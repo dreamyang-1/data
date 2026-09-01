@@ -28,6 +28,12 @@ class RetrievalStub:
     def __init__(self) -> None:
         self.request = None
 
+    async def health(self):
+        return True
+
+    async def rewrite_health(self):
+        return False
+
     async def query(
         self, request, identity, *, semantic_model_id, business_domain_id
     ):
@@ -79,6 +85,14 @@ async def test_combined_tool_binds_metrics_before_query_planning():
     assert result.sql == "SELECT 1"
     assert semantic.calls == 1
     assert retrieval.request.metrics[0].metric_id == "81:tax_inclusive_sales_amount"
+
+
+@pytest.mark.asyncio
+async def test_combined_tool_exposes_underlying_readiness_checks():
+    tool = CompositeSemanticQueryTool(SemanticStub([]), RetrievalStub())
+
+    assert await tool.health() is True
+    assert await tool.rewrite_health() is False
 
 
 @pytest.mark.asyncio

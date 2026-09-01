@@ -374,7 +374,13 @@ class AnswerPlanner:
 
     def plan(self, result: StructuredAnalysisResult) -> AnswerPlan:
         ordered = sorted(result.insights, key=lambda item: item.priority, reverse=True)
-        facts = [item.statement for item in ordered if item.nature == InsightNature.FACT][:3]
+        headline_key = self._content_key(result.headline)
+        facts = [
+            item.statement
+            for item in ordered
+            if item.nature == InsightNature.FACT
+            and self._content_key(item.statement) != headline_key
+        ][:3]
         interpretations = [
             item.statement for item in ordered
             if item.nature == InsightNature.INTERPRETATION
@@ -393,3 +399,8 @@ class AnswerPlanner:
             limitations=limitations,
             omitted_internal_fields=list(self._INTERNAL_FIELDS),
         )
+
+    @staticmethod
+    def _content_key(value: str) -> str:
+        """Normalize punctuation/spacing when suppressing duplicate sections."""
+        return "".join(character for character in value if not character.isspace()).rstrip("。；;")

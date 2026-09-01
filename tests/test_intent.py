@@ -4,6 +4,7 @@ import pytest
 
 from app.domain.models import AnalysisOperator, ConversationControl, PrimaryIntent, TrustedIdentity
 from app.intent import RuleBasedIntentClassifier
+from app.intent.classifier import render_execution_question
 
 
 IDENTITY = TrustedIdentity(tenant_id="tenant-a", user_id="user-a")
@@ -23,6 +24,63 @@ def test_detail_uses_high_risk_path():
     )
     assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
     assert request.risk_level == "HIGH"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "请列出上海市某产品的含税销售总额。",
+        "请列出某产品的含税销售总额和销售总数量。",
+        "请列出含税销售总额排名前10的医院，并显示医院等级和订单笔数。",
+    ],
+)
+def test_list_verb_with_explicit_metrics_is_not_misclassified_as_detail(question):
+    request = RuleBasedIntentClassifier().classify(question, IDENTITY, "c-list-metric")
+
+    assert request.primary_intent != PrimaryIntent.DETAIL_QUERY
+    assert request.metrics
+
+
+def test_additive_metric_clarification_preserves_existing_metrics():
+    classifier = RuleBasedIntentClassifier()
+    pending = classifier.classify(
+        "查询各经销商的含税销售总额并排序", IDENTITY, "c-additive-metric"
+    )
+
+    merged = classifier.merge_clarification(
+        pending, "再加上订单笔数，其他条件不变。"
+    )
+
+    assert {metric.input for metric in merged.metrics} == {
+        "含税销售总额", "订单笔数",
+    }
+
+
+def test_additive_metric_clarification_preserves_descending_sort_semantics():
+    classifier = RuleBasedIntentClassifier()
+    pending = classifier.classify(
+        "查询医用外科口罩产品的经销商，按含税销售总额从高到低排序。",
+        IDENTITY,
+        "c-additive-sort",
+    )
+
+    merged = classifier.merge_clarification(
+        pending, "再加上订单笔数，其他条件不变。"
+    )
+    execution_question = render_execution_question(merged)
+
+    assert AnalysisOperator.SORT in merged.operators
+    assert "SORT_DIRECTION=DESC" in merged.assumptions
+    assert "排序要求：按含税销售总额从高到低" in execution_question
+
+
+def test_monthly_statistics_is_a_grouped_metric_table_not_trend_analysis():
+    request = RuleBasedIntentClassifier().classify(
+        "按月统计某产品的含税销售总额。", IDENTITY, "c-monthly-stat"
+    )
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert "DEFAULT_TIME_GRANULARITY=month" in request.assumptions
 
 
 def test_future_plan_value_is_query_not_forecast():
@@ -181,6 +239,27 @@ def test_partner_list_shape_removes_non_physical_list_placeholder_field():
     RuleBasedIntentClassifier.apply_business_query_shapes(request, question)
 
     assert request.fields == ["经销商名称"]
+
+
+def test_transaction_partner_scope_separates_activity_words_from_catalog_value():
+    request = RuleBasedIntentClassifier().classify(
+        "查询最近一年销售过费森尤斯产品的经销商名单",
+        IDENTITY,
+        "transaction-brand-partners",
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.entity == "经销商"
+    assert request.fields == ["经销商名称"]
+    assert request.filters == [
+        {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"},
+    ]
+    assert request.time_range is not None
+    assert "SET_RELATIONSHIP_PROJECTION" in request.assumptions
+    assert (
+        "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
+        in request.assumptions
+    )
 
 
 def test_branded_consumable_partner_scope_is_not_one_product_name():
@@ -411,7 +490,7 @@ def test_sales_total_quantity_and_taxed_order_amount_aliases_are_preserved():
         "c-taxed-order-amount",
     )
 
-    assert {item.input for item in quantity.metrics} == {"含税销售总额", "销售量"}
+    assert {item.input for item in quantity.metrics} == {"含税销售总额", "销售总数量"}
     assert [item.input for item in dealer.metrics] == ["含税销售总额", "订单笔数"]
     assert quantity.missing_slots == []
     assert dealer.missing_slots == []
@@ -494,6 +573,10 @@ def test_relationship_lists_keep_exact_product_filter(question, product):
         question, IDENTITY, "c-relationship-product"
     )
     assert {"field": "商品名称", "operator": "EQ", "value": product} in request.filters
+    assert (
+        "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
+        in request.assumptions
+    )
     if "上海" in question:
         assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
 
@@ -1078,6 +1161,48 @@ def test_partner_list_ranked_by_snapshot_metric_is_complete_comparison():
         {"field": "厂家名称", "operator": "NE", "value": "上海洁安"},
         {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
     ]
+
+
+def test_ranked_partner_result_without_list_word_keeps_partner_grouping():
+    request = RuleBasedIntentClassifier().classify(
+        "查询上海市医用外科口罩产品的经销商，并按整体业务规模从高到低排序。",
+        IDENTITY,
+        "ranked-partner-without-list-word",
+    )
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert request.entity == "经销商"
+    assert [metric.input for metric in request.metrics] == ["整体业务规模"]
+    assert "经销商" in request.dimensions
+    assert AnalysisOperator.GROUP_BY in request.operators
+    assert AnalysisOperator.SORT in request.operators
+    assert request.missing_slots == []
+
+
+def test_ranked_partner_result_with_intermediate_exclusion_keeps_grouping():
+    request = RuleBasedIntentClassifier().classify(
+        "查询上海市医用外科口罩产品的经销商，排除上海洁安厂家，"
+        "并按整体业务规模排序。",
+        IDENTITY,
+        "ranked-partner-with-exclusion",
+    )
+
+    assert request.entity == "经销商"
+    assert "经销商" in request.dimensions
+    assert {"field": "厂家名称", "operator": "NE", "value": "上海洁安"} in request.filters
+
+
+def test_hospital_level_rollup_does_not_group_by_individual_hospital():
+    request = RuleBasedIntentClassifier().classify(
+        "按医院等级汇总含税销售总额、销售总数量和订单笔数。",
+        IDENTITY,
+        "hospital-level-rollup",
+    )
+
+    assert request.dimensions == ["医院等级"]
+    assert {metric.input for metric in request.metrics} == {
+        "含税销售总额", "销售总数量", "订单笔数",
+    }
 
 
 def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():

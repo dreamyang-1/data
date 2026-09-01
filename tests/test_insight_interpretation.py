@@ -1,6 +1,7 @@
 import pytest
 
 from app.analysis import AnalysisEngine
+from app.analysis.engine import AnalysisOutput
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
 from app.domain.models import (
     CanonicalAnalysisRequest,
@@ -72,3 +73,25 @@ def test_answer_plan_keeps_internal_diagnostics_out_of_user_answer():
     assert "direction_consistency" in plan.omitted_internal_fields
     assert "robust_slope_per_period" in plan.omitted_internal_fields
     assert "direction_consistency" not in plan.render()
+
+
+def test_answer_plan_does_not_repeat_deterministic_table_as_key_fact():
+    request = CanonicalAnalysisRequest(
+        conversation_id="detail-no-duplicate",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="查询经销商并按销售额排序",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="含税销售总额", canonical_name="含税销售总额")],
+    )
+    answer = "| 经销商 | 含税销售总额 |\n| --- | --- |\n| 甲公司 | 100 |"
+    analysis = AnalysisOutput(
+        answer=answer,
+        method="deterministic_result",
+        facts={},
+    )
+    plan = AnswerPlanner().plan(InsightInterpretationLayer().interpret(request, analysis))
+
+    assert plan.headline == answer
+    assert plan.key_facts == []
+    assert plan.render().count("| 甲公司 | 100 |") == 1

@@ -21,6 +21,14 @@ class CompositeSemanticQueryTool:
         self.semantic = semantic
         self.retrieval = retrieval
 
+    async def health(self) -> bool:
+        """Expose the retrieval/query-contract health through the facade."""
+        return bool(await self.retrieval.health())
+
+    async def rewrite_health(self) -> bool:
+        """Expose entity-rewrite readiness expected by the application probe."""
+        return bool(await self.retrieval.rewrite_health())
+
     async def query(
         self,
         request: CanonicalAnalysisRequest,

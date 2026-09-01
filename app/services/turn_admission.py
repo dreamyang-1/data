@@ -53,6 +53,11 @@ _FOLLOWUP_PATTERNS: tuple[tuple[str, str], ...] = (
     ("LIMIT_REPLACEMENT", r"前(?:\d+|[一二三四五六七八九十]+)(?:个|名|条)?"),
     ("WHY", r"为什么|为何|怎么会"),
     ("CONTINUE", r"继续|接着|再看|再查|同样"),
+    (
+        "ADDITIVE_METRIC",
+        r"(?:再|同时|并)?(?:加上|增加|新增|补充|带上|显示|返回).{0,20}"
+        r"(?:指标|金额|销售|数量|笔数|次数|均价|单价|利润|成本|收入)",
+    ),
     ("MODIFY", r"改成|改为|换成|只看|只保留|去掉|取消"),
 )
 _TOPIC_SHIFT_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -395,6 +400,20 @@ class TurnAdmissionGate:
             or (
                 self._semantic_field_family(value) is not None
                 and self._semantic_field_family(value) in filter_dimension_families
+            )
+            or (
+                value == current.entity
+                and bool(current.metrics)
+                and value in compact
+                and any(
+                    operator in current.operators
+                    for operator in (
+                        AnalysisOperator.GROUP_BY,
+                        AnalysisOperator.SORT,
+                        AnalysisOperator.TOP_N,
+                        AnalysisOperator.BOTTOM_N,
+                    )
+                )
             )
         ]
         if explicit_dimensions:

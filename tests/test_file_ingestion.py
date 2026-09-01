@@ -290,6 +290,16 @@ def test_projection_and_directional_sort_are_local_operations():
     }
 
 
+def test_only_keep_metric_is_column_projection_not_row_filter():
+    rows = [{"商品": "A", "含税销售总额": 100, "订单笔数": 2}]
+
+    assert plan_dataset_followup(
+        "只保留订单笔数，其他条件不变。",
+        ["商品", "含税销售总额", "订单笔数"],
+        rows,
+    ) == {"type": "select", "columns": ["订单笔数"]}
+
+
 def test_projection_with_missing_enrichment_column_returns_to_query_path():
     rows = [{"医院名称": "A医院"}, {"医院名称": "B医院"}]
     assert plan_dataset_followup(
@@ -335,4 +345,25 @@ def test_bare_top_count_on_single_name_column_is_a_preview_limit():
             {"经销商名称": "甲", "_source_row": 1},
             {"经销商名称": "乙", "_source_row": 2},
         ],
+    ) == {"type": "limit", "count": 5}
+
+
+def test_limit_replacement_preserves_existing_multi_metric_ranking_order():
+    rows = [
+        {"经销商": "甲", "销售额": 100, "合作次数": 3},
+        {"经销商": "乙", "销售额": 90, "合作次数": 8},
+    ]
+
+    assert plan_dataset_followup(
+        "改成前3名，其他条件不变。",
+        ["经销商", "销售额", "合作次数"],
+        rows,
+    ) == {"type": "limit", "count": 3}
+
+
+def test_preview_limit_ignores_unchanged_filter_scope_suffix():
+    assert plan_dataset_followup(
+        "只返回前5个，其他筛选条件不变。",
+        ["经销商名称"],
+        [{"经销商名称": "甲"}, {"经销商名称": "乙"}],
     ) == {"type": "limit", "count": 5}

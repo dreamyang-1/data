@@ -68,6 +68,14 @@ def plan_dataset_followup(
     the wrong historical snapshot.
     """
     compact = re.sub(r"\s+", "", question)
+    # “其他筛选条件不变” describes inherited query scope; it is not itself a
+    # request to filter the materialized result. Remove this suffix before
+    # choosing the local operation so “只返回前5个” reaches the limit parser.
+    compact = re.sub(
+        r"，?(?:其他|其余)(?:筛选)?条件不变[。！!？?]?$",
+        "",
+        compact,
+    )
     sheet_filter: dict[str, Any] | None = None
     if "_sheet_name" in columns:
         sheet_names = {
@@ -159,6 +167,24 @@ def plan_dataset_followup(
             "count": 1,
         })
 
+    if any(marker in compact for marker in (
+        "只看", "只保留", "只显示", "仅显示", "只要", "保留字段", "保留列",
+    )):
+        requested_business_columns = [
+            name for name in (
+                "医院名称", "医院等级", "经销商名称", "供应商名称",
+                "商品名称", "产品名称", "交易日期", "订单号",
+            )
+            if name in compact
+        ]
+        if any(name not in columns for name in requested_business_columns):
+            return None
+        selected = [column for column in columns if column and column in compact]
+        if selected:
+            return _with_sheet_filter(
+                sheet_filter, {"type": "select", "columns": selected}
+            )
+
     if any(marker in compact for marker in ("只看", "只保留", "筛选", "过滤")):
         candidates: list[tuple[str, Any]] = []
         for column in columns:
@@ -192,6 +218,23 @@ def plan_dataset_followup(
         assert match is not None
         target = _mentioned_or_unique_column(compact, numeric_columns)
         if target is None:
+            # A closed-form limit replacement over an already ordered result
+            # preserves the verified source order. This covers ranked tables
+            # with several numeric columns as well as multi-column relation
+            # lists. Re-sorting by an arbitrary numeric column would change the
+            # user's prior ranking.
+            limit_only = bool(re.fullmatch(
+                rf"(?:改成|改为|换成|只(?:显示|展示|返回|保留)?|展示|显示|返回)?"
+                rf"(?:前|Top){count_pattern}(?:名|条|个)?"
+                r"(?:，?(?:其他|其余)(?:筛选)?条件不变)?[。！!？?]?",
+                compact,
+                re.I,
+            ))
+            if rank and limit_only:
+                return _with_sheet_filter(sheet_filter, {
+                    "type": "limit",
+                    "count": _ranking_count(match.group(1)),
+                })
             # A one-column name list has no ranking metric.  Natural turns
             # such as “前五个” mean preview the first five existing rows, not
             # start a new metric query and ask which metric to rank by.

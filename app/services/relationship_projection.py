@@ -133,6 +133,8 @@ def requires_distinct_relationship_projection(
             semantic_text,
         )
     )
-    return implicit_partner_product_relationship or asks_for_set and (
-        explicit_relationship or implicit_product_relationship
+    return (
+        implicit_partner_product_relationship
+        or explicit_relationship and implicit_product_relationship
+        or asks_for_set and (explicit_relationship or implicit_product_relationship)
     )

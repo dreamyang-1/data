@@ -675,6 +675,16 @@ class HttpDataRetrievalAdapter:
         ]
 
         semantic_query = request.rewritten_question or request.original_question
+        # Keep equivalent temporal grouping word orders away from the semantic
+        # planner's entity-alignment boundary.  Some callers naturally write
+        # “按月请计算”/“请按月查询”; both are the same governed grouped query as
+        # “按月统计”.  This normalization changes neither literals nor scope.
+        semantic_query = re.sub(
+            r"^(?:请)?按(日|天|周|月|季度|年)(?:请)?(?:计算|查询|汇总)",
+            lambda match: f"按{match.group(1)}统计",
+            semantic_query,
+            count=1,
+        )
         if semantic_model_id == 81 and "经销商等级" in semantic_query:
             # Model 81 has dealer type and profile/status attributes, but no
             # governed field whose business meaning is "dealer level". Do not
@@ -845,9 +855,13 @@ class HttpDataRetrievalAdapter:
             (
                 item for item in request.filters
                 if isinstance(item, dict)
-                and str(item.get("field") or "") in {
-                    "品牌", "品牌名称", "商品品牌", "母品牌",
-                }
+                and any(
+                    marker in str(item.get("field") or "").lower()
+                    for marker in (
+                        "品牌", "厂牌", "厂家", "制造商",
+                        "brand", "manufacturer",
+                    )
+                )
             ),
             None,
         )
@@ -905,6 +919,23 @@ class HttpDataRetrievalAdapter:
                     "\n上一次查询结果未通过契约校验，必须修正以下问题后重新生成ASL："
                     + retry_feedback
                 )
+        semantic_retry_feedback = next(
+            (
+                value.removeprefix("SEMANTIC_QUERY_RETRY:")
+                for value in request.assumptions
+                if value.startswith("SEMANTIC_QUERY_RETRY:")
+            ),
+            None,
+        )
+        if semantic_retry_feedback is not None:
+            asl_query += (
+                "\n语义规划重试要求：首次规划未能稳定完成实体/字段对齐。请重新读取本次"
+                "召回的最新语义层实体、维度、指标和关系，以用户原文及调用方已确认的"
+                "filters、dimensions、metrics为准重新生成ASL。不得复用首次SQL，不得"
+                "发明字段或关系；只有当前语义层确实存在多个无法消解的候选时才返回"
+                "ambiguity。首次反馈："
+                + semantic_retry_feedback
+            )
         if request.primary_intent == PrimaryIntent.DETAIL_QUERY and request.fields:
             detail_fields = "、".join(request.fields)
             asl_query += (
@@ -1014,6 +1045,17 @@ class HttpDataRetrievalAdapter:
                     "\n执行要求：当前趋势区间不少于60天且用户未明确粒度，默认按月分组返回；"
                     "时间维度必须使用time_context.anchor对应字段，不能使用其他实体日期。"
                 )
+        # Shape-specific branches above may rebuild ``retrieval_query`` (for
+        # example grouped partner metrics). Manufacturer/brand filters still
+        # need the current semantic model's registered name attributes in the
+        # final recall query, so enrich the final value after all shape branches.
+        if brand_name_filter is not None:
+            manufacturer_recall = (
+                " 母品牌 厂家名称 parent_brand manufacturer_name "
+                "manufacturer.parent_brand manufacturer.manufacturer_name"
+            )
+            if "manufacturer.manufacturer_name" not in retrieval_query:
+                retrieval_query += manufacturer_recall
         if request.dependency_constraints:
             dependency_fields = list(dict.fromkeys(
                 item.source_column for item in request.dependency_constraints
@@ -1534,6 +1576,7 @@ class HttpDataRetrievalAdapter:
             raw,
             request_id=str(request.request_id),
             has_result_file=result_file_url is not None,
+            distinct_projection=requires_distinct_relationship_projection(request),
         )
         if analysis_contract is not None and not dataset.truncated:
             violation = validate_contract(
@@ -2164,6 +2207,44 @@ class HttpDataRetrievalAdapter:
             # time anchor.  Only the presentation limit is allowed to change.
             return template
         if (
+            "DETERMINISTIC_GRAIN_FAST_PATH" in request.assumptions
+            and request.asl_template is not None
+            and semantic_model_id is not None
+        ):
+            grain = next(
+                (
+                    value.split("=", 1)[1]
+                    for value in request.assumptions
+                    if value.startswith("DEFAULT_TIME_GRANULARITY=")
+                ),
+                None,
+            )
+            template = copy.deepcopy(request.asl_template)
+            dimensions = template.get("dimensions")
+            temporal = next(
+                (
+                    item for item in dimensions
+                    if isinstance(item, dict)
+                    and HttpDataRetrievalAdapter._is_temporal_asl_item(item)
+                ),
+                None,
+            ) if isinstance(dimensions, list) else None
+            if grain is None or temporal is None:
+                return None
+            temporal["granularity"] = grain
+            time_context = template.get("time_context")
+            if request.time_range is not None and isinstance(time_context, dict):
+                template["time_context"] = {
+                    **time_context,
+                    "type": "range",
+                    "start": request.time_range.start.isoformat(),
+                    "end": (
+                        request.time_range.end_exclusive - timedelta(days=1)
+                    ).isoformat(),
+                }
+            template["ambiguity"] = []
+            return template
+        if (
             "DETERMINISTIC_TIME_FAST_PATH" not in request.assumptions
             or request.asl_template is None
             or request.time_range is None
@@ -2226,7 +2307,11 @@ class HttpDataRetrievalAdapter:
             or request.time_range is None
         ):
             return
-        text = request.original_question
+        # Contextual grain replacements are rendered into the canonical
+        # executable question while ``original_question`` intentionally keeps
+        # the audit history. Prefer executable text so “改成按季度” cannot be
+        # repaired back to the previous monthly dimension.
+        text = request.rewritten_question or request.original_question
         granularity = next(
             (
                 value
@@ -2750,7 +2835,8 @@ class HttpDataRetrievalAdapter:
 
     @staticmethod
     def _dataset(
-        data: dict[str, Any], *, request_id: str, has_result_file: bool = False
+        data: dict[str, Any], *, request_id: str, has_result_file: bool = False,
+        distinct_projection: bool = False,
     ) -> Dataset:
         rows_from_data = data.get("data")
         uses_preview = (
@@ -2807,6 +2893,34 @@ class HttpDataRetrievalAdapter:
                 "SQL_RESPONSE_INVALID",
                 "truncated=false conflicts with total_count greater than returned rows",
             )
+        if distinct_projection and rows:
+            # Relationship queries are sets.  Keep a final defensive boundary
+            # here because legacy translator versions and physical join paths
+            # can still return duplicate visible rows even when the ASL asks
+            # for DISTINCT.  Normalize only surrounding whitespace and dedupe
+            # the complete projected row; ordinary transaction detail never
+            # enters this branch.
+            normalized_rows: list[dict[str, Any]] = []
+            seen: set[str] = set()
+            for row in rows:
+                normalized = {
+                    key: value.strip() if isinstance(value, str) else value
+                    for key, value in row.items()
+                }
+                marker = json.dumps(
+                    normalized,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    default=str,
+                )
+                if marker in seen:
+                    continue
+                seen.add(marker)
+                normalized_rows.append(normalized)
+            rows = normalized_rows
+            if not truncated:
+                total_count = len(rows)
         fingerprint = hashlib.sha256(
             json.dumps(
                 {"columns": columns, "rows": rows},

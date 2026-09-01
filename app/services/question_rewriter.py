@@ -105,7 +105,8 @@ class QuestionRewriter:
 
     _STRONG_CONTEXT_MARKERS = (
         "上述", "刚才", "前面", "同样", "再看", "再查", "再查询", "那查询", "继续", "改成", "换成", "改查",
-        "只看", "去掉", "取消", "恢复", "同时", "也要", "这些", "其中", "它", "第一个",
+        "只看", "去掉", "取消", "恢复", "同时", "也要", "再加", "加上", "增加", "新增",
+        "其他条件不变", "其余条件不变", "这些", "其中", "它", "第一个",
     )
     _BUSINESS_FOLLOWUP_TERMS = (
         "销售", "订单", "退款", "库存", "金额", "数量", "指标", "数据", "趋势",
@@ -165,6 +166,14 @@ class QuestionRewriter:
     ) -> RewriteResult:
         original = question.strip()
         locally_normalized, local_events = self._normalize_local_metric_typos(original)
+        locally_normalized, word_order_events = self._normalize_polite_word_order(
+            locally_normalized
+        )
+        local_events.extend(word_order_events)
+        locally_normalized, grouped_wording_events = (
+            self._normalize_grouped_calculation_wording(locally_normalized)
+        )
+        local_events.extend(grouped_wording_events)
         locally_normalized, temporal_events = self._normalize_short_year(
             locally_normalized
         )
@@ -239,6 +248,45 @@ class QuestionRewriter:
             semantic_matches=[dict(item) for item in matches],
         )
 
+    @staticmethod
+    def _normalize_polite_word_order(text: str) -> tuple[str, list[RewriteEvent]]:
+        """Normalize harmless polite-particle inversions before semantic recall.
+
+        Users and generated paraphrases may write ``按月请计算`` or
+        ``以月份为粒度请统计``.  Moving ``请`` to the front preserves every
+        business token while avoiding an unstable parse of the temporal phrase.
+        """
+        pattern = re.compile(
+            r"^(?P<scope>(?:按|以)[^，,。；;！？!?]{1,20}?)"
+            r"请(?P<verb>查询|计算|统计|分析|汇总|列出|展示|返回)"
+        )
+        match = pattern.search(text)
+        if match is None:
+            return text, []
+        replacement = f"请{match.group('scope')}{match.group('verb')}"
+        normalized = pattern.sub(replacement, text, count=1)
+        return normalized, [RewriteEvent(
+            match.group(0), replacement, "POLITE_WORD_ORDER", 1.0
+        )]
+
+    @staticmethod
+    def _normalize_grouped_calculation_wording(
+        text: str,
+    ) -> tuple[str, list[RewriteEvent]]:
+        """Canonicalize temporal grouped-query verbs without changing scope."""
+        pattern = re.compile(
+            r"^(?:请)?按(?P<grain>日|天|周|月|季度|年)"
+            r"(?P<verb>计算|查询|汇总)"
+        )
+        match = pattern.search(text)
+        if match is None:
+            return text, []
+        replacement = f"按{match.group('grain')}统计"
+        normalized = pattern.sub(replacement, text, count=1)
+        return normalized, [RewriteEvent(
+            match.group(0), replacement, "GROUPED_CALCULATION_WORDING", 1.0
+        )]
+
     @classmethod
     def ground_request_dimensions(
         cls,
@@ -308,6 +356,7 @@ class QuestionRewriter:
 
         grounded_by_family: dict[str, str] = {}
         grounded_filters: list[dict[str, Any]] = []
+        family_rebound = False
         for item in request.filters:
             if not isinstance(item, dict):
                 grounded_filters.append(item)
@@ -321,26 +370,50 @@ class QuestionRewriter:
                 for value in values
                 if value not in (None, "")
             }
+            value_matches = lambda candidate: (
+                candidate["score"] >= 0.70
+                and required_values
+                and all(
+                    any(
+                        required.casefold() in candidate_value.casefold()
+                        or candidate_value.casefold() in required.casefold()
+                        for candidate_value in candidate["values"]
+                    )
+                    for required in required_values
+                )
+            )
             ranked = sorted(
                 (
                     candidate for candidate in candidates
                     if candidate["family"] == current_family
-                    and candidate["score"] >= 0.70
-                    and required_values
-                    and all(
-                        any(
-                            required.casefold() in candidate_value.casefold()
-                            or candidate_value.casefold() in required.casefold()
-                            for candidate_value in candidate["values"]
-                        )
-                        for required in required_values
-                    )
+                    and value_matches(candidate)
                 ),
                 key=lambda candidate: (-candidate["score"], candidate["label"]),
             )
+            if not ranked:
+                # The completion model can identify the right literal but
+                # attach a provisional family (for example 商品名称=费森尤斯).
+                # Rebind only from high-confidence, current-model catalog
+                # evidence and only when the best family is unambiguous.  This
+                # keeps changing semantic dimensions authoritative without
+                # guessing a brand/product distinction from a static wordlist.
+                cross_family = sorted(
+                    (candidate for candidate in candidates if value_matches(candidate)),
+                    key=lambda candidate: (-candidate["score"], candidate["label"]),
+                )
+                if cross_family:
+                    best = cross_family[0]
+                    competing_families = {
+                        candidate["family"]
+                        for candidate in cross_family
+                        if best["score"] - candidate["score"] < 0.05
+                    }
+                    if len(competing_families) == 1:
+                        ranked = [best]
+                        family_rebound = best["family"] != current_family
             if ranked and current_family is not None:
                 current["field"] = ranked[0]["label"]
-                grounded_by_family[current_family] = ranked[0]["label"]
+                grounded_by_family[ranked[0]["family"]] = ranked[0]["label"]
             grounded_filters.append(current)
 
         if not grounded_by_family:
@@ -351,6 +424,10 @@ class QuestionRewriter:
             for value in request.dimensions
         ))
         request.assumptions.append("SEMANTIC_DIMENSIONS_GROUNDED_FROM_CURRENT_MODEL")
+        if family_rebound:
+            request.assumptions.append(
+                "SEMANTIC_FILTER_FAMILY_REBOUND_FROM_CURRENT_MODEL"
+            )
         return request
 
     async def _extract_candidates(self, question: str) -> list[EntityCandidate]:
@@ -549,12 +626,22 @@ class QuestionRewriter:
             question,
         ))
         # A follow-up may replace the metric rather than inherit it, e.g.
-        # “那订单量呢”. Never append the old metric in that case because the
-        # downstream classifier would otherwise see two conflicting metrics.
+        # “那订单量呢”. Additive wording is different: “再加上订单笔数” must
+        # keep the previous metrics and append the new one. Rendering the
+        # confirmed previous metrics gives the model the complete requested
+        # measure set without hard-coding any particular business metric.
+        additive_metric_reference = bool(re.search(
+            r"(?:再|同时|并)?(?:加上|增加|新增|补充|带上|显示|返回).{0,20}"
+            r"(?:指标|金额|销售|数量|笔数|次数|均价|单价|利润|成本|收入)",
+            question,
+        ))
         if (
             previous.metrics
             and not relationship_followup
-            and not self._EXPLICIT_METRIC_PATTERN.search(question)
+            and (
+                not self._EXPLICIT_METRIC_PATTERN.search(question)
+                or additive_metric_reference
+            )
         ):
             names = [item.canonical_name or item.input for item in previous.metrics]
             context.append("指标=" + "、".join(dict.fromkeys(names)))

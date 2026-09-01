@@ -111,6 +111,27 @@ def test_catalog_category_scope_does_not_become_a_synthetic_product_fact():
     assert "product" not in facts.core_subjects
 
 
+def test_ranked_partner_query_object_survives_explicit_slot_protection():
+    question = (
+        "查询上海地区销售振德医疗品牌医用外科口罩的经销商，"
+        "并按整体业务规模从高到低排序。"
+    )
+    request = _finalized_standalone(
+        RuleBasedIntentClassifier(),
+        TurnAdmissionGate(),
+        question,
+        "ranked-partner-admission",
+    )
+
+    assert request.entity == "经销商"
+    assert "经销商" in request.dimensions
+    assert request.turn_admission is not None
+    assert (
+        "经销商"
+        in request.turn_admission.current_turn_facts.explicit_slots["dimensions"].value
+    )
+
+
 def test_catalog_category_alignment_accepts_split_sql_and_still_rejects_loss():
     request = _finalized_standalone(
         RuleBasedIntentClassifier(),

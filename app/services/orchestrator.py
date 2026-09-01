@@ -129,6 +129,30 @@ def select_data_execution_question(
         decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
         and decision.context_mode == ContextMode.NONE
     ):
+        normalized_raw, _ = QuestionRewriter._normalize_polite_word_order(
+            raw_question
+        )
+        normalized_raw, _ = (
+            QuestionRewriter._normalize_grouped_calculation_wording(
+                normalized_raw
+            )
+        )
+        safe_normalized_standalone = any(
+            isinstance(event, dict)
+            and str(event.get("kind") or "") in {
+                "POLITE_WORD_ORDER",
+                "GROUPED_CALCULATION_WORDING",
+            }
+            for event in request.rewrite_events
+        )
+        if normalized_raw != raw_question:
+            return normalized_raw, canonical, "NORMALIZED_STANDALONE"
+        if safe_normalized_standalone and request.rewritten_question:
+            return (
+                request.rewritten_question,
+                canonical,
+                "NORMALIZED_STANDALONE",
+            )
         return raw_question, canonical, "RAW_STANDALONE"
     return canonical, canonical, "CANONICAL_CONTEXTUAL"
 
@@ -1910,6 +1934,14 @@ class DataAnalysisOrchestrator:
     async def _handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
         preserve_merged_question = False
         recalled_task_frame = False
+        admission_question, _ = QuestionRewriter._normalize_polite_word_order(
+            chat.question
+        )
+        admission_question, _ = (
+            QuestionRewriter._normalize_grouped_calculation_wording(
+                admission_question
+            )
+        )
         await emit_progress(
             "CONTEXT_RESTORE", "RUNNING", "正在恢复当前会话的短期上下文和待补充状态。"
         )
@@ -1918,7 +1950,7 @@ class DataAnalysisOrchestrator:
         # business task frame. Otherwise a previous data query can rewrite a
         # later lifestyle question back into the old product/dealer task.
         raw_rule_request = self._classify_with_rules(
-            chat.question, identity, chat.conversation_id
+            admission_question, identity, chat.conversation_id
         )
         independent_chat = raw_rule_request.primary_intent == PrimaryIntent.CHAT
         standalone_complete_business = bool(
@@ -1930,7 +1962,7 @@ class DataAnalysisOrchestrator:
                 r"(?:按(?:日|天|周|月|季度|季|年)(?:查询|统计|汇总|分析|展示|显示))|"
                 r"(?:查询|统计|列出|展示|显示|查看)"
                 r")",
-                re.sub(r"\s+", "", chat.question),
+                re.sub(r"\s+", "", admission_question),
             )
             and raw_rule_request.primary_intent in {
                 PrimaryIntent.METRIC_QUERY, PrimaryIntent.DETAIL_QUERY,
@@ -2049,7 +2081,7 @@ class DataAnalysisOrchestrator:
                         update=successful_updates,
                     )
         turn_decision = self.turn_admission_gate.evaluate(
-            question=chat.question,
+            question=admission_question,
             current=raw_rule_request,
             previous=previous_for_rewrite,
             message_id=chat.message_id,
@@ -2477,6 +2509,150 @@ class DataAnalysisOrchestrator:
             raw_rule_request,
             turn_decision,
         )
+        # A closed-form “按月/季度统计” is a grouped metric table. Structured
+        # completion sometimes rewrites it as “分析趋势”, changing both the
+        # deliverable and follow-up behavior. Keep the deterministic current
+        # turn authoritative for a standalone grouped statistic, and for a
+        # grain change whose active task was already a metric table. Explicit
+        # 趋势/走势/变化 wording continues through the trend path unchanged.
+        raw_grain = next(
+            (
+                value
+                for value in raw_rule_request.assumptions
+                if value.startswith("DEFAULT_TIME_GRANULARITY=")
+            ),
+            None,
+        )
+        grouped_statistic = bool(
+            raw_rule_request.primary_intent == PrimaryIntent.METRIC_QUERY
+            and raw_grain is not None
+            and not re.search(
+                r"趋势|走势|变化|涨跌|上升|下降|增长|波动",
+                chat.question,
+            )
+            and (
+                turn_decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+                or previous_for_rewrite is not None
+                and previous_for_rewrite.primary_intent == PrimaryIntent.METRIC_QUERY
+                and any(
+                    value.startswith("DEFAULT_TIME_GRANULARITY=")
+                    for value in previous_for_rewrite.assumptions
+                )
+            )
+        )
+        if grouped_statistic:
+            request.primary_intent = PrimaryIntent.METRIC_QUERY
+            request.operators = list(raw_rule_request.operators)
+            request.assumptions = [
+                value for value in request.assumptions
+                if not value.startswith("DEFAULT_TIME_GRANULARITY=")
+            ]
+            request.assumptions.append(raw_grain)
+        additive_metric_turn = bool(re.search(
+            r"(?:再|同时|并)?(?:加上|增加|新增|补充|带上|显示|返回).{0,20}"
+            r"(?:指标|金额|销售|数量|笔数|次数|均价|单价|利润|成本|收入)",
+            chat.question,
+        ))
+        if additive_metric_turn and previous_for_rewrite is not None:
+            metric_by_name = {
+                metric.canonical_name or metric.input: metric.model_copy(deep=True)
+                for metric in (
+                    *previous_for_rewrite.metrics,
+                    *request.metrics,
+                    *raw_rule_request.metrics,
+                )
+            }
+            request.metrics = list(metric_by_name.values())
+            for operator in previous_for_rewrite.operators:
+                if operator in {
+                    AnalysisOperator.SORT,
+                    AnalysisOperator.TOP_N,
+                    AnalysisOperator.BOTTOM_N,
+                } and operator not in request.operators:
+                    request.operators.append(operator)
+            if request.ranking_limit is None:
+                request.ranking_limit = previous_for_rewrite.ranking_limit
+            for assumption in previous_for_rewrite.assumptions:
+                if (
+                    assumption.startswith("SORT_DIRECTION=")
+                    and assumption not in request.assumptions
+                ):
+                    request.assumptions.append(assumption)
+            # Adding a measure changes the projection, so the preceding ASL and
+            # immutable result cannot be reused as if they already contained it.
+            request.asl_template = None
+            request.source_dataset_id = None
+            if previous_for_rewrite.time_range is None:
+                request.assumptions.append("TIME_SCOPE=ALL_TIME")
+        limit_only_turn = bool(re.fullmatch(
+            r"(?:改成|改为|换成|只(?:显示|展示|返回|保留)?|展示|显示|返回)?"
+            r"(?:前|top)(?:\d{1,5}|[一二三四五六七八九十]{1,3})(?:名|条|个)?"
+            r"(?:，?(?:其他|其余)(?:筛选)?条件不变)?[。！!？?]?",
+            re.sub(r"\s+", "", chat.question).lower(),
+        ))
+        if limit_only_turn and previous_for_rewrite is not None:
+            request.primary_intent = previous_for_rewrite.primary_intent
+            request.secondary_intents = list(previous_for_rewrite.secondary_intents)
+            request.metrics = [
+                metric.model_copy(deep=True)
+                for metric in previous_for_rewrite.metrics
+            ]
+            request.entity = previous_for_rewrite.entity
+            request.fields = list(previous_for_rewrite.fields)
+            request.dimensions = list(previous_for_rewrite.dimensions)
+            request.filters = [dict(item) for item in previous_for_rewrite.filters]
+            request.time_range = (
+                previous_for_rewrite.time_range.model_copy(deep=True)
+                if previous_for_rewrite.time_range is not None
+                else None
+            )
+            request.asl_template = copy.deepcopy(previous_for_rewrite.asl_template)
+            request.source_dataset_id = previous_for_rewrite.source_dataset_id
+        grain_only_turn = bool(re.fullmatch(
+            r"(?:改成|改为|换成|还是)?按(?:日|天|周|月|季度|年)"
+            r"(?:统计|汇总|分析|看|给我|吧)?"
+            r"(?:，?(?:其他|其余)条件不变)?[。！!？?]?",
+            re.sub(r"\s+", "", chat.question),
+        ))
+        if (
+            grain_only_turn
+            and raw_grain is not None
+            and previous_for_rewrite is not None
+            and previous_for_rewrite.primary_intent in {
+                PrimaryIntent.TREND_ANALYSIS,
+                PrimaryIntent.METRIC_QUERY,
+            }
+            and previous_for_rewrite.asl_template is not None
+        ):
+            previously_grouped_metric = (
+                previous_for_rewrite.primary_intent == PrimaryIntent.METRIC_QUERY
+                and any(
+                    value.startswith("DEFAULT_TIME_GRANULARITY=")
+                    for value in previous_for_rewrite.assumptions
+                )
+            )
+            if previously_grouped_metric:
+                request.primary_intent = PrimaryIntent.METRIC_QUERY
+            request.metrics = [
+                metric.model_copy(deep=True)
+                for metric in previous_for_rewrite.metrics
+            ]
+            request.entity = previous_for_rewrite.entity
+            request.fields = list(previous_for_rewrite.fields)
+            request.dimensions = list(previous_for_rewrite.dimensions)
+            request.filters = [dict(item) for item in previous_for_rewrite.filters]
+            request.time_range = (
+                previous_for_rewrite.time_range.model_copy(deep=True)
+                if previous_for_rewrite.time_range is not None
+                else None
+            )
+            request.asl_template = copy.deepcopy(previous_for_rewrite.asl_template)
+            request.source_dataset_id = None
+            request.assumptions.append("DETERMINISTIC_GRAIN_FAST_PATH")
+        rules = getattr(self.classifier, "rules", self.classifier)
+        required_missing_slots = getattr(rules, "required_missing_slots", None)
+        if callable(required_missing_slots):
+            request.missing_slots = required_missing_slots(request)
         request.analysis_thread_id = turn_decision.selected_thread_id
         request = resolve_conversation_temporal_context(
             request,
@@ -2798,26 +2974,56 @@ class DataAnalysisOrchestrator:
                             request, query_result
                         )
                 except AdapterError as first_error:
-                    if first_error.code != "ANALYSIS_RESULT_CONTRACT_INVALID":
-                        raise
-                    await emit_progress(
-                        "DATA_RETRIEVAL",
-                        "RUNNING",
-                        "首次结果不符合分析契约，正在按缺失字段受控重查一次。",
-                        error_code=first_error.code,
+                    semantic_retry_codes = {
+                        "ASL_AMBIGUOUS",
+                        "SQL_TRANSLATION_AMBIGUOUS",
+                        "SQL_QUERY_ENTITY_ALIGNMENT_FAILED",
+                    }
+                    retry_code = (
+                        first_error.upstream_code
+                        if first_error.upstream_code in semantic_retry_codes
+                        else first_error.code
                     )
-                    retry_request = request.model_copy(deep=True, update={
-                        "request_id": uuid4(),
-                        "asl_template": None,
-                        "assumptions": [
-                            *request.assumptions,
+                    if first_error.code == "ANALYSIS_RESULT_CONTRACT_INVALID":
+                        await emit_progress(
+                            "DATA_RETRIEVAL",
+                            "RUNNING",
+                            "首次结果不符合分析契约，正在按缺失字段受控重查一次。",
+                            error_code=first_error.code,
+                        )
+                        retry_assumption = (
                             "ANALYSIS_CONTRACT_RETRY:"
                             + json.dumps(
                                 first_error.details,
                                 ensure_ascii=False,
                                 separators=(",", ":"),
                                 default=str,
-                            )[:4000],
+                            )[:4000]
+                        )
+                    elif retry_code in semantic_retry_codes:
+                        await emit_progress(
+                            "DATA_RETRIEVAL",
+                            "RUNNING",
+                            "首次语义规划未稳定对齐，正在基于当前已发布语义层重新召回并规划一次。",
+                            error_code=retry_code,
+                        )
+                        retry_assumption = (
+                            "SEMANTIC_QUERY_RETRY:"
+                            + json.dumps(
+                                first_error.details,
+                                ensure_ascii=False,
+                                separators=(",", ":"),
+                                default=str,
+                            )[:4000]
+                        )
+                    else:
+                        raise
+                    retry_request = retrieval_request.model_copy(deep=True, update={
+                        "request_id": uuid4(),
+                        "asl_template": None,
+                        "assumptions": [
+                            *retrieval_request.assumptions,
+                            retry_assumption,
                         ],
                     })
                     query_result = await self.adapters.query.query(
@@ -2825,6 +3031,10 @@ class DataAnalysisOrchestrator:
                         semantic_model_id=chat.semantic_model_id,
                         business_domain_id=self._effective_business_domain_id(chat),
                     )
+                    if relationship_count_request is not None:
+                        query_result = self._relationship_count_projection_result(
+                            request, query_result
+                        )
             except AdapterError as exc:
                 if exc.code in {"ASL_AMBIGUOUS", "SQL_TRANSLATION_AMBIGUOUS"}:
                     request.semantic_ambiguities = self._semantic_ambiguities(exc)
@@ -4185,12 +4395,12 @@ class DataAnalysisOrchestrator:
                 column for column in loaded.reference.columns
                 if not str(column).startswith("_")
             ]
-            if (
-                operation.get("type") == "limit"
-                and len(visible_source_columns) == 1
-            ):
-                # “前五个” over an existing one-column name list is a table
-                # preview, not a fresh TOP-N metric analysis.
+            if operation.get("type") == "limit":
+                # A pure limit over an immutable result is a presentation
+                # projection, not a new ranking analysis. Preserve every
+                # verified source column and its existing order; otherwise a
+                # multi-metric TOP-N follow-up can silently drop its primary
+                # ranking measure during a second analysis pass.
                 request.primary_intent = PrimaryIntent.DETAIL_QUERY
                 request.metrics = []
                 request.entity = request.entity or visible_source_columns[0]

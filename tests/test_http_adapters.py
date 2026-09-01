@@ -476,6 +476,37 @@ async def test_ranked_partner_sales_record_range_uses_transaction_time_scope():
 
 
 @pytest.mark.asyncio
+async def test_manufacturer_exclusion_recalls_current_registered_name_attributes():
+    ranked = CanonicalAnalysisRequest(
+        conversation_id="ranked-manufacturer-exclusion",
+        tenant_id="t1",
+        user_id="u1",
+        original_question=(
+            "查询上海市医用外科口罩产品的经销商，排除上海洁安厂家，"
+            "并按整体业务规模排序"
+        ),
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="整体业务规模")],
+        entity="经销商",
+        dimensions=["经销商"],
+        filters=[
+            {"field": "厂家名称", "operator": "NE", "value": "上海洁安"},
+        ],
+    )
+    client = StubClient([{"success": False}])
+
+    with pytest.raises(AdapterError) as exc:
+        await HttpDataRetrievalAdapter(
+            Settings(adapter_mode="http"), client
+        ).query(ranked, IDENTITY, semantic_model_id=81, business_domain_id=205)
+
+    assert exc.value.code == "ASL_GENERATION_FAILED"
+    payload = client.calls[0][2]
+    assert "manufacturer.manufacturer_name" in payload["retrieval_query"]
+    assert "名称属性进行精确名称过滤" in payload["query"]
+
+
+@pytest.mark.asyncio
 async def test_dealer_recommendation_uses_relationship_aware_retrieval_scope():
     metric_codes = (
         "dealer_recent_year_sales",
@@ -632,6 +663,20 @@ def test_product_dealer_list_is_set_shaped_without_explicit_relationship_word() 
         primary_intent=PrimaryIntent.DETAIL_QUERY,
         entity="经销商",
         fields=["经销商名称"],
+    )
+
+    assert requires_distinct_relationship_projection(detail) is True
+
+
+def test_product_applicable_department_is_set_shaped_without_list_word() -> None:
+    detail = CanonicalAnalysisRequest(
+        conversation_id="implicit-product-department-relation",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询超声血管导引穿刺套件适用的科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="产品",
+        fields=["商品名称", "适用科室"],
     )
 
     assert requires_distinct_relationship_projection(detail) is True
@@ -2076,6 +2121,32 @@ def test_dataset_fingerprint_is_stable_across_request_retries():
     first = HttpDataRetrievalAdapter._dataset(payload, request_id="request-a")
     second = HttpDataRetrievalAdapter._dataset(payload, request_id="request-b")
     assert first.snapshot_id == second.snapshot_id
+
+
+def test_relationship_projection_normalizes_and_deduplicates_visible_rows():
+    payload = {
+        "success": True,
+        "data": [
+            {"商品名称": "超声血管导引穿刺套件", "适用科室": "麻醉科"},
+            {"商品名称": "超声血管导引穿刺套件 ", "适用科室": " 麻醉科"},
+            {"商品名称": "超声血管导引穿刺套件", "适用科室": "肾内科"},
+        ],
+        "columns": ["商品名称", "适用科室"],
+        "row_count": 3,
+    }
+
+    dataset = HttpDataRetrievalAdapter._dataset(
+        payload,
+        request_id="relationship-dedupe",
+        distinct_projection=True,
+    )
+
+    assert dataset.rows == [
+        {"商品名称": "超声血管导引穿刺套件", "适用科室": "麻醉科"},
+        {"商品名称": "超声血管导引穿刺套件", "适用科室": "肾内科"},
+    ]
+    assert dataset.row_count == 2
+    assert dataset.total_row_count == 2
 
 
 class _ConcurrentRedis:

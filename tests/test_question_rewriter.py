@@ -100,6 +100,36 @@ def test_current_semantic_matches_ground_filter_and_dimension_labels():
     assert "SEMANTIC_DIMENSIONS_GROUNDED_FROM_CURRENT_MODEL" in grounded.assumptions
 
 
+def test_current_semantic_catalog_rebinds_provisional_product_filter_to_brand():
+    request = CanonicalAnalysisRequest(
+        conversation_id="semantic-family-rebind",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询最近一年销售过费森尤斯产品的经销商名单",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="经销商",
+        fields=["经销商名称"],
+        filters=[{"field": "商品名称", "operator": "EQ", "value": "费森尤斯"}],
+    )
+    matches = [{
+        "score": 0.98,
+        "entity_name": "商品主数据",
+        "attribute_name": "商品品牌",
+        "attribute_code": "product_brand",
+        "attribute_value": "费森尤斯",
+    }]
+
+    grounded = QuestionRewriter.ground_request_dimensions(request, matches)
+
+    assert grounded.filters == [
+        {"field": "商品品牌", "operator": "EQ", "value": "费森尤斯"},
+    ]
+    assert (
+        "SEMANTIC_FILTER_FAMILY_REBOUND_FROM_CURRENT_MODEL"
+        in grounded.assumptions
+    )
+
+
 @pytest.mark.asyncio
 async def test_semantic_matches_are_retained_without_forcing_text_rewrite():
     matches = [{
@@ -340,6 +370,33 @@ async def test_dimension_and_top_n_modifier_inherits_previous_metric_and_time():
     assert result.context_applied is True
     assert "指标=销售额" in result.rewritten_question
     assert "时间=2026-08-01至2026-09-01" in result.rewritten_question
+
+
+@pytest.mark.asyncio
+async def test_additive_metric_followup_keeps_previous_metric_and_grouping():
+    previous = CanonicalAnalysisRequest(
+        conversation_id="c-add-metric",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="按经销商查询整体业务规模",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="整体业务规模", canonical_name="整体业务规模")],
+        entity="经销商",
+        dimensions=["经销商"],
+        filters=[{"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"}],
+    )
+
+    result = await QuestionRewriter(None).rewrite(
+        "再加上订单笔数，其他条件不变。",
+        previous=previous,
+        semantic_model_id=81,
+        business_domain_id=None,
+    )
+
+    assert result.context_applied is True
+    assert "指标=整体业务规模" in result.rewritten_question
+    assert "维度=经销商" in result.rewritten_question
+    assert '"value":"医用外科口罩"' in result.rewritten_question
 
 
 @pytest.mark.asyncio
@@ -693,3 +750,17 @@ async def test_typo_rewrite_cannot_change_numeric_identifier():
     )
     assert "2026" in result.rewritten_question
     assert result.events == []
+@pytest.mark.asyncio
+async def test_temporal_scope_before_polite_verb_is_normalized_without_losing_terms():
+    result = await QuestionRewriter(None).rewrite(
+        "按月请计算空心纤维血液透析器产品的含税销售总额。",
+        previous=None,
+        semantic_model_id=None,
+        business_domain_id=None,
+    )
+
+    assert result.rewritten_question == "按月统计空心纤维血液透析器产品的含税销售总额。"
+    assert any(event.kind == "POLITE_WORD_ORDER" for event in result.events)
+    assert any(
+        event.kind == "GROUPED_CALCULATION_WORDING" for event in result.events
+    )

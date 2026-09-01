@@ -90,6 +90,22 @@ def render_execution_question(
     if request.ranking_limit:
         direction = "最低" if AnalysisOperator.BOTTOM_N in request.operators else "最高"
         parts.append(f"排名要求：{direction}{request.ranking_limit}项")
+    elif AnalysisOperator.SORT in request.operators:
+        direction = next(
+            (
+                value.split("=", 1)[1]
+                for value in request.assumptions
+                if value.startswith("SORT_DIRECTION=")
+            ),
+            "DESC",
+        )
+        label = "从低到高" if direction == "ASC" else "从高到低"
+        metric_name = (
+            request.metrics[0].canonical_name or request.metrics[0].input
+            if request.metrics
+            else "主要业务指标"
+        )
+        parts.append(f"排序要求：按{metric_name}{label}")
     if request.forecast_horizon_periods and request.forecast_granularity:
         parts.append(
             f"预测范围：未来{request.forecast_horizon_periods}个"
@@ -248,7 +264,7 @@ class RuleBasedIntentClassifier:
         "经销商近一年销售额", "近三月业绩增长率", "整体业务规模",
         "业绩增长率", "合作时长", "合作次数",
         "已合作医院数", "已合作经销商数", "已合作供应商数", "已合作客户数", "已合作门店数",
-        "销售情况", "销售额", "订单量", "销售量", "客户数", "客单价", "退款额", "退款率",
+        "销售情况", "销售额", "销售总数量", "订单量", "销售量", "客户数", "客单价", "退款额", "退款率",
         "科室匹配度", "科室覆盖率",
     )
     _known_dimensions = (
@@ -478,6 +494,26 @@ class RuleBasedIntentClassifier:
                 intent = matched[0]
 
         metrics = self._extract_metric_refs(normalized)
+        # “请列出某产品的销售额/订单数” asks for governed measures, not raw
+        # row detail. The verb “列出” alone must not override explicit metric
+        # nouns; true detail requests are already captured by名单、清单、明细、
+        # 逐笔 and similar result-shape markers above.
+        if (
+            intent == PrimaryIntent.DETAIL_QUERY
+            and metrics
+            and not explicit_detail_output
+        ):
+            intent = PrimaryIntent.METRIC_QUERY
+            matched = [
+                PrimaryIntent.METRIC_QUERY,
+                *(
+                    item for item in matched
+                    if item not in {
+                        PrimaryIntent.METRIC_QUERY,
+                        PrimaryIntent.DETAIL_QUERY,
+                    }
+                ),
+            ]
         operators = self._operators(intent, normalized)
         time_range = self._time_range(normalized)
         entity = (
@@ -560,6 +596,11 @@ class RuleBasedIntentClassifier:
             forecast_history_provided=forecast_history_provided,
             risk_level="HIGH" if intent == PrimaryIntent.DETAIL_QUERY else "MEDIUM",
         )
+        if AnalysisOperator.SORT in request.operators:
+            ascending = bool(re.search(r"升序|从低到高|由低到高", normalized))
+            request.assumptions.append(
+                "SORT_DIRECTION=" + ("ASC" if ascending else "DESC")
+            )
         self.apply_business_query_shapes(request, question)
         self._apply_default_time_range(request)
         request.missing_slots = self.required_missing_slots(request)
@@ -625,10 +666,13 @@ class RuleBasedIntentClassifier:
             if name in text and not any(name in existing for existing in selected):
                 selected.append(name)
         aliases = (
+            # Preserve the governed metric's exact name when the user states
+            # it.  Convenience wording remains backward compatible across
+            # semantic models that register ``销售量`` directly.
             ("销量", "销售量"),
             ("销售数量", "销售量"),
-            ("销售总数量", "销售量"),
-            ("总销售数量", "销售量"),
+            ("销售总数量", "销售总数量"),
+            ("总销售数量", "销售总数量"),
             ("订单总额（含税）", "含税销售总额"),
             ("订单总额(含税)", "含税销售总额"),
             ("订单含税总额", "含税销售总额"),
@@ -659,7 +703,12 @@ class RuleBasedIntentClassifier:
                 and surface.endswith("数")
                 and text[position + len(surface):position + len(surface) + 1] == "据"
             )
-            if position >= 0 and not followed_by_data and canonical not in selected:
+            if (
+                position >= 0
+                and not followed_by_data
+                and surface not in selected
+                and canonical not in selected
+            ):
                 selected.append(canonical)
         selected.sort(key=text.find)
         return [MetricRef(input=name) for name in selected]
@@ -836,8 +885,9 @@ class RuleBasedIntentClassifier:
             return
         cls._apply_metric_subject_scope(request, compact)
         transaction_activity = cls._uses_transaction_activity_definition(compact)
+        cooperation_activity = cls._uses_cooperation_activity_definition(compact)
         if (
-            transaction_activity
+            (transaction_activity or cooperation_activity)
             and "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
             not in request.assumptions
         ):
@@ -861,8 +911,10 @@ class RuleBasedIntentClassifier:
         cls._apply_department_partner_scope(request, compact)
         cls._apply_common_region_filter(request, compact)
         cls._apply_hospital_level_scope(request, compact)
+        cls._apply_explicit_grouping_scope(request, compact)
         cls._apply_multidimensional_product_scope(request, compact)
         cls._apply_brand_comparison_scope(request, compact)
+        cls._apply_transaction_partner_scope(request, compact)
         cls._apply_relationship_product_scope(request, compact)
         cls._apply_brand_product_scope(request, compact)
         cls._apply_explicit_dealer_metric_scope(request, question)
@@ -931,6 +983,16 @@ class RuleBasedIntentClassifier:
                 r"(?:合作)?(?:经销商|供应商|医院|客户|门店)",
                 compact,
             ))
+        metric_only_projection = bool(
+            request.metrics
+            and not any(
+                marker in compact
+                for marker in (
+                    "名单", "清单", "哪些", "明细", "逐笔", "每一条",
+                    "联系方式", "属于哪些", "适用于哪些", "适用的科室",
+                )
+            )
+        )
 
         protected_intents = {
             PrimaryIntent.REPORT_GENERATION,
@@ -959,7 +1021,11 @@ class RuleBasedIntentClassifier:
             ):
                 if operator not in request.operators:
                     request.operators.append(operator)
-        elif relation_detail and request.primary_intent not in protected_intents:
+        elif (
+            relation_detail
+            and not metric_only_projection
+            and request.primary_intent not in protected_intents
+        ):
             request.primary_intent = PrimaryIntent.DETAIL_QUERY
             request.risk_level = "HIGH"
             request.operators = [
@@ -1008,11 +1074,20 @@ class RuleBasedIntentClassifier:
                 if dimension != dimension_name
             ]
 
+        partner_result_shape = any(
+            shape in compact for shape in ("名单", "清单", "列出", "找出")
+        ) or bool(re.search(
+            r"(?:的)?(?:经销商|供应商).{0,80}?(?:按|根据)"
+            r".{0,30}?(?:排序|排名)",
+            compact,
+        ))
         partner_metric_list = bool(
-            request.primary_intent == PrimaryIntent.DETAIL_QUERY
+            request.primary_intent in {
+                PrimaryIntent.DETAIL_QUERY, PrimaryIntent.METRIC_QUERY,
+            }
             and request.metrics
             and any(partner in compact for partner in ("经销商", "供应商"))
-            and any(shape in compact for shape in ("名单", "清单", "列出", "找出"))
+            and partner_result_shape
         )
         if partner_metric_list:
             # A partner name accompanied by SUM/count/snapshot measures is a
@@ -1040,6 +1115,8 @@ class RuleBasedIntentClassifier:
             ):
                 if operator not in request.operators:
                     request.operators.append(operator)
+            if re.search(r"(?:按|根据).{0,80}(?:排序|排名)", compact):
+                cls._apply_ranked_partner_scope(request, compact)
 
         ranked_partner_list = bool(
             request.primary_intent not in (
@@ -1430,6 +1507,25 @@ class RuleBasedIntentClassifier:
         })
 
     @staticmethod
+    def _apply_explicit_grouping_scope(
+        request: CanonicalAnalysisRequest, text: str
+    ) -> None:
+        """Keep a nested grouping label from expanding to its parent object.
+
+        In ``按医院等级汇总`` the requested grain is the level, not every
+        hospital inside the level.  Substring extraction initially sees both
+        nouns; this correction applies to explicit grouping syntax and leaves
+        questions that request both hospital and level untouched.
+        """
+
+        if re.search(r"(?:按|各|每个|分)(?:医院)?(?:等级|级别)(?:汇总|统计|分析|展示|显示)?", text):
+            request.dimensions = [
+                value for value in request.dimensions if value != "医院"
+            ]
+            if "医院等级" not in request.dimensions:
+                request.dimensions.append("医院等级")
+
+    @staticmethod
     def _apply_multidimensional_product_scope(
         request: CanonicalAnalysisRequest, text: str
     ) -> None:
@@ -1549,6 +1645,77 @@ class RuleBasedIntentClassifier:
         request.filters.append({
             "field": "商品名称", "operator": "EQ", "value": product,
         })
+
+    @classmethod
+    def _apply_transaction_partner_scope(
+        cls, request: CanonicalAnalysisRequest, text: str
+    ) -> None:
+        """Separate an activity predicate from its catalog entity literal.
+
+        ``最近一年销售过费森尤斯产品的经销商`` contains three independent
+        slots: a time range, transaction activity and a catalog value.  Model
+        completion may occasionally concatenate the first two into the value
+        (``最近一年销售过费森尤斯``).  Keep only the catalog literal here; the
+        current semantic-model entity search subsequently decides whether it
+        is a brand, manufacturer, category or exact product field.
+        """
+
+        if not cls._uses_transaction_activity_definition(text):
+            return
+        match = re.search(
+            r"(?P<scope>[^，,。；;？?]{2,120}?)(?:产品|商品)(?:的)?"
+            r"(?P<partner>经销商|供应商)(?:名单|清单|列表)?",
+            text,
+        )
+        if match is None or "品牌" in match.group("scope"):
+            # Explicit ``<brand>品牌<product>`` is handled by the catalog
+            # splitter, which must retain both filters.
+            return
+        scope = re.sub(
+            r"^(?:请|麻烦|帮我|给我|请帮我)?"
+            r"(?:查询|查找|找出|列出|展示|显示|查看|看看|筛选|提供)?",
+            "",
+            match.group("scope"),
+        )
+        scope = re.sub(
+            r"^(?:(?:最近|近|过去)"
+            r"(?:\d+|[一二两三四五六七八九十]+)(?:个)?(?:天|日|周|月|季度|年)"
+            r"(?:内|期间)?|本年度|今年)?"
+            r"(?:正在销售|销售过|曾经销售|发生过销售|卖过|经营过?)",
+            "",
+            scope,
+        ).strip("的，,；;、")
+        if not 1 <= len(scope) <= 80 or any(ord(char) < 32 for char in scope):
+            return
+
+        partner = match.group("partner")
+        request.primary_intent = PrimaryIntent.DETAIL_QUERY
+        request.entity = partner
+        request.metrics = []
+        request.fields = [f"{partner}名称"]
+        request.filters = [
+            item for item in request.filters
+            if str(item.get("field") or "") not in {
+                "商品名称", "产品名称", "商品品牌", "品牌名称", "母品牌",
+                "厂家", "厂家名称",
+            }
+        ]
+        request.filters.append({
+            # This provisional family is intentionally rebound by
+            # QuestionRewriter.ground_request_dimensions from the latest
+            # semantic entity catalog when a stronger brand/category match is
+            # available.
+            "field": "商品名称", "operator": "EQ", "value": scope,
+        })
+        if "SET_RELATIONSHIP_PROJECTION" not in request.assumptions:
+            request.assumptions.append("SET_RELATIONSHIP_PROJECTION")
+        if (
+            "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
+            not in request.assumptions
+        ):
+            request.assumptions.append(
+                "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
+            )
 
     @staticmethod
     def _apply_brand_product_scope(
@@ -1983,7 +2150,7 @@ class RuleBasedIntentClassifier:
         )
         partner_scope = re.search(
             r"(?P<value>[^，,。；;]{2,180}?)(?:产品)?的?"
-            r"(?:经销商|供应商)(?:名单|清单)",
+            r"(?:经销商|供应商)(?:名单|清单)?(?=，|,|并|按|$)",
             scope_text,
         )
 
@@ -2218,7 +2385,19 @@ class RuleBasedIntentClassifier:
                     ]
                     if replacement_names:
                         metrics = [MetricRef(input=name) for name in replacement_names]
-            pending.metrics = metrics
+            additive_metric_change = bool(re.search(
+                r"(?:再|同时|并)?(?:加上|增加|新增|补充|带上|显示|返回).{0,20}"
+                r"(?:指标|金额|销售|数量|笔数|次数|均价|单价|利润|成本|收入)",
+                answer,
+            ))
+            if additive_metric_change:
+                by_name = {
+                    metric.canonical_name or metric.input: metric
+                    for metric in [*pending.metrics, *metrics]
+                }
+                pending.metrics = list(by_name.values())
+            else:
+                pending.metrics = metrics
         parsed_uses_default_time = (
             "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in parsed.assumptions
         )
@@ -2641,6 +2820,24 @@ class RuleBasedIntentClassifier:
             r"(?:期间|范围内).{0,12}(?:存在|有|发生).{0,12}销售|"
             r"发生过销售|"
             r"活跃(?:经销商|供应商|客户|门店).{0,20}(?:在)?销售",
+            compact,
+        ))
+
+    @staticmethod
+    def _uses_cooperation_activity_definition(text: str) -> bool:
+        """Return whether cooperation is scoped to a product relationship.
+
+        Product cooperation lists and their distinct-count metrics must share
+        the same positive-sales fact-row definition.  Otherwise a static
+        relationship table can return a different list size from the governed
+        ``已合作…数`` metric.
+        """
+
+        compact = re.sub(r"\s+", "", text)
+        return bool(re.search(
+            r"(?:产品|商品|导管|耗材|口罩|透析器).{0,40}"
+            r"(?:已)?合作(?:的)?(?:医院|经销商|供应商|客户|门店)"
+            r"(?:数量|数|名单|清单|列表)?",
             compact,
         ))
 
