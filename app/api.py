@@ -330,7 +330,6 @@ async def chat_stream(
             if event.get("stage") == "TASK_PLANNING" and not file_inspection_completed:
                 deferred_planning.append(event)
                 return []
-            ordered = [event]
             if (
                 event.get("stage") == "INTENT_RECOGNITION"
                 and event.get("status") == "COMPLETED"
@@ -341,9 +340,11 @@ async def chat_stream(
                 and event.get("status") == "COMPLETED"
             ):
                 file_inspection_completed = True
+                ordered = [event] if bool(event.get("file_based")) else []
                 ordered.extend(deferred_planning)
                 deferred_planning.clear()
-            return ordered
+                return ordered
+            return [event]
         yield _event("updata_state", {
             "step": "",
             "data": "accepted",

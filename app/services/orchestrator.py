@@ -4680,23 +4680,15 @@ class DataAnalysisOrchestrator:
         ]
         intent_label = cls._intent_label(request.primary_intent)
         intent_display = f"基于用户文件进行{intent_label}" if file_based else intent_label
-        if file_based:
-            file_judgement = (
-                "文件判断：检测到用户上传文件，且当前问题需要基于文件内容处理。"
-            )
-        elif file_status in {"READ_SUCCESS", "DATASET_BOUND"}:
-            file_judgement = (
-                "文件判断：检测到可用文件或数据集，但当前问题未基于文件内容，"
-                "按正常业务数据链路处理。"
-            )
-        else:
-            file_judgement = (
-                "文件判断：未检测到用户上传文件，按正常业务数据链路处理。"
-            )
+        file_judgement = (
+            "文件判断：检测到用户上传文件，且当前问题需要基于文件内容处理。\n"
+            if file_based
+            else ""
+        )
         return (
             "### ◉ 问题补全与意图识别\n"
             f"补全后的问题：{question[:600]}\n"
-            f"{file_judgement}\n"
+            f"{file_judgement}"
             f"任务意图：{intent_display}"
             f"（{request.primary_intent.value}，置信度 {request.intent_confidence:.2f}）\n"
             f"结构化提取：指标={metrics or ['未提取']}；实体={request.entity or '未提取'}；"

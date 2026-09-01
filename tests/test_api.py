@@ -102,8 +102,9 @@ def test_intent_summary_marks_file_based_analysis_only_when_selected():
     )
     assert "### ◉ 问题补全与意图识别" in file_summary
     assert "任务意图：基于用户文件进行趋势分析" in file_summary
+    assert "文件判断：检测到用户上传文件" in file_summary
     assert "任务意图：基于用户文件进行" not in normal_summary
-    assert "按正常业务数据链路处理" in normal_summary
+    assert "文件判断：" not in normal_summary
 
 
 def test_readiness_checks_memory_dependencies():
@@ -246,14 +247,11 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         data["type"] == "message_chunk" and data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
         for data in events
     )
-    file_chunk = next(
-        data for data in events
-        if data["type"] == "message_chunk"
+    assert not any(
+        data["type"] == "message_chunk"
         and data.get("meta", {}).get("stage") == "FILE_INSPECTION"
+        for data in events
     )
-    assert file_chunk["step"] == "step1"
-    assert file_chunk["meta"]["file_status"] == "NOT_PROVIDED"
-    assert "### ◉ 文件感知与解析" in file_chunk["content"]
     think_chunks = [
         data for data in events
         if data["type"] == "message_chunk" and data.get("step") != "output"
@@ -276,12 +274,11 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     all_thinking_content = "".join(data["content"] for data in think_chunks)
     expected_headings = [
         "### ◉ 意图识别",
-        "### ◉ 文件感知与解析",
         "### ◉ 任务拆分与规划",
         "### ◉ 输出总结",
     ]
     assert all(all_thinking_content.count(heading) == 1 for heading in expected_headings)
-    assert len(re.findall(r"(?m)^\s*#{1,6}\s+", all_thinking_content)) == 4
+    assert len(re.findall(r"(?m)^\s*#{1,6}\s+", all_thinking_content)) == 3
     intent_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
@@ -313,8 +310,6 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         and data.get("meta", {}).get("status") == "COMPLETED"
     ]
     assert "OUTPUT_SUMMARY" in completed_think_stages
-    assert completed_think_stages.index("INTENT_RECOGNITION") < completed_think_stages.index("FILE_INSPECTION")
-    assert completed_think_stages.index("FILE_INSPECTION") < completed_think_stages.index("TASK_PLANNING")
     if "TASK_PLANNING" in completed_think_stages:
         assert completed_think_stages.index("INTENT_RECOGNITION") < completed_think_stages.index("TASK_PLANNING")
 
