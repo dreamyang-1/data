@@ -1682,17 +1682,24 @@ class HttpDataRetrievalAdapter:
             if field and texts:
                 current_by_field.setdefault(field, set()).update(texts)
             for value in texts:
-                if value.casefold() not in folded_sql:
+                aliases = HttpDataRetrievalAdapter._sql_entity_value_aliases(
+                    field, value
+                )
+                if not any(alias.casefold() in folded_sql for alias in aliases):
                     missing.append({"field": field, "value": value})
                     continue
                 if str(item.get("operator") or "EQ").upper() in negative_operators:
-                    escaped = re.escape(value)
-                    if re.search(
-                        rf"(?:!=|<>|\bnot\s+(?:in|like)\b)[^;]{{0,160}}"
-                        rf"['\"]?{escaped}['\"]?",
-                        normalized_sql,
-                        flags=re.I,
-                    ) is None:
+                    polarity_preserved = any(
+                        re.search(
+                            rf"(?:!=|<>|\bnot\s+(?:in|like)\b)[^;]{{0,160}}"
+                            rf"['\"]?{re.escape(alias)}['\"]?",
+                            normalized_sql,
+                            flags=re.I,
+                        )
+                        is not None
+                        for alias in aliases
+                    )
+                    if not polarity_preserved:
                         polarity_errors.append({"field": field, "value": value})
         if missing:
             raise AdapterError(
@@ -1719,8 +1726,18 @@ class HttpDataRetrievalAdapter:
                 if (
                     text
                     and field in current_by_field
-                    and text not in current_by_field[field]
-                    and text.casefold() in folded_sql
+                    and not any(
+                        HttpDataRetrievalAdapter._sql_entity_values_equivalent(
+                            field, text, current
+                        )
+                        for current in current_by_field[field]
+                    )
+                    and any(
+                        alias.casefold() in folded_sql
+                        for alias in HttpDataRetrievalAdapter._sql_entity_value_aliases(
+                            field, text
+                        )
+                    )
                 ):
                     stale.append({"field": field, "value": text})
         if stale:
@@ -1733,6 +1750,54 @@ class HttpDataRetrievalAdapter:
             "status": "PASS",
             "checked_filters": len(explicit_filters),
         }
+
+    @staticmethod
+    def _sql_entity_value_aliases(field: str, value: str) -> set[str]:
+        """Return only field-safe aliases accepted by the SQL alignment gate.
+
+        Users commonly append the generic object word ``产品`` or ``商品`` to
+        a concrete product name, while the semantic layer stores the canonical
+        name without that suffix.  Treat that one normalization as equivalent
+        only for product-name fields.  Other entity families remain exact so a
+        manufacturer, region, or negative filter cannot be weakened.
+        """
+
+        normalized = str(value).strip().strip("%")
+        if not normalized:
+            return set()
+        aliases = {normalized}
+        normalized_field = str(field).strip().casefold()
+        is_product_field = (
+            normalized_field in {"商品", "商品名称", "产品", "产品名称"}
+            or "product" in normalized_field
+        )
+        if not is_product_field:
+            return aliases
+        for suffix in ("产品", "商品"):
+            if not normalized.endswith(suffix):
+                continue
+            canonical = normalized[: -len(suffix)].strip()
+            # Never turn a specific entity requirement into a one-character
+            # substring check (for example ``A产品`` -> ``A``).
+            if len(canonical) >= 2:
+                aliases.add(canonical)
+        return aliases
+
+    @staticmethod
+    def _sql_entity_values_equivalent(field: str, left: str, right: str) -> bool:
+        left_aliases = {
+            value.casefold()
+            for value in HttpDataRetrievalAdapter._sql_entity_value_aliases(
+                field, left
+            )
+        }
+        right_aliases = {
+            value.casefold()
+            for value in HttpDataRetrievalAdapter._sql_entity_value_aliases(
+                field, right
+            )
+        }
+        return bool(left_aliases & right_aliases)
 
     @staticmethod
     def _reuse_time_only_asl(

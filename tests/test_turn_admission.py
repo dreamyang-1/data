@@ -242,6 +242,85 @@ def test_query_to_sql_alignment_rejects_missing_or_stale_current_entity():
     assert stale.value.code == "STALE_CONTEXT_CONFLICT"
 
 
+def test_product_name_alignment_accepts_only_the_generic_product_suffix_alias():
+    request = _finalized_standalone(
+        RuleBasedIntentClassifier(),
+        TurnAdmissionGate(),
+        "查询空心纤维血液透析器产品合作的经销商名单。",
+        "product-suffix-alias",
+    )
+
+    report = HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+        request,
+        "SELECT dealer_name FROM dealer LEFT JOIN product "
+        "ON dealer.product_code = product.product_code "
+        "WHERE product.product_name = '空心纤维血液透析器'",
+    )
+    assert report == {"status": "PASS", "checked_filters": 1}
+
+    with pytest.raises(AdapterError) as different_product:
+        HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+            request,
+            "SELECT dealer_name FROM dealer LEFT JOIN product "
+            "ON dealer.product_code = product.product_code "
+            "WHERE product.product_name = '腹膜透析器'",
+        )
+    assert different_product.value.code == "SQL_QUERY_ENTITY_ALIGNMENT_FAILED"
+
+
+def test_product_suffix_alias_keeps_negative_filter_polarity_enforced():
+    request = _finalized_standalone(
+        RuleBasedIntentClassifier(),
+        TurnAdmissionGate(),
+        "查询空心纤维血液透析器产品合作的经销商名单。",
+        "negative-product-suffix",
+    )
+    request.filters[0]["operator"] = "NE"
+    explicit_filters = request.turn_admission.current_turn_facts.explicit_slots[
+        "filters"
+    ].value
+    explicit_filters[0]["operator"] = "NE"
+
+    report = HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+        request,
+        "SELECT dealer_name FROM dealer LEFT JOIN product "
+        "ON dealer.product_code = product.product_code "
+        "WHERE product.product_name != '空心纤维血液透析器'",
+    )
+    assert report["status"] == "PASS"
+
+    with pytest.raises(AdapterError) as reversed_polarity:
+        HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+            request,
+            "SELECT dealer_name FROM dealer LEFT JOIN product "
+            "ON dealer.product_code = product.product_code "
+            "WHERE product.product_name = '空心纤维血液透析器'",
+        )
+    assert reversed_polarity.value.code == "SQL_QUERY_FILTER_POLARITY_FAILED"
+
+
+def test_stale_product_detection_understands_the_same_suffix_alias():
+    gate, previous, current, decision = _decision(
+        "查询空心纤维血液透析器产品合作的经销商名单。",
+        "外周插管中心静脉导管呢？",
+        "stale-product-suffix",
+    )
+    request = gate.apply_explicit_slot_protection(
+        previous.model_copy(deep=True), current, decision
+    )
+    request.turn_admission = decision
+
+    with pytest.raises(AdapterError) as stale:
+        HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+            request,
+            "SELECT dealer_name FROM dealer LEFT JOIN product "
+            "ON dealer.product_code = product.product_code "
+            "WHERE product.product_name IN "
+            "('外周插管中心静脉导管', '空心纤维血液透析器')",
+        )
+    assert stale.value.code == "STALE_CONTEXT_CONFLICT"
+
+
 def test_filter_polarity_is_preserved_in_asl_and_sql_guards():
     question = (
         "查询上海市医用外科口罩产品的经销商，"
