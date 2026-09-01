@@ -542,22 +542,28 @@ class HttpDataRetrievalAdapter:
     @staticmethod
     def _constraint_field_family(value: str) -> str | None:
         normalized = value.lower()
-        families = {
-            "department": ("科室", "部门", "department", "dept"),
-            "category": ("分类", "类别", "品类", "category", "class"),
-            "region": ("地区", "区域", "省份", "城市", "region", "province", "city"),
-            "product": ("商品", "产品", "货品", "product", "goods", "sku"),
-            "supplier": ("供应商", "经销商", "supplier", "dealer", "vendor"),
-            "hospital": ("医院", "hospital"),
-            "customer": ("客户", "会员", "customer", "member"),
-            "store": ("门店", "店铺", "store", "shop"),
-            "brand": ("品牌", "brand"),
-        }
-        matches = [
-            family for family, aliases in families.items()
-            if any(alias in normalized for alias in aliases)
-        ]
-        return matches[0] if len(matches) == 1 else None
+        # Ordered from compound/specific concepts to generic entities.  A
+        # current semantic field such as ``product_category.product_type``
+        # contains both "product" and "category"; returning ambiguity here
+        # makes valid metadata updates look like an entity mismatch.
+        families = (
+            ("department", ("科室", "部门", "department", "dept")),
+            ("category", ("商品分类", "产品分类", "商品品类", "分类", "类别", "品类", "类目", "category", "class")),
+            ("brand", ("商品品牌", "品牌", "brand")),
+            ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
+            ("supplier", ("供应商", "经销商", "supplier", "dealer", "vendor")),
+            ("hospital", ("医院", "hospital")),
+            ("customer", ("客户", "会员", "customer", "member")),
+            ("store", ("门店", "店铺", "store", "shop")),
+            ("product", ("商品", "产品", "货品", "product", "goods", "sku")),
+        )
+        return next(
+            (
+                family for family, aliases in families
+                if any(alias in normalized for alias in aliases)
+            ),
+            None,
+        )
 
     @classmethod
     def _constraint_field_matches(cls, expected: str, actual: str) -> bool:
@@ -693,6 +699,14 @@ class HttpDataRetrievalAdapter:
                 + "。这些条件必须逐项出现在ASL filters中，字段可映射为已注册的语义字段，"
                 "但值、运算方向和业务含义不得省略、放宽或替换。"
             )
+        if request.dimensions:
+            asl_query += (
+                "\n调用方识别出的语义维度角色："
+                + json.dumps(request.dimensions, ensure_ascii=False, separators=(",", ":"))
+                + "。必须基于当前语义模型最新注册的实体、维度及关系逐项解析这些角色，"
+                "不得复用历史物理字段或应用侧静态表字段；每个角色都必须保留在ASL "
+                "dimensions中，筛选维度同时还必须保留对应filter。"
+            )
         if request.time_range is not None:
             asl_query += (
                 "\n调用方已确认的强制时间范围："
@@ -777,7 +791,9 @@ class HttpDataRetrievalAdapter:
             (
                 item for item in request.filters
                 if isinstance(item, dict)
-                and str(item.get("field") or "") in {"品牌", "品牌名称", "母品牌"}
+                and str(item.get("field") or "") in {
+                    "品牌", "品牌名称", "商品品牌", "母品牌",
+                }
             ),
             None,
         )
@@ -882,8 +898,10 @@ class HttpDataRetrievalAdapter:
             asl_query += (
                 f"\n执行要求：这是按{request.entity}分组的指标清单。"
                 f"必须保留{request.entity}名称维度以及全部请求指标；"
-                "品牌、商品分类、具体商品和地区均为过滤条件，不得作为替代指标，"
-                "不得把聚合指标删除或退化为纯明细查询。"
+                "城市、商品品牌、商品品类等显式范围既是筛选维度，也必须按调用方"
+                "维度角色完整投影；不得作为替代指标，不得把聚合指标删除或退化为"
+                "纯明细查询。若品牌和品类已经分别给出且用户未说具体商品，禁止再"
+                "合成或添加商品名称筛选。"
             )
         elif (
             request.primary_intent == PrimaryIntent.METRIC_QUERY
@@ -953,6 +971,13 @@ class HttpDataRetrievalAdapter:
         asl_cache_key: str | None = None
         cacheable_asl = (
             not request.dependency_constraints
+            # Without an upstream semantic-metadata version in the cache key,
+            # a filtered or grouped plan can retain renamed dimensions and
+            # relationship paths for several minutes.  Always re-resolve such
+            # plans against the current model; scalar plans may still use the
+            # bounded cache because metric-definition fingerprints are keyed.
+            and not request.filters
+            and not request.dimensions
             and analysis_contract is None
             and exploration_requirements is None
             and self.settings.asl_plan_cache_ttl_seconds > 0
@@ -1127,6 +1152,7 @@ class HttpDataRetrievalAdapter:
                 details=ambiguities,
             )
         self._validate_request_filters(asl, request)
+        self._validate_no_synthetic_product_filter(asl, request)
         self._validate_dependency_constraints(asl, request)
         if request.primary_intent == PrimaryIntent.DETAIL_QUERY:
             dimensions = asl.get("dimensions")
@@ -1174,6 +1200,7 @@ class HttpDataRetrievalAdapter:
                     "ASL_ANALYSIS_SHAPE_INVALID",
                     "grouped partner metric ASL must retain requested metrics",
                 )
+            self._validate_grouped_semantic_dimensions(asl, request)
         if ordered_entity_metric_ranking_request(request):
             sort = asl.get("sort")
             if not (
@@ -1639,6 +1666,80 @@ class HttpDataRetrievalAdapter:
                 "ASL_REQUIRED_FILTER_MISSING",
                 "ASL did not preserve one or more caller-grounded filters",
                 details={"missing_filters": missing},
+            )
+
+    @classmethod
+    def _validate_no_synthetic_product_filter(
+        cls,
+        asl: dict[str, Any],
+        request: CanonicalAnalysisRequest,
+    ) -> None:
+        """Reject a product-name guess when brand + category fully define scope."""
+
+        requested_families = {
+            cls._constraint_field_family(str(item.get("field") or ""))
+            for item in request.filters
+            if isinstance(item, dict)
+        }
+        if not {"brand", "category"}.issubset(requested_families):
+            return
+        if "product" in requested_families:
+            return
+        synthetic = [
+            item for item in (asl.get("filters") or [])
+            if isinstance(item, dict)
+            and cls._constraint_field_family(str(item.get("field") or "")) == "product"
+        ]
+        if synthetic:
+            raise AdapterError(
+                "ASL_SYNTHETIC_PRODUCT_FILTER",
+                "ASL invented a product-name filter for an explicit brand/category scope",
+                details={"unexpected_filters": synthetic},
+            )
+
+    @classmethod
+    def _validate_grouped_semantic_dimensions(
+        cls,
+        asl: dict[str, Any],
+        request: CanonicalAnalysisRequest,
+    ) -> None:
+        """Require every requested role using current ASL semantic metadata."""
+
+        dimensions = [
+            item for item in (asl.get("dimensions") or [])
+            if isinstance(item, dict)
+        ]
+        actual_references = [
+            " ".join(
+                str(item.get(key) or "")
+                for key in ("name", "alias", "attr", "field")
+            ).strip()
+            for item in dimensions
+        ]
+        missing: list[str] = []
+        for expected in request.dimensions:
+            expected_text = str(expected).strip()
+            if not expected_text:
+                continue
+            expected_family = cls._constraint_field_family(expected_text)
+            preserved = any(
+                expected_text.casefold() in actual.casefold()
+                or (
+                    expected_family is not None
+                    and cls._constraint_field_family(actual) == expected_family
+                )
+                for actual in actual_references
+            )
+            if not preserved:
+                missing.append(expected_text)
+        if missing:
+            raise AdapterError(
+                "ASL_REQUIRED_DIMENSION_MISSING",
+                "ASL omitted one or more current semantic dimension roles",
+                details={
+                    "missing_dimensions": missing,
+                    "projected_dimensions": dimensions,
+                },
             )
 
     @staticmethod

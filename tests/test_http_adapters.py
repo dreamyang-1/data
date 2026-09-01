@@ -901,6 +901,69 @@ def test_relationship_identity_dimension_deduplication_keeps_explicit_name_alone
     assert asl["dimensions"] == [{"name": "dealer.dealer_name"}]
 
 
+def test_grouped_scope_requires_all_current_semantic_dimension_roles():
+    grouped = CanonicalAnalysisRequest(
+        conversation_id="semantic-role-contract",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询品牌品类经销商清单并显示销售额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        entity="经销商",
+        dimensions=["经销商", "城市", "商品品牌", "商品品类"],
+    )
+    asl = {
+        "dimensions": [
+            {"name": "dealer", "alias": "经销商"},
+            {"name": "dealer.city", "alias": "城市"},
+            {"name": "product.brand", "alias": "商品品牌"},
+            {"name": "product_category.product_type", "alias": "商品品类"},
+        ]
+    }
+
+    HttpDataRetrievalAdapter._validate_grouped_semantic_dimensions(asl, grouped)
+
+    asl["dimensions"].pop()
+    with pytest.raises(AdapterError) as missing:
+        HttpDataRetrievalAdapter._validate_grouped_semantic_dimensions(asl, grouped)
+    assert missing.value.code == "ASL_REQUIRED_DIMENSION_MISSING"
+    assert missing.value.details["missing_dimensions"] == ["商品品类"]
+
+
+def test_brand_category_scope_rejects_an_invented_product_name_filter():
+    grouped = CanonicalAnalysisRequest(
+        conversation_id="no-synthetic-product",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询江苏苏云品牌低值耗材的经销商清单",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        filters=[
+            {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
+            {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
+        ],
+    )
+    valid = {
+        "filters": [
+            {"field": "manufacturer.parent_brand", "operator": "=", "value": "江苏苏云"},
+            {"field": "product_category.product_type", "operator": "=", "value": "低值耗材"},
+        ]
+    }
+    HttpDataRetrievalAdapter._validate_no_synthetic_product_filter(valid, grouped)
+
+    invalid = {"filters": [
+        *valid["filters"],
+        {
+            "field": "product.product_name",
+            "operator": "=",
+            "value": "江苏苏云品牌低值耗材",
+        },
+    ]}
+    with pytest.raises(AdapterError) as synthetic:
+        HttpDataRetrievalAdapter._validate_no_synthetic_product_filter(
+            invalid, grouped
+        )
+    assert synthetic.value.code == "ASL_SYNTHETIC_PRODUCT_FILTER"
+
+
 def test_current_metric_formula_replaces_stale_same_table_distinct_field():
     sql = (
         "SELECT dealer.dealer_name AS 经销商, "
@@ -1168,6 +1231,59 @@ async def test_validated_asl_plan_is_reused_but_sql_is_executed_again():
     assert paths.count("/agent/query") == 1
     assert paths.count("/api/translate") == 2
     assert paths.count("/api/execute") == 2
+
+
+@pytest.mark.asyncio
+async def test_dimension_scoped_plan_is_regenerated_after_semantic_metadata_update():
+    first_asl = {
+        "version": "2.0",
+        "metrics": [],
+        "dimensions": [{"name": "member.level", "alias": "会员等级"}],
+        "ambiguity": [],
+    }
+    second_asl = {
+        "version": "2.0",
+        "metrics": [],
+        "dimensions": [{"name": "customer.member_level", "alias": "会员等级"}],
+        "ambiguity": [],
+    }
+    translated = {"success": True, "sql": "SELECT member_level FROM customer"}
+    executed = {
+        "success": True,
+        "sql": "SELECT member_level FROM customer",
+        "data": [{"会员等级": "普通"}],
+        "columns": ["会员等级"],
+        "row_count": 1,
+    }
+    client = StubClient([
+        {"success": True, "result": json.dumps(first_asl, ensure_ascii=False)},
+        translated,
+        executed,
+        {"success": True, "result": json.dumps(second_asl, ensure_ascii=False)},
+        translated,
+        executed,
+    ])
+    adapter = HttpDataRetrievalAdapter(
+        Settings(
+            adapter_mode="http",
+            asl_plan_cache_ttl_seconds=300,
+            asl_plan_cache_max_items=8,
+        ),
+        client,
+    )
+    scoped = request().model_copy(update={"dimensions": ["会员等级"]})
+
+    first = await adapter.query(
+        scoped, IDENTITY, semantic_model_id=8, business_domain_id=13
+    )
+    second = await adapter.query(
+        scoped, IDENTITY, semantic_model_id=8, business_domain_id=13
+    )
+
+    assert first.asl["dimensions"][0]["name"] == "member.level"
+    assert second.asl["dimensions"][0]["name"] == "customer.member_level"
+    paths = [call[1] for call in client.calls]
+    assert paths.count("/agent/query") == 2
 
 
 @pytest.mark.asyncio
@@ -1452,7 +1568,7 @@ async def test_unbounded_entity_sort_requires_metric_order_without_limit():
     asl = {
         "version": "2.0",
         "metrics": [{"name": "business_scale", "alias": "整体业务规模"}],
-        "dimensions": [{"name": "dealer.dealer_name", "alias": "经销商名称"}],
+        "dimensions": [{"name": "dealer.dealer_name", "alias": "经销商"}],
         "sort": {"field": "business_scale", "field_type": "metric", "direction": "DESC"},
         "limit": None,
         "ambiguity": [],
@@ -1624,7 +1740,12 @@ async def test_grouped_partner_metric_keeps_metric_and_uses_catalog_relationship
         "version": "2.0",
         "subject": {"entity": "sales_order"},
         "metrics": [{"name": "tax_included_sales_amount", "alias": "销售总额"}],
-        "dimensions": [{"name": "dealer.dealer_name", "alias": "经销商名称"}],
+        "dimensions": [
+            {"name": "dealer.dealer_name", "alias": "经销商"},
+            {"name": "guoyao_company.city", "alias": "城市"},
+            {"name": "manufacturer.parent_brand", "alias": "商品品牌"},
+            {"name": "product_category.product_type", "alias": "商品品类"},
+        ],
         "filters": [
             {"field": "dealer.province", "operator": "=", "value": "上海市"},
             {
@@ -1666,12 +1787,12 @@ async def test_grouped_partner_metric_keeps_metric_and_uses_catalog_relationship
         rewritten_question=business_question,
         primary_intent=PrimaryIntent.METRIC_QUERY,
         entity="经销商",
-        dimensions=["经销商"],
+        dimensions=["经销商", "城市", "商品品牌", "商品品类"],
         metrics=[MetricRef(input="销售总额")],
         filters=[
-            {"field": "地区", "operator": "EQ", "value": "上海市"},
-            {"field": "品牌名称", "operator": "EQ", "value": "江苏苏云"},
-            {"field": "商品分类", "operator": "EQ", "value": "低值耗材"},
+            {"field": "城市", "operator": "EQ", "value": "上海市"},
+            {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
+            {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
         ],
     )
 
@@ -1687,6 +1808,10 @@ async def test_grouped_partner_metric_keeps_metric_and_uses_catalog_relationship
         )
     )
     assert "按经销商分组的指标清单" in payload["query"]
+    assert all(
+        value in payload["query"]
+        for value in ("经销商", "城市", "商品品牌", "商品品类")
+    )
     translated_asl = json.loads(client.calls[1][2]["asl"])
     assert translated_asl["metrics"] == asl["metrics"]
     assert result.dataset.row_count == 1

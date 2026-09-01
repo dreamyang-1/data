@@ -165,8 +165,8 @@ def test_supplier_contact_list_is_detail_without_metric_or_time_clarification():
     assert request.fields == ["供应商名称", "联系人姓名", "联系人手机号"]
     assert request.missing_slots == []
     assert request.filters == [
-        {"field": "地区", "operator": "EQ", "value": "上海市"},
-        {"field": "品牌名称", "operator": "EQ", "value": "漫步者"},
+        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "商品品牌", "operator": "EQ", "value": "漫步者"},
         {"field": "商品名称", "operator": "EQ", "value": "耳机"},
     ]
 
@@ -195,13 +195,13 @@ def test_branded_consumable_partner_scope_is_not_one_product_name():
     assert request.entity == "经销商"
     assert request.fields == []
     assert [metric.input for metric in request.metrics] == ["销售总额"]
-    assert request.dimensions == ["经销商"]
+    assert request.dimensions == ["经销商", "城市", "商品品牌", "商品品类"]
     assert AnalysisOperator.GROUP_BY in request.operators
     assert AnalysisOperator.AGGREGATE in request.operators
     assert request.filters == [
-        {"field": "地区", "operator": "EQ", "value": "上海市"},
-        {"field": "品牌名称", "operator": "EQ", "value": "江苏苏云"},
-        {"field": "商品分类", "operator": "EQ", "value": "低值耗材"},
+        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
+        {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
     ]
     assert all(item["field"] != "商品名称" for item in request.filters)
 
@@ -214,9 +214,9 @@ def test_branded_category_scope_is_generic_not_vendor_specific():
     )
 
     assert request.filters == [
-        {"field": "地区", "operator": "EQ", "value": "浙江省"},
-        {"field": "品牌名称", "operator": "EQ", "value": "华美医疗"},
-        {"field": "商品分类", "operator": "EQ", "value": "高值医用耗材"},
+        {"field": "城市", "operator": "EQ", "value": "浙江省"},
+        {"field": "商品品牌", "operator": "EQ", "value": "华美医疗"},
+        {"field": "商品品类", "operator": "EQ", "value": "高值医用耗材"},
     ]
 
 
@@ -228,8 +228,8 @@ def test_concrete_product_after_brand_remains_exact_product_scope():
     )
 
     assert request.filters == [
-        {"field": "地区", "operator": "EQ", "value": "上海市"},
-        {"field": "品牌名称", "operator": "EQ", "value": "BD"},
+        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "商品品牌", "operator": "EQ", "value": "BD"},
         {
             "field": "商品名称",
             "operator": "EQ",
@@ -506,9 +506,9 @@ def test_all_dealers_followup_is_a_deduplicated_catalog_list():
     )
     assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
     assert request.metrics == []
-    assert {"field": "地区", "operator": "EQ", "value": "上海市"} in request.filters
-    assert {"field": "品牌名称", "operator": "EQ", "value": "江苏苏云"} in request.filters
-    assert {"field": "商品分类", "operator": "EQ", "value": "低值耗材"} in request.filters
+    assert {"field": "城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"} in request.filters
+    assert {"field": "商品品类", "operator": "EQ", "value": "低值耗材"} in request.filters
     assert not any("所有" in str(item.get("value")) for item in request.filters)
 
 
@@ -539,8 +539,8 @@ def test_dealer_quantity_is_normalized_to_relationship_count_metric():
     assert request.primary_intent == PrimaryIntent.METRIC_QUERY
     assert [item.input for item in request.metrics] == ["已合作经销商数"]
     assert "经销商" not in request.dimensions
-    assert {"field": "地区", "operator": "EQ", "value": "上海市"} in request.filters
-    assert {"field": "品牌名称", "operator": "EQ", "value": "BD"} in request.filters
+    assert {"field": "城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert {"field": "商品品牌", "operator": "EQ", "value": "BD"} in request.filters
     assert {
         "field": "商品名称", "operator": "EQ", "value": "超声血管导引穿刺套件"
     } in request.filters
@@ -1101,10 +1101,10 @@ def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
         "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
         in request.assumptions
     )
-    assert request.dimensions == ["经销商"]
+    assert request.dimensions == ["经销商", "城市", "商品品牌", "商品名称"]
     assert request.filters == [
-        {"field": "地区", "operator": "EQ", "value": "上海市"},
-        {"field": "品牌名称", "operator": "EQ", "value": "振德医疗"},
+        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "商品品牌", "operator": "EQ", "value": "振德医疗"},
         {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
     ]
 

@@ -1883,39 +1883,79 @@ class RuleBasedIntentClassifier:
         elif catalog_value not in {"", "产品", "商品", "货品", "物料"}:
             product = catalog_value
 
-        def replace_filter(field: str, value: str) -> None:
+        def replace_filter(field: str, value: str, aliases: set[str]) -> None:
             request.filters = [
                 item for item in request.filters
-                if str(item.get("field") or "") != field
+                if str(item.get("field") or "") not in aliases
             ]
             request.filters.append({"field": field, "operator": "EQ", "value": value})
 
         if region:
-            replace_filter("地区", region)
-        replace_filter("品牌名称", brand)
+            replace_filter(
+                "城市", region, {"地区", "区域", "省份", "城市", "业务城市"}
+            )
+        replace_filter(
+            "商品品牌", brand, {"品牌", "品牌名称", "商品品牌", "母品牌"}
+        )
 
         # Remove the broad ``商品名称=<brand>品牌<category>`` guess produced by
         # a preceding generic scope extractor, even when the user only said
         # ``品牌产品`` and therefore supplied no concrete catalog value.
         request.filters = [
             item for item in request.filters
-            if str(item.get("field") or "") not in {"商品名称", "商品分类"}
+            if str(item.get("field") or "") not in {
+                "商品名称", "产品名称", "商品分类", "产品分类", "商品品类", "品类",
+            }
         ]
         if category:
-            replace_filter("商品分类", category)
-            request.dimensions = [
-                value for value in request.dimensions
-                if value not in {"品牌", "品类", "商品"}
-            ]
+            replace_filter(
+                "商品品类",
+                category,
+                {"商品分类", "产品分类", "商品品类", "品类", "类目", "类别"},
+            )
         elif product:
-            replace_filter("商品名称", product)
-            request.dimensions = [
-                value for value in request.dimensions if value != "品牌"
-            ]
-        else:
-            request.dimensions = [
-                value for value in request.dimensions if value != "品牌"
-            ]
+            replace_filter(
+                "商品名称", product, {"商品名称", "产品名称", "商品", "产品"}
+            )
+
+        # These are semantic dimension roles, not database columns.  Oagnet
+        # resolves each role against the dimensions and relationship graph of
+        # the *current* semantic-model version.  Keeping every explicit scope
+        # role visible prevents a compound partner query from being flattened
+        # to only ``经销商`` or from inventing one synthetic product dimension.
+        partner = "经销商" if "经销商" in compact else "供应商"
+        scalar_relationship_count = any(
+            metric.input in {"已合作经销商数", "已合作供应商数"}
+            for metric in request.metrics
+        ) and not re.search(
+            rf"(?:按|各|每(?:家|个)|分){partner}|{partner}维度",
+            compact,
+        )
+        scoped_dimensions: list[str] = []
+        if not scalar_relationship_count:
+            scoped_dimensions.append(partner)
+            if region:
+                scoped_dimensions.append("城市")
+            scoped_dimensions.append("商品品牌")
+            if category:
+                scoped_dimensions.append("商品品类")
+            elif product:
+                scoped_dimensions.append("商品名称")
+        catalog_dimension_aliases = {
+            "地区", "区域", "省份", "城市", "业务城市",
+            "品牌", "品牌名称", "商品品牌", "母品牌",
+            "商品分类", "产品分类", "商品品类", "品类", "类目", "类别",
+            "商品", "产品", "商品名称", "产品名称",
+            "经销商", "供应商",
+        }
+        remaining_dimensions = [
+            value for value in request.dimensions
+            if value not in catalog_dimension_aliases
+        ]
+        request.dimensions = list(dict.fromkeys([
+            *scoped_dimensions,
+            *remaining_dimensions,
+        ]))
 
     @staticmethod
     def _apply_ranked_partner_scope(

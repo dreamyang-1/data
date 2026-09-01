@@ -83,6 +83,130 @@ def _filter_value(request: CanonicalAnalysisRequest, field: str) -> str | None:
     )
 
 
+def test_catalog_category_scope_does_not_become_a_synthetic_product_fact():
+    question = (
+        "查询上海市江苏苏云品牌低值耗材的经销商清单，"
+        "并显示各经销商含税销售总额。"
+    )
+    request = _finalized_standalone(
+        RuleBasedIntentClassifier(),
+        TurnAdmissionGate(),
+        question,
+        "catalog-category-admission",
+    )
+
+    assert request.filters == [
+        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
+        {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
+    ]
+    assert request.dimensions == ["经销商", "城市", "商品品牌", "商品品类"]
+    facts = request.turn_admission.current_turn_facts
+    assert facts.core_subjects == {
+        "region": "上海市",
+        "brand": "江苏苏云",
+        "category": "低值耗材",
+    }
+    assert facts.explicit_slots["filters"].value == request.filters
+    assert "product" not in facts.core_subjects
+
+
+def test_catalog_category_alignment_accepts_split_sql_and_still_rejects_loss():
+    request = _finalized_standalone(
+        RuleBasedIntentClassifier(),
+        TurnAdmissionGate(),
+        "查询上海市江苏苏云品牌低值耗材的经销商清单，"
+        "并显示各经销商含税销售总额。",
+        "catalog-category-alignment",
+    )
+    split_sql = (
+        "SELECT dealer.dealer_name, SUM(sales_order.amount_with_tax) "
+        "AS 含税销售总额 FROM sales_order "
+        "JOIN dealer ON sales_order.dealer_code = dealer.dealer_code "
+        "JOIN product ON sales_order.product_code = product.product_code "
+        "JOIN manufacturer ON product.manufacturer_code = "
+        "manufacturer.manufacturer_code "
+        "JOIN product_category ON product.category_code = "
+        "product_category.category_code "
+        "WHERE dealer.city = '上海市' "
+        "AND manufacturer.manufacturer_name = '江苏苏云医疗器材有限公司' "
+        "AND product_category.category_name = '低值耗材' "
+        "GROUP BY dealer.dealer_name"
+    )
+
+    report = HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+        request, split_sql
+    )
+    assert report == {"status": "PASS", "checked_filters": 3}
+
+    with pytest.raises(AdapterError) as missing_category:
+        HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+            request,
+            split_sql.replace(
+                "AND product_category.category_name = '低值耗材' ", ""
+            ),
+        )
+    assert missing_category.value.code == "SQL_QUERY_ENTITY_ALIGNMENT_FAILED"
+    assert missing_category.value.details == {
+        "missing_entities": [{"field": "商品品类", "value": "低值耗材"}]
+    }
+
+
+def test_catalog_category_change_is_a_core_subject_change_not_a_followup_leak():
+    gate, _, _, decision = _decision(
+        "查询上海市江苏苏云品牌低值耗材的经销商清单。",
+        "查询上海市江苏苏云品牌高值耗材的经销商清单。",
+        "catalog-category-topic-change",
+    )
+
+    assert decision.current_turn_facts.core_subjects["category"] == "高值耗材"
+    assert decision.core_subject_changed is True
+    assert decision.inherit_business_context is False
+
+
+def test_concrete_product_fact_remains_protected_when_no_category_was_parsed():
+    request = _finalized_standalone(
+        RuleBasedIntentClassifier(),
+        TurnAdmissionGate(),
+        "查询上海市江苏苏云品牌医用外科口罩的经销商清单。",
+        "catalog-product-admission",
+    )
+
+    facts = request.turn_admission.current_turn_facts
+    assert facts.core_subjects["product"] == "医用外科口罩"
+    assert _filter_value(request, "商品名称") == "医用外科口罩"
+
+
+def test_semantic_dimension_rebind_updates_provenance_before_slot_protection():
+    classifier = RuleBasedIntentClassifier()
+    gate = TurnAdmissionGate()
+    question = "查询上海市江苏苏云品牌低值耗材的经销商清单。"
+    raw = classifier.classify(question, IDENTITY, "semantic-rebind")
+    decision = gate.evaluate(
+        question=question,
+        current=raw,
+        previous=None,
+        message_id="semantic-rebind-message",
+    )
+    grounded = raw.model_copy(deep=True)
+    grounded.filters = [
+        {"field": "销售城市", "operator": "EQ", "value": "上海市"},
+        {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
+        {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
+    ]
+    grounded.dimensions = ["经销商", "销售城市", "商品品牌", "商品品类"]
+
+    gate.rebind_current_semantic_shape(decision, grounded)
+    final = gate.apply_explicit_slot_protection(
+        grounded.model_copy(deep=True), grounded, decision
+    )
+
+    assert final.filters == grounded.filters
+    assert final.dimensions == grounded.dimensions
+    assert decision.current_turn_facts.explicit_slots["filters"].value == grounded.filters
+    assert decision.current_turn_facts.explicit_slots["dimensions"].value == grounded.dimensions
+
+
 def test_case_1_complete_new_product_trend_is_standalone_new_topic():
     gate, previous, current, decision = _decision(
         "查询空心纤维血液透析器产品合作的经销商名单。",

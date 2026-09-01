@@ -2423,6 +2423,24 @@ class DataAnalysisOrchestrator:
             request.asl_template = copy.deepcopy(previous_for_rewrite.asl_template)
             request.assumptions.append("DETERMINISTIC_TIME_FAST_PATH")
 
+        if rewrite is not None and rewrite.semantic_matches:
+            # The entity-attribute endpoint is scoped to the current semantic
+            # model/domain.  Use its latest dimension labels for both the raw
+            # provenance frame and the executable request before current-turn
+            # slot protection runs; values and turn relation remain unchanged.
+            QuestionRewriter.ground_request_dimensions(
+                raw_rule_request, rewrite.semantic_matches
+            )
+            QuestionRewriter.ground_request_dimensions(
+                request, rewrite.semantic_matches
+            )
+            if "SEMANTIC_DIMENSIONS_GROUNDED_FROM_CURRENT_MODEL" in (
+                raw_rule_request.assumptions
+            ):
+                self.turn_admission_gate.rebind_current_semantic_shape(
+                    turn_decision, raw_rule_request
+                )
+
         admission_base = request
         if (
             pending is None

@@ -74,7 +74,14 @@ _CORE_FILTER_FIELDS = {
     "产品名称": "product",
     "商品": "product",
     "产品": "product",
+    "商品分类": "category",
+    "产品分类": "category",
+    "商品品类": "category",
+    "品类": "category",
+    "类目": "category",
+    "类别": "category",
     "品牌名称": "brand",
+    "商品品牌": "brand",
     "母品牌": "brand",
     "厂家名称": "manufacturer",
     "制造商名称": "manufacturer",
@@ -297,12 +304,22 @@ class TurnAdmissionGate:
         filters = [dict(item) for item in current.filters]
         core_subjects = self._core_subjects(current)
         lexical_product = self._lexical_product_from_raw_turn(compact)
-        if lexical_product and "product" not in core_subjects:
+        if lexical_product and not (
+            {"product", "category"} & core_subjects.keys()
+        ):
             # Elliptical entity changes such as ``外周插管中心静脉导管呢？``
             # are intentionally absent from a standalone deterministic parse:
             # the analytical action must come from the active thread.  The
             # product itself is nevertheless explicit in the *current* turn
             # and therefore has to be protected before any context merge.
+            #
+            # A catalog category is different: in a compound scope such as
+            # ``江苏苏云品牌低值耗材的经销商`` the raw lexical pattern can see the
+            # trailing ``耗材`` and mistake the whole brand/category phrase for
+            # one product name.  The deterministic classifier has already
+            # normalized that phrase into brand + category filters.  Treat the
+            # normalized category as authoritative so the admission gate does
+            # not re-introduce a contradictory synthetic product filter.
             core_subjects["product"] = lexical_product
             filters = [
                 item
@@ -357,11 +374,27 @@ class TurnAdmissionGate:
                 1.0 if metric_is_explicit else 0.9,
             )
 
+        filter_dimension_families = {
+            self._semantic_field_family(str(item.get("field") or ""))
+            for item in filters
+            if isinstance(item, dict)
+        }
         explicit_dimensions = [
             value for value in current.dimensions
             if re.search(
                 rf"(?:按|各|每个|分)(?:[^，,。；;]{{0,8}})?{re.escape(value)}",
                 compact,
+            )
+            or (
+                value in compact
+                and any(
+                    marker in compact
+                    for marker in ("名单", "清单", "列表", "列出", "显示", "展示")
+                )
+            )
+            or (
+                self._semantic_field_family(value) is not None
+                and self._semantic_field_family(value) in filter_dimension_families
             )
         ]
         if explicit_dimensions:
@@ -726,6 +759,55 @@ class TurnAdmissionGate:
         return request
 
     @classmethod
+    def rebind_current_semantic_shape(
+        cls,
+        decision: TurnAdmissionDecision,
+        current: CanonicalAnalysisRequest,
+    ) -> None:
+        """Refresh slot labels after current-model semantic grounding.
+
+        Turn relation is intentionally left untouched: the raw-turn gate has
+        already decided whether history may be inherited.  Only field and
+        dimension labels are refreshed, while literal values and provenance
+        remain current-turn facts.  This keeps strict downstream alignment in
+        sync when semantic metadata renames a dimension.
+        """
+
+        facts = decision.current_turn_facts
+        source_turn = next(
+            (
+                slot.source_turn
+                for slot in facts.explicit_slots.values()
+                if slot.source_turn
+            ),
+            None,
+        )
+        if current.filters:
+            prior = facts.explicit_slots.get("filters")
+            facts.explicit_slots["filters"] = SlotProvenance(
+                value=[dict(item) for item in current.filters],
+                source=(prior.source if prior is not None else SlotSource.CURRENT_EXPLICIT),
+                source_turn=(prior.source_turn if prior is not None else source_turn),
+                confidence=(prior.confidence if prior is not None else 1.0),
+            )
+        if current.dimensions:
+            prior = facts.explicit_slots.get("dimensions")
+            facts.explicit_slots["dimensions"] = SlotProvenance(
+                value=list(current.dimensions),
+                source=(prior.source if prior is not None else SlotSource.CURRENT_EXPLICIT),
+                source_turn=(prior.source_turn if prior is not None else source_turn),
+                confidence=(prior.confidence if prior is not None else 1.0),
+            )
+        facts.core_subjects = cls._core_subjects(current)
+        refreshed_slots = list(decision.protected_slots)
+        if current.filters:
+            refreshed_slots.append("filters")
+        if current.dimensions:
+            refreshed_slots.append("dimensions")
+        decision.protected_slots = list(dict.fromkeys(refreshed_slots))
+        decision.context_delta = cls._facts_delta(facts)
+
+    @classmethod
     def validate_context_consistency(
         cls,
         request: CanonicalAnalysisRequest,
@@ -891,13 +973,32 @@ class TurnAdmissionGate:
         for item in request.filters:
             if not isinstance(item, dict):
                 continue
-            subject_type = _CORE_FILTER_FIELDS.get(str(item.get("field") or ""))
+            field = str(item.get("field") or "").strip()
+            subject_type = TurnAdmissionGate._semantic_field_family(field)
             value = item.get("value")
             if subject_type and isinstance(value, (str, int, float)):
                 text = str(value).strip()
                 if text:
                     result[subject_type] = text
         return result
+
+    @staticmethod
+    def _semantic_field_family(field: str) -> str | None:
+        direct = _CORE_FILTER_FIELDS.get(field)
+        if direct is not None:
+            return direct
+        folded = str(field or "").strip().casefold()
+        families = (
+            ("category", ("商品分类", "产品分类", "商品品类", "品类", "类目", "类别", "category", "class")),
+            ("brand", ("商品品牌", "品牌", "brand")),
+            ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
+            ("dealer", ("经销商", "供应商", "dealer", "supplier", "vendor")),
+            ("product", ("商品名称", "产品名称", "product_name", "goods_name")),
+        )
+        return next(
+            (name for name, aliases in families if any(alias in folded for alias in aliases)),
+            None,
+        )
 
     @staticmethod
     def _facts_delta(facts: CurrentTurnFacts) -> dict[str, Any]:

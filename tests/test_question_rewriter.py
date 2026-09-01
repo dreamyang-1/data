@@ -51,6 +51,76 @@ class CandidateFailingSearcher(FakeSearcher):
         return self.matches
 
 
+def test_current_semantic_matches_ground_filter_and_dimension_labels():
+    request = CanonicalAnalysisRequest(
+        conversation_id="semantic-dimension-grounding",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询上海市江苏苏云品牌低值耗材的经销商清单",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        dimensions=["经销商", "地区", "品牌", "品类"],
+        filters=[
+            {"field": "地区", "operator": "EQ", "value": "上海市"},
+            {"field": "品牌名称", "operator": "EQ", "value": "江苏苏云"},
+            {"field": "商品分类", "operator": "EQ", "value": "低值耗材"},
+        ],
+    )
+    matches = [
+        {
+            "score": 0.98,
+            "entity_name": "经销商主数据",
+            "attribute_name": "城市",
+            "attribute_code": "dealer_city",
+            "attribute_value": "上海市",
+        },
+        {
+            "score": 0.97,
+            "entity_name": "商品主数据",
+            "attribute_name": "商品品牌",
+            "attribute_code": "product_brand",
+            "attribute_value": "江苏苏云医疗器材有限公司",
+        },
+        {
+            "score": 0.96,
+            "entity_name": "商品主数据",
+            "attribute_name": "商品品类",
+            "attribute_code": "product_category",
+            "attribute_value": "低值耗材",
+        },
+    ]
+
+    grounded = QuestionRewriter.ground_request_dimensions(request, matches)
+
+    assert grounded.dimensions == ["经销商", "城市", "商品品牌", "商品品类"]
+    assert grounded.filters == [
+        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
+        {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
+    ]
+    assert "SEMANTIC_DIMENSIONS_GROUNDED_FROM_CURRENT_MODEL" in grounded.assumptions
+
+
+@pytest.mark.asyncio
+async def test_semantic_matches_are_retained_without_forcing_text_rewrite():
+    matches = [{
+        "score": 0.98,
+        "entity_name": "商品主数据",
+        "attribute_name": "商品品类",
+        "attribute_code": "product_category",
+        "attribute_value": "低值耗材",
+    }]
+    result = await QuestionRewriter(FakeSearcher(matches)).rewrite(
+        "查询低值耗材",
+        previous=None,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert result.rewritten_question == "查询低值耗材"
+    assert result.events == []
+    assert result.semantic_matches == matches
+
+
 @pytest.mark.asyncio
 async def test_shadow_candidates_are_audited_but_do_not_expand_semantic_search():
     searcher = FakeSearcher([])

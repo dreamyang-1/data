@@ -33,6 +33,11 @@ class RewriteResult:
     events: list[RewriteEvent] = field(default_factory=list)
     context_applied: bool = False
     degraded: bool = False
+    # Current semantic-layer hits are retained even when no textual rewrite is
+    # necessary.  Intent extraction can then bind user-facing roles (city,
+    # brand, category, and so on) to the latest registered dimension labels
+    # without guessing physical columns or relying on a stale local dictionary.
+    semantic_matches: list[dict[str, Any]] = field(default_factory=list)
 
 
 class EntityAttributeSearcher(Protocol):
@@ -226,7 +231,127 @@ class QuestionRewriter:
             return RewriteResult(
                 original, rewritten, context_applied=context_applied, degraded=True
             )
-        return RewriteResult(original, normalized, local_events + events, context_applied)
+        return RewriteResult(
+            original,
+            normalized,
+            local_events + events,
+            context_applied,
+            semantic_matches=[dict(item) for item in matches],
+        )
+
+    @classmethod
+    def ground_request_dimensions(
+        cls,
+        request: CanonicalAnalysisRequest,
+        matches: list[dict[str, Any]],
+    ) -> CanonicalAnalysisRequest:
+        """Bind canonical filter roles to current semantic dimension labels.
+
+        The vector endpoint is scoped by semantic model and business domain, so
+        its attribute names are fresher than application-side aliases.  A hit is
+        accepted only when both its semantic family and its literal value agree
+        with a caller-grounded filter.  Physical codes remain with Oagnet; this
+        method changes only user-facing semantic labels.
+        """
+
+        def family(value: Any) -> str | None:
+            text = str(value or "").strip().casefold()
+            if not text:
+                return None
+            # More specific compound concepts must win before the generic
+            # product family (``product_category`` contains both tokens).
+            families = (
+                ("category", ("商品分类", "产品分类", "商品品类", "品类", "类目", "类别", "category", "class")),
+                ("brand", ("商品品牌", "品牌", "brand")),
+                ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
+                ("partner", ("经销商", "供应商", "dealer", "supplier", "vendor")),
+                ("product", ("商品名称", "产品名称", "商品", "产品", "product", "goods", "sku")),
+            )
+            return next(
+                (name for name, aliases in families if any(alias in text for alias in aliases)),
+                None,
+            )
+
+        candidates: list[dict[str, Any]] = []
+        for item in matches:
+            if not isinstance(item, dict):
+                continue
+            label = str(
+                item.get("attribute_name")
+                or item.get("dimension_name")
+                or item.get("field_name")
+                or ""
+            ).strip()
+            if not label or len(label) > 100 or any(ord(char) < 32 for char in label):
+                continue
+            reference = " ".join(
+                str(item.get(key) or "")
+                for key in (
+                    "attribute_name", "attribute_code", "dimension_name",
+                    "field_name", "entity_name",
+                )
+            )
+            candidate_family = family(reference)
+            if candidate_family is None:
+                continue
+            candidate_values = {
+                str(item.get(key) or "").strip()
+                for key in ("attribute_value", "canonical_value", "entity_name")
+                if str(item.get(key) or "").strip()
+            }
+            candidates.append({
+                "family": candidate_family,
+                "label": label,
+                "values": candidate_values,
+                "score": float(item.get("score") or 0.0),
+            })
+
+        grounded_by_family: dict[str, str] = {}
+        grounded_filters: list[dict[str, Any]] = []
+        for item in request.filters:
+            if not isinstance(item, dict):
+                grounded_filters.append(item)
+                continue
+            current = dict(item)
+            current_family = family(current.get("field"))
+            raw_value = current.get("value")
+            values = raw_value if isinstance(raw_value, list) else [raw_value]
+            required_values = {
+                str(value).strip().strip("%")
+                for value in values
+                if value not in (None, "")
+            }
+            ranked = sorted(
+                (
+                    candidate for candidate in candidates
+                    if candidate["family"] == current_family
+                    and candidate["score"] >= 0.70
+                    and required_values
+                    and all(
+                        any(
+                            required.casefold() in candidate_value.casefold()
+                            or candidate_value.casefold() in required.casefold()
+                            for candidate_value in candidate["values"]
+                        )
+                        for required in required_values
+                    )
+                ),
+                key=lambda candidate: (-candidate["score"], candidate["label"]),
+            )
+            if ranked and current_family is not None:
+                current["field"] = ranked[0]["label"]
+                grounded_by_family[current_family] = ranked[0]["label"]
+            grounded_filters.append(current)
+
+        if not grounded_by_family:
+            return request
+        request.filters = grounded_filters
+        request.dimensions = list(dict.fromkeys(
+            grounded_by_family.get(family(value) or "", value)
+            for value in request.dimensions
+        ))
+        request.assumptions.append("SEMANTIC_DIMENSIONS_GROUNDED_FROM_CURRENT_MODEL")
+        return request
 
     async def _extract_candidates(self, question: str) -> list[EntityCandidate]:
         if self.candidate_extractor is None or self.candidate_mode == "off":
