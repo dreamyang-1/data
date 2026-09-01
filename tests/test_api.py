@@ -273,7 +273,11 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         }
         for data in events if data["type"] == "updata_state"
     )
-    assert all(not re.search(r"(?m)^\s*#{1,6}\s+", data["content"]) for data in think_chunks)
+    all_thinking_content = "".join(data["content"] for data in think_chunks)
+    assert all_thinking_content.count("### ◉ 问题补全与意图识别") == 1
+    assert all_thinking_content.count("### ◉ 规划与执行") == 1
+    assert all_thinking_content.count("### ◉ 结果研判与应答") == 1
+    assert len(re.findall(r"(?m)^\s*#{1,6}\s+", all_thinking_content)) == 3
     intent_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
@@ -284,7 +288,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         if data.get("meta", {}).get("stage") == "TASK_PLANNING"
         and data.get("meta", {}).get("status") == "RUNNING"
     )
-    assert "### ◉ 规划与执行" not in planning_running_chunk["content"]
+    assert "### ◉ 规划与执行" in planning_running_chunk["content"]
     assert "正在判断是否需要拆分" in planning_running_chunk["content"]
     summary_chunk = next(
         data for data in think_chunks

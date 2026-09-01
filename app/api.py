@@ -308,6 +308,15 @@ async def chat_stream(
         deferred_planning: list[dict[str, Any]] = []
         intent_completed = False
         file_inspection_completed = False
+        titled_think_groups: set[str] = set()
+
+        def render_thinking(event: dict[str, Any]) -> str:
+            step = _new_agent_think_step(str(event.get("stage") or "processing"))
+            group = _thinking_group(step)
+            include_heading = group not in titled_think_groups
+            titled_think_groups.add(group)
+            return _thinking_event(event, include_heading=include_heading)
+
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
             if event.get("stage") == "TASK_PLANNING" and not file_inspection_completed:
@@ -336,7 +345,7 @@ async def chat_stream(
             while not execution.done() or not progress_queue.empty():
                 if not progress_queue.empty():
                     for event in ordered_progress(progress_queue.get_nowait()):
-                        yield _thinking_event(event)
+                        yield render_thinking(event)
                     continue
 
                 next_progress = asyncio.create_task(progress_queue.get())
@@ -347,7 +356,7 @@ async def chat_stream(
                 )
                 if next_progress in done:
                     for event in ordered_progress(next_progress.result()):
-                        yield _thinking_event(event)
+                        yield render_thinking(event)
                     continue
                 next_progress.cancel()
                 try:
@@ -365,7 +374,7 @@ async def chat_stream(
 
             response = await execution
             for event in deferred_planning:
-                yield _thinking_event(event)
+                yield render_thinking(event)
             deferred_planning.clear()
             query_evidence = [
                 item for item in response.evidence if item.kind == "QUERY_RESULT"
@@ -373,7 +382,7 @@ async def chat_stream(
             analysis_evidence = [
                 item for item in response.evidence if item.kind == "ANALYSIS_RESULT"
             ]
-            yield _thinking_event({
+            yield render_thinking({
                 "stage": "OUTPUT_SUMMARY",
                 "status": "COMPLETED",
                 "message": (
@@ -470,7 +479,9 @@ def _event(name: str, data: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
-def _thinking_event(progress: dict[str, Any]) -> str:
+def _thinking_event(
+    progress: dict[str, Any], *, include_heading: bool = True
+) -> str:
     stage = str(progress.get("stage") or "processing")
     # Keep the transport labels identical to New_Agent.  The platform-side
     # stream renderer does not understand data-agent-specific step names such
@@ -482,11 +493,12 @@ def _thinking_event(progress: dict[str, Any]) -> str:
         "data": step,
     })
     content = str(progress.get("message") or stage).strip()
-    # The generic-agent Java stream aggregator owns public section headings
-    # and emits each one once per canonical step. Data-agent nodes historically
-    # supplied headings too, which caused duplicated titles after aggregation.
-    # Send body content only, matching the generic agent's wire contract.
+    # Remove node-owned headings, then reproduce the generic agent's grouping
+    # behavior at the SSE boundary: one public heading per display group.
     content = re.sub(r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", content).strip()
+    if include_heading:
+        title = _thinking_title(_thinking_group(step))
+        content = f"{title}\n{content}" if content else title
     # Keep each body milestone in a fresh block so adjacent chunks are not
     # concatenated into a single line by the platform renderer.
     content = f"\n\n{content}\n\n"
@@ -503,6 +515,22 @@ def _thinking_event(progress: dict[str, Any]) -> str:
         message_payload["task_index"] = int(progress.get("task_index") or 0)
     message_event = _event("message_chunk", message_payload)
     return state_event + message_event
+
+
+def _thinking_group(step: str) -> str:
+    if step in {"execute_plan", "execute_exe"}:
+        return "planning"
+    if step == "response_result":
+        return "result"
+    return "intent"
+
+
+def _thinking_title(group: str) -> str:
+    return {
+        "intent": "### ◉ 问题补全与意图识别",
+        "planning": "### ◉ 规划与执行",
+        "result": "### ◉ 结果研判与应答",
+    }[group]
 
 
 def _new_agent_think_step(stage: str) -> str:
