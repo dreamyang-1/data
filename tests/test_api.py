@@ -287,6 +287,13 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
     )
     assert intent_chunk["step"] == "step1"
+    assert "### ◉ 意图识别" not in intent_chunk["content"]
+    completed_intent_chunk = next(
+        data for data in think_chunks
+        if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
+        and data.get("meta", {}).get("status") == "COMPLETED"
+    )
+    assert "### ◉ 意图识别" in completed_intent_chunk["content"]
     planning_running_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "TASK_PLANNING"

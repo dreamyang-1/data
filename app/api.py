@@ -314,9 +314,11 @@ async def chat_stream(
             stage = str(event.get("stage") or "processing").strip().upper()
             section = _thinking_section(stage)
             include_heading = bool(
-                section and section not in titled_think_sections
+                section
+                and section not in titled_think_sections
+                and _heading_event_is_visible_summary(section, event)
             )
-            if section:
+            if include_heading:
                 titled_think_sections.add(section)
             return _thinking_event(
                 event,
@@ -544,6 +546,16 @@ def _thinking_title(section: str) -> str:
         "insight": "### ◉ 数据洞察分析",
         "summary": "### ◉ 输出总结",
     }[section]
+
+
+def _heading_event_is_visible_summary(
+    section: str, event: dict[str, Any]
+) -> bool:
+    # The platform may collapse the short INTENT_RECOGNITION/RUNNING chunk.
+    # Attach its heading to the completed structured summary so the title and
+    # extracted fields are rendered together. Other stages keep their first
+    # emitted event, matching the existing UI behavior.
+    return section != "intent" or str(event.get("status") or "").upper() == "COMPLETED"
 
 
 def _new_agent_think_step(stage: str) -> str:
