@@ -2214,16 +2214,33 @@ class DataAnalysisOrchestrator:
             )
             current_request = request.model_copy(deep=True)
             rounds = 1
-            history_recovery = self._history_recovery_candidate(chat)
-            contextual_analysis = self._is_contextual_analysis_follow_up(request)
+            # The raw-turn admission decision is authoritative.  Legacy
+            # history recovery used to treat any analysis beginning with
+            # "按..." as contextual and could therefore re-merge the latest
+            # history item even after the gate had proved that this was a
+            # complete, standalone topic.  That produced hybrid requests such
+            # as a current product filter plus the previous turn's entity and
+            # dimensions.
+            history_recovery = (
+                self._history_recovery_candidate(chat)
+                if turn_decision.inherit_business_context
+                else None
+            )
+            contextual_analysis = (
+                turn_decision.inherit_business_context
+                and self._is_contextual_analysis_follow_up(request)
+            )
             if (
-                request.conversation_control in {
-                    ConversationControl.FOLLOW_UP,
-                    ConversationControl.CORRECTION,
-                }
-                or (rewrite is not None and rewrite.context_applied)
-                or history_recovery is not None
-                or contextual_analysis
+                turn_decision.inherit_business_context
+                and (
+                    request.conversation_control in {
+                        ConversationControl.FOLLOW_UP,
+                        ConversationControl.CORRECTION,
+                    }
+                    or (rewrite is not None and rewrite.context_applied)
+                    or history_recovery is not None
+                    or contextual_analysis
+                )
             ):
                 previous = previous_for_rewrite
                 if previous is None:
@@ -5091,6 +5108,21 @@ class DataAnalysisOrchestrator:
             PrimaryIntent.OUT_OF_SCOPE: "非数据任务",
         }.get(intent, intent.value)
 
+    @staticmethod
+    def _turn_relation_label(relation: TurnRelation | None) -> str:
+        if relation is None:
+            return "未判定"
+        return {
+            TurnRelation.STANDALONE_NEW_TOPIC: "独立新问题",
+            TurnRelation.CURRENT_TOPIC_FOLLOWUP: "当前主题追问",
+            TurnRelation.CURRENT_TOPIC_MODIFICATION: "当前主题条件修改",
+            TurnRelation.CURRENT_TOPIC_DRILLDOWN: "当前主题下钻",
+            TurnRelation.HISTORICAL_TOPIC_RETURN: "返回历史主题",
+            TurnRelation.CLARIFICATION_RESPONSE: "澄清回复",
+            TurnRelation.CORRECTION: "纠正上一请求",
+            TurnRelation.AMBIGUOUS_RELATION: "轮次关系待确认",
+        }.get(relation, relation.value)
+
     @classmethod
     def _intent_think_summary(
         cls,
@@ -5115,6 +5147,21 @@ class DataAnalysisOrchestrator:
         ]
         intent_label = cls._intent_label(request.primary_intent)
         intent_display = f"基于用户文件进行{intent_label}" if file_based else intent_label
+        relation = request.turn_relation
+        relation_label = cls._turn_relation_label(relation)
+        if relation is None:
+            contextual_followup = "未判定"
+        elif relation == TurnRelation.AMBIGUOUS_RELATION:
+            contextual_followup = "待确认"
+        elif relation == TurnRelation.STANDALONE_NEW_TOPIC:
+            contextual_followup = "否"
+        else:
+            contextual_followup = "是"
+        business_context_inherited = (
+            request.turn_admission.inherit_business_context
+            if request.turn_admission is not None
+            else request.context_mode != ContextMode.NONE
+        )
         file_judgement = (
             "文件判断：检测到用户上传文件，且当前问题需要基于文件内容处理。\n"
             if file_based
@@ -5129,8 +5176,12 @@ class DataAnalysisOrchestrator:
             f"结构化提取：指标={metrics or ['未提取']}；实体={request.entity or '未提取'}；"
             f"维度={request.dimensions or ['未提取']}；字段={request.fields or ['未提取']}；"
             f"时间={time_text}；筛选={filters or ['无']}；排序数量={request.ranking_limit or '无'}。\n"
-            f"上下文补全={'是' if request.rewrite_context_applied else '否'}；"
-            f"是否需要追问={'是：' + '、'.join(request.missing_slots) if request.missing_slots else '否'}；"
+            f"轮次关系={relation_label}"
+            f"（{relation.value if relation is not None else 'UNKNOWN'}）；"
+            f"是否为上下文追问={contextual_followup}；"
+            f"业务上下文继承={'是' if business_context_inherited else '否'}；"
+            f"问题改写使用上下文={'是' if request.rewrite_context_applied else '否'}；"
+            f"是否需要用户补充={'是：' + '、'.join(request.missing_slots) if request.missing_slots else '否'}；"
             f"参数规范化={'已完成' if not request.rewrite_degraded else '降级完成'}。"
         )
 

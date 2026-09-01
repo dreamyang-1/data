@@ -539,6 +539,88 @@ class TurnAdmissionGate:
     ) -> CanonicalAnalysisRequest:
         """Apply current explicit values after merge using code-level priority."""
         facts = decision.current_turn_facts
+        if decision.relation == TurnRelation.STANDALONE_NEW_TOPIC:
+            # A standalone turn starts a new semantic frame.  Remove only
+            # values that are byte-for-byte carryovers from the prior context;
+            # keep any current-turn model enrichment that differs from that
+            # context.  Explicit lexical facts are applied immediately below.
+            previous = decision.context_before
+            current_metrics = [
+                item.canonical_name or item.input for item in current.metrics
+            ]
+            request_metrics = [
+                item.canonical_name or item.input for item in request.metrics
+            ]
+            if (
+                request.primary_intent.value == previous.get("intent")
+                and request.primary_intent != current.primary_intent
+            ):
+                request.primary_intent = current.primary_intent
+                request.secondary_intents = list(current.secondary_intents)
+                request.operators = list(current.operators)
+            if (
+                request_metrics == previous.get("metrics")
+                and request_metrics != current_metrics
+            ):
+                request.metrics = [
+                    item.model_copy(deep=True) for item in current.metrics
+                ]
+            for attribute in ("entity", "fields", "dimensions"):
+                request_value = getattr(request, attribute)
+                current_value = getattr(current, attribute)
+                if (
+                    request_value == previous.get(attribute)
+                    and request_value != current_value
+                ):
+                    setattr(
+                        request,
+                        attribute,
+                        list(current_value)
+                        if isinstance(current_value, list)
+                        else current_value,
+                    )
+            previous_filters = previous.get("filters") or []
+            explicit_filters = facts.explicit_slots.get("filters")
+            current_fact_filters = (
+                explicit_filters.value
+                if explicit_filters is not None
+                and isinstance(explicit_filters.value, list)
+                else []
+            )
+            request.filters = [
+                dict(item)
+                for item in request.filters
+                if item not in previous_filters or item in current_fact_filters
+            ]
+            request_time = (
+                request.time_range.model_dump(mode="json")
+                if request.time_range is not None
+                else None
+            )
+            current_time = (
+                current.time_range.model_dump(mode="json")
+                if current.time_range is not None
+                else None
+            )
+            if (
+                request_time == previous.get("time_range")
+                and request_time != current_time
+            ):
+                request.time_range = (
+                    current.time_range.model_copy(deep=True)
+                    if current.time_range is not None
+                    else None
+                )
+            if (
+                request.comparison_type == previous.get("comparison")
+                and request.comparison_type != current.comparison_type
+            ):
+                request.comparison_type = current.comparison_type
+            if (
+                request.ranking_limit == previous.get("top_n")
+                and request.ranking_limit != current.ranking_limit
+            ):
+                request.ranking_limit = current.ranking_limit
         request.turn_relation = decision.relation
         request.context_mode = decision.context_mode
         request.slot_provenance.update(facts.inferred_slots)

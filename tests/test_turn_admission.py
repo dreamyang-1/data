@@ -14,6 +14,7 @@ from app.domain.models import (
     ChatRequest,
     DataQueryResult,
     Dataset,
+    HistoryMessage,
     PrimaryIntent,
     TrustedIdentity,
     TurnRelation,
@@ -491,6 +492,18 @@ async def test_real_two_turn_orchestration_does_not_leak_previous_product_or_dea
             message_id="m2",
             question="按月分析外周插管中心静脉导管的销售趋势。",
             semantic_model_id=81,
+            history=[
+                HistoryMessage(
+                    role="user",
+                    content="查询空心纤维血液透析器产品合作的经销商名单。",
+                    message_id="m1",
+                ),
+                HistoryMessage(
+                    role="assistant",
+                    content=first.answer,
+                    message_id="a1",
+                ),
+            ],
         ),
         IDENTITY,
     )
@@ -501,6 +514,8 @@ async def test_real_two_turn_orchestration_does_not_leak_previous_product_or_dea
     assert executed.turn_relation == TurnRelation.STANDALONE_NEW_TOPIC
     assert executed.context_mode.value == "NONE"
     assert executed.primary_intent == PrimaryIntent.TREND_ANALYSIS
+    assert executed.entity is None
+    assert executed.dimensions == []
     assert executed.rewritten_question == "按月分析外周插管中心静脉导管的销售趋势。"
     assert _filter_value(executed, "商品名称") == "外周插管中心静脉导管"
     assert "经销商" not in executed.dimensions
@@ -535,3 +550,39 @@ async def test_real_two_turn_orchestration_does_not_leak_previous_product_or_dea
     assert admission_event.payload["new_thread_created"] is True
     assert merge_event.payload["context_conflicts"] == []
     assert "空心纤维血液透析器" not in str(merge_event.payload["context_after"])
+
+
+def test_standalone_admission_rebases_a_precontaminated_semantic_frame():
+    gate, previous, current, decision = _decision(
+        "查询空心纤维血液透析器产品合作的经销商名单。",
+        "按月分析外周插管中心静脉导管的销售趋势。",
+        "standalone-precontaminated-frame",
+    )
+    assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+
+    contaminated = previous.model_copy(
+        deep=True,
+        update={
+            "request_id": current.request_id,
+            "original_question": current.original_question,
+            "rewritten_question": current.rewritten_question,
+            "primary_intent": current.primary_intent,
+            "metrics": [item.model_copy(deep=True) for item in current.metrics],
+        },
+    )
+    assert contaminated.entity == "经销商"
+    assert "经销商" in contaminated.dimensions
+
+    final = gate.apply_explicit_slot_protection(
+        contaminated,
+        current,
+        decision,
+    )
+
+    assert final.primary_intent == PrimaryIntent.TREND_ANALYSIS
+    assert final.entity is None
+    assert final.dimensions == []
+    assert final.fields == []
+    assert _filter_value(final, "商品名称") == "外周插管中心静脉导管"
+    assert "空心纤维血液透析器" not in str(final.filters)
+    assert "空心纤维血液透析器" not in str(final.asl_template)

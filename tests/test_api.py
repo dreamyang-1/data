@@ -9,8 +9,10 @@ from app.domain.models import (
     AgentResponse,
     CanonicalAnalysisRequest,
     ChatRequest,
+    ContextMode,
     ExtensionExecution,
     PrimaryIntent,
+    TurnRelation,
 )
 from app.main import create_app
 from app.api import (
@@ -112,6 +114,44 @@ def test_intent_summary_marks_file_based_analysis_only_when_selected():
     assert "文件判断：检测到用户上传文件" in file_summary
     assert "任务意图：基于用户文件进行" not in normal_summary
     assert "文件判断：" not in normal_summary
+
+
+def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
+    standalone = CanonicalAnalysisRequest(
+        conversation_id="turn-relation-display",
+        application_id="app",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="按月分析B产品销售趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        turn_relation=TurnRelation.STANDALONE_NEW_TOPIC,
+        context_mode=ContextMode.NONE,
+    )
+    standalone_summary = DataAnalysisOrchestrator._intent_think_summary(
+        standalone
+    )
+    assert "轮次关系=独立新问题（STANDALONE_NEW_TOPIC）" in standalone_summary
+    assert "是否为上下文追问=否" in standalone_summary
+    assert "业务上下文继承=否" in standalone_summary
+    assert "问题改写使用上下文=否" in standalone_summary
+    assert "是否需要用户补充=否" in standalone_summary
+    assert "是否需要追问=" not in standalone_summary
+
+    followup = standalone.model_copy(
+        deep=True,
+        update={
+            "original_question": "11月较10月下降多少",
+            "turn_relation": TurnRelation.CURRENT_TOPIC_FOLLOWUP,
+            "context_mode": ContextMode.CURRENT_THREAD,
+        },
+    )
+    followup_summary = DataAnalysisOrchestrator._intent_think_summary(followup)
+    assert "轮次关系=当前主题追问（CURRENT_TOPIC_FOLLOWUP）" in followup_summary
+    assert "是否为上下文追问=是" in followup_summary
+    assert "业务上下文继承=是" in followup_summary
+    # Structured state inheritance is independent of whether the natural-
+    # language question rewriter happened to add text.
+    assert "问题改写使用上下文=否" in followup_summary
 
 
 def test_readiness_checks_memory_dependencies():
