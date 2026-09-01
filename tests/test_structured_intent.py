@@ -30,6 +30,23 @@ def model_response(output: dict) -> httpx.Response:
     )
 
 
+@pytest.mark.parametrize(
+    "generic",
+    ["销售", "订单", "业务", "数据", "金额", "数量", "趋势", "业绩"],
+)
+def test_grounded_generic_nouns_are_not_accepted_as_complete_metrics(generic):
+    assert HybridIntentClassifier._grounded_metric_names(
+        [generic], f"按月分析直营网点的{generic}趋势"
+    ) == []
+
+
+@pytest.mark.parametrize("metric", ["毛利", "库存", "回款金额", "复购客户率"])
+def test_grounded_custom_business_metrics_remain_eligible(metric):
+    assert HybridIntentClassifier._grounded_metric_names(
+        [metric], f"按月分析直营网点的{metric}趋势"
+    ) == [metric]
+
+
 @pytest.mark.asyncio
 async def test_model_detail_label_cannot_drop_metric_from_grouped_partner_list():
     output = {
@@ -238,6 +255,134 @@ async def test_strong_business_rule_still_uses_model_for_completion_and_entity_e
     assert "MODEL_ENTITY_EXTRACTION_APPLIED" in result.assumptions
     assert "MODEL_QUESTION_COMPLETION_APPLIED" in result.assumptions
     assert "STRONG_RULE_MODEL_SKIPPED" not in result.assumptions
+
+
+@pytest.mark.asyncio
+async def test_generic_model_metric_cannot_override_registered_sales_trend_metric():
+    output = {
+        "primary_intent": "TREND_ANALYSIS",
+        "secondary_intents": [],
+        "operators": ["AGGREGATE", "TIME_BUCKET"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.95,
+        "evidence": ["按月", "销售趋势"],
+        "metrics": ["销售"],
+        "dimensions": ["产品"],
+        "entity": "产品",
+        "fields": [],
+        "comparison_type": None,
+        "ambiguities": ["“销售”可能指金额或数量"],
+        "completed_question": "按月分析外周插管中心静脉导管的销售趋势。",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+
+    result = await classifier.classify(
+        "按月分析外周插管中心静脉导管的销售趋势。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "c-generic-sales-metric",
+    )
+
+    assert result.primary_intent == PrimaryIntent.TREND_ANALYSIS
+    assert [metric.input for metric in result.metrics] == ["销售额"]
+    assert result.rewritten_question == (
+        "按月分析外周插管中心静脉导管的销售额趋势。"
+    )
+    assert result.missing_slots == []
+    assert result.ambiguities == []
+    assert "SALES_TREND_METRIC=销售额" in result.assumptions
+    assert "GENERIC_MODEL_METRIC_DROPPED" in result.assumptions
+    assert "MODEL_ENTITY_EXTRACTION_APPLIED" in result.assumptions
+
+
+@pytest.mark.asyncio
+async def test_generic_model_metric_is_dropped_when_no_default_convention_exists():
+    output = {
+        "primary_intent": "TREND_ANALYSIS",
+        "secondary_intents": [],
+        "operators": ["AGGREGATE", "TIME_BUCKET"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.95,
+        "evidence": ["订单趋势"],
+        "metrics": ["订单"],
+        "dimensions": ["门店"],
+        "entity": "门店",
+        "fields": [],
+        "comparison_type": None,
+        "ambiguities": ["订单趋势可能指订单金额或订单笔数"],
+        "completed_question": "按月分析直营网点的订单趋势。",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+
+    result = await classifier.classify(
+        "按月分析直营网点的订单趋势。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "c-generic-order-metric",
+    )
+
+    assert result.metrics == []
+    assert result.missing_slots == ["metric"]
+    assert result.ambiguities == ["订单趋势可能指订单金额或订单笔数"]
+    assert "GENERIC_MODEL_METRIC_DROPPED" in result.assumptions
+
+
+@pytest.mark.asyncio
+async def test_explicit_quantity_metric_still_wins_over_generic_model_fragment():
+    output = {
+        "primary_intent": "TREND_ANALYSIS",
+        "secondary_intents": [],
+        "operators": ["AGGREGATE", "TIME_BUCKET"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.95,
+        "evidence": ["销售量趋势"],
+        "metrics": ["销售"],
+        "dimensions": ["产品"],
+        "entity": "产品",
+        "fields": [],
+        "comparison_type": None,
+        "ambiguities": [],
+        "completed_question": "按月分析外周插管中心静脉导管的销售量趋势。",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+
+    result = await classifier.classify(
+        "按月分析外周插管中心静脉导管的销售量趋势。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "c-explicit-sales-quantity",
+    )
+
+    assert [metric.input for metric in result.metrics] == ["销售量"]
+    assert result.rewritten_question == output["completed_question"]
+    assert result.missing_slots == []
 
 
 def test_model_completion_guard_rejects_lost_current_numbers_and_sql():

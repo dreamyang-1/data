@@ -60,7 +60,7 @@ SYSTEM_PROMPT = """你是企业数据分析系统的意图分类器，只分类�
 7. evidence 只填写用户原话中的短语，不输出推理过程。
 8. “下月计划值/预算值/目标值”是已存在数据查询，不是预测；只有要求推算未知未来结果才是 FORECAST_ANALYSIS。
 9. 同时包含多个诉求时，最终交付物作为 primary_intent，其余放 secondary_intents；例如“分析下降原因并生成报告”主意图为 REPORT_GENERATION、次意图为 ROOT_CAUSE_ANALYSIS。
-10. 指标名称必须保持用户原话，不得改写成臆造的标准指标编码。
+10. 指标名称优先保持用户原话中的完整业务度量，不得改写成臆造的标准指标编码，也不得只截取“销售、订单、业务、数据、金额、数量、趋势”等泛化名词充当指标。
 11. 只查询一个时间段的汇总数值是 METRIC_QUERY；出现“最近30天、某月、某季度、某日”本身不代表趋势。只有要求走势、升降、按时间观察变化才是 TREND_ANALYSIS。
 12. 预测必须要求推算尚未发生的结果。明确的历史日期、月份、季度，即使带年份，也不能分类为 FORECAST_ANALYSIS。
 13. 同比、环比、同期比、较上期、增长率属于 COMPARISON_ANALYSIS，不能归为普通指标查询。
@@ -71,6 +71,8 @@ SYSTEM_PROMPT = """你是企业数据分析系统的意图分类器，只分类�
 18. completed_question 不得回答问题、不得生成 SQL、不得添加输入及已确认上下文中不存在的业务值；独立完整问题只做必要规范化，不得擅自引用上一轮。
 19. entity 表示用户本轮要查询、分组或返回的业务对象（如产品、经销商、医院），不得把作为筛选值的具体产品名直接当成 entity；dimensions 和 fields 必须按用户实际要求抽取。
 20. 实体、维度、字段和指标都要由语义理解给出；规则或关键词只能作为证据，不能因为句式常见就省略抽取。
+21. “销售趋势、销售走势、销售变化”是已登记的业务省略表达：用户未明确“销量、销售量、销售数量”时，metrics 填“销售额”，completed_question 补成“销售额趋势/走势/变化”；用户明确数量口径时必须填“销售量”。“订单趋势、业务趋势”等没有已登记默认口径的泛化表达仍需指出歧义，不得照抄“订单、业务”作为指标。
+22. metrics 中的每一项都必须能独立表示可计算度量；completed_question 中的指标口径必须与 metrics 一致。
 """
 
 
@@ -147,6 +149,11 @@ class StructuredIntentModelClient:
 class HybridIntentClassifier:
     """Rules provide a safe baseline; structured model enriches it under deterministic gates."""
 
+    _generic_metric_nouns = frozenset({
+        "销售", "订单", "业务", "经营", "业绩", "数据", "指标", "度量",
+        "金额", "数量", "数值", "情况", "表现", "趋势", "变化",
+    })
+
     def __init__(
         self,
         settings: Settings,
@@ -218,6 +225,11 @@ class HybridIntentClassifier:
                 request.metrics = [MetricRef(input=name) for name in grounded_metrics]
             if len(grounded_metrics) != len(model.metrics):
                 request.assumptions.append("UNGROUNDED_MODEL_METRIC_DROPPED")
+            if any(
+                self._normalize_metric_text(name) in self._generic_metric_nouns
+                for name in model.metrics
+            ):
+                request.assumptions.append("GENERIC_MODEL_METRIC_DROPPED")
         if model.dimensions:
             grounded_dimensions = self._grounded_text_values(model.dimensions, question)
             grounded_dimensions.extend(
@@ -683,8 +695,21 @@ class HybridIntentClassifier:
         return candidate if HybridIntentClassifier._looks_like_metric(candidate) else None
 
     @staticmethod
-    def _grounded_metric_names(names: list[str], question: str) -> list[str]:
-        """Keep only model metric spans that occur verbatim in the user question."""
+    def _normalize_metric_text(value: str) -> str:
+        return re.sub(r"\s+", "", value).strip(
+            "，,。.!！?？;；：:\"'“”‘’"
+        ).casefold()
+
+    @classmethod
+    def _grounded_metric_names(cls, names: list[str], question: str) -> list[str]:
+        """Keep grounded, independently computable model metric spans.
+
+        A model can copy a substring such as ``销售`` from ``销售趋势``.  The
+        substring is lexically grounded but is not a complete measure and must
+        not overwrite a canonical rule/semantic convention such as ``销售额``.
+        Other grounded custom metric names remain eligible for semantic-layer
+        resolution; this gate rejects only known generic nouns.
+        """
         normalized_question = re.sub(r"\s+", "", question).casefold()
         result: list[str] = []
         seen: set[str] = set()
@@ -695,6 +720,7 @@ class HybridIntentClassifier:
                 not name
                 or len(name) > 100
                 or normalized in seen
+                or normalized in cls._generic_metric_nouns
                 or normalized not in normalized_question
             ):
                 continue

@@ -1095,6 +1095,21 @@ class RuleBasedIntentClassifier:
             request.assumptions.append("SALES_TREND_METRIC=销售额")
 
         if (
+            request.primary_intent == PrimaryIntent.TREND_ANALYSIS
+            and [metric.input for metric in request.metrics] == ["销售额"]
+            and "SALES_TREND_METRIC=销售额" in request.assumptions
+            and request.rewritten_question
+        ):
+            # Keep the model-completed executable question consistent with the
+            # canonical implicit metric.  The raw user question remains intact
+            # in ``original_question`` for audit.
+            request.rewritten_question = re.sub(
+                r"销售(?=趋势|走势|变化)",
+                "销售额",
+                request.rewritten_question,
+            )
+
+        if (
             re.search(r"销售额(?:下降|减少|下跌)(?:幅度)?(?:最大|最多)", compact)
             and any(token in compact for token in ("产品", "商品"))
         ):
