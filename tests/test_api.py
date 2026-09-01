@@ -12,7 +12,7 @@ from app.domain.models import (
     PrimaryIntent,
 )
 from app.main import create_app
-from app.api import _answer_chunk_delay, _answer_chunks
+from app.api import _answer_chunk_delay, _answer_chunks, _thinking_section, _thinking_title
 from app.services.orchestrator import DataAnalysisOrchestrator
 
 
@@ -253,7 +253,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     )
     assert file_chunk["step"] == "step1"
     assert file_chunk["meta"]["file_status"] == "NOT_PROVIDED"
-    assert "### ◉ 问题补全与意图识别" not in file_chunk["content"]
+    assert "### ◉ 文件感知与解析" in file_chunk["content"]
     think_chunks = [
         data for data in events
         if data["type"] == "message_chunk" and data.get("step") != "output"
@@ -274,10 +274,14 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         for data in events if data["type"] == "updata_state"
     )
     all_thinking_content = "".join(data["content"] for data in think_chunks)
-    assert all_thinking_content.count("### ◉ 问题补全与意图识别") == 1
-    assert all_thinking_content.count("### ◉ 规划与执行") == 1
-    assert all_thinking_content.count("### ◉ 结果研判与应答") == 1
-    assert len(re.findall(r"(?m)^\s*#{1,6}\s+", all_thinking_content)) == 3
+    expected_headings = [
+        "### ◉ 意图识别",
+        "### ◉ 文件感知与解析",
+        "### ◉ 任务拆分与规划",
+        "### ◉ 输出总结",
+    ]
+    assert all(all_thinking_content.count(heading) == 1 for heading in expected_headings)
+    assert len(re.findall(r"(?m)^\s*#{1,6}\s+", all_thinking_content)) == 4
     intent_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
@@ -288,7 +292,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         if data.get("meta", {}).get("stage") == "TASK_PLANNING"
         and data.get("meta", {}).get("status") == "RUNNING"
     )
-    assert "### ◉ 规划与执行" in planning_running_chunk["content"]
+    assert "### ◉ 任务拆分与规划" in planning_running_chunk["content"]
     assert "正在判断是否需要拆分" in planning_running_chunk["content"]
     summary_chunk = next(
         data for data in think_chunks
@@ -306,6 +310,23 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     assert completed_think_stages.index("FILE_INSPECTION") < completed_think_stages.index("TASK_PLANNING")
     if "TASK_PLANNING" in completed_think_stages:
         assert completed_think_stages.index("INTENT_RECOGNITION") < completed_think_stages.index("TASK_PLANNING")
+
+
+def test_all_seven_thinking_stages_have_normalized_unnumbered_headings():
+    expected = {
+        "INTENT_RECOGNITION": "### ◉ 意图识别",
+        "FILE_INSPECTION": "### ◉ 文件感知与解析",
+        "TASK_PLANNING": "### ◉ 任务拆分与规划",
+        "DATA_RETRIEVAL": "### ◉ 调度执行",
+        "RELIABILITY_CHECK": "### ◉ 结果校验",
+        "INSIGHT_ANALYSIS": "### ◉ 数据洞察分析",
+        "OUTPUT_SUMMARY": "### ◉ 输出总结",
+    }
+
+    assert {
+        stage: _thinking_title(_thinking_section(stage))
+        for stage in expected
+    } == expected
 
 
 def test_stream_tool_result_preserves_new_agent_application_error_status():

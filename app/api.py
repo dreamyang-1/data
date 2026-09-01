@@ -308,14 +308,20 @@ async def chat_stream(
         deferred_planning: list[dict[str, Any]] = []
         intent_completed = False
         file_inspection_completed = False
-        titled_think_groups: set[str] = set()
+        titled_think_sections: set[str] = set()
 
         def render_thinking(event: dict[str, Any]) -> str:
-            step = _new_agent_think_step(str(event.get("stage") or "processing"))
-            group = _thinking_group(step)
-            include_heading = group not in titled_think_groups
-            titled_think_groups.add(group)
-            return _thinking_event(event, include_heading=include_heading)
+            stage = str(event.get("stage") or "processing").strip().upper()
+            section = _thinking_section(stage)
+            include_heading = bool(
+                section and section not in titled_think_sections
+            )
+            if section:
+                titled_think_sections.add(section)
+            return _thinking_event(
+                event,
+                heading=_thinking_title(section) if include_heading else None,
+            )
 
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
@@ -480,7 +486,7 @@ def _event(name: str, data: dict) -> str:
 
 
 def _thinking_event(
-    progress: dict[str, Any], *, include_heading: bool = True
+    progress: dict[str, Any], *, heading: str | None = None
 ) -> str:
     stage = str(progress.get("stage") or "processing")
     # Keep the transport labels identical to New_Agent.  The platform-side
@@ -493,12 +499,11 @@ def _thinking_event(
         "data": step,
     })
     content = str(progress.get("message") or stage).strip()
-    # Remove node-owned headings, then reproduce the generic agent's grouping
-    # behavior at the SSE boundary: one public heading per display group.
+    # Remove node-owned headings, then emit one normalized public heading for
+    # each of the seven data-agent stages at the SSE boundary.
     content = re.sub(r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", content).strip()
-    if include_heading:
-        title = _thinking_title(_thinking_group(step))
-        content = f"{title}\n{content}" if content else title
+    if heading:
+        content = f"{heading}\n{content}" if content else heading
     # Keep each body milestone in a fresh block so adjacent chunks are not
     # concatenated into a single line by the platform renderer.
     content = f"\n\n{content}\n\n"
@@ -517,20 +522,28 @@ def _thinking_event(
     return state_event + message_event
 
 
-def _thinking_group(step: str) -> str:
-    if step in {"execute_plan", "execute_exe"}:
-        return "planning"
-    if step == "response_result":
-        return "result"
-    return "intent"
-
-
-def _thinking_title(group: str) -> str:
+def _thinking_section(stage: str) -> str | None:
     return {
-        "intent": "### ◉ 问题补全与意图识别",
-        "planning": "### ◉ 规划与执行",
-        "result": "### ◉ 结果研判与应答",
-    }[group]
+        "INTENT_RECOGNITION": "intent",
+        "FILE_INSPECTION": "file",
+        "TASK_PLANNING": "planning",
+        "DATA_RETRIEVAL": "execution",
+        "RELIABILITY_CHECK": "validation",
+        "INSIGHT_ANALYSIS": "insight",
+        "OUTPUT_SUMMARY": "summary",
+    }.get(stage)
+
+
+def _thinking_title(section: str) -> str:
+    return {
+        "intent": "### ◉ 意图识别",
+        "file": "### ◉ 文件感知与解析",
+        "planning": "### ◉ 任务拆分与规划",
+        "execution": "### ◉ 调度执行",
+        "validation": "### ◉ 结果校验",
+        "insight": "### ◉ 数据洞察分析",
+        "summary": "### ◉ 输出总结",
+    }[section]
 
 
 def _new_agent_think_step(stage: str) -> str:
