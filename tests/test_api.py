@@ -31,6 +31,7 @@ def build_test_app(**overrides):
         "adapter_mode": "mock",
         "intent_model_enabled": False,
         "allow_missing_trusted_identity_headers": False,
+        "business_question_collection_enabled": False,
     }
     defaults.update(overrides)
     return create_app(Settings(**defaults))
@@ -52,6 +53,72 @@ def test_chat_endpoint():
     assert response.json()["status"] == "COMPLETED"
     assert response.json()["intent_source"] == "DETERMINISTIC_RULE_FAST_PATH"
     assert response.json()["intent_confidence"] == 0.95
+
+
+def test_chat_collects_sync_and_stream_questions_but_not_refresh(tmp_path):
+    document_path = tmp_path / "实际业务问题.md"
+    app = build_test_app(
+        business_question_collection_enabled=True,
+        business_question_document_path=document_path,
+    )
+    base_payload = {
+        "conversation_id": "business-conversation",
+        "application_id": "business-app",
+    }
+    with TestClient(app) as client:
+        sync_response = client.post(
+            "/agent_chat",
+            json={
+                **base_payload,
+                "message_id": "business-sync-1",
+                "question": "统计上海地区本月销售额",
+            },
+        )
+        stream_response = client.post(
+            "/agent_chat/stream",
+            json={
+                **base_payload,
+                "message_id": "business-stream-1",
+                "question": "按经销商展示销售额",
+            },
+        )
+        refresh_response = client.post(
+            "/agent_chat/refresh",
+            json={
+                **base_payload,
+                "message_id": "business-refresh-1",
+                "question": "这条刷新问题不应重复收集",
+            },
+        )
+
+    assert sync_response.status_code == 200
+    assert stream_response.status_code == 200
+    assert refresh_response.status_code == 200
+    content = document_path.read_text(encoding="utf-8")
+    assert content.count("统计上海地区本月销售额") == 1
+    assert content.count("按经销商展示销售额") == 1
+    assert "这条刷新问题不应重复收集" not in content
+
+
+def test_question_collection_failure_does_not_break_chat(tmp_path):
+    app = build_test_app(
+        business_question_collection_enabled=True,
+        # Opening an existing directory for append fails inside the collector.
+        business_question_document_path=tmp_path,
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/agent_chat",
+            json={
+                "conversation_id": "collector-failure-conversation",
+                "application_id": "collector-failure-app",
+                "message_id": "collector-failure-message",
+                "question": "查询本月销售额",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "COMPLETED"
 
 
 def test_answer_transport_chunks_preserve_full_answer_and_bound_event_count():

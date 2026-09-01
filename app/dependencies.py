@@ -16,6 +16,7 @@ from app.services.dataset_followup import DatasetLifecycleCleaner
 from app.services.file_ingestion import SpreadsheetFileImporter
 from app.services.report_export import DatasetReportExporter
 from app.services.question_rewriter import HttpEntityAttributeSearcher, QuestionRewriter
+from app.services.business_question_collector import BusinessQuestionCollector
 from app.services.entity_extraction import build_gliner_extractor_from_environment
 from app.planning import MultiQuestionPlanner
 from app.services.knowledge_retrieval import RedisKnowledgeSearchCache
@@ -39,6 +40,7 @@ class Container:
     dataset_cleaner: DatasetLifecycleCleaner | None
     file_importer: SpreadsheetFileImporter | None
     report_exporter: DatasetReportExporter | None
+    business_question_collector: BusinessQuestionCollector | None
     workflow: object
 
 
@@ -227,5 +229,10 @@ def build_container(settings: Settings) -> Container:
         dataset_cleaner=dataset_cleaner,
         file_importer=file_importer,
         report_exporter=report_exporter,
+        business_question_collector=(
+            BusinessQuestionCollector(settings.business_question_document_path)
+            if settings.business_question_collection_enabled
+            else None
+        ),
         workflow=build_workflow(orchestrator),
     )

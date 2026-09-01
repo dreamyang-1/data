@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     # budget below this value so orchestration still has time to terminate and
     # persist an idempotent response.
     request_timeout_seconds: float = Field(default=120, gt=0, le=300)
+    business_question_collection_enabled: bool = True
+    business_question_document_path: Path = PROJECT_ROOT / "实际业务问题.md"
     dynamic_skills_enabled: bool = True
     autonomous_tool_selection_enabled: bool = True
     autonomous_tool_selection_max_tools: int = Field(default=3, ge=1, le=5)

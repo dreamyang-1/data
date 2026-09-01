@@ -132,6 +132,25 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
         ) from exc
 
 
+async def _collect_business_question(request: Request, chat: ChatRequest) -> None:
+    """Persist one real user question without coupling chat availability to I/O."""
+    collector = request.app.state.container.business_question_collector
+    if collector is None:
+        return
+    try:
+        await asyncio.to_thread(
+            collector.record,
+            application_id=chat.application_id,
+            conversation_id=chat.conversation_id,
+            message_id=chat.message_id,
+            question=chat.question,
+        )
+    except Exception:
+        # Question collection is an observability feature. A transient disk
+        # problem must never turn a valid business question into a chat error.
+        logger.exception("business question collection failed")
+
+
 async def bind_chat_spreadsheet(
     request: Request, chat: ChatRequest, identity: TrustedIdentity
 ) -> None:
@@ -257,7 +276,10 @@ async def chat(
 ) -> AgentResponse:
     identity = trusted_identity(x_roles)
     external_conversation_id = payload.conversation_id
-    if payload.regenerate:
+    is_regeneration = payload.regenerate
+    if not is_regeneration:
+        await _collect_business_question(request, payload)
+    if is_regeneration:
         payload, external_conversation_id, _ = _prepare_regeneration(payload)
     await bind_chat_spreadsheet(request, payload, identity)
     response = await invoke(request, payload, identity)
@@ -322,7 +344,10 @@ async def chat_stream(
     identity = trusted_identity(x_roles)
     external_conversation_id = payload.conversation_id
     external_message_id = payload.message_id
-    if payload.regenerate:
+    is_regeneration = payload.regenerate
+    if not is_regeneration:
+        await _collect_business_question(request, payload)
+    if is_regeneration:
         payload, external_conversation_id, external_message_id = _prepare_regeneration(payload)
     await bind_chat_spreadsheet(request, payload, identity)
     # Preserve the most important pre-stream idempotency guarantee.  Once the
