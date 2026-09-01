@@ -479,6 +479,42 @@ async def test_empty_metric_query_is_completed_without_fabricating_zero() -> Non
 
 
 @pytest.mark.asyncio
+async def test_sparse_trend_preserves_and_displays_real_query_rows() -> None:
+    response = await service(row_count=1).handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id="sparse-trend-result",
+            message_id="m1",
+            question="查看2026年各城市每月销售趋势",
+            semantic_model_id=1,
+            business_domain_id=1,
+        ),
+        TrustedIdentity(tenant_id="tenant", user_id="user"),
+    )
+
+    assert response.status == "PARTIAL_SUCCESS"
+    assert response.intent is PrimaryIntent.TREND_ANALYSIS
+    assert "数据库实际返回的数据" in response.answer
+    assert "2026-01" in response.answer
+    assert "100" in response.answer
+    assert "最少 2 行" in response.answer
+    assert not any(item.kind == "ANALYSIS_RESULT" for item in response.evidence)
+    query_evidence = next(
+        item for item in response.evidence if item.kind == "QUERY_RESULT"
+    )
+    assert query_evidence.payload["row_count"] == 1
+    assert query_evidence.payload["analysis_sufficiency"] == {
+        "sufficient": False,
+        "required_rows": 2,
+        "returned_rows": 1,
+    }
+    assert response.reliability is not None
+    assert response.reliability.level == "LIMITED"
+    assert response.reliability.gates["query_evidence_preserved"] is True
+    assert response.reliability.gates["analysis_conclusion_withheld"] is True
+
+
+@pytest.mark.asyncio
 async def test_large_report_exports_detail_but_does_not_fake_analysis_from_preview() -> None:
     sessions = InMemorySessionStore()
     response = await service(download_only=True, sessions=sessions).handle(

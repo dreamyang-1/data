@@ -964,6 +964,57 @@ def test_brand_category_scope_rejects_an_invented_product_name_filter():
     assert synthetic.value.code == "ASL_SYNTHETIC_PRODUCT_FILTER"
 
 
+def test_geographic_filter_must_share_the_grouped_city_hierarchy():
+    trend = CanonicalAnalysisRequest(
+        conversation_id="geographic-hierarchy",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查看2025年安徽省下各个城市每月销售趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        dimensions=["城市"],
+        filters=[{"field": "地区", "operator": "EQ", "value": "安徽省"}],
+    )
+    asl = {
+        "filters": [
+            {
+                "field": "dim_province.province_name",
+                "operator": "=",
+                "value": "安徽省",
+            }
+        ]
+    }
+    wrong_branch = (
+        "SELECT dim_city.city_name AS 城市, "
+        "DATE_FORMAT(sales_order.created_date, '%Y-%m') AS 交易月份, "
+        "SUM(sales_order.amount_with_tax) AS 含税销售总额 "
+        "FROM sales_order "
+        "LEFT JOIN dealer ON sales_order.dealer_code = dealer.dealer_code "
+        "LEFT JOIN dim_city ON dealer.city_id = dim_city.city_id "
+        "LEFT JOIN hospital ON sales_order.hospital_id = hospital.hospital_id "
+        "LEFT JOIN dim_province ON hospital.province_id = dim_province.province_id "
+        "WHERE dim_province.province_name = '安徽省' "
+        "GROUP BY dim_city.city_name, DATE_FORMAT(sales_order.created_date, '%Y-%m')"
+    )
+
+    with pytest.raises(AdapterError) as mismatch:
+        HttpDataRetrievalAdapter._validate_geographic_hierarchy_alignment(
+            asl, trend, wrong_branch
+        )
+    assert mismatch.value.code == "SQL_GEOGRAPHIC_HIERARCHY_MISMATCH"
+    assert mismatch.value.details["mismatches"][0]["join_path"] == [
+        "dim_city", "dealer", "sales_order", "hospital", "dim_province",
+    ]
+
+    same_hierarchy = wrong_branch.replace(
+        "LEFT JOIN hospital ON sales_order.hospital_id = hospital.hospital_id "
+        "LEFT JOIN dim_province ON hospital.province_id = dim_province.province_id ",
+        "LEFT JOIN dim_province ON dim_city.province_id = dim_province.province_id ",
+    )
+    HttpDataRetrievalAdapter._validate_geographic_hierarchy_alignment(
+        asl, trend, same_hierarchy
+    )
+
+
 def test_current_metric_formula_replaces_stale_same_table_distinct_field():
     sql = (
         "SELECT dealer.dealer_name AS 经销商, "

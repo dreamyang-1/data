@@ -707,6 +707,24 @@ class HttpDataRetrievalAdapter:
                 "不得复用历史物理字段或应用侧静态表字段；每个角色都必须保留在ASL "
                 "dimensions中，筛选维度同时还必须保留对应filter。"
             )
+        if (
+            any(
+                self._constraint_field_family(str(value)) == "region"
+                for value in request.dimensions
+            )
+            and any(
+                isinstance(item, dict)
+                and self._constraint_field_family(
+                    str(item.get("field") or "")
+                ) == "region"
+                for item in request.filters
+            )
+        ):
+            asl_query += (
+                "\n行政区层级一致性要求：当省/地区筛选与城市等下级行政区分组同时出现时，"
+                "两者必须沿当前语义层中同一结果对象、同一行政区层级关系解析；禁止按经销商"
+                "城市分组却使用医院、客户或其他业务对象的省份字段进行筛选。"
+            )
         if request.time_range is not None:
             asl_query += (
                 "\n调用方已确认的强制时间范围："
@@ -1320,6 +1338,7 @@ class HttpDataRetrievalAdapter:
         sql = self._apply_current_metric_formulas(sql, metric_definitions)
         self._validate_read_only_sql(sql)
         self._validate_query_to_sql_entity_alignment(request, sql)
+        self._validate_geographic_hierarchy_alignment(asl, request, sql)
         metric_bindings = [
             {
                 "用户指标": metric.input,
@@ -1740,6 +1759,121 @@ class HttpDataRetrievalAdapter:
                     "missing_dimensions": missing,
                     "projected_dimensions": dimensions,
                 },
+            )
+
+    @classmethod
+    def _validate_geographic_hierarchy_alignment(
+        cls,
+        asl: dict[str, Any],
+        request: CanonicalAnalysisRequest,
+        sql: str,
+    ) -> None:
+        """Reject province/city filters attached to another business branch.
+
+        A generated query can group a dealer city while filtering the province
+        reached through a hospital.  Both labels and the literal value look
+        valid in isolation, so ordinary entity/value preservation checks pass,
+        but the result answers a different question.  This guard uses only the
+        current ASL fields and translated JOIN graph: a geographic filter must
+        be directly connected to its geographic GROUP BY table, or connected
+        through administrative tables only.  Physical names are never repaired
+        or invented here; the semantic relationship service remains the source
+        of truth and must regenerate/translate a consistent path.
+        """
+
+        if not any(
+            cls._constraint_field_family(str(value)) == "region"
+            for value in request.dimensions
+        ):
+            return
+
+        geographic_filter_fields = [
+            str(item.get("field") or "").strip().strip("`")
+            for item in (asl.get("filters") or [])
+            if isinstance(item, dict)
+            and cls._constraint_field_family(
+                str(item.get("field") or "")
+            ) == "region"
+            and "." in str(item.get("field") or "")
+        ]
+        if not geographic_filter_fields:
+            return
+
+        group_match = re.search(
+            r"\bGROUP\s+BY\b(?P<body>.*?)(?=\bHAVING\b|\bORDER\s+BY\b|"
+            r"\bLIMIT\b|$)",
+            sql,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if group_match is None:
+            return
+        grouped_geographic_fields = [
+            f"{table}.{field}"
+            for table, field in re.findall(
+                r"`?([A-Za-z_][A-Za-z0-9_]*)`?\."
+                r"`?([A-Za-z_][A-Za-z0-9_]*)`?",
+                group_match.group("body"),
+            )
+            if cls._constraint_field_family(f"{table}.{field}") == "region"
+        ]
+        if not grouped_geographic_fields:
+            return
+
+        graph: dict[str, set[str]] = {}
+        for left, right in re.findall(
+            r"`?([A-Za-z_][A-Za-z0-9_]*)`?\."
+            r"`?[A-Za-z_][A-Za-z0-9_]*`?\s*=\s*"
+            r"`?([A-Za-z_][A-Za-z0-9_]*)`?\."
+            r"`?[A-Za-z_][A-Za-z0-9_]*`?",
+            sql,
+            re.IGNORECASE,
+        ):
+            if left == right:
+                continue
+            graph.setdefault(left, set()).add(right)
+            graph.setdefault(right, set()).add(left)
+
+        def shortest_path(source: str, target: str) -> list[str] | None:
+            if source == target:
+                return [source]
+            frontier: list[list[str]] = [[source]]
+            visited = {source}
+            while frontier:
+                path = frontier.pop(0)
+                for candidate in sorted(graph.get(path[-1], set())):
+                    if candidate in visited:
+                        continue
+                    next_path = [*path, candidate]
+                    if candidate == target:
+                        return next_path
+                    visited.add(candidate)
+                    frontier.append(next_path)
+            return None
+
+        mismatches: list[dict[str, Any]] = []
+        for grouped_field in grouped_geographic_fields:
+            grouped_table = grouped_field.split(".", 1)[0]
+            for filter_field in geographic_filter_fields:
+                filter_table = filter_field.split(".", 1)[0]
+                path = shortest_path(grouped_table, filter_table)
+                if path is None:
+                    continue
+                intermediate = path[1:-1]
+                aligned = len(path) <= 2 or all(
+                    cls._constraint_field_family(table) == "region"
+                    for table in intermediate
+                )
+                if not aligned:
+                    mismatches.append({
+                        "grouped_field": grouped_field,
+                        "filter_field": filter_field,
+                        "join_path": path,
+                    })
+        if mismatches:
+            raise AdapterError(
+                "SQL_GEOGRAPHIC_HIERARCHY_MISMATCH",
+                "SQL attached an administrative filter to a different business entity branch",
+                details={"mismatches": mismatches},
             )
 
     @staticmethod

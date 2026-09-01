@@ -3138,12 +3138,103 @@ class DataAnalysisOrchestrator:
             response.result_file_url = query_result.result_file_url
             return await self._finish_terminal(request, response)
         if query_result.dataset.row_count < minimum_rows:
-            response = self._fallback(
-                    request,
-                    f"当前只取得 {query_result.dataset.row_count} 行数据，不足以可靠执行{request.primary_intent.value}，本次不生成分析结论。",
+            # The deterministic analysis method may require more observations,
+            # but every returned database row is still valid query evidence.
+            # Do not turn "insufficient for a trend/outlier conclusion" into
+            # "no result": disclose the rows, retain the immutable dataset for
+            # follow-ups, and clearly separate facts from the skipped analysis.
+            insufficiency = (
+                f"当前返回 {query_result.dataset.row_count} 行有效数据，"
+                f"少于{self._intent_label(request.primary_intent)}所需的最少 "
+                f"{minimum_rows} 行；已展示真实查询结果，但不据此生成趋势、比较、"
+                "异常、归因或预测结论。"
+            )
+            evidence = [
+                EvidenceItem(
+                    evidence_id=f"query:{query_result.dataset.snapshot_id}",
+                    kind="QUERY_RESULT",
+                    source_ref=(
+                        f"data-source:{query_result.data_source_id or 'unknown'}"
+                    ),
+                    payload={
+                        "columns": query_result.dataset.columns,
+                        "row_count": total_row_count,
+                        "returned_row_count": query_result.dataset.row_count,
+                        "total_row_count_confirmed": total_row_count_confirmed,
+                        "truncated": query_result.dataset.truncated,
+                        "data_as_of": query_result.dataset.data_as_of.isoformat(),
+                        "quality_status": query_result.dataset.quality_status,
+                        "result_fingerprint": query_result.dataset.snapshot_id,
+                        "analysis_sufficiency": {
+                            "sufficient": False,
+                            "required_rows": minimum_rows,
+                            "returned_rows": query_result.dataset.row_count,
+                        },
+                        **self._source_watermark_payload(
+                            request, query_result.dataset
+                        ),
+                    },
                 )
-            response.dataset_id = dataset_id
-            response.result_file_url = query_result.result_file_url
+            ]
+            evidence.extend(self._derived_metric_evidence(request, query_result))
+            evidence.extend(self._semantic_metric_evidence(
+                request,
+                query_result,
+                semantic_model_id=chat.semantic_model_id,
+                business_domain_id=self._effective_business_domain_id(chat),
+            ))
+            answer = (
+                "查询已成功，以下是数据库实际返回的数据：\n\n"
+                + self._analyze(
+                    request,
+                    query_result.dataset.columns,
+                    query_result.dataset.rows,
+                    KnowledgeContext(query=request.original_question, documents=[]),
+                    result_truncated=query_result.dataset.truncated,
+                )
+                + f"\n\n数据充足性说明：{insufficiency}"
+            )
+            source_watermark_note = self._source_watermark_note(
+                request, query_result.dataset
+            )
+            if source_watermark_note:
+                answer += f"\n{source_watermark_note}"
+            reliability = ReliabilityReport(
+                level="LIMITED",
+                score=(
+                    0.75
+                    if query_result.dataset.quality_status.upper() == "PASS"
+                    else 0.55
+                ),
+                gates={
+                    "query_succeeded": True,
+                    "query_evidence_preserved": True,
+                    "analysis_data_sufficient": False,
+                    "analysis_conclusion_withheld": True,
+                },
+                warnings=[insufficiency],
+            )
+            await emit_progress(
+                "RELIABILITY_CHECK",
+                "COMPLETED",
+                "查询结果已通过数据证据校验；分析样本不足，已保留并展示实际数据，"
+                "同时跳过不可靠的分析结论。",
+                reliability_level=reliability.level,
+                reliability_score=reliability.score,
+            )
+            response = AgentResponse(
+                request_id=request.request_id,
+                conversation_id=request.conversation_id,
+                status="PARTIAL_SUCCESS",
+                intent=request.primary_intent,
+                intent_source=request.intent_source,
+                intent_confidence=request.intent_confidence,
+                answer=answer,
+                evidence=evidence,
+                reliability=reliability,
+                dataset_id=dataset_id,
+                result_file_url=query_result.result_file_url,
+            )
             return await self._finish_terminal(
                 request,
                 response,
