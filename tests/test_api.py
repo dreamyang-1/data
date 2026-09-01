@@ -8,11 +8,18 @@ from app.config import Settings
 from app.domain.models import (
     AgentResponse,
     CanonicalAnalysisRequest,
+    ChatRequest,
     ExtensionExecution,
     PrimaryIntent,
 )
 from app.main import create_app
-from app.api import _answer_chunk_delay, _answer_chunks, _thinking_section, _thinking_title
+from app.api import (
+    _answer_chunk_delay,
+    _answer_chunks,
+    _prepare_regeneration,
+    _thinking_section,
+    _thinking_title,
+)
 from app.services.orchestrator import DataAnalysisOrchestrator
 
 
@@ -130,6 +137,34 @@ def test_identity_headers_are_not_required():
             json={"application_id": "app1", "conversation_id": "c1", "message_id": "m1", "question": "你好"},
         )
     assert response.status_code == 200
+
+
+def test_regeneration_uses_isolated_ids_and_removes_replaced_turn_from_history():
+    payload = ChatRequest(
+        application_id="app-refresh",
+        conversation_id="conversation-original",
+        message_id="message-original",
+        question="查询销售额",
+        regenerate=True,
+        history=[
+            {"role": "user", "content": "查询销售量"},
+            {"role": "assistant", "content": "旧销售量答案"},
+            {"role": "user", "content": "第2轮问题：查询销售额"},
+            {"role": "assistant", "content": "应被替换的旧销售额答案"},
+        ],
+    )
+
+    execution, conversation_id, message_id = _prepare_regeneration(payload)
+
+    assert conversation_id == "conversation-original"
+    assert message_id == "message-original"
+    assert execution.conversation_id.startswith("refresh-")
+    assert execution.message_id == execution.conversation_id
+    assert execution.regenerate is False
+    assert [item.content for item in execution.history] == [
+        "查询销售量",
+        "旧销售量答案",
+    ]
 
 
 def test_development_can_temporarily_use_fallback_identity():

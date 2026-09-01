@@ -316,6 +316,12 @@ class ChatRequest(StrictModel):
     # generic agent API. Short-term conversation state is always scoped by the
     # trusted tenant/user/application/conversation identifiers.
     use_longterm_memory: bool = False
+    regenerate: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("regenerate", "refresh", "force_regenerate"),
+        exclude=True,
+        description="强制隔离旧响应缓存和会话派生状态，完整重新生成本轮答案",
+    )
     tools: list[ToolConfig] = Field(default_factory=list, max_length=30)
     skills: list[SkillConfig] = Field(default_factory=list, max_length=30)
     mcp: list[McpConfig] = Field(default_factory=list, max_length=10)

@@ -7,6 +7,7 @@ import re
 import time
 from collections.abc import AsyncIterator
 from typing import Any
+from uuid import uuid4
 
 from fastapi import APIRouter, Header, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
@@ -213,6 +214,32 @@ async def bind_chat_spreadsheet(
     }
 
 
+def _prepare_regeneration(payload: ChatRequest) -> tuple[ChatRequest, str, str]:
+    """Create an isolated execution while preserving external response IDs."""
+    external_conversation_id = payload.conversation_id
+    external_message_id = payload.message_id
+    execution = payload.model_copy(deep=True)
+    refresh_id = f"refresh-{uuid4().hex}"
+    execution.conversation_id = refresh_id
+    execution.message_id = refresh_id
+    execution.regenerate = False
+
+    # Some refresh callers include the answer being replaced in history. Cut
+    # the refreshed turn and everything after it so the old answer cannot be
+    # treated as evidence or a follow-up result during regeneration.
+    normalized_question = re.sub(r"\s+", "", execution.question)
+    for index in range(len(execution.history) - 1, -1, -1):
+        item = execution.history[index]
+        normalized_content = re.sub(r"\s+", "", item.content)
+        if item.role == "user" and (
+            normalized_content == normalized_question
+            or normalized_content.endswith(normalized_question)
+        ):
+            execution.history = execution.history[:index]
+            break
+    return execution, external_conversation_id, external_message_id
+
+
 @router.post(
     "/agent_chat",
     response_model=AgentResponse,
@@ -229,8 +256,28 @@ async def chat(
     x_roles: str | None = Header(default=None, description="可选；逗号分隔的角色"),
 ) -> AgentResponse:
     identity = trusted_identity(x_roles)
+    external_conversation_id = payload.conversation_id
+    if payload.regenerate:
+        payload, external_conversation_id, _ = _prepare_regeneration(payload)
     await bind_chat_spreadsheet(request, payload, identity)
-    return await invoke(request, payload, identity)
+    response = await invoke(request, payload, identity)
+    response.conversation_id = external_conversation_id
+    return response
+
+
+@router.post(
+    "/agent_chat/refresh",
+    response_model=AgentResponse,
+    responses=CHAT_ERROR_RESPONSES,
+    summary="完整重新生成数据分析回答",
+)
+async def chat_refresh(
+    payload: ChatRequest,
+    request: Request,
+    x_roles: str | None = Header(default=None),
+) -> AgentResponse:
+    payload.regenerate = True
+    return await chat(payload, request, x_roles)
 
 
 @router.post(
@@ -273,6 +320,10 @@ async def chat_stream(
     x_roles: str | None = Header(default=None, description="可选；逗号分隔的角色"),
 ) -> StreamingResponse:
     identity = trusted_identity(x_roles)
+    external_conversation_id = payload.conversation_id
+    external_message_id = payload.message_id
+    if payload.regenerate:
+        payload, external_conversation_id, external_message_id = _prepare_regeneration(payload)
     await bind_chat_spreadsheet(request, payload, identity)
     # Preserve the most important pre-stream idempotency guarantee.  Once the
     # first SSE byte is sent HTTP status is necessarily 200, so a known reuse
@@ -348,7 +399,7 @@ async def chat_stream(
         yield _event("updata_state", {
             "step": "",
             "data": "accepted",
-            "message_id": payload.message_id,
+            "message_id": external_message_id,
         })
         try:
             while not execution.done() or not progress_queue.empty():
@@ -377,11 +428,12 @@ async def chat_stream(
                 yield _event("updata_state", {
                     "step": "",
                     "data": "heartbeat",
-                    "message_id": payload.message_id,
+                    "message_id": external_message_id,
                     "elapsed_seconds": round(time.monotonic() - started_at, 1),
                 })
 
             response = await execution
+            response.conversation_id = external_conversation_id
             for event in deferred_planning:
                 yield render_thinking(event)
             deferred_planning.clear()
@@ -480,6 +532,20 @@ async def chat_stream(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.post(
+    "/agent_chat/refresh/stream",
+    response_class=StreamingResponse,
+    summary="SSE 完整重新生成数据分析回答",
+)
+async def chat_refresh_stream(
+    payload: ChatRequest,
+    request: Request,
+    x_roles: str | None = Header(default=None),
+) -> StreamingResponse:
+    payload.regenerate = True
+    return await chat_stream(payload, request, x_roles)
 
 
 def _event(name: str, data: dict) -> str:

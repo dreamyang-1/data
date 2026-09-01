@@ -22,6 +22,14 @@ def test_web_search_flag_matches_new_agent_request_contract():
     assert ChatRequest(**request_payload(web_search=True)).web_search is True
 
 
+@pytest.mark.parametrize("field", ["regenerate", "refresh", "force_regenerate"])
+def test_chat_request_accepts_regeneration_aliases(field):
+    request = ChatRequest(**request_payload(**{field: True}))
+
+    assert request.regenerate is True
+    assert "regenerate" not in request.model_dump(mode="json")
+
+
 @pytest.mark.parametrize("name", ["sql翻译器", "自然语言提取AST", "inventory.lookup-v2"])
 def test_tool_name_accepts_platform_unicode_identifiers(name):
     tool = ToolConfig(name=name, url="http://192.168.1.20/tool")
