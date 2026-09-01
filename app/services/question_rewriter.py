@@ -156,6 +156,7 @@ class QuestionRewriter:
         semantic_model_id: int | None,
         business_domain_id: int | None,
         business_domain_ids: list[int] | None = None,
+        force_context: bool = False,
     ) -> RewriteResult:
         original = question.strip()
         locally_normalized, local_events = self._normalize_local_metric_typos(original)
@@ -168,6 +169,7 @@ class QuestionRewriter:
             previous,
             semantic_model_id=semantic_model_id,
             business_domain_ids=business_domain_ids,
+            force_context=force_context,
         )
         if previous is not None and self.is_deterministic_slot_update(locally_normalized):
             return RewriteResult(
@@ -361,6 +363,7 @@ class QuestionRewriter:
         *,
         semantic_model_id: int | None,
         business_domain_ids: list[int] | None,
+        force_context: bool = False,
     ) -> tuple[str, bool]:
         if previous is None:
             return question, False
@@ -394,7 +397,12 @@ class QuestionRewriter:
                 ))
             )
         )
-        if not strong_reference and not weak_reference and not modification_reference:
+        if (
+            not force_context
+            and not strong_reference
+            and not weak_reference
+            and not modification_reference
+        ):
             return question, False
         # Expand the most common elliptical period switch into a standalone
         # business question. This is both easier for semantic retrieval and

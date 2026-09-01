@@ -586,3 +586,50 @@ def test_standalone_admission_rebases_a_precontaminated_semantic_frame():
     assert _filter_value(final, "商品名称") == "外周插管中心静脉导管"
     assert "空心纤维血液透析器" not in str(final.filters)
     assert "空心纤维血液透析器" not in str(final.asl_template)
+
+
+class _CountingModelClassifier:
+    def __init__(self) -> None:
+        self.rules = RuleBasedIntentClassifier()
+        self.calls: list[str] = []
+
+    async def classify(self, question, identity, conversation_id):
+        self.calls.append(question)
+        request = self.rules.classify(question, identity, conversation_id)
+        request.intent_source = "STRUCTURED_MODEL"
+        request.intent_confidence = 0.96
+        request.assumptions.extend([
+            "MODEL_QUESTION_COMPLETION_APPLIED",
+            "MODEL_ENTITY_EXTRACTION_APPLIED",
+        ])
+        return request
+
+    def merge_clarification(self, pending, answer):
+        return self.rules.merge_clarification(pending, answer)
+
+
+@pytest.mark.asyncio
+async def test_complete_business_query_does_not_bypass_enabled_model_classifier():
+    classifier = _CountingModelClassifier()
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(
+            env="test", adapter_mode="mock", intent_model_enabled=True
+        ),
+        classifier=classifier,
+        adapters=build_mock_adapters(),
+        sessions=InMemorySessionStore(),
+    )
+
+    response = await agent.handle(
+        ChatRequest(
+            application_id="app-1",
+            conversation_id="model-required-complete-query",
+            message_id="m1",
+            question="查询本月销售额",
+        ),
+        IDENTITY,
+    )
+
+    assert response.status == "COMPLETED"
+    assert classifier.calls == ["查询本月销售额"]
+    assert response.intent_source == "STRUCTURED_MODEL"

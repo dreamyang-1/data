@@ -144,6 +144,44 @@ async def test_context_is_added_before_intent_classification():
 
 
 @pytest.mark.asyncio
+async def test_admitted_followup_can_force_context_for_model_completion():
+    previous = CanonicalAnalysisRequest(
+        conversation_id="c-force-model-context",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="按月分析A产品销售趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        metrics=[MetricRef(input="销售额")],
+        entity="产品",
+        dimensions=["产品"],
+        filters=[{"field": "商品名称", "operator": "EQ", "value": "A产品"}],
+        time_range=TimeRange(
+            start=date(2025, 9, 1), end_exclusive=date(2026, 9, 2)
+        ),
+    )
+
+    without_force = await QuestionRewriter(None).rewrite(
+        "11月较10月下降多少",
+        previous=previous,
+        semantic_model_id=81,
+        business_domain_id=None,
+    )
+    forced = await QuestionRewriter(None).rewrite(
+        "11月较10月下降多少",
+        previous=previous,
+        semantic_model_id=81,
+        business_domain_id=None,
+        force_context=True,
+    )
+
+    assert without_force.context_applied is False
+    assert forced.context_applied is True
+    assert "指标=销售额" in forced.rewritten_question
+    assert "实体=产品" in forced.rewritten_question
+    assert '"value":"A产品"' in forced.rewritten_question
+
+
+@pytest.mark.asyncio
 async def test_granularity_only_followup_inherits_metric_and_period():
     previous = CanonicalAnalysisRequest(
         conversation_id="c1",

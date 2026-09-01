@@ -134,6 +134,8 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
     assert "是否为上下文追问=否" in standalone_summary
     assert "业务上下文继承=否" in standalone_summary
     assert "问题改写使用上下文=否" in standalone_summary
+    assert "问题补全来源=规则降级" in standalone_summary
+    assert "实体抽取来源=规则降级" in standalone_summary
     assert "是否需要用户补充=否" in standalone_summary
     assert "是否需要追问=" not in standalone_summary
 
@@ -152,6 +154,22 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
     # Structured state inheritance is independent of whether the natural-
     # language question rewriter happened to add text.
     assert "问题改写使用上下文=否" in followup_summary
+
+    model_enriched = standalone.model_copy(
+        deep=True,
+        update={
+            "intent_source": "STRUCTURED_MODEL",
+            "assumptions": [
+                "MODEL_QUESTION_COMPLETION_APPLIED",
+                "MODEL_ENTITY_EXTRACTION_APPLIED",
+            ],
+        },
+    )
+    model_summary = DataAnalysisOrchestrator._intent_think_summary(
+        model_enriched
+    )
+    assert "问题补全来源=大模型" in model_summary
+    assert "实体抽取来源=大模型+规则校验" in model_summary
 
 
 def test_readiness_checks_memory_dependencies():

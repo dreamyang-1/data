@@ -1936,7 +1936,10 @@ class DataAnalysisOrchestrator:
                 PrimaryIntent.METRIC_QUERY, PrimaryIntent.DETAIL_QUERY,
             }
         )
-        if standalone_complete_business:
+        deterministic_business_fast_path = bool(
+            standalone_complete_business and not self.settings.intent_model_enabled
+        )
+        if deterministic_business_fast_path:
             # This path deliberately skips the model only when the utterance is
             # an explicit, self-contained query with all required slots.  The
             # generic rule default (0.60) is not a calibrated score for this
@@ -2108,7 +2111,7 @@ class DataAnalysisOrchestrator:
         if (
             self.question_rewriter is not None
             and not independent_chat
-            and not standalone_complete_business
+            and not deterministic_business_fast_path
         ):
             rewrite = await self.question_rewriter.rewrite(
                 chat.question,
@@ -2116,6 +2119,7 @@ class DataAnalysisOrchestrator:
                 semantic_model_id=chat.semantic_model_id,
                 business_domain_id=self._effective_business_domain_id(chat),
                 business_domain_ids=list(chat.business_domain_ids),
+                force_context=turn_decision.inherit_business_context,
             )
             classification_question = rewrite.rewritten_question
         await emit_progress(
@@ -2207,7 +2211,7 @@ class DataAnalysisOrchestrator:
         else:
             request = (
                 raw_rule_request
-                if independent_chat or standalone_complete_business
+                if independent_chat or deterministic_business_fast_path
                 else await self._classify(
                     classification_question, identity, chat.conversation_id
                 )
@@ -2292,6 +2296,15 @@ class DataAnalysisOrchestrator:
                         request = merged
                         preserve_merged_question = True
                         request.request_id = uuid4()
+                        request.intent_source = current_request.intent_source
+                        request.intent_confidence = current_request.intent_confidence
+                        request.intent_candidates = list(
+                            current_request.intent_candidates
+                        )
+                        request.assumptions = list(dict.fromkeys([
+                            *request.assumptions,
+                            *current_request.assumptions,
+                        ]))
                         # CANCEL/CORRECTION are decisions from the current user
                         # message and must survive history cold recovery.
                         if request.conversation_control not in {
@@ -2363,12 +2376,24 @@ class DataAnalysisOrchestrator:
                         request.rewritten_question = render_execution_question(request)
 
         if rewrite is not None:
+            model_completion_applied = (
+                "MODEL_QUESTION_COMPLETION_APPLIED" in request.assumptions
+            )
             if not preserve_merged_question:
                 request.original_question = rewrite.original_question
-                request.rewritten_question = rewrite.rewritten_question
+                if not model_completion_applied:
+                    request.rewritten_question = rewrite.rewritten_question
             request.rewrite_context_applied = rewrite.context_applied
             request.rewrite_degraded = rewrite.degraded
             request.rewrite_events = [event.__dict__ for event in rewrite.events]
+            if model_completion_applied:
+                request.rewrite_events.append({
+                    "original": rewrite.rewritten_question,
+                    "canonical": request.rewritten_question or rewrite.rewritten_question,
+                    "kind": "MODEL_QUESTION_COMPLETION",
+                    "confidence": request.intent_confidence,
+                    "attribute_code": None,
+                })
             if (
                 rewrite.context_applied
                 and QuestionRewriter.is_deterministic_time_update(chat.question)
@@ -2421,6 +2446,11 @@ class DataAnalysisOrchestrator:
                     "conversation_control": ConversationControl.FOLLOW_UP,
                     "intent_source": request.intent_source,
                     "intent_confidence": request.intent_confidence,
+                    "intent_candidates": list(request.intent_candidates),
+                    "assumptions": list(dict.fromkeys([
+                        *previous_for_rewrite.assumptions,
+                        *request.assumptions,
+                    ])),
                     "missing_slots": [],
                 },
             )
@@ -5162,6 +5192,25 @@ class DataAnalysisOrchestrator:
             if request.turn_admission is not None
             else request.context_mode != ContextMode.NONE
         )
+        model_semantics_used = request.intent_source == "STRUCTURED_MODEL"
+        model_completion_used = (
+            "MODEL_QUESTION_COMPLETION_APPLIED" in request.assumptions
+            or any(
+                str(item.get("kind") or "") == "MODEL_QUESTION_COMPLETION"
+                for item in request.rewrite_events
+                if isinstance(item, dict)
+            )
+        )
+        completion_source = (
+            "大模型"
+            if model_completion_used
+            else "大模型未返回，规则安全补全"
+            if model_semantics_used
+            else "规则降级"
+        )
+        extraction_source = (
+            "大模型+规则校验" if model_semantics_used else "规则降级"
+        )
         file_judgement = (
             "文件判断：检测到用户上传文件，且当前问题需要基于文件内容处理。\n"
             if file_based
@@ -5181,6 +5230,7 @@ class DataAnalysisOrchestrator:
             f"是否为上下文追问={contextual_followup}；"
             f"业务上下文继承={'是' if business_context_inherited else '否'}；"
             f"问题改写使用上下文={'是' if request.rewrite_context_applied else '否'}；"
+            f"问题补全来源={completion_source}；实体抽取来源={extraction_source}；"
             f"是否需要用户补充={'是：' + '、'.join(request.missing_slots) if request.missing_slots else '否'}；"
             f"参数规范化={'已完成' if not request.rewrite_degraded else '降级完成'}。"
         )

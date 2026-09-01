@@ -46,6 +46,7 @@ class StructuredIntentOutput(BaseModel):
     fields: list[str] = Field(default_factory=list)
     comparison_type: str | None = None
     ambiguities: list[str] = Field(default_factory=list)
+    completed_question: str | None = Field(default=None, max_length=4000)
 
 
 SYSTEM_PROMPT = """你是企业数据分析系统的意图分类器，只分类和抽取，不回答问题。输出必须是符合给定字段定义的 JSON 对象，不得包含 Markdown 或额外文字。
@@ -66,6 +67,10 @@ SYSTEM_PROMPT = """你是企业数据分析系统的意图分类器，只分类�
 14. 询问来源表、来源字段、加工链路属于 DATA_LINEAGE；询问指标含义、公式、统计范围属于 METRIC_DEFINITION。
 15. 询问刷新频率、延迟、缺失、重复、空值或跨系统对账属于 DATA_QUALITY。
 16. 不要因为句子中出现“报表”就判为 REPORT_GENERATION；“报表中的指标来源/对账”仍分别属于 DATA_LINEAGE/DATA_QUALITY。
+17. completed_question 必须把当前问题补全成一条可以独立理解和执行的业务问题；如果输入中包含“已确认的上一轮上下文”，只继承当前问题省略的内容，当前问题明确表达的实体、指标、时间、筛选和排序永远优先。
+18. completed_question 不得回答问题、不得生成 SQL、不得添加输入及已确认上下文中不存在的业务值；独立完整问题只做必要规范化，不得擅自引用上一轮。
+19. entity 表示用户本轮要查询、分组或返回的业务对象（如产品、经销商、医院），不得把作为筛选值的具体产品名直接当成 entity；dimensions 和 fields 必须按用户实际要求抽取。
+20. 实体、维度、字段和指标都要由语义理解给出；规则或关键词只能作为证据，不能因为句式常见就省略抽取。
 """
 
 
@@ -206,6 +211,7 @@ class HybridIntentClassifier:
         request.operators = model.operators
         request.intent_source = "STRUCTURED_MODEL"
         request.intent_confidence = model.confidence
+        semantic_extraction_applied = False
         if model.metrics:
             grounded_metrics = self._grounded_metric_names(model.metrics, question)
             if grounded_metrics:
@@ -214,20 +220,34 @@ class HybridIntentClassifier:
                 request.assumptions.append("UNGROUNDED_MODEL_METRIC_DROPPED")
         if model.dimensions:
             grounded_dimensions = self._grounded_text_values(model.dimensions, question)
+            grounded_dimensions.extend(
+                value
+                for value in model.dimensions
+                if value not in grounded_dimensions
+                and self._supported_entity_category(value, question, request)
+            )
+            grounded_dimensions = list(dict.fromkeys(grounded_dimensions))
             if grounded_dimensions:
                 request.dimensions = grounded_dimensions
+                semantic_extraction_applied = True
             if len(grounded_dimensions) != len(model.dimensions):
                 request.assumptions.append("UNGROUNDED_MODEL_DIMENSION_DROPPED")
         if model.entity:
             grounded_entity = self._grounded_text_value(model.entity, question)
+            if grounded_entity is None and self._supported_entity_category(
+                model.entity, question, request
+            ):
+                grounded_entity = model.entity.strip()
             if grounded_entity:
                 request.entity = grounded_entity
+                semantic_extraction_applied = True
             else:
                 request.assumptions.append("UNGROUNDED_MODEL_ENTITY_DROPPED")
         if model.fields:
             grounded_fields = self._grounded_text_values(model.fields, question)
             if grounded_fields:
                 request.fields = grounded_fields
+                semantic_extraction_applied = True
             if len(grounded_fields) != len(model.fields):
                 request.assumptions.append("UNGROUNDED_MODEL_FIELD_DROPPED")
         if model.comparison_type:
@@ -238,6 +258,18 @@ class HybridIntentClassifier:
                 request.comparison_type = grounded_comparison
             else:
                 request.assumptions.append("UNGROUNDED_MODEL_COMPARISON_DROPPED")
+        if semantic_extraction_applied:
+            request.assumptions.append("MODEL_ENTITY_EXTRACTION_APPLIED")
+        if model.completed_question:
+            completed_question = self._safe_completed_question(
+                model.completed_question,
+                question,
+            )
+            if completed_question is not None:
+                request.rewritten_question = completed_question
+                request.assumptions.append("MODEL_QUESTION_COMPLETION_APPLIED")
+            else:
+                request.assumptions.append("UNSAFE_MODEL_QUESTION_COMPLETION_DROPPED")
         # Re-apply deterministic result-shape rules after model enrichment.
         # The structured model may otherwise downgrade a supplier list to a
         # metric query or treat recommendation wording as out of scope.
@@ -776,20 +808,80 @@ class HybridIntentClassifier:
     def _should_skip_model(
         cls, request: CanonicalAnalysisRequest, question: str
     ) -> bool:
+        # Business questions always use the structured model when it is
+        # enabled. Rules remain the deterministic baseline and safety guard,
+        # but must not suppress model-based completion/entity extraction merely
+        # because a familiar metric or intent phrase was recognized.
         if request.primary_intent in {
             PrimaryIntent.OUT_OF_SCOPE, PrimaryIntent.CHAT, PrimaryIntent.CAPABILITY_HELP
         } and cls._has_strong_rule_signal(request.primary_intent, question):
             return True
-        if (
-            request.primary_intent == PrimaryIntent.METRIC_QUERY
-            and request.metrics
-            and request.time_range
-        ):
-            return True
-        if (
-            cls._has_strong_rule_signal(request.primary_intent, question)
-            and request.metrics
-            and not request.ambiguities
-        ):
-            return True
         return False
+
+    @staticmethod
+    def _safe_completed_question(value: str, source: str) -> str | None:
+        completed = re.sub(r"\s+", " ", value).strip()
+        if not completed or len(completed) > 4000:
+            return None
+        if any(
+            marker in completed.lower()
+            for marker in ("select ", "insert ", "update ", "delete ", "```", "已确认的上一轮上下文")
+        ):
+            return None
+        current = source.split("\n已确认的上一轮上下文", 1)[0].strip()
+        current_numbers = set(re.findall(r"\d+(?:\.\d+)?", current))
+        completed_numbers = set(re.findall(r"\d+(?:\.\d+)?", completed))
+        if not current_numbers.issubset(completed_numbers):
+            return None
+        for term in ("不要", "排除", "剔除", "不含", "不是"):
+            if term in current and term not in completed:
+                return None
+        return completed
+
+    @staticmethod
+    def _supported_entity_category(
+        value: str,
+        question: str,
+        baseline: CanonicalAnalysisRequest,
+    ) -> bool:
+        """Allow model-inferred object categories backed by current-turn evidence.
+
+        A user often names a concrete medical device without appending “产品”.
+        Requiring the category label itself to occur verbatim would discard the
+        model's useful semantic extraction and fall back to keywords again.
+        Only a closed set of business object categories can use this inferred
+        path; concrete names remain filters and cannot become query objects.
+        """
+        category = re.sub(r"\s+", "", value)
+        compact = re.sub(r"\s+", "", question).split(
+            "已确认的上一轮上下文", 1
+        )[0]
+        current_fields = {
+            str(item.get("field") or "")
+            for item in baseline.filters
+            if isinstance(item, dict)
+        }
+        evidence = {
+            "产品": bool(
+                {"商品名称", "产品名称", "商品", "产品"} & current_fields
+                or re.search(
+                    r"(?:导管|透析器|口罩|套件|球囊|支架|导丝|耗材|器械|设备)",
+                    compact,
+                )
+            ),
+            "商品": bool(
+                {"商品名称", "产品名称", "商品", "产品"} & current_fields
+                or "商品" in compact
+            ),
+            "经销商": "经销商" in compact,
+            "供应商": "供应商" in compact,
+            "医院": "医院" in compact,
+            "客户": "客户" in compact,
+            "门店": "门店" in compact,
+            "厂家": bool("厂家" in compact or "制造商" in compact),
+            "制造商": bool("厂家" in compact or "制造商" in compact),
+            "区域": bool("区域" in compact or "地区" in compact),
+            "地区": bool("区域" in compact or "地区" in compact),
+            "订单": "订单" in compact,
+        }
+        return evidence.get(category, False)
