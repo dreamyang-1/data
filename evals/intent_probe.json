@@ -1,0 +1,7 @@
+[
+  {
+    "id": "PROBE01",
+    "question": "查询本月销售额",
+    "expected": "METRIC_QUERY"
+  }
+]

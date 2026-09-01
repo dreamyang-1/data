@@ -1,0 +1,153 @@
+{
+  "summary": {
+    "generated_at": "2026-08-29T11:40:28.285101+08:00",
+    "question_count": 10,
+    "passed": 9,
+    "failed": 1,
+    "completed": 8,
+    "needs_clarification": 0,
+    "safe_fallback": 1,
+    "files": 0,
+    "latency_mean": 10.994,
+    "latency_p95": 16.0
+  },
+  "scenarios": [
+    {
+      "name": "实体关系与指代追问",
+      "turns": [
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 1,
+          "question": "查询最近一年上海东松医疗科技股份有限公司销售过的产品。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "共查询到 10 条明细。\n\n| 产品名称 |\n| --- |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 16.0,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 2,
+          "question": "其中销售额最高的是哪个？",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "商品按含税销售总额降序排名：第1名 血液透析设备=634286。\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 21.777,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 3,
+          "question": "它卖给了哪些医院？",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "商品按含税销售总额降序排名：第1名 血液透析设备=634286。\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。",
+          "file_count": 0,
+          "elapsed_seconds": 11.088,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 4,
+          "question": "这些医院分别是什么等级？",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "商品按含税销售总额降序排名：第1名 血液透析设备=634286。\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。",
+          "file_count": 0,
+          "elapsed_seconds": 10.291,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 5,
+          "question": "只保留三级医院。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "商品按含税销售总额降序排名：第1名 血液透析设备=634286。\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。",
+          "file_count": 0,
+          "elapsed_seconds": 9.186,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 6,
+          "question": "按医院的销售额排序。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "商品按含税销售总额降序排名：第1名 血液透析设备=634286。\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。",
+          "file_count": 0,
+          "elapsed_seconds": 5.769,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 7,
+          "question": "第一家医院还与哪些经销商合作？",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。当前业务数据只更新到 2025-12-30，所选区间在该日期之后的部分尚无数据。",
+          "file_count": 0,
+          "elapsed_seconds": 12.36,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 8,
+          "question": "这些经销商的销售额分别是多少？",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "商品按含税销售总额降序排名：第1名 血液透析设备=634286。\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。",
+          "file_count": 0,
+          "elapsed_seconds": 7.01,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 9,
+          "question": "改为查看上海华美投资管理有限公司。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "商品按含税销售总额降序排名：第1名 血液透析设备=634286。\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。",
+          "file_count": 0,
+          "elapsed_seconds": 12.817,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 10,
+          "question": "总结刚才两家经销商的差异。",
+          "http_status": 502,
+          "status": null,
+          "intent": null,
+          "missing_slots": [],
+          "answer": "",
+          "file_count": 0,
+          "elapsed_seconds": 3.642,
+          "issues": [
+            "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          ]
+        }
+      ]
+    }
+  ]
+}

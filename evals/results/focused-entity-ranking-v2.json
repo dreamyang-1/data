@@ -1,0 +1,156 @@
+{
+  "summary": {
+    "generated_at": "2026-08-29T11:39:06.840333+08:00",
+    "question_count": 10,
+    "passed": 9,
+    "failed": 1,
+    "completed": 7,
+    "needs_clarification": 1,
+    "safe_fallback": 1,
+    "files": 0,
+    "latency_mean": 10.965,
+    "latency_p95": 12.788
+  },
+  "scenarios": [
+    {
+      "name": "实体关系与指代追问",
+      "turns": [
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 1,
+          "question": "查询最近一年上海东松医疗科技股份有限公司销售过的产品。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "共查询到 10 条明细。\n\n| 产品名称 |\n| --- |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 12.355,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 2,
+          "question": "其中销售额最高的是哪个？",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "数据不足以支持可靠分析：排名结果存在多个对象标签列，无法安全确定排名对象。",
+          "file_count": 0,
+          "elapsed_seconds": 11.273,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 3,
+          "question": "它卖给了哪些医院？",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "共查询到 10 条明细。\n\n| 产品名称 |\n| --- |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 12.788,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 4,
+          "question": "这些医院分别是什么等级？",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "共查询到 10 条明细。\n\n| 产品名称 |\n| --- |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 12.584,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 5,
+          "question": "只保留三级医院。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "共查询到 10 条明细。\n\n| 产品名称 |\n| --- |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 11.988,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 6,
+          "question": "按医院的销售额排序。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "共查询到 10 条明细。\n\n| 产品名称 |\n| --- |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 8.588,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 7,
+          "question": "第一家医院还与哪些经销商合作？",
+          "http_status": 502,
+          "status": null,
+          "intent": null,
+          "missing_slots": [],
+          "answer": "",
+          "file_count": 0,
+          "elapsed_seconds": 7.757,
+          "issues": [
+            "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+          ]
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 8,
+          "question": "这些经销商的销售额分别是多少？",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "共查询到 10 条明细。\n\n| 产品名称 |\n| --- |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 12.656,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 9,
+          "question": "改为查看上海华美投资管理有限公司。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "共查询到 10 条明细。\n\n| 产品名称 |\n| --- |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 14.511,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 10,
+          "question": "总结刚才两家经销商的差异。",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [
+            "metric",
+            "comparison_type"
+          ],
+          "answer": "我已理解：时间范围=2025-08-29 至 2026-08-29（含首尾）；明细对象=商品；分析维度=经销商名称、经销商。还需要补充：要查询或分析哪个指标？；希望同比、环比、目标值还是对象间比较？",
+          "file_count": 0,
+          "elapsed_seconds": 5.15,
+          "issues": []
+        }
+      ]
+    }
+  ]
+}

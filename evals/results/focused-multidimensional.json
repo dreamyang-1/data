@@ -1,0 +1,159 @@
+{
+  "summary": {
+    "generated_at": "2026-08-29T12:10:12.276638+08:00",
+    "question_count": 10,
+    "passed": 9,
+    "failed": 1,
+    "completed": 1,
+    "needs_clarification": 3,
+    "safe_fallback": 5,
+    "files": 1,
+    "latency_mean": 12.007,
+    "latency_p95": 17.876
+  },
+  "scenarios": [
+    {
+      "name": "多维度拆解与多问题合并",
+      "turns": [
+        {
+          "scenario": "多维度拆解与多问题合并",
+          "turn": 1,
+          "question": "按月份和产品统计最近一年销售额、销量和订单数，并给出环比。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [],
+          "answer": "查询结果已被截断，无法基于不完整数据生成可靠分析结论；可下载完整结果或缩小范围后重试。\n\n附件：[下载完整查询结果（XLSX）](http://192.168.1.223:29000/bam/8f16acb724d345f1ab72aac0369f1ae2.xlsx)",
+          "file_count": 1,
+          "elapsed_seconds": 13.623,
+          "issues": []
+        },
+        {
+          "scenario": "多维度拆解与多问题合并",
+          "turn": 2,
+          "question": "比较上海和江苏2025年与2026年的销售额、订单数和客户数。",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [
+            "comparison_type"
+          ],
+          "answer": "我已理解：指标=销售额、客户数；时间范围=2025-01-01 至 2025-12-31（含首尾）；分析维度=客户。还需要补充：希望同比、环比、目标值还是对象间比较？",
+          "file_count": 0,
+          "elapsed_seconds": 0.924,
+          "issues": []
+        },
+        {
+          "scenario": "多维度拆解与多问题合并",
+          "turn": 3,
+          "question": "查询销量前十的产品，以及下单次数最多的三个客户。",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "semantic_ambiguity"
+          ],
+          "answer": "我已理解：指标=销售总数量、订单笔数；时间范围=2025-08-29 至 2026-08-29（含首尾）；分析维度=产品、客户。还需要补充：查询同时包含“产品”和“客户”两个不同维度的Top N排名，无法在单一分组中同时返回。请确认优先展示哪一个排名：1) 销量前十的产品；2) 下单次数最多的三个客户（经销商）。",
+          "file_count": 0,
+          "elapsed_seconds": 14.955,
+          "issues": []
+        },
+        {
+          "scenario": "多维度拆解与多问题合并",
+          "turn": 4,
+          "question": "统计每家医院的订单总金额、订单笔数，并关联医院等级和所在城市。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "上游数据服务暂时不可用（ASL_DETAIL_FIELDS_INCOMPLETE），请稍后重试。",
+          "file_count": 0,
+          "elapsed_seconds": 14.513,
+          "issues": []
+        },
+        {
+          "scenario": "多维度拆解与多问题合并",
+          "turn": 5,
+          "question": "分析空心纤维血液透析器在各城市、各医院等级、各月份的销售趋势。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。当前业务数据只更新到 2025-12-30，所选区间在该日期之后的部分尚无数据。当前筛选条件：地区=空心纤维血液透析器在各城市、商品名称=各医院等级、各月份。请确认名称是否与主数据一致。",
+          "file_count": 0,
+          "elapsed_seconds": 14.079,
+          "issues": []
+        },
+        {
+          "scenario": "多维度拆解与多问题合并",
+          "turn": 6,
+          "question": "找出销售额下降最大的五个产品，并分析涉及的经销商和医院。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "数据不足以支持可靠分析：排名对象为空或重复，SQL必须按唯一对象聚合。",
+          "file_count": 0,
+          "elapsed_seconds": 10.912,
+          "issues": []
+        },
+        {
+          "scenario": "多维度拆解与多问题合并",
+          "turn": 7,
+          "question": "分别查询销售额最高的三家经销商和合作医院最多的三家经销商。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "经销商按含税销售总额降序排名：第1名 上海鸿迪医疗科技有限公司=3.40713e+07；第2名 广东合德供应链有限责任公司=2.32821e+07；第3名 上海福荫商贸有限公司=1.95702e+07。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（按销售记录时间统计）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 20.532,
+          "issues": []
+        },
+        {
+          "scenario": "多维度拆解与多问题合并",
+          "turn": 8,
+          "question": "比较费森尤斯与贝朗产品最近一年销售额、销量和覆盖医院数。",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [
+            "comparison_type"
+          ],
+          "answer": "我已理解：指标=销售额；时间范围=2025-08-29 至 2026-08-29（含首尾）。还需要补充：希望同比、环比、目标值还是对象间比较？",
+          "file_count": 0,
+          "elapsed_seconds": 0.889,
+          "issues": []
+        },
+        {
+          "scenario": "多维度拆解与多问题合并",
+          "turn": 9,
+          "question": "生成上海地区最近一年销售分析报告，包含趋势、排名、异常和结论。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "REPORT_GENERATION",
+          "missing_slots": [],
+          "answer": "自然语言转 ASL 服务暂时不可用。",
+          "file_count": 0,
+          "elapsed_seconds": 11.771,
+          "issues": []
+        },
+        {
+          "scenario": "多维度拆解与多问题合并",
+          "turn": 10,
+          "question": "查询单价最高的三个产品，并同时查询销售额最高的三个产品。",
+          "http_status": 200,
+          "status": "PARTIAL_SUCCESS",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "| 查询目标 | 结果内容 |\n| --- | --- |\n| 查询单价最高的三个产品 | 当前问题匹配到的指标口径存在冲突，请联系管理员检查指标名称和别名配置。 |\n| 查询销售额最高的三个产品 | 查询结果，共 3 行。<br><br>\\| 商品 \\| 含税销售总额 \\|<br>\\| --- \\| --- \\|<br>\\| 胸腹腔内窥镜手术系统用手术器械 \\| 96,646,272.298 \\|<br>\\| 经导管主动脉瓣膜系统 \\| 41,561,095.2277 \\|<br>\\| 一次性使用血液透析滤过器及配套管路 \\| 32,860,440.9286 \\|<br>数据水位：当前业务数据截至 2025-12-30T00:00:00（按销售记录时间统计）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。 |",
+          "file_count": 0,
+          "elapsed_seconds": 17.876,
+          "issues": [
+            "未知状态:PARTIAL_SUCCESS"
+          ]
+        }
+      ]
+    }
+  ]
+}

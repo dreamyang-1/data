@@ -1,0 +1,124 @@
+{
+  "summary": {
+    "generated_at": "2026-08-29T13:18:18.253847+08:00",
+    "question_count": 6,
+    "passed": 3,
+    "failed": 3,
+    "completed": 3,
+    "latency_mean": 22.723,
+    "latency_max": 30.037
+  },
+  "results": [
+    {
+      "number": 4,
+      "question": "查询上海市紫杉醇释放冠脉球囊导管合作经销商名单。",
+      "http_status": 200,
+      "status": "COMPLETED",
+      "intent": "DETAIL_QUERY",
+      "missing_slots": [],
+      "answer": "共查询到 21 条明细。\n\n| 经销商名称 |\n| --- |\n| 上海米寻科技有限公司 |\n| 上海宸天医疗器械有限公司 |\n| 上海永绥吉医疗科技有限公司 |\n| 上海瑞矩医疗科技有限公司 |\n| 上海宸昌和实业有限公司 |\n| 国药控股医疗器械有限公司 |\n| 上海若程贸易中心 |\n| 上海博润盛康科技有限公司 |\n| 上海文桉科技有限公司 |\n| 上海屹虹纳商贸有限公司 |\n| 上海正山河贸易有限公司 |\n| 铭盛医疗器械（上海）有限公司 |\n| 上海泓耀医疗器械有限公司 |\n| 诺伊格（上海）医疗科技有限公司 |\n| 上海斐汐贸易有限公司 |\n| 上海耀熠绮医疗科技有限公司 |\n| 上海倍润嘉供应链有限公司 |\n| 上海芝栎医疗科技有限公司 |\n| 上海丽梅庆供应链有限公司 |\n| 上海硕瑞医疗器械有限公司 |\n数据水位：当前业务数据截至 2025-12-30T00:00:00（按销售记录时间统计）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+      "evidence_kinds": [
+        "QUERY_RESULT"
+      ],
+      "files": [],
+      "elapsed_seconds": 21.268,
+      "issues": []
+    },
+    {
+      "number": 16,
+      "question": "查询上海市紫杉醇释放冠脉球囊导管合作医院名单。",
+      "http_status": 200,
+      "status": "SAFE_FALLBACK",
+      "intent": "DETAIL_QUERY",
+      "missing_slots": [],
+      "answer": "上游数据服务暂时不可用（ASL_DETAIL_FIELDS_INCOMPLETE），请稍后重试。",
+      "evidence_kinds": [],
+      "files": [],
+      "elapsed_seconds": 26.454,
+      "issues": [
+        "状态不是COMPLETED:SAFE_FALLBACK",
+        "缺少QUERY_RESULT证据"
+      ]
+    },
+    {
+      "number": 17,
+      "question": "查询外周插管中心静脉导管合作的医院名单。",
+      "http_status": 200,
+      "status": "SAFE_FALLBACK",
+      "intent": "DETAIL_QUERY",
+      "missing_slots": [],
+      "answer": "上游数据服务暂时不可用（ASL_DETAIL_FIELDS_INCOMPLETE），请稍后重试。",
+      "evidence_kinds": [],
+      "files": [],
+      "elapsed_seconds": 13.086,
+      "issues": [
+        "状态不是COMPLETED:SAFE_FALLBACK",
+        "缺少QUERY_RESULT证据"
+      ]
+    },
+    {
+      "number": 18,
+      "question": "查询超声血管导引穿刺套件适用的科室。",
+      "http_status": 200,
+      "status": "COMPLETED",
+      "intent": "DETAIL_QUERY",
+      "missing_slots": [],
+      "answer": "查询成功，共 1386 条结果；当前仅返回 0 条预览，预览不作为全量统计。完整结果请使用回答末尾的附件链接下载。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（按销售记录时间统计）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。\n\n附件：[下载完整查询结果（XLSX）](http://192.168.1.223:29000/bam/9085c21ccd1b46bc8b38dee6fe613554.xlsx)",
+      "evidence_kinds": [
+        "QUERY_RESULT"
+      ],
+      "files": [
+        {
+          "file_id": "sql-result-992fbf051c5504a28b828acf",
+          "dataset_id": "ds-f75fc357-cb7d-4c43-8579-1d5b0b1d5e3b",
+          "dataset_ids": [],
+          "format": "xlsx",
+          "object_name": "9085c21ccd1b46bc8b38dee6fe613554.xlsx",
+          "download_url": "http://192.168.1.223:29000/bam/9085c21ccd1b46bc8b38dee6fe613554.xlsx",
+          "byte_size": 0,
+          "expires_at": "2026-08-30T05:18:01.653441+00:00"
+        }
+      ],
+      "elapsed_seconds": 21.628,
+      "issues": []
+    },
+    {
+      "number": 19,
+      "question": "查询含税销售总额排名前 10 的医院，并显示医院名称、医院等级和订单笔数。",
+      "http_status": 200,
+      "status": "COMPLETED",
+      "intent": "METRIC_QUERY",
+      "missing_slots": [],
+      "answer": "医院按含税销售总额降序排名：第1名 复旦大学附属华山医院=6.21543e+07（订单笔数=7581）；第2名 上海市皮肤病医院=1.83483e+07（订单笔数=5358）；第3名 民航上海医院=5.27378e+06（订单笔数=2251）；第4名 上海市口腔医院=3.69443e+06（订单笔数=2431）；第5名 上海交通大学医学院附属新华医院=3.07894e+06（订单笔数=148）；第6名 上海市第一人民医院=3.03085e+06（订单笔数=962）；第7名 上海交通大学医学院附属瑞金医院=2.97205e+06（订单笔数=1386）；第8名 武汉中纪病理诊断中心有限公司=2.73537e+06（订单笔数=38）；第9名 中国人民解放军海军军医大学第一附属医院=2.3842e+06（订单笔数=114）；第10名 上海市虹口区江湾医院=2.36081e+06（订单笔数=241）。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（按销售记录时间统计）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+      "evidence_kinds": [
+        "QUERY_RESULT",
+        "SEMANTIC_METRIC_RESOLUTION",
+        "SEMANTIC_METRIC_RESOLUTION",
+        "ANALYSIS_RESULT"
+      ],
+      "files": [],
+      "elapsed_seconds": 30.037,
+      "issues": []
+    },
+    {
+      "number": 29,
+      "question": "分析上海地区费森尤斯产品最近一年的销售趋势。",
+      "http_status": 200,
+      "status": "NEEDS_CLARIFICATION",
+      "intent": "TREND_ANALYSIS",
+      "missing_slots": [
+        "semantic_ambiguity"
+      ],
+      "answer": "我已理解：指标=含税销售总额；时间范围=2025-08-29 至 2026-08-29（含首尾）；明细对象=产品。还需要补充：品牌值 费森尤斯 对应多个同优先级目录字段或规范值，请确认具体品牌口径。；过滤值 费森尤斯 在关联实体目录中存在多个同等候选，请确认具体商品、品牌或厂家口径。",
+      "evidence_kinds": [],
+      "files": [],
+      "elapsed_seconds": 23.863,
+      "issues": [
+        "状态不是COMPLETED:NEEDS_CLARIFICATION",
+        "缺少QUERY_RESULT证据",
+        "仍有missing_slots",
+        "回答包含失败或澄清话术"
+      ]
+    }
+  ]
+}

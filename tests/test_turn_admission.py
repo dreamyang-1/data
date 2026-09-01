@@ -1,0 +1,458 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+import pytest
+
+from app.adapters.base import AdapterBundle, AdapterError
+from app.adapters.http import HttpDataRetrievalAdapter
+from app.adapters.mock import build_mock_adapters
+from app.adapters.semantic_query import CompositeSemanticQueryTool
+from app.config import Settings
+from app.domain.models import (
+    CanonicalAnalysisRequest,
+    ChatRequest,
+    DataQueryResult,
+    Dataset,
+    PrimaryIntent,
+    TrustedIdentity,
+    TurnRelation,
+)
+from app.intent import RuleBasedIntentClassifier
+from app.services import DataAnalysisOrchestrator
+from app.services.orchestrator import select_data_execution_question
+from app.services.turn_admission import TurnAdmissionGate
+from app.stores import InMemorySessionStore
+from app.stores.events import InMemorySessionEventStore, SessionEventType
+
+
+IDENTITY = TrustedIdentity(tenant_id="tenant-1", user_id="user-1")
+
+
+def _finalized_standalone(
+    classifier: RuleBasedIntentClassifier,
+    gate: TurnAdmissionGate,
+    question: str,
+    conversation_id: str,
+) -> CanonicalAnalysisRequest:
+    raw = classifier.classify(question, IDENTITY, conversation_id)
+    decision = gate.evaluate(
+        question=question,
+        current=raw,
+        previous=None,
+        message_id="m1",
+    )
+    decision.selected_thread_id = "thread-1"
+    request = gate.apply_explicit_slot_protection(
+        raw.model_copy(deep=True), raw, decision
+    )
+    request.analysis_thread_id = "thread-1"
+    request.turn_admission = decision
+    return request
+
+
+def _decision(
+    previous_question: str,
+    current_question: str,
+    conversation_id: str,
+):
+    classifier = RuleBasedIntentClassifier()
+    gate = TurnAdmissionGate()
+    previous = _finalized_standalone(
+        classifier, gate, previous_question, conversation_id
+    )
+    current = classifier.classify(current_question, IDENTITY, conversation_id)
+    decision = gate.evaluate(
+        question=current_question,
+        current=current,
+        previous=previous,
+        message_id="m2",
+    )
+    return gate, previous, current, decision
+
+
+def _filter_value(request: CanonicalAnalysisRequest, field: str) -> str | None:
+    return next(
+        (
+            str(item.get("value"))
+            for item in request.filters
+            if str(item.get("field") or "") == field
+        ),
+        None,
+    )
+
+
+def test_case_1_complete_new_product_trend_is_standalone_new_topic():
+    gate, previous, current, decision = _decision(
+        "查询空心纤维血液透析器产品合作的经销商名单。",
+        "按月分析外周插管中心静脉导管的销售趋势。",
+        "case-1",
+    )
+
+    assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert decision.current_turn_facts.is_self_contained is True
+    assert decision.core_subject_changed is True
+    assert decision.inherit_business_context is False
+    assert decision.create_new_analysis_thread is True
+    assert decision.context_mode.value == "NONE"
+    assert decision.current_turn_facts.explicit_slots["time_grain"].value == "month"
+
+    final = gate.apply_explicit_slot_protection(
+        current.model_copy(deep=True), current, decision
+    )
+    assert final.primary_intent == PrimaryIntent.TREND_ANALYSIS
+    assert _filter_value(final, "商品名称") == "外周插管中心静脉导管"
+    assert "经销商" not in final.dimensions
+    assert "空心纤维血液透析器" not in str(final.model_dump())
+    assert previous.analysis_thread_id != decision.selected_thread_id
+
+
+def test_case_2_elliptical_product_replacement_is_current_topic_modification():
+    gate, previous, current, decision = _decision(
+        "分析空心纤维血液透析器销售趋势。",
+        "外周插管中心静脉导管呢？",
+        "case-2",
+    )
+
+    assert decision.relation == TurnRelation.CURRENT_TOPIC_MODIFICATION
+    assert decision.inherit_business_context is True
+    assert decision.core_subject_changed is True
+    assert decision.current_turn_facts.explicit_slots["product"].value == (
+        "外周插管中心静脉导管"
+    )
+
+    merged = previous.model_copy(deep=True)
+    final = gate.apply_explicit_slot_protection(merged, current, decision)
+    assert final.primary_intent == PrimaryIntent.TREND_ANALYSIS
+    assert _filter_value(final, "商品名称") == "外周插管中心静脉导管"
+    assert "空心纤维血液透析器" not in str(final.filters)
+
+
+def test_case_3_complete_same_domain_query_is_still_new_topic():
+    _, _, _, decision = _decision(
+        "分析空心纤维血液透析器销售趋势。",
+        "按月分析外周插管中心静脉导管销售趋势。",
+        "case-3",
+    )
+
+    assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert decision.inherit_business_context is False
+
+
+def test_case_4_elliptical_analysis_action_inherits_product():
+    gate, previous, current, decision = _decision(
+        "查询A产品经销商。",
+        "销售趋势呢？",
+        "case-4",
+    )
+
+    assert _filter_value(previous, "商品名称") == "A"
+    assert decision.relation == TurnRelation.CURRENT_TOPIC_FOLLOWUP
+    assert decision.inherit_business_context is True
+
+    final = gate.apply_explicit_slot_protection(
+        previous.model_copy(deep=True), current, decision
+    )
+    assert final.primary_intent == PrimaryIntent.TREND_ANALYSIS
+    assert _filter_value(final, "商品名称") == "A"
+
+
+def test_case_5_complete_product_change_clears_dealer_task():
+    gate, _, current, decision = _decision(
+        "查询A产品经销商。",
+        "分析B产品销售趋势。",
+        "case-5",
+    )
+
+    assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert decision.inherit_business_context is False
+    final = gate.apply_explicit_slot_protection(
+        current.model_copy(deep=True), current, decision
+    )
+    assert final.primary_intent == PrimaryIntent.TREND_ANALYSIS
+    assert _filter_value(final, "商品名称") == "B"
+    assert "经销商" not in final.dimensions
+    assert "A" not in str(final.filters)
+
+
+def test_case_6_region_ellipsis_is_current_topic_modification():
+    gate, previous, current, decision = _decision(
+        "上海A产品趋势。",
+        "北京呢？",
+        "case-6",
+    )
+
+    assert decision.relation == TurnRelation.CURRENT_TOPIC_MODIFICATION
+    assert decision.inherit_business_context is True
+    final = gate.apply_explicit_slot_protection(
+        previous.model_copy(deep=True), current, decision
+    )
+    assert _filter_value(final, "地区") == "北京市"
+    assert _filter_value(final, "商品名称") == "A"
+
+
+def test_case_7_complete_region_product_ranking_is_new_topic():
+    gate, _, current, decision = _decision(
+        "上海A产品趋势。",
+        "分析广东B产品医院销量排名。",
+        "case-7",
+    )
+
+    assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert decision.inherit_business_context is False
+    final = gate.apply_explicit_slot_protection(
+        current.model_copy(deep=True), current, decision
+    )
+    assert _filter_value(final, "地区") == "广东省"
+    assert _filter_value(final, "商品名称") == "B"
+    assert "上海" not in str(final.filters)
+    assert "A" not in str(final.filters)
+
+
+def test_query_to_sql_alignment_rejects_missing_or_stale_current_entity():
+    gate, previous, current, decision = _decision(
+        "查询空心纤维血液透析器产品合作的经销商名单。",
+        "按月分析外周插管中心静脉导管的销售趋势。",
+        "sql-alignment",
+    )
+    request = gate.apply_explicit_slot_protection(
+        current.model_copy(deep=True), current, decision
+    )
+    request.turn_admission = decision
+
+    report = HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+        request,
+        "SELECT * FROM sales_order WHERE product_name = '外周插管中心静脉导管'",
+    )
+    assert report["status"] == "PASS"
+
+    with pytest.raises(AdapterError) as missing:
+        HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+            request,
+            "SELECT * FROM sales_order WHERE product_name = '空心纤维血液透析器产品'",
+        )
+    assert missing.value.code == "SQL_QUERY_ENTITY_ALIGNMENT_FAILED"
+
+    with pytest.raises(AdapterError) as stale:
+        HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+            request,
+            "SELECT * FROM sales_order WHERE product_name IN "
+            "('外周插管中心静脉导管', '空心纤维血液透析器产品')",
+        )
+    assert stale.value.code == "STALE_CONTEXT_CONFLICT"
+
+
+def test_filter_polarity_is_preserved_in_asl_and_sql_guards():
+    question = (
+        "查询上海市医用外科口罩产品的经销商，"
+        "排除上海洁安厂家，并按整体业务规模排序。"
+    )
+    request = _finalized_standalone(
+        RuleBasedIntentClassifier(), TurnAdmissionGate(), question, "polarity"
+    )
+
+    with pytest.raises(AdapterError) as asl_error:
+        HttpDataRetrievalAdapter._validate_request_filters(
+            {
+                "filters": [
+                    {"field": "地区", "operator": "EQ", "value": "上海市"},
+                    {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
+                    {"field": "厂家名称", "operator": "EQ", "value": "上海洁安"},
+                ]
+            },
+            request,
+        )
+    assert asl_error.value.code == "ASL_REQUIRED_FILTER_MISSING"
+
+    with pytest.raises(AdapterError) as sql_error:
+        HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+            request,
+            "SELECT dealer_name FROM dealer WHERE city = '上海市' "
+            "AND product_name = '医用外科口罩' "
+            "AND manufacturer_name = '上海洁安'",
+        )
+    assert sql_error.value.code == "SQL_QUERY_FILTER_POLARITY_FAILED"
+
+    report = HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+        request,
+        "SELECT dealer_name FROM dealer WHERE city = '上海市' "
+        "AND product_name = '医用外科口罩' "
+        "AND manufacturer_name != '上海洁安'",
+    )
+    assert report["status"] == "PASS"
+
+
+def test_execution_query_policy_uses_raw_only_for_standalone_turns():
+    classifier = RuleBasedIntentClassifier()
+    gate = TurnAdmissionGate()
+    raw_question = "查询上海市空心纤维血液透析器产品销售额。"
+    standalone = classifier.classify(raw_question, IDENTITY, "execution-source")
+    standalone_decision = gate.evaluate(
+        question=raw_question,
+        current=standalone,
+        previous=None,
+        message_id="m1",
+    )
+
+    execution, canonical, source = select_data_execution_question(
+        standalone, standalone_decision, raw_question
+    )
+    assert execution == raw_question
+    assert canonical != ""
+    assert source == "RAW_STANDALONE"
+
+    gate, previous, current, followup = _decision(
+        "分析A产品销售趋势。",
+        "北京呢？",
+        "execution-followup",
+    )
+    contextual = gate.apply_explicit_slot_protection(
+        previous.model_copy(deep=True), current, followup
+    )
+    execution, canonical, source = select_data_execution_question(
+        contextual, followup, "北京呢？"
+    )
+    assert execution == canonical
+    assert execution != "北京呢？"
+    assert "A" in execution
+    assert "北京市" in execution
+    assert source == "CANONICAL_CONTEXTUAL"
+
+
+class _CapturingTwoTurnRetrieval:
+    def __init__(self) -> None:
+        self.requests: list[CanonicalAnalysisRequest] = []
+        self.sql: list[str] = []
+
+    async def health(self) -> bool:
+        return True
+
+    async def rewrite_health(self) -> bool:
+        return True
+
+    async def query(
+        self,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> DataQueryResult:
+        self.requests.append(request.model_copy(deep=True))
+        product = _filter_value(request, "商品名称") or ""
+        if request.primary_intent == PrimaryIntent.TREND_ANALYSIS:
+            columns = ["交易日期", "销售额"]
+            rows = [
+                {"交易日期": "2025-10", "销售额": 100.0},
+                {"交易日期": "2025-11", "销售额": 80.0},
+                {"交易日期": "2025-12", "销售额": 120.0},
+            ]
+            sql = (
+                "SELECT month, SUM(sales_amount) FROM sales_order "
+                f"WHERE product_name = '{product}' GROUP BY month"
+            )
+        else:
+            columns = ["经销商名称"]
+            rows = [{"经销商名称": "示例经销商"}]
+            sql = (
+                "SELECT DISTINCT dealer_name FROM sales_order "
+                f"WHERE product_name = '{product}'"
+            )
+        self.sql.append(sql)
+        return DataQueryResult(
+            asl={"version": "2.0", "intent": "query", "ambiguity": []},
+            sql=sql,
+            dataset=Dataset(
+                columns=columns,
+                rows=rows,
+                row_count=len(rows),
+                snapshot_id="context-leakage-test",
+                data_as_of=datetime(2025, 12, 30, tzinfo=timezone.utc),
+            ),
+            data_source_id="mock",
+        )
+
+
+@pytest.mark.asyncio
+async def test_real_two_turn_orchestration_does_not_leak_previous_product_or_dealer():
+    base = build_mock_adapters()
+    retrieval = _CapturingTwoTurnRetrieval()
+    event_store = InMemorySessionEventStore()
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(
+            env="test", adapter_mode="mock", intent_model_enabled=False
+        ),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=AdapterBundle(
+            semantic=base.semantic,
+            retrieval=retrieval,
+            knowledge=base.knowledge,
+            policy=base.policy,
+            analysis=base.analysis,
+            semantic_query=CompositeSemanticQueryTool(base.semantic, retrieval),
+        ),
+        sessions=InMemorySessionStore(),
+        event_store=event_store,
+    )
+    conversation_id = "real-two-turn-context-leakage"
+    first = await agent.handle(
+        ChatRequest(
+            application_id="app-1",
+            conversation_id=conversation_id,
+            message_id="m1",
+            question="查询空心纤维血液透析器产品合作的经销商名单。",
+            semantic_model_id=81,
+        ),
+        IDENTITY,
+    )
+    second = await agent.handle(
+        ChatRequest(
+            application_id="app-1",
+            conversation_id=conversation_id,
+            message_id="m2",
+            question="按月分析外周插管中心静脉导管的销售趋势。",
+            semantic_model_id=81,
+        ),
+        IDENTITY,
+    )
+
+    assert first.status == "COMPLETED"
+    assert second.status == "COMPLETED", second.model_dump(mode="json")
+    executed = retrieval.requests[-1]
+    assert executed.turn_relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert executed.context_mode.value == "NONE"
+    assert executed.primary_intent == PrimaryIntent.TREND_ANALYSIS
+    assert executed.rewritten_question == "按月分析外周插管中心静脉导管的销售趋势。"
+    assert _filter_value(executed, "商品名称") == "外周插管中心静脉导管"
+    assert "经销商" not in executed.dimensions
+    assert "空心纤维血液透析器" not in executed.rewritten_question
+    assert "空心纤维血液透析器" not in str(executed.filters)
+    assert "空心纤维血液透析器" not in str(executed.asl_template)
+    assert "空心纤维血液透析器" not in retrieval.sql[-1]
+    assert "外周插管中心静脉导管" in retrieval.sql[-1]
+    assert executed.turn_admission is not None
+    assert "空心纤维血液透析器" not in str(
+        executed.turn_admission.context_after
+    )
+    assert "空心纤维血液透析器" not in second.answer
+
+    events = await event_store.list_events(
+        "tenant-1", "user-1", "app-1", conversation_id, limit=200
+    )
+    admission_event = next(
+        item
+        for item in reversed(events)
+        if item.message_id == "m2"
+        and item.event_type == SessionEventType.TURN_ADMISSION
+    )
+    merge_event = next(
+        item
+        for item in reversed(events)
+        if item.message_id == "m2"
+        and item.event_type == SessionEventType.CONTEXT_MERGE
+    )
+    assert admission_event.payload["turn_relation"] == "STANDALONE_NEW_TOPIC"
+    assert admission_event.payload["inheritance_allowed"] is False
+    assert admission_event.payload["new_thread_created"] is True
+    assert merge_event.payload["context_conflicts"] == []
+    assert "空心纤维血液透析器" not in str(merge_event.payload["context_after"])

@@ -1,0 +1,73 @@
+{
+  "summary": {
+    "generated_at": "2026-08-29T11:24:24.921080+08:00",
+    "question_count": 4,
+    "passed": 4,
+    "failed": 0,
+    "completed": 1,
+    "needs_clarification": 0,
+    "safe_fallback": 3,
+    "files": 1,
+    "latency_mean": 9.793,
+    "latency_p95": 12.887
+  },
+  "scenarios": [
+    {
+      "name": "相对时间与显式日期追问",
+      "turns": [
+        {
+          "scenario": "相对时间与显式日期追问",
+          "turn": 1,
+          "question": "查询最近一年销售过费森尤斯产品的经销商名单。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "查询成功，共 1615 条结果；当前仅返回 0 条预览，预览不作为全量统计。完整结果请使用回答末尾的附件链接下载。\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。\n\n附件：[下载完整查询结果（XLSX）](http://192.168.1.223:29000/bam/e769a2b72d3f4d72840ec17ad8a04a5f.xlsx)",
+          "file_count": 1,
+          "elapsed_seconds": 16.038,
+          "issues": []
+        },
+        {
+          "scenario": "相对时间与显式日期追问",
+          "turn": 2,
+          "question": "那再查询一下最近一个月的。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。本次查询时间从 2026-07-29 开始，但当前业务数据只更新到 2025-12-30，所选区间完全位于数据水位之后。可改查水位日前的时间范围。",
+          "file_count": 0,
+          "elapsed_seconds": 5.296,
+          "issues": []
+        },
+        {
+          "scenario": "相对时间与显式日期追问",
+          "turn": 3,
+          "question": "那最近半年呢？",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。本次查询时间从 2026-02-28 开始，但当前业务数据只更新到 2025-12-30，所选区间完全位于数据水位之后。可改查水位日前的时间范围。",
+          "file_count": 0,
+          "elapsed_seconds": 4.949,
+          "issues": []
+        },
+        {
+          "scenario": "相对时间与显式日期追问",
+          "turn": 4,
+          "question": "那查询一下25年12月1号到31号的。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。当前业务数据只更新到 2025-12-30，所选区间在该日期之后的部分尚无数据。",
+          "file_count": 0,
+          "elapsed_seconds": 12.887,
+          "issues": []
+        }
+      ]
+    }
+  ]
+}

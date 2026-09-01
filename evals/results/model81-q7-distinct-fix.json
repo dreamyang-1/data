@@ -1,0 +1,28 @@
+{
+  "summary": {
+    "generated_at": "2026-08-29T13:39:17.085014+08:00",
+    "question_count": 1,
+    "passed": 1,
+    "failed": 0,
+    "completed": 1,
+    "latency_mean": 13.366,
+    "latency_max": 13.366
+  },
+  "results": [
+    {
+      "number": 7,
+      "question": "查询上海市医用外科口罩产品的经销商名单。",
+      "http_status": 200,
+      "status": "COMPLETED",
+      "intent": "DETAIL_QUERY",
+      "missing_slots": [],
+      "answer": "共查询到 8 条明细。\n\n| 经销商名称 |\n| --- |\n| 上海德昶实业有限公司 |\n| 国药集团上海医疗器械有限公司 |\n| 上海凡勋医疗科技有限公司 |\n| 上海维捷医疗设备有限公司 |\n| 上海宏峰医疗器械有限公司 |\n| 上海助邦医疗器材有限公司 |\n| 上海协卫医疗器材有限公司 |\n| 上海翔逸医疗器械有限公司 |\n数据水位：当前业务数据截至 2025-12-30T00:00:00（按销售记录时间统计）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+      "evidence_kinds": [
+        "QUERY_RESULT"
+      ],
+      "files": [],
+      "elapsed_seconds": 13.366,
+      "issues": []
+    }
+  ]
+}

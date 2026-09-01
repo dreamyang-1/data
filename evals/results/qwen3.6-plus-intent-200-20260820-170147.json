@@ -1,0 +1,303 @@
+﻿{
+  "mode": "model",
+  "model": "qwen3.6-plus",
+  "datasets": [
+    "E:\\YouoAgent\\DataAnalysis_Agent\\evals\\intent_realistic_100.json",
+    "E:\\YouoAgent\\DataAnalysis_Agent\\evals\\intent_realistic_extra_100.json"
+  ],
+  "total": 200,
+  "execution_valid": true,
+  "accuracy": 0.94,
+  "macro_f1": 0.9518,
+  "schema_valid_rate": 0.995,
+  "error_counts": {
+    "ReadTimeout": 1
+  },
+  "latency_ms_p50": 137947.2,
+  "latency_ms_p95": 264216.6,
+  "latency_ms_max": 274289.9,
+  "confusions": [
+    {
+      "expected": "METRIC_QUERY",
+      "predicted": "TREND_ANALYSIS",
+      "count": 1
+    },
+    {
+      "expected": "METRIC_QUERY",
+      "predicted": "FORECAST_ANALYSIS",
+      "count": 4
+    },
+    {
+      "expected": "TREND_ANALYSIS",
+      "predicted": "FORECAST_ANALYSIS",
+      "count": 1
+    },
+    {
+      "expected": "COMPARISON_ANALYSIS",
+      "predicted": "METRIC_QUERY",
+      "count": 2
+    },
+    {
+      "expected": "DATA_LINEAGE",
+      "predicted": "METRIC_DEFINITION",
+      "count": 1
+    },
+    {
+      "expected": "DATA_QUALITY",
+      "predicted": "COMPARISON_ANALYSIS",
+      "count": 1
+    },
+    {
+      "expected": "TREND_ANALYSIS",
+      "predicted": null,
+      "count": 1
+    },
+    {
+      "expected": "DATA_QUALITY",
+      "predicted": "METRIC_DEFINITION",
+      "count": 1
+    }
+  ],
+  "per_intent": [
+    {
+      "intent": "ANOMALY_ANALYSIS",
+      "support": 14,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "CAPABILITY_HELP",
+      "support": 9,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "CHAT",
+      "support": 9,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "COMPARISON_ANALYSIS",
+      "support": 15,
+      "precision": 0.9286,
+      "recall": 0.8667,
+      "f1": 0.8966
+    },
+    {
+      "intent": "COMPOSITION_ANALYSIS",
+      "support": 14,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "DATA_LINEAGE",
+      "support": 11,
+      "precision": 1.0,
+      "recall": 0.9091,
+      "f1": 0.9524
+    },
+    {
+      "intent": "DATA_QUALITY",
+      "support": 11,
+      "precision": 1.0,
+      "recall": 0.8182,
+      "f1": 0.9
+    },
+    {
+      "intent": "DETAIL_QUERY",
+      "support": 15,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "FORECAST_ANALYSIS",
+      "support": 15,
+      "precision": 0.75,
+      "recall": 1.0,
+      "f1": 0.8571
+    },
+    {
+      "intent": "METRIC_DEFINITION",
+      "support": 12,
+      "precision": 0.8571,
+      "recall": 1.0,
+      "f1": 0.9231
+    },
+    {
+      "intent": "METRIC_QUERY",
+      "support": 25,
+      "precision": 0.9091,
+      "recall": 0.8,
+      "f1": 0.8511
+    },
+    {
+      "intent": "OUT_OF_SCOPE",
+      "support": 8,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "REPORT_GENERATION",
+      "support": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "ROOT_CAUSE_ANALYSIS",
+      "support": 15,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "TREND_ANALYSIS",
+      "support": 15,
+      "precision": 0.9286,
+      "recall": 0.8667,
+      "f1": 0.8966
+    }
+  ],
+  "failures": [
+    {
+      "id": "MQ03",
+      "question": "看一下最近30天客户数",
+      "expected": "METRIC_QUERY",
+      "predicted": "TREND_ANALYSIS",
+      "confidence": 0.95,
+      "schema_valid": true,
+      "latency_ms": 4875.1,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "MQ04",
+      "question": "2026年7月退款额有多少",
+      "expected": "METRIC_QUERY",
+      "predicted": "FORECAST_ANALYSIS",
+      "confidence": 0.95,
+      "schema_valid": true,
+      "latency_ms": 4212.4,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "MQ07",
+      "question": "查一下2026年7月1号到30号销售额",
+      "expected": "METRIC_QUERY",
+      "predicted": "FORECAST_ANALYSIS",
+      "confidence": 0.95,
+      "schema_valid": true,
+      "latency_ms": 8962.4,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "TR08",
+      "question": "分析2026Q2销售额走势",
+      "expected": "TREND_ANALYSIS",
+      "predicted": "FORECAST_ANALYSIS",
+      "confidence": 0.95,
+      "schema_valid": true,
+      "latency_ms": 35919.4,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "CP01",
+      "question": "本月销售额同比增长率是多少",
+      "expected": "COMPARISON_ANALYSIS",
+      "predicted": "METRIC_QUERY",
+      "confidence": 0.95,
+      "schema_valid": true,
+      "latency_ms": 41407.1,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "DL03",
+      "question": "退款率用的是哪个字段",
+      "expected": "DATA_LINEAGE",
+      "predicted": "METRIC_DEFINITION",
+      "confidence": 1.0,
+      "schema_valid": true,
+      "latency_ms": 114135.7,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "QU03",
+      "question": "客户数和财务系统对账一致吗",
+      "expected": "DATA_QUALITY",
+      "predicted": "COMPARISON_ANALYSIS",
+      "confidence": 0.9,
+      "schema_valid": true,
+      "latency_ms": 119441.2,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "MQ101",
+      "question": "查查2026年第二季度GMV",
+      "expected": "METRIC_QUERY",
+      "predicted": "FORECAST_ANALYSIS",
+      "confidence": 0.95,
+      "schema_valid": true,
+      "latency_ms": 140300.8,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "MQ111",
+      "question": "2026-08-01的净销售额",
+      "expected": "METRIC_QUERY",
+      "predicted": "FORECAST_ANALYSIS",
+      "confidence": 0.9,
+      "schema_valid": true,
+      "latency_ms": 151313.1,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "TR101",
+      "question": "近半年复购率怎么走的",
+      "expected": "TREND_ANALYSIS",
+      "predicted": null,
+      "confidence": null,
+      "schema_valid": false,
+      "latency_ms": 194538.0,
+      "correct": false,
+      "error": "ReadTimeout"
+    },
+    {
+      "id": "CP107",
+      "question": "本周销售额环比增长率",
+      "expected": "COMPARISON_ANALYSIS",
+      "predicted": "METRIC_QUERY",
+      "confidence": 0.95,
+      "schema_valid": true,
+      "latency_ms": 187422.6,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "QU105",
+      "question": "这个指标多久刷新一次",
+      "expected": "DATA_QUALITY",
+      "predicted": "METRIC_DEFINITION",
+      "confidence": 0.95,
+      "schema_valid": true,
+      "latency_ms": 256894.3,
+      "correct": false,
+      "error": null
+    }
+  ]
+}
+

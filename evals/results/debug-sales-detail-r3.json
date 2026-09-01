@@ -1,0 +1,119 @@
+﻿{
+    "request_id":  "f35e9aa8-4da6-44e1-aaa1-e90ddfadead9",
+    "conversation_id":  "debug-sales-detail-4ac2378b",
+    "status":  "SAFE_FALLBACK",
+    "intent":  "DETAIL_QUERY",
+    "intent_source":  "STRUCTURED_MODEL",
+    "intent_confidence":  1.0,
+    "answer":  "ä¸æ¸¸æ°æ®æå¡ææ¶ä¸å¯ç¨ï¼ASL_DETAIL_FIELDS_INCOMPLETEï¼ï¼è¯·ç¨åéè¯ã",
+    "clarification_questions":  [
+
+                                ],
+    "clarification_items":  [
+
+                            ],
+    "remaining_question_count":  0,
+    "missing_slots":  [
+
+                      ],
+    "understood_slots":  {
+
+                         },
+    "clarification_round":  null,
+    "evidence":  [
+
+                 ],
+    "reliability":  {
+                        "level":  "FAIL",
+                        "score":  0.0,
+                        "gates":  {
+                                      "safe_termination":  true
+                                  },
+                        "warnings":  [
+                                         "ä¸æ¸¸æ°æ®æå¡ææ¶ä¸å¯ç¨ï¼ASL_DETAIL_FIELDS_INCOMPLETEï¼ï¼è¯·ç¨åéè¯ã"
+                                     ]
+                    },
+    "requirements":  [
+
+                     ],
+    "analysis_process":  [
+                             {
+                                 "stage":  "QUESTION_REWRITE",
+                                 "status":  "COMPLETED",
+                                 "title":  "è§èåé®é¢",
+                                 "summary":  "æªä½¿ç¨åå²ä¸ä¸ææå®ä½å«åæ¹åã",
+                                 "evidence_ids":  [
+
+                                                  ]
+                             },
+                             {
+                                 "stage":  "UNDERSTANDING",
+                                 "status":  "COMPLETED",
+                                 "title":  "çè§£é®é¢",
+                                 "summary":  "å·²è¯å«ç¨æ·æå¾ä¸º DETAIL_QUERYï¼è¯å«æ¥æºä¸º STRUCTURED_MODELï¼ç½®ä¿¡åº¦ 1.00ã",
+                                 "evidence_ids":  [
+
+                                                  ]
+                             },
+                             {
+                                 "stage":  "COMPLETENESS_CHECK",
+                                 "status":  "COMPLETED",
+                                 "title":  "æ£æ¥ä¿¡æ¯å®æ´æ§",
+                                 "summary":  "æ§è¡å½åä»»å¡æéçå\u0085³é®ä¿¡æ¯å·²éè¿å®æ´æ§æ£æ¥ã",
+                                 "evidence_ids":  [
+
+                                                  ]
+                             },
+                             {
+                                 "stage":  "RELIABILITY_CHECK",
+                                 "status":  "FAILED",
+                                 "title":  "æ ¡éªç»æå¯é æ§",
+                                 "summary":  "å¯é æ§ç­çº§ FAILï¼å¾å 0.00ï¼æç¤º 1 æ¡ã",
+                                 "evidence_ids":  [
+
+                                                  ]
+                             },
+                             {
+                                 "stage":  "SAFE_TERMINATION",
+                                 "status":  "FAILED",
+                                 "title":  "å®å\u0085¨ç»æ",
+                                 "summary":  "ä¾èµãæ°æ®æè¯æ®æªéè¿å®å\u0085¨é¨ç¦ï¼ç³»ç»æªè¾åºæªç»éªè¯çç»è®ºã",
+                                 "evidence_ids":  [
+
+                                                  ]
+                             }
+                         ],
+    "analysis_plan":  null,
+    "chart_specs":  [
+
+                    ],
+    "files":  [
+
+              ],
+    "skills_used":  [
+                        "detail_query"
+                    ],
+    "extension_executions":  [
+
+                             ],
+    "task_plan":  null,
+    "task_results":  [
+
+                     ],
+    "dag_resume_token":  null,
+    "awaiting_task_ids":  [
+
+                          ],
+    "dataset_id":  null,
+    "dataset_ids":  [
+
+                    ],
+    "result_file_url":  null,
+    "semantic_model_id":  81,
+    "database_id":  null,
+    "requested_business_domain_ids":  [
+
+                                      ],
+    "business_domain_selection_mode":  "AUTO",
+    "created_at":  "2026-08-29T07:06:03.405699Z"
+}

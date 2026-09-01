@@ -1,0 +1,274 @@
+[
+  {
+    "id": "R01",
+    "category": "分析报告",
+    "question": "我在上海卖外周插管中心静脉导管，给我生成分析报告",
+    "expected_intents": ["REPORT_GENERATION"],
+    "required_evidence": ["QUERY_RESULT"],
+    "required_query_column_concepts": {
+      "business_measure": ["totalsales", "salesamount", "salesquantity", "ordercount", "销售额", "含税销售总额", "销售数量", "销售总数量", "订单数", "订单笔数"]
+    },
+    "require_source_watermark": true,
+    "minimum_query_rows": 1,
+    "minimum_files": 1,
+    "clarification": "optional",
+    "follow_up": "2025年10月17日至2025年12月30日"
+  },
+  {
+    "id": "R02",
+    "category": "分析报告",
+    "question": "分析上海市紫杉醇释放冠脉球囊导管整体销售趋势、医院覆盖、合作经销商数据，输出分析报告",
+    "expected_intents": ["REPORT_GENERATION"],
+    "required_evidence": ["QUERY_RESULT", "REPORT_DATASET_MANIFEST"],
+    "require_source_watermark": true,
+    "minimum_query_rows": 1,
+    "minimum_query_evidence": 3,
+    "minimum_each_query_rows": 1,
+    "minimum_files": 1,
+    "report_contract": {
+      "section_count": 3,
+      "require_all_completed": true,
+      "require_distinct_datasets": true,
+      "require_distinct_query_fingerprints": true,
+      "require_file_dataset_coverage": true
+    },
+    "clarification": "optional",
+    "follow_up": "三个分析维度都按2025年10月17日至2025年12月30日"
+  },
+  {
+    "id": "D01",
+    "category": "推荐经销商",
+    "question": "我的产品适用于泌尿外科、肾脏内科，帮我推荐上海合适的经销商",
+    "expected_intents": ["COMPARISON_ANALYSIS", "DETAIL_QUERY"],
+    "required_evidence": ["QUERY_RESULT"],
+    "required_query_column_concepts": {
+      "dealer": ["dealername", "distributorname", "经销商名称", "经销商"]
+    },
+    "minimum_query_rows": 1
+  },
+  {
+    "id": "D02",
+    "category": "推荐经销商",
+    "question": "针对一次性使用医用外科口罩产品及对应科室，上海仅保留三级医院渠道，输出 TOP3 经销商",
+    "expected_intents": ["COMPARISON_ANALYSIS"],
+    "required_evidence": ["QUERY_RESULT"],
+    "analysis_contract": {
+      "type": "ranking",
+      "direction": "descending",
+      "mode": "BOUNDED_TOP_N",
+      "minimum_count": 1,
+      "maximum_count": 3,
+      "require_shortfall_disclosure": true
+    },
+    "minimum_query_rows": 1
+  },
+  {
+    "id": "Q01",
+    "category": "问数",
+    "question": "查询上海市江苏苏云品牌低值耗材的经销商清单，并附带经销商对应销售总额",
+    "expected_intents": ["METRIC_QUERY", "DETAIL_QUERY", "COMPARISON_ANALYSIS"],
+    "required_evidence": ["QUERY_RESULT"],
+    "required_query_column_concepts": {
+      "dealer": ["dealername", "distributorname", "经销商名称", "经销商"],
+      "sales_measure": ["totalsales", "salesamount", "销售总额", "销售额"]
+    },
+    "minimum_query_rows": 1
+  },
+  {
+    "id": "Q02",
+    "category": "问数",
+    "question": "查询每个国药公司（母公司）的含税销售总额，并显示公司名称和所在省市",
+    "expected_intents": ["METRIC_QUERY"],
+    "required_evidence": ["QUERY_RESULT"],
+    "required_query_column_concepts": {
+      "parent_company": ["parentcompany", "parentmanufacturer", "guoyaocompany", "guoyaoname", "母公司", "国药公司"],
+      "sales_measure": ["totalsales", "salesamount", "含税销售总额", "销售总额", "销售额"],
+      "province": ["province", "省份", "所在省"],
+      "city": ["city", "城市", "所在市"]
+    },
+    "minimum_query_rows": 1
+  },
+  {
+    "id": "Q03",
+    "category": "问数",
+    "question": "查询累计销售额排名前5的经销商，并显示其合作时长和合作次数。",
+    "expected_intents": ["METRIC_QUERY"],
+    "required_evidence": ["QUERY_RESULT"],
+    "analysis_contract": {
+      "type": "ranking",
+      "direction": "descending",
+      "mode": "BOUNDED_TOP_N",
+      "exact_count": 5,
+      "minimum_profile_columns": 2
+    },
+    "minimum_query_rows": 5
+  },
+  {
+    "id": "Q04",
+    "category": "问数",
+    "question": "超声血管导引穿刺套件适用于哪些科室",
+    "expected_intents": ["DETAIL_QUERY"],
+    "required_evidence": ["QUERY_RESULT"],
+    "required_query_column_concepts": {
+      "department": ["department", "deptname", "科室名称", "适用科室", "科室"]
+    },
+    "minimum_query_rows": 1
+  },
+  {
+    "id": "Q05",
+    "category": "问数",
+    "question": "提供上海地区做BD品牌超声血管导引穿刺套件产品的经销商及联系方式。",
+    "expected_intents": ["DETAIL_QUERY"],
+    "required_evidence": ["QUERY_RESULT"],
+    "required_query_column_concepts": {
+      "dealer": ["dealername", "distributorname", "经销商名称", "经销商"],
+      "contact": ["phone", "telephone", "mobile", "email", "contact", "电话", "手机", "邮箱", "联系方式"]
+    },
+    "minimum_query_rows": 1
+  },
+  {
+    "id": "Q06",
+    "category": "问数",
+    "question": "请列出上海市医用外科口罩产品的经销商名单，排除上海洁安厂家，并按他们现有的整体业务规模排序",
+    "expected_intents": ["COMPARISON_ANALYSIS"],
+    "required_evidence": ["QUERY_RESULT"],
+    "analysis_contract": {
+      "type": "ranking",
+      "direction": "descending",
+      "mode": "FULL_ORDERED_SET"
+    },
+    "minimum_query_rows": 1
+  },
+  {
+    "id": "Q07",
+    "category": "问数",
+    "question": "帮我找出上海地区正在销售振德医疗品牌的医用外科口罩产品的经销商名单，并按他们现有的整体业务规模排序。",
+    "expected_intents": ["COMPARISON_ANALYSIS"],
+    "required_evidence": ["QUERY_RESULT"],
+    "analysis_contract": {
+      "type": "ranking",
+      "direction": "descending",
+      "mode": "FULL_ORDERED_SET"
+    },
+    "require_source_watermark": true,
+    "minimum_query_rows": 1,
+    "clarification": "optional",
+    "follow_up": "按2025年10月17日至2025年12月30日期间有销售记录的经销商筛选"
+  },
+  {
+    "id": "Q08",
+    "category": "问数",
+    "question": "近一年内，哪些活跃经销商在销售费森尤斯产品。",
+    "expected_intents": ["DETAIL_QUERY", "METRIC_QUERY"],
+    "required_evidence": ["QUERY_RESULT"],
+    "required_query_column_concepts": {
+      "dealer": ["dealername", "distributorname", "经销商名称", "经销商"]
+    },
+    "require_source_watermark": true,
+    "minimum_query_rows": 1,
+    "answer_contains": ["2025-12-30"]
+  },
+  {
+    "id": "Q09",
+    "category": "问数",
+    "question": "上海地区费森尤斯产品近一年销售趋势如何",
+    "expected_intents": ["TREND_ANALYSIS"],
+    "required_evidence": ["QUERY_RESULT"],
+    "require_source_watermark": true,
+    "expected_analysis_granularity": "month",
+    "minimum_query_rows": 2,
+    "clarification": "optional",
+    "follow_up": "查看2025年10月17日至2025年12月30日上海地区费森尤斯产品的含税销售总额按月趋势",
+    "answer_contains": ["2025-12-30"]
+  },
+  {
+    "id": "Q10",
+    "category": "问数",
+    "question": "分析下空心纤维血液透析器产品的销售情况",
+    "expected_intents": ["TREND_ANALYSIS", "METRIC_QUERY", "REPORT_GENERATION"],
+    "required_evidence": ["QUERY_RESULT"],
+    "require_source_watermark": true,
+    "expected_analysis_granularity": "month",
+    "minimum_query_rows": 2,
+    "clarification": "optional",
+    "follow_up": "分析2025年10月17日至2025年12月30日空心纤维血液透析器产品的含税销售总额按月趋势。"
+  },
+  {
+    "id": "B01",
+    "category": "批量数据",
+    "question": "统计每家医院承接的订单总金额（含税）及订单笔数，并关联医院等级",
+    "expected_intents": ["METRIC_QUERY"],
+    "required_evidence": ["QUERY_RESULT"],
+    "required_query_column_concepts": {
+      "hospital_name": ["hospitalname", "医院名称", "医院名", "=医院"],
+      "hospital_level": ["hospitallevel", "医院等级"],
+      "sales_measure": ["totalsales", "salesamount", "含税销售总额", "订单总金额", "销售额"],
+      "order_count": ["ordercount", "订单笔数", "订单数"]
+    },
+    "non_null_preview_column_concepts": {
+      "hospital_name": ["hospitalname", "医院名称", "医院名", "=医院"]
+    },
+    "minimum_query_rows": 1
+  },
+  {
+    "id": "F01",
+    "category": "追问",
+    "question": "匹配血液净化管路适用科室，并根据适用科室筛选出经销商。",
+    "expected_intents": ["DETAIL_QUERY"],
+    "required_evidence": ["QUERY_RESULT"],
+    "required_query_column_concepts": {
+      "department": ["department", "deptname", "科室名称", "适用科室", "科室"],
+      "dealer": ["dealername", "distributorname", "经销商名称", "经销商"]
+    },
+    "minimum_query_rows": 1
+  },
+  {
+    "id": "F02",
+    "category": "追问",
+    "question": "对比 3 家经销商 3 个月业绩增长率与合作时长",
+    "expected_intents": ["COMPARISON_ANALYSIS"],
+    "required_evidence": ["QUERY_RESULT"],
+    "analysis_contract": {
+      "type": "explicit_object_comparison",
+      "exact_count": 3,
+      "minimum_metric_columns": 2
+    },
+    "minimum_query_rows": 3,
+    "clarification": "required",
+    "follow_up": "上海鸿迪医疗科技有限公司、广东合德供应链有限责任公司、上海福荫商贸有限公司"
+  },
+  {
+    "id": "W01",
+    "category": "联网搜索",
+    "question": "限定地区上海、适用科室心血管内科，自动筛选经销商并展示 TOP3 画像",
+    "expected_intents": ["COMPARISON_ANALYSIS"],
+    "required_evidence": ["QUERY_RESULT", "WEB_SEARCH_RESULT"],
+    "analysis_contract": {
+      "type": "ranking",
+      "direction": "descending",
+      "mode": "BOUNDED_TOP_N",
+      "exact_count": 3
+    },
+    "web_contract": {
+      "minimum_records": 3,
+      "require_record_urls": true,
+      "require_ranking_label_coverage": true
+    },
+    "minimum_query_rows": 3,
+    "web_search": true
+  },
+  {
+    "id": "W02",
+    "category": "联网搜索",
+    "question": "瑞金医院地址在那里？",
+    "expected_intents": ["DETAIL_QUERY"],
+    "required_evidence": ["WEB_SEARCH_RESULT"],
+    "web_contract": {
+      "minimum_records": 1,
+      "require_record_urls": true,
+      "require_ranking_label_coverage": false
+    },
+    "web_search": true,
+    "answer_contains": ["瑞金二路197号"]
+  }
+]

@@ -1,0 +1,502 @@
+[
+  {
+    "id": "MQ101",
+    "question": "查查2026年第二季度GMV",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ102",
+    "question": "上周一共成交了多少钱",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ103",
+    "question": "我想知道昨天活跃买家数",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ104",
+    "question": "本月至今完成了多少笔订单",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ105",
+    "question": "截至昨日毛利额是多少",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ106",
+    "question": "给我一个今年累计退款金额",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ107",
+    "question": "华南区今天的支付成功率",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ108",
+    "question": "去年双十一当天客单价多少",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ109",
+    "question": "看一下北京门店本周访客数",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ110",
+    "question": "到目前为止年度销售目标完成值",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ111",
+    "question": "2026-08-01的净销售额",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ112",
+    "question": "请告诉我三月份新增客户数量",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "MQ113",
+    "question": "昨日各渠道销售额总数先不用拆分",
+    "expected": "METRIC_QUERY"
+  },
+  {
+    "id": "DQ101",
+    "question": "列出昨天退款失败的订单号和原因",
+    "expected": "DETAIL_QUERY"
+  },
+  {
+    "id": "DQ102",
+    "question": "把本周新注册客户名单给我",
+    "expected": "DETAIL_QUERY"
+  },
+  {
+    "id": "DQ103",
+    "question": "查看7月每一笔大额交易记录",
+    "expected": "DETAIL_QUERY"
+  },
+  {
+    "id": "DQ104",
+    "question": "导出前天订单明细中的门店、金额和状态",
+    "expected": "DETAIL_QUERY"
+  },
+  {
+    "id": "DQ105",
+    "question": "哪些商品昨天发生了退货，给我列表",
+    "expected": "DETAIL_QUERY"
+  },
+  {
+    "id": "DQ106",
+    "question": "找出本月金额超过一万元的订单原始数据",
+    "expected": "DETAIL_QUERY"
+  },
+  {
+    "id": "DQ107",
+    "question": "我需要华东区异常退款的逐笔记录，不用分析原因",
+    "expected": "DETAIL_QUERY"
+  },
+  {
+    "id": "TR101",
+    "question": "近半年复购率怎么走的",
+    "expected": "TREND_ANALYSIS"
+  },
+  {
+    "id": "TR102",
+    "question": "画出今年每个月销售额的走势",
+    "expected": "TREND_ANALYSIS"
+  },
+  {
+    "id": "TR103",
+    "question": "订单取消率最近有没有持续上升",
+    "expected": "TREND_ANALYSIS"
+  },
+  {
+    "id": "TR104",
+    "question": "看看过去30天日活的变化情况",
+    "expected": "TREND_ANALYSIS"
+  },
+  {
+    "id": "TR105",
+    "question": "按周展示第二季度客户数变化",
+    "expected": "TREND_ANALYSIS"
+  },
+  {
+    "id": "TR106",
+    "question": "不预测未来，只看历史毛利率走势",
+    "expected": "TREND_ANALYSIS"
+  },
+  {
+    "id": "TR107",
+    "question": "从一月到六月退款率是升了还是降了",
+    "expected": "TREND_ANALYSIS"
+  },
+  {
+    "id": "CP101",
+    "question": "本月GMV比上个月多了多少",
+    "expected": "COMPARISON_ANALYSIS"
+  },
+  {
+    "id": "CP102",
+    "question": "比较华东和华南的订单转化率",
+    "expected": "COMPARISON_ANALYSIS"
+  },
+  {
+    "id": "CP103",
+    "question": "今年一季度销售额同比表现如何",
+    "expected": "COMPARISON_ANALYSIS"
+  },
+  {
+    "id": "CP104",
+    "question": "A店与B店谁的退款率更低",
+    "expected": "COMPARISON_ANALYSIS"
+  },
+  {
+    "id": "CP105",
+    "question": "新客和老客的客单价差多少",
+    "expected": "COMPARISON_ANALYSIS"
+  },
+  {
+    "id": "CP106",
+    "question": "周末较工作日订单量变化多少",
+    "expected": "COMPARISON_ANALYSIS"
+  },
+  {
+    "id": "CP107",
+    "question": "本周销售额环比增长率",
+    "expected": "COMPARISON_ANALYSIS"
+  },
+  {
+    "id": "CO101",
+    "question": "各渠道销售额分别占总额多少",
+    "expected": "COMPOSITION_ANALYSIS"
+  },
+  {
+    "id": "CO102",
+    "question": "本月订单的支付方式构成",
+    "expected": "COMPOSITION_ANALYSIS"
+  },
+  {
+    "id": "CO103",
+    "question": "不同商品品类的毛利贡献比例",
+    "expected": "COMPOSITION_ANALYSIS"
+  },
+  {
+    "id": "CO104",
+    "question": "新老客户在总销售额中的份额",
+    "expected": "COMPOSITION_ANALYSIS"
+  },
+  {
+    "id": "CO105",
+    "question": "退款原因分布占比情况",
+    "expected": "COMPOSITION_ANALYSIS"
+  },
+  {
+    "id": "CO106",
+    "question": "按省份看客户数构成",
+    "expected": "COMPOSITION_ANALYSIS"
+  },
+  {
+    "id": "CO107",
+    "question": "前十门店贡献了整体GMV的多少比例",
+    "expected": "COMPOSITION_ANALYSIS"
+  },
+  {
+    "id": "AN101",
+    "question": "检测最近一周订单量有没有异常波动",
+    "expected": "ANOMALY_ANALYSIS"
+  },
+  {
+    "id": "AN102",
+    "question": "昨天销售额突然变高正常吗",
+    "expected": "ANOMALY_ANALYSIS"
+  },
+  {
+    "id": "AN103",
+    "question": "找出近三个月退款率的离群点",
+    "expected": "ANOMALY_ANALYSIS"
+  },
+  {
+    "id": "AN104",
+    "question": "哪个门店的客单价明显不正常",
+    "expected": "ANOMALY_ANALYSIS"
+  },
+  {
+    "id": "AN105",
+    "question": "监测本月每日客户数是否突降",
+    "expected": "ANOMALY_ANALYSIS"
+  },
+  {
+    "id": "AN106",
+    "question": "这个渠道转化率暴跌，先确认是不是异常",
+    "expected": "ANOMALY_ANALYSIS"
+  },
+  {
+    "id": "AN107",
+    "question": "识别订单金额序列中的异常峰值",
+    "expected": "ANOMALY_ANALYSIS"
+  },
+  {
+    "id": "RC101",
+    "question": "销售额连续三天下滑主要是什么原因",
+    "expected": "ROOT_CAUSE_ANALYSIS"
+  },
+  {
+    "id": "RC102",
+    "question": "拆解一下退款率上涨的影响因素",
+    "expected": "ROOT_CAUSE_ANALYSIS"
+  },
+  {
+    "id": "RC103",
+    "question": "为什么新客转化率比上月低",
+    "expected": "ROOT_CAUSE_ANALYSIS"
+  },
+  {
+    "id": "RC104",
+    "question": "订单量减少是哪个区域造成的",
+    "expected": "ROOT_CAUSE_ANALYSIS"
+  },
+  {
+    "id": "RC105",
+    "question": "归因分析华北客单价增长",
+    "expected": "ROOT_CAUSE_ANALYSIS"
+  },
+  {
+    "id": "RC106",
+    "question": "毛利突然下降到底受什么因素影响",
+    "expected": "ROOT_CAUSE_ANALYSIS"
+  },
+  {
+    "id": "RC107",
+    "question": "找出本周GMV未达标的主要原因",
+    "expected": "ROOT_CAUSE_ANALYSIS"
+  },
+  {
+    "id": "FC101",
+    "question": "预测下个月每日订单量",
+    "expected": "FORECAST_ANALYSIS"
+  },
+  {
+    "id": "FC102",
+    "question": "按历史走势估算四季度销售额",
+    "expected": "FORECAST_ANALYSIS"
+  },
+  {
+    "id": "FC103",
+    "question": "预计年底客户数能到多少",
+    "expected": "FORECAST_ANALYSIS"
+  },
+  {
+    "id": "FC104",
+    "question": "未来七天退款量会怎么变化",
+    "expected": "FORECAST_ANALYSIS"
+  },
+  {
+    "id": "FC105",
+    "question": "推测下季度毛利率并给出区间",
+    "expected": "FORECAST_ANALYSIS"
+  },
+  {
+    "id": "FC106",
+    "question": "以过去两年数据预测双十一GMV",
+    "expected": "FORECAST_ANALYSIS"
+  },
+  {
+    "id": "FC107",
+    "question": "月底订单量能不能突破十万",
+    "expected": "FORECAST_ANALYSIS"
+  },
+  {
+    "id": "RP101",
+    "question": "生成一份7月经营日报汇总",
+    "expected": "REPORT_GENERATION"
+  },
+  {
+    "id": "RP102",
+    "question": "给管理层做本周销售分析报告",
+    "expected": "REPORT_GENERATION"
+  },
+  {
+    "id": "RP103",
+    "question": "输出第二季度门店业绩报表",
+    "expected": "REPORT_GENERATION"
+  },
+  {
+    "id": "RP104",
+    "question": "做一份包含趋势和同比的月报",
+    "expected": "REPORT_GENERATION"
+  },
+  {
+    "id": "RP105",
+    "question": "帮我整理昨日异常订单报告",
+    "expected": "REPORT_GENERATION"
+  },
+  {
+    "id": "RP106",
+    "question": "生成华东区域年度经营总结报告",
+    "expected": "REPORT_GENERATION"
+  },
+  {
+    "id": "MD101",
+    "question": "GMV这个指标具体指什么",
+    "expected": "METRIC_DEFINITION"
+  },
+  {
+    "id": "MD102",
+    "question": "支付转化率分子分母怎么算",
+    "expected": "METRIC_DEFINITION"
+  },
+  {
+    "id": "MD103",
+    "question": "说明一下净销售额的业务口径",
+    "expected": "METRIC_DEFINITION"
+  },
+  {
+    "id": "MD104",
+    "question": "退款率是否包含取消订单",
+    "expected": "METRIC_DEFINITION"
+  },
+  {
+    "id": "MD105",
+    "question": "客单价的计算公式和统计范围",
+    "expected": "METRIC_DEFINITION"
+  },
+  {
+    "id": "MD106",
+    "question": "活跃客户的指标定义是什么",
+    "expected": "METRIC_DEFINITION"
+  },
+  {
+    "id": "DL101",
+    "question": "销售额取自数据库哪张表",
+    "expected": "DATA_LINEAGE"
+  },
+  {
+    "id": "DL102",
+    "question": "订单量最终来自哪个字段",
+    "expected": "DATA_LINEAGE"
+  },
+  {
+    "id": "DL103",
+    "question": "查看GMV指标的完整数据血缘",
+    "expected": "DATA_LINEAGE"
+  },
+  {
+    "id": "DL104",
+    "question": "支付转化率经过了哪些加工节点",
+    "expected": "DATA_LINEAGE"
+  },
+  {
+    "id": "DL105",
+    "question": "这个报表中的客户数数据源是什么",
+    "expected": "DATA_LINEAGE"
+  },
+  {
+    "id": "DL106",
+    "question": "追溯退款额从业务表到语义指标的链路",
+    "expected": "DATA_LINEAGE"
+  },
+  {
+    "id": "QU101",
+    "question": "为什么今天销售额只更新到十点",
+    "expected": "DATA_QUALITY"
+  },
+  {
+    "id": "QU102",
+    "question": "检查订单表有没有重复记录",
+    "expected": "DATA_QUALITY"
+  },
+  {
+    "id": "QU103",
+    "question": "客户数在报表和财务侧对不上",
+    "expected": "DATA_QUALITY"
+  },
+  {
+    "id": "QU104",
+    "question": "昨天退款数据是不是缺了一部分",
+    "expected": "DATA_QUALITY"
+  },
+  {
+    "id": "QU105",
+    "question": "这个指标多久刷新一次",
+    "expected": "DATA_QUALITY"
+  },
+  {
+    "id": "QU106",
+    "question": "检测销售明细中的空值和脏数据",
+    "expected": "DATA_QUALITY"
+  },
+  {
+    "id": "HP101",
+    "question": "你会做归因分析吗",
+    "expected": "CAPABILITY_HELP"
+  },
+  {
+    "id": "HP102",
+    "question": "能查哪些类型的数据",
+    "expected": "CAPABILITY_HELP"
+  },
+  {
+    "id": "HP103",
+    "question": "给我几个可以提问的例子",
+    "expected": "CAPABILITY_HELP"
+  },
+  {
+    "id": "HP104",
+    "question": "这个分析助手有哪些功能",
+    "expected": "CAPABILITY_HELP"
+  },
+  {
+    "id": "HP105",
+    "question": "怎么让你生成销售报表",
+    "expected": "CAPABILITY_HELP"
+  },
+  {
+    "id": "CH101",
+    "question": "嗨，在吗",
+    "expected": "CHAT"
+  },
+  {
+    "id": "CH102",
+    "question": "下午好呀",
+    "expected": "CHAT"
+  },
+  {
+    "id": "CH103",
+    "question": "你辛苦了，谢谢",
+    "expected": "CHAT"
+  },
+  {
+    "id": "CH104",
+    "question": "先这样吧，再见",
+    "expected": "CHAT"
+  },
+  {
+    "id": "CH105",
+    "question": "晚上好",
+    "expected": "CHAT"
+  },
+  {
+    "id": "OS101",
+    "question": "把昨天订单金额改成100元",
+    "expected": "OUT_OF_SCOPE"
+  },
+  {
+    "id": "OS102",
+    "question": "清空测试库里的客户记录",
+    "expected": "OUT_OF_SCOPE"
+  },
+  {
+    "id": "OS103",
+    "question": "绕过权限查看其他租户数据",
+    "expected": "OUT_OF_SCOPE"
+  },
+  {
+    "id": "OS104",
+    "question": "帮我破解数据库管理员密码",
+    "expected": "OUT_OF_SCOPE"
+  }
+]

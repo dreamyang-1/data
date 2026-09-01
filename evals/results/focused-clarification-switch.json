@@ -1,0 +1,156 @@
+{
+  "summary": {
+    "generated_at": "2026-08-29T12:02:44.470782+08:00",
+    "question_count": 10,
+    "passed": 10,
+    "failed": 0,
+    "completed": 2,
+    "needs_clarification": 2,
+    "safe_fallback": 6,
+    "files": 1,
+    "latency_mean": 10.318,
+    "latency_p95": 13.698
+  },
+  "scenarios": [
+    {
+      "name": "澄清、中断与新任务识别",
+      "turns": [
+        {
+          "scenario": "澄清、中断与新任务识别",
+          "turn": 1,
+          "question": "展示前三名。",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric",
+            "dimension"
+          ],
+          "answer": "我已理解：时间范围=2025-08-29 至 2026-08-29（含首尾）。还需要补充：要查询或分析哪个指标？；希望按哪个维度分析？",
+          "file_count": 0,
+          "elapsed_seconds": 4.605,
+          "issues": []
+        },
+        {
+          "scenario": "澄清、中断与新任务识别",
+          "turn": 2,
+          "question": "查询最近一年销售过费森尤斯产品的经销商名单。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "查询成功，共 1615 条结果；当前仅返回 0 条预览，预览不作为全量统计。完整结果请使用回答末尾的附件链接下载。\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（按销售记录时间统计）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。\n\n附件：[下载完整查询结果（XLSX）](http://192.168.1.223:29000/bam/4e27cc43eb734146bebb644e8536d907.xlsx)",
+          "file_count": 1,
+          "elapsed_seconds": 17.515,
+          "issues": []
+        },
+        {
+          "scenario": "澄清、中断与新任务识别",
+          "turn": 3,
+          "question": "前三名。",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-29 至 2026-08-29（含首尾）；明细对象=费森尤斯；分析维度=经销商。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.36,
+          "issues": []
+        },
+        {
+          "scenario": "澄清、中断与新任务识别",
+          "turn": 4,
+          "question": "按销售额排序。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。当前业务数据只更新到 2025-12-30，所选区间在该日期之后的部分尚无数据。",
+          "file_count": 0,
+          "elapsed_seconds": 11.038,
+          "issues": []
+        },
+        {
+          "scenario": "澄清、中断与新任务识别",
+          "turn": 5,
+          "question": "算了，不查这个了，查询各医院等级有哪些。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "上游数据服务暂时不可用（ASL_DETAIL_FIELDS_INCOMPLETE），请稍后重试。",
+          "file_count": 0,
+          "elapsed_seconds": 11.463,
+          "issues": []
+        },
+        {
+          "scenario": "澄清、中断与新任务识别",
+          "turn": 6,
+          "question": "只看上海。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。当前业务数据只更新到 2025-12-30，所选区间在该日期之后的部分尚无数据。",
+          "file_count": 0,
+          "elapsed_seconds": 12.635,
+          "issues": []
+        },
+        {
+          "scenario": "澄清、中断与新任务识别",
+          "turn": 7,
+          "question": "不是医院名单，我要各等级对应的医院数量。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "上游数据服务暂时不可用（ASL_DETAIL_FIELDS_INCOMPLETE），请稍后重试。",
+          "file_count": 0,
+          "elapsed_seconds": 12.596,
+          "issues": []
+        },
+        {
+          "scenario": "澄清、中断与新任务识别",
+          "turn": 8,
+          "question": "另外解释一下含税销售总额的统计口径。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_DEFINITION",
+          "missing_slots": [],
+          "answer": "{'metric_id': '81:annual_total_sales', 'version': 'current', 'semantic_model_id': 81, 'business_domain_id': 205, 'metric_code': 'annual_total_sales', 'metric_name': '含税销售总额', 'metric_level': 1, 'unit': '元', 'format_rule': '#,##0.00', 'description': '指定时间范围内有效销售订单的含税金额合计', 'synonyms': ['销售总额', '销售额', '年度总销售额', '含税销售金额', '订单销售额'], 'applicable_scenarios': ['销售趋势', '经销商排名', '商品销售分析', '医院销售分析'], 'calculation_formula': 'annual_total_sales=SUM(sales_order.amount_with_tax)', 'global_filters': [\"{'filterType': 'include', 'filterCondition': 'sales_order.quantity > 0', 'filterExplanation': '排除退货和零数量记录'}\"], 'depend_metrics': [], 'bound_entities': [{'entity_code': 'sales_order', 'resolved_entity_code': 'sales_order', 'indicator_logic': None, 'entity_name': '销售订单', 'main_table_name': 'sales_order', 'data_source_id': 58}], 'request_id': '4c01075f-bb26-43ae-943d-09756c711e90'}",
+          "file_count": 0,
+          "elapsed_seconds": 4.162,
+          "issues": []
+        },
+        {
+          "scenario": "澄清、中断与新任务识别",
+          "turn": 9,
+          "question": "回到医院数量，按城市拆分。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。当前业务数据只更新到 2025-12-30，所选区间在该日期之后的部分尚无数据。",
+          "file_count": 0,
+          "elapsed_seconds": 13.698,
+          "issues": []
+        },
+        {
+          "scenario": "澄清、中断与新任务识别",
+          "turn": 10,
+          "question": "开始新任务：查询最近三个月的销售趋势。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。本次查询时间从 2026-05-29 开始，但当前业务数据只更新到 2025-12-30，所选区间完全位于数据水位之后。可改查水位日前的时间范围。",
+          "file_count": 0,
+          "elapsed_seconds": 10.106,
+          "issues": []
+        }
+      ]
+    }
+  ]
+}

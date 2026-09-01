@@ -1,0 +1,30 @@
+{
+  "summary": {
+    "generated_at": "2026-08-29T13:24:52.312012+08:00",
+    "question_count": 1,
+    "passed": 0,
+    "failed": 1,
+    "completed": 0,
+    "latency_mean": 13.491,
+    "latency_max": 13.491
+  },
+  "results": [
+    {
+      "number": 16,
+      "question": "查询上海市紫杉醇释放冠脉球囊导管合作医院名单。",
+      "http_status": 200,
+      "status": "SAFE_FALLBACK",
+      "intent": "DETAIL_QUERY",
+      "missing_slots": [],
+      "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。当前业务数据只更新到 2025-12-30，所选区间在该日期之后的部分尚无数据。当前筛选条件：业务城市=上海市、业务城市=上海市、商品名称=紫杉醇释放冠脉球囊导管。请确认名称是否与主数据一致。",
+      "evidence_kinds": [],
+      "files": [],
+      "elapsed_seconds": 13.491,
+      "issues": [
+        "状态不是COMPLETED:SAFE_FALLBACK",
+        "缺少QUERY_RESULT证据",
+        "回答包含失败或澄清话术"
+      ]
+    }
+  ]
+}

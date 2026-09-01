@@ -1,0 +1,61 @@
+{
+  "summary": {
+    "generated_at": "2026-08-29T13:21:19.910563+08:00",
+    "question_count": 3,
+    "passed": 2,
+    "failed": 1,
+    "completed": 2,
+    "latency_mean": 14.364,
+    "latency_max": 17.993
+  },
+  "results": [
+    {
+      "number": 4,
+      "question": "查询上海市紫杉醇释放冠脉球囊导管合作经销商名单。",
+      "http_status": 200,
+      "status": "COMPLETED",
+      "intent": "DETAIL_QUERY",
+      "missing_slots": [],
+      "answer": "共查询到 21 条明细。\n\n| 经销商名称 |\n| --- |\n| 上海米寻科技有限公司 |\n| 上海宸天医疗器械有限公司 |\n| 上海永绥吉医疗科技有限公司 |\n| 上海瑞矩医疗科技有限公司 |\n| 上海宸昌和实业有限公司 |\n| 国药控股医疗器械有限公司 |\n| 上海若程贸易中心 |\n| 上海博润盛康科技有限公司 |\n| 上海文桉科技有限公司 |\n| 上海屹虹纳商贸有限公司 |\n| 上海正山河贸易有限公司 |\n| 铭盛医疗器械（上海）有限公司 |\n| 上海泓耀医疗器械有限公司 |\n| 诺伊格（上海）医疗科技有限公司 |\n| 上海斐汐贸易有限公司 |\n| 上海耀熠绮医疗科技有限公司 |\n| 上海倍润嘉供应链有限公司 |\n| 上海芝栎医疗科技有限公司 |\n| 上海丽梅庆供应链有限公司 |\n| 上海硕瑞医疗器械有限公司 |\n数据水位：当前业务数据截至 2025-12-30T00:00:00（按销售记录时间统计）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+      "evidence_kinds": [
+        "QUERY_RESULT"
+      ],
+      "files": [],
+      "elapsed_seconds": 17.993,
+      "issues": []
+    },
+    {
+      "number": 15,
+      "question": "统计上海市紫杉醇释放冠脉球囊导管已合作医院数。",
+      "http_status": 200,
+      "status": "COMPLETED",
+      "intent": "METRIC_QUERY",
+      "missing_slots": [],
+      "answer": "| 已合作医院数 |\n| --- |\n| 1 |\n数据水位：当前业务数据截至 2025-12-30T00:00:00（按销售记录时间统计）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+      "evidence_kinds": [
+        "QUERY_RESULT",
+        "SEMANTIC_METRIC_RESOLUTION"
+      ],
+      "files": [],
+      "elapsed_seconds": 11.189,
+      "issues": []
+    },
+    {
+      "number": 16,
+      "question": "查询上海市紫杉醇释放冠脉球囊导管合作医院名单。",
+      "http_status": 200,
+      "status": "SAFE_FALLBACK",
+      "intent": "DETAIL_QUERY",
+      "missing_slots": [],
+      "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。当前业务数据只更新到 2025-12-30，所选区间在该日期之后的部分尚无数据。当前筛选条件：地区=上海市、商品名称=紫杉醇释放冠脉球囊导管。请确认名称是否与主数据一致。",
+      "evidence_kinds": [],
+      "files": [],
+      "elapsed_seconds": 13.911,
+      "issues": [
+        "状态不是COMPLETED:SAFE_FALLBACK",
+        "缺少QUERY_RESULT证据",
+        "回答包含失败或澄清话术"
+      ]
+    }
+  ]
+}

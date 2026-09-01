@@ -1,0 +1,1588 @@
+{
+  "summary": {
+    "generated_at": "2026-08-28T20:26:35.507112+08:00",
+    "scenario_count": 4,
+    "turns_per_scenario": {
+      "metric_evolution": 30,
+      "entity_relationship": 30,
+      "correction_and_reset": 30,
+      "natural_and_failure_prone": 30
+    },
+    "total_turns": 120,
+    "http_errors": 0,
+    "transport_errors": 0,
+    "needs_clarification": 47,
+    "safe_fallback": 29,
+    "completed": 42,
+    "files": 4,
+    "latency_mean": 11.827,
+    "latency_p95": 29.667
+  },
+  "scenarios": [
+    {
+      "scenario": "metric_evolution",
+      "conversation_id": "followup-30-metric_evolution-33e91344",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "查询最近一年上海地区含税销售总额",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：含税销售总额=338200349.5772\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 26.528,
+          "error": null
+        },
+        {
+          "turn": 2,
+          "question": "按月统计",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "含税销售总额从 2025-10 的 5.46556e+08 到 2025-12 的 2.07407e+08，整体下降 3.39149e+08（62.05%）。区间最低 1.43545e+08，最高 5.46556e+08，走势表现为存在波动。最大单期上升发生在 2025-11 至 2025-12，增加 6.38616e+07。最大单期下降发生在 2025-10 至 2025-11，减少 4.0301e+08。稳健斜率判断为下降，方向一致性50.00%。方向转折点：2025-11（谷值）。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 36.991,
+          "error": null
+        },
+        {
+          "turn": 3,
+          "question": "改成按季度",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "含税销售总额从 2025-10 的 5.46556e+08 到 2025-12 的 2.07407e+08，整体下降 3.39149e+08（62.05%）。区间最低 1.43545e+08，最高 5.46556e+08，走势表现为存在波动。最大单期上升发生在 2025-11 至 2025-12，增加 6.38616e+07。最大单期下降发生在 2025-10 至 2025-11，减少 4.0301e+08。稳健斜率判断为下降，方向一致性50.00%。方向转折点：2025-11（谷值）。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 35.184,
+          "error": null
+        },
+        {
+          "turn": 4,
+          "question": "只看2026年",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有有效数据。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求的时间段完全晚于该水位，空结果不能解释为业务没有发生。",
+          "file_count": 0,
+          "elapsed_seconds": 13.53,
+          "error": null
+        },
+        {
+          "turn": 5,
+          "question": "那2025年呢",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：含税销售总额=897508140.2692\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 11.219,
+          "error": null
+        },
+        {
+          "turn": 6,
+          "question": "换成销售数量",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：含税销售总额=897508140.2692\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 11.003,
+          "error": null
+        },
+        {
+          "turn": 7,
+          "question": "同时加上订单数",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：含税销售总额=897508140.2692\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 14.63,
+          "error": null
+        },
+        {
+          "turn": 8,
+          "question": "按经销商拆分",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询成功，共 2154 条结果；当前仅返回 0 条预览，预览不作为全量统计。完整结果请通过 result_file_url 下载。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 1,
+          "elapsed_seconds": 17.307,
+          "error": null
+        },
+        {
+          "turn": 9,
+          "question": "显示前10名",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "数据不足以支持可靠分析：排名结果缺少与分组维度对应的唯一对象列。",
+          "file_count": 0,
+          "elapsed_seconds": 1.793,
+          "error": null
+        },
+        {
+          "turn": 10,
+          "question": "改成前5名",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "数据不足以支持可靠分析：排名结果缺少与分组维度对应的唯一对象列。",
+          "file_count": 0,
+          "elapsed_seconds": 1.793,
+          "error": null
+        },
+        {
+          "turn": 11,
+          "question": "从低到高排序",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：含税销售总额=897508140.2692",
+          "file_count": 0,
+          "elapsed_seconds": 5.617,
+          "error": null
+        },
+        {
+          "turn": 12,
+          "question": "只看上海市",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 4.856,
+          "error": null
+        },
+        {
+          "turn": 13,
+          "question": "去掉地区条件",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 7.984,
+          "error": null
+        },
+        {
+          "turn": 14,
+          "question": "按医院拆分",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-29（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 9.288,
+          "error": null
+        },
+        {
+          "turn": 15,
+          "question": "只保留三级医院",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "关键信息多轮补充后仍不完整，请重新描述分析目标。",
+          "file_count": 0,
+          "elapsed_seconds": 8.435,
+          "error": null
+        },
+        {
+          "turn": 16,
+          "question": "再按月看趋势",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "当前只取得 1 行数据，不足以可靠执行TREND_ANALYSIS，本次不生成分析结论。",
+          "file_count": 0,
+          "elapsed_seconds": 9.177,
+          "error": null
+        },
+        {
+          "turn": 17,
+          "question": "哪个月最高",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 7.578,
+          "error": null
+        },
+        {
+          "turn": 18,
+          "question": "最低的是哪个月",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果共 2 行：[{\"含税销售总额\": 897508140.2692, \"极值类型\": \"最高\"}, {\"含税销售总额\": 897508140.2692, \"极值类型\": \"最低\"}]",
+          "file_count": 0,
+          "elapsed_seconds": 11.593,
+          "error": null
+        },
+        {
+          "turn": 19,
+          "question": "最高和最低差多少",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [],
+          "answer": "当前只取得 1 行数据，不足以可靠执行COMPARISON_ANALYSIS，本次不生成分析结论。",
+          "file_count": 0,
+          "elapsed_seconds": 7.8,
+          "error": null
+        },
+        {
+          "turn": 20,
+          "question": "计算平均值",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 7.771,
+          "error": null
+        },
+        {
+          "turn": 21,
+          "question": "只显示月份和销售额",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：含税销售总额=897508140.2692\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 17.398,
+          "error": null
+        },
+        {
+          "turn": 22,
+          "question": "把销售数量也加回来",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 4.894,
+          "error": null
+        },
+        {
+          "turn": 23,
+          "question": "改看最近6个月",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "当前只取得 1 行数据，不足以可靠执行TREND_ANALYSIS，本次不生成分析结论。",
+          "file_count": 0,
+          "elapsed_seconds": 5.611,
+          "error": null
+        },
+        {
+          "turn": 24,
+          "question": "按周统计",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "当前只取得 0 行数据，不足以可靠执行TREND_ANALYSIS，本次不生成分析结论。",
+          "file_count": 0,
+          "elapsed_seconds": 15.331,
+          "error": null
+        },
+        {
+          "turn": 25,
+          "question": "还是按月吧",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "当前只取得 0 行数据，不足以可靠执行TREND_ANALYSIS，本次不生成分析结论。",
+          "file_count": 0,
+          "elapsed_seconds": 15.998,
+          "error": null
+        },
+        {
+          "turn": 26,
+          "question": "导出Excel",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "REPORT_GENERATION",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 12.216,
+          "error": null
+        },
+        {
+          "turn": 27,
+          "question": "再导出PDF",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "REPORT_GENERATION",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 12.708,
+          "error": null
+        },
+        {
+          "turn": 28,
+          "question": "解释一下为什么最后一个月下降",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "ROOT_CAUSE_ANALYSIS",
+          "missing_slots": [
+            "semantic_ambiguity"
+          ],
+          "answer": "我已理解：指标=含税销售总额；时间范围=2026-02-28 至 2026-08-30（含首尾）。还需要补充：“解释为什么最后一个月下降”属于归因分析，需要指定分解维度（如按经销商、商品、医院等级或业态等）。请确认按哪个维度进行贡献度分解？",
+          "file_count": 0,
+          "elapsed_seconds": 17.899,
+          "error": null
+        },
+        {
+          "turn": 29,
+          "question": "和上个月做环比",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2026-07-01 至 2026-07-31（含首尾）；对比方式=环比。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 1.383,
+          "error": null
+        },
+        {
+          "turn": 30,
+          "question": "总结刚才的分析",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2026-07-01 至 2026-08-01（含首尾）；对比方式=环比。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 4.128,
+          "error": null
+        }
+      ]
+    },
+    {
+      "scenario": "entity_relationship",
+      "conversation_id": "followup-30-entity_relationship-f74179ce",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "查询最近一年上海东松医疗科技股份有限公司销售的产品",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 12.037,
+          "error": null
+        },
+        {
+          "turn": 2,
+          "question": "只显示产品名称",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 7.551,
+          "error": null
+        },
+        {
+          "turn": 3,
+          "question": "按销售额排序",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：含税销售总额=897508140.2692\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 28.069,
+          "error": null
+        },
+        {
+          "turn": 4,
+          "question": "前20个",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric",
+            "dimension"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？；希望按哪个维度分析？",
+          "file_count": 0,
+          "elapsed_seconds": 5.112,
+          "error": null
+        },
+        {
+          "turn": 5,
+          "question": "它合作了哪些医院",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）；分析维度=它合作了哪些医院。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.598,
+          "error": null
+        },
+        {
+          "turn": 6,
+          "question": "统计医院数量",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "hospital.hospital_name按统计医院数量降序排名：第1名 上海市杨浦区长海社区卫生服务中心=1；第2名 上海市第五人民医院=1；第3名 上海市闵行区梅陇社区卫生服务中心=1；第4名 上海嘉会国际医院有限公司=1；第5名 上海瑞浦门诊部有限公司=1；第6名 上海市宝山区仁和医院=1；第7名 复旦大学附属中山医院=1；第8名 上海市宝山区罗泾镇社区卫生服务中心=1；第9名 上海市第一人民医院=1；第10名 上海市金山区亭林医院=1；第11名 上海交通大学医学院附属第九人民医院=1；第12名 上海新起点康复医院有限公司=1；第13名 上海市口腔医院=1；第14名 中国人民解放军海军特色医学中心=1；第15名 上海市宝山区月浦镇社区卫生服务中心=1；第16名 上海市杨浦区定海社区卫生服务中心=1；第17名 上海市浦东新区公利医院=1；第18名 上海市第四人民医院=1；第19名 上海交通大学医学院附属仁济东院=1；第20名 上海市黄浦区肿瘤防治院=1。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 24.081,
+          "error": null
+        },
+        {
+          "turn": 7,
+          "question": "只看三级医院",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "hospital.hospital_name按统计医院数量降序排名：第1名 上海市第一妇婴保健院=1；第2名 上海市长宁区周家桥街道社区卫生服务中心=1；第3名 上海交通大学附属新华医院=1；第4名 上海明珠医院有限公司=1；第5名 上海市同仁医院=1；第6名 中国人民解放军海军第九〇五医院=1；第7名 上海市宝山区杨行镇社区卫生服务中心=1；第8名 上海市杨浦区市东医院=1；第9名 上海市肺科医院=1；第10名 上海交通大学医学院附属仁济医院=1；第11名 上海市黄浦区顺昌医院=1；第12名 上海市光华中西医结合医院=1；第13名 中国人民解放军海军军医大学第一附属医院=1；第14名 上海市宝山区庙行镇社区卫生服务中心=1；第15名 新华医院崇明分院=1；第16名 上海市普陀区甘泉街道社区卫生服务中心=1；第17名 上海市浦东新区周浦医院=1；第18名 上海市第六人民医院=1；第19名 上海中医药大学附属岳阳中西医结合医院=1；第20名 上海市静安区中心医院=1。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 32.994,
+          "error": null
+        },
+        {
+          "turn": 8,
+          "question": "这些医院分别在哪个城市",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）；分析维度=城市。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 8.983,
+          "error": null
+        },
+        {
+          "turn": 9,
+          "question": "只看上海",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-29（含首尾）；分析维度=城市。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.666,
+          "error": null
+        },
+        {
+          "turn": 10,
+          "question": "按医院等级分组",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-30（含首尾）；分析维度=城市。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.452,
+          "error": null
+        },
+        {
+          "turn": 11,
+          "question": "再看合作经销商数量",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果共 20 行：[{\"hospital.hospital_name\": \"上海市第一妇婴保健院\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"上海市长宁区周家桥街道社区卫生服务中心\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"上海交通大学附属新华医院\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"上海明珠医院有限公司\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"上海市同仁医院\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"中国人民解放军海军第九〇五医院\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"上海市宝山区杨行镇社区卫生服务中心\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"上海市杨浦区市东医院\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"上海市肺科医院\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"上海交通大学医学院附属仁济医院\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"上海市黄浦区顺昌医院\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"上海市光华中西医结合医院\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"中国人民解放军海军军医大学第一附属医院\", \"统计医院数量\": 1}, {\"hospital.hospital_name\": \"上海市宝山区庙行镇社区卫",
+          "file_count": 0,
+          "elapsed_seconds": 6.227,
+          "error": null
+        },
+        {
+          "turn": 12,
+          "question": "经销商销售额前5名",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "dealer.dealer_name按含税销售总额降序排名：第1名 上海鸿迪医疗科技有限公司=3.40713e+07；第2名 广东合德供应链有限责任公司=2.32821e+07；第3名 上海福荫商贸有限公司=1.95702e+07；第4名 重庆友驰医疗器械有限公司=1.18864e+07；第5名 上海泰初臻医疗科技有限公司=1.1568e+07。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 26.951,
+          "error": null
+        },
+        {
+          "turn": 13,
+          "question": "第1名销售什么产品",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "当前仅有1个对象满足全部筛选条件，不足请求的前10名。product.product_name按销售数量降序排名：第1名 一次性使用注射笔用针头=4.02958e+06。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 27.136,
+          "error": null
+        },
+        {
+          "turn": 14,
+          "question": "这些产品卖给哪些医院",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 7.318,
+          "error": null
+        },
+        {
+          "turn": 15,
+          "question": "改查上海美笛投资管理有限公司",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 9.166,
+          "error": null
+        },
+        {
+          "turn": 16,
+          "question": "它销售哪些产品",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 8.154,
+          "error": null
+        },
+        {
+          "turn": 17,
+          "question": "合作医院有多少家",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "关键信息多轮补充后仍不完整，请重新描述分析目标。",
+          "file_count": 0,
+          "elapsed_seconds": 7.269,
+          "error": null
+        },
+        {
+          "turn": 18,
+          "question": "按月看销售趋势",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "含税销售总额从 2025-10 的 5.46556e+08 到 2025-12 的 2.07407e+08，整体下降 3.39149e+08（62.05%）。区间最低 1.43545e+08，最高 5.46556e+08，走势表现为存在波动。最大单期上升发生在 2025-11 至 2025-12，增加 6.38616e+07。最大单期下降发生在 2025-10 至 2025-11，减少 4.0301e+08。稳健斜率判断为下降，方向一致性50.00%。方向转折点：2025-11（谷值）。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 28.146,
+          "error": null
+        },
+        {
+          "turn": 19,
+          "question": "换成订单数",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "含税销售总额从 2025-10 的 5.46556e+08 到 2025-12 的 2.07407e+08，整体下降 3.39149e+08（62.05%）。区间最低 1.43545e+08，最高 5.46556e+08，走势表现为存在波动。最大单期上升发生在 2025-11 至 2025-12，增加 6.38616e+07。最大单期下降发生在 2025-10 至 2025-11，减少 4.0301e+08。稳健斜率判断为下降，方向一致性50.00%。方向转折点：2025-11（谷值）。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 32.519,
+          "error": null
+        },
+        {
+          "turn": 20,
+          "question": "只看2026年上半年",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有有效数据。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求的时间段完全晚于该水位，空结果不能解释为业务没有发生。",
+          "file_count": 0,
+          "elapsed_seconds": 10.19,
+          "error": null
+        },
+        {
+          "turn": 21,
+          "question": "那下半年呢",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有有效数据。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求的时间段完全晚于该水位，空结果不能解释为业务没有发生。",
+          "file_count": 0,
+          "elapsed_seconds": 21.499,
+          "error": null
+        },
+        {
+          "turn": 22,
+          "question": "按产品拆分",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有数据。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求的时间段完全晚于该水位，空结果不能解释为业务没有发生。",
+          "file_count": 0,
+          "elapsed_seconds": 12.073,
+          "error": null
+        },
+        {
+          "turn": 23,
+          "question": "销售额最高的产品",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：product.product_name=胸腹腔内窥镜手术系统用手术器械，含税销售总额=96646272.298\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 14.636,
+          "error": null
+        },
+        {
+          "turn": 24,
+          "question": "这个产品覆盖哪些医院",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 4.736,
+          "error": null
+        },
+        {
+          "turn": 25,
+          "question": "去掉时间限制看全部历史",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 4.376,
+          "error": null
+        },
+        {
+          "turn": 26,
+          "question": "恢复最近一年",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.279,
+          "error": null
+        },
+        {
+          "turn": 27,
+          "question": "导出完整结果",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "REPORT_GENERATION",
+          "missing_slots": [],
+          "answer": "报表共 1 行、2 列。数值摘要：含税销售总额合计=9.66463e+07、均值=9.66463e+07。\n注意事项：自动洞察是待解释的统计候选，不自动构成因果结论。\n已生成XLSX文件，可通过返回的 files[0].download_url 下载。",
+          "file_count": 1,
+          "elapsed_seconds": 14.151,
+          "error": null
+        },
+        {
+          "turn": 28,
+          "question": "只预览前10条",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric",
+            "dimension"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？；希望按哪个维度分析？",
+          "file_count": 0,
+          "elapsed_seconds": 4.533,
+          "error": null
+        },
+        {
+          "turn": 29,
+          "question": "生成一段业务摘要",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）；分析维度=生成一段业务摘要。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 4.851,
+          "error": null
+        },
+        {
+          "turn": 30,
+          "question": "列出本轮使用的筛选条件",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "CAPABILITY_HELP",
+          "missing_slots": [],
+          "answer": "我可以进行指标、明细、趋势、对比、占比、异常、归因、预测和报表分析。",
+          "file_count": 0,
+          "elapsed_seconds": 3.917,
+          "error": null
+        }
+      ]
+    },
+    {
+      "scenario": "correction_and_reset",
+      "conversation_id": "followup-30-correction_and_reset-abc3f3ee",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "查询最近一年上海地区销售额",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：含税销售总额=338200349.5772\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 32.96,
+          "error": null
+        },
+        {
+          "turn": 2,
+          "question": "不是销售额，是订单量",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：订单量=59383\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 25.982,
+          "error": null
+        },
+        {
+          "turn": 3,
+          "question": "不是上海，是江苏",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：订单量=59383\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 19.715,
+          "error": null
+        },
+        {
+          "turn": 4,
+          "question": "按月统计",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "订单量从 2025-10 的 39505 到 2025-12 的 9930，整体下降 29575（74.86%）。区间最低 9930，最高 39505，走势表现为持续下降。最大单期下降发生在 2025-10 至 2025-11，减少 29557。稳健斜率判断为下降，方向一致性100.00%。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 29.667,
+          "error": null
+        },
+        {
+          "turn": 5,
+          "question": "不按月了，按季度",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "订单量从 2025-10 的 39505 到 2025-12 的 9930，整体下降 29575（74.86%）。区间最低 9930，最高 39505，走势表现为持续下降。最大单期下降发生在 2025-10 至 2025-11，减少 29557。稳健斜率判断为下降，方向一致性100.00%。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 29.393,
+          "error": null
+        },
+        {
+          "turn": 6,
+          "question": "去掉地区条件",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "订单量从 2025-10 的 39505 到 2025-12 的 9930，整体下降 29575（74.86%）。区间最低 9930，最高 39505，走势表现为持续下降。最大单期下降发生在 2025-10 至 2025-11，减少 29557。稳健斜率判断为下降，方向一致性100.00%。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 25.657,
+          "error": null
+        },
+        {
+          "turn": 7,
+          "question": "按经销商分组",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "当前问题匹配到的指标口径存在冲突，请联系管理员检查指标名称和别名配置。",
+          "file_count": 0,
+          "elapsed_seconds": 9.005,
+          "error": null
+        },
+        {
+          "turn": 8,
+          "question": "不要经销商维度，改按医院",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：订单量=59383\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 20.146,
+          "error": null
+        },
+        {
+          "turn": 9,
+          "question": "只看三级医院",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：订单量=22549\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 19.817,
+          "error": null
+        },
+        {
+          "turn": 10,
+          "question": "取消医院等级条件",
+          "http_status": 200,
+          "status": "CANCELLED",
+          "intent": "OUT_OF_SCOPE",
+          "missing_slots": [],
+          "answer": "当前没有正在执行的任务，已清除本会话待补充状态。",
+          "file_count": 0,
+          "elapsed_seconds": 0.966,
+          "error": null
+        },
+        {
+          "turn": 11,
+          "question": "看前10名",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric",
+            "dimension"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？；希望按哪个维度分析？",
+          "file_count": 0,
+          "elapsed_seconds": 9.602,
+          "error": null
+        },
+        {
+          "turn": 12,
+          "question": "不是前10，是后5名",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）；分析维度=不是前10、是后5名。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 10.645,
+          "error": null
+        },
+        {
+          "turn": 13,
+          "question": "改回前5名",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）；分析维度=不是前10、是后5名。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.634,
+          "error": null
+        },
+        {
+          "turn": 14,
+          "question": "加上销售额",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "数据不足以支持可靠分析：排名结果缺少与分组维度对应的唯一对象列。",
+          "file_count": 0,
+          "elapsed_seconds": 14.927,
+          "error": null
+        },
+        {
+          "turn": 15,
+          "question": "去掉订单量",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "semantic_ambiguity"
+          ],
+          "answer": "我已理解：指标=订单量；时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：当前查询缺少明确的业务指标或维度。'去掉订单量'可能意味着您希望从之前的查询中移除该指标，但当前上下文未提供基础查询。请明确您希望查询的其他指标（如销售额、销售数量等）或维度。",
+          "file_count": 0,
+          "elapsed_seconds": 16.847,
+          "error": null
+        },
+        {
+          "turn": 16,
+          "question": "比较2025年和2026年",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [
+            "metric",
+            "comparison_type"
+          ],
+          "answer": "我已理解：时间范围=2025-01-01 至 2025-12-31（含首尾）。还需要补充：要查询或分析哪个指标？；希望同比、环比、目标值还是对象间比较？",
+          "file_count": 0,
+          "elapsed_seconds": 5.183,
+          "error": null
+        },
+        {
+          "turn": 17,
+          "question": "取消比较，只看2026年",
+          "http_status": 200,
+          "status": "CANCELLED",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [],
+          "answer": "当前没有正在执行的任务，已清除本会话待补充状态。",
+          "file_count": 0,
+          "elapsed_seconds": 0.015,
+          "error": null
+        },
+        {
+          "turn": 18,
+          "question": "改成2026年7月",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：订单量=0\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求的时间段完全晚于该水位，空结果不能解释为业务没有发生。",
+          "file_count": 0,
+          "elapsed_seconds": 8.543,
+          "error": null
+        },
+        {
+          "turn": 19,
+          "question": "不对，是2026年6月",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：订单量=0\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求的时间段完全晚于该水位，空结果不能解释为业务没有发生。",
+          "file_count": 0,
+          "elapsed_seconds": 18.331,
+          "error": null
+        },
+        {
+          "turn": 20,
+          "question": "那5月呢",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：订单量=0\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求的时间段完全晚于该水位，空结果不能解释为业务没有发生。",
+          "file_count": 0,
+          "elapsed_seconds": 11.566,
+          "error": null
+        },
+        {
+          "turn": 21,
+          "question": "另外问一下销售额的指标口径",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_DEFINITION",
+          "missing_slots": [],
+          "answer": "{'metric_id': '81:annual_total_sales', 'version': 'current', 'semantic_model_id': 81, 'business_domain_id': 205, 'metric_code': 'annual_total_sales', 'metric_name': '含税销售总额', 'metric_level': 1, 'unit': '元', 'format_rule': '#,##0.00', 'description': '指定时间范围内有效销售订单的含税金额合计', 'synonyms': ['销售总额', '销售额', '年度总销售额', '含税销售金额', '订单销售额'], 'applicable_scenarios': ['销售趋势', '经销商排名', '商品销售分析', '医院销售分析'], 'calculation_formula': 'annual_total_sales=SUM(sales_order.amount_with_tax)', 'global_filters': [\"{'filterType': 'include', 'filterCondition': 'sales_order.quantity > 0', 'filterExplanation': '排除退货和零数量记录'}\"], 'depend_metrics': [], 'bound_entities': [{'entity_code': 'sales_order', 'resolved_entity_code': 'sales_order', 'indicator_logic': None, 'entity_name': '销售订单', 'main_table_name': 'sales_order', 'dat",
+          "file_count": 0,
+          "elapsed_seconds": 2.203,
+          "error": null
+        },
+        {
+          "turn": 22,
+          "question": "回到刚才查询",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：订单量=0\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求的时间段完全晚于该水位，空结果不能解释为业务没有发生。",
+          "file_count": 0,
+          "elapsed_seconds": 10.204,
+          "error": null
+        },
+        {
+          "turn": 23,
+          "question": "按周统计",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "当前只取得 0 行数据，不足以可靠执行TREND_ANALYSIS，本次不生成分析结论。",
+          "file_count": 0,
+          "elapsed_seconds": 13.773,
+          "error": null
+        },
+        {
+          "turn": 24,
+          "question": "显示趋势",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.478,
+          "error": null
+        },
+        {
+          "turn": 25,
+          "question": "只显示日期和销售额",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "含税销售总额从 2025-10 的 5.46556e+08 到 2025-12 的 2.07407e+08，整体下降 3.39149e+08（62.05%）。区间最低 1.43545e+08，最高 5.46556e+08，走势表现为存在波动。最大单期上升发生在 2025-11 至 2025-12，增加 6.38616e+07。最大单期下降发生在 2025-10 至 2025-11，减少 4.0301e+08。稳健斜率判断为下降，方向一致性50.00%。方向转折点：2025-11（谷值）。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 22.932,
+          "error": null
+        },
+        {
+          "turn": 26,
+          "question": "清除刚才条件，查询经销商名单",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "查询结果已被截断，无法基于不完整数据生成可靠分析结论；可下载完整结果或缩小范围后重试。",
+          "file_count": 1,
+          "elapsed_seconds": 13.265,
+          "error": null
+        },
+        {
+          "turn": 27,
+          "question": "只看上海的",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询成功，共 781 条结果；当前仅返回 0 条预览，预览不作为全量统计。完整结果请通过 result_file_url 下载。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 1,
+          "elapsed_seconds": 11.268,
+          "error": null
+        },
+        {
+          "turn": 28,
+          "question": "显示前30条",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "数据不足以支持可靠分析：排名结果顺序不正确，拒绝直接相信未排序的SQL结果。",
+          "file_count": 0,
+          "elapsed_seconds": 0.953,
+          "error": null
+        },
+        {
+          "turn": 29,
+          "question": "导出Excel",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "REPORT_GENERATION",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 12.757,
+          "error": null
+        },
+        {
+          "turn": 30,
+          "question": "开始新任务：查询医院等级有哪些",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）；分析维度=医院等级。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 4.35,
+          "error": null
+        }
+      ]
+    },
+    {
+      "scenario": "natural_and_failure_prone",
+      "conversation_id": "followup-30-natural_and_failure_prone-50d42de4",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "帮我看看最近一年生意怎么样",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "TREND_ANALYSIS",
+          "missing_slots": [],
+          "answer": "当前问题匹配到的指标口径存在冲突，请联系管理员检查指标名称和别名配置。",
+          "file_count": 0,
+          "elapsed_seconds": 36.044,
+          "error": null
+        },
+        {
+          "turn": 2,
+          "question": "具体看销售额",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "查询结果：含税销售总额=897508140.2692\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 29.059,
+          "error": null
+        },
+        {
+          "turn": 3,
+          "question": "按月给我",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.919,
+          "error": null
+        },
+        {
+          "turn": 4,
+          "question": "上海怎么样",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-29（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 4.842,
+          "error": null
+        },
+        {
+          "turn": 5,
+          "question": "那江苏呢",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-29（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.058,
+          "error": null
+        },
+        {
+          "turn": 6,
+          "question": "两个地区对比一下",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [
+            "metric",
+            "comparison_type"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？；希望同比、环比、目标值还是对象间比较？",
+          "file_count": 0,
+          "elapsed_seconds": 6.751,
+          "error": null
+        },
+        {
+          "turn": 7,
+          "question": "哪个更高",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [
+            "metric",
+            "comparison_type"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？；希望同比、环比、目标值还是对象间比较？",
+          "file_count": 0,
+          "elapsed_seconds": 7.206,
+          "error": null
+        },
+        {
+          "turn": 8,
+          "question": "差多少",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [
+            "metric",
+            "comparison_type"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？；希望同比、环比、目标值还是对象间比较？",
+          "file_count": 0,
+          "elapsed_seconds": 8.079,
+          "error": null
+        },
+        {
+          "turn": 9,
+          "question": "为什么会有差异",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [],
+          "answer": "关键信息多轮补充后仍不完整，请重新描述分析目标。",
+          "file_count": 0,
+          "elapsed_seconds": 7.407,
+          "error": null
+        },
+        {
+          "turn": 10,
+          "question": "按产品看看原因",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 9.049,
+          "error": null
+        },
+        {
+          "turn": 11,
+          "question": "卖得最好的三个产品",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 7.818,
+          "error": null
+        },
+        {
+          "turn": 12,
+          "question": "第一个是谁卖的",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 6.576,
+          "error": null
+        },
+        {
+          "turn": 13,
+          "question": "这些经销商还卖什么",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "关键信息多轮补充后仍不完整，请重新描述分析目标。",
+          "file_count": 0,
+          "elapsed_seconds": 6.25,
+          "error": null
+        },
+        {
+          "turn": 14,
+          "question": "合作医院呢",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 6.587,
+          "error": null
+        },
+        {
+          "turn": 15,
+          "question": "医院最多的经销商是谁",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.26,
+          "error": null
+        },
+        {
+          "turn": 16,
+          "question": "看它每个月的变化",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.039,
+          "error": null
+        },
+        {
+          "turn": 17,
+          "question": "最近三个月就行",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "关键信息多轮补充后仍不完整，请重新描述分析目标。",
+          "file_count": 0,
+          "elapsed_seconds": 4.85,
+          "error": null
+        },
+        {
+          "turn": 18,
+          "question": "按天看看",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 5.133,
+          "error": null
+        },
+        {
+          "turn": 19,
+          "question": "数据太多了，只看前20条",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "metric"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-29（含首尾）。还需要补充：要查询或分析哪个指标？",
+          "file_count": 0,
+          "elapsed_seconds": 4.92,
+          "error": null
+        },
+        {
+          "turn": 20,
+          "question": "只留销售额最高的5天",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 1.259,
+          "error": null
+        },
+        {
+          "turn": 21,
+          "question": "撤销刚才的前5限制",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 3.054,
+          "error": null
+        },
+        {
+          "turn": 22,
+          "question": "换成订单量",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 0.716,
+          "error": null
+        },
+        {
+          "turn": 23,
+          "question": "也要销售数量",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 7.63,
+          "error": null
+        },
+        {
+          "turn": 24,
+          "question": "算一下平均每单数量",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [
+            "semantic_ambiguity"
+          ],
+          "answer": "我已理解：指标=平均每单数量；时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：“平均每单数量”通常指“销售总数量 / 订单笔数”。当前元数据中只有原子指标“销售总数量”(sales_total_quantity) 和 “订单笔数”(order_count)，没有预定义的复合指标“平均每单数量”。请确认是希望直接查询“销售总数量”，还是由下游计算平均值（总数量/订单数）？",
+          "file_count": 0,
+          "elapsed_seconds": 16.246,
+          "error": null
+        },
+        {
+          "turn": 25,
+          "question": "结果导出来",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 1.306,
+          "error": null
+        },
+        {
+          "turn": 26,
+          "question": "刚才如果失败了就继续原来的问题",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 8.219,
+          "error": null
+        },
+        {
+          "turn": 27,
+          "question": "再试一次",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "CHAT",
+          "missing_slots": [],
+          "answer": "你好，我可以协助查询和分析业务数据。",
+          "file_count": 0,
+          "elapsed_seconds": 7.016,
+          "error": null
+        },
+        {
+          "turn": 28,
+          "question": "不需要文件了，直接总结",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 7.609,
+          "error": null
+        },
+        {
+          "turn": 29,
+          "question": "告诉我数据截止日期",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "DATA_QUALITY",
+          "missing_slots": [
+            "semantic_ambiguity"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：“数据截止日期”不是具体的业务指标或维度。请明确您想查询的具体业务对象（如：最新的订单日期、最近一次交易时间等），或指定需要查看截止日期的实体/指标。",
+          "file_count": 0,
+          "elapsed_seconds": 20.157,
+          "error": null
+        },
+        {
+          "turn": 30,
+          "question": "现在开始一个全新的问题：上海东松医疗科技股份有限公司都销售什么产品",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "DATA_QUALITY",
+          "missing_slots": [
+            "semantic_ambiguity"
+          ],
+          "answer": "我已理解：时间范围=2025-08-28 至 2026-08-28（含首尾）。还需要补充：过滤值 上海东松医疗科技股份有限公司 使用了未注册字段 dealer.dealer_name，当前语义和源数据不能唯一确定其规范过滤属性，请确认筛选口径。",
+          "file_count": 0,
+          "elapsed_seconds": 16.039,
+          "error": null
+        }
+      ]
+    }
+  ]
+}

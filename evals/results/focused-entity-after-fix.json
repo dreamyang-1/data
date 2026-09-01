@@ -1,0 +1,154 @@
+{
+  "summary": {
+    "generated_at": "2026-08-29T11:07:22.791379+08:00",
+    "question_count": 10,
+    "passed": 10,
+    "failed": 0,
+    "completed": 4,
+    "needs_clarification": 1,
+    "safe_fallback": 5,
+    "files": 2,
+    "latency_mean": 8.207,
+    "latency_p95": 14.126
+  },
+  "scenarios": [
+    {
+      "name": "实体关系与指代追问",
+      "turns": [
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 1,
+          "question": "查询最近一年上海东松医疗科技股份有限公司销售过的产品。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "共查询到 10 条明细。\n\n| 产品名称 |\n| --- |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n| 血液透析设备 |\n活跃口径：本次将 2025-08-29 至 2026-08-29 期间内存在销售记录的对象定义为活跃对象。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 12.261,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 2,
+          "question": "其中销售额最高的是哪个？",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "| 含税销售总额 |\n| --- |\n| 897,508,140.2692 |\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。",
+          "file_count": 0,
+          "elapsed_seconds": 10.108,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 3,
+          "question": "它卖给了哪些医院？",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 6.3,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 4,
+          "question": "这些医院分别是什么等级？",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 1.377,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 5,
+          "question": "只保留三级医院。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 5.235,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 6,
+          "question": "按医院的销售额排序。",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "METRIC_QUERY",
+          "missing_slots": [],
+          "answer": "结果未通过数据、指标与证据一致性校验，本次不返回数值。",
+          "file_count": 0,
+          "elapsed_seconds": 1.453,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 7,
+          "question": "第一家医院还与哪些经销商合作？",
+          "http_status": 200,
+          "status": "SAFE_FALLBACK",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "查询执行成功，但指定条件下没有匹配到有效业务数据。",
+          "file_count": 0,
+          "elapsed_seconds": 15.752,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 8,
+          "question": "这些经销商的销售额分别是多少？",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "查询成功，共 10000 条结果；当前仅返回 0 条预览，预览不作为全量统计。完整结果请使用回答末尾的附件链接下载。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。\n\n附件：[下载完整查询结果（XLSX）](http://192.168.1.223:29000/bam/2181c4bc5fd64071a2348a428ddee08b.xlsx)",
+          "file_count": 1,
+          "elapsed_seconds": 10.224,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 9,
+          "question": "改为查看上海华美投资管理有限公司。",
+          "http_status": 200,
+          "status": "COMPLETED",
+          "intent": "DETAIL_QUERY",
+          "missing_slots": [],
+          "answer": "查询成功，共 10000 条结果；当前仅返回 0 条预览，预览不作为全量统计。完整结果请使用回答末尾的附件链接下载。\n数据水位：当前业务数据截至 2025-12-30T00:00:00（已注册时间字段 sales_order.created_date）。查询快照时间仅表示本次读取时间，不代表业务数据更新时间。所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。\n\n附件：[下载完整查询结果（XLSX）](http://192.168.1.223:29000/bam/578fb82f66d04d14a0d1929671488f66.xlsx)",
+          "file_count": 1,
+          "elapsed_seconds": 14.126,
+          "issues": []
+        },
+        {
+          "scenario": "实体关系与指代追问",
+          "turn": 10,
+          "question": "总结刚才两家经销商的差异。",
+          "http_status": 200,
+          "status": "NEEDS_CLARIFICATION",
+          "intent": "COMPARISON_ANALYSIS",
+          "missing_slots": [
+            "metric",
+            "comparison_type"
+          ],
+          "answer": "我已理解：时间范围=2025-08-29 至 2026-08-29（含首尾）；明细对象=经销商；字段=经销商名称；分析维度=经销商。还需要补充：要查询或分析哪个指标？；希望同比、环比、目标值还是对象间比较？",
+          "file_count": 0,
+          "elapsed_seconds": 5.235,
+          "issues": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,390 @@
+﻿{
+  "mode": "hybrid",
+  "model": "qwen3.6-plus",
+  "datasets": [
+    "E:\\YouoAgent\\DataAnalysis_Agent\\evals\\intent_realistic_100.json",
+    "E:\\YouoAgent\\DataAnalysis_Agent\\evals\\intent_realistic_extra_100.json"
+  ],
+  "total": 200,
+  "execution_valid": true,
+  "accuracy": 0.94,
+  "macro_f1": 0.9406,
+  "schema_valid_rate": 1.0,
+  "error_counts": {},
+  "routing_counts": {
+    "RULE": 82,
+    "STRUCTURED_MODEL": 118
+  },
+  "fallback_counts": {
+    "LOW_MODEL_CONFIDENCE_RULE_FALLBACK": 1,
+    "MODEL_CONFLICT_STRONG_RULE_FALLBACK": 5,
+    "MODEL_INTENT_FAILED_CONSTRAINT_RULE_FALLBACK": 3
+  },
+  "latency_ms_p50": 4245.0,
+  "latency_ms_p95": 6291.7,
+  "latency_ms_max": 7173.4,
+  "confusions": [
+    {
+      "expected": "DETAIL_QUERY",
+      "predicted": "METRIC_QUERY",
+      "count": 1
+    },
+    {
+      "expected": "TREND_ANALYSIS",
+      "predicted": "METRIC_QUERY",
+      "count": 1
+    },
+    {
+      "expected": "TREND_ANALYSIS",
+      "predicted": "FORECAST_ANALYSIS",
+      "count": 1
+    },
+    {
+      "expected": "ANOMALY_ANALYSIS",
+      "predicted": "METRIC_QUERY",
+      "count": 1
+    },
+    {
+      "expected": "ROOT_CAUSE_ANALYSIS",
+      "predicted": "ANOMALY_ANALYSIS",
+      "count": 1
+    },
+    {
+      "expected": "FORECAST_ANALYSIS",
+      "predicted": "TREND_ANALYSIS",
+      "count": 1
+    },
+    {
+      "expected": "DATA_LINEAGE",
+      "predicted": "REPORT_GENERATION",
+      "count": 1
+    },
+    {
+      "expected": "DATA_QUALITY",
+      "predicted": "METRIC_QUERY",
+      "count": 1
+    },
+    {
+      "expected": "DATA_QUALITY",
+      "predicted": "REPORT_GENERATION",
+      "count": 1
+    },
+    {
+      "expected": "DATA_QUALITY",
+      "predicted": "DETAIL_QUERY",
+      "count": 1
+    },
+    {
+      "expected": "CAPABILITY_HELP",
+      "predicted": "ROOT_CAUSE_ANALYSIS",
+      "count": 1
+    },
+    {
+      "expected": "CAPABILITY_HELP",
+      "predicted": "REPORT_GENERATION",
+      "count": 1
+    }
+  ],
+  "per_intent": [
+    {
+      "intent": "ANOMALY_ANALYSIS",
+      "support": 14,
+      "precision": 0.9286,
+      "recall": 0.9286,
+      "f1": 0.9286
+    },
+    {
+      "intent": "CAPABILITY_HELP",
+      "support": 9,
+      "precision": 1.0,
+      "recall": 0.7778,
+      "f1": 0.875
+    },
+    {
+      "intent": "CHAT",
+      "support": 9,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "COMPARISON_ANALYSIS",
+      "support": 15,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "COMPOSITION_ANALYSIS",
+      "support": 14,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "DATA_LINEAGE",
+      "support": 11,
+      "precision": 1.0,
+      "recall": 0.9091,
+      "f1": 0.9524
+    },
+    {
+      "intent": "DATA_QUALITY",
+      "support": 11,
+      "precision": 1.0,
+      "recall": 0.7273,
+      "f1": 0.8421
+    },
+    {
+      "intent": "DETAIL_QUERY",
+      "support": 15,
+      "precision": 0.9333,
+      "recall": 0.9333,
+      "f1": 0.9333
+    },
+    {
+      "intent": "FORECAST_ANALYSIS",
+      "support": 15,
+      "precision": 0.9333,
+      "recall": 0.9333,
+      "f1": 0.9333
+    },
+    {
+      "intent": "METRIC_DEFINITION",
+      "support": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "METRIC_QUERY",
+      "support": 25,
+      "precision": 0.8621,
+      "recall": 1.0,
+      "f1": 0.9259
+    },
+    {
+      "intent": "OUT_OF_SCOPE",
+      "support": 8,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    {
+      "intent": "REPORT_GENERATION",
+      "support": 12,
+      "precision": 0.8,
+      "recall": 1.0,
+      "f1": 0.8889
+    },
+    {
+      "intent": "ROOT_CAUSE_ANALYSIS",
+      "support": 15,
+      "precision": 0.9333,
+      "recall": 0.9333,
+      "f1": 0.9333
+    },
+    {
+      "intent": "TREND_ANALYSIS",
+      "support": 15,
+      "precision": 0.9286,
+      "recall": 0.8667,
+      "f1": 0.8966
+    }
+  ],
+  "failures": [
+    {
+      "id": "DQ101",
+      "question": "列出昨天退款失败的订单号和原因",
+      "expected": "DETAIL_QUERY",
+      "predicted": "METRIC_QUERY",
+      "confidence": 0.6,
+      "intent_source": "RULE",
+      "assumptions": [
+        "MODEL_INTENT_FAILED_CONSTRAINT_RULE_FALLBACK"
+      ],
+      "schema_valid": true,
+      "latency_ms": 6400.0,
+      "queue_ms": 79557.0,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "TR105",
+      "question": "按周展示第二季度客户数变化",
+      "expected": "TREND_ANALYSIS",
+      "predicted": "METRIC_QUERY",
+      "confidence": 0.95,
+      "intent_source": "RULE",
+      "assumptions": [
+        "STRONG_RULE_MODEL_SKIPPED"
+      ],
+      "schema_valid": true,
+      "latency_ms": 0.1,
+      "queue_ms": 92875.8,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "TR106",
+      "question": "不预测未来，只看历史毛利率走势",
+      "expected": "TREND_ANALYSIS",
+      "predicted": "FORECAST_ANALYSIS",
+      "confidence": 0.6,
+      "intent_source": "RULE",
+      "assumptions": [
+        "MODEL_CONFLICT_STRONG_RULE_FALLBACK"
+      ],
+      "schema_valid": true,
+      "latency_ms": 4914.1,
+      "queue_ms": 92876.0,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "AN102",
+      "question": "昨天销售额突然变高正常吗",
+      "expected": "ANOMALY_ANALYSIS",
+      "predicted": "METRIC_QUERY",
+      "confidence": 0.95,
+      "intent_source": "RULE",
+      "assumptions": [
+        "STRONG_RULE_MODEL_SKIPPED"
+      ],
+      "schema_valid": true,
+      "latency_ms": 0.1,
+      "queue_ms": 109861.6,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "RC106",
+      "question": "毛利突然下降到底受什么因素影响",
+      "expected": "ROOT_CAUSE_ANALYSIS",
+      "predicted": "ANOMALY_ANALYSIS",
+      "confidence": 0.6,
+      "intent_source": "RULE",
+      "assumptions": [
+        "MODEL_CONFLICT_STRONG_RULE_FALLBACK"
+      ],
+      "schema_valid": true,
+      "latency_ms": 5104.0,
+      "queue_ms": 121372.1,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "FC102",
+      "question": "按历史走势估算四季度销售额",
+      "expected": "FORECAST_ANALYSIS",
+      "predicted": "TREND_ANALYSIS",
+      "confidence": 0.95,
+      "intent_source": "RULE",
+      "assumptions": [
+        "STRONG_RULE_MODEL_SKIPPED"
+      ],
+      "schema_valid": true,
+      "latency_ms": 0.1,
+      "queue_ms": 125831.6,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "DL105",
+      "question": "这个报表中的客户数数据源是什么",
+      "expected": "DATA_LINEAGE",
+      "predicted": "REPORT_GENERATION",
+      "confidence": 0.95,
+      "intent_source": "RULE",
+      "assumptions": [
+        "STRONG_RULE_MODEL_SKIPPED"
+      ],
+      "schema_valid": true,
+      "latency_ms": 0.1,
+      "queue_ms": 148664.4,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "QU101",
+      "question": "为什么今天销售额只更新到十点",
+      "expected": "DATA_QUALITY",
+      "predicted": "METRIC_QUERY",
+      "confidence": 0.95,
+      "intent_source": "RULE",
+      "assumptions": [
+        "STRONG_RULE_MODEL_SKIPPED"
+      ],
+      "schema_valid": true,
+      "latency_ms": 0.1,
+      "queue_ms": 149333.8,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "QU103",
+      "question": "客户数在报表和财务侧对不上",
+      "expected": "DATA_QUALITY",
+      "predicted": "REPORT_GENERATION",
+      "confidence": 0.95,
+      "intent_source": "RULE",
+      "assumptions": [
+        "STRONG_RULE_MODEL_SKIPPED"
+      ],
+      "schema_valid": true,
+      "latency_ms": 0.2,
+      "queue_ms": 152510.8,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "QU106",
+      "question": "检测销售明细中的空值和脏数据",
+      "expected": "DATA_QUALITY",
+      "predicted": "DETAIL_QUERY",
+      "confidence": 0.6,
+      "intent_source": "RULE",
+      "assumptions": [
+        "MODEL_CONFLICT_STRONG_RULE_FALLBACK"
+      ],
+      "schema_valid": true,
+      "latency_ms": 4499.1,
+      "queue_ms": 153818.4,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "HP101",
+      "question": "你会做归因分析吗",
+      "expected": "CAPABILITY_HELP",
+      "predicted": "ROOT_CAUSE_ANALYSIS",
+      "confidence": 0.6,
+      "intent_source": "RULE",
+      "assumptions": [
+        "MODEL_CONFLICT_STRONG_RULE_FALLBACK"
+      ],
+      "schema_valid": true,
+      "latency_ms": 3841.5,
+      "queue_ms": 154477.4,
+      "correct": false,
+      "error": null
+    },
+    {
+      "id": "HP105",
+      "question": "怎么让你生成销售报表",
+      "expected": "CAPABILITY_HELP",
+      "predicted": "REPORT_GENERATION",
+      "confidence": 0.6,
+      "intent_source": "RULE",
+      "assumptions": [
+        "MODEL_CONFLICT_STRONG_RULE_FALLBACK"
+      ],
+      "schema_valid": true,
+      "latency_ms": 3146.6,
+      "queue_ms": 159643.3,
+      "correct": false,
+      "error": null
+    }
+  ]
+}
+
