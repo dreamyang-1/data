@@ -870,6 +870,101 @@ def test_model81_repairs_explicit_hospital_level_grouping():
     }
 
 
+def test_relationship_identity_dimension_deduplication_prefers_business_relation():
+    asl = {
+        "dimensions": [
+            {"name": "dealer", "alias": "经销商"},
+            {"name": "dealer.dealer_name"},
+            {"name": "dealer.province", "alias": "省份"},
+        ],
+        "sort": {
+            "field": "dealer.dealer_name",
+            "direction": "ASC",
+            "field_type": "dimension",
+        },
+    }
+
+    HttpDataRetrievalAdapter._deduplicate_relationship_identity_dimensions(asl)
+
+    assert asl["dimensions"] == [
+        {"name": "dealer", "alias": "经销商"},
+        {"name": "dealer.province", "alias": "省份"},
+    ]
+    assert asl["sort"]["field"] == "dealer"
+
+
+def test_relationship_identity_dimension_deduplication_keeps_explicit_name_alone():
+    asl = {"dimensions": [{"name": "dealer.dealer_name"}]}
+
+    HttpDataRetrievalAdapter._deduplicate_relationship_identity_dimensions(asl)
+
+    assert asl["dimensions"] == [{"name": "dealer.dealer_name"}]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("limit", [None, 10])
+async def test_grouped_metric_removes_duplicate_identity_before_sql_translation(limit):
+    asl = {
+        "version": "2.0",
+        "subject": {"entity": "sales_order"},
+        "metrics": [{
+            "name": "cooperating_hospital_count",
+            "alias": "已合作医院数",
+        }],
+        "dimensions": [
+            {"name": "dealer", "alias": "经销商"},
+            {"name": "dealer.dealer_name"},
+        ],
+        "sort": ({
+            "field": "cooperating_hospital_count",
+            "direction": "DESC",
+            "field_type": "metric",
+        } if limit else None),
+        "limit": limit,
+        "ambiguity": [],
+    }
+    client = StubClient([
+        {"success": True, "result": json.dumps(asl, ensure_ascii=False)},
+        {
+            "success": True,
+            "sql": "SELECT dealer_name AS 经销商, COUNT(*) AS 已合作医院数 FROM sales_order",
+        },
+        {
+            "success": True,
+            "sql": "SELECT dealer_name AS 经销商, COUNT(*) AS 已合作医院数 FROM sales_order",
+            "data": [{"经销商": "经销商A", "已合作医院数": 2}],
+            "columns": ["经销商", "已合作医院数"],
+            "row_count": 1,
+        },
+    ])
+    question = "统计每个经销商已合作医院数量" + ("，取Top10" if limit else "")
+    grouped = CanonicalAnalysisRequest(
+        conversation_id=f"dealer-hospital-count-{limit}",
+        tenant_id="t1",
+        user_id="u1",
+        original_question=question,
+        rewritten_question=question,
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        entity="经销商",
+        dimensions=["经销商"],
+        metrics=[MetricRef(
+            input="已合作医院数",
+            canonical_name="已合作医院数",
+            metric_id="81:cooperating_hospital_count",
+        )],
+    )
+
+    result = await HttpDataRetrievalAdapter(
+        Settings(adapter_mode="http"), client
+    ).query(grouped, IDENTITY, semantic_model_id=81, business_domain_id=205)
+
+    translated_asl = json.loads(client.calls[1][2]["asl"])
+    assert translated_asl["dimensions"] == [
+        {"name": "dealer", "alias": "经销商"}
+    ]
+    assert result.dataset.columns == ["经销商", "已合作医院数"]
+
+
 @pytest.mark.asyncio
 async def test_preview_limit_followup_reuses_all_grounded_asl_filters():
     template = {

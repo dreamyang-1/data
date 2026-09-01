@@ -1058,6 +1058,7 @@ class HttpDataRetrievalAdapter:
         self._repair_model81_trend_time(asl, request, semantic_model_id)
         self._bind_canonical_time_range(asl, request)
         self._repair_required_model81_dimensions(asl, request, semantic_model_id)
+        self._deduplicate_relationship_identity_dimensions(asl)
         bound_metric_codes = {
             metric.metric_id.split(":", 1)[1]
             for metric in request.metrics
@@ -1672,6 +1673,63 @@ class HttpDataRetrievalAdapter:
                 "granularity": None,
             })
             asl["dimensions"] = dimensions
+
+    @staticmethod
+    def _deduplicate_relationship_identity_dimensions(asl: dict[str, Any]) -> None:
+        """Remove a relationship's duplicate identity-name projection.
+
+        The ASL generator can emit both ``dealer`` and
+        ``dealer.dealer_name`` for a request grouped by dealer.  The SQL
+        translator already expands the relationship dimension to its business
+        display name, so keeping the physical name attribute produces two
+        identical SELECT/GROUP BY columns.  Prefer the relationship dimension
+        because it preserves the model's business alias; unrelated attributes
+        such as ``dealer.province`` remain untouched.
+        """
+        dimensions = asl.get("dimensions")
+        if not isinstance(dimensions, list):
+            return
+
+        relationship_names = {
+            str(item.get("name") or "").strip().lower()
+            for item in dimensions
+            if isinstance(item, dict)
+            and "." not in str(item.get("name") or "").strip()
+            and str(item.get("name") or "").strip()
+        }
+        seen: set[str] = set()
+        deduplicated: list[Any] = []
+        removed_to_relationship: dict[str, str] = {}
+        for item in dimensions:
+            if not isinstance(item, dict):
+                deduplicated.append(item)
+                continue
+            name = str(item.get("name") or "").strip()
+            normalized = name.lower()
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+
+            parts = normalized.split(".")
+            if len(parts) == 2:
+                relationship, attribute = parts
+                if (
+                    relationship in relationship_names
+                    and attribute in {"name", f"{relationship}_name"}
+                ):
+                    removed_to_relationship[normalized] = relationship
+                    continue
+            deduplicated.append(item)
+
+        if len(deduplicated) == len(dimensions):
+            return
+        asl["dimensions"] = deduplicated
+
+        sort = asl.get("sort")
+        if isinstance(sort, dict):
+            sort_field = str(sort.get("field") or "").strip().lower()
+            if sort_field in removed_to_relationship:
+                sort["field"] = removed_to_relationship[sort_field]
 
     @staticmethod
     def _bind_canonical_time_range(
