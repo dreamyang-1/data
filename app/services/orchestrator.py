@@ -3170,6 +3170,9 @@ class DataAnalysisOrchestrator:
             )
         ]
         evidence.extend(
+            self._derived_metric_evidence(request, query_result)
+        )
+        evidence.extend(
             self._semantic_metric_evidence(
                 request,
                 query_result,
@@ -5627,6 +5630,61 @@ class DataAnalysisOrchestrator:
             request.metrics = bound
 
     @staticmethod
+    def _derived_metric_evidence(
+        request: CanonicalAnalysisRequest,
+        query_result: DataQueryResult,
+    ) -> list[EvidenceItem]:
+        """Build metric proof from an audited deterministic query transform."""
+
+        evidence: list[EvidenceItem] = []
+        for transform in query_result.execution_transforms:
+            if (
+                transform.get("type")
+                != "RELATIONSHIP_COUNT_TO_DISTINCT_PROJECTION"
+                or transform.get("verified") is not True
+            ):
+                continue
+            metric_name = str(transform.get("metric_name") or "").strip()
+            metric = next(
+                (
+                    item
+                    for item in request.metrics
+                    if metric_name
+                    in {
+                        str(item.input or "").strip(),
+                        str(item.canonical_name or "").strip(),
+                    }
+                ),
+                None,
+            )
+            if metric is None:
+                continue
+            if (
+                query_result.dataset.columns != [metric_name]
+                or query_result.dataset.row_count != 1
+                or query_result.dataset.rows != [
+                    {metric_name: transform.get("derived_value")}
+                ]
+            ):
+                continue
+            evidence.append(
+                EvidenceItem(
+                    evidence_id=(
+                        f"derived-metric:{query_result.dataset.snapshot_id}:"
+                        f"{metric_name}"
+                    ),
+                    kind="DERIVED_METRIC_RESOLUTION",
+                    source_ref="audited-query-transform",
+                    payload={
+                        **transform,
+                        "metric_id": metric.metric_id,
+                        "canonical_name": metric.canonical_name or metric.input,
+                    },
+                )
+            )
+        return evidence
+
+    @staticmethod
     def _semantic_metric_evidence(
         request: CanonicalAnalysisRequest,
         query_result: DataQueryResult,
@@ -5859,6 +5917,9 @@ class DataAnalysisOrchestrator:
             "dimensions": [entity],
             "operators": [AnalysisOperator.FILTER, AnalysisOperator.RENDER_TABLE],
             "asl_template": None,
+            "execution_contract_transform": (
+                "RELATIONSHIP_COUNT_TO_DISTINCT_PROJECTION"
+            ),
             "assumptions": [
                 *request.assumptions,
                 "SET_RELATIONSHIP_PROJECTION",
@@ -5871,20 +5932,71 @@ class DataAnalysisOrchestrator:
         request: CanonicalAnalysisRequest,
         result: DataQueryResult,
     ) -> DataQueryResult:
+        mapping = {
+            "已合作医院数": "医院名称",
+            "已合作经销商数": "经销商名称",
+            "已合作供应商数": "供应商名称",
+            "已合作客户数": "客户名称",
+            "已合作门店数": "门店名称",
+        }
         metric_name = request.metrics[0].canonical_name or request.metrics[0].input
-        dataset = result.dataset
-        if dataset.truncated:
-            count = (
-                dataset.total_row_count
-                if dataset.total_row_count is not None
-                else dataset.row_count
+        expected_column = mapping.get(metric_name) or mapping.get(
+            request.metrics[0].input
+        )
+        if expected_column is None:
+            raise AdapterError(
+                "RELATIONSHIP_COUNT_PROJECTION_INVALID",
+                "relationship count metric is not eligible for projection",
             )
+        dataset = result.dataset
+        source_total_row_count = (
+            dataset.total_row_count
+            if dataset.total_row_count is not None
+            else dataset.row_count
+        )
+        source_total_confirmed = (
+            not dataset.truncated
+            or source_total_row_count > dataset.row_count
+        )
+        visible_column = (
+            expected_column
+            if expected_column in dataset.columns
+            else dataset.columns[0]
+            if len(dataset.columns) == 1
+            else None
+        )
+        if visible_column is None:
+            raise AdapterError(
+                "RELATIONSHIP_COUNT_PROJECTION_INVALID",
+                "relationship projection did not return one identifiable name column",
+                details={
+                    "expected_column": expected_column,
+                    "returned_columns": dataset.columns,
+                },
+            )
+        if dataset.truncated:
+            if (
+                not source_total_confirmed
+                or re.search(r"^\s*SELECT\s+DISTINCT\b", result.sql, re.I) is None
+            ):
+                raise AdapterError(
+                    "RELATIONSHIP_COUNT_SOURCE_INCOMPLETE",
+                    "truncated relationship projection has no verified distinct total",
+                    details={
+                        "returned_row_count": dataset.row_count,
+                        "total_row_count": source_total_row_count,
+                        "sql_distinct": bool(
+                            re.search(r"^\s*SELECT\s+DISTINCT\b", result.sql, re.I)
+                        ),
+                    },
+                )
+            count = source_total_row_count
+            distinctness_method = "UPSTREAM_DISTINCT_TOTAL"
         else:
             # SQL aggregate/join paths may return one physical row whose
             # projected master-data name is NULL.  The list renderer correctly
             # treats that as no displayable object; the derived count must do
             # the same instead of reporting the physical row count as one.
-            visible_column = dataset.columns[0] if dataset.columns else None
             visible_values = {
                 str(row.get(visible_column)).strip()
                 for row in dataset.rows
@@ -5893,6 +6005,7 @@ class DataAnalysisOrchestrator:
                 and str(row.get(visible_column)).strip()
             }
             count = len(visible_values)
+            distinctness_method = "LOCAL_DISTINCT_VISIBLE_VALUES"
         scalar = Dataset(
             columns=[metric_name],
             rows=[{metric_name: count}],
@@ -5905,7 +6018,25 @@ class DataAnalysisOrchestrator:
             total_row_count=1,
             truncated=False,
         )
-        return result.model_copy(update={"dataset": scalar})
+        transform = {
+            "type": "RELATIONSHIP_COUNT_TO_DISTINCT_PROJECTION",
+            "metric_name": metric_name,
+            "source_projection": visible_column,
+            "source_row_count": dataset.row_count,
+            "source_total_row_count": source_total_row_count,
+            "source_truncated": dataset.truncated,
+            "source_total_confirmed": source_total_confirmed,
+            "distinctness_method": distinctness_method,
+            "derived_value": count,
+            "verified": True,
+        }
+        return result.model_copy(update={
+            "dataset": scalar,
+            "execution_transforms": [
+                *result.execution_transforms,
+                transform,
+            ],
+        })
 
     @staticmethod
     def _analyze(
@@ -6877,11 +7008,42 @@ class DataAnalysisOrchestrator:
             and bool(request.metrics)
             and not immutable_dataset_followup
         )
+        def derived_metric_verified(metric: MetricRef) -> bool:
+            names = {
+                str(metric.input or "").strip(),
+                str(metric.canonical_name or "").strip(),
+            }
+            return any(
+                item.kind == "DERIVED_METRIC_RESOLUTION"
+                and item.payload.get("verified") is True
+                and str(item.payload.get("metric_name") or "").strip() in names
+                for item in evidence
+            )
+
         gates = {
             "query_succeeded": any(e.kind == "QUERY_RESULT" for e in evidence),
-            "metric_bound": not metric_validation_required or all(m.metric_id and m.version for m in request.metrics),
-            "semantic_metric_verified": not metric_validation_required or all(any(e.kind == "SEMANTIC_METRIC_RESOLUTION" and e.payload.get("metric_id") == m.metric_id and e.payload.get("verified") is True for e in evidence) for m in request.metrics),
+            "metric_bound": not metric_validation_required or all(
+                (m.metric_id and m.version) or derived_metric_verified(m)
+                for m in request.metrics
+            ),
+            "semantic_metric_verified": not metric_validation_required or all(
+                any(
+                    e.kind == "SEMANTIC_METRIC_RESOLUTION"
+                    and e.payload.get("metric_id") == m.metric_id
+                    and e.payload.get("verified") is True
+                    for e in evidence
+                )
+                or derived_metric_verified(m)
+                for m in request.metrics
+            ),
         }
+        derived_metrics = [
+            metric for metric in request.metrics if derived_metric_verified(metric)
+        ]
+        if derived_metrics:
+            gates["derived_metric_contract_verified"] = (
+                len(derived_metrics) == len(request.metrics)
+            )
         if immutable_dataset_followup:
             gates["immutable_source_dataset_selected"] = True
         if _requires_deterministic_analysis(request):
@@ -6936,6 +7098,13 @@ class DataAnalysisOrchestrator:
             "ASL_METRIC_SELECTION_INVALID": "当前问题匹配到的指标口径存在冲突，请联系管理员检查指标名称和别名配置。",
             "ASL_DIMENSION_INVALID": "当前分析维度没有完成有效字段映射，请联系管理员完善语义配置。",
             "ASL_SCOPE_INVALID": "当前语义模型与业务域配置不一致，请联系管理员检查应用绑定关系。",
+            "RELATIONSHIP_COUNT_PROJECTION_INVALID": (
+                "合作对象数量查询未返回可识别的名称投影，本次不输出可能错误的数量。"
+            ),
+            "RELATIONSHIP_COUNT_SOURCE_INCOMPLETE": (
+                "合作对象明细结果已截断，且上游未提供经过确认的去重总数，"
+                "本次不使用预览行数代替完整数量。"
+            ),
         }
         diagnostic_code = exc.upstream_code or exc.code
         if diagnostic_code in known:

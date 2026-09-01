@@ -700,6 +700,12 @@ class DataQueryResult(StrictModel):
     dataset: Dataset
     data_source_id: str | None = None
     ambiguities: list[dict[str, Any]] = Field(default_factory=list)
+    # Audited post-query transformations are kept separate from ASL because
+    # they describe deterministic result processing, not upstream query
+    # semantics.  Reliability gates consume these records as provenance.
+    execution_transforms: list[dict[str, Any]] = Field(
+        default_factory=list, max_length=20
+    )
     result_file_url: str | None = Field(
         default=None,
         max_length=4096,

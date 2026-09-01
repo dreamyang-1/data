@@ -287,6 +287,172 @@ class FailingThenCapturingRetrieval:
         )
 
 
+class RelationshipCountProjectionRetrieval:
+    def __init__(self, *, truncated: bool = False, total_row_count: int | None = None):
+        self.request = None
+        self.truncated = truncated
+        self.total_row_count = total_row_count
+
+    async def health(self):
+        return True
+
+    async def rewrite_health(self):
+        return True
+
+    async def query(self, request, identity, *, semantic_model_id, business_domain_id):
+        self.request = request.model_copy(deep=True)
+        assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+        assert request.fields == ["经销商名称"]
+        assert request.execution_contract_transform == (
+            "RELATIONSHIP_COUNT_TO_DISTINCT_PROJECTION"
+        )
+        rows = [
+            {"经销商名称": f"经销商{index:03d}"}
+            for index in range(1, 102)
+        ]
+        return DataQueryResult(
+            asl={
+                "version": "2.0",
+                "subject": {"entity": "dealer"},
+                "metrics": [],
+                "dimensions": [{"name": "dealer.dealer_name"}],
+                "ambiguity": [],
+            },
+            sql=(
+                "SELECT DISTINCT dealer.dealer_name AS 经销商名称 "
+                "FROM dealer LEFT JOIN sales_order ON 1=1"
+            ),
+            dataset=Dataset(
+                columns=["经销商名称"],
+                rows=rows,
+                row_count=len(rows),
+                total_row_count=(
+                    self.total_row_count
+                    if self.total_row_count is not None
+                    else len(rows)
+                ),
+                truncated=self.truncated,
+                snapshot_id="relationship-count-snapshot",
+                data_as_of=datetime.now(timezone.utc),
+                source_data_as_of=date.today(),
+                source_watermark_field="sales_order.created_date",
+            ),
+            data_source_id="58",
+        )
+
+
+@pytest.mark.asyncio
+async def test_relationship_count_projection_is_accepted_as_verified_metric_evidence():
+    base = build_mock_adapters()
+    retrieval = RelationshipCountProjectionRetrieval()
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(
+            env="test", adapter_mode="mock", intent_model_enabled=False,
+            multi_question_enabled=False,
+        ),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=AdapterBundle(
+            semantic=base.semantic,
+            retrieval=retrieval,
+            knowledge=base.knowledge,
+            policy=base.policy,
+            analysis=base.analysis,
+        ),
+        sessions=InMemorySessionStore(),
+    )
+
+    response = await agent.handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id="relationship-count",
+            message_id="relationship-count-1",
+            question="统计上海市紫杉醇释放冠脉球囊导管已合作经销商数",
+            semantic_model_id=81,
+            business_domain_ids=[205],
+        ),
+        TrustedIdentity(tenant_id="tenant", user_id="user"),
+    )
+
+    assert response.status == "COMPLETED"
+    assert response.reliability is not None
+    assert response.reliability.level == "HIGH"
+    assert response.reliability.gates == {
+        "query_succeeded": True,
+        "metric_bound": True,
+        "semantic_metric_verified": True,
+        "derived_metric_contract_verified": True,
+        "source_watermark_verified": True,
+    }
+    assert "101" in response.answer
+    derived = next(
+        item for item in response.evidence
+        if item.kind == "DERIVED_METRIC_RESOLUTION"
+    )
+    assert derived.payload["source_projection"] == "经销商名称"
+    assert derived.payload["source_row_count"] == 101
+    assert derived.payload["derived_value"] == 101
+
+
+def test_relationship_count_projection_rejects_unconfirmed_truncated_total():
+    request = RuleBasedIntentClassifier().classify(
+        "统计上海市紫杉醇释放冠脉球囊导管已合作经销商数",
+        TrustedIdentity(tenant_id="tenant", user_id="user"),
+        "relationship-count-truncated",
+    )
+    rows = [{"经销商名称": f"经销商{index:03d}"} for index in range(100)]
+    result = DataQueryResult(
+        asl={"metrics": [], "dimensions": [{"name": "dealer.dealer_name"}]},
+        sql="SELECT DISTINCT dealer.dealer_name AS 经销商名称 FROM dealer",
+        dataset=Dataset(
+            columns=["经销商名称"],
+            rows=rows,
+            row_count=len(rows),
+            truncated=True,
+            snapshot_id="relationship-count-truncated-snapshot",
+            data_as_of=datetime.now(timezone.utc),
+        ),
+    )
+
+    with pytest.raises(AdapterError) as captured:
+        DataAnalysisOrchestrator._relationship_count_projection_result(
+            request, result
+        )
+
+    assert captured.value.code == "RELATIONSHIP_COUNT_SOURCE_INCOMPLETE"
+
+
+def test_relationship_count_projection_accepts_confirmed_distinct_total():
+    request = RuleBasedIntentClassifier().classify(
+        "统计上海市紫杉醇释放冠脉球囊导管已合作经销商数",
+        TrustedIdentity(tenant_id="tenant", user_id="user"),
+        "relationship-count-confirmed-total",
+    )
+    rows = [{"经销商名称": f"经销商{index:03d}"} for index in range(100)]
+    result = DataQueryResult(
+        asl={"metrics": [], "dimensions": [{"name": "dealer.dealer_name"}]},
+        sql="SELECT DISTINCT dealer.dealer_name AS 经销商名称 FROM dealer",
+        dataset=Dataset(
+            columns=["经销商名称"],
+            rows=rows,
+            row_count=len(rows),
+            total_row_count=101,
+            truncated=True,
+            snapshot_id="relationship-count-confirmed-snapshot",
+            data_as_of=datetime.now(timezone.utc),
+        ),
+    )
+
+    transformed = DataAnalysisOrchestrator._relationship_count_projection_result(
+        request, result
+    )
+
+    assert transformed.dataset.rows == [{"已合作经销商数": 101}]
+    assert transformed.execution_transforms[-1]["distinctness_method"] == (
+        "UPSTREAM_DISTINCT_TOTAL"
+    )
+    assert transformed.execution_transforms[-1]["source_total_confirmed"] is True
+
+
 def test_asl_metric_binding_preserves_semantic_model_scope_for_followups():
     request = CanonicalAnalysisRequest(
         conversation_id="metric-scope",
