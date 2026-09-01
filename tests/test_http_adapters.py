@@ -315,6 +315,12 @@ def test_detail_retrieval_query_expands_catalog_semantics_for_consumable_filter(
         primary_intent=PrimaryIntent.DETAIL_QUERY,
         entity="经销商",
         fields=["经销商名称"],
+        dimensions=["经销商", "城市", "商品品牌", "商品品类"],
+        filters=[
+            {"field": "城市", "operator": "EQ", "value": "上海市"},
+            {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
+            {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
+        ],
     )
 
     query = HttpDataRetrievalAdapter._detail_retrieval_query(
@@ -323,7 +329,10 @@ def test_detail_retrieval_query_expands_catalog_semantics_for_consumable_filter(
 
     assert all(
         value in query
-        for value in ("商品分类", "产品分类", "品类", "类目", "耗材")
+        for value in (
+            "城市", "商品品牌", "商品品类",
+            "商品分类", "产品分类", "品类", "类目", "耗材",
+        )
     )
     assert "dealer_result" not in query
 
@@ -927,6 +936,50 @@ def test_grouped_scope_requires_all_current_semantic_dimension_roles():
         HttpDataRetrievalAdapter._validate_grouped_semantic_dimensions(asl, grouped)
     assert missing.value.code == "ASL_REQUIRED_DIMENSION_MISSING"
     assert missing.value.details["missing_dimensions"] == ["商品品类"]
+
+
+def test_grouped_scope_keeps_filter_only_roles_out_of_group_by():
+    grouped = CanonicalAnalysisRequest(
+        conversation_id="semantic-filter-role-repair",
+        tenant_id="t1",
+        user_id="u1",
+        original_question=(
+            "查询上海市江苏苏云品牌低值耗材的经销商清单，"
+            "并显示各经销商含税销售总额"
+        ),
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        entity="经销商",
+        dimensions=["经销商", "城市", "商品品牌", "商品品类"],
+        filters=[
+            {"field": "城市", "operator": "EQ", "value": "上海市"},
+            {
+                "field": "商品品牌",
+                "operator": "EQ",
+                "value": "江苏苏云",
+            },
+            {
+                "field": "商品品类",
+                "operator": "EQ",
+                "value": "低值耗材",
+            },
+        ],
+    )
+    assert HttpDataRetrievalAdapter._required_grouped_dimension_roles(
+        grouped
+    ) == ["经销商"]
+    HttpDataRetrievalAdapter._validate_grouped_semantic_dimensions(
+        {"dimensions": [{"name": "dealer", "alias": "经销商"}]},
+        grouped,
+    )
+
+
+def test_city_dimension_is_not_satisfied_by_a_province_field():
+    assert not HttpDataRetrievalAdapter._semantic_dimension_role_matches(
+        "城市", "dim_province.province_name"
+    )
+    assert HttpDataRetrievalAdapter._semantic_dimension_role_matches(
+        "城市", "dim_city.city_name"
+    )
 
 
 def test_brand_category_scope_rejects_an_invented_product_name_filter():

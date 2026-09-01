@@ -700,12 +700,32 @@ class HttpDataRetrievalAdapter:
                 "但值、运算方向和业务含义不得省略、放宽或替换。"
             )
         if request.dimensions:
+            grouped_dimension_roles = self._required_grouped_dimension_roles(
+                request
+            )
+            filter_only_roles = [
+                str(value)
+                for value in request.dimensions
+                if str(value) not in grouped_dimension_roles
+            ]
             asl_query += (
                 "\n调用方识别出的语义维度角色："
                 + json.dumps(request.dimensions, ensure_ascii=False, separators=(",", ":"))
                 + "。必须基于当前语义模型最新注册的实体、维度及关系逐项解析这些角色，"
-                "不得复用历史物理字段或应用侧静态表字段；每个角色都必须保留在ASL "
-                "dimensions中，筛选维度同时还必须保留对应filter。"
+                "不得复用历史物理字段或应用侧静态表字段。需要分组或展示的角色为："
+                + json.dumps(
+                    grouped_dimension_roles,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
+                + "，必须保留在ASL dimensions中；仅限定查询范围的筛选角色为："
+                + json.dumps(
+                    filter_only_roles,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
+                + "，只需保留在ASL filters中，不得仅因调用方识别出该角色就强制加入"
+                "dimensions或GROUP BY。"
             )
         if (
             any(
@@ -724,6 +744,22 @@ class HttpDataRetrievalAdapter:
                 "\n行政区层级一致性要求：当省/地区筛选与城市等下级行政区分组同时出现时，"
                 "两者必须沿当前语义层中同一结果对象、同一行政区层级关系解析；禁止按经销商"
                 "城市分组却使用医院、客户或其他业务对象的省份字段进行筛选。"
+            )
+        if request.entity and any(
+            isinstance(item, dict)
+            and self._constraint_field_family(
+                str(item.get("field") or "")
+            )
+            == "region"
+            for item in request.filters
+        ):
+            asl_query += (
+                f"\n结果对象位置口径：用户当前查询的结果对象是{request.entity}；在用户未"
+                "明确说明订单发生地、医院所在地、客户所在地等其他位置口径时，城市、省份"
+                f"等位置修饰词约束{request.entity}自身已注册的位置关系。必须沿当前语义层"
+                f"从{request.entity}到行政区维度的关系选择规范显示字段；不得因为模型中"
+                "同时存在其他业务对象的位置字段就要求用户二次确认，也不得切换到其他业务"
+                "对象的位置分支。"
             )
         if request.time_range is not None:
             asl_query += (
@@ -916,9 +952,11 @@ class HttpDataRetrievalAdapter:
             asl_query += (
                 f"\n执行要求：这是按{request.entity}分组的指标清单。"
                 f"必须保留{request.entity}名称维度以及全部请求指标；"
-                "城市、商品品牌、商品品类等显式范围既是筛选维度，也必须按调用方"
-                "维度角色完整投影；不得作为替代指标，不得把聚合指标删除或退化为"
-                "纯明细查询。若品牌和品类已经分别给出且用户未说具体商品，禁止再"
+                "城市、商品品牌、商品品类等用于限定范围时必须完整保留为filters，"
+                "但不应仅因它们被识别为语义角色就加入dimensions或GROUP BY；只有"
+                "用户明确要求分组或展示时才投影。不得把这些字段作为替代指标，也"
+                "不得把聚合指标删除或退化为纯明细查询。若品牌和品类已经分别给出"
+                "且用户未说具体商品，禁止再"
                 "合成或添加商品名称筛选。"
             )
         elif (
@@ -1736,17 +1774,13 @@ class HttpDataRetrievalAdapter:
             for item in dimensions
         ]
         missing: list[str] = []
-        for expected in request.dimensions:
+        required_dimensions = cls._required_grouped_dimension_roles(request)
+        for expected in required_dimensions:
             expected_text = str(expected).strip()
             if not expected_text:
                 continue
-            expected_family = cls._constraint_field_family(expected_text)
             preserved = any(
-                expected_text.casefold() in actual.casefold()
-                or (
-                    expected_family is not None
-                    and cls._constraint_field_family(actual) == expected_family
-                )
+                cls._semantic_dimension_role_matches(expected_text, actual)
                 for actual in actual_references
             )
             if not preserved:
@@ -1757,9 +1791,89 @@ class HttpDataRetrievalAdapter:
                 "ASL omitted one or more current semantic dimension roles",
                 details={
                     "missing_dimensions": missing,
+                    "required_grouped_dimensions": required_dimensions,
                     "projected_dimensions": dimensions,
                 },
             )
+
+    @classmethod
+    def _semantic_dimension_role_matches(
+        cls,
+        expected: str,
+        actual: str,
+    ) -> bool:
+        """Match a business dimension without collapsing city into province."""
+
+        if not cls._constraint_field_matches(expected, actual):
+            return False
+        if cls._constraint_field_family(expected) != "region":
+            return True
+
+        def geographic_level(value: str) -> str | None:
+            normalized = value.casefold()
+            levels = (
+                ("province", ("province", "省份", "省级")),
+                ("city", ("city", "城市", "市级")),
+                ("district", ("district", "区县", "县级")),
+                ("region", ("region", "地区", "区域", "地域")),
+            )
+            return next(
+                (
+                    level
+                    for level, aliases in levels
+                    if any(alias in normalized for alias in aliases)
+                ),
+                None,
+            )
+
+        expected_level = geographic_level(expected)
+        actual_level = geographic_level(actual)
+        return (
+            expected_level is None
+            or actual_level is None
+            or expected_level == "region"
+            or actual_level == "region"
+            or expected_level == actual_level
+        )
+
+    @classmethod
+    def _required_grouped_dimension_roles(
+        cls,
+        request: CanonicalAnalysisRequest,
+    ) -> list[str]:
+        """Separate result/group roles from dimensions that only constrain scope.
+
+        Intent extraction intentionally records every semantic role mentioned
+        by the user.  That does not mean every role belongs in ``GROUP BY``:
+        in "Shanghai + brand + category dealer sales", dealer is the result
+        group while the other three roles are fixed filters.  Keep the result
+        entity and all non-filter roles; filter-only roles remain governed by
+        the independent lossless-filter validator.
+        """
+
+        filter_fields = [
+            str(item.get("field") or "").strip()
+            for item in request.filters
+            if isinstance(item, dict) and str(item.get("field") or "").strip()
+        ]
+        required: list[str] = []
+        for value in request.dimensions:
+            dimension = str(value).strip()
+            if not dimension:
+                continue
+            is_result_entity = bool(
+                request.entity
+                and cls._semantic_dimension_role_matches(
+                    str(request.entity), dimension
+                )
+            )
+            is_filter_only = any(
+                cls._semantic_dimension_role_matches(dimension, field)
+                for field in filter_fields
+            )
+            if is_result_entity or not is_filter_only:
+                required.append(dimension)
+        return list(dict.fromkeys(required))
 
     @classmethod
     def _validate_geographic_hierarchy_alignment(
@@ -2479,6 +2593,19 @@ class HttpDataRetrievalAdapter:
             add(f"{request.entity}画像")
         for field in request.fields:
             add(field)
+        # Retrieval must see the caller's semantic roles as well as the raw
+        # literals.  A value such as ``上海市`` may rank a province record above
+        # the current ``城市`` dimension, while ASL generation still correctly
+        # chooses a city field.  Supplying the role labels lets Oagnet recall
+        # the latest published dimension/entity mapping instead of treating
+        # that valid field as an unregistered invention.  Only semantic labels
+        # are added here; physical fields continue to come exclusively from
+        # the current semantic model.
+        for dimension in request.dimensions:
+            add(str(dimension))
+        for item in request.filters:
+            if isinstance(item, dict):
+                add(str(item.get("field") or ""))
         for token in re.findall(r"(?<![0-9A-Za-z])[0-9A-Za-z][0-9A-Za-z_.-]{1,63}", semantic_query):
             add(token)
 
