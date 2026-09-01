@@ -901,6 +901,37 @@ def test_relationship_identity_dimension_deduplication_keeps_explicit_name_alone
     assert asl["dimensions"] == [{"name": "dealer.dealer_name"}]
 
 
+def test_current_metric_formula_replaces_stale_same_table_distinct_field():
+    sql = (
+        "SELECT dealer.dealer_name AS 经销商, "
+        "COUNT(DISTINCT hospital.hospital_name) AS 已合作医院数 "
+        "FROM sales_order LEFT JOIN hospital ON sales_order.hospital_id = hospital.hospital_id"
+    )
+
+    repaired = HttpDataRetrievalAdapter._apply_current_metric_formulas(sql, [{
+        "metric_id": "81:cooperating_hospital_count",
+        "version": "current",
+        "formula": "cooperating_hospital_count=COUNT(DISTINCT hospital.hospital_code)",
+    }])
+
+    assert "COUNT(DISTINCT hospital.hospital_code)" in repaired
+    assert "COUNT(DISTINCT hospital.hospital_name)" not in repaired
+
+
+def test_current_metric_formula_rejects_unprovable_stale_sql():
+    with pytest.raises(AdapterError) as exc:
+        HttpDataRetrievalAdapter._apply_current_metric_formulas(
+            "SELECT COUNT(DISTINCT customer.customer_name) FROM sales_order",
+            [{
+                "metric_id": "81:cooperating_hospital_count",
+                "version": "current",
+                "formula": "COUNT(DISTINCT hospital.hospital_code)",
+            }],
+        )
+
+    assert exc.value.code == "METRIC_FORMULA_STALE"
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("limit", [None, 10])
 async def test_grouped_metric_removes_duplicate_identity_before_sql_translation(limit):

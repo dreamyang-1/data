@@ -657,6 +657,17 @@ class HttpDataRetrievalAdapter:
                 "semantic_model_id is required",
             )
 
+        metric_definitions = await self._current_metric_definitions(request, identity)
+        metric_definition_fingerprints = [
+            hashlib.sha256(json.dumps(
+                definition,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")).hexdigest()
+            for definition in metric_definitions
+        ]
+
         semantic_query = request.rewritten_question or request.original_question
         if semantic_model_id == 81 and "经销商等级" in semantic_query:
             # Model 81 has dealer type and profile/status attributes, but no
@@ -967,6 +978,7 @@ class HttpDataRetrievalAdapter:
                     metric.metric_id for metric in request.metrics
                     if metric.metric_id is not None
                 ],
+                "metric_definition_fingerprints": metric_definition_fingerprints,
             }, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
         asl = (
             None
@@ -1223,7 +1235,12 @@ class HttpDataRetrievalAdapter:
                 },
                 identity=identity,
                 application_id=request.application_id,
-                idempotency_key=f"{request.request_id}:sql-translate",
+                idempotency_key=(
+                    f"{request.request_id}:sql-translate:"
+                    f"{metric_definition_fingerprints[0][:16]}"
+                    if metric_definition_fingerprints
+                    else f"{request.request_id}:sql-translate"
+                ),
                 retryable=True,
             )
         except AdapterError as exc:
@@ -1273,6 +1290,7 @@ class HttpDataRetrievalAdapter:
                 "SQL_RESPONSE_INVALID", "SQL translation response did not contain SQL"
             )
         sql = sql.strip()
+        sql = self._apply_current_metric_formulas(sql, metric_definitions)
         self._validate_read_only_sql(sql)
         metric_bindings = [
             {
@@ -1449,11 +1467,115 @@ class HttpDataRetrievalAdapter:
                 )
         return DataQueryResult(
             asl=asl,
-            sql=str(raw.get("sql") or sql),
+            sql=sql,
             dataset=dataset,
             data_source_id=actual_data_source_id,
             result_file_url=result_file_url,
         )
+
+    async def _current_metric_definitions(
+        self,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+    ) -> list[dict[str, str]]:
+        """Read the current published formula for every version-bound metric."""
+        definitions: list[dict[str, str]] = []
+        for metric in request.metrics:
+            if not metric.metric_id or not metric.version:
+                continue
+            path = self.settings.semantic_definition_path.format(
+                metric_id=metric.metric_id,
+                version=metric.version,
+            )
+            payload = await self.client.get(
+                self.settings.semantic_base_url,
+                path,
+                identity=identity,
+                application_id=request.application_id,
+            )
+            if not isinstance(payload, dict):
+                raise AdapterError(
+                    "METRIC_DEFINITION_INVALID",
+                    "semantic service returned an invalid metric definition",
+                )
+            returned_id = str(payload.get("metric_id") or "")
+            formula = str(
+                payload.get("calculation_formula") or payload.get("formula") or ""
+            ).strip()
+            if returned_id != metric.metric_id or not formula:
+                raise AdapterError(
+                    "METRIC_DEFINITION_INVALID",
+                    "semantic service did not return the requested published formula",
+                    details={"metric_id": metric.metric_id},
+                )
+            definitions.append({
+                "metric_id": metric.metric_id,
+                "version": str(payload.get("version") or metric.version),
+                "formula": formula,
+            })
+        return definitions
+
+    @classmethod
+    def _apply_current_metric_formulas(
+        cls,
+        sql: str,
+        definitions: list[dict[str, str]],
+    ) -> str:
+        """Reject or safely repair SQL produced from a stale metric snapshot.
+
+        The only automatic rewrite is a same-table
+        ``COUNT(DISTINCT table.field)`` field change. It covers identity-name
+        to identity-code corrections without altering joins, filters, grouping,
+        or another metric expression.
+        """
+        current = sql
+        for definition in definitions:
+            formula = definition["formula"].split("=", 1)[-1].strip()
+            expected_match = re.fullmatch(
+                r"COUNT\s*\(\s*DISTINCT\s+"
+                r"([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\s*\)",
+                formula,
+                re.IGNORECASE,
+            )
+            if expected_match is None:
+                expected_fields = set(re.findall(
+                    r"[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*",
+                    formula,
+                ))
+                normalized_sql = current.replace("`", "").lower()
+                if any(field.lower() not in normalized_sql for field in expected_fields):
+                    raise AdapterError(
+                        "METRIC_FORMULA_STALE",
+                        "SQL translation does not match the current published metric formula",
+                        details={"metric_id": definition["metric_id"]},
+                    )
+                continue
+
+            expected_field = expected_match.group(1)
+            expected_table = expected_field.split(".", 1)[0].lower()
+            count_pattern = re.compile(
+                r"COUNT\s*\(\s*DISTINCT\s+"
+                r"([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\s*\)",
+                re.IGNORECASE,
+            )
+            candidates = [
+                match for match in count_pattern.finditer(current)
+                if match.group(1).split(".", 1)[0].lower() == expected_table
+            ]
+            if any(
+                match.group(1).lower() == expected_field.lower()
+                for match in candidates
+            ):
+                continue
+            if len(candidates) != 1:
+                raise AdapterError(
+                    "METRIC_FORMULA_STALE",
+                    "SQL translation does not match the current published metric formula",
+                    details={"metric_id": definition["metric_id"]},
+                )
+            stale = candidates[0]
+            current = current[:stale.start(1)] + expected_field + current[stale.end(1):]
+        return current
 
     @staticmethod
     def _validate_request_filters(
