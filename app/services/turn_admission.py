@@ -50,6 +50,7 @@ _FOLLOWUP_PATTERNS: tuple[tuple[str, str], ...] = (
     ("GRANULARITY_ONLY", r"^(?:改成|换成|再)?按(?:日|天|周|月|季度|年)(?:统计|汇总|分析|看|给我|吧)?[。！!？?]?$"),
     ("LIMIT_ONLY", r"^(?:只)?(?:保留|显示|展示|返回)?前(?:\d+|[一二三四五六七八九十]+)(?:个|名|条)?[。！!？?]?$"),
     ("TIME_ONLY", r"^(?:那|改成|换成)?(?:今天|昨天|本周|上周|本月|上月|本季度|上季度|今年|去年|近(?:一|二|三|四|五|六|七|八|九|十|\d+)年)[。！!？?]?$"),
+    ("LIMIT_REPLACEMENT", r"前(?:\d+|[一二三四五六七八九十]+)(?:个|名|条)?"),
     ("WHY", r"为什么|为何|怎么会"),
     ("CONTINUE", r"继续|接着|再看|再查|同样"),
     ("MODIFY", r"改成|改为|换成|只看|只保留|去掉|取消"),
@@ -166,6 +167,13 @@ class TurnAdmissionGate:
             relation = TurnRelation.CORRECTION
             confidence = 0.95
             reasons = ["EXPLICIT_CORRECTION_LANGUAGE"]
+        elif previous is not None and "top_n" in facts.explicit_slots:
+            # A quantity stated in the current raw turn replaces the inherited
+            # presentation/ranking limit.  Treating it as a generic follow-up
+            # allowed an earlier LIMIT 5/result slice to survive "给我前10个".
+            relation = TurnRelation.CURRENT_TOPIC_MODIFICATION
+            confidence = 0.99
+            reasons = ["EXPLICIT_TOP_N_REPLACEMENT", "CURRENT_EXPLICIT_WINS"]
         elif _DRILLDOWN_PATTERN.search(question):
             relation = TurnRelation.CURRENT_TOPIC_DRILLDOWN
             confidence = 0.94
@@ -557,7 +565,12 @@ class TurnAdmissionGate:
             request.entity = current.entity
             request.fields = list(current.fields)
         if "dimensions" in facts.explicit_slots:
-            request.dimensions = list(current.dimensions)
+            explicit_dimensions = facts.explicit_slots["dimensions"].value
+            request.dimensions = (
+                list(explicit_dimensions)
+                if isinstance(explicit_dimensions, list)
+                else []
+            )
         if "filters" in facts.explicit_slots:
             explicit_filters = facts.explicit_slots["filters"].value
             for current_filter in (

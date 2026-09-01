@@ -3,7 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from minio_followup_store import DatasetReference, LoadedDataset
+from minio_followup_store import (
+    DatasetReference,
+    FollowupResult,
+    LoadedDataset,
+    apply_followup_operation,
+)
 
 from app.adapters.base import AdapterBundle
 from app.adapters.mock import build_mock_adapters
@@ -64,6 +69,8 @@ class _ResultStore:
             semantic_model_id=kwargs.get("semantic_model_id"),
             business_domain_ids=tuple(kwargs.get("business_domain_ids", [])),
             metric_ids=tuple(kwargs.get("metric_ids", [])),
+            parent_dataset_ids=tuple(kwargs.get("parent_dataset_ids", [])),
+            transformation_log=tuple(kwargs.get("transformation_log", [])),
         )
         self.items[dataset_id] = LoadedDataset(
             reference,
@@ -74,6 +81,40 @@ class _ResultStore:
     def load_dataset(self, reference, *, current_scope):
         assert reference.scope == current_scope
         return self.items[reference.dataset_id]
+
+    def execute_followup(
+        self,
+        reference,
+        *,
+        current_scope,
+        operation,
+        ttl_seconds,
+        preview_rows,
+    ):
+        loaded = self.load_dataset(reference, current_scope=current_scope)
+        columns, rows = apply_followup_operation(
+            loaded.reference.columns,
+            loaded.rows,
+            operation,
+        )
+        derived = self.save_dataset(
+            scope=current_scope,
+            columns=columns,
+            rows=rows,
+            snapshot_id=reference.snapshot_id,
+            data_as_of=datetime.fromisoformat(reference.data_as_of),
+            source_type="CONVERSATION_FOLLOWUP",
+            source_ref=reference.dataset_id,
+            semantic_model_id=reference.semantic_model_id,
+            business_domain_ids=reference.business_domain_ids,
+            metric_ids=reference.metric_ids,
+            parent_dataset_ids=(reference.dataset_id,),
+            transformation_log=(*reference.transformation_log, dict(operation)),
+        )
+        return FollowupResult(
+            reference=derived,
+            preview_rows=tuple(rows[:preview_rows]),
+        )
 
 
 class _CapturingRetrieval:
@@ -183,7 +224,6 @@ async def test_1_period_decline_reuses_previous_result_without_sql():
         ),
         IDENTITY,
     )
-
     assert second.status == "COMPLETED"
     assert len(retrieval.requests) == 1
     assert "1,427,090.89" in second.answer
@@ -306,3 +346,120 @@ async def test_6_complete_new_product_with_explicit_year_is_new_topic():
     assert request.time_range.start.isoformat() == "2026-11-01"
     assert (_filter(request, "商品名称") or "").casefold() == "b"
     assert "'value': 'a'" not in str(request.filters).casefold()
+
+
+class _ListRetrieval:
+    def __init__(self) -> None:
+        self.requests: list[CanonicalAnalysisRequest] = []
+
+    async def health(self) -> bool:
+        return True
+
+    async def rewrite_health(self) -> bool:
+        return True
+
+    async def query(
+        self,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> DataQueryResult:
+        self.requests.append(request.model_copy(deep=True))
+        rows = [
+            {"经销商名称": f"经销商{index:02d}"}
+            for index in range(1, 23)
+        ]
+        return DataQueryResult(
+            asl={"version": "2.0", "intent": "query", "ambiguity": []},
+            sql="SELECT dealer_name FROM dealer ORDER BY dealer_name",
+            dataset=Dataset(
+                columns=["经销商名称"],
+                rows=rows,
+                row_count=len(rows),
+                total_row_count=len(rows),
+                snapshot_id="dealer-list-22",
+                data_as_of=datetime(2025, 12, 30, tzinfo=timezone.utc),
+            ),
+            data_source_id="mock",
+        )
+
+
+def _list_agent():
+    base = build_mock_adapters()
+    retrieval = _ListRetrieval()
+    store = _ResultStore()
+    sessions = InMemorySessionStore()
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(
+            env="test", adapter_mode="mock", intent_model_enabled=False
+        ),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=AdapterBundle(
+            semantic=base.semantic,
+            retrieval=retrieval,
+            knowledge=base.knowledge,
+            policy=base.policy,
+            analysis=base.analysis,
+            semantic_query=CompositeSemanticQueryTool(base.semantic, retrieval),
+        ),
+        sessions=sessions,
+        dataset_store=store,
+    )
+    return agent, retrieval, sessions, store
+
+
+@pytest.mark.asyncio
+async def test_7_expanding_top_n_restores_base_result_instead_of_reusing_slice():
+    agent, retrieval, sessions, store = _list_agent()
+    conversation_id = "followup-top-n-expansion"
+
+    first = await agent.handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id=conversation_id,
+            message_id="m1",
+            question="查询A产品合作的经销商名单。",
+            semantic_model_id=81,
+        ),
+        IDENTITY,
+    )
+    second = await agent.handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id=conversation_id,
+            message_id="m2",
+            question="只返回前5个。",
+            semantic_model_id=81,
+        ),
+        IDENTITY,
+    )
+    third = await agent.handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id=conversation_id,
+            message_id="m3",
+            question="5个太少了，给我前10个吧。",
+            semantic_model_id=81,
+        ),
+        IDENTITY,
+    )
+
+    assert first.status == second.status == third.status == "COMPLETED"
+    assert len(retrieval.requests) == 1
+    five = store.items[second.dataset_id]
+    ten = store.items[third.dataset_id]
+    assert five.reference.row_count == 5
+    assert ten.reference.row_count == 10
+    assert ten.rows[:5] == five.rows
+    assert [row["经销商名称"] for row in ten.rows[5:]] == [
+        f"经销商{index:02d}" for index in range(6, 11)
+    ]
+    completed = await sessions.get_last_request(
+        "tenant", "user", "app", conversation_id
+    )
+    assert completed is not None
+    assert completed.ranking_limit == 10
+    assert completed.turn_relation == TurnRelation.CURRENT_TOPIC_MODIFICATION
+    assert "TOP_N_EXPANDED_FROM_BASE_RESULT" in completed.assumptions

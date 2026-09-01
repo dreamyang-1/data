@@ -109,6 +109,12 @@ def resolve_conversation_temporal_context(
     if not references:
         if _WHY_PATTERN.search(question):
             request.query_resolution_type = "FOLLOWUP_ANALYSIS"
+            request.primary_intent = PrimaryIntent.ROOT_CAUSE_ANALYSIS
+            request.operators = list(dict.fromkeys([
+                *request.operators,
+                AnalysisOperator.DECOMPOSE,
+                AnalysisOperator.EXPLAIN,
+            ]))
         return request
 
     anchor = previous.temporal_anchor or build_temporal_anchor(previous)
@@ -165,6 +171,13 @@ def resolve_conversation_temporal_context(
             if _WHY_PATTERN.search(question)
             else "DIRECT_DATA_QUERY"
         )
+        if _WHY_PATTERN.search(question):
+            request.primary_intent = PrimaryIntent.ROOT_CAUSE_ANALYSIS
+            request.operators = list(dict.fromkeys([
+                *request.operators,
+                AnalysisOperator.DECOMPOSE,
+                AnalysisOperator.EXPLAIN,
+            ]))
 
     request.conversation_control = ConversationControl.FOLLOW_UP
     request.slot_provenance["time_range"] = SlotProvenance(

@@ -31,7 +31,7 @@ from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLaye
 from app.services.chat_responder import QwenChatResponder
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
-from app.domain.models import AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, TaskExecutionResult, TaskPlan, TrustedIdentity
+from app.domain.models import AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, TaskExecutionResult, TaskPlan, TrustedIdentity, TurnAdmissionDecision, TurnRelation
 from app.planning import MultiQuestionPlanner, TaskPlanningError
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
@@ -39,6 +39,12 @@ from app.intent.classifier import (
     safe_semantic_confirmation,
 )
 from app.stores import SessionConflictError, SessionStore
+from app.stores.events import (
+    InMemorySessionEventStore,
+    SessionEvent,
+    SessionEventStore,
+    SessionEventType,
+)
 from app.stores.long_memory import LongTermMemory, LongTermMemoryStore, MemoryScope, MemoryType
 from app.services.dataset_followup import (
     is_dataset_operation_followup,
@@ -47,6 +53,12 @@ from app.services.dataset_followup import (
     scope_for_request,
 )
 from app.services.question_rewriter import QuestionRewriter
+from app.services.conversation_followup import (
+    build_temporal_anchor,
+    derive_period_comparison,
+    resolve_conversation_temporal_context,
+)
+from app.services.turn_admission import TurnAdmissionGate
 from app.services.history_compaction import compact_history
 from app.services.working_memory import recalls_prior_task, select_recalled_task_frame
 from app.services.extension_dispatcher import ExtensionDispatcher
@@ -99,6 +111,28 @@ def _compact_trace_value(value: Any, limit: int) -> str:
     return f"{rendered[:limit]}…（已省略 {len(rendered) - limit} 字符）"
 
 
+def select_data_execution_question(
+    request: CanonicalAnalysisRequest,
+    decision: TurnAdmissionDecision,
+    raw_question: str,
+) -> tuple[str, str, str]:
+    """Keep complete standalone wording while executing contextual turns canonically.
+
+    A canonical rendering is useful only after context was intentionally merged.
+    Replacing a complete standalone utterance with a partial structured rendering
+    can silently discard product or negative-filter requirements that downstream
+    semantic parsing could otherwise understand from the raw text.
+    """
+
+    canonical = render_execution_question(request)
+    if (
+        decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+        and decision.context_mode == ContextMode.NONE
+    ):
+        return raw_question, canonical, "RAW_STANDALONE"
+    return canonical, canonical, "CANONICAL_CONTEXTUAL"
+
+
 class ExplicitDatasetUnavailableError(RuntimeError):
     """The caller selected a dataset that cannot be safely reused."""
 
@@ -123,6 +157,8 @@ class DataAnalysisOrchestrator:
         file_importer: Any | None = None,
         extension_dispatcher: ExtensionDispatcher | None = None,
         chat_responder: QwenChatResponder | None = None,
+        event_store: SessionEventStore | None = None,
+        turn_admission_gate: TurnAdmissionGate | None = None,
     ) -> None:
         self.settings = settings
         self.classifier = classifier
@@ -138,6 +174,8 @@ class DataAnalysisOrchestrator:
         self.task_planner = task_planner
         self.report_exporter = report_exporter
         self.file_importer = file_importer
+        self.event_store = event_store or InMemorySessionEventStore()
+        self.turn_admission_gate = turn_admission_gate or TurnAdmissionGate()
         self.extension_dispatcher = extension_dispatcher or ExtensionDispatcher(
             settings=settings,
             tool_selector=OptionalToolSelector(settings),
@@ -172,6 +210,38 @@ class DataAnalysisOrchestrator:
             tuple[str, str, str, str],
             dict[asyncio.Task[AgentResponse], asyncio.Event],
         ] = {}
+
+    async def _append_session_event(
+        self,
+        *,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        event_type: SessionEventType,
+        payload: dict[str, Any],
+        trace_id: str,
+    ) -> None:
+        try:
+            await self.event_store.append(SessionEvent(
+                session_id=chat.conversation_id,
+                user_id=identity.user_id,
+                tenant_id=identity.tenant_id,
+                application_id=chat.application_id,
+                message_id=chat.message_id,
+                event_type=event_type,
+                trace_id=trace_id,
+                payload=payload,
+            ))
+        except Exception as exc:  # pragma: no cover - backend-specific failure
+            # Observability is deliberately fail-open: losing an audit event is
+            # reportable, but must never discard a valid business response.
+            logger.warning(
+                "session event append failed: conversation_id=%s message_id=%s "
+                "event_type=%s error=%s",
+                chat.conversation_id,
+                chat.message_id,
+                event_type.value,
+                exc,
+            )
 
     async def handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
         scope = self._running_scope(chat, identity)
@@ -1831,7 +1901,10 @@ class DataAnalysisOrchestrator:
             and request.database_id == chat.database_id
             and sorted(request.business_domain_ids) == sorted(chat.business_domain_ids)
             and sorted(request.knowledge_base_names) == sorted(chat.knowledge_base_names)
-            and request.source_dataset_id == chat.dataset_id
+            and (
+                chat.dataset_id is None
+                or request.source_dataset_id == chat.dataset_id
+            )
         )
 
     async def _handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
@@ -1946,13 +2019,82 @@ class DataAnalysisOrchestrator:
                 # filters (for example the dealer selected in turn 2) when
                 # turn 3 only changed the month.  Only borrow the last verified
                 # ASL template when the newer frame does not already carry it.
+                successful_updates: dict[str, Any] = {}
                 if previous_for_rewrite.asl_template is None:
+                    successful_updates["asl_template"] = copy.deepcopy(
+                        completed.asl_template
+                    )
+                if completed.temporal_anchor is not None:
+                    successful_updates["temporal_anchor"] = (
+                        completed.temporal_anchor.model_copy(deep=True)
+                    )
+                if completed.source_dataset_id is not None:
+                    successful_updates["source_dataset_id"] = (
+                        completed.source_dataset_id
+                    )
+                if not previous_for_rewrite.metrics and completed.metrics:
+                    successful_updates["metrics"] = [
+                        item.model_copy(deep=True) for item in completed.metrics
+                    ]
+                if completed.analysis_thread_id is not None:
+                    successful_updates["analysis_thread_id"] = (
+                        completed.analysis_thread_id
+                    )
+                if successful_updates:
                     previous_for_rewrite = previous_for_rewrite.model_copy(
                         deep=True,
-                        update={
-                            "asl_template": copy.deepcopy(completed.asl_template),
-                        },
+                        update=successful_updates,
                     )
+        turn_decision = self.turn_admission_gate.evaluate(
+            question=chat.question,
+            current=raw_rule_request,
+            previous=previous_for_rewrite,
+            message_id=chat.message_id,
+            pending=pending is not None,
+        )
+        turn_decision.selected_thread_id = (
+            f"thread-{uuid4()}"
+            if turn_decision.create_new_analysis_thread
+            or previous_for_rewrite is None
+            else previous_for_rewrite.analysis_thread_id
+            or f"thread-{previous_for_rewrite.request_id}"
+        )
+        turn_decision.selected_episode_id = (
+            str(previous_for_rewrite.request_id)
+            if turn_decision.inherit_business_context
+            and previous_for_rewrite is not None
+            else None
+        )
+        if turn_decision.relation == TurnRelation.STANDALONE_NEW_TOPIC:
+            # The raw-turn gate runs before contextual rewriting.  Once it has
+            # proved this is a complete new topic, old task state must not be
+            # supplied to the rewriter or the later merge path.
+            previous_for_rewrite = None
+        await self._append_session_event(
+            chat=chat,
+            identity=identity,
+            event_type=SessionEventType.TURN_ADMISSION,
+            trace_id=str(raw_rule_request.request_id),
+            payload={
+                "turn_relation": turn_decision.relation.value,
+                "context_mode": turn_decision.context_mode.value,
+                "self_contained": turn_decision.current_turn_facts.is_self_contained,
+                "context_dependency": turn_decision.context_dependent,
+                "core_subject_changed": turn_decision.core_subject_changed,
+                "reference_signals": turn_decision.current_turn_facts.reference_signals,
+                "followup_signals": turn_decision.current_turn_facts.followup_signals,
+                "omitted_slots": turn_decision.current_turn_facts.omitted_slots,
+                "temporal_reference": turn_decision.current_turn_facts.temporal_references,
+                "inheritance_allowed": turn_decision.inherit_business_context,
+                "inheritance_slots": turn_decision.inheritance_slots,
+                "protected_slots": turn_decision.protected_slots,
+                "cleared_slots": turn_decision.cleared_slots,
+                "previous_thread": turn_decision.previous_thread_id,
+                "selected_thread": turn_decision.selected_thread_id,
+                "new_thread_created": turn_decision.create_new_analysis_thread,
+                "reason_codes": turn_decision.reason_codes,
+            },
+        )
         await emit_progress(
             "CONTEXT_RESTORE",
             "COMPLETED",
@@ -2239,8 +2381,96 @@ class DataAnalysisOrchestrator:
             request.asl_template = copy.deepcopy(previous_for_rewrite.asl_template)
             request.assumptions.append("DETERMINISTIC_TIME_FAST_PATH")
 
+        admission_base = request
+        if (
+            pending is None
+            and turn_decision.inherit_business_context
+            and previous_for_rewrite is not None
+        ):
+            # Context inheritance is a structured state restore followed by a
+            # current-turn delta.  ``merge_clarification`` predates this gate
+            # and can legitimately produce an empty metric/filter set for an
+            # elliptical comparison; do not let that lossy intermediate state
+            # become authoritative.
+            admission_base = previous_for_rewrite.model_copy(
+                deep=True,
+                update={
+                    "request_id": request.request_id,
+                    "original_question": request.original_question,
+                    "rewritten_question": request.rewritten_question,
+                    "rewrite_events": list(request.rewrite_events),
+                    "rewrite_context_applied": request.rewrite_context_applied,
+                    "rewrite_degraded": request.rewrite_degraded,
+                    "conversation_control": ConversationControl.FOLLOW_UP,
+                    "intent_source": request.intent_source,
+                    "intent_confidence": request.intent_confidence,
+                    "missing_slots": [],
+                },
+            )
+        request = self.turn_admission_gate.apply_explicit_slot_protection(
+            admission_base,
+            raw_rule_request,
+            turn_decision,
+        )
+        request.analysis_thread_id = turn_decision.selected_thread_id
+        request = resolve_conversation_temporal_context(
+            request,
+            previous_for_rewrite,
+            turn_decision,
+            chat.question,
+        )
+        execution_question, canonical_question, execution_source = (
+            select_data_execution_question(request, turn_decision, chat.question)
+        )
+        request.rewritten_question = execution_question
+        request.assumptions.append(f"EXECUTION_QUERY_SOURCE={execution_source}")
+        turn_decision.context_after = self.turn_admission_gate.context_snapshot(request)
+        turn_decision.context_conflicts = (
+            self.turn_admission_gate.validate_context_consistency(
+                request, turn_decision
+            )
+        )
+        request.turn_admission = turn_decision
+        await self._append_session_event(
+            chat=chat,
+            identity=identity,
+            event_type=SessionEventType.CONTEXT_MERGE,
+            trace_id=str(request.request_id),
+            payload={
+                "turn_relation": turn_decision.relation.value,
+                "context_mode": turn_decision.context_mode.value,
+                "inheritance_allowed": turn_decision.inherit_business_context,
+                "inheritance_slots": turn_decision.inheritance_slots,
+                "protected_slots": turn_decision.protected_slots,
+                "cleared_slots": turn_decision.cleared_slots,
+                "context_before": turn_decision.context_before,
+                "context_delta": turn_decision.context_delta,
+                "context_after": turn_decision.context_after,
+                "context_conflicts": turn_decision.context_conflicts,
+                "new_thread_created": turn_decision.create_new_analysis_thread,
+                "inherited_slots": turn_decision.inheritance_slots,
+                "temporal_anchor": (
+                    request.temporal_anchor.model_dump(mode="json")
+                    if request.temporal_anchor else None
+                ),
+                "resolved_periods": request.resolved_periods,
+                "comparison": (
+                    request.resolved_comparison.model_dump(mode="json")
+                    if request.resolved_comparison else None
+                ),
+                "canonical_query": canonical_question,
+                "execution_query_source": execution_source,
+            },
+        )
+
         request.application_id = chat.application_id
-        request.source_dataset_id = chat.dataset_id
+        request.source_dataset_id = (
+            chat.dataset_id
+            if chat.dataset_id is not None
+            else request.source_dataset_id
+            if turn_decision.inherit_business_context
+            else None
+        )
         request.semantic_model_id = chat.semantic_model_id
         request.database_id = chat.database_id
         request.business_domain_ids = list(chat.business_domain_ids)
@@ -2339,6 +2569,97 @@ class DataAnalysisOrchestrator:
                     request,
                     self._fallback(request, str(exc)),
                 )
+
+        derived_comparison = (
+            derive_period_comparison(
+                request,
+                query_result.dataset.columns,
+                query_result.dataset.rows,
+            )
+            if query_result is not None and request.resolved_comparison is not None
+            else None
+        )
+        if derived_comparison is not None:
+            request.execution_mode = "REUSE_PREVIOUS_RESULT"
+            request.query_resolution_type = "DERIVED_RESULT_QUERY"
+            request.temporal_anchor = build_temporal_anchor(
+                request,
+                query_result.dataset.columns,
+                query_result.dataset.rows,
+            )
+            await self._append_session_event(
+                chat=chat,
+                identity=identity,
+                event_type=SessionEventType.QUERY_RESOLUTION,
+                trace_id=str(request.request_id),
+                payload={
+                    "raw_query": chat.question,
+                    "turn_relation": (
+                        request.turn_relation.value
+                        if request.turn_relation else None
+                    ),
+                    "active_thread": request.analysis_thread_id,
+                    "active_episode": turn_decision.selected_episode_id,
+                    "context_dependency": True,
+                    "omitted_slots": turn_decision.current_turn_facts.omitted_slots,
+                    "inherited_slots": turn_decision.inheritance_slots,
+                    "temporal_reference": (
+                        turn_decision.current_turn_facts.temporal_references
+                    ),
+                    "temporal_anchor": (
+                        request.temporal_anchor.model_dump(mode="json")
+                        if request.temporal_anchor else None
+                    ),
+                    "resolved_periods": request.resolved_periods,
+                    "comparison_type": request.comparison_type,
+                    "comparison": request.resolved_comparison.model_dump(mode="json"),
+                    "previous_result_available": True,
+                    "result_sufficiency": True,
+                    "execution_mode": request.execution_mode,
+                    "source_dataset_id": request.source_dataset_id,
+                },
+            )
+            response = AgentResponse(
+                request_id=request.request_id,
+                conversation_id=request.conversation_id,
+                status="COMPLETED",
+                intent=request.primary_intent,
+                intent_source=request.intent_source,
+                intent_confidence=request.intent_confidence,
+                answer=derived_comparison.answer(),
+                evidence=[EvidenceItem(
+                    evidence_id=f"derived-result:{query_result.dataset.snapshot_id}",
+                    kind="DERIVED_RESULT_COMPARISON",
+                    source_ref=request.source_dataset_id or query_result.data_source_id or "conversation-result",
+                    payload={
+                        "sql_executed": False,
+                        "left_period": derived_comparison.left_period,
+                        "right_period": derived_comparison.right_period,
+                        "metric": derived_comparison.metric_column,
+                        "left_value": str(derived_comparison.left_value),
+                        "right_value": str(derived_comparison.right_value),
+                        "delta": str(derived_comparison.delta),
+                        "change_rate": (
+                            str(derived_comparison.change_rate)
+                            if derived_comparison.change_rate is not None else None
+                        ),
+                    },
+                )],
+                reliability=ReliabilityReport(
+                    level="HIGH",
+                    score=1.0,
+                    gates={
+                        "validated_previous_result": True,
+                        "periods_uniquely_resolved": True,
+                        "deterministic_arithmetic": True,
+                        "sql_not_reexecuted": True,
+                    },
+                ),
+                dataset_id=dataset_id,
+            )
+            await self.sessions.put_task_frame(request)
+            await self.sessions.put_last_request(request)
+            return await self._finish_terminal(request, response)
 
         if (
             query_result is None
@@ -3203,6 +3524,33 @@ class DataAnalysisOrchestrator:
             await self._attach_requested_report(
                 response, request=request, identity=identity, dataset_id=dataset_id
             )
+        request.temporal_anchor = build_temporal_anchor(
+            request,
+            query_result.dataset.columns,
+            query_result.dataset.rows,
+        )
+        if not request.metrics and request.temporal_anchor is not None:
+            metric_candidates = [
+                str(column)
+                for column in query_result.dataset.columns
+                if not any(
+                    marker in str(column).casefold()
+                    for marker in (
+                        "日期", "时间", "月份", "period", "month", "year",
+                    )
+                )
+            ]
+            if len(metric_candidates) == 1:
+                # A successful, validated trend result is authoritative enough
+                # to name its sole value column for a later elliptical
+                # comparison, even when the initial rule parse used a generic
+                # phrase such as “销售趋势”.
+                request.metrics = [MetricRef(input=metric_candidates[0])]
+        if dataset_id is not None:
+            # Successful episodes point at their immutable result artifact.
+            # Follow-ups must never infer the active result from an older or
+            # already-sliced preview when this exact reference is available.
+            request.source_dataset_id = dataset_id
         await self.sessions.put_last_request(request)
         return await self._finish_terminal(request, response)
 
@@ -3464,9 +3812,68 @@ class DataAnalysisOrchestrator:
             )
         )
 
+    @staticmethod
+    def _operation_limit(operation: dict[str, Any] | None) -> int | None:
+        if not isinstance(operation, dict):
+            return None
+        operation_type = str(operation.get("type") or "").lower()
+        if operation_type in {"limit", "sort_limit"}:
+            count = operation.get("count")
+            return count if isinstance(count, int) and count > 0 else None
+        if operation_type == "pipeline":
+            limits = [
+                value
+                for item in operation.get("operations", [])
+                if isinstance(item, dict)
+                and (value := DataAnalysisOrchestrator._operation_limit(item))
+                is not None
+            ]
+            return limits[-1] if limits else None
+        return None
+
+    @staticmethod
+    def _expandable_dataset_reference(
+        selected: dict[str, Any],
+        references: list[dict[str, Any]],
+        target_count: int,
+    ) -> dict[str, Any] | None:
+        """Find the nearest stored ancestor large enough for an expanded slice."""
+
+        by_id = {
+            str(item.get("dataset_id")): item
+            for item in references
+            if item.get("dataset_id")
+        }
+        queue = list(selected.get("parent_dataset_ids") or [])
+        visited: set[str] = set()
+        while queue:
+            dataset_id = str(queue.pop(0))
+            if dataset_id in visited:
+                continue
+            visited.add(dataset_id)
+            candidate = by_id.get(dataset_id)
+            if candidate is None:
+                continue
+            row_count = candidate.get("row_count")
+            if isinstance(row_count, int) and row_count >= target_count:
+                return candidate
+            queue.extend(candidate.get("parent_dataset_ids") or [])
+        return None
+
     async def _try_dataset_followup(
         self, request: CanonicalAnalysisRequest
     ) -> tuple[DataQueryResult | None, str | None]:
+        if request.query_resolution_type in {
+            "FOLLOWUP_ANALYSIS",
+            "DIRECT_DATA_QUERY",
+        }:
+            # “为什么下降” needs decomposition, while a single explicit-period
+            # replacement needs a newly scoped value.  Prior trend rows remain
+            # temporal/semantic anchors but are not silently substituted for a
+            # fresh database query. Closed-form two-period arithmetic uses the
+            # separate DERIVED_RESULT_QUERY path below.
+            request.execution_mode = "QUERY_DATABASE"
+            return None, None
         if self.dataset_store is None:
             if request.source_dataset_id is not None:
                 raise ExplicitDatasetUnavailableError(
@@ -3545,6 +3952,32 @@ class DataAnalysisOrchestrator:
                 loaded.reference.columns,
                 loaded.rows,
             )
+            requested_limit = self._operation_limit(operation)
+            if (
+                requested_limit is not None
+                and requested_limit > loaded.reference.row_count
+                and loaded.reference.parent_dataset_ids
+            ):
+                expanded = self._expandable_dataset_reference(
+                    selected,
+                    references,
+                    requested_limit,
+                )
+                if expanded is not None:
+                    source_reference = restore_reference(expanded)
+                    loaded = await asyncio.to_thread(
+                        self.dataset_store.load_dataset,
+                        source_reference,
+                        current_scope=scope,
+                    )
+                    operation = plan_dataset_followup(
+                        operation_question,
+                        loaded.reference.columns,
+                        loaded.rows,
+                    )
+                    request.assumptions.append(
+                        "TOP_N_EXPANDED_FROM_BASE_RESULT"
+                    )
             if operation is None:
                 self._bind_result_entity_reference(
                     request,
@@ -3576,6 +4009,7 @@ class DataAnalysisOrchestrator:
                     quality_status="PASS",
                     truncated=loaded.reference.row_count > len(rows),
                 )
+                request.execution_mode = "REUSE_PREVIOUS_RESULT"
                 return (
                     DataQueryResult(
                         asl={
@@ -3614,6 +4048,7 @@ class DataAnalysisOrchestrator:
                 ttl_seconds=self.settings.dataset_ttl_seconds,
                 preview_rows=self.settings.data_query_max_rows,
             )
+            request.execution_mode = "REUSE_PREVIOUS_RESULT"
             await self.sessions.put_dataset_reference(
                 result.reference.to_dict(), recent_limit=self.settings.dataset_recent_limit
             )

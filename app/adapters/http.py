@@ -1292,6 +1292,7 @@ class HttpDataRetrievalAdapter:
         sql = sql.strip()
         sql = self._apply_current_metric_formulas(sql, metric_definitions)
         self._validate_read_only_sql(sql)
+        self._validate_query_to_sql_entity_alignment(request, sql)
         metric_bindings = [
             {
                 "用户指标": metric.input,
@@ -1587,6 +1588,9 @@ class HttpDataRetrievalAdapter:
         generated = [
             item for item in (asl.get("filters") or []) if isinstance(item, dict)
         ]
+        negative_operators = {
+            "NE", "!=", "<>", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE",
+        }
         missing: list[dict[str, Any]] = []
         for required in request.filters:
             if not isinstance(required, dict):
@@ -1600,8 +1604,16 @@ class HttpDataRetrievalAdapter:
             }
             if not required_text:
                 continue
+            required_negative = str(
+                required.get("operator") or "EQ"
+            ).upper() in negative_operators
             preserved = False
             for item in generated:
+                candidate_negative = str(
+                    item.get("operator") or "EQ"
+                ).upper() in negative_operators
+                if candidate_negative != required_negative:
+                    continue
                 candidate = item.get("value")
                 candidate_values = candidate if isinstance(candidate, list) else [candidate]
                 candidate_text = {
@@ -1628,6 +1640,99 @@ class HttpDataRetrievalAdapter:
                 "ASL did not preserve one or more caller-grounded filters",
                 details={"missing_filters": missing},
             )
+
+    @staticmethod
+    def _validate_query_to_sql_entity_alignment(
+        request: CanonicalAnalysisRequest,
+        sql: str,
+    ) -> dict[str, Any]:
+        """Prove that current explicit entities survived and stale ones did not."""
+
+        admission = request.turn_admission
+        if admission is None:
+            return {"status": "PASS", "checked_filters": 0}
+        explicit_filter_slot = admission.current_turn_facts.explicit_slots.get(
+            "filters"
+        )
+        explicit_filters = (
+            explicit_filter_slot.value
+            if explicit_filter_slot is not None
+            and isinstance(explicit_filter_slot.value, list)
+            else []
+        )
+        normalized_sql = sql.replace("`", "")
+        folded_sql = normalized_sql.casefold()
+        negative_operators = {
+            "NE", "!=", "<>", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE",
+        }
+        missing: list[dict[str, Any]] = []
+        polarity_errors: list[dict[str, Any]] = []
+        current_by_field: dict[str, set[str]] = {}
+        for item in explicit_filters:
+            if not isinstance(item, dict):
+                continue
+            field = str(item.get("field") or "")
+            raw_values = item.get("value")
+            values = raw_values if isinstance(raw_values, list) else [raw_values]
+            texts = {
+                str(value).strip().strip("%")
+                for value in values
+                if value not in (None, "")
+            }
+            if field and texts:
+                current_by_field.setdefault(field, set()).update(texts)
+            for value in texts:
+                if value.casefold() not in folded_sql:
+                    missing.append({"field": field, "value": value})
+                    continue
+                if str(item.get("operator") or "EQ").upper() in negative_operators:
+                    escaped = re.escape(value)
+                    if re.search(
+                        rf"(?:!=|<>|\bnot\s+(?:in|like)\b)[^;]{{0,160}}"
+                        rf"['\"]?{escaped}['\"]?",
+                        normalized_sql,
+                        flags=re.I,
+                    ) is None:
+                        polarity_errors.append({"field": field, "value": value})
+        if missing:
+            raise AdapterError(
+                "SQL_QUERY_ENTITY_ALIGNMENT_FAILED",
+                "SQL did not preserve one or more current-turn entities",
+                details={"missing_entities": missing},
+            )
+        if polarity_errors:
+            raise AdapterError(
+                "SQL_QUERY_FILTER_POLARITY_FAILED",
+                "SQL reversed or dropped a current negative filter",
+                details={"filters": polarity_errors},
+            )
+
+        stale: list[dict[str, Any]] = []
+        for item in admission.context_before.get("filters", []):
+            if not isinstance(item, dict):
+                continue
+            field = str(item.get("field") or "")
+            raw_values = item.get("value")
+            values = raw_values if isinstance(raw_values, list) else [raw_values]
+            for value in values:
+                text = str(value or "").strip().strip("%")
+                if (
+                    text
+                    and field in current_by_field
+                    and text not in current_by_field[field]
+                    and text.casefold() in folded_sql
+                ):
+                    stale.append({"field": field, "value": text})
+        if stale:
+            raise AdapterError(
+                "STALE_CONTEXT_CONFLICT",
+                "SQL contains an entity replaced by the current turn",
+                details={"stale_entities": stale},
+            )
+        return {
+            "status": "PASS",
+            "checked_filters": len(explicit_filters),
+        }
 
     @staticmethod
     def _reuse_time_only_asl(

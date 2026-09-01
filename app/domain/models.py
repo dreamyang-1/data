@@ -50,6 +50,35 @@ class ConversationControl(StrEnum):
     FEEDBACK = "FEEDBACK"
 
 
+class TurnRelation(StrEnum):
+    """Relationship between the raw current turn and conversation state."""
+
+    STANDALONE_NEW_TOPIC = "STANDALONE_NEW_TOPIC"
+    CURRENT_TOPIC_FOLLOWUP = "CURRENT_TOPIC_FOLLOWUP"
+    CURRENT_TOPIC_MODIFICATION = "CURRENT_TOPIC_MODIFICATION"
+    CURRENT_TOPIC_DRILLDOWN = "CURRENT_TOPIC_DRILLDOWN"
+    HISTORICAL_TOPIC_RETURN = "HISTORICAL_TOPIC_RETURN"
+    CLARIFICATION_RESPONSE = "CLARIFICATION_RESPONSE"
+    CORRECTION = "CORRECTION"
+    AMBIGUOUS_RELATION = "AMBIGUOUS_RELATION"
+
+
+class ContextMode(StrEnum):
+    NONE = "NONE"
+    CURRENT_THREAD = "CURRENT_THREAD"
+    HISTORICAL_THREAD = "HISTORICAL_THREAD"
+    CLARIFICATION_RESUME = "CLARIFICATION_RESUME"
+
+
+class SlotSource(StrEnum):
+    CURRENT_EXPLICIT = "CURRENT_EXPLICIT"
+    CURRENT_INFERRED = "CURRENT_INFERRED"
+    CURRENT_REFERENCE_RESOLUTION = "CURRENT_REFERENCE_RESOLUTION"
+    ACTIVE_THREAD_STATE = "ACTIVE_THREAD_STATE"
+    HISTORICAL_EPISODE = "HISTORICAL_EPISODE"
+    RESULT_ARTIFACT = "RESULT_ARTIFACT"
+
+
 class AnalysisOperator(StrEnum):
     FILTER = "FILTER"
     GROUP_BY = "GROUP_BY"
@@ -72,6 +101,73 @@ class TimeRange(StrictModel):
     start: date
     end_exclusive: date
     timezone: str = "Asia/Shanghai"
+
+
+class SlotProvenance(StrictModel):
+    value: Any
+    source: SlotSource
+    source_turn: str | None = Field(default=None, max_length=128)
+    source_thread: str | None = Field(default=None, max_length=128)
+    source_episode: str | None = Field(default=None, max_length=128)
+    confidence: float = Field(default=1.0, ge=0, le=1)
+
+
+class CurrentTurnFacts(StrictModel):
+    raw_query: str = Field(min_length=1, max_length=8000)
+    explicit_slots: dict[str, SlotProvenance] = Field(default_factory=dict)
+    inferred_slots: dict[str, SlotProvenance] = Field(default_factory=dict)
+    reference_signals: list[str] = Field(default_factory=list)
+    followup_signals: list[str] = Field(default_factory=list)
+    topic_shift_signals: list[str] = Field(default_factory=list)
+    core_subjects: dict[str, str] = Field(default_factory=dict)
+    omitted_slots: list[str] = Field(default_factory=list)
+    temporal_references: list[dict[str, Any]] = Field(default_factory=list)
+    is_self_contained: bool = False
+
+
+class TurnAdmissionDecision(StrictModel):
+    relation: TurnRelation
+    confidence: float = Field(ge=0, le=1)
+    context_mode: ContextMode
+    current_turn_facts: CurrentTurnFacts
+    context_dependent: bool = False
+    core_subject_changed: bool = False
+    inherit_business_context: bool = False
+    create_new_analysis_thread: bool = False
+    historical_recall_required: bool = False
+    reason_codes: list[str] = Field(default_factory=list)
+    protected_slots: list[str] = Field(default_factory=list)
+    cleared_slots: list[str] = Field(default_factory=list)
+    inheritance_slots: list[str] = Field(default_factory=list)
+    previous_thread_id: str | None = Field(default=None, max_length=128)
+    previous_episode_id: str | None = Field(default=None, max_length=128)
+    selected_thread_id: str | None = Field(default=None, max_length=128)
+    selected_episode_id: str | None = Field(default=None, max_length=128)
+    context_before: dict[str, Any] = Field(default_factory=dict)
+    context_delta: dict[str, Any] = Field(default_factory=dict)
+    context_after: dict[str, Any] = Field(default_factory=dict)
+    context_conflicts: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class TemporalAnchor(StrictModel):
+    range_start: date
+    range_end: date
+    grain: Literal["day", "week", "month", "quarter", "year"] = "month"
+    available_periods: list[str] = Field(default_factory=list, max_length=500)
+
+    @field_validator("available_periods")
+    @classmethod
+    def validate_available_periods(cls, values: list[str]) -> list[str]:
+        normalized = list(dict.fromkeys(values))
+        if any(not re.fullmatch(r"(?:19|20)\d{2}-(?:0[1-9]|1[0-2])", value) for value in normalized):
+            raise ValueError("available periods must use YYYY-MM")
+        return normalized
+
+
+class ResolvedPeriodComparison(StrictModel):
+    left_period: str = Field(pattern=r"^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])$")
+    right_period: str = Field(pattern=r"^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])$")
+    operation: Literal["DECLINE", "RECOVERY", "CHANGE"] = "CHANGE"
 
 
 class MetricRef(StrictModel):
@@ -125,6 +221,19 @@ class CanonicalAnalysisRequest(StrictModel):
     tenant_id: str
     user_id: str
     source_dataset_id: str | None = Field(default=None, max_length=128)
+    analysis_thread_id: str | None = Field(default=None, max_length=128)
+    turn_relation: TurnRelation | None = None
+    context_mode: ContextMode = ContextMode.NONE
+    slot_provenance: dict[str, SlotProvenance] = Field(default_factory=dict)
+    turn_admission: TurnAdmissionDecision | None = None
+    temporal_anchor: TemporalAnchor | None = None
+    resolved_periods: list[str] = Field(default_factory=list, max_length=24)
+    resolved_comparison: ResolvedPeriodComparison | None = None
+    followup_type: str | None = Field(default=None, max_length=100)
+    query_resolution_type: str | None = Field(default=None, max_length=100)
+    execution_mode: Literal["QUERY_DATABASE", "REUSE_PREVIOUS_RESULT"] = "QUERY_DATABASE"
+    execution_contract_transform: str | None = Field(default=None, max_length=100)
+    semantic_entity_mentions: list[str] = Field(default_factory=list, max_length=50)
     original_question: str
     rewritten_question: str | None = None
     rewrite_events: list[dict[str, Any]] = Field(default_factory=list)

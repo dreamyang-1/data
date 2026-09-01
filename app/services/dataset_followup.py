@@ -39,6 +39,12 @@ def is_dataset_operation_followup(question: str) -> bool:
         return False
     if re.search(r"(?:20\d{2}年|\d{1,2}月\d{0,2}日?|最近\d+)", compact):
         return False
+    if re.search(
+        r"(?:前|top)(?:\d{1,5}|[一二三四五六七八九十]{1,3})(?:名|条|个)?",
+        compact,
+        re.I,
+    ):
+        return True
     return any(
         marker in compact
         for marker in (
