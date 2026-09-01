@@ -1,4 +1,5 @@
 import json
+import re
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -252,7 +253,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     )
     assert file_chunk["step"] == "step1"
     assert file_chunk["meta"]["file_status"] == "NOT_PROVIDED"
-    assert "### ◉ 问题补全与意图识别" in file_chunk["content"]
+    assert "### ◉ 问题补全与意图识别" not in file_chunk["content"]
     think_chunks = [
         data for data in events
         if data["type"] == "message_chunk" and data.get("step") != "output"
@@ -272,6 +273,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         }
         for data in events if data["type"] == "updata_state"
     )
+    assert all(not re.search(r"(?m)^\s*#{1,6}\s+", data["content"]) for data in think_chunks)
     intent_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
@@ -282,7 +284,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         if data.get("meta", {}).get("stage") == "TASK_PLANNING"
         and data.get("meta", {}).get("status") == "RUNNING"
     )
-    assert "### ◉ 规划与执行" in planning_running_chunk["content"]
+    assert "### ◉ 规划与执行" not in planning_running_chunk["content"]
     assert "正在判断是否需要拆分" in planning_running_chunk["content"]
     summary_chunk = next(
         data for data in think_chunks

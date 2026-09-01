@@ -308,7 +308,6 @@ async def chat_stream(
         deferred_planning: list[dict[str, Any]] = []
         intent_completed = False
         file_inspection_completed = False
-
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
             if event.get("stage") == "TASK_PLANNING" and not file_inspection_completed:
@@ -483,10 +482,13 @@ def _thinking_event(progress: dict[str, Any]) -> str:
         "data": step,
     })
     content = str(progress.get("message") or stage).strip()
-    # New_Agent renders each public milestone as its own Markdown block.  Keep
-    # headings such as ``### ◉ 问题补全与意图识别`` at the beginning of a fresh block;
-    # otherwise adjacent SSE chunks are concatenated by the platform and the
-    # heading is shown as literal inline text ("...完成。 ### ◉ ...").
+    # The generic-agent Java stream aggregator owns public section headings
+    # and emits each one once per canonical step. Data-agent nodes historically
+    # supplied headings too, which caused duplicated titles after aggregation.
+    # Send body content only, matching the generic agent's wire contract.
+    content = re.sub(r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", content).strip()
+    # Keep each body milestone in a fresh block so adjacent chunks are not
+    # concatenated into a single line by the platform renderer.
     content = f"\n\n{content}\n\n"
     message_payload: dict[str, Any] = {
         "step": step,
