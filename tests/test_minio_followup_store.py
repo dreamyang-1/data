@@ -5,7 +5,10 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.services.dataset_followup import plan_dataset_followup
+from app.services.dataset_followup import (
+    is_dataset_operation_followup,
+    plan_dataset_followup,
+)
 from minio_followup_store import (
     DatasetExpired,
     InvalidFollowupOperation,
@@ -455,3 +458,22 @@ def test_extrema_and_difference_followups_preserve_labels_and_calculate_gap():
         ("销售额差额",),
         [{"销售额差额": 40}],
     )
+
+
+def test_elliptical_month_extrema_is_routed_to_existing_result():
+    question = "哪个月最高？比最低月高多少？"
+    assert is_dataset_operation_followup(question) is True
+    assert plan_dataset_followup(
+        question,
+        ("交易月份", "含税销售总额"),
+        (
+            {"交易月份": "2025-10", "含税销售总额": 100},
+            {"交易月份": "2025-11", "含税销售总额": 60},
+            {"交易月份": "2025-12", "含税销售总额": 80},
+        ),
+    ) == {
+        "type": "extrema",
+        "field": "含税销售总额",
+        "include_difference": True,
+        "result_field": "含税销售总额差额",
+    }

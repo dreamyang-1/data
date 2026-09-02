@@ -2765,6 +2765,10 @@ class DataAnalysisOrchestrator:
         )
 
         request.application_id = chat.application_id
+        if chat.dataset_id is not None:
+            request.assumptions.append("EXPLICIT_SOURCE_DATASET_SELECTION")
+        elif request.source_dataset_id is not None:
+            request.assumptions.append("INHERITED_CONVERSATION_DATASET")
         request.source_dataset_id = (
             chat.dataset_id
             if chat.dataset_id is not None
@@ -3036,8 +3040,12 @@ class DataAnalysisOrchestrator:
                 except AdapterError as first_error:
                     semantic_retry_codes = {
                         "ASL_AMBIGUOUS",
+                        "ASL_DIMENSION_INVALID",
+                        "ASL_REQUIRED_DIMENSION_MISSING",
+                        "ASL_UNREQUESTED_DIMENSION",
                         "SQL_TRANSLATION_AMBIGUOUS",
                         "SQL_QUERY_ENTITY_ALIGNMENT_FAILED",
+                        "SQL_QUERY_FILTER_OPERATOR_FAILED",
                     }
                     retry_code = (
                         first_error.upstream_code
@@ -4418,6 +4426,24 @@ class DataAnalysisOrchestrator:
                     loaded.reference.columns,
                     loaded.rows,
                 )
+                explicit_dataset_selection = (
+                    "EXPLICIT_SOURCE_DATASET_SELECTION" in request.assumptions
+                )
+                if (
+                    not explicit_dataset_selection
+                    and request.primary_intent != PrimaryIntent.REPORT_GENERATION
+                    and request.resolved_comparison is None
+                ):
+                    # An automatically inherited result is an optimization,
+                    # never the authority for a semantically changed request.
+                    # If no whitelisted local operation can answer the turn,
+                    # execute the merged canonical request against the source.
+                    request.source_dataset_id = None
+                    request.execution_mode = "QUERY_DATABASE"
+                    request.assumptions.append(
+                        "INHERITED_DATASET_INSUFFICIENT_REQUERY"
+                    )
+                    return None, None
                 # File delivery is a follow-up over the latest immutable result,
                 # not a reason to execute the original SQL again.
                 if (

@@ -1311,6 +1311,48 @@ def test_hospital_level_rollup_does_not_group_by_individual_hospital():
     }
 
 
+def test_hospital_level_count_is_grouped_metric_not_hospital_detail():
+    request = RuleBasedIntentClassifier().classify(
+        "各医院等级对应的医院数量是多少？",
+        IDENTITY,
+        "hospital-level-count",
+    )
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert [metric.input for metric in request.metrics] == ["医院数量"]
+    assert request.entity is None
+    assert request.fields == []
+    assert request.dimensions == ["医院等级"]
+    assert "NULL_DIMENSION_BUCKET=医院等级:未填写" in request.assumptions
+    assert "STRICT_GROUPING_DIMENSIONS" in request.assumptions
+
+
+def test_all_product_monthly_trend_is_not_misclassified_as_comparison():
+    request = RuleBasedIntentClassifier().classify(
+        "对比一下全部产品的月度含税销售总额趋势。",
+        IDENTITY,
+        "all-product-monthly-trend",
+    )
+
+    assert request.primary_intent == PrimaryIntent.TREND_ANALYSIS
+    assert [metric.input for metric in request.metrics] == ["含税销售总额"]
+    assert "产品" not in request.dimensions
+    assert request.comparison_type is None
+    assert request.missing_slots == []
+
+
+def test_generic_province_order_count_uses_sales_business_geography():
+    request = RuleBasedIntentClassifier().classify(
+        "统计各省份的订单笔数。",
+        IDENTITY,
+        "business-province-orders",
+    )
+
+    assert request.dimensions == ["业务省份"]
+    assert "GEOGRAPHIC_ROLE=SALES_ORDER_BUSINESS_PROVINCE" in request.assumptions
+    assert [metric.input for metric in request.metrics] == ["订单笔数"]
+
+
 def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
     request = RuleBasedIntentClassifier().classify(
         "帮我找出上海地区正在销售振德医疗品牌的医用外科口罩产品的"

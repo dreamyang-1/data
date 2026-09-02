@@ -53,6 +53,12 @@ _FOLLOWUP_PATTERNS: tuple[tuple[str, str], ...] = (
     ("LIMIT_ONLY", r"^(?:只)?(?:保留|显示|展示|返回)?前(?:\d+|[一二三四五六七八九十]+)(?:个|名|条)?[。！!？?]?$"),
     ("TIME_ONLY", r"^(?:那|改成|换成)?(?:今天|昨天|本周|上周|本月|上月|本季度|上季度|今年|去年|近(?:一|二|三|四|五|六|七|八|九|十|\d+)年)[。！!？?]?$"),
     ("LIMIT_REPLACEMENT", r"前(?:\d+|[一二三四五六七八九十]+)(?:个|名|条)?"),
+    (
+        "RESULT_EXTREMA",
+        r"^(?:(?:其中|这些|上述|刚才)?(?:哪个|哪一个|谁|哪家|哪月|哪个月)"
+        r".{0,12}(?:最高|最低|最大|最小)|(?:最高|最低|最大|最小)(?:的是)?"
+        r"|排(?:第)?一|比最低.{0,8}(?:高|多)多少)",
+    ),
     ("WHY", r"为什么|为何|怎么会"),
     ("CONTINUE", r"继续|接着|再看|再查|同样"),
     (
@@ -887,6 +893,47 @@ class TurnAdmissionGate:
             if "CORE_SUBJECT_CHANGE_REPLAN_REQUIRED" not in request.assumptions:
                 request.assumptions.append(
                     "CORE_SUBJECT_CHANGE_REPLAN_REQUIRED"
+                )
+        elif (
+            not any(
+                signal in {
+                    "RESULT_PERIOD_COMPARISON",
+                    "RESULT_PERIOD_RECOVERY",
+                    "RESULT_DELTA_ELLIPSIS",
+                    "RESULT_EXTREMA",
+                }
+                for signal in decision.current_turn_facts.followup_signals
+            )
+            and any(
+            operation.slot in {
+                "analysis_type",
+                "metrics",
+                "query_object",
+                "fields",
+                "dimensions",
+                "filters",
+                "time_range",
+                "time_grain",
+                "comparison",
+            }
+            and operation.operation in {
+                SlotOperationType.ADD,
+                SlotOperationType.REPLACE,
+                SlotOperationType.REMOVE,
+                SlotOperationType.CLEAR,
+            }
+            for operation in decision.slot_operations
+            )
+        ):
+            # A materialized result is sufficient only for presentation-local
+            # operations such as limit/sort/projection. Any semantic slot
+            # mutation changes the requested population, grain or measure and
+            # therefore invalidates both the previous ASL and result dataset.
+            request.asl_template = None
+            request.source_dataset_id = None
+            if "SEMANTIC_SLOT_CHANGE_REPLAN_REQUIRED" not in request.assumptions:
+                request.assumptions.append(
+                    "SEMANTIC_SLOT_CHANGE_REPLAN_REQUIRED"
                 )
         return request
 

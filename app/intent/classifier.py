@@ -449,6 +449,13 @@ class RuleBasedIntentClassifier:
             r"(?:谁|哪个|哪家)(?:的)?.{0,16}(?:更高|更低|更多|更少|较高|较低)",
             normalized,
         ))
+        explicit_trend_series = bool(
+            "趋势" in normalized
+            and re.search(r"(?:按|各|每)?(?:日|周|月|季度|年)(?:度|份)?", normalized)
+            and not explicit_object_comparison
+            and not self._has_explicit_comparison_pair(normalized)
+            and not any(term in normalized for term in ("同比", "环比"))
+        )
         explicit_file_delivery = bool(
             re.search(r"(?:导出|生成|下载).{0,24}(?:excel|xlsx|pdf|word|docx)", normalized)
         )
@@ -461,6 +468,11 @@ class RuleBasedIntentClassifier:
         elif implicit_forecast:
             intent = PrimaryIntent.FORECAST_ANALYSIS
             matched = [PrimaryIntent.FORECAST_ANALYSIS] + [i for i in matched if i != PrimaryIntent.FORECAST_ANALYSIS]
+        elif explicit_trend_series:
+            intent = PrimaryIntent.TREND_ANALYSIS
+            matched = [PrimaryIntent.TREND_ANALYSIS] + [
+                i for i in matched if i != PrimaryIntent.TREND_ANALYSIS
+            ]
         elif explicit_object_comparison:
             intent = PrimaryIntent.COMPARISON_ANALYSIS
             matched = [PrimaryIntent.COMPARISON_ANALYSIS] + [i for i in matched if i != PrimaryIntent.COMPARISON_ANALYSIS]
@@ -1062,6 +1074,55 @@ class RuleBasedIntentClassifier:
         explicit_metrics = cls._extract_metric_refs(compact)
         if explicit_metrics:
             request.metrics = explicit_metrics
+        hospital_level_count = bool(re.search(
+            r"(?:各|按|每个)(?:医院)?(?:等级|级别)(?:对应的)?(?:医院)?(?:数量|数)"
+            r"|(?:医院)?(?:等级|级别).{0,10}(?:医院)?(?:数量|数)",
+            compact,
+        ))
+        if hospital_level_count:
+            request.primary_intent = PrimaryIntent.METRIC_QUERY
+            request.metrics = [MetricRef(input="医院数量")]
+            request.entity = None
+            request.fields = []
+            request.dimensions = ["医院等级"]
+            request.risk_level = "MEDIUM"
+            request.operators = [
+                AnalysisOperator.GROUP_BY,
+                AnalysisOperator.AGGREGATE,
+                AnalysisOperator.RENDER_TABLE,
+            ]
+            if "NULL_DIMENSION_BUCKET=医院等级:未填写" not in request.assumptions:
+                request.assumptions.append(
+                    "NULL_DIMENSION_BUCKET=医院等级:未填写"
+                )
+            if "STRICT_GROUPING_DIMENSIONS" not in request.assumptions:
+                request.assumptions.append("STRICT_GROUPING_DIMENSIONS")
+        if (
+            request.primary_intent == PrimaryIntent.TREND_ANALYSIS
+            and re.search(r"(?:全部|所有)(?:产品|商品)", compact)
+        ):
+            request.dimensions = [
+                value for value in request.dimensions
+                if value not in {"产品", "商品"}
+            ]
+            if "ALL_PRODUCTS_SCOPE" not in request.assumptions:
+                request.assumptions.append("ALL_PRODUCTS_SCOPE")
+        if (
+            any(metric.input == "订单笔数" for metric in request.metrics)
+            and re.search(r"(?:各|按|分)(?:个)?省份", compact)
+            and not any(
+                owner in compact
+                for owner in ("医院省份", "经销商省份", "供应商省份", "客户省份")
+            )
+        ):
+            request.dimensions = [
+                "业务省份" if value == "省份" else value
+                for value in request.dimensions
+            ]
+            if "GEOGRAPHIC_ROLE=SALES_ORDER_BUSINESS_PROVINCE" not in request.assumptions:
+                request.assumptions.append(
+                    "GEOGRAPHIC_ROLE=SALES_ORDER_BUSINESS_PROVINCE"
+                )
         relationship_count_dimensions = {
             "已合作医院数": "医院",
             "已合作经销商数": "经销商",

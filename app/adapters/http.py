@@ -737,6 +737,11 @@ class HttpDataRetrievalAdapter:
                 + "，只需保留在ASL filters中，不得仅因调用方识别出该角色就强制加入"
                 "dimensions或GROUP BY。"
             )
+        if "NULL_DIMENSION_BUCKET=医院等级:未填写" in request.assumptions:
+            asl_query += (
+                "\n空维度保留契约：医院等级为空的记录也必须参与统计，"
+                "使用“未填写”作为展示分组；不得添加医院等级 IS NOT NULL 筛选。"
+            )
         if (
             any(
                 self._constraint_field_family(str(value)) == "region"
@@ -1299,6 +1304,12 @@ class HttpDataRetrievalAdapter:
                     "grouped partner metric ASL must retain requested metrics",
                 )
             self._validate_grouped_semantic_dimensions(asl, request)
+        elif (
+            request.primary_intent == PrimaryIntent.METRIC_QUERY
+            and request.metrics
+            and self._required_grouped_dimension_roles(request)
+        ):
+            self._validate_grouped_semantic_dimensions(asl, request)
         if ordered_entity_metric_ranking_request(request):
             sort = asl.get("sort")
             if not (
@@ -1838,6 +1849,25 @@ class HttpDataRetrievalAdapter:
                     "projected_dimensions": dimensions,
                 },
             )
+        unexpected = [
+            actual
+            for actual in actual_references
+            if actual
+            and not any(
+                cls._semantic_dimension_role_matches(expected, actual)
+                for expected in required_dimensions
+            )
+        ]
+        if unexpected and "STRICT_GROUPING_DIMENSIONS" in request.assumptions:
+            raise AdapterError(
+                "ASL_UNREQUESTED_DIMENSION",
+                "ASL added grouping dimensions that change the requested grain",
+                details={
+                    "unexpected_dimensions": unexpected,
+                    "required_grouped_dimensions": required_dimensions,
+                    "projected_dimensions": dimensions,
+                },
+            )
 
     @classmethod
     def _semantic_dimension_role_matches(
@@ -1846,6 +1876,20 @@ class HttpDataRetrievalAdapter:
         actual: str,
     ) -> bool:
         """Match a business dimension without collapsing city into province."""
+
+        def is_hospital_level(value: str) -> bool:
+            normalized = value.casefold()
+            return any(
+                marker in normalized
+                for marker in (
+                    "医院等级", "医院级别", "hospital_level", "hospitallevel",
+                )
+            )
+
+        expected_hospital_level = is_hospital_level(expected)
+        actual_hospital_level = is_hospital_level(actual)
+        if expected_hospital_level or actual_hospital_level:
+            return expected_hospital_level and actual_hospital_level
 
         if not cls._constraint_field_matches(expected, actual):
             return False
@@ -2059,6 +2103,7 @@ class HttpDataRetrievalAdapter:
         }
         missing: list[dict[str, Any]] = []
         polarity_errors: list[dict[str, Any]] = []
+        operator_errors: list[dict[str, Any]] = []
         current_by_field: dict[str, set[str]] = {}
         for item in explicit_filters:
             if not isinstance(item, dict):
@@ -2093,6 +2138,25 @@ class HttpDataRetrievalAdapter:
                     )
                     if not polarity_preserved:
                         polarity_errors.append({"field": field, "value": value})
+                elif str(item.get("operator") or "EQ").upper() in {
+                    "EQ", "=", "EQUALS",
+                }:
+                    equality_preserved = any(
+                        re.search(
+                            rf"(?:(?<![<>!])=(?!=)\s*['\"]?{re.escape(alias)}['\"]?"
+                            rf"|\bin\s*\([^)]*['\"]?{re.escape(alias)}['\"]?[^)]*\))",
+                            normalized_sql,
+                            flags=re.I,
+                        )
+                        is not None
+                        for alias in aliases
+                    )
+                    if not equality_preserved:
+                        operator_errors.append({
+                            "field": field,
+                            "value": value,
+                            "expected_operator": "EQ",
+                        })
         if missing:
             raise AdapterError(
                 "SQL_QUERY_ENTITY_ALIGNMENT_FAILED",
@@ -2104,6 +2168,12 @@ class HttpDataRetrievalAdapter:
                 "SQL_QUERY_FILTER_POLARITY_FAILED",
                 "SQL reversed or dropped a current negative filter",
                 details={"filters": polarity_errors},
+            )
+        if operator_errors:
+            raise AdapterError(
+                "SQL_QUERY_FILTER_OPERATOR_FAILED",
+                "SQL weakened an exact current filter into a different operator",
+                details={"filters": operator_errors},
             )
 
         stale: list[dict[str, Any]] = []
@@ -2163,15 +2233,23 @@ class HttpDataRetrievalAdapter:
             normalized_field in {"商品", "商品名称", "产品", "产品名称"}
             or "product" in normalized_field
         )
-        if not is_product_field:
-            return aliases
-        for suffix in ("产品", "商品"):
-            if not normalized.endswith(suffix):
-                continue
-            canonical = normalized[: -len(suffix)].strip()
-            # Never turn a specific entity requirement into a one-character
-            # substring check (for example ``A产品`` -> ``A``).
-            if len(canonical) >= 2:
+        is_hospital_level_field = (
+            normalized_field in {"医院等级", "医院级别"}
+            or "hospital_level" in normalized_field
+            or "hospitallevel" in normalized_field
+        )
+        if is_product_field:
+            for suffix in ("产品", "商品"):
+                if not normalized.endswith(suffix):
+                    continue
+                canonical = normalized[: -len(suffix)].strip()
+                # Never turn a specific entity requirement into a one-character
+                # substring check (for example ``A产品`` -> ``A``).
+                if len(canonical) >= 2:
+                    aliases.add(canonical)
+        if is_hospital_level_field and normalized.endswith("医院"):
+            canonical = normalized[:-2].strip()
+            if canonical:
                 aliases.add(canonical)
         return aliases
 

@@ -983,6 +983,31 @@ def test_grouped_scope_requires_all_current_semantic_dimension_roles():
     assert missing.value.details["missing_dimensions"] == ["商品品类"]
 
 
+def test_strict_grouped_scope_rejects_an_extra_dimension_that_changes_grain():
+    grouped = CanonicalAnalysisRequest(
+        conversation_id="strict-hospital-level-grain",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="各医院等级对应的医院数量是多少",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="医院数量")],
+        dimensions=["医院等级"],
+        assumptions=["STRICT_GROUPING_DIMENSIONS"],
+    )
+
+    with pytest.raises(AdapterError) as unexpected:
+        HttpDataRetrievalAdapter._validate_grouped_semantic_dimensions(
+            {
+                "dimensions": [
+                    {"name": "hospital.hospital_level", "alias": "医院等级"},
+                    {"name": "hospital.hospital_name", "alias": "医院名称"},
+                ]
+            },
+            grouped,
+        )
+    assert unexpected.value.code == "ASL_UNREQUESTED_DIMENSION"
+
+
 def test_grouped_scope_keeps_filter_only_roles_out_of_group_by():
     grouped = CanonicalAnalysisRequest(
         conversation_id="semantic-filter-role-repair",

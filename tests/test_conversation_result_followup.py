@@ -463,3 +463,37 @@ async def test_7_expanding_top_n_restores_base_result_instead_of_reusing_slice()
     assert completed.ranking_limit == 10
     assert completed.turn_relation == TurnRelation.CURRENT_TOPIC_MODIFICATION
     assert "TOP_N_EXPANDED_FROM_BASE_RESULT" in completed.assumptions
+
+
+@pytest.mark.asyncio
+async def test_8_semantic_filter_followup_requeries_instead_of_replaying_old_list():
+    agent, retrieval, _, _ = _list_agent()
+    conversation_id = "followup-filter-requery"
+    await agent.handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id=conversation_id,
+            message_id="m1",
+            question="查询A产品合作的经销商名单。",
+            semantic_model_id=81,
+        ),
+        IDENTITY,
+    )
+
+    second = await agent.handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id=conversation_id,
+            message_id="m2",
+            question="只看上海的。",
+            semantic_model_id=81,
+        ),
+        IDENTITY,
+    )
+
+    assert second.status == "COMPLETED"
+    assert len(retrieval.requests) == 2
+    request = retrieval.requests[-1]
+    assert request.execution_mode == "QUERY_DATABASE"
+    assert request.source_dataset_id is None
+    assert "INHERITED_DATASET_INSUFFICIENT_REQUERY" in request.assumptions

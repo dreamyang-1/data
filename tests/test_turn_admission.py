@@ -518,6 +518,79 @@ def test_product_suffix_alias_keeps_negative_filter_polarity_enforced():
     assert reversed_polarity.value.code == "SQL_QUERY_FILTER_POLARITY_FAILED"
 
 
+def test_exact_product_filter_cannot_be_weakened_to_like():
+    request = _finalized_standalone(
+        RuleBasedIntentClassifier(),
+        TurnAdmissionGate(),
+        "查询医用外科口罩产品合作的经销商名单。",
+        "exact-filter-operator",
+    )
+
+    with pytest.raises(AdapterError) as weakened:
+        HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+            request,
+            "SELECT dealer_name FROM dealer LEFT JOIN product "
+            "ON dealer.product_code = product.product_code "
+            "WHERE product.product_name LIKE '%医用外科口罩%'",
+        )
+    assert weakened.value.code == "SQL_QUERY_FILTER_OPERATOR_FAILED"
+
+
+def test_hospital_level_filter_accepts_registered_value_without_object_suffix():
+    request = _finalized_standalone(
+        RuleBasedIntentClassifier(),
+        TurnAdmissionGate(),
+        "查询三级医院的含税销售总额。",
+        "hospital-level-value-normalization",
+    )
+
+    report = HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+        request,
+        "SELECT SUM(amount) FROM hospital "
+        "WHERE hospital.hospital_level = '三级'",
+    )
+    assert report["status"] == "PASS"
+
+
+def test_semantic_filter_change_invalidates_inherited_asl_and_dataset():
+    gate, previous, current, decision = _decision(
+        "查询A产品合作的经销商名单。",
+        "只看上海的。",
+        "semantic-filter-replan",
+    )
+    previous.asl_template = {"subject": {"entity": "dealer"}}
+    previous.source_dataset_id = "dealer-list-a"
+
+    merged = gate.apply_explicit_slot_protection(
+        previous.model_copy(deep=True), current, decision
+    )
+
+    assert merged.asl_template is None
+    assert merged.source_dataset_id is None
+    assert "SEMANTIC_SLOT_CHANGE_REPLAN_REQUIRED" in merged.assumptions
+
+
+def test_complete_extrema_query_is_not_mistaken_for_result_followup():
+    _, _, _, decision = _decision(
+        "查询A产品合作的经销商名单。",
+        "查询含税销售总额最高的经销商。",
+        "standalone-extrema-query",
+    )
+
+    assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+
+
+def test_elliptical_extrema_question_is_admitted_as_result_followup():
+    _, _, _, decision = _decision(
+        "按月分析2025年含税销售总额趋势。",
+        "哪个月最高？比最低月高多少？",
+        "extrema-result-followup",
+    )
+
+    assert decision.relation == TurnRelation.CURRENT_TOPIC_FOLLOWUP
+    assert "RESULT_EXTREMA" in decision.current_turn_facts.followup_signals
+
+
 def test_stale_product_detection_understands_the_same_suffix_alias():
     gate, previous, current, decision = _decision(
         "查询空心纤维血液透析器产品合作的经销商名单。",
