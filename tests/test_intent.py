@@ -1524,6 +1524,18 @@ def test_legal_manufacturer_metric_uses_name_role_and_preserves_punctuation(
     assert request.missing_slots == []
 
 
+def test_grouped_trend_keeps_only_business_noun_as_semantic_entity_mention():
+    request = RuleBasedIntentClassifier().classify(
+        "按月分析外周插管中心静脉导管的销售趋势",
+        IDENTITY,
+        "grouped-trend-semantic-mention",
+    )
+
+    assert request.primary_intent == PrimaryIntent.TREND_ANALYSIS
+    assert request.semantic_entity_mentions == ["外周插管中心静脉导管"]
+    assert all("按月分析" not in value for value in request.semantic_entity_mentions)
+
+
 def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
     request = RuleBasedIntentClassifier().classify(
         "帮我找出上海地区正在销售振德医疗品牌的医用外科口罩产品的"

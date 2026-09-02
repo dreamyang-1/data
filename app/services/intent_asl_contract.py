@@ -8,6 +8,7 @@ teaching either service database-specific mappings.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any
 
 from app.domain.models import AnalysisOperator, CanonicalAnalysisRequest, PrimaryIntent
@@ -79,6 +80,28 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
 
     positive_filters = [item for item in request.filters if not _is_negative_filter(item)]
     negative_filters = [item for item in request.filters if _is_negative_filter(item)]
+    filter_roles = {
+        str(item.get("field") or "").strip()
+        for item in request.filters
+        if isinstance(item, dict) and str(item.get("field") or "").strip()
+    }
+    role_aliases = {
+        "产品": "商品", "产品名称": "商品名称",
+        "品牌": "商品品牌", "品牌名称": "商品品牌", "母品牌": "商品品牌",
+        "品类": "商品品类", "商品分类": "商品品类", "产品分类": "商品品类",
+        "区域": "地区", "省份": "地区", "城市": "地区",
+        "业务省份": "地区", "业务城市": "地区",
+    }
+
+    def normalized_role(value: str) -> str:
+        return role_aliases.get(value, value)
+
+    normalized_filter_roles = {normalized_role(value) for value in filter_roles}
+    required_groupings = list(dict.fromkeys(
+        value for value in request.dimensions
+        if value not in {"时间", "日期", "年", "季度", "月", "周", "日"}
+        and normalized_role(value) not in normalized_filter_roles
+    ))
     default_time_only = "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
     period_independent_scope = any(
         value in {
@@ -89,10 +112,10 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         for value in request.assumptions
     )
     time_policy = (
-        "REQUIRED"
-        if request.primary_intent == PrimaryIntent.TREND_ANALYSIS
-        else "FORBIDDEN"
+        "FORBIDDEN"
         if period_independent_scope or (detail_like and default_time_only)
+        else "REQUIRED"
+        if request.time_range is not None
         else "OPTIONAL"
     )
     return {
@@ -103,6 +126,7 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         "required_metrics": [metric.canonical_name or metric.input for metric in request.metrics],
         "required_metric_codes": metric_codes,
         "required_projections": list(dict.fromkeys(request.fields if detail_like else [])),
+        "required_groupings": required_groupings if not detail_like else [],
         "projection_mode": (
             "DISTINCT"
             if detail_like and requires_distinct_relationship_projection(request)
@@ -128,6 +152,16 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         ),
         "time_dimension_required": request.primary_intent == PrimaryIntent.TREND_ANALYSIS,
         "time_policy": time_policy,
+        "canonical_time_range": (
+            {
+                "start": request.time_range.start.isoformat(),
+                "end": (
+                    request.time_range.end_exclusive - timedelta(days=1)
+                ).isoformat(),
+            }
+            if time_policy == "REQUIRED" and request.time_range is not None
+            else None
+        ),
     }
 
 
@@ -144,6 +178,11 @@ def validate_intent_asl_contract_definition(contract: dict[str, Any]) -> list[st
             errors.append("DETAIL_PROJECTION_REQUIRED")
         if contract.get("projection_mode") not in {"DISTINCT", "ROWS"}:
             errors.append("DETAIL_PROJECTION_MODE_REQUIRED")
+    groupings = contract.get("required_groupings")
+    if not isinstance(groupings, list) or any(
+        not isinstance(value, str) or not value.strip() for value in groupings
+    ):
+        errors.append("GROUPING_CONTRACT_INVALID")
     if contract.get("metric_required") and not (
         contract.get("required_metric_codes") or contract.get("required_metrics")
     ):
@@ -154,6 +193,15 @@ def validate_intent_asl_contract_definition(contract: dict[str, Any]) -> list[st
         errors.append("TIME_POLICY_INVALID")
     if contract.get("time_dimension_required") and contract.get("time_policy") != "REQUIRED":
         errors.append("TIME_POLICY_CONFLICT")
+    canonical_time_range = contract.get("canonical_time_range")
+    if contract.get("time_policy") == "REQUIRED" and not (
+        isinstance(canonical_time_range, dict)
+        and canonical_time_range.get("start")
+        and canonical_time_range.get("end")
+    ):
+        errors.append("CANONICAL_TIME_RANGE_REQUIRED")
+    if contract.get("time_policy") != "REQUIRED" and canonical_time_range is not None:
+        errors.append("CANONICAL_TIME_RANGE_FORBIDDEN")
     mentions = contract.get("semantic_entity_mentions")
     if not isinstance(mentions, list) or any(
         not isinstance(value, str)

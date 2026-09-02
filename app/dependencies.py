@@ -21,6 +21,11 @@ from app.services.entity_extraction import build_gliner_extractor_from_environme
 from app.planning import MultiQuestionPlanner
 from app.services.knowledge_retrieval import RedisKnowledgeSearchCache
 from app.stores import InMemorySessionStore, RedisSessionStore, SessionStore
+from app.stores.events import (
+    InMemorySessionEventStore,
+    RedisSessionEventStore,
+    SessionEventStore,
+)
 from app.stores.long_memory import (
     InMemoryLongTermMemoryStore,
     LongTermMemoryStore,
@@ -35,6 +40,7 @@ class Container:
     settings: Settings
     adapters: AdapterBundle
     sessions: SessionStore
+    event_store: SessionEventStore
     memories: LongTermMemoryStore | None
     dataset_store: HybridMinioFollowupStore | None
     dataset_cleaner: DatasetLifecycleCleaner | None
@@ -64,6 +70,15 @@ def build_container(settings: Settings) -> Container:
         sessions = InMemorySessionStore(
             settings.session_ttl_seconds, settings.response_cache_ttl_seconds
         )
+    event_store: SessionEventStore = (
+        RedisSessionEventStore(
+            sessions.redis,
+            prefix=settings.session_key_prefix,
+            ttl_seconds=settings.session_ttl_seconds,
+        )
+        if isinstance(sessions, RedisSessionStore)
+        else InMemorySessionEventStore()
+    )
     if settings.env == "test":
         memories: LongTermMemoryStore | None = InMemoryLongTermMemoryStore()
     elif settings.long_term_memory_mode == "disabled":
@@ -192,6 +207,7 @@ def build_container(settings: Settings) -> Container:
         classifier=HybridIntentClassifier(settings),
         adapters=adapters,
         sessions=sessions,
+        event_store=event_store,
         memories=memories,
         dataset_store=dataset_store,
         question_rewriter=(
@@ -224,6 +240,7 @@ def build_container(settings: Settings) -> Container:
         settings=settings,
         adapters=adapters,
         sessions=sessions,
+        event_store=event_store,
         memories=memories,
         dataset_store=dataset_store,
         dataset_cleaner=dataset_cleaner,

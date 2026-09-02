@@ -44,7 +44,7 @@ async def main() -> None:
         second_response.raise_for_status()
 
     container = build_container(get_settings())
-    events = await container.events.list_events(
+    events = await container.event_store.list_events(
         "default-tenant",
         "default-user",
         "data-analysis",

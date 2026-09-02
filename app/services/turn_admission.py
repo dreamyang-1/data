@@ -797,24 +797,53 @@ class TurnAdmissionGate:
                     confidence=1.0,
                 )
 
-        if "analysis_type" in facts.explicit_slots:
+        # A pending clarification owns an already-confirmed execution shape.
+        # Words such as “期间内存在销售记录” can look like an analysis request
+        # when parsed in isolation, but they are only filling the missing slot.
+        # A genuine replacement task is separated before this method is called.
+        if (
+            "analysis_type" in facts.explicit_slots
+            and request.pending_state_version is None
+        ):
+            previous_primary_intent = request.primary_intent
             request.primary_intent = current.primary_intent
-            request.secondary_intents = list(current.secondary_intents)
+            if (
+                current.secondary_intents
+                or previous_primary_intent != current.primary_intent
+                or not request.secondary_intents
+            ):
+                request.secondary_intents = list(current.secondary_intents)
             request.operators = list(current.operators)
-        if "metrics" in facts.explicit_slots:
+        apply_current_slots = request.pending_state_version is None
+        if apply_current_slots and "metrics" in facts.explicit_slots:
             request.metrics = [item.model_copy(deep=True) for item in current.metrics]
-        if "query_object" in facts.explicit_slots:
+        if apply_current_slots and "query_object" in facts.explicit_slots:
             request.entity = current.entity
             request.fields = list(current.fields)
-        if "dimensions" in facts.explicit_slots:
+        if apply_current_slots and "dimensions" in facts.explicit_slots:
             explicit_dimensions = facts.explicit_slots["dimensions"].value
             request.dimensions = (
                 list(explicit_dimensions)
                 if isinstance(explicit_dimensions, list)
                 else []
             )
-        if "filters" in facts.explicit_slots:
-            explicit_filters = facts.explicit_slots["filters"].value
+        if apply_current_slots and "filters" in facts.explicit_slots:
+            explicit_filter_slot = facts.explicit_slots["filters"]
+            explicit_filters = explicit_filter_slot.value
+            if (
+                explicit_filter_slot.source
+                == SlotSource.CURRENT_REFERENCE_RESOLUTION
+                and isinstance(explicit_filters, list)
+            ):
+                # An elliptical entity replacement supplies a complete current
+                # filter set after removing the superseded role.  An empty set
+                # is meaningful here: the new noun is intentionally waiting
+                # for semantic-layer role resolution and the old filter must
+                # not leak back in through the active frame.
+                request.filters = [
+                    dict(item) for item in explicit_filters
+                    if isinstance(item, dict)
+                ]
             for current_filter in (
                 explicit_filters if isinstance(explicit_filters, list) else []
             ):
@@ -828,13 +857,13 @@ class TurnAdmissionGate:
                     if str(item.get("field") or "") != field
                 ]
                 request.filters.append(dict(current_filter))
-        if "time_range" in facts.explicit_slots:
+        if apply_current_slots and "time_range" in facts.explicit_slots:
             request.time_range = current.time_range
             request.assumptions = [
                 item for item in request.assumptions
                 if not item.startswith("DEFAULT_TIME_RANGE=")
             ]
-        if "time_grain" in facts.explicit_slots:
+        if apply_current_slots and "time_grain" in facts.explicit_slots:
             request.assumptions = [
                 item for item in request.assumptions
                 if not item.startswith("DEFAULT_TIME_GRANULARITY=")
@@ -874,9 +903,9 @@ class TurnAdmissionGate:
                     request.slot_provenance["analysis_type"] = (
                         facts.explicit_slots["analysis_type"]
                     )
-        if "comparison" in facts.explicit_slots:
+        if apply_current_slots and "comparison" in facts.explicit_slots:
             request.comparison_type = current.comparison_type
-        if "top_n" in facts.explicit_slots:
+        if apply_current_slots and "top_n" in facts.explicit_slots:
             request.ranking_limit = current.ranking_limit
 
         if decision.relation == TurnRelation.STANDALONE_NEW_TOPIC:
@@ -1002,16 +1031,17 @@ class TurnAdmissionGate:
         prior = candidates[0]
         if str(prior.get("value") or "").strip() == value:
             return
-        replacement = {
-            "field": str(prior.get("field") or ""),
-            "operator": "EQ",
-            "value": value,
-        }
+        prior_field = str(prior.get("field") or "")
+        # The current noun is model-extracted, but its business role is not
+        # proved by the previous filter.  Reusing that field turned a brand
+        # follow-up such as “那费森尤斯呢” into 商品名称=费森尤斯.  Remove only
+        # the replaced active filter and keep the noun in
+        # semantic_entity_mentions; Oagnet must bind it against the latest
+        # governed semantic attributes and source catalog.
         current.filters = [
             dict(item) for item in previous.filters
-            if str(item.get("field") or "") != replacement["field"]
+            if str(item.get("field") or "") != prior_field
         ]
-        current.filters.append(replacement)
         facts = decision.current_turn_facts
         facts.explicit_slots["filters"] = SlotProvenance(
             value=[dict(item) for item in current.filters],
@@ -1025,15 +1055,7 @@ class TurnAdmissionGate:
             ),
             confidence=max(current.intent_confidence, 0.8),
         )
-        family = cls._semantic_field_family(replacement["field"])
-        if family:
-            facts.core_subjects[family] = value
-            facts.explicit_slots[family] = SlotProvenance(
-                value=value,
-                source=SlotSource.CURRENT_REFERENCE_RESOLUTION,
-                source_turn=facts.explicit_slots["filters"].source_turn,
-                confidence=max(current.intent_confidence, 0.8),
-            )
+        family = cls._semantic_field_family(prior_field)
         decision.relation = TurnRelation.CURRENT_TOPIC_MODIFICATION
         decision.core_subject_changed = True
         decision.reason_codes = list(dict.fromkeys([
@@ -1044,7 +1066,6 @@ class TurnAdmissionGate:
         decision.protected_slots = list(dict.fromkeys([
             *decision.protected_slots,
             "filters",
-            *( [family] if family else [] ),
         ]))
         decision.inheritance_slots = [
             slot for slot in decision.inheritance_slots

@@ -50,7 +50,7 @@ async def main() -> None:
     first = turn_1.json()
     second = turn_2.json()
     container = build_container(get_settings())
-    events = await container.events.list_events(
+    events = await container.event_store.list_events(
         "default-tenant",
         "default-user",
         "data-analysis",

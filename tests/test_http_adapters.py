@@ -95,6 +95,76 @@ def request():
     return CanonicalAnalysisRequest(conversation_id="c1", tenant_id="t1", user_id="u1", original_question="不同会员等级的客单价是多少？", primary_intent=PrimaryIntent.METRIC_QUERY)
 
 
+def test_semantic_entity_mention_accepts_source_backed_canonical_repair():
+    req = request().model_copy(update={
+        "semantic_entity_mentions": ["费森尤斯"],
+    })
+    asl = {
+        "filters": [{
+            "field": "manufacturer.parent_brand",
+            "operator": "=",
+            "value": "费森尤斯",
+        }],
+    }
+
+    HttpDataRetrievalAdapter._validate_semantic_entity_mentions(
+        asl,
+        req,
+        [{
+            "type": "ADD_SOURCE_RESOLVED_ENTITY_FILTER",
+            "mention": "费森尤斯",
+            "canonical_value": "费森尤斯",
+            "resolved_field": "manufacturer.parent_brand",
+        }],
+    )
+
+
+def test_semantic_entity_mention_rejects_missing_source_binding_proof():
+    req = request().model_copy(update={
+        "semantic_entity_mentions": ["费森尤斯"],
+    })
+
+    with pytest.raises(AdapterError) as exc:
+        HttpDataRetrievalAdapter._validate_semantic_entity_mentions(
+            {"filters": []}, req, [],
+        )
+
+    assert exc.value.code == "ASL_ENTITY_MENTION_UNRESOLVED"
+
+
+@pytest.mark.asyncio
+async def test_contextual_entity_mention_is_preserved_for_current_semantic_recall():
+    req = CanonicalAnalysisRequest(
+        conversation_id="contextual-brand-recall",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="那费森尤斯呢",
+        rewritten_question=(
+            "查询明细；对象：经销商；返回字段：经销商名称；分析维度：经销商"
+        ),
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="经销商",
+        fields=["经销商名称"],
+        dimensions=["经销商"],
+        semantic_entity_mentions=["费森尤斯"],
+    )
+    client = StubClient([{"success": False}])
+
+    with pytest.raises(AdapterError) as exc:
+        await HttpDataRetrievalAdapter(
+            Settings(adapter_mode="http"), client
+        ).query(req, IDENTITY, semantic_model_id=81, business_domain_id=205)
+
+    assert exc.value.code == "ASL_GENERATION_FAILED"
+    retrieval_query = client.calls[0][2]["retrieval_query"]
+    assert "费森尤斯" in retrieval_query
+    assert "当前语义层维度及关系" in retrieval_query
+    assert all(
+        label in retrieval_query
+        for label in ("品牌", "母厂牌", "生产厂家", "商品品类")
+    )
+
+
 def test_required_non_null_name_filter_accepts_current_semantic_field():
     required = CanonicalAnalysisRequest(
         conversation_id="non-null-filter",
@@ -335,6 +405,23 @@ def test_detail_field_validation_accepts_registered_hospital_name_column():
     )
 
     assert missing == []
+
+
+@pytest.mark.parametrize(
+    ("field", "logical_dimension"),
+    (
+        ("经销商名称", "dealer"),
+        ("医院名称", "hospital"),
+        ("商品名称", "product"),
+        ("厂家名称", "manufacturer"),
+    ),
+)
+def test_detail_field_validation_accepts_registered_logical_dimensions(
+    field, logical_dimension,
+):
+    assert HttpDataRetrievalAdapter._missing_detail_fields(
+        [field], [{"name": logical_dimension}],
+    ) == []
 
 
 def test_detail_retrieval_query_expands_related_entities_without_physical_names():

@@ -723,6 +723,7 @@ class RuleBasedIntentClassifier:
             ("销售订单分布", "订单笔数"),
             ("订单分布", "订单笔数"),
             ("销售订单数据", "订单笔数"),
+            ("销售规模", "整体业务规模"),
         )
         for surface, canonical in aliases:
             position = text.find(surface)
@@ -1481,8 +1482,252 @@ class RuleBasedIntentClassifier:
         ):
             request.comparison_type = "对象间比较"
         cls._apply_manufacturer_metric_scope(request, question)
+        cls._apply_semantic_catalog_guardrails(request, question)
         cls._apply_name_projection_non_null_constraint(request)
         cls._drop_invalid_filter_values(request)
+
+    @classmethod
+    def _apply_semantic_catalog_guardrails(
+        cls,
+        request: CanonicalAnalysisRequest,
+        question: str,
+    ) -> None:
+        """Preserve explicit current-turn catalog roles before semantic grounding.
+
+        These guards do not choose physical columns or decide whether a literal
+        is a product, brand or category in the source.  They preserve only roles
+        that the user stated unambiguously (product marker, manufacturer marker,
+        result object and requested attribute).  Oagnet must still resolve every
+        semantic label and exact literal against the current semantic metadata and
+        source-value index.  This provides a lossless fallback when structured LLM
+        enrichment is unavailable without turning suffix lists into a catalog.
+        """
+
+        compact = re.sub(r"\s+", "", question).strip("。！!？?")
+
+        def put_filter(field: str, operator: str, value: str) -> None:
+            value = value.strip("的，,；;、")
+            if not value:
+                return
+            request.filters = [
+                item for item in request.filters
+                if str(item.get("field") or "") != field
+            ]
+            request.filters.append({
+                "field": field,
+                "operator": operator,
+                "value": value,
+            })
+            request.semantic_entity_mentions = list(dict.fromkeys([
+                *request.semantic_entity_mentions,
+                value,
+            ]))
+
+        # ``查询某厂家产品`` is a product-master projection filtered by the
+        # manufacturer, not a scalar metric with a missing measure.
+        maker_products = re.fullmatch(
+            r"(?:请|麻烦|帮我|给我|请帮我)?(?:查询|查找|列出|展示|显示|查看)"
+            r"(?P<maker>[^，,。；;]{1,100}?)厂家(?:的)?(?:产品|商品)(?:名单|清单|列表)?",
+            compact,
+        )
+        if maker_products is not None:
+            request.primary_intent = PrimaryIntent.DETAIL_QUERY
+            request.secondary_intents = [
+                item for item in request.secondary_intents
+                if item != PrimaryIntent.METRIC_QUERY
+            ]
+            request.entity = "商品"
+            request.metrics = []
+            request.fields = ["商品名称"]
+            request.dimensions = ["商品"]
+            request.risk_level = "HIGH"
+            request.operators = [
+                operator for operator in request.operators
+                if operator != AnalysisOperator.AGGREGATE
+            ]
+            for operator in (AnalysisOperator.FILTER, AnalysisOperator.RENDER_TABLE):
+                if operator not in request.operators:
+                    request.operators.append(operator)
+            put_filter("厂家名称", "EQ", maker_products.group("maker"))
+            if "SET_RELATIONSHIP_PROJECTION" not in request.assumptions:
+                request.assumptions.append("SET_RELATIONSHIP_PROJECTION")
+
+        # A plain regional partner lookup has an implicit list shape.
+        simple_partner = re.fullmatch(
+            r"(?:请|麻烦|帮我|给我|请帮我)?(?:查询|查找|列出|展示|显示|查看)"
+            r"(?:(?:北京|上海|天津|重庆)(?:市|地区)?|"
+            r"(?:香港|澳门)特别行政区|[\u4e00-\u9fff]{2,12}(?:省|自治区|市|地区))?"
+            r"(?P<partner>经销商|供应商)(?:名单|清单|列表)?",
+            compact,
+        )
+        if simple_partner is not None and not request.metrics:
+            partner = simple_partner.group("partner")
+            request.primary_intent = PrimaryIntent.DETAIL_QUERY
+            request.entity = partner
+            request.fields = [f"{partner}名称"]
+            request.dimensions = [partner]
+            request.risk_level = "HIGH"
+            request.operators = [
+                operator for operator in request.operators
+                if operator != AnalysisOperator.AGGREGATE
+            ]
+            for operator in (AnalysisOperator.FILTER, AnalysisOperator.RENDER_TABLE):
+                if operator not in request.operators:
+                    request.operators.append(operator)
+            if "SET_RELATIONSHIP_PROJECTION" not in request.assumptions:
+                request.assumptions.append("SET_RELATIONSHIP_PROJECTION")
+
+        # Explicit product attributes are row projections.  The literal remains
+        # a provisional semantic value until exact source-backed resolution.
+        product_attribute = re.fullmatch(
+            r"(?:请|麻烦|帮我|给我|请帮我)?(?:查询|查找|列出|展示|显示|查看)"
+            r"(?P<product>[^，,。；;]{2,100}?)(?:产品|商品)(?:的)?"
+            r"(?P<attribute>规格|型号)",
+            compact,
+        )
+        if product_attribute is not None:
+            request.primary_intent = PrimaryIntent.DETAIL_QUERY
+            request.entity = "商品"
+            request.metrics = []
+            request.fields = [f"商品{product_attribute.group('attribute')}"]
+            request.dimensions = ["商品"]
+            request.risk_level = "HIGH"
+            put_filter("商品名称", "EQ", product_attribute.group("product"))
+
+        # Preserve a concrete ``X产品`` span for metric, ranking and trend
+        # requests.  Location prefixes are already represented by a region slot
+        # and must not become part of the catalog literal.
+        product_metric = re.search(
+            r"^(?:请|麻烦|帮我|给我|请帮我)?(?:查询|查找|查看|统计|计算|分析)?"
+            r"(?P<product>[^，,。；;]{2,100}?)(?:产品|商品)(?:的)?"
+            r"(?:按(?:日|周|月|季度|年))?"
+            r"(?:含税销售总额|销售总额|销售额|销售总数量|销售数量|销售量|"
+            r"订单笔数|订单量|销售趋势|销售额趋势)",
+            compact,
+        )
+        if product_metric is not None and request.metrics:
+            product = re.sub(
+                r"^(?:(?:北京|上海|天津|重庆)(?:市|地区)?|"
+                r"(?:香港|澳门)特别行政区|"
+                r"[\u4e00-\u9fff]{2,12}(?:省|自治区|市|地区))",
+                "",
+                product_metric.group("product"),
+            )
+            product = re.sub(
+                r"^(?:(?:查询|查找|查看|统计|计算|分析|按(?:日|周|月|季度|年)"
+                r"(?:统计|分析|查看|查询)?))+",
+                "",
+                product,
+            ).strip("的")
+            has_manufacturer_scope = any(
+                str(item.get("field") or "") in {
+                    "厂家", "厂家名称", "制造商", "制造商名称",
+                }
+                for item in request.filters
+                if isinstance(item, dict)
+            )
+            if 2 <= len(product) <= 100 and not has_manufacturer_scope:
+                put_filter("商品名称", "EQ", product)
+                if request.entity is None:
+                    request.entity = "产品"
+
+        # When the user omits the role word (for example “人工心肺系统的销售
+        # 总数量”), retain the full metric subject as an unresolved semantic
+        # mention.  This is not assigned to 商品名称 here: Oagnet must classify
+        # it against the current semantic catalog and source-value index, so a
+        # later metadata update can legitimately resolve it as brand/category.
+        implicit_metric_subject = re.search(
+            r"^(?:请|麻烦|帮我|给我|请帮我)?(?:查询|查找|查看|统计|计算|分析)?"
+            r"(?P<subject>[^，,。；;]{2,100}?)(?:的)?"
+            r"(?:含税销售总额|销售总额|销售额|销售总数量|销售数量|销售量|"
+            r"订单笔数|订单量|销售趋势|销售额趋势)$",
+            compact,
+        )
+        if implicit_metric_subject is not None and request.metrics:
+            subject = implicit_metric_subject.group("subject").strip("的")
+            # The subject capture intentionally runs after intent parsing, but
+            # grouped-analysis wording may still be part of the captured span
+            # (for example “按月分析外周插管中心静脉导管”).  Strip only query
+            # scaffolding; never trim the remaining business noun by suffix or
+            # a static entity dictionary.  Oagnet will ground that complete
+            # noun against the current published semantic catalog.
+            subject = re.sub(
+                r"^(?:(?:查询|查找|查看|统计|计算|分析|展示|返回)|"
+                r"按(?:日|天|周|月|季度|年)(?:度|份)?"
+                r"(?:统计|计算|分析|查看|查询|展示|返回)?)+",
+                "",
+                subject,
+            ).strip("的")
+            subject = re.sub(
+                r"^(?:(?:北京|上海|天津|重庆)(?:市|地区)?|"
+                r"(?:香港|澳门)特别行政区|"
+                r"[\u4e00-\u9fff]{2,12}(?:省|自治区|市|地区))",
+                "",
+                subject,
+            ).strip("的")
+            has_named_scope = any(
+                str(item.get("field") or "") in {
+                    "厂家", "厂家名称", "制造商", "制造商名称",
+                    "医院", "医院名称",
+                }
+                for item in request.filters
+                if isinstance(item, dict)
+            )
+            if subject and not has_named_scope and subject not in {
+                "今年", "去年", "本年", "本月", "上月", "整体", "全部", "总",
+            }:
+                request.semantic_entity_mentions = list(dict.fromkeys([
+                    *request.semantic_entity_mentions,
+                    subject,
+                ]))
+
+        ranked_partner = re.search(
+            r"(?:最高|最低|最大|最小)(?:的)?(?P<partner>经销商|供应商|医院)",
+            compact,
+        )
+        if ranked_partner is not None and request.metrics:
+            partner = ranked_partner.group("partner")
+            request.primary_intent = PrimaryIntent.METRIC_QUERY
+            request.entity = partner
+            request.dimensions = [
+                value for value in request.dimensions
+                if value not in {"产品", "商品"}
+            ]
+            if partner not in request.dimensions:
+                request.dimensions.append(partner)
+            request.ranking_limit = request.ranking_limit or 1
+            for operator in (
+                AnalysisOperator.GROUP_BY,
+                AnalysisOperator.AGGREGATE,
+                AnalysisOperator.TOP_N,
+            ):
+                if operator not in request.operators:
+                    request.operators.append(operator)
+
+        # A full institution name must remain whole.  The semantic service may
+        # rebind the role, but must never shorten it to a generic suffix such as
+        # ``口腔医院`` or ``江湾医院``.
+        named_hospital = re.search(
+            r"^(?:请|麻烦|帮我|给我|请帮我)?(?:查询|查找|查看|统计|计算|分析)?"
+            r"(?P<hospital>[^，,。；;]{2,100}?(?:医院|护理院|卫生服务中心|卫生院))(?:的)?"
+            r"(?:含税销售总额|销售总额|销售额|销售总数量|销售数量|销售量|"
+            r"订单笔数|订单量)",
+            compact,
+        )
+        if named_hospital is not None and request.metrics:
+            hospital = named_hospital.group("hospital").strip("的")
+            has_hospital_level_scope = any(
+                str(item.get("field") or "") in {
+                    "医院等级", "医院级别", "医院层级",
+                }
+                for item in request.filters
+                if isinstance(item, dict)
+            )
+            if (
+                not has_hospital_level_scope
+                and not re.match(r"^(?:各|每家|所有|全部)", hospital)
+            ):
+                put_filter("医院名称", "EQ", hospital)
 
     @classmethod
     def _apply_manufacturer_metric_scope(

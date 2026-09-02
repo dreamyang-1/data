@@ -36,6 +36,11 @@ from app.services.knowledge_retrieval import (
     normalize_and_deduplicate_hits,
 )
 from app.services.progress import emit_progress
+from app.services.intent_asl_contract import (
+    build_intent_asl_contract,
+    validate_intent_asl_contract_completeness,
+    validate_intent_asl_contract_definition,
+)
 from app.services.relationship_projection import (
     requires_distinct_relationship_projection,
 )
@@ -674,6 +679,35 @@ class HttpDataRetrievalAdapter:
             ).encode("utf-8")).hexdigest()
             for definition in metric_definitions
         ]
+        intent_asl_contract: dict[str, Any] | None = build_intent_asl_contract(request)
+        contract_definition_errors = validate_intent_asl_contract_definition(
+            intent_asl_contract
+        )
+        if contract_definition_errors:
+            if request.turn_admission is not None:
+                raise AdapterError(
+                    "INTENT_ASL_CONTRACT_INVALID",
+                    "canonical request produced an invalid Intent-ASL contract",
+                    details={"errors": contract_definition_errors},
+                )
+            # Direct adapter callers and older internal tests may intentionally
+            # provide a partial request.  They retain the legacy path; admitted
+            # user turns always have to satisfy the full contract above.
+            intent_asl_contract = None
+        contract_completeness_errors = (
+            validate_intent_asl_contract_completeness(
+                intent_asl_contract,
+                request,
+            )
+            if intent_asl_contract is not None
+            else []
+        )
+        if contract_completeness_errors:
+            raise AdapterError(
+                "INTENT_ASL_CONTRACT_INCOMPLETE",
+                "Intent-ASL contract lost one or more explicit current-turn requirements",
+                details={"errors": contract_completeness_errors},
+            )
 
         semantic_query = request.rewritten_question or request.original_question
         # Keep equivalent temporal grouping word orders away from the semantic
@@ -1065,6 +1099,27 @@ class HttpDataRetrievalAdapter:
                     "\n执行要求：当前趋势区间不少于60天且用户未明确粒度，默认按月分组返回；"
                     "时间维度必须使用time_context.anchor对应字段，不能使用其他实体日期。"
                 )
+        # A contextual rewrite deliberately omits unresolved replacement
+        # literals from the executable sentence until their semantic role is
+        # source-verified.  Keep those caller-owned literals in semantic recall,
+        # otherwise attributes such as a newly published brand/manufacturer
+        # dimension may never enter the current knowledge scope and cannot be
+        # resolved.  These hints affect recall only; the ASL contract and live
+        # source catalog still decide the field and canonical value.
+        semantic_mentions = list(dict.fromkeys(
+            value.strip()
+            for value in request.semantic_entity_mentions
+            if value.strip()
+        ))
+        if semantic_mentions:
+            mention_text = " ".join(semantic_mentions)
+            if mention_text not in retrieval_query:
+                retrieval_query += f" {mention_text}"
+            retrieval_query += (
+                " 实体筛选值 身份属性 名称 品牌 母厂牌 生产厂家 "
+                "商品名称 商品品类 产品分类 当前语义层维度及关系"
+            )
+
         # Shape-specific branches above may rebuild ``retrieval_query`` (for
         # example grouped partner metrics). Manufacturer/brand filters still
         # need the current semantic model's registered name attributes in the
@@ -1089,6 +1144,7 @@ class HttpDataRetrievalAdapter:
         asl_cache_key: str | None = None
         cacheable_asl = (
             not request.dependency_constraints
+            and not request.semantic_entity_mentions
             # Without an upstream semantic-metadata version in the cache key,
             # a filtered or grouped plan can retain renamed dimensions and
             # relationship paths for several minutes.  Always re-resolve such
@@ -1122,10 +1178,13 @@ class HttpDataRetrievalAdapter:
                     if metric.metric_id is not None
                 ],
                 "metric_definition_fingerprints": metric_definition_fingerprints,
+                "intent_asl_contract": intent_asl_contract,
             }, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+        intent_contract_confirmed = False
+        asl_repairs: list[dict[str, Any]] = []
         asl = (
             None
-            if request.dependency_constraints
+            if request.dependency_constraints or request.semantic_entity_mentions
             else self._reuse_time_only_asl(request, semantic_model_id)
         )
         if asl is None and asl_cache_key is not None:
@@ -1134,6 +1193,7 @@ class HttpDataRetrievalAdapter:
                 expires_at, cached_asl = cached
                 if expires_at > time.monotonic():
                     asl = copy.deepcopy(cached_asl)
+                    intent_contract_confirmed = intent_asl_contract is not None
                 else:
                     self._asl_plan_cache.pop(asl_cache_key, None)
         if asl is None:
@@ -1151,6 +1211,11 @@ class HttpDataRetrievalAdapter:
                         for metric in request.metrics
                         if metric.metric_id is not None
                     ],
+                    "metricless_projection": bool(
+                        request.execution_contract_transform
+                        == "RELATIONSHIP_COUNT_TO_DISTINCT_PROJECTION"
+                    ),
+                    "intent_asl_contract": intent_asl_contract,
                     "analysis_operator": (
                         analysis_contract.operator if analysis_contract is not None else None
                     ),
@@ -1175,6 +1240,29 @@ class HttpDataRetrievalAdapter:
             )
             if generated.get("success") is not True:
                 raise AdapterError("ASL_GENERATION_FAILED", "ASL generator rejected request")
+            contract_acknowledged = (
+                "asl_validation" in generated or "asl_contract" in generated
+            )
+            if contract_acknowledged and (
+                generated.get("asl_validation") != "PASS"
+                or generated.get("asl_contract") != intent_asl_contract
+            ):
+                raise AdapterError(
+                    "ASL_INTENT_CONTRACT_UNCONFIRMED",
+                    "ASL generator did not confirm the caller-owned Intent-ASL contract",
+                    details={
+                        "validation": generated.get("asl_validation"),
+                        "validation_error_code": generated.get(
+                            "asl_validation_error_code"
+                        ),
+                    },
+                )
+            intent_contract_confirmed = contract_acknowledged
+            asl_repairs = [
+                dict(item)
+                for item in generated.get("asl_repair") or []
+                if isinstance(item, dict)
+            ]
             requested_domains = list(request.business_domain_ids)
             if len(requested_domains) > 1:
                 echoed_domains = generated.get("business_domain_ids")
@@ -1211,10 +1299,17 @@ class HttpDataRetrievalAdapter:
                     )
         self._remove_unrequested_metric_window_time(asl, request)
         self._repair_model81_trend_time(asl, request, semantic_model_id)
-        self._bind_canonical_time_range(asl, request)
+        self._bind_canonical_time_range(
+            asl,
+            request,
+            time_policy=str(
+                (intent_asl_contract or {}).get("time_policy") or "OPTIONAL"
+            ),
+        )
         self._repair_required_model81_dimensions(asl, request, semantic_model_id)
         self._deduplicate_relationship_identity_dimensions(asl)
         self._ensure_required_name_non_null_filters(asl, request)
+        self._validate_semantic_entity_mentions(asl, request, asl_repairs)
         bound_metric_codes = {
             metric.metric_id.split(":", 1)[1]
             for metric in request.metrics
@@ -1270,7 +1365,11 @@ class HttpDataRetrievalAdapter:
                 "ASL generator returned business ambiguities",
                 details=ambiguities,
             )
-        self._validate_request_filters(asl, request)
+        self._validate_request_filters(
+            asl,
+            request,
+            exact_operator_contract=intent_contract_confirmed,
+        )
         self._validate_no_synthetic_product_filter(asl, request)
         self._validate_dependency_constraints(asl, request)
         if request.primary_intent == PrimaryIntent.DETAIL_QUERY:
@@ -1632,9 +1731,9 @@ class HttpDataRetrievalAdapter:
         self,
         request: CanonicalAnalysisRequest,
         identity: TrustedIdentity,
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, Any]]:
         """Read the current published formula for every version-bound metric."""
-        definitions: list[dict[str, str]] = []
+        definitions: list[dict[str, Any]] = []
         for metric in request.metrics:
             if not metric.metric_id or not metric.version:
                 continue
@@ -1667,6 +1766,14 @@ class HttpDataRetrievalAdapter:
                 "metric_id": metric.metric_id,
                 "version": str(payload.get("version") or metric.version),
                 "formula": formula,
+                # Formula and global filters jointly define a governed metric.
+                # Including both in the plan fingerprint prevents a published
+                # filter change from reusing ASL generated from an older scope.
+                "global_filters": (
+                    payload.get("global_filters")
+                    if isinstance(payload.get("global_filters"), list)
+                    else []
+                ),
             })
         return definitions
 
@@ -1674,7 +1781,7 @@ class HttpDataRetrievalAdapter:
     def _apply_current_metric_formulas(
         cls,
         sql: str,
-        definitions: list[dict[str, str]],
+        definitions: list[dict[str, Any]],
     ) -> str:
         """Reject or safely repair SQL produced from a stale metric snapshot.
 
@@ -1734,14 +1841,18 @@ class HttpDataRetrievalAdapter:
 
     @classmethod
     def _validate_request_filters(
-        cls, asl: dict[str, Any], request: CanonicalAnalysisRequest
+        cls,
+        asl: dict[str, Any],
+        request: CanonicalAnalysisRequest,
+        *,
+        exact_operator_contract: bool = False,
     ) -> None:
         """Fail closed when generated ASL drops a caller-grounded filter value."""
         generated = [
             item for item in (asl.get("filters") or []) if isinstance(item, dict)
         ]
         negative_operators = {
-            "NE", "!=", "<>", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE",
+            "NE", "!=", "<>", "NOT_EQ", "NOT EQ", "NOT IN", "NOT_IN", "EXCLUDE",
         }
         null_operators = {
             "IS_NOT_NULL", "IS NOT NULL", "NOT_NULL", "NOT NULL",
@@ -1787,14 +1898,16 @@ class HttpDataRetrievalAdapter:
             }
             if not required_text:
                 continue
-            required_negative = str(
+            required_operator = str(
                 required.get("operator") or "EQ"
-            ).upper() in negative_operators
+            ).upper().replace("_", " ")
+            required_negative = required_operator in negative_operators
             preserved = False
             for item in generated:
-                candidate_negative = str(
+                candidate_operator = str(
                     item.get("operator") or "EQ"
-                ).upper() in negative_operators
+                ).upper().replace("_", " ")
+                candidate_negative = candidate_operator in negative_operators
                 if candidate_negative != required_negative:
                     continue
                 candidate = item.get("value")
@@ -1804,14 +1917,27 @@ class HttpDataRetrievalAdapter:
                     for value in candidate_values
                     if value not in (None, "")
                 }
-                if all(
-                    any(
-                        required_value == candidate_value
-                        or required_value in candidate_value
-                        or candidate_value in required_value
-                        for candidate_value in candidate_text
+                required_exact = required_operator in {
+                    "EQ", "=", "EQUAL", "EQUALS", "NE", "!=", "<>", "NOT EQ",
+                }
+                candidate_exact = candidate_operator in {
+                    "EQ", "=", "EQUAL", "EQUALS", "NE", "!=", "<>", "NOT EQ",
+                }
+                if exact_operator_contract and (
+                    required_exact
+                    and candidate_exact
+                    and required_text == candidate_text
+                ) or (
+                    (not exact_operator_contract or not required_exact)
+                    and all(
+                        any(
+                            required_value == candidate_value
+                            or required_value in candidate_value
+                            or candidate_value in required_value
+                            for candidate_value in candidate_text
+                        )
+                        for required_value in required_text
                     )
-                    for required_value in required_text
                 ):
                     preserved = True
                     break
@@ -1850,6 +1976,60 @@ class HttpDataRetrievalAdapter:
                 "ASL_REQUIRED_NAME_NON_NULL_MISSING",
                 "ASL omitted a required master-name non-null constraint",
                 details={"missing_name_fields": missing_name_constraints},
+            )
+
+    @staticmethod
+    def _validate_semantic_entity_mentions(
+        asl: dict[str, Any],
+        request: CanonicalAnalysisRequest,
+        repairs: list[dict[str, Any]],
+    ) -> None:
+        """Require source-backed proof for every caller-owned untyped noun."""
+
+        mentions = list(dict.fromkeys(
+            value.strip()
+            for value in request.semantic_entity_mentions
+            if value.strip()
+        ))
+        if not mentions:
+            return
+        generated_filters = [
+            item for item in asl.get("filters") or [] if isinstance(item, dict)
+        ]
+        unresolved: list[str] = []
+        for mention in mentions:
+            direct = any(
+                str(item.get("value") or "").strip().strip("%") == mention
+                for item in generated_filters
+            )
+            resolved = False
+            for repair in repairs:
+                if (
+                    repair.get("type") != "ADD_SOURCE_RESOLVED_ENTITY_FILTER"
+                    or str(repair.get("mention") or "").strip() != mention
+                ):
+                    continue
+                field = str(repair.get("resolved_field") or "").strip()
+                canonical = str(repair.get("canonical_value") or "").strip()
+                resolved = bool(
+                    field
+                    and canonical
+                    and any(
+                        str(item.get("field") or "").strip() == field
+                        and str(item.get("value") or "").strip().strip("%")
+                        == canonical
+                        for item in generated_filters
+                    )
+                )
+                if resolved:
+                    break
+            if not direct and not resolved:
+                unresolved.append(mention)
+        if unresolved:
+            raise AdapterError(
+                "ASL_ENTITY_MENTION_UNRESOLVED",
+                "ASL did not provide source-backed bindings for semantic entity mentions",
+                details={"unresolved_mentions": unresolved},
             )
 
     @classmethod
@@ -2687,7 +2867,10 @@ class HttpDataRetrievalAdapter:
 
     @staticmethod
     def _bind_canonical_time_range(
-        asl: dict[str, Any], request: CanonicalAnalysisRequest
+        asl: dict[str, Any],
+        request: CanonicalAnalysisRequest,
+        *,
+        time_policy: str = "OPTIONAL",
     ) -> None:
         """Keep generated ASL on the canonical half-open request interval.
 
@@ -2700,6 +2883,11 @@ class HttpDataRetrievalAdapter:
             return
         time_context = asl.get("time_context")
         if not isinstance(time_context, dict) or not time_context.get("anchor"):
+            if time_policy.upper() == "REQUIRED":
+                raise AdapterError(
+                    "ASL_TIME_ANCHOR_MISSING",
+                    "time-bound analysis omitted a registered semantic time anchor",
+                )
             return
         asl["time_context"] = {
             **time_context,
@@ -2779,14 +2967,14 @@ class HttpDataRetrievalAdapter:
         "金额": ("金额", "amount", "payamount", "paymentamount"),
         "状态": ("状态", "status", "state"),
         "门店": ("门店", "店铺", "shop", "store"),
-        "商品名称": ("商品名称", "商品名", "goodsname", "productname", "itemname"),
+        "商品名称": ("商品名称", "商品名", "商品", "product", "goodsname", "productname", "itemname"),
         "商品分类": ("商品分类", "品类", "类目", "goodscategory", "productcategory", "categoryname"),
         "客户名称": ("客户名称", "客户名", "customername", "clientname"),
         "供应商名称": ("供应商名称", "供应商", "suppliername", "vendorname"),
-        "经销商名称": ("经销商名称", "经销商", "dealername", "distributorname"),
-        "医院名称": ("医院名称", "医院", "hospitalname", "medicalinstitutionname"),
-        "厂家名称": ("厂家名称", "厂家", "厂商", "manufacturername", "makername"),
-        "制造商名称": ("制造商名称", "制造商", "manufacturername", "makername"),
+        "经销商名称": ("经销商名称", "经销商", "dealer", "dealername", "distributorname"),
+        "医院名称": ("医院名称", "医院", "hospital", "hospitalname", "medicalinstitutionname"),
+        "厂家名称": ("厂家名称", "厂家", "厂商", "manufacturer", "manufacturername", "makername"),
+        "制造商名称": ("制造商名称", "制造商", "manufacturer", "manufacturername", "makername"),
         "品牌名称": ("品牌名称", "品牌", "brandname"),
         "母品牌": ("母品牌", "母品牌名称", "parentbrand", "parentbrandname"),
         "医院等级": ("医院等级", "医院级别", "hospitallevel", "hospitalgrade"),

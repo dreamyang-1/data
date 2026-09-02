@@ -84,7 +84,7 @@ def _filter_value(request: CanonicalAnalysisRequest, field: str) -> str | None:
     )
 
 
-def test_model_grounded_short_followup_replaces_active_entity_filter():
+def test_model_grounded_short_followup_defers_entity_role_to_semantic_layer():
     gate, previous, current, decision = _decision(
         "空心纤维血液透析器产品的经销商有哪些",
         "那费森尤斯呢",
@@ -109,11 +109,12 @@ def test_model_grounded_short_followup_replaces_active_entity_filter():
 
     assert decision.relation == TurnRelation.CURRENT_TOPIC_MODIFICATION
     assert "MODEL_GROUNDED_ENTITY_REPLACEMENT" in decision.reason_codes
-    assert _filter_value(merged, "商品名称") == "费森尤斯"
+    assert _filter_value(merged, "商品名称") is None
     assert all(
         str(item.get("value") or "") != "空心纤维血液透析器"
         for item in merged.filters
     )
+    assert current.semantic_entity_mentions == ["费森尤斯"]
     assert merged.asl_template is None
     assert merged.source_dataset_id is None
     assert "CORE_SUBJECT_CHANGE_REPLAN_REQUIRED" in merged.assumptions
@@ -122,7 +123,7 @@ def test_model_grounded_short_followup_replaces_active_entity_filter():
         if item.slot == "filters"
     )
     assert replacement.operation == SlotOperationType.REPLACE
-    assert replacement.new_value[-1]["value"] == "费森尤斯"
+    assert replacement.new_value == []
 
 
 def test_incomplete_unreferenced_turn_exposes_relation_clarification_state():

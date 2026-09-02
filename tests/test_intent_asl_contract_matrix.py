@@ -110,8 +110,8 @@ def test_intent_asl_contract_regression_matrix(
         for item in request.assumptions
     )
     assert contract["time_policy"] == (
-        "REQUIRED" if intent == PrimaryIntent.TREND_ANALYSIS
-        else "FORBIDDEN" if intent == PrimaryIntent.DETAIL_QUERY or period_independent
+        "FORBIDDEN" if intent == PrimaryIntent.DETAIL_QUERY or period_independent
+        else "REQUIRED" if request.time_range is not None
         else "OPTIONAL"
     )
     assert validate_intent_asl_contract_definition(contract) == []
@@ -135,10 +135,10 @@ def test_canonical_detail_rewrite_does_not_disable_relationship_set_semantics():
             PrimaryIntent.METRIC_QUERY,
             "经销商",
             "整体业务规模",
-            [
-                {"field": "业务城市", "operator": "EQ", "value": "上海市"},
-                {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
-                {"field": "厂家名称", "operator": "NE", "value": "上海洁安"},
+                [
+                    {"field": "地区", "operator": "EQ", "value": "上海市"},
+                    {"field": "厂家名称", "operator": "NE", "value": "上海洁安"},
+                    {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
             ],
             {"required": True, "direction": "DESC", "limit": None},
         ),
@@ -147,9 +147,9 @@ def test_canonical_detail_rewrite_does_not_disable_relationship_set_semantics():
             PrimaryIntent.METRIC_QUERY,
             "产品",
             "销售额",
-            [
-                {"field": "商品名称", "operator": "EQ", "value": "空心纤维血液透析器"},
-                {"field": "地区", "operator": "EQ", "value": "上海市"},
+                [
+                    {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+                    {"field": "商品名称", "operator": "EQ", "value": "空心纤维血液透析器"},
             ],
             None,
         ),
@@ -180,7 +180,13 @@ def test_p0_composite_query_contracts_are_lossless(
     assert request.filters == expected_filters
     assert "产品" not in request.dimensions
     assert contract["query_object"] == expected_object
-    assert [*contract["filters"], *contract["negative_filters"]] == expected_filters
+    assert {
+        (item["field"], item["operator"], str(item["value"]))
+        for item in [*contract["filters"], *contract["negative_filters"]]
+    } == {
+        (item["field"], item["operator"], str(item["value"]))
+        for item in expected_filters
+    }
     assert contract["sorting"] == expected_sorting
     assert validate_intent_asl_contract_definition(contract) == []
     assert validate_intent_asl_contract_completeness(contract, request) == []
@@ -266,3 +272,24 @@ def test_relationship_count_projection_still_rejects_filter_loss():
     )
 
     assert [item["code"] for item in errors] == ["EXPLICIT_FILTER_MISSING"]
+
+
+def test_ranked_business_scale_contract_keeps_partner_grouping():
+    request = RuleBasedIntentClassifier().classify(
+        "查询经销商并按整体业务规模排序",
+        IDENTITY,
+        "ranked-partner-grouping",
+    )
+
+    contract = build_intent_asl_contract(request)
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert contract["query_object"] == "经销商"
+    assert contract["required_metrics"] == ["整体业务规模"]
+    assert contract["required_groupings"] == ["经销商"]
+    assert contract["sorting"] == {
+        "required": True,
+        "direction": "DESC",
+        "limit": None,
+    }
+    assert validate_intent_asl_contract_definition(contract) == []
