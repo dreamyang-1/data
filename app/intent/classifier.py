@@ -1075,8 +1075,10 @@ class RuleBasedIntentClassifier:
         if explicit_metrics:
             request.metrics = explicit_metrics
         hospital_level_count = bool(re.search(
-            r"(?:各|按|每个)(?:医院)?(?:等级|级别)(?:对应的)?(?:医院)?(?:数量|数)"
-            r"|(?:医院)?(?:等级|级别).{0,10}(?:医院)?(?:数量|数)",
+            r"(?:各|按|每个)(?:医院)?(?:等级|级别)"
+            r"(?:对应的|下|中)?(?:医院)?(?:数量|个数|家数)"
+            r"|(?:医院)?(?:等级|级别)(?:对应的|下|中|分别)?"
+            r"医院(?:数量|个数|家数)",
             compact,
         ))
         if hospital_level_count:
@@ -1460,7 +1462,55 @@ class RuleBasedIntentClassifier:
             and re.search(r"(?:对比|比较).{0,20}(?:家|个|名|供应商|经销商|门店)", compact)
         ):
             request.comparison_type = "对象间比较"
+        cls._apply_name_projection_non_null_constraint(request)
         cls._drop_invalid_filter_values(request)
+
+    @staticmethod
+    def _apply_name_projection_non_null_constraint(
+        request: CanonicalAnalysisRequest,
+    ) -> None:
+        """Keep master-data list projections free of missing object names.
+
+        A relationship row can legitimately exist while its display-name join
+        is missing or stale.  For a user-facing list such as ``合作医院名单``
+        that row is not a valid list member: rendering it as a dash changes a
+        data-quality defect into an apparent business object.  Bind the
+        non-null requirement to the requested semantic role so the current
+        semantic layer, rather than a physical table name, resolves it.
+        """
+
+        if request.primary_intent != PrimaryIntent.DETAIL_QUERY:
+            return
+        entity_name_fields = {
+            "医院": "医院名称",
+            "经销商": "经销商名称",
+            "供应商": "供应商名称",
+            "厂家": "厂家名称",
+            "制造商": "制造商名称",
+            "商品": "商品名称",
+            "产品": "商品名称",
+            "客户": "客户名称",
+            "门店": "门店名称",
+            "科室": "科室名称",
+            "品牌": "品牌名称",
+            "母品牌": "母品牌",
+        }
+        name_field = entity_name_fields.get(str(request.entity or "").strip())
+        if name_field is None:
+            projected_names = [
+                field
+                for field in request.fields
+                if field in set(entity_name_fields.values())
+            ]
+            if len(projected_names) != 1:
+                return
+            name_field = projected_names[0]
+        elif name_field not in request.fields:
+            return
+
+        assumption = f"REQUIRED_NAME_NON_NULL={name_field}"
+        if assumption not in request.assumptions:
+            request.assumptions.append(assumption)
 
     @staticmethod
     def _drop_invalid_filter_values(request: CanonicalAnalysisRequest) -> None:

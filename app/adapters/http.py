@@ -709,6 +709,20 @@ class HttpDataRetrievalAdapter:
                 + "。这些条件必须逐项出现在ASL filters中，字段可映射为已注册的语义字段，"
                 "但值、运算方向和业务含义不得省略、放宽或替换。"
             )
+        required_non_null_names = [
+            value.split("=", 1)[1]
+            for value in request.assumptions
+            if value.startswith("REQUIRED_NAME_NON_NULL=")
+            and value.split("=", 1)[1].strip()
+        ]
+        if required_non_null_names:
+            asl_query += (
+                "\n名单主名称完整性要求："
+                + "、".join(dict.fromkeys(required_non_null_names))
+                + "必须使用当前语义层注册的对应名称属性投影，并在ASL filters中保留"
+                "“名称 != 空字符串”约束；该约束通过SQL三值逻辑同时排除NULL和空字符串，"
+                "不得把空名称作为名单成员返回。"
+            )
         if request.dimensions:
             grouped_dimension_roles = self._required_grouped_dimension_roles(
                 request
@@ -1199,6 +1213,7 @@ class HttpDataRetrievalAdapter:
         self._bind_canonical_time_range(asl, request)
         self._repair_required_model81_dimensions(asl, request, semantic_model_id)
         self._deduplicate_relationship_identity_dimensions(asl)
+        self._ensure_required_name_non_null_filters(asl, request)
         bound_metric_codes = {
             metric.metric_id.split(":", 1)[1]
             for metric in request.metrics
@@ -1716,22 +1731,51 @@ class HttpDataRetrievalAdapter:
             current = current[:stale.start(1)] + expected_field + current[stale.end(1):]
         return current
 
-    @staticmethod
+    @classmethod
     def _validate_request_filters(
-        asl: dict[str, Any], request: CanonicalAnalysisRequest
+        cls, asl: dict[str, Any], request: CanonicalAnalysisRequest
     ) -> None:
         """Fail closed when generated ASL drops a caller-grounded filter value."""
-        if not request.filters:
-            return
         generated = [
             item for item in (asl.get("filters") or []) if isinstance(item, dict)
         ]
         negative_operators = {
             "NE", "!=", "<>", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE",
         }
+        null_operators = {
+            "IS_NOT_NULL", "IS NOT NULL", "NOT_NULL", "NOT NULL",
+        }
+
+        def is_non_null_constraint(item: dict[str, Any]) -> bool:
+            operator = str(item.get("operator") or "").upper()
+            if operator in null_operators:
+                return True
+            return (
+                operator in negative_operators
+                and item.get("value") is not None
+                and str(item.get("value")).strip() == ""
+            )
         missing: list[dict[str, Any]] = []
         for required in request.filters:
             if not isinstance(required, dict):
+                continue
+            required_operator = str(required.get("operator") or "EQ").upper()
+            if required_operator in null_operators:
+                expected_field = str(required.get("field") or "").strip()
+                preserved = any(
+                    is_non_null_constraint(item)
+                    and not cls._missing_detail_fields(
+                        [expected_field],
+                        [{
+                            key: item.get(key)
+                            for key in ("field", "name", "attr", "alias")
+                            if item.get(key) is not None
+                        }],
+                    )
+                    for item in generated
+                )
+                if not preserved:
+                    missing.append(required)
                 continue
             raw_value = required.get("value")
             required_values = raw_value if isinstance(raw_value, list) else [raw_value]
@@ -1778,6 +1822,111 @@ class HttpDataRetrievalAdapter:
                 "ASL did not preserve one or more caller-grounded filters",
                 details={"missing_filters": missing},
             )
+        required_name_fields = list(dict.fromkeys(
+            value.split("=", 1)[1].strip()
+            for value in request.assumptions
+            if value.startswith("REQUIRED_NAME_NON_NULL=")
+            and value.split("=", 1)[1].strip()
+        ))
+        missing_name_constraints = [
+            expected_field
+            for expected_field in required_name_fields
+            if not any(
+                is_non_null_constraint(item)
+                and not cls._missing_detail_fields(
+                    [expected_field],
+                    [{
+                        key: item.get(key)
+                        for key in ("field", "name", "attr", "alias")
+                        if item.get(key) is not None
+                    }],
+                )
+                for item in generated
+            )
+        ]
+        if missing_name_constraints:
+            raise AdapterError(
+                "ASL_REQUIRED_NAME_NON_NULL_MISSING",
+                "ASL omitted a required master-name non-null constraint",
+                details={"missing_name_fields": missing_name_constraints},
+            )
+
+    @classmethod
+    def _ensure_required_name_non_null_filters(
+        cls,
+        asl: dict[str, Any],
+        request: CanonicalAnalysisRequest,
+    ) -> None:
+        """Bind list-name completeness to the currently projected ASL field.
+
+        The ASL model chooses the registered semantic attribute.  Once that
+        projection is present, adding a non-null predicate on the exact same
+        reference is deterministic and remains valid when physical schemas are
+        republished.  No table or column name is guessed by the application.
+        """
+
+        required_fields = list(dict.fromkeys(
+            value.split("=", 1)[1].strip()
+            for value in request.assumptions
+            if value.startswith("REQUIRED_NAME_NON_NULL=")
+            and value.split("=", 1)[1].strip()
+        ))
+        if not required_fields:
+            return
+        filters = [
+            item for item in (asl.get("filters") or []) if isinstance(item, dict)
+        ]
+        dimensions = [
+            item for item in (asl.get("dimensions") or []) if isinstance(item, dict)
+        ]
+        null_operators = {
+            "IS_NOT_NULL", "IS NOT NULL", "NOT_NULL", "NOT NULL",
+        }
+
+        negative_operators = {
+            "NE", "!=", "<>", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE",
+        }
+
+        def is_non_null_constraint(item: dict[str, Any]) -> bool:
+            operator = str(item.get("operator") or "").upper()
+            if operator in null_operators:
+                return True
+            return (
+                operator in negative_operators
+                and item.get("value") is not None
+                and str(item.get("value")).strip() == ""
+            )
+        for expected_field in required_fields:
+            if any(
+                is_non_null_constraint(item)
+                and not cls._missing_detail_fields([expected_field], [item])
+                for item in filters
+            ):
+                continue
+            candidates = [
+                item for item in dimensions
+                if not cls._missing_detail_fields([expected_field], [item])
+            ]
+            if len(candidates) != 1:
+                continue
+            dimension = candidates[0]
+            reference = next(
+                (
+                    str(dimension.get(key)).strip()
+                    for key in ("name", "field")
+                    if dimension.get(key) is not None
+                    and str(dimension.get(key)).strip()
+                ),
+                None,
+            )
+            if reference is None:
+                continue
+            filters.append({
+                "field": reference,
+                "operator": "!=",
+                "value": "",
+            })
+        asl["filters"] = filters
 
     @classmethod
     def _validate_no_synthetic_product_filter(
@@ -2635,8 +2784,13 @@ class HttpDataRetrievalAdapter:
         "供应商名称": ("供应商名称", "供应商", "suppliername", "vendorname"),
         "经销商名称": ("经销商名称", "经销商", "dealername", "distributorname"),
         "医院名称": ("医院名称", "医院", "hospitalname", "medicalinstitutionname"),
+        "厂家名称": ("厂家名称", "厂家", "厂商", "manufacturername", "makername"),
+        "制造商名称": ("制造商名称", "制造商", "manufacturername", "makername"),
+        "品牌名称": ("品牌名称", "品牌", "brandname"),
+        "母品牌": ("母品牌", "母品牌名称", "parentbrand", "parentbrandname"),
         "医院等级": ("医院等级", "医院级别", "hospitallevel", "hospitalgrade"),
         "适用科室": ("适用科室", "科室名称", "deptname", "departmentname"),
+        "科室名称": ("科室名称", "适用科室", "deptname", "departmentname"),
         "联系人姓名": ("联系人姓名", "联系人", "contactname", "linkman"),
         "联系人手机号": ("联系人手机号", "联系电话", "联系方式", "contactphone", "mobile", "phone"),
         "邮箱": ("邮箱", "电子邮箱", "email", "mail"),

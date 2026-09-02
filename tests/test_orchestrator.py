@@ -116,6 +116,86 @@ def test_requested_business_column_renames_existing_semantic_alias():
     assert dataset.rows == [{"医院名称": "测试医院", "医院等级": "三级"}]
 
 
+def test_complete_name_list_drops_null_and_placeholder_members():
+    request = CanonicalAnalysisRequest(
+        conversation_id="name-integrity",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询产品合作的医院名单",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="医院",
+        fields=["医院名称"],
+        assumptions=["REQUIRED_NAME_NON_NULL=医院名称"],
+    )
+    result = DataQueryResult(
+        asl={},
+        sql="SELECT hospital_name FROM hospital",
+        dataset=Dataset(
+            columns=["医院名称"],
+            rows=[
+                {"医院名称": "测试医院"},
+                {"医院名称": None},
+                {"医院名称": "—"},
+            ],
+            row_count=3,
+            total_row_count=3,
+            snapshot_id="name-integrity-snapshot",
+            data_as_of=datetime(2025, 12, 30, tzinfo=timezone.utc),
+        ),
+    )
+
+    cleaned = DataAnalysisOrchestrator._enforce_name_projection_integrity(
+        request, result
+    )
+
+    assert cleaned.dataset.rows == [{"医院名称": "测试医院"}]
+    assert cleaned.dataset.row_count == 1
+    assert cleaned.dataset.total_row_count == 1
+    assert cleaned.execution_transforms[-1] == {
+        "type": "DROP_INVALID_NAME_PROJECTION_ROWS",
+        "fields": ["医院名称"],
+        "removed_row_count": 2,
+        "verified_complete_result": True,
+    }
+    assert "INVALID_NAME_ROWS_REMOVED=2" in request.assumptions
+
+
+def test_truncated_name_list_with_invalid_members_fails_closed():
+    request = CanonicalAnalysisRequest(
+        conversation_id="name-integrity-truncated",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询经销商名单",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="经销商",
+        fields=["经销商名称"],
+        assumptions=["REQUIRED_NAME_NON_NULL=经销商名称"],
+    )
+    result = DataQueryResult(
+        asl={},
+        sql="SELECT dealer_name FROM dealer",
+        dataset=Dataset(
+            columns=["经销商名称"],
+            rows=[{"经销商名称": "有效公司"}, {"经销商名称": None}],
+            row_count=2,
+            total_row_count=20,
+            truncated=True,
+            snapshot_id="name-integrity-truncated-snapshot",
+            data_as_of=datetime(2025, 12, 30, tzinfo=timezone.utc),
+        ),
+        result_file_url="https://example.test/result.xlsx",
+    )
+
+    cleaned = DataAnalysisOrchestrator._enforce_name_projection_integrity(
+        request, result
+    )
+
+    assert cleaned.dataset.quality_status == "FAIL"
+    assert cleaned.dataset.rows == [{"经销商名称": "有效公司"}]
+    assert cleaned.dataset.total_row_count == 20
+    assert cleaned.result_file_url is None
+
+
 def test_singular_product_pronoun_is_bound_from_previous_result_table():
     request = CanonicalAnalysisRequest(
         conversation_id="result-pronoun",

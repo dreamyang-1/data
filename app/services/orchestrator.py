@@ -3146,6 +3146,9 @@ class DataAnalysisOrchestrator:
                 )
 
         self._restore_projected_filter_columns(request, query_result.dataset)
+        query_result = self._enforce_name_projection_integrity(
+            request, query_result
+        )
         await emit_progress(
             "DATA_RETRIEVAL",
             "COMPLETED",
@@ -6589,6 +6592,113 @@ class DataAnalysisOrchestrator:
         for row in dataset.rows:
             for field in restored:
                 row[field] = constants[field]
+
+    @classmethod
+    def _enforce_name_projection_integrity(
+        cls,
+        request: CanonicalAnalysisRequest,
+        query_result: DataQueryResult,
+    ) -> DataQueryResult:
+        """Remove invalid master-name members from complete list results.
+
+        The canonical/ASL constraint is the primary guard.  This deterministic
+        result gate protects against stale relationship rows, legacy translators
+        and dirty placeholder strings that still reach a complete result.  A
+        truncated result cannot be repaired locally because unseen/file rows
+        may contain the same defect, so it is marked failed instead of silently
+        claiming a complete clean list.
+        """
+
+        if request.primary_intent != PrimaryIntent.DETAIL_QUERY:
+            return query_result
+        required_fields = list(dict.fromkeys(
+            value.split("=", 1)[1].strip()
+            for value in request.assumptions
+            if value.startswith("REQUIRED_NAME_NON_NULL=")
+            and value.split("=", 1)[1].strip()
+        ))
+        if not required_fields or not query_result.dataset.rows:
+            return query_result
+
+        aliases = {
+            "医院名称": {"医院", "hospital", "hospitalname", "medicalinstitutionname"},
+            "经销商名称": {"经销商", "dealer", "dealername", "distributorname"},
+            "供应商名称": {"供应商", "supplier", "suppliername", "vendorname"},
+            "厂家名称": {"厂家", "厂商", "manufacturer", "manufacturername", "makername"},
+            "制造商名称": {"制造商", "manufacturer", "manufacturername", "makername"},
+            "商品名称": {"商品", "产品", "product", "productname", "goodsname", "itemname"},
+            "客户名称": {"客户", "customer", "customername", "clientname"},
+            "门店名称": {"门店", "store", "storename", "shopname"},
+            "科室名称": {"科室", "适用科室", "department", "departmentname", "deptname"},
+            "品牌名称": {"品牌", "brand", "brandname"},
+            "母品牌": {"母品牌名称", "parentbrand", "parentbrandname"},
+        }
+
+        def normalize(value: Any) -> str:
+            return re.sub(
+                r"[^0-9a-z\u4e00-\u9fff]", "", str(value or "").casefold()
+            )
+
+        resolved_columns: list[str] = []
+        for field in required_fields:
+            tokens = {
+                normalize(field),
+                *(normalize(value) for value in aliases.get(field, set())),
+            }
+            matches = [
+                column for column in query_result.dataset.columns
+                if normalize(column) in tokens
+            ]
+            if len(matches) == 1:
+                resolved_columns.append(matches[0])
+        if len(resolved_columns) != len(required_fields):
+            return query_result
+
+        invalid_markers = {
+            "", "-", "--", "—", "–", "－", "null", "none", "nil", "n/a",
+            "na", "未填写", "未知", "无",
+        }
+
+        def valid_row(row: dict[str, Any]) -> bool:
+            for column in resolved_columns:
+                value = row.get(column)
+                if value is None or str(value).strip().casefold() in invalid_markers:
+                    return False
+            return True
+
+        clean_rows = [row for row in query_result.dataset.rows if valid_row(row)]
+        removed_count = len(query_result.dataset.rows) - len(clean_rows)
+        if removed_count == 0:
+            return query_result
+
+        dataset_payload = query_result.dataset.model_dump()
+        dataset_payload["rows"] = clean_rows
+        dataset_payload["row_count"] = len(clean_rows)
+        if query_result.dataset.truncated:
+            dataset_payload["quality_status"] = "FAIL"
+        else:
+            dataset_payload["total_row_count"] = len(clean_rows)
+        cleaned_dataset = Dataset.model_validate(dataset_payload)
+        transform = {
+            "type": "DROP_INVALID_NAME_PROJECTION_ROWS",
+            "fields": required_fields,
+            "removed_row_count": removed_count,
+            "verified_complete_result": not query_result.dataset.truncated,
+        }
+        assumption = f"INVALID_NAME_ROWS_REMOVED={removed_count}"
+        if assumption not in request.assumptions:
+            request.assumptions.append(assumption)
+        return query_result.model_copy(update={
+            "dataset": cleaned_dataset,
+            "execution_transforms": [
+                *query_result.execution_transforms,
+                transform,
+            ],
+            "result_file_url": (
+                None if query_result.dataset.truncated
+                else query_result.result_file_url
+            ),
+        })
 
     @staticmethod
     def _relationship_projection_rows(

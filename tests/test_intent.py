@@ -41,6 +41,23 @@ def test_list_verb_with_explicit_metrics_is_not_misclassified_as_detail(question
     assert request.metrics
 
 
+def test_ranked_hospital_profile_keeps_all_explicit_metrics():
+    request = RuleBasedIntentClassifier().classify(
+        "查询含税销售总额排名前10的医院，并显示医院名称、医院等级和订单笔数。",
+        IDENTITY,
+        "ranked-hospital-profile",
+    )
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert {metric.input for metric in request.metrics} == {
+        "含税销售总额", "订单笔数",
+    }
+    assert request.ranking_limit == 10
+    assert "医院" in request.dimensions
+    assert "医院等级" in request.dimensions
+    assert "NULL_DIMENSION_BUCKET=医院等级:未填写" not in request.assumptions
+
+
 def test_additive_metric_clarification_preserves_existing_metrics():
     classifier = RuleBasedIntentClassifier()
     pending = classifier.classify(
@@ -650,6 +667,35 @@ def test_multidimensional_trend_separates_product_from_dimensions():
     assert {"省份", "城市", "医院等级"}.issubset(request.dimensions)
     assert [item.input for item in request.metrics] == ["销售量"]
     assert "DEFAULT_TIME_GRANULARITY=month" in request.assumptions
+
+
+@pytest.mark.parametrize(
+    ("question", "entity", "field"),
+    [
+        (
+            "查询外周插管中心静脉导管合作的医院名单。",
+            "医院",
+            "医院名称",
+        ),
+        (
+            "查询空心纤维血液透析器合作的经销商名单。",
+            "经销商",
+            "经销商名称",
+        ),
+        ("查询医用外科口罩的供应商清单。", "供应商", "供应商名称"),
+    ],
+)
+def test_master_name_lists_require_non_null_members(
+    question: str, entity: str, field: str
+):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, f"non-null-{entity}"
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.entity == entity
+    assert field in request.fields
+    assert f"REQUIRED_NAME_NON_NULL={field}" in request.assumptions
 
 
 def test_brand_comparison_uses_business_names_not_internal_codes():
@@ -1430,9 +1476,10 @@ def test_dated_sales_record_activity_does_not_request_partner_status_or_threshol
     assert request.fields == ["经销商名称"]
     assert request.time_range is not None
     assert request.missing_slots == []
-    assert request.assumptions == [
-        "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
-    ]
+    assert "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE" in (
+        request.assumptions
+    )
+    assert "REQUIRED_NAME_NON_NULL=经销商名称" in request.assumptions
 
 
 def test_named_dealer_product_lookup_is_relationship_detail_without_metric():
@@ -1564,7 +1611,8 @@ def test_plain_active_partner_status_still_requires_an_explicit_activity_period(
     )
 
     assert request.fields == ["经销商名称", "合作状态"]
-    assert request.assumptions == ["DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"]
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
+    assert "REQUIRED_NAME_NON_NULL=经销商名称" in request.assumptions
     assert request.missing_slots == []
 
 
