@@ -38,6 +38,15 @@ def _is_negative_filter(item: dict[str, Any]) -> bool:
 def _query_object(
     request: CanonicalAnalysisRequest, *, prefer_grouping_object: bool = False
 ) -> str | None:
+    if (
+        "DEPARTMENT_GRAIN=PRODUCT_MAIN_DEPARTMENT_COMBINATION"
+        in request.assumptions
+    ):
+        # The visible grouping label is an attribute grain; its semantic owner
+        # remains the product master.  Returning the grouping label itself as
+        # query_object makes an overlapping standard-department dimension look
+        # more authoritative than the product attribute.
+        return request.entity or "商品"
     # Ranked/grouped requests commonly express the return object as the last
     # non-time dimension.  This is a semantic label only; Oagnet still resolves
     # the actual entity and display field from recalled metadata.

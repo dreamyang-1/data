@@ -945,6 +945,7 @@ class RuleBasedIntentClassifier:
         cls._apply_common_region_filter(request, compact)
         cls._apply_hospital_level_scope(request, compact)
         cls._apply_explicit_grouping_scope(request, compact)
+        cls._apply_department_grouping_grain(request, compact)
         cls._apply_multidimensional_product_scope(request, compact)
         cls._apply_brand_comparison_scope(request, compact)
         cls._apply_transaction_partner_scope(request, compact)
@@ -1483,8 +1484,83 @@ class RuleBasedIntentClassifier:
             request.comparison_type = "对象间比较"
         cls._apply_manufacturer_metric_scope(request, question)
         cls._apply_semantic_catalog_guardrails(request, question)
+        cls._drop_geographic_subspan_filters(request)
         cls._apply_name_projection_non_null_constraint(request)
         cls._drop_invalid_filter_values(request)
+
+    @staticmethod
+    def _drop_geographic_subspan_filters(
+        request: CanonicalAnalysisRequest,
+    ) -> None:
+        """Remove a place name that was split out of a named organization.
+
+        Structured extraction can legitimately see both ``上海市`` and
+        ``上海市皮肤病医院``.  When the former is emitted as a generic region
+        filter and the latter as a hospital-name filter, they are not two user
+        constraints: the shorter value is only a token span inside the named
+        organization.  Keeping both makes the semantic layer resolve an
+        unnecessary and frequently ambiguous ``地区`` field before it can bind
+        the exact organization name.
+
+        This rule is deliberately limited to identity-name roles.  A product
+        name containing a place token therefore cannot erase an independently
+        requested sales region.
+        """
+
+        geographic_fields = {
+            "地区", "区域", "省", "省份", "城市", "市",
+            "业务省份", "业务城市", "所在省份", "所在城市",
+        }
+        identity_name_markers = (
+            "医院名称", "医疗机构名称", "经销商名称", "供应商名称",
+            "厂家名称", "制造商名称", "客户名称", "公司名称", "门店名称",
+        )
+
+        def compact(value: object) -> str:
+            return re.sub(r"\s+", "", str(value or "")).casefold()
+
+        identity_values = [
+            compact(item.get("value"))
+            for item in request.filters
+            if isinstance(item, dict)
+            and any(
+                marker in str(item.get("field") or "")
+                for marker in identity_name_markers
+            )
+            and compact(item.get("value"))
+        ]
+        redundant_values = {
+            compact(item.get("value"))
+            for item in request.filters
+            if isinstance(item, dict)
+            and str(item.get("field") or "").strip() in geographic_fields
+            and compact(item.get("value"))
+            and any(
+                compact(item.get("value")) != identity
+                and compact(item.get("value")) in identity
+                for identity in identity_values
+            )
+        }
+        if not redundant_values:
+            return
+
+        request.filters = [
+            item
+            for item in request.filters
+            if not (
+                isinstance(item, dict)
+                and str(item.get("field") or "").strip() in geographic_fields
+                and compact(item.get("value")) in redundant_values
+            )
+        ]
+        request.semantic_entity_mentions = [
+            value for value in request.semantic_entity_mentions
+            if compact(value) not in redundant_values
+        ]
+        if "REDUNDANT_GEOGRAPHIC_SUBSPAN_FILTER_DROPPED" not in request.assumptions:
+            request.assumptions.append(
+                "REDUNDANT_GEOGRAPHIC_SUBSPAN_FILTER_DROPPED"
+            )
 
     @classmethod
     def _apply_semantic_catalog_guardrails(
@@ -2059,6 +2135,68 @@ class RuleBasedIntentClassifier:
             ]
             if "医院等级" not in request.dimensions:
                 request.dimensions.append("医院等级")
+
+    @staticmethod
+    def _apply_department_grouping_grain(
+        request: CanonicalAnalysisRequest, text: str
+    ) -> None:
+        """Choose the governed product-department grain for sales rollups.
+
+        The semantic model exposes both a denormalized product department
+        combination and a many-to-many standard-department bridge.  Plain
+        business wording such as ``各科室的订单笔数`` refers to the former in
+        the governed report.  Selecting the generic bridge instead splits one
+        combination into several rows and can multiply sales facts.
+
+        An explicit request to split by standard/single department keeps the
+        bridge grain.  Only semantic labels are selected here; the active
+        semantic model remains responsible for the physical field.
+        """
+        if not request.metrics or "科室" not in text:
+            return
+        explicit_standard_grain = bool(re.search(
+            r"标准科室|单个科室|单科室|拆分(?:到|成)?(?:每个|单个)?科室|"
+            r"逐科室|科室明细",
+            text,
+        ))
+        if explicit_standard_grain:
+            if "科室" not in request.dimensions:
+                request.dimensions.append("科室")
+            if "DEPARTMENT_GRAIN=STANDARD_DEPARTMENT" not in request.assumptions:
+                request.assumptions.append("DEPARTMENT_GRAIN=STANDARD_DEPARTMENT")
+            return
+        if not re.search(
+            r"(?:各|每个|按|分)(?:个)?科室|科室(?:维度)?(?:排名|排行|分布|汇总)",
+            text,
+        ):
+            return
+        governed_metrics = {
+            "含税销售总额", "销售总额", "销售额", "销售总数量", "销售数量",
+            "销售量", "订单笔数", "订单量",
+        }
+        if not any(
+            (metric.canonical_name or metric.input) in governed_metrics
+            for metric in request.metrics
+        ):
+            return
+        # The grouping is a governed attribute of the product master, not a
+        # standalone standard-department entity.  Supplying the semantic owner
+        # lets Oagnet distinguish two currently published dimensions with
+        # overlapping labels without naming a physical table or column here.
+        request.entity = "商品"
+        request.dimensions = list(dict.fromkeys(
+            "主要适用科室" if value == "科室" else value
+            for value in request.dimensions
+        ))
+        if "主要适用科室" not in request.dimensions:
+            request.dimensions.append("主要适用科室")
+        if (
+            "DEPARTMENT_GRAIN=PRODUCT_MAIN_DEPARTMENT_COMBINATION"
+            not in request.assumptions
+        ):
+            request.assumptions.append(
+                "DEPARTMENT_GRAIN=PRODUCT_MAIN_DEPARTMENT_COMBINATION"
+            )
 
     @staticmethod
     def _apply_multidimensional_product_scope(

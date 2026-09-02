@@ -81,6 +81,26 @@ def test_metric_table_displays_all_138_untruncated_rows() -> None:
     assert "当前展示前" not in answer
 
 
+def test_complete_217_row_product_list_is_not_silently_presented_as_preview() -> None:
+    request = request_for("查询国药集团上海医疗器械有限公司销售的产品有哪些")
+    request.entity = "商品"
+    request.fields = ["商品名称"]
+    rows = [{"商品名称": f"产品{index:03d}"} for index in range(1, 218)]
+
+    answer = DataAnalysisOrchestrator._analyze(
+        request,
+        ["商品名称"],
+        rows,
+        KnowledgeContext(query=request.original_question, documents=[]),
+    )
+
+    assert "共查询到 217 条明细" in answer
+    assert "产品001" in answer
+    assert "产品217" in answer
+    assert answer.count("| 产品") == 217
+    assert "当前展示前" not in answer
+
+
 def test_relationship_projection_is_deduplicated_only_for_answer_display() -> None:
     request = request_for("某商品适用于哪些科室")
     columns = ["科室"]

@@ -4033,12 +4033,12 @@ class DataAnalysisOrchestrator:
             else (
                 (
                     (
-                        f"查询成功，共 {total_row_count} 条结果；"
+                        f"查询成功，共命中 {total_row_count} 条结果；"
                         if total_row_count_confirmed
                         else "查询成功，但SQL服务未确认完整结果行数；"
                     )
-                    + f"当前展示前 {query_result.dataset.row_count} 条预览，"
-                    "预览不作为全量统计。\n"
+                    + f"本次接口返回 {query_result.dataset.row_count} 条预览，"
+                    "以下内容不是全量清单。\n"
                     + self._analyze(
                         request,
                         query_result.dataset.columns,
@@ -4046,9 +4046,13 @@ class DataAnalysisOrchestrator:
                         knowledge_context,
                         result_truncated=True,
                     )
-                    + "\n完整结果请使用回答末尾的附件链接下载。"
+                    + (
+                        "\n完整结果请使用回答末尾的附件链接下载。"
+                        if query_result.result_file_url
+                        else "\n本次未收到完整结果文件；请缩小查询范围或继续分页查询。"
+                    )
                 )
-                if query_result.dataset.truncated and query_result.result_file_url
+                if query_result.dataset.truncated
                 else self._analyze(
                     request,
                     query_result.dataset.columns,
@@ -4079,10 +4083,27 @@ class DataAnalysisOrchestrator:
         )
         if source_watermark_note:
             answer += f"\n{source_watermark_note}"
+        incomplete_result = bool(
+            query_result.dataset.truncated and not query_result.result_file_url
+        )
+        if incomplete_result:
+            reliability = ReliabilityReport(
+                level="LIMITED",
+                score=min(reliability.score, 0.65),
+                gates={
+                    **reliability.gates,
+                    "complete_result_available": False,
+                    "preview_disclosed": True,
+                },
+                warnings=[
+                    *reliability.warnings,
+                    "SQL服务仅返回结果预览，且未提供完整结果文件。",
+                ],
+            )
         response = AgentResponse(
             request_id=request.request_id,
             conversation_id=request.conversation_id,
-            status="COMPLETED",
+            status="PARTIAL_SUCCESS" if incomplete_result else "COMPLETED",
             intent=request.primary_intent,
             intent_source=request.intent_source,
             intent_confidence=request.intent_confidence,
@@ -7111,7 +7132,13 @@ class DataAnalysisOrchestrator:
         if all(value is None for row in rows for value in row.values()):
             return "查询执行成功，但指定条件下没有有效数据。"
         if request.primary_intent == PrimaryIntent.DETAIL_QUERY:
-            display_limit = 200
+            # Keep ordinary complete business lists complete in the answer.
+            # The retrieval contract already caps an in-memory dataset at
+            # ``data_query_max_rows`` (1000 by default); an older presentation
+            # cap silently turned a verified 217-row result into a 20/200-row
+            # looking answer.  Truly larger results arrive as truncated/file
+            # responses and are handled by the explicit preview branch.
+            display_limit = 1000
             unique_rows = (
                 None
                 if result_truncated

@@ -2,9 +2,16 @@ from datetime import date
 
 import pytest
 
-from app.domain.models import AnalysisOperator, ConversationControl, PrimaryIntent, TrustedIdentity
+from app.domain.models import (
+    AnalysisOperator,
+    CanonicalAnalysisRequest,
+    ConversationControl,
+    PrimaryIntent,
+    TrustedIdentity,
+)
 from app.intent import RuleBasedIntentClassifier
 from app.intent.classifier import render_execution_question
+from app.services.intent_asl_contract import build_intent_asl_contract
 
 
 IDENTITY = TrustedIdentity(tenant_id="tenant-a", user_id="user-a")
@@ -1394,6 +1401,34 @@ def test_hospital_level_rollup_does_not_group_by_individual_hospital():
     }
 
 
+def test_plain_department_order_ranking_uses_product_combination_grain():
+    request = RuleBasedIntentClassifier().classify(
+        "统计各科室的订单笔数排名。", IDENTITY, "department-combination-grain"
+    )
+
+    assert [metric.input for metric in request.metrics] == ["订单笔数"]
+    assert request.entity == "商品"
+    assert request.dimensions == ["主要适用科室"]
+    assert (
+        "DEPARTMENT_GRAIN=PRODUCT_MAIN_DEPARTMENT_COMBINATION"
+        in request.assumptions
+    )
+    assert build_intent_asl_contract(request)["query_object"] == "商品"
+
+
+def test_explicit_standard_department_split_keeps_bridge_grain():
+    request = RuleBasedIntentClassifier().classify(
+        "按单个标准科室拆分统计订单笔数排名。",
+        IDENTITY,
+        "standard-department-grain",
+    )
+
+    assert [metric.input for metric in request.metrics] == ["订单笔数"]
+    assert "科室" in request.dimensions
+    assert "主要适用科室" not in request.dimensions
+    assert "DEPARTMENT_GRAIN=STANDARD_DEPARTMENT" in request.assumptions
+
+
 def test_hospital_level_count_is_grouped_metric_not_hospital_detail():
     request = RuleBasedIntentClassifier().classify(
         "各医院等级对应的医院数量是多少？",
@@ -1522,6 +1557,55 @@ def test_legal_manufacturer_metric_uses_name_role_and_preserves_punctuation(
     assert "SEMANTIC_ENTITY_ROLE=MANUFACTURER_NAME" in request.assumptions
     assert "TIME_SCOPE=ALL_TIME" in request.assumptions
     assert request.missing_slots == []
+
+
+def test_named_organization_drops_geographic_token_split_from_its_full_name():
+    request = CanonicalAnalysisRequest(
+        conversation_id="named-hospital-geographic-subspan",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询上海市皮肤病医院的含税销售总额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        filters=[
+            {"field": "地区", "operator": "EQ", "value": "上海市"},
+            {
+                "field": "医院名称",
+                "operator": "EQ",
+                "value": "上海市皮肤病医院",
+            },
+        ],
+        semantic_entity_mentions=["上海市皮肤病医院", "上海市"],
+    )
+
+    RuleBasedIntentClassifier._drop_geographic_subspan_filters(request)
+
+    assert request.filters == [{
+        "field": "医院名称",
+        "operator": "EQ",
+        "value": "上海市皮肤病医院",
+    }]
+    assert request.semantic_entity_mentions == ["上海市皮肤病医院"]
+    assert "REDUNDANT_GEOGRAPHIC_SUBSPAN_FILTER_DROPPED" in request.assumptions
+
+
+def test_product_name_place_token_does_not_erase_explicit_sales_region():
+    request = CanonicalAnalysisRequest(
+        conversation_id="product-place-token-keeps-region",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询上海牌产品在上海市的销售额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        filters=[
+            {"field": "地区", "operator": "EQ", "value": "上海市"},
+            {"field": "商品名称", "operator": "EQ", "value": "上海牌产品"},
+        ],
+        semantic_entity_mentions=["上海牌产品", "上海市"],
+    )
+
+    RuleBasedIntentClassifier._drop_geographic_subspan_filters(request)
+
+    assert len(request.filters) == 2
+    assert request.semantic_entity_mentions == ["上海牌产品", "上海市"]
 
 
 def test_grouped_trend_keeps_only_business_noun_as_semantic_entity_mention():

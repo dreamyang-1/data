@@ -48,6 +48,27 @@ from app.tools.database_load import DatabaseLoadError, build_database_load_tool
 from app.adapters.semantic_query import CompositeSemanticQueryTool
 
 
+# These codes describe a deterministic semantic/query contract rejection.  A
+# transport-level 5xx wrapper must not make the HTTP client submit the exact
+# same read-only plan several times.  The orchestrator may still perform its
+# single evidence-enriched semantic re-plan for the explicitly whitelisted
+# repairable subset.
+_NON_RETRYABLE_UPSTREAM_CODES = frozenset({
+    "ASL_ENTITY_MENTION_UNRESOLVED",
+    "ASL_FILTER_INVALID",
+    "ASL_REQUIRED_FILTER_MISSING",
+    "ASL_REQUIRED_DIMENSION_MISSING",
+    "ASL_DETAIL_FIELDS_INCOMPLETE",
+    "ASL_DETAIL_PROJECTION_MISSING",
+    "ASL_GROUPING_DIMENSION_MISSING",
+    "ASL_DIMENSION_INVALID",
+    "ASL_UNREQUESTED_DIMENSION",
+    "SQL_QUERY_ENTITY_ALIGNMENT_FAILED",
+    "SQL_QUERY_FILTER_OPERATOR_FAILED",
+    "SQL_RELATIONSHIP_GRAPH_INCOMPLETE",
+})
+
+
 def _compact_progress_value(value: Any, limit: int = 800) -> str:
     """Render auditable tool I/O without flooding the SSE stream."""
     if isinstance(value, str):
@@ -206,15 +227,19 @@ class PlatformHttpClient:
                     )
                 if response.status_code == 429 or response.status_code >= 500:
                     upstream_code = self._upstream_error_code(response)
+                    effective_retryable = bool(
+                        retryable
+                        and upstream_code not in _NON_RETRYABLE_UPSTREAM_CODES
+                    )
                     last_adapter_error = AdapterError(
                         "DEPENDENCY_UNAVAILABLE",
                         f"dependency returned HTTP {response.status_code}",
-                        retryable=retryable,
+                        retryable=effective_retryable,
                         status_code=response.status_code,
                         upstream_code=upstream_code,
                         details={"path": path},
                     )
-                    if attempt + 1 < attempts:
+                    if effective_retryable and attempt + 1 < attempts:
                         await asyncio.sleep(
                             self.settings.http_retry_backoff_seconds * (2**attempt)
                         )
@@ -874,6 +899,54 @@ class HttpDataRetrievalAdapter:
         )
 
     @classmethod
+    def _semantic_filter_retrieval_terms(
+        cls,
+        request: CanonicalAnalysisRequest,
+        *,
+        semantic_model_id: int | None,
+    ) -> str:
+        """Return role-specific recall anchors for caller-owned filters.
+
+        A literal such as a full hospital or bilingual manufacturer name can
+        dominate vector recall and crowd out the registered name attribute.
+        The Intent-ASL contract then contains the right business filter but the
+        planner has no recalled field with which to realize it.  Add semantic
+        role/name anchors after all shape-specific retrieval rewrites.  Model
+        81's currently published identifiers are included only as recall hints;
+        Oagnet must still prove them against live metadata and source values.
+        """
+        families = {
+            cls._constraint_field_family(str(item.get("field") or ""))
+            for item in request.filters
+            if isinstance(item, dict)
+        }
+        terms: list[str] = []
+        if "hospital" in families:
+            terms.extend(("医院主数据", "医院名称", "医疗机构名称"))
+            if semantic_model_id == 81:
+                terms.extend(("hospital_name", "hospital.hospital_name"))
+        if "manufacturer" in families:
+            terms.extend((
+                "厂家主数据", "厂家名称", "制造商名称", "厂家标准名称",
+            ))
+            if semantic_model_id == 81:
+                terms.extend((
+                    "manufacturer_name", "standard_name",
+                    "manufacturer.manufacturer_name",
+                    "manufacturer.standard_name",
+                ))
+        if (
+            "DEPARTMENT_GRAIN=PRODUCT_MAIN_DEPARTMENT_COMBINATION"
+            in request.assumptions
+        ):
+            terms.extend((
+                "主要适用科室", "商品主要适用科室", "原始科室组合",
+            ))
+            if semantic_model_id == 81:
+                terms.extend(("main_department", "product.main_department"))
+        return " ".join(dict.fromkeys(terms))
+
+    @classmethod
     def _constraint_field_matches(cls, expected: str, actual: str) -> bool:
         expected_normalized = expected.strip().lower()
         actual_normalized = actual.strip().lower()
@@ -1433,6 +1506,44 @@ class HttpDataRetrievalAdapter:
             )
             if "manufacturer.manufacturer_name" not in retrieval_query:
                 retrieval_query += manufacturer_recall
+        role_recall = self._semantic_filter_retrieval_terms(
+            request,
+            semantic_model_id=semantic_model_id,
+        )
+        if role_recall:
+            retrieval_query += " " + role_recall
+        if any(
+            self._constraint_field_family(str(item.get("field") or ""))
+            == "hospital"
+            for item in request.filters
+            if isinstance(item, dict)
+        ):
+            asl_query += (
+                "\n实体过滤要求：医院全称必须绑定到当前语义模型已发布的医院主名称"
+                "属性，并按源数据中的完整规范值过滤；不得缩短成末尾别名，也不得把"
+                "医院名称误当成商品、品牌或厂家过滤。"
+            )
+        if any(
+            self._constraint_field_family(str(item.get("field") or ""))
+            == "manufacturer"
+            for item in request.filters
+            if isinstance(item, dict)
+        ):
+            asl_query += (
+                "\n实体过滤要求：用户给出的是厂家法定名称，不是关系编码。"
+                "名称可能同时包含中英文、空格和标点；必须使用当前召回的厂家名称或"
+                "厂家标准名称属性进行源数据校验。多个名称变体若归属同一业务主体，"
+                "不得要求用户改用编码。"
+            )
+        if (
+            "DEPARTMENT_GRAIN=PRODUCT_MAIN_DEPARTMENT_COMBINATION"
+            in request.assumptions
+        ):
+            asl_query += (
+                "\n分组粒度要求：本次“科室”按商品主数据中已发布的“主要适用科室”"
+                "原始组合值分组，不拆分为单个标准科室，不经过商品—科室多对多桥接；"
+                "订单笔数仍使用已发布指标公式按销售订单事实唯一键去重。"
+            )
         if request.dependency_constraints:
             dependency_fields = list(dict.fromkeys(
                 item.source_column for item in request.dependency_constraints
@@ -2300,9 +2411,17 @@ class HttpDataRetrievalAdapter:
             item for item in asl.get("filters") or [] if isinstance(item, dict)
         ]
         unresolved: list[str] = []
+        def literal_key(value: object) -> str:
+            # Structured extraction may preserve or remove spaces inside the
+            # same bilingual legal name.  Once the role-bound filter has been
+            # source-validated, that formatting-only variant is already bound
+            # and must not trigger a second untyped-entity lookup.
+            return re.sub(r"\s+", "", str(value or "").strip()).casefold()
+
         for mention in mentions:
             direct = any(
-                str(item.get("value") or "").strip().strip("%") == mention
+                literal_key(str(item.get("value") or "").strip("%"))
+                == literal_key(mention)
                 for item in generated_filters
             )
             resolved = False

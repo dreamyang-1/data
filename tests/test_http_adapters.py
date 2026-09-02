@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import httpx
 import pytest
 from app.adapters.base import AdapterError
 from app.adapters.http import (
@@ -37,6 +38,108 @@ class ContractClient:
     async def openapi_has_paths(self, base_url, required_paths):
         self.calls.append((base_url, required_paths))
         return next(self.results)
+
+
+def test_filter_recall_anchors_full_hospital_name_to_published_name_role():
+    req = CanonicalAnalysisRequest(
+        conversation_id="hospital-name-recall",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询上海市口腔医院的含税销售总额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        filters=[{
+            "field": "医院名称",
+            "operator": "EQ",
+            "value": "上海市口腔医院",
+        }],
+    )
+
+    recall = HttpDataRetrievalAdapter._semantic_filter_retrieval_terms(
+        req, semantic_model_id=81
+    )
+
+    assert "医院主数据" in recall
+    assert "医院名称" in recall
+    assert "hospital.hospital_name" in recall
+
+
+def test_filter_recall_includes_manufacturer_name_and_standard_name_roles():
+    req = CanonicalAnalysisRequest(
+        conversation_id="manufacturer-name-recall",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询Intuitive Surgical, Inc直观医疗公司的产品销售额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        filters=[{
+            "field": "厂家名称",
+            "operator": "EQ",
+            "value": "Intuitive Surgical, Inc直观医疗公司",
+        }],
+    )
+
+    recall = HttpDataRetrievalAdapter._semantic_filter_retrieval_terms(
+        req, semantic_model_id=81
+    )
+
+    assert "manufacturer.manufacturer_name" in recall
+    assert "manufacturer.standard_name" in recall
+
+
+def test_department_combination_grain_recalls_denormalized_published_attribute():
+    req = CanonicalAnalysisRequest(
+        conversation_id="department-combination-recall",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="统计各科室的订单笔数排名",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        assumptions=["DEPARTMENT_GRAIN=PRODUCT_MAIN_DEPARTMENT_COMBINATION"],
+    )
+
+    recall = HttpDataRetrievalAdapter._semantic_filter_retrieval_terms(
+        req, semantic_model_id=81
+    )
+
+    assert "主要适用科室" in recall
+    assert "product.main_department" in recall
+
+
+@pytest.mark.asyncio
+async def test_deterministic_semantic_5xx_is_not_retried_by_http_client(monkeypatch):
+    calls = 0
+
+    class FakeAsyncClient:
+        def __init__(self, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        async def request(self, method, path, **kwargs):
+            nonlocal calls
+            calls += 1
+            return httpx.Response(
+                502,
+                json={"error_code": "ASL_ENTITY_MENTION_UNRESOLVED"},
+                request=httpx.Request(method, "http://semantic.test" + path),
+            )
+
+    monkeypatch.setattr("app.adapters.http.httpx.AsyncClient", FakeAsyncClient)
+    client = PlatformHttpClient(Settings(http_max_retries=3))
+
+    with pytest.raises(AdapterError) as caught:
+        await client.post(
+            "http://semantic.test",
+            "/query",
+            {"query": "test"},
+            retryable=True,
+        )
+
+    assert calls == 1
+    assert caught.value.upstream_code == "ASL_ENTITY_MENTION_UNRESOLVED"
+    assert caught.value.retryable is False
 
 
 @pytest.mark.asyncio
@@ -343,6 +446,26 @@ def test_semantic_entity_mention_accepts_source_backed_canonical_repair():
             "canonical_value": "费森尤斯",
             "resolved_field": "manufacturer.parent_brand",
         }],
+    )
+
+
+def test_semantic_entity_mention_accepts_whitespace_variant_of_bound_filter():
+    req = request().model_copy(update={
+        "semantic_entity_mentions": [
+            "IntuitiveSurgical,Inc.直观医疗公司",
+        ],
+    })
+
+    HttpDataRetrievalAdapter._validate_semantic_entity_mentions(
+        {
+            "filters": [{
+                "field": "manufacturer.manufacturer_name",
+                "operator": "=",
+                "value": "Intuitive Surgical,Inc.直观医疗公司",
+            }],
+        },
+        req,
+        [],
     )
 
 
