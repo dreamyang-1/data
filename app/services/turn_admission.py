@@ -16,6 +16,8 @@ from app.domain.models import (
     CurrentTurnFacts,
     PrimaryIntent,
     SlotProvenance,
+    SlotOperation,
+    SlotOperationType,
     SlotSource,
     TurnAdmissionDecision,
     TurnRelation,
@@ -240,7 +242,7 @@ class TurnAdmissionGate:
             ]
             if inheritance_allowed else []
         )
-        return TurnAdmissionDecision(
+        decision = TurnAdmissionDecision(
             relation=relation,
             confidence=confidence,
             context_mode=context_mode,
@@ -262,7 +264,102 @@ class TurnAdmissionGate:
             previous_episode_id=(str(previous.request_id) if previous else None),
             context_before=before,
             context_delta=self._facts_delta(facts),
+            needs_clarification=(relation == TurnRelation.AMBIGUOUS_RELATION),
         )
+        self.refresh_slot_operations(decision)
+        return decision
+
+    @classmethod
+    def reconcile_model_relation(
+        cls,
+        *,
+        decision: TurnAdmissionDecision,
+        current: CanonicalAnalysisRequest,
+        previous: CanonicalAnalysisRequest | None,
+    ) -> None:
+        """Use the structured model as a semantic second opinion under hard gates.
+
+        The raw-turn admission result remains authoritative for complete new
+        tasks.  The model may resolve a genuinely ambiguous relation or refine a
+        generic follow-up into a modification, but it cannot make a standalone
+        request inherit history or bypass pending-state binding.
+        """
+
+        proposed = current.model_turn_relation
+        confidence = current.model_turn_relation_confidence or 0.0
+        if proposed is None or confidence < 0.75:
+            return
+        facts = decision.current_turn_facts
+        if facts.is_self_contained and decision.relation == TurnRelation.STANDALONE_NEW_TOPIC:
+            if proposed != TurnRelation.STANDALONE_NEW_TOPIC:
+                decision.reason_codes = list(dict.fromkeys([
+                    *decision.reason_codes,
+                    "MODEL_RELATION_REJECTED_BY_SELF_CONTAINED_GATE",
+                ]))
+            return
+        accepted = False
+        if proposed == TurnRelation.AMBIGUOUS_RELATION:
+            decision.relation = proposed
+            decision.confidence = confidence
+            decision.needs_clarification = True
+            accepted = True
+        elif (
+            decision.relation == TurnRelation.AMBIGUOUS_RELATION
+            and proposed != TurnRelation.STANDALONE_NEW_TOPIC
+        ):
+            decision.relation = proposed
+            decision.confidence = confidence
+            accepted = True
+        elif (
+            decision.relation == TurnRelation.CURRENT_TOPIC_FOLLOWUP
+            and proposed in {
+                TurnRelation.CURRENT_TOPIC_MODIFICATION,
+                TurnRelation.CURRENT_TOPIC_DRILLDOWN,
+                TurnRelation.CORRECTION,
+            }
+        ):
+            decision.relation = proposed
+            decision.confidence = confidence
+            accepted = True
+        if not accepted:
+            return
+        decision.needs_clarification = (
+            decision.relation == TurnRelation.AMBIGUOUS_RELATION
+        )
+
+        inheritance_allowed = decision.relation in {
+            TurnRelation.CURRENT_TOPIC_FOLLOWUP,
+            TurnRelation.CURRENT_TOPIC_MODIFICATION,
+            TurnRelation.CURRENT_TOPIC_DRILLDOWN,
+            TurnRelation.HISTORICAL_TOPIC_RETURN,
+            TurnRelation.CLARIFICATION_RESPONSE,
+            TurnRelation.CORRECTION,
+        }
+        decision.inherit_business_context = inheritance_allowed
+        decision.context_mode = (
+            ContextMode.HISTORICAL_THREAD
+            if decision.relation == TurnRelation.HISTORICAL_TOPIC_RETURN
+            else ContextMode.CLARIFICATION_RESUME
+            if decision.relation == TurnRelation.CLARIFICATION_RESPONSE
+            else ContextMode.CURRENT_THREAD
+            if inheritance_allowed
+            else ContextMode.NONE
+        )
+        decision.create_new_analysis_thread = (
+            decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+        )
+        decision.inheritance_slots = (
+            [
+                slot for slot in cls._present_business_slots(previous)
+                if slot not in decision.protected_slots
+            ]
+            if inheritance_allowed else []
+        )
+        decision.reason_codes = list(dict.fromkeys([
+            *decision.reason_codes,
+            "STRUCTURED_MODEL_RELATION_ACCEPTED",
+        ]))
+        cls.refresh_slot_operations(decision)
 
     def extract_current_turn_facts(
         self,
@@ -676,6 +773,10 @@ class TurnAdmissionGate:
                 request.ranking_limit = current.ranking_limit
         request.turn_relation = decision.relation
         request.context_mode = decision.context_mode
+        request.slot_operations = [
+            operation.model_copy(deep=True)
+            for operation in decision.slot_operations
+        ]
         request.slot_provenance.update(facts.inferred_slots)
         request.slot_provenance.update(facts.explicit_slots)
         for slot in decision.inheritance_slots:
@@ -903,6 +1004,7 @@ class TurnAdmissionGate:
             if slot not in {"filters", family}
         ]
         decision.context_delta = cls._facts_delta(facts)
+        cls.refresh_slot_operations(decision)
 
     @classmethod
     def rebind_current_semantic_shape(
@@ -952,6 +1054,102 @@ class TurnAdmissionGate:
             refreshed_slots.append("dimensions")
         decision.protected_slots = list(dict.fromkeys(refreshed_slots))
         decision.context_delta = cls._facts_delta(facts)
+        cls.refresh_slot_operations(decision)
+
+    @classmethod
+    def refresh_slot_operations(cls, decision: TurnAdmissionDecision) -> None:
+        """Render the admission decision as an explicit, auditable slot plan.
+
+        This is deliberately derived from already validated current-turn facts;
+        model-proposed operations remain advisory until the literal/provenance
+        gates have accepted the corresponding slot value.
+        """
+
+        before = decision.context_before
+        operations: list[SlotOperation] = []
+        snapshot_keys = {
+            "analysis_type": "intent",
+            "entity": "entity",
+            "query_object": "entity",
+            "metrics": "metrics",
+            "fields": "fields",
+            "projection": "fields",
+            "dimensions": "dimensions",
+            "filters": "filters",
+            "time_range": "time_range",
+            "comparison": "comparison",
+            "top_n": "top_n",
+            "previous_sql_plan": "has_asl_template",
+            "result_reference": "source_dataset_id",
+        }
+
+        for slot in decision.cleared_slots:
+            old_value = before.get(snapshot_keys.get(slot, slot))
+            if old_value not in (None, [], {}, False):
+                operations.append(SlotOperation(
+                    slot=slot,
+                    operation=SlotOperationType.CLEAR,
+                    source=SlotSource.CURRENT_EXPLICIT,
+                    confidence=decision.confidence,
+                    reason_code="STANDALONE_FRAME_CLEAR",
+                ))
+
+        current_slots = {
+            **decision.current_turn_facts.inferred_slots,
+            **decision.current_turn_facts.explicit_slots,
+        }
+        for slot, provenance in current_slots.items():
+            old_value = (
+                None
+                if decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+                else before.get(snapshot_keys.get(slot, slot))
+            )
+            new_value = provenance.value
+            operation = (
+                SlotOperationType.REPLACE
+                if old_value not in (None, [], {}, False) and old_value != new_value
+                else SlotOperationType.ADD
+            )
+            operations.append(SlotOperation(
+                slot=slot,
+                operation=operation,
+                old_value=old_value,
+                new_value=new_value,
+                evidence_span=(
+                    decision.current_turn_facts.raw_query[:500]
+                    if provenance.source != SlotSource.CURRENT_INFERRED
+                    else None
+                ),
+                source=provenance.source,
+                confidence=provenance.confidence,
+                reason_code=(
+                    "CURRENT_VALUE_REPLACES_ACTIVE_SLOT"
+                    if operation == SlotOperationType.REPLACE
+                    else "CURRENT_VALUE_ADDED"
+                ),
+            ))
+
+        current_names = set(current_slots)
+        for slot in decision.inheritance_slots:
+            if slot in current_names:
+                continue
+            value = before.get(snapshot_keys.get(slot, slot))
+            if value in (None, [], {}, False):
+                continue
+            operations.append(SlotOperation(
+                slot=slot,
+                operation=SlotOperationType.INHERIT,
+                old_value=value,
+                new_value=value,
+                source=(
+                    SlotSource.HISTORICAL_EPISODE
+                    if decision.context_mode == ContextMode.HISTORICAL_THREAD
+                    else SlotSource.ACTIVE_THREAD_STATE
+                ),
+                confidence=decision.confidence,
+                reason_code="UNIQUE_COMPATIBLE_CONTEXT_INHERITANCE",
+            ))
+        decision.slot_operations = operations[:100]
 
     @classmethod
     def validate_context_consistency(

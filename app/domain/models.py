@@ -79,6 +79,17 @@ class SlotSource(StrEnum):
     RESULT_ARTIFACT = "RESULT_ARTIFACT"
 
 
+class SlotOperationType(StrEnum):
+    """Auditable merge operation applied to one canonical dialogue slot."""
+
+    KEEP = "KEEP"
+    INHERIT = "INHERIT"
+    ADD = "ADD"
+    REPLACE = "REPLACE"
+    REMOVE = "REMOVE"
+    CLEAR = "CLEAR"
+
+
 class AnalysisOperator(StrEnum):
     FILTER = "FILTER"
     GROUP_BY = "GROUP_BY"
@@ -110,6 +121,19 @@ class SlotProvenance(StrictModel):
     source_thread: str | None = Field(default=None, max_length=128)
     source_episode: str | None = Field(default=None, max_length=128)
     confidence: float = Field(default=1.0, ge=0, le=1)
+
+
+class SlotOperation(StrictModel):
+    """A structured context merge decision; never an executable SQL operation."""
+
+    slot: str = Field(min_length=1, max_length=200)
+    operation: SlotOperationType
+    old_value: Any = None
+    new_value: Any = None
+    evidence_span: str | None = Field(default=None, max_length=500)
+    source: SlotSource
+    confidence: float = Field(default=1.0, ge=0, le=1)
+    reason_code: str = Field(default="", max_length=100)
 
 
 class CurrentTurnFacts(StrictModel):
@@ -147,6 +171,8 @@ class TurnAdmissionDecision(StrictModel):
     context_delta: dict[str, Any] = Field(default_factory=dict)
     context_after: dict[str, Any] = Field(default_factory=dict)
     context_conflicts: list[dict[str, Any]] = Field(default_factory=list)
+    slot_operations: list[SlotOperation] = Field(default_factory=list, max_length=100)
+    needs_clarification: bool = False
 
 
 class TemporalAnchor(StrictModel):
@@ -185,9 +211,23 @@ class IntentCandidate(StrictModel):
 
 
 class SemanticAmbiguity(StrictModel):
-    type: Literal["metric", "dimension", "filter", "time_anchor", "subject", "unknown"]
+    type: Literal[
+        "turn_relation", "schema_relation", "metric", "dimension", "filter",
+        "entity_value", "entity_role", "filter_slot", "operation_intent",
+        "time_anchor", "comparison", "data_source", "context",
+        "fact_conflict", "rewrite_conflict", "historical_branch", "subject",
+        "unknown",
+    ]
     question: str = Field(min_length=1, max_length=500)
     candidates: list[str] = Field(default_factory=list, max_length=10)
+    ambiguity_id: str | None = Field(default=None, max_length=128)
+    phrase: str | None = Field(default=None, max_length=200)
+    affected_slots: list[str] = Field(default_factory=list, max_length=20)
+    candidate_details: list[dict[str, Any]] = Field(default_factory=list, max_length=10)
+    material_impact: str | None = Field(default=None, max_length=300)
+    blocking: bool = True
+    semantic_model_id: int | None = Field(default=None, gt=0)
+    semantic_model_version: str | None = Field(default=None, max_length=128)
 
     @model_validator(mode="after")
     def normalize_candidates(self) -> "SemanticAmbiguity":
@@ -223,8 +263,11 @@ class CanonicalAnalysisRequest(StrictModel):
     source_dataset_id: str | None = Field(default=None, max_length=128)
     analysis_thread_id: str | None = Field(default=None, max_length=128)
     turn_relation: TurnRelation | None = None
+    model_turn_relation: TurnRelation | None = None
+    model_turn_relation_confidence: float | None = Field(default=None, ge=0, le=1)
     context_mode: ContextMode = ContextMode.NONE
     slot_provenance: dict[str, SlotProvenance] = Field(default_factory=dict)
+    slot_operations: list[SlotOperation] = Field(default_factory=list, max_length=100)
     turn_admission: TurnAdmissionDecision | None = None
     temporal_anchor: TemporalAnchor | None = None
     resolved_periods: list[str] = Field(default_factory=list, max_length=24)
@@ -266,6 +309,7 @@ class CanonicalAnalysisRequest(StrictModel):
     semantic_ambiguities: list[SemanticAmbiguity] = Field(default_factory=list, max_length=5)
     knowledge_base_names: list[str] = Field(default_factory=list)
     semantic_model_id: int | None = Field(default=None, gt=0)
+    semantic_model_version: str | None = Field(default=None, max_length=128)
     database_id: int | None = Field(
         default=None,
         gt=0,

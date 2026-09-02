@@ -19,7 +19,11 @@ from app.domain.models import (
     IntentCandidate,
     MetricRef,
     PrimaryIntent,
+    SlotOperation,
+    SlotOperationType,
+    SlotSource,
     TrustedIdentity,
+    TurnRelation,
 )
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
@@ -31,6 +35,16 @@ from app.intent.classifier import (
 logger = logging.getLogger(__name__)
 
 
+class StructuredSlotOperation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    slot: str = Field(min_length=1, max_length=200)
+    operation: SlotOperationType
+    value: Any = None
+    evidence_span: str = Field(default="", max_length=500)
+    confidence: float = Field(default=0.8, ge=0, le=1)
+
+
 class StructuredIntentOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -38,6 +52,9 @@ class StructuredIntentOutput(BaseModel):
     secondary_intents: list[PrimaryIntent] = Field(default_factory=list)
     operators: list[AnalysisOperator] = Field(default_factory=list)
     conversation_control: ConversationControl = ConversationControl.NEW_REQUEST
+    turn_relation: TurnRelation | None = None
+    turn_relation_confidence: float | None = Field(default=None, ge=0, le=1)
+    slot_operations: list[StructuredSlotOperation] = Field(default_factory=list, max_length=30)
     confidence: float = Field(ge=0, le=1)
     evidence: list[str] = Field(default_factory=list)
     metrics: list[str] = Field(default_factory=list)
@@ -76,6 +93,10 @@ SYSTEM_PROMPT = """你是企业数据分析系统的意图分类器，只分类�
 22. metrics 中的每一项都必须能独立表示可计算度量；completed_question 中的指标口径必须与 metrics 一致。
 23. current_entity_values 只提取当前用户问题（“已确认的上一轮上下文”之前）明确出现的具体业务实体值，例如产品名、品牌名、厂家名、经销商名、医院名或地区名；不得填写“产品、经销商、医院”等对象类别，不得复制只存在于上一轮上下文中的值，也不得包含“那、呢、换成”等语气或操作词。例如“那费森尤斯呢”必须提取为 ["费森尤斯"]。
 24. 当前问题出现新的实体值时，completed_question 必须用新值替换上一轮同一筛选槽，不得同时保留冲突旧值，也不得把新实体值臆造成查询对象或指标。
+25. turn_relation 必须先根据“已确认的上一轮上下文”之前的当前用户原话判断，再把上下文作为候选先行项；完整且可独立执行的问题默认 STANDALONE_NEW_TOPIC，不得因为业务域相似或上一轮刚发生就判为追问。
+26. 只有当前问题依赖省略、指代或明确修改上一任务时才使用 CURRENT_TOPIC_FOLLOWUP / CURRENT_TOPIC_MODIFICATION / CURRENT_TOPIC_DRILLDOWN；用户正在回答一个明确待补充项时才使用 CLARIFICATION_RESPONSE；存在多个合理先行项时使用 AMBIGUOUS_RELATION。
+27. slot_operations 表示当前轮相对已确认上下文的槽位操作。当前明确值替换同槽旧值时用 REPLACE；“再加、同时、以及”才用 ADD；省略且唯一可恢复才用 INHERIT；不得为当前原话及确认上下文都没有的值生成操作。evidence_span 必须逐字来自当前用户原话。
+28. 查询对象和筛选实体值必须分开。例如“某产品的经销商有哪些”的查询对象是经销商，产品名是筛选；“那费森尤斯呢”只能提出替换相容筛选槽，不能把费森尤斯改成查询对象。
 """
 
 
@@ -218,6 +239,25 @@ class HybridIntentClassifier:
             if deterministic_control != ConversationControl.NEW_REQUEST
             else model.conversation_control
         )
+        request.model_turn_relation = model.turn_relation
+        request.model_turn_relation_confidence = model.turn_relation_confidence
+        current_fragment_for_ops = question.split(
+            "\n已确认的上一轮上下文", 1
+        )[0]
+        for operation in model.slot_operations:
+            evidence = operation.evidence_span.strip()
+            if not evidence or evidence not in current_fragment_for_ops:
+                request.assumptions.append("UNGROUNDED_MODEL_SLOT_OPERATION_DROPPED")
+                continue
+            request.slot_operations.append(SlotOperation(
+                slot=operation.slot,
+                operation=operation.operation,
+                new_value=operation.value,
+                evidence_span=evidence,
+                source=SlotSource.CURRENT_EXPLICIT,
+                confidence=operation.confidence,
+                reason_code="MODEL_PROPOSED_CURRENT_DELTA",
+            ))
         request.operators = model.operators
         request.intent_source = "STRUCTURED_MODEL"
         request.intent_confidence = model.confidence
@@ -312,6 +352,7 @@ class HybridIntentClassifier:
             completed_question = self._safe_completed_question(
                 model.completed_question,
                 question,
+                required_current_entities=request.semantic_entity_mentions,
             )
             if completed_question is not None:
                 request.rewritten_question = completed_question
@@ -908,7 +949,11 @@ class HybridIntentClassifier:
         return False
 
     @staticmethod
-    def _safe_completed_question(value: str, source: str) -> str | None:
+    def _safe_completed_question(
+        value: str,
+        source: str,
+        required_current_entities: list[str] | None = None,
+    ) -> str | None:
         completed = re.sub(r"\s+", " ", value).strip()
         if not completed or len(completed) > 4000:
             return None
@@ -924,6 +969,26 @@ class HybridIntentClassifier:
             return None
         for term in ("不要", "排除", "剔除", "不含", "不是"):
             if term in current and term not in completed:
+                return None
+        required_entities = [
+            re.sub(r"\s+", "", item)
+            for item in required_current_entities or []
+            if str(item).strip()
+        ]
+        compact_completed = re.sub(r"\s+", "", completed)
+        if any(entity not in compact_completed for entity in required_entities):
+            return None
+        if required_entities and "\n已确认的上一轮上下文" in source:
+            context = source.split("\n已确认的上一轮上下文", 1)[1]
+            inherited_filter_values = {
+                re.sub(r"\s+", "", item)
+                for item in re.findall(r'["\']value["\']\s*:\s*["\']([^"\']+)["\']', context)
+            }
+            if any(
+                old_value not in required_entities
+                and old_value in compact_completed
+                for old_value in inherited_filter_values
+            ):
                 return None
         return completed
 

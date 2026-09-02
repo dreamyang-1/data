@@ -679,6 +679,46 @@ async def test_ambiguous_same_surface_candidates_are_not_rewritten():
     )
     assert result.rewritten_question == "查北区销售额"
     assert result.events == []
+    assert len(result.semantic_ambiguities) == 1
+    ambiguity = result.semantic_ambiguities[0]
+    assert ambiguity.type == "entity_role"
+    assert ambiguity.phrase == "北区"
+    assert ambiguity.blocking is True
+    assert ambiguity.semantic_model_id == 6
+    assert len(ambiguity.candidates) == 2
+
+
+@pytest.mark.asyncio
+async def test_semantic_model_version_is_carried_into_live_ambiguity():
+    searcher = FakeSearcher([
+        {
+            "score": 0.96,
+            "entity_name": "商品主数据",
+            "attribute_name": "商品品牌",
+            "attribute_code": "brand",
+            "attribute_value": "费森尤斯",
+            "semantic_model_version": "v2026-09-02",
+        },
+        {
+            "score": 0.94,
+            "entity_name": "厂家主数据",
+            "attribute_name": "厂家名称",
+            "attribute_code": "manufacturer",
+            "attribute_value": "费森尤斯",
+            "semantic_model_version": "v2026-09-02",
+        },
+    ])
+
+    result = await QuestionRewriter(searcher).rewrite(
+        "查询费森尤斯的经销商",
+        previous=None,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert result.semantic_model_version == "v2026-09-02"
+    assert result.semantic_ambiguities[0].semantic_model_version == "v2026-09-02"
+    assert result.semantic_ambiguities[0].affected_slots == ["filters"]
 
 
 @pytest.mark.asyncio

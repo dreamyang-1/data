@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 from dataclasses import dataclass, field
@@ -10,7 +11,7 @@ import re
 
 import httpx
 
-from app.domain.models import CanonicalAnalysisRequest
+from app.domain.models import CanonicalAnalysisRequest, SemanticAmbiguity
 from app.services.entity_extraction import EntityCandidate, EntityCandidateExtractor
 
 
@@ -38,6 +39,8 @@ class RewriteResult:
     # brand, category, and so on) to the latest registered dimension labels
     # without guessing physical columns or relying on a stale local dictionary.
     semantic_matches: list[dict[str, Any]] = field(default_factory=list)
+    semantic_ambiguities: list[SemanticAmbiguity] = field(default_factory=list)
+    semantic_model_version: str | None = None
 
 
 class EntityAttributeSearcher(Protocol):
@@ -92,7 +95,21 @@ class HttpEntityAttributeSearcher:
         matches = payload.get("matches", []) if isinstance(payload, dict) else []
         if not isinstance(matches, list):
             raise ValueError("entity attribute search returned invalid matches")
-        return [item for item in matches if isinstance(item, dict)]
+        version = (
+            payload.get("semantic_model_version")
+            or payload.get("model_version")
+            or payload.get("published_version")
+            or payload.get("version")
+        ) if isinstance(payload, dict) else None
+        result: list[dict[str, Any]] = []
+        for item in matches:
+            if not isinstance(item, dict):
+                continue
+            normalized = dict(item)
+            if version is not None and "semantic_model_version" not in normalized:
+                normalized["semantic_model_version"] = str(version)
+            result.append(normalized)
+        return result
 
 
 class QuestionRewriter:
@@ -235,10 +252,20 @@ class QuestionRewriter:
             )
 
         normalized, events = self._normalize(rewritten, locally_normalized, matches)
+        semantic_version = self._semantic_model_version(matches)
+        semantic_ambiguities = self._detect_semantic_ambiguities(
+            locally_normalized,
+            matches,
+            semantic_model_id=semantic_model_id,
+            semantic_model_version=semantic_version,
+        )
         if not self._critical_terms_preserved(original, normalized):
             logger.warning("unsafe rewrite rejected because intent/number/negation terms changed")
             return RewriteResult(
-                original, rewritten, context_applied=context_applied, degraded=True
+                original, rewritten, context_applied=context_applied, degraded=True,
+                semantic_matches=[dict(item) for item in matches],
+                semantic_ambiguities=semantic_ambiguities,
+                semantic_model_version=semantic_version,
             )
         return RewriteResult(
             original,
@@ -246,7 +273,99 @@ class QuestionRewriter:
             local_events + events,
             context_applied,
             semantic_matches=[dict(item) for item in matches],
+            semantic_ambiguities=semantic_ambiguities,
+            semantic_model_version=semantic_version,
         )
+
+    @staticmethod
+    def _semantic_model_version(matches: list[dict[str, Any]]) -> str | None:
+        versions = {
+            str(item.get("semantic_model_version") or item.get("model_version") or "").strip()
+            for item in matches
+            if str(item.get("semantic_model_version") or item.get("model_version") or "").strip()
+        }
+        return next(iter(versions)) if len(versions) == 1 else None
+
+    def _detect_semantic_ambiguities(
+        self,
+        question: str,
+        matches: list[dict[str, Any]],
+        *,
+        semantic_model_id: int | None,
+        semantic_model_version: str | None,
+    ) -> list[SemanticAmbiguity]:
+        """Promote close live-semantic candidates instead of silently skipping them."""
+
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for match in matches:
+            score = float(match.get("score") or 0.0)
+            if score < self.auto_replace_threshold:
+                continue
+            aliases = self._aliases(match.get("entity_alias"))
+            surfaces = [
+                *aliases,
+                str(match.get("attribute_value") or "").strip(),
+                str(match.get("entity_name") or "").strip(),
+            ]
+            for surface in dict.fromkeys(value for value in surfaces if len(value) >= 2):
+                if surface in question:
+                    grouped.setdefault(surface, []).append(match)
+
+        result: list[SemanticAmbiguity] = []
+        for surface, alternatives in grouped.items():
+            unique: dict[tuple[str, str, str], dict[str, Any]] = {}
+            for item in alternatives:
+                key = (
+                    str(item.get("attribute_code") or ""),
+                    str(item.get("attribute_name") or ""),
+                    str(item.get("entity_name") or item.get("attribute_value") or ""),
+                )
+                current = unique.get(key)
+                if current is None or float(item.get("score") or 0.0) > float(current.get("score") or 0.0):
+                    unique[key] = item
+            ranked = sorted(unique.values(), key=lambda item: -float(item.get("score") or 0.0))
+            if len(ranked) < 2:
+                continue
+            if float(ranked[0].get("score") or 0.0) - float(ranked[1].get("score") or 0.0) >= self.candidate_gap:
+                continue
+            details: list[dict[str, Any]] = []
+            labels: list[str] = []
+            for item in ranked[:5]:
+                attribute_name = str(item.get("attribute_name") or "").strip()
+                entity_name = str(item.get("entity_name") or "").strip()
+                attribute_value = str(item.get("attribute_value") or surface).strip()
+                label = "：".join(value for value in (attribute_name, entity_name or attribute_value) if value) or attribute_value
+                if label in labels:
+                    continue
+                labels.append(label)
+                details.append({
+                    "semantic_id": str(item.get("attribute_code") or item.get("id") or ""),
+                    "label": label,
+                    "value": attribute_value,
+                    "entity_name": entity_name,
+                    "attribute_name": attribute_name,
+                    "score": float(item.get("score") or 0.0),
+                    "semantic_model_version": semantic_model_version,
+                })
+            if len(labels) < 2:
+                continue
+            digest = hashlib.sha256(
+                f"{semantic_model_id}:{semantic_model_version}:{surface}:{'|'.join(labels)}".encode("utf-8")
+            ).hexdigest()[:20]
+            result.append(SemanticAmbiguity(
+                ambiguity_id=f"semantic-rewrite-{digest}",
+                type="entity_role",
+                phrase=surface,
+                affected_slots=["filters"],
+                question=f"“{surface}”在当前语义层有多个业务含义，请确认本次指的是哪一个？",
+                candidates=labels,
+                candidate_details=details,
+                material_impact="不同选择会改变筛选字段或关联实体",
+                blocking=True,
+                semantic_model_id=semantic_model_id,
+                semantic_model_version=semantic_model_version,
+            ))
+        return result[:5]
 
     @staticmethod
     def _normalize_polite_word_order(text: str) -> tuple[str, list[RewriteEvent]]:

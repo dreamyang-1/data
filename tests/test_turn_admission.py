@@ -18,6 +18,7 @@ from app.domain.models import (
     PrimaryIntent,
     TrustedIdentity,
     TurnRelation,
+    SlotOperationType,
 )
 from app.intent import RuleBasedIntentClassifier
 from app.services import DataAnalysisOrchestrator
@@ -116,6 +117,28 @@ def test_model_grounded_short_followup_replaces_active_entity_filter():
     assert merged.asl_template is None
     assert merged.source_dataset_id is None
     assert "CORE_SUBJECT_CHANGE_REPLAN_REQUIRED" in merged.assumptions
+    replacement = next(
+        item for item in decision.slot_operations
+        if item.slot == "filters"
+    )
+    assert replacement.operation == SlotOperationType.REPLACE
+    assert replacement.new_value[-1]["value"] == "费森尤斯"
+
+
+def test_incomplete_unreferenced_turn_exposes_relation_clarification_state():
+    gate, _, _, decision = _decision(
+        "查询2026年8月含税销售总额",
+        "分析数据",
+        "ambiguous-relation-state",
+    )
+
+    assert decision.relation == TurnRelation.AMBIGUOUS_RELATION
+    assert decision.needs_clarification is True
+    assert decision.inherit_business_context is False
+    assert not any(
+        item.operation == SlotOperationType.INHERIT
+        for item in decision.slot_operations
+    )
 
 
 def test_catalog_category_scope_does_not_become_a_synthetic_product_fact():

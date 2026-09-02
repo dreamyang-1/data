@@ -31,7 +31,7 @@ from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLaye
 from app.services.chat_responder import QwenChatResponder
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
-from app.domain.models import AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, TaskExecutionResult, TaskPlan, TrustedIdentity, TurnAdmissionDecision, TurnRelation
+from app.domain.models import AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
 from app.planning import MultiQuestionPlanner, TaskPlanningError
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
@@ -2250,6 +2250,11 @@ class DataAnalysisOrchestrator:
                 )
             )
             current_request = request.model_copy(deep=True)
+            self.turn_admission_gate.reconcile_model_relation(
+                decision=turn_decision,
+                current=current_request,
+                previous=previous_for_rewrite,
+            )
             self.turn_admission_gate.promote_model_entity_replacement(
                 decision=turn_decision,
                 current=current_request,
@@ -2428,6 +2433,8 @@ class DataAnalysisOrchestrator:
             request.rewrite_context_applied = rewrite.context_applied
             request.rewrite_degraded = rewrite.degraded
             request.rewrite_events = [event.__dict__ for event in rewrite.events]
+            if rewrite.semantic_model_version:
+                request.semantic_model_version = rewrite.semantic_model_version
             if model_completion_applied:
                 request.rewrite_events.append({
                     "original": rewrite.rewritten_question,
@@ -2665,6 +2672,43 @@ class DataAnalysisOrchestrator:
         required_missing_slots = getattr(rules, "required_missing_slots", None)
         if callable(required_missing_slots):
             request.missing_slots = required_missing_slots(request)
+        if rewrite is not None and rewrite.semantic_ambiguities:
+            request.semantic_ambiguities = [
+                item.model_copy(deep=True)
+                for item in rewrite.semantic_ambiguities
+                if item.blocking
+            ]
+            request.ambiguities = [
+                item.question for item in request.semantic_ambiguities
+            ]
+            if request.semantic_ambiguities and "semantic_ambiguity" not in request.missing_slots:
+                request.missing_slots.append("semantic_ambiguity")
+        if turn_decision.relation == TurnRelation.AMBIGUOUS_RELATION:
+            relation_ambiguity = SemanticAmbiguity(
+                ambiguity_id=f"turn-relation-{request.request_id}",
+                type="turn_relation",
+                phrase=chat.question[:200],
+                affected_slots=["turn_relation"],
+                question="这句话既可以作为上一轮的补充，也可以作为一个新问题。请确认本次意图。",
+                candidates=["补充或修改上一轮问题", "作为独立新问题"],
+                material_impact="不同选择会决定是否继承上一轮指标、实体、时间和筛选条件",
+                blocking=True,
+                semantic_model_id=chat.semantic_model_id,
+                semantic_model_version=request.semantic_model_version,
+            )
+            request.semantic_ambiguities = [
+                relation_ambiguity,
+                *[
+                    item for item in request.semantic_ambiguities
+                    if item.type != "turn_relation"
+                ],
+            ][:5]
+            request.ambiguities = [
+                item.question for item in request.semantic_ambiguities
+            ]
+            if "turn_relation" not in request.missing_slots:
+                request.missing_slots.insert(0, "turn_relation")
+            turn_decision.needs_clarification = True
         request.analysis_thread_id = turn_decision.selected_thread_id
         request = resolve_conversation_temporal_context(
             request,
@@ -2700,6 +2744,10 @@ class DataAnalysisOrchestrator:
                 "context_delta": turn_decision.context_delta,
                 "context_after": turn_decision.context_after,
                 "context_conflicts": turn_decision.context_conflicts,
+                "slot_operations": [
+                    item.model_dump(mode="json")
+                    for item in turn_decision.slot_operations
+                ],
                 "new_thread_created": turn_decision.create_new_analysis_thread,
                 "inherited_slots": turn_decision.inheritance_slots,
                 "temporal_anchor": (
@@ -4661,6 +4709,12 @@ class DataAnalysisOrchestrator:
             ))
         if slot == "comparison_type":
             return compact in {"同比", "环比", "目标值", "对象间比较"}
+        if slot == "turn_relation":
+            return compact in {
+                "补充上一轮", "修改上一轮", "继续上一轮", "追问上一轮",
+                "补充或修改上一轮问题", "作为独立新问题", "独立新问题",
+                "新问题", "作为新问题",
+            }
         if slot == "comparison_objects":
             confirmation = safe_semantic_confirmation(question)
             if confirmation is None:
@@ -4940,6 +4994,78 @@ class DataAnalysisOrchestrator:
 
         parsed_patch = merged.model_copy(deep=True)
         missing = set(pending.missing_slots)
+        if "turn_relation" in missing:
+            compact_answer = re.sub(r"\s+", "", clarification_answer)
+            followup_selected = any(
+                marker in compact_answer
+                for marker in ("上一轮", "继续", "补充", "修改", "追问")
+            ) and not any(
+                marker in compact_answer for marker in ("独立", "新问题")
+            )
+            relation_request = pending.model_copy(deep=True)
+            relation_request.missing_slots = [
+                slot for slot in relation_request.missing_slots
+                if slot != "turn_relation"
+            ]
+            relation_request.semantic_ambiguities = [
+                item for item in relation_request.semantic_ambiguities
+                if item.type != "turn_relation"
+            ]
+            relation_request.ambiguities = [
+                item.question for item in relation_request.semantic_ambiguities
+            ]
+            if followup_selected:
+                before = (
+                    relation_request.turn_admission.context_before
+                    if relation_request.turn_admission is not None else {}
+                )
+                if not relation_request.metrics:
+                    relation_request.metrics = [
+                        MetricRef(input=str(value))
+                        for value in before.get("metrics") or []
+                        if str(value).strip()
+                    ]
+                relation_request.entity = relation_request.entity or before.get("entity")
+                if not relation_request.fields:
+                    relation_request.fields = list(before.get("fields") or [])
+                if not relation_request.dimensions:
+                    relation_request.dimensions = list(before.get("dimensions") or [])
+                if not relation_request.filters:
+                    relation_request.filters = [
+                        dict(item) for item in before.get("filters") or []
+                        if isinstance(item, dict)
+                    ]
+                if relation_request.time_range is None and before.get("time_range"):
+                    relation_request.time_range = TimeRange.model_validate(
+                        before["time_range"]
+                    )
+                relation_request.comparison_type = (
+                    relation_request.comparison_type or before.get("comparison")
+                )
+                relation_request.ranking_limit = (
+                    relation_request.ranking_limit or before.get("top_n")
+                )
+                relation_request.turn_relation = TurnRelation.CURRENT_TOPIC_FOLLOWUP
+                relation_request.context_mode = ContextMode.CURRENT_THREAD
+                relation_request.assumptions.append(
+                    "TURN_RELATION_CLARIFIED_AS_CURRENT_TOPIC"
+                )
+            else:
+                relation_request.turn_relation = TurnRelation.STANDALONE_NEW_TOPIC
+                relation_request.context_mode = ContextMode.NONE
+                relation_request.asl_template = None
+                relation_request.source_dataset_id = None
+                relation_request.assumptions.append(
+                    "TURN_RELATION_CLARIFIED_AS_STANDALONE"
+                )
+            if relation_request.turn_admission is not None:
+                relation_request.turn_admission.relation = relation_request.turn_relation
+                relation_request.turn_admission.context_mode = relation_request.context_mode
+                relation_request.turn_admission.needs_clarification = False
+            relation_request.rewritten_question = render_execution_question(
+                relation_request
+            )
+            return relation_request
         semantic_clarification = "semantic_ambiguity" in missing
 
         merged.primary_intent = pending.primary_intent
@@ -5403,9 +5529,17 @@ class DataAnalysisOrchestrator:
             )
             return self._fallback(request, "关键信息多轮补充后仍不完整，请重新描述分析目标。")
         all_questions = self._clarification_questions(request)
-        questions = all_questions[:5]
-        clarification_items = self._clarification_items(request)[:5]
-        remaining_questions = all_questions[5:]
+        question_limit = (
+            1
+            if any(
+                slot in request.missing_slots
+                for slot in ("turn_relation", "semantic_ambiguity")
+            )
+            else 5
+        )
+        questions = all_questions[:question_limit]
+        clarification_items = self._clarification_items(request)[:question_limit]
+        remaining_questions = all_questions[question_limit:]
         try:
             await self.sessions.put_pending(
                 PendingState(
@@ -6535,7 +6669,12 @@ class DataAnalysisOrchestrator:
         if not isinstance(exc.details, list):
             return []
         result: list[SemanticAmbiguity] = []
-        allowed_types = {"metric", "dimension", "filter", "time_anchor", "subject"}
+        allowed_types = {
+            "turn_relation", "schema_relation", "metric", "dimension", "filter",
+            "entity_value", "entity_role", "filter_slot", "operation_intent",
+            "time_anchor", "comparison", "data_source", "context",
+            "fact_conflict", "rewrite_conflict", "historical_branch", "subject",
+        }
         for value in exc.details[:5]:
             if not isinstance(value, dict):
                 continue
@@ -6556,6 +6695,36 @@ class DataAnalysisOrchestrator:
                     type=ambiguity_type,
                     question=question[:500],
                     candidates=candidates[:10],
+                    ambiguity_id=(
+                        str(value.get("ambiguity_id"))[:128]
+                        if value.get("ambiguity_id") else None
+                    ),
+                    phrase=(
+                        str(value.get("phrase"))[:200]
+                        if value.get("phrase") else None
+                    ),
+                    affected_slots=[
+                        str(item)[:200]
+                        for item in value.get("affected_slots") or []
+                        if str(item).strip()
+                    ][:20],
+                    candidate_details=[
+                        dict(item) for item in value.get("candidate_details") or []
+                        if isinstance(item, dict)
+                    ][:10],
+                    material_impact=(
+                        str(value.get("material_impact"))[:300]
+                        if value.get("material_impact") else None
+                    ),
+                    blocking=bool(value.get("blocking", True)),
+                    semantic_model_id=(
+                        int(value["semantic_model_id"])
+                        if value.get("semantic_model_id") else None
+                    ),
+                    semantic_model_version=(
+                        str(value.get("semantic_model_version"))[:128]
+                        if value.get("semantic_model_version") else None
+                    ),
                 ))
             except ValueError:
                 continue
@@ -6563,7 +6732,7 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _clarification_questions(request: CanonicalAnalysisRequest) -> list[str]:
-        prompts = {"metric": "要查询或分析哪个指标？", "time_range": "要分析哪个时间范围？", "entity": "要查询哪类业务明细？", "fields": "明细中需要哪些字段？", "comparison_type": "希望同比、环比、目标值还是对象间比较？", "comparison_objects": "请提供要对比的具体经销商或供应商名称，并用顿号或逗号分隔。", "dimension": "希望按哪个维度分析？", "product": "要计算哪个具体商品的科室匹配度？", "semantic_ambiguity": "请确认存在歧义的业务口径。"}
+        prompts = {"turn_relation": "请确认这句话是在补充上一轮，还是一个独立新问题？", "metric": "要查询或分析哪个指标？", "time_range": "要分析哪个时间范围？", "entity": "要查询哪类业务明细？", "fields": "明细中需要哪些字段？", "comparison_type": "希望同比、环比、目标值还是对象间比较？", "comparison_objects": "请提供要对比的具体经销商或供应商名称，并用顿号或逗号分隔。", "dimension": "希望按哪个维度分析？", "product": "要计算哪个具体商品的科室匹配度？", "semantic_ambiguity": "请确认存在歧义的业务口径。"}
         normalized_question = re.sub(r"\s+", "", request.original_question or "")
         if "推荐" in normalized_question or "画像" in normalized_question:
             prompts["metric"] = (
@@ -6590,20 +6759,28 @@ class DataAnalysisOrchestrator:
     @classmethod
     def _clarification_items(cls, request: CanonicalAnalysisRequest) -> list[dict[str, Any]]:
         options_by_slot = {
+            "turn_relation": ["补充或修改上一轮问题", "作为独立新问题"],
             "time_range": ["今天", "昨天", "本周", "上周", "本月", "上月"],
             "comparison_type": ["同比", "环比", "目标值", "对象间比较"],
             "forecast_horizon": ["未来7天", "未来4周", "未来3个月", "未来4个季度"],
             "forecast_history_range": ["过去3个月", "过去6个月", "过去12个月", "过去24个月"],
         }
         titles = {
-            "metric": "指标", "time_range": "时间", "entity": "业务对象",
+            "turn_relation": "对话关系", "metric": "指标", "time_range": "时间", "entity": "业务对象",
             "fields": "字段", "comparison_type": "比较方式", "comparison_objects": "比较对象", "dimension": "分析维度",
             "product": "商品", "semantic_ambiguity": "口径确认",
             "forecast_horizon": "预测范围", "forecast_history_range": "历史范围",
         }
         semantic_titles = {
+            "turn_relation": "对话关系", "schema_relation": "数据关系",
             "metric": "指标口径", "dimension": "维度口径", "filter": "筛选口径",
-            "time_anchor": "时间口径", "subject": "业务对象", "unknown": "口径确认",
+            "entity_value": "实体值", "entity_role": "实体角色",
+            "filter_slot": "筛选字段", "operation_intent": "查询方式",
+            "time_anchor": "时间口径", "comparison": "比较方式",
+            "data_source": "数据来源", "context": "上下文",
+            "fact_conflict": "事实冲突", "rewrite_conflict": "改写冲突",
+            "historical_branch": "历史任务", "subject": "业务对象",
+            "unknown": "口径确认",
         }
         items: list[dict[str, Any]] = []
         for slot in request.missing_slots:
