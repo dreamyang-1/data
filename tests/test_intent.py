@@ -1436,6 +1436,94 @@ def test_generic_province_order_count_uses_sales_business_geography():
     assert [metric.input for metric in request.metrics] == ["订单笔数"]
 
 
+def test_product_order_distribution_infers_count_without_clarification():
+    request = RuleBasedIntentClassifier().classify(
+        "统计胸腹腔内窥镜手术系统用手术器械在各省份的销售订单分布。",
+        IDENTITY,
+        "product-order-distribution",
+    )
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert [metric.input for metric in request.metrics] == ["订单笔数"]
+    assert request.dimensions == ["业务省份"]
+    assert request.filters == [{
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "胸腹腔内窥镜手术系统用手术器械",
+    }]
+    assert request.time_range is None
+    assert "TIME_SCOPE=ALL_TIME" in request.assumptions
+    assert request.missing_slots == []
+
+
+@pytest.mark.parametrize(
+    "question",
+    (
+        "查询复旦大学附属华山医院的订单笔数。",
+        "查询上海交通大学医学院附属新华医院的订单笔数。",
+        "查询上海市第十人民医院的订单笔数。",
+        "查询上海市宝山区高境镇社区卫生服务中心的订单笔数。",
+    ),
+)
+def test_period_free_named_hospital_metric_uses_all_available_history(question):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "hospital-lifetime-order-count"
+    )
+
+    assert [metric.input for metric in request.metrics] == ["订单笔数"]
+    assert request.time_range is None
+    assert "TIME_SCOPE=ALL_TIME" in request.assumptions
+    assert (
+        "TIME_SCOPE_SOURCE=BUSINESS_DEFAULT_ALL_AVAILABLE_HISTORY"
+        in request.assumptions
+    )
+    assert request.missing_slots == []
+
+
+@pytest.mark.parametrize(
+    ("question", "manufacturer"),
+    (
+        (
+            "查询Intuitive Surgical, Inc直观医疗公司的产品的含税销售总额。",
+            "Intuitive Surgical, Inc直观医疗公司",
+        ),
+        (
+            "查询理诺珐德国有限责任公司LivaNova Deutschland GmbH的产品的含税销售总额。",
+            "理诺珐德国有限责任公司LivaNova Deutschland GmbH",
+        ),
+        (
+            "查询碧迪生物科学 Becton, Dickinson and Company, BD Biosciences的产品的含税销售总额。",
+            "碧迪生物科学 Becton, Dickinson and Company, BD Biosciences",
+        ),
+        (
+            "查询B.Braun Surgical SA的产品的含税销售总额。",
+            "B.Braun Surgical SA",
+        ),
+    ),
+)
+def test_legal_manufacturer_metric_uses_name_role_and_preserves_punctuation(
+    question, manufacturer
+):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "manufacturer-lifetime-total"
+    )
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert request.entity == "产品"
+    assert [metric.input for metric in request.metrics] == ["含税销售总额"]
+    assert request.dimensions == []
+    assert request.filters == [{
+        "field": "厂家名称",
+        "operator": "EQ",
+        "value": manufacturer,
+    }]
+    assert request.semantic_entity_mentions == [manufacturer]
+    assert request.time_range is None
+    assert "SEMANTIC_ENTITY_ROLE=MANUFACTURER_NAME" in request.assumptions
+    assert "TIME_SCOPE=ALL_TIME" in request.assumptions
+    assert request.missing_slots == []
+
+
 def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
     request = RuleBasedIntentClassifier().classify(
         "帮我找出上海地区正在销售振德医疗品牌的医用外科口罩产品的"

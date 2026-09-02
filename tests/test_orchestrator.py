@@ -26,6 +26,7 @@ from app.domain.models import (
 )
 from app.intent import RuleBasedIntentClassifier
 from app.services import DataAnalysisOrchestrator
+from app.services.orchestrator import SEMANTIC_QUERY_RETRY_CODES
 from app.stores import InMemorySessionStore
 from app.stores.long_memory import (
     InMemoryLongTermMemoryStore,
@@ -42,6 +43,11 @@ def service() -> DataAnalysisOrchestrator:
         adapters=build_mock_adapters(),
         sessions=InMemorySessionStore(),
     )
+
+
+def test_recoverable_asl_contract_failures_receive_one_semantic_retry():
+    assert "ASL_DETAIL_FIELDS_INCOMPLETE" in SEMANTIC_QUERY_RETRY_CODES
+    assert "ASL_REQUIRED_FILTER_MISSING" in SEMANTIC_QUERY_RETRY_CODES
 
 
 def test_explicit_field_projection_replaces_previous_table_columns():

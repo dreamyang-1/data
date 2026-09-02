@@ -82,6 +82,21 @@ ANALYSIS_INTENTS = {
     PrimaryIntent.ROOT_CAUSE_ANALYSIS, PrimaryIntent.FORECAST_ANALYSIS,
     PrimaryIntent.REPORT_GENERATION, PrimaryIntent.DATA_QUALITY,
 }
+
+# Contract failures that can be repaired by regenerating ASL against the same
+# published semantic snapshot.  The second attempt receives the exact missing
+# fields/filters in ``SEMANTIC_QUERY_RETRY`` and is still fail-closed.
+SEMANTIC_QUERY_RETRY_CODES = frozenset({
+    "ASL_AMBIGUOUS",
+    "ASL_DIMENSION_INVALID",
+    "ASL_DETAIL_FIELDS_INCOMPLETE",
+    "ASL_REQUIRED_FILTER_MISSING",
+    "ASL_REQUIRED_DIMENSION_MISSING",
+    "ASL_UNREQUESTED_DIMENSION",
+    "SQL_TRANSLATION_AMBIGUOUS",
+    "SQL_QUERY_ENTITY_ALIGNMENT_FAILED",
+    "SQL_QUERY_FILTER_OPERATOR_FAILED",
+})
 _SALES_RECORD_TIME_ASSUMPTION = "TRANSACTION_TIME_SCOPE=SALES_RECORD"
 _INTERNAL_ASSUMPTIONS: ContextVar[tuple[str, ...]] = ContextVar(
     "data_agent_internal_assumptions", default=()
@@ -3038,18 +3053,9 @@ class DataAnalysisOrchestrator:
                             request, query_result
                         )
                 except AdapterError as first_error:
-                    semantic_retry_codes = {
-                        "ASL_AMBIGUOUS",
-                        "ASL_DIMENSION_INVALID",
-                        "ASL_REQUIRED_DIMENSION_MISSING",
-                        "ASL_UNREQUESTED_DIMENSION",
-                        "SQL_TRANSLATION_AMBIGUOUS",
-                        "SQL_QUERY_ENTITY_ALIGNMENT_FAILED",
-                        "SQL_QUERY_FILTER_OPERATOR_FAILED",
-                    }
                     retry_code = (
                         first_error.upstream_code
-                        if first_error.upstream_code in semantic_retry_codes
+                        if first_error.upstream_code in SEMANTIC_QUERY_RETRY_CODES
                         else first_error.code
                     )
                     if first_error.code == "ANALYSIS_RESULT_CONTRACT_INVALID":
@@ -3068,7 +3074,7 @@ class DataAnalysisOrchestrator:
                                 default=str,
                             )[:4000]
                         )
-                    elif retry_code in semantic_retry_codes:
+                    elif retry_code in SEMANTIC_QUERY_RETRY_CODES:
                         await emit_progress(
                             "DATA_RETRIEVAL",
                             "RUNNING",

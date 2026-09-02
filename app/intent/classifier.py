@@ -634,6 +634,22 @@ class RuleBasedIntentClassifier:
             or cls._uses_precomputed_metric_window(request)
         ):
             return
+        if cls._uses_business_default_all_time_scope(request):
+            # An unqualified scalar/grouped metric means the complete governed
+            # fact history up to the source watermark.  A rolling year remains
+            # appropriate for rankings, comparisons, trends and explicitly
+            # active/current populations, but silently applying it to a plain
+            # hospital count or manufacturer total makes otherwise identical
+            # queries disagree with their business definition.
+            request.assumptions.extend(
+                assumption
+                for assumption in (
+                    "TIME_SCOPE=ALL_TIME",
+                    "TIME_SCOPE_SOURCE=BUSINESS_DEFAULT_ALL_AVAILABLE_HISTORY",
+                )
+                if assumption not in request.assumptions
+            )
+            return
         if request.primary_intent == PrimaryIntent.DETAIL_QUERY:
             detail_text = re.sub(
                 r"\s+", "", request.original_question or request.rewritten_question or ""
@@ -704,6 +720,8 @@ class RuleBasedIntentClassifier:
             ("合作供应商数", "已合作供应商数"),
             ("供应商数量", "已合作供应商数"),
             ("供应商数", "已合作供应商数"),
+            ("销售订单分布", "订单笔数"),
+            ("订单分布", "订单笔数"),
             ("销售订单数据", "订单笔数"),
         )
         for surface, canonical in aliases:
@@ -1462,8 +1480,89 @@ class RuleBasedIntentClassifier:
             and re.search(r"(?:对比|比较).{0,20}(?:家|个|名|供应商|经销商|门店)", compact)
         ):
             request.comparison_type = "对象间比较"
+        cls._apply_manufacturer_metric_scope(request, question)
         cls._apply_name_projection_non_null_constraint(request)
         cls._drop_invalid_filter_values(request)
+
+    @classmethod
+    def _apply_manufacturer_metric_scope(
+        cls,
+        request: CanonicalAnalysisRequest,
+        question: str,
+    ) -> None:
+        """Bind an explicitly named legal manufacturer as a name filter.
+
+        The semantic layer owns the eventual name-to-code resolution.  This
+        guard only preserves the business role expressed by constructions such
+        as ``B.Braun Surgical SA 的产品销售总额``.  Without it, a completion can
+        treat the legal name as a product literal or group the scalar total by
+        product, which later leaks the physical ``manufacturer_code`` relation
+        key into clarification.
+        """
+
+        if request.primary_intent != PrimaryIntent.METRIC_QUERY or not request.metrics:
+            return
+        current = question.split("\n已确认的上一轮上下文", 1)[0].strip()
+        match = re.search(
+            r"^(?:(?:请|麻烦|帮我|给我)?(?:查询|查找|查看|统计|计算|分析)?)"
+            r"(?P<maker>.+?)(?:的)?(?:产品|商品)(?:的)?"
+            r"(?:含税销售总额|累计销售额|销售总额|销售总数量|销售数量|销售量|"
+            r"订单总金额|订单金额|订单笔数|订单量|销售额|销量)",
+            current,
+            re.I,
+        )
+        if match is None:
+            return
+        maker = match.group("maker").strip().rstrip("的").strip("，,；;：:")
+        if not maker or len(maker) > 160 or any(ord(char) < 32 for char in maker):
+            return
+        legal_name = bool(re.search(
+            r"公司|有限责任|股份|集团|"
+            r"(?:^|[\s,.(])(?:inc\.?|gmbh|company|corp\.?|co\.?|ltd\.?|"
+            r"llc|s\.?a\.?|ag|plc)(?:$|[\s,.)])|surgical",
+            maker,
+            re.I,
+        ))
+        if not legal_name:
+            # Short catalog names such as “费森尤斯产品” may legitimately be a
+            # brand, a manufacturer alias or an exact product family.  Leave
+            # those to live semantic grounding instead of forcing a role.
+            return
+
+        request.entity = "产品"
+        request.fields = []
+        request.dimensions = [
+            dimension
+            for dimension in request.dimensions
+            if dimension not in {"产品", "商品", "厂家", "制造商"}
+        ]
+        request.filters = [
+            item
+            for item in request.filters
+            if str(item.get("field") or "") not in {
+                "商品名称", "产品名称", "商品", "产品",
+                "厂家", "厂家名称", "制造商", "制造商名称",
+            }
+        ]
+        request.filters.append({
+            "field": "厂家名称",
+            "operator": "EQ",
+            "value": maker,
+        })
+        request.semantic_entity_mentions = list(dict.fromkeys([
+            *request.semantic_entity_mentions,
+            maker,
+        ]))
+        request.operators = [
+            operator
+            for operator in request.operators
+            if operator != AnalysisOperator.GROUP_BY or request.dimensions
+        ]
+        for operator in (AnalysisOperator.FILTER, AnalysisOperator.AGGREGATE):
+            if operator not in request.operators:
+                request.operators.append(operator)
+        if "SEMANTIC_ENTITY_ROLE=MANUFACTURER_NAME" not in request.assumptions:
+            request.assumptions.append("SEMANTIC_ENTITY_ROLE=MANUFACTURER_NAME")
 
     @staticmethod
     def _apply_name_projection_non_null_constraint(
@@ -3093,6 +3192,59 @@ class RuleBasedIntentClassifier:
         # Only user wording or a recorded semantic assumption may opt into
         # all-history scope.
         return False
+
+    @staticmethod
+    def _uses_business_default_all_time_scope(
+        request: CanonicalAnalysisRequest,
+    ) -> bool:
+        """Return whether a period-free metric uses the governed lifetime default.
+
+        Rankings and comparisons deliberately retain a bounded recency default:
+        “top” and “better” are normally current-business questions.  Plain
+        totals, counts and grouped distributions instead describe the complete
+        available fact population unless the user supplies a period.  The
+        distinction is recorded in assumptions and remains visible to ASL.
+        """
+
+        if request.primary_intent != PrimaryIntent.METRIC_QUERY or not request.metrics:
+            return False
+        metric_names = {
+            metric.canonical_name or metric.input for metric in request.metrics
+        }
+        if metric_names & {
+            "已合作医院数", "已合作经销商数", "已合作供应商数",
+            "已合作客户数", "已合作门店数",
+        }:
+            # These measures describe activity in a requested/current period,
+            # not immutable master-data totals.
+            return False
+        ranking_operators = {
+            AnalysisOperator.TOP_N,
+            AnalysisOperator.BOTTOM_N,
+            AnalysisOperator.SORT,
+        }
+        if any(operator in ranking_operators for operator in request.operators):
+            return False
+        text = re.sub(
+            r"\s+", "", request.original_question or request.rewritten_question or ""
+        )
+        named_hospital = bool(re.search(
+            r"^(?:(?:请|帮我|给我)?(?:查询|查看|统计|计算|分析)?)"
+            r"[^，,。；;]{2,100}(?:医院|护理院|卫生服务中心|卫生院)(?:的)?"
+            r"(?:含税|销售|订单|金额|数量)",
+            text,
+        ))
+        explicit_group_population = bool(
+            request.dimensions
+            and re.search(r"(?:各|按|每个|分别|分布)", text)
+        )
+        scoped_entity = bool(
+            request.filters
+            or request.semantic_entity_mentions
+            or named_hospital
+            or explicit_group_population
+        )
+        return scoped_entity
 
     @staticmethod
     def _forecast_target(text: str) -> tuple[int | None, str | None]:

@@ -130,6 +130,35 @@ def test_current_semantic_catalog_rebinds_provisional_product_filter_to_brand():
     )
 
 
+def test_current_semantic_catalog_rebinds_manufacturer_to_published_name_field():
+    value = "B.Braun Surgical SA"
+    request = CanonicalAnalysisRequest(
+        conversation_id="semantic-manufacturer-rebind",
+        tenant_id="t1",
+        user_id="u1",
+        original_question=f"查询{value}的产品的含税销售总额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        entity="产品",
+        filters=[{"field": "厂家名称", "operator": "EQ", "value": value}],
+    )
+    matches = [{
+        "score": 0.99,
+        "entity_name": "manufacturer",
+        "attribute_name": "生产企业名称",
+        "attribute_code": "manufacturer.manufacturer_name",
+        "attribute_value": "B. Braun Surgical S.A.",
+    }]
+
+    grounded = QuestionRewriter.ground_request_dimensions(request, matches)
+
+    assert grounded.filters == [{
+        "field": "生产企业名称",
+        "operator": "EQ",
+        "value": value,
+    }]
+    assert "SEMANTIC_DIMENSIONS_GROUNDED_FROM_CURRENT_MODEL" in grounded.assumptions
+
+
 @pytest.mark.asyncio
 async def test_semantic_matches_are_retained_without_forcing_text_rewrite():
     matches = [{
@@ -719,6 +748,67 @@ async def test_semantic_model_version_is_carried_into_live_ambiguity():
     assert result.semantic_model_version == "v2026-09-02"
     assert result.semantic_ambiguities[0].semantic_model_version == "v2026-09-02"
     assert result.semantic_ambiguities[0].affected_slots == ["filters"]
+
+
+@pytest.mark.asyncio
+async def test_unique_full_hospital_name_suppresses_nested_alias_ambiguity():
+    searcher = FakeSearcher([
+        {
+            "score": 0.99,
+            "entity_name": "上海市口腔医院",
+            "entity_alias": '["口腔医院"]',
+            "attribute_name": "医院名称",
+            "attribute_code": "hospital.hospital_name",
+            "attribute_value": "上海市口腔医院",
+        },
+        {
+            "score": 0.97,
+            "entity_name": "浦东新区口腔医院",
+            "entity_alias": '["口腔医院"]',
+            "attribute_name": "医院名称",
+            "attribute_code": "hospital.hospital_name",
+            "attribute_value": "浦东新区口腔医院",
+        },
+    ])
+
+    result = await QuestionRewriter(searcher).rewrite(
+        "查询上海市口腔医院的含税销售总额。",
+        previous=None,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert result.semantic_ambiguities == []
+
+
+@pytest.mark.asyncio
+async def test_legal_manufacturer_surface_is_disambiguated_by_business_role():
+    value = "B.Braun Surgical SA"
+    searcher = FakeSearcher([
+        {
+            "score": 0.96,
+            "entity_name": "厂家主数据",
+            "attribute_name": "厂家名称",
+            "attribute_code": "manufacturer.manufacturer_name",
+            "attribute_value": value,
+        },
+        {
+            "score": 0.95,
+            "entity_name": "产品主数据",
+            "attribute_name": "商品名称",
+            "attribute_code": "product.product_name",
+            "attribute_value": value,
+        },
+    ])
+
+    result = await QuestionRewriter(searcher).rewrite(
+        f"查询{value}的产品的含税销售总额。",
+        previous=None,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert result.semantic_ambiguities == []
 
 
 @pytest.mark.asyncio

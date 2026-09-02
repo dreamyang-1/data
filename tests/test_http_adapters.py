@@ -1426,6 +1426,22 @@ async def test_detail_intent_rejects_asl_that_omits_requested_field():
     assert len(client.calls) == 1
 
 
+def test_manufacturer_name_family_is_distinct_from_relationship_code():
+    adapter = HttpDataRetrievalAdapter
+
+    assert adapter._constraint_field_family("厂家名称") == "manufacturer"
+    assert (
+        adapter._constraint_field_family("manufacturer.manufacturer_name")
+        == "manufacturer"
+    )
+    assert adapter._constraint_field_matches(
+        "厂家名称", "manufacturer.manufacturer_name"
+    )
+    assert not adapter._constraint_field_matches(
+        "厂家名称", "product.manufacturer_code"
+    )
+
+
 @pytest.mark.asyncio
 async def test_real_two_stage_contract_and_double_encoded_result():
     asl = {"version": "2.0", "metrics": [{"name": "average_transaction_value", "alias": "客单价"}], "ambiguity": []}

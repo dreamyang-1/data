@@ -97,6 +97,8 @@ SYSTEM_PROMPT = """你是企业数据分析系统的意图分类器，只分类�
 26. 只有当前问题依赖省略、指代或明确修改上一任务时才使用 CURRENT_TOPIC_FOLLOWUP / CURRENT_TOPIC_MODIFICATION / CURRENT_TOPIC_DRILLDOWN；用户正在回答一个明确待补充项时才使用 CLARIFICATION_RESPONSE；存在多个合理先行项时使用 AMBIGUOUS_RELATION。
 27. slot_operations 表示当前轮相对已确认上下文的槽位操作。当前明确值替换同槽旧值时用 REPLACE；“再加、同时、以及”才用 ADD；省略且唯一可恢复才用 INHERIT；不得为当前原话及确认上下文都没有的值生成操作。evidence_span 必须逐字来自当前用户原话。
 28. 查询对象和筛选实体值必须分开。例如“某产品的经销商有哪些”的查询对象是经销商，产品名是筛选；“那费森尤斯呢”只能提出替换相容筛选槽，不能把费森尤斯改成查询对象。
+29. “某公司/Inc./GmbH/Company/SA等法定主体的产品销售额”中，查询对象是产品，完整法定主体名称（包括中英文、空格、逗号和点号）是厂家筛选实体；不得把它拆成多个实体、改成商品名称、要求用户提供厂家编码或按产品额外分组。
+30. “订单分布/销售订单分布”在已经明确分组维度时，metrics 填“订单笔数”，不得再次询问指标；用户明确金额、数量等其他口径时以用户显式指标为准。
 """
 
 
@@ -1024,6 +1026,17 @@ class HybridIntentClassifier:
             for item in baseline.filters
             if isinstance(item, dict)
         }
+        manufacturer_evidence = bool(
+            {"厂家", "厂家名称", "制造商", "制造商名称"} & current_fields
+            or "厂家" in compact
+            or "制造商" in compact
+            or re.search(
+                r"(?:公司|有限责任|股份|集团|inc\.?|gmbh|company|corp\.?|"
+                r"co\.?|ltd\.?|llc|s\.?a\.?|ag|plc|surgical).{0,20}(?:产品|商品)",
+                compact,
+                re.I,
+            )
+        )
         evidence = {
             "产品": bool(
                 {"商品名称", "产品名称", "商品", "产品"} & current_fields
@@ -1041,8 +1054,8 @@ class HybridIntentClassifier:
             "医院": "医院" in compact,
             "客户": "客户" in compact,
             "门店": "门店" in compact,
-            "厂家": bool("厂家" in compact or "制造商" in compact),
-            "制造商": bool("厂家" in compact or "制造商" in compact),
+            "厂家": manufacturer_evidence,
+            "制造商": manufacturer_evidence,
             "区域": bool("区域" in compact or "地区" in compact),
             "地区": bool("区域" in compact or "地区" in compact),
             "订单": "订单" in compact,

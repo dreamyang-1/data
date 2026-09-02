@@ -311,8 +311,9 @@ class QuestionRewriter:
                 if surface in question:
                     grouped.setdefault(surface, []).append(match)
 
-        result: list[SemanticAmbiguity] = []
-        for surface, alternatives in grouped.items():
+        def unique_candidates(
+            alternatives: list[dict[str, Any]],
+        ) -> dict[tuple[str, str, str], dict[str, Any]]:
             unique: dict[tuple[str, str, str], dict[str, Any]] = {}
             for item in alternatives:
                 key = (
@@ -321,8 +322,40 @@ class QuestionRewriter:
                     str(item.get("entity_name") or item.get("attribute_value") or ""),
                 )
                 current = unique.get(key)
-                if current is None or float(item.get("score") or 0.0) > float(current.get("score") or 0.0):
+                if current is None or float(item.get("score") or 0.0) > float(
+                    current.get("score") or 0.0
+                ):
                     unique[key] = item
+            return unique
+
+        # A unique exact full name is stronger evidence than ambiguous aliases
+        # nested inside it.  For example, 上海市口腔医院 must not be blocked merely
+        # because the shorter surface 口腔医院 is shared by other catalog rows.
+        uniquely_grounded_surfaces = {
+            surface
+            for surface, alternatives in grouped.items()
+            if len(unique_candidates(alternatives)) == 1
+        }
+
+        result: list[SemanticAmbiguity] = []
+        for surface, alternatives in grouped.items():
+            if any(
+                surface != longer
+                and len(longer) > len(surface)
+                and surface in longer
+                for longer in uniquely_grounded_surfaces
+            ):
+                continue
+            expected_family = self._expected_semantic_family(question, surface)
+            if expected_family is not None:
+                role_compatible = [
+                    item
+                    for item in alternatives
+                    if self._semantic_match_family(item) == expected_family
+                ]
+                if role_compatible:
+                    alternatives = role_compatible
+            unique = unique_candidates(alternatives)
             ranked = sorted(unique.values(), key=lambda item: -float(item.get("score") or 0.0))
             if len(ranked) < 2:
                 continue
@@ -366,6 +399,50 @@ class QuestionRewriter:
                 semantic_model_version=semantic_model_version,
             ))
         return result[:5]
+
+    @staticmethod
+    def _semantic_match_family(match: dict[str, Any]) -> str | None:
+        reference = " ".join(
+            str(match.get(key) or "").casefold()
+            for key in (
+                "attribute_name", "attribute_code", "dimension_name",
+                "field_name", "entity_name",
+            )
+        )
+        families = (
+            ("category", ("商品分类", "产品分类", "商品品类", "品类", "category", "class")),
+            ("brand", ("商品品牌", "品牌", "parent_brand", "brand")),
+            ("manufacturer", ("厂家", "制造商", "厂商", "manufacturer", "maker", "producer")),
+            ("hospital", ("医院", "护理院", "卫生服务中心", "hospital")),
+            ("partner", ("经销商", "供应商", "dealer", "supplier", "vendor")),
+            ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
+            ("product", ("商品名称", "产品名称", "商品", "产品", "product", "goods", "sku")),
+        )
+        return next(
+            (name for name, aliases in families if any(alias in reference for alias in aliases)),
+            None,
+        )
+
+    @staticmethod
+    def _expected_semantic_family(question: str, surface: str) -> str | None:
+        compact_surface = re.sub(r"\s+", "", surface).casefold()
+        if any(
+            marker in compact_surface
+            for marker in ("医院", "护理院", "卫生服务中心", "卫生院")
+        ):
+            return "hospital"
+        legal_manufacturer = bool(re.search(
+            r"公司|有限责任|股份|集团|"
+            r"(?:inc\.?|gmbh|company|corp\.?|co\.?|ltd\.?|llc|"
+            r"s\.?a\.?|ag|plc)|surgical",
+            surface,
+            re.I,
+        ))
+        if legal_manufacturer:
+            tail = question[question.find(surface) + len(surface):]
+            if re.search(r".{0,60}(?:产品|商品)", tail, re.S):
+                return "manufacturer"
+        return None
 
     @staticmethod
     def _normalize_polite_word_order(text: str) -> tuple[str, list[RewriteEvent]]:
@@ -430,6 +507,8 @@ class QuestionRewriter:
             families = (
                 ("category", ("商品分类", "产品分类", "商品品类", "品类", "类目", "类别", "category", "class")),
                 ("brand", ("商品品牌", "品牌", "brand")),
+                ("manufacturer", ("厂家", "制造商", "厂商", "manufacturer", "maker", "producer")),
+                ("hospital", ("医院", "护理院", "卫生服务中心", "hospital")),
                 ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
                 ("partner", ("经销商", "供应商", "dealer", "supplier", "vendor")),
                 ("product", ("商品名称", "产品名称", "商品", "产品", "product", "goods", "sku")),
@@ -476,6 +555,44 @@ class QuestionRewriter:
         grounded_by_family: dict[str, str] = {}
         grounded_filters: list[dict[str, Any]] = []
         family_rebound = False
+
+        def equivalent_literal(
+            required: str,
+            candidate_value: str,
+            candidate_family: str,
+        ) -> bool:
+            required_folded = required.casefold()
+            candidate_folded = candidate_value.casefold()
+            if (
+                required_folded in candidate_folded
+                or candidate_folded in required_folded
+            ):
+                return True
+            if candidate_family not in {"manufacturer", "hospital"}:
+                return False
+
+            # Legal organization names frequently vary only in whitespace and
+            # punctuation (Inc./Inc, B. Braun/B.Braun, Chinese/English comma).
+            # Normalize those separators for catalog comparison while keeping
+            # the original literal untouched in the executable request.
+            def organization_key(value: str) -> str:
+                return re.sub(
+                    r"[\s,，.。;；:：()（）\[\]{}'\"“”‘’_\-]+",
+                    "",
+                    value.casefold(),
+                )
+
+            required_key = organization_key(required)
+            candidate_key = organization_key(candidate_value)
+            return bool(
+                required_key
+                and candidate_key
+                and (
+                    required_key in candidate_key
+                    or candidate_key in required_key
+                )
+            )
+
         for item in request.filters:
             if not isinstance(item, dict):
                 grounded_filters.append(item)
@@ -494,8 +611,11 @@ class QuestionRewriter:
                 and required_values
                 and all(
                     any(
-                        required.casefold() in candidate_value.casefold()
-                        or candidate_value.casefold() in required.casefold()
+                        equivalent_literal(
+                            required,
+                            candidate_value,
+                            candidate["family"],
+                        )
                         for candidate_value in candidate["values"]
                     )
                     for required in required_values

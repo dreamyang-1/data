@@ -550,6 +550,7 @@ class HttpDataRetrievalAdapter:
             ("department", ("科室", "部门", "department", "dept")),
             ("category", ("商品分类", "产品分类", "商品品类", "分类", "类别", "品类", "类目", "category", "class")),
             ("brand", ("商品品牌", "品牌", "brand")),
+            ("manufacturer", ("厂家", "制造商", "厂商", "manufacturer", "maker", "producer")),
             ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
             ("supplier", ("供应商", "经销商", "supplier", "dealer", "vendor")),
             ("hospital", ("医院", "hospital")),
