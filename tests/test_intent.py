@@ -262,6 +262,112 @@ def test_transaction_partner_scope_separates_activity_words_from_catalog_value()
     )
 
 
+@pytest.mark.parametrize(
+    "question",
+    (
+        "空心纤维血液透析器产品的经销商有哪些",
+        "空心纤维血液透析器产品有哪些经销商",
+        "空心纤维血液透析器产品由哪些经销商销售",
+        "哪些经销商销售空心纤维血液透析器产品",
+    ),
+)
+def test_interrogative_product_partner_word_orders_are_relationship_details(question):
+    request = RuleBasedIntentClassifier().classify(
+        question,
+        IDENTITY,
+        "interrogative-product-partners",
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.entity == "经销商"
+    assert request.metrics == []
+    assert request.fields == ["经销商名称"]
+    assert request.dimensions == ["经销商"]
+    assert request.filters == [
+        {
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "空心纤维血液透析器",
+        },
+    ]
+    assert "metric" not in request.missing_slots
+    assert "SET_RELATIONSHIP_PROJECTION" in request.assumptions
+
+
+@pytest.mark.parametrize(
+    ("question", "target"),
+    (
+        ("医用外科口罩商品的供应商有哪些", "供应商"),
+        ("医用外科口罩产品由哪些医院使用", "医院"),
+        ("哪些医院采购医用外科口罩产品", "医院"),
+        ("医用外科口罩商品有哪些客户", "客户"),
+        ("医用外科口罩商品对应的门店都有谁", "门店"),
+        ("查询医用外科口罩产品合作经销商", "经销商"),
+        ("查询医用外科口罩产品合作医院", "医院"),
+        ("查询医用外科口罩产品厂家", "厂家"),
+        ("医用外科口罩产品经销商", "经销商"),
+    ),
+)
+def test_interrogative_product_relationship_targets_share_one_detail_shape(
+    question, target
+):
+    request = RuleBasedIntentClassifier().classify(
+        question,
+        IDENTITY,
+        f"interrogative-product-{target}",
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.entity == target
+    assert request.fields == [f"{target}名称"]
+    assert request.filters == [
+        {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
+    ]
+    assert request.missing_slots == []
+
+
+def test_bare_regional_product_partner_shape_preserves_region_and_exclusion_filters():
+    regional = RuleBasedIntentClassifier().classify(
+        "上海紫杉醇释放冠脉球囊导管产品经销商",
+        IDENTITY,
+        "bare-regional-product-partner",
+    )
+    excluded = RuleBasedIntentClassifier().classify(
+        "排除振德医疗厂家的医用外科口罩产品经销商",
+        IDENTITY,
+        "bare-excluded-product-partner",
+    )
+
+    assert regional.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert regional.entity == "经销商"
+    assert regional.filters == [
+        {"field": "地区", "operator": "EQ", "value": "上海市"},
+        {
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "紫杉醇释放冠脉球囊导管",
+        },
+    ]
+    assert excluded.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert excluded.entity == "经销商"
+    assert excluded.filters == [
+        {"field": "厂家名称", "operator": "NE", "value": "振德医疗"},
+        {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
+    ]
+
+
+def test_interrogative_relationship_shape_does_not_replace_ranked_metric_query():
+    request = RuleBasedIntentClassifier().classify(
+        "空心纤维血液透析器产品的哪些经销商销售额最高",
+        IDENTITY,
+        "ranked-product-partners",
+    )
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert [metric.input for metric in request.metrics] == ["销售额"]
+    assert request.ranking_limit == 1
+
+
 def test_branded_consumable_partner_scope_is_not_one_product_name():
     request = RuleBasedIntentClassifier().classify(
         "查询上海市江苏苏云品牌低值耗材的经销商清单，"

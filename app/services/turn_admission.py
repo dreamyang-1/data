@@ -65,7 +65,8 @@ _TOPIC_SHIFT_PATTERNS: tuple[tuple[str, str], ...] = (
 )
 _ACTION_PATTERN = re.compile(
     r"查询|查找|列出|统计|计算|分析|比较|对比|排名|排行|趋势|走势|"
-    r"明细|名单|清单|报告|预测|归因|异常|占比|构成"
+    r"明细|名单|清单|报告|预测|归因|异常|占比|构成|"
+    r"有哪些|哪些|哪几家|都有谁|有谁"
 )
 _DRILLDOWN_PATTERN = re.compile(
     r"按(?:医院|经销商|供应商|地区|区域|省份|城市|科室).{0,16}"

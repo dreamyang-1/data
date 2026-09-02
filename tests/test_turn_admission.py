@@ -253,6 +253,21 @@ def test_case_1_complete_new_product_trend_is_standalone_new_topic():
     assert previous.analysis_thread_id != decision.selected_thread_id
 
 
+def test_interrogative_relationship_question_is_self_contained_new_topic():
+    _, _, current, decision = _decision(
+        "按月分析外周插管中心静脉导管的销售趋势。",
+        "空心纤维血液透析器产品的经销商有哪些？",
+        "interrogative-relationship-new-topic",
+    )
+
+    assert current.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert current.entity == "经销商"
+    assert current.missing_slots == []
+    assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert decision.current_turn_facts.is_self_contained is True
+    assert decision.inherit_business_context is False
+
+
 def test_case_2_elliptical_product_replacement_is_current_topic_modification():
     gate, previous, current, decision = _decision(
         "分析空心纤维血液透析器销售趋势。",

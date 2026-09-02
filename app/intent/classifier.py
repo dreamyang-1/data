@@ -916,6 +916,9 @@ class RuleBasedIntentClassifier:
         cls._apply_brand_comparison_scope(request, compact)
         cls._apply_transaction_partner_scope(request, compact)
         cls._apply_relationship_product_scope(request, compact)
+        cls._apply_interrogative_relationship_scope(
+            request, re.sub(r"\s+", "", question)
+        )
         cls._apply_brand_product_scope(request, compact)
         cls._apply_explicit_dealer_metric_scope(request, question)
         cls._apply_time_grouped_metric_scope(request, compact)
@@ -985,11 +988,18 @@ class RuleBasedIntentClassifier:
             ))
         metric_only_projection = bool(
             request.metrics
-            and not any(
-                marker in compact
-                for marker in (
-                    "名单", "清单", "哪些", "明细", "逐笔", "每一条",
-                    "联系方式", "属于哪些", "适用于哪些", "适用的科室",
+            and (
+                re.search(
+                    r"最高|最低|最大|最小|前\d+|后\d+|排名|排行|排序|"
+                    r"趋势|走势|同比|环比|占比|平均|汇总|合计",
+                    compact,
+                )
+                or not any(
+                    marker in compact
+                    for marker in (
+                        "名单", "清单", "哪些", "明细", "逐笔", "每一条",
+                        "联系方式", "属于哪些", "适用于哪些", "适用的科室",
+                    )
                 )
             )
         )
@@ -1604,6 +1614,178 @@ class RuleBasedIntentClassifier:
         if "品牌" not in request.dimensions:
             request.dimensions.append("品牌")
         request.comparison_type = "对象间比较"
+
+    @staticmethod
+    def _apply_interrogative_relationship_scope(
+        request: CanonicalAnalysisRequest, text: str
+    ) -> None:
+        """Normalize non-numeric relationship questions into detail queries.
+
+        Business users ask for the same relationship list in several word
+        orders: ``A产品的经销商有哪些``, ``A产品有哪些经销商``, ``A产品由哪些
+        经销商销售`` and ``哪些经销商销售A产品``.  The generic classifier used
+        to recognize only the last form (or an explicit ``名单/清单`` suffix),
+        so the other forms fell through to a metric query and incorrectly
+        requested a metric.  This method only determines the result *shape*;
+        the provisional catalog filter is still grounded against the current
+        semantic model by the normal semantic entity resolver.
+
+        Numeric counts, rankings, trends and explicitly requested measures are
+        deliberately excluded.  They remain aggregate analytical requests.
+        """
+
+        compact = re.sub(r"\s+", "", text)
+        if (
+            request.primary_intent == PrimaryIntent.DETAIL_QUERY
+            and "SET_RELATIONSHIP_PROJECTION" in request.assumptions
+            and request.entity in {"经销商", "供应商", "医院", "客户", "门店", "厂家"}
+            and request.fields == [f"{request.entity}名称"]
+            and any(
+                str(item.get("field") or "") in {"商品名称", "产品名称"}
+                for item in request.filters
+            )
+        ):
+            # A more specific relationship extractor (for example the
+            # transaction-activity parser) has already separated its slots.
+            # Do not replace its cleaned product literal with the broader raw
+            # prefix recognized by the generic word-order parser.
+            return
+        if request.metrics or request.primary_intent in {
+            PrimaryIntent.REPORT_GENERATION,
+            PrimaryIntent.TREND_ANALYSIS,
+            PrimaryIntent.COMPARISON_ANALYSIS,
+            PrimaryIntent.COMPOSITION_ANALYSIS,
+            PrimaryIntent.ANOMALY_ANALYSIS,
+            PrimaryIntent.ROOT_CAUSE_ANALYSIS,
+            PrimaryIntent.FORECAST_ANALYSIS,
+            PrimaryIntent.DATA_LINEAGE,
+            PrimaryIntent.DATA_QUALITY,
+        }:
+            return
+        if re.search(
+            r"多少|几家|数量|个数|总数|销售额|销售量|销量|金额|订单|次数|"
+            r"最高|最低|最大|最小|排名|排行|排序|趋势|走势|同比|环比|占比|平均",
+            compact,
+        ):
+            return
+
+        target_pattern = r"经销商|供应商|医院|客户|门店|厂家"
+        ask_pattern = r"哪些|哪几家|都有谁|有谁|是谁|什么"
+        matches = (
+            # A产品的经销商有哪些 / A产品有哪些经销商
+            re.search(
+                rf"(?P<scope>.+?)(?:产品|商品)(?:对应的|(?:已)?合作(?:的)?|的)?"
+                rf"(?P<target>{target_pattern})(?:都)?(?:有|是|包括|包含)?"
+                rf"(?:{ask_pattern})[。！!？?]*$",
+                compact,
+            ),
+            re.search(
+                rf"(?P<scope>.+?)(?:产品|商品)(?:都)?(?:有|包括|包含|对应)?"
+                rf"(?:{ask_pattern})(?P<target>{target_pattern})[。！!？?]*$",
+                compact,
+            ),
+            # A产品由哪些经销商销售
+            re.search(
+                rf"(?P<scope>.+?)(?:产品|商品)(?:是)?由(?:{ask_pattern})"
+                rf"(?P<target>{target_pattern})(?:销售|经销|代理|供应|采购|使用)?"
+                r"[。！!？?]*$",
+                compact,
+            ),
+            # 哪些经销商销售A产品
+            re.search(
+                rf"(?:{ask_pattern})(?P<target>{target_pattern})"
+                r"(?:正在|目前|曾经|在)?(?:销售|经销|代理|供应|采购|使用|覆盖)"
+                r"(?P<scope>.+?)(?:产品|商品)[。！!？?]*$",
+                compact,
+            ),
+            # 查询A产品合作经销商 / 列出A产品厂家。The explicit query
+            # verb already supplies the list action, so no interrogative or
+            # 名单 suffix is required.
+            re.search(
+                rf"^(?:请|麻烦|帮我|给我|请帮我)?"
+                rf"(?:查询|查找|找出|列出|展示|显示|查看|筛选|提供)"
+                rf"(?P<scope>.+?)(?:产品|商品)"
+                rf"(?:对应的|(?:已)?合作(?:的)?|的)?"
+                rf"(?P<target>{target_pattern})(?:名单|清单|列表)?[。！!？?]*$",
+                compact,
+            ),
+            # A产品经销商 / 上海A产品合作医院。Short search-box
+            # utterances commonly omit both a query verb and an interrogative.
+            re.search(
+                rf"^(?P<scope>.+?)(?:产品|商品)"
+                rf"(?:对应的|(?:已)?合作(?:的)?|的)?"
+                rf"(?P<target>{target_pattern})(?:名单|清单|列表)?[。！!？?]*$",
+                compact,
+            ),
+        )
+        match = next((candidate for candidate in matches if candidate is not None), None)
+        if match is None:
+            return
+
+        scope = match.group("scope")
+        excluded_maker_match = re.match(
+            r"^排除(?P<maker>[^，,。；;]{1,100}?)厂家(?:的)?",
+            scope,
+        )
+        excluded_maker = (
+            excluded_maker_match.group("maker").strip("的，,；;、")
+            if excluded_maker_match is not None
+            else None
+        )
+        scope = re.sub(
+            r"^(?:请|麻烦|帮我|给我|请帮我)?"
+            r"(?:查询|查找|找出|列出|展示|显示|查看|看看|筛选|提供)?",
+            "",
+            scope,
+        )
+        scope = re.sub(
+            r"^(?:北京|上海|天津|重庆)(?:市|地区)?",
+            "",
+            scope,
+        )
+        scope = re.sub(
+            r"^排除[^，,。；;]{1,100}?厂家(?:的)?",
+            "",
+            scope,
+        ).strip("的，,；;、")
+        if not 1 <= len(scope) <= 100 or any(ord(char) < 32 for char in scope):
+            return
+
+        target = match.group("target")
+        request.primary_intent = PrimaryIntent.DETAIL_QUERY
+        request.entity = target
+        request.metrics = []
+        request.fields = [f"{target}名称"]
+        request.dimensions = [target]
+        request.risk_level = "HIGH"
+        request.operators = [
+            operator for operator in request.operators
+            if operator != AnalysisOperator.AGGREGATE
+        ]
+        for operator in (AnalysisOperator.FILTER, AnalysisOperator.RENDER_TABLE):
+            if operator not in request.operators:
+                request.operators.append(operator)
+        request.filters = [
+            item for item in request.filters
+            if str(item.get("field") or "") not in {
+                "商品名称", "产品名称", "商品", "产品",
+            }
+        ]
+        if excluded_maker and not any(
+            str(item.get("field") or "") in {"厂家名称", "厂家"}
+            and str(item.get("operator") or "").upper() in {"NE", "NOT_EQ"}
+            for item in request.filters
+        ):
+            request.filters.append({
+                "field": "厂家名称", "operator": "NE", "value": excluded_maker,
+            })
+        request.filters.append({
+            # Provisional family: semantic grounding may rebind this value to
+            # a current brand/category/manufacturer attribute when appropriate.
+            "field": "商品名称", "operator": "EQ", "value": scope,
+        })
+        if "SET_RELATIONSHIP_PROJECTION" not in request.assumptions:
+            request.assumptions.append("SET_RELATIONSHIP_PROJECTION")
 
     @staticmethod
     def _apply_relationship_product_scope(

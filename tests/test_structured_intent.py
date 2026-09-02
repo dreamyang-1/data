@@ -30,6 +30,54 @@ def model_response(output: dict) -> httpx.Response:
     )
 
 
+@pytest.mark.asyncio
+async def test_model_metric_guess_cannot_turn_relationship_question_into_metric_clarification():
+    output = {
+        "primary_intent": "METRIC_QUERY",
+        "secondary_intents": [],
+        "operators": ["AGGREGATE"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.60,
+        "evidence": ["产品", "经销商"],
+        "metrics": [],
+        "dimensions": ["产品", "经销商"],
+        "entity": None,
+        "fields": [],
+        "comparison_type": None,
+        "ambiguities": ["缺少指标"],
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings(intent_model_min_confidence=0.5)
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "空心纤维血液透析器产品的经销商有哪些",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "c-interrogative-relationship",
+    )
+
+    assert result.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert result.entity == "经销商"
+    assert result.metrics == []
+    assert result.fields == ["经销商名称"]
+    assert result.filters == [
+        {
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "空心纤维血液透析器",
+        },
+    ]
+    assert "metric" not in result.missing_slots
+    assert result.ambiguities == []
+
+
 @pytest.mark.parametrize(
     "generic",
     ["销售", "订单", "业务", "数据", "金额", "数量", "趋势", "业绩"],
