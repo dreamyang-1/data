@@ -12,7 +12,7 @@ from typing import Any
 
 import httpx
 
-from app.adapters.base import AdapterBundle, AdapterError
+from app.adapters.base import AdapterBundle, AdapterError, MetricDiscovery
 from app.analysis.contracts import (
     contract_for_request,
     ordered_entity_metric_ranking_request,
@@ -542,6 +542,190 @@ class HttpDataRetrievalAdapter:
         return await self.client.openapi_has_paths(
             self.settings.asl_generator_base_url,
             [self.settings.entity_attribute_search_path],
+        )
+
+    @staticmethod
+    def _semantic_evidence_fingerprint(evidence: dict[str, Any]) -> str:
+        unsigned = {
+            key: value for key, value in evidence.items()
+            if key != "evidence_fingerprint"
+        }
+        canonical = json.dumps(
+            unsigned,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _is_time_independent_snapshot_metric(
+        asl: dict[str, Any], selected_metrics: list[dict[str, Any]]
+    ) -> bool:
+        """Recognize a schema-backed master-data count without naming a domain.
+
+        The decision is intentionally conservative: every selected metric must
+        be a distinct count over the ASL subject's own table, the live planner
+        must omit time_context, and no fact/event table marker may occur. This
+        keeps ordinary sales/order metrics on their configured time policy.
+        """
+        if asl.get("time_context") is not None or not selected_metrics:
+            return False
+        subject = asl.get("subject")
+        subject_code = (
+            str(subject.get("entity") or "")
+            if isinstance(subject, dict)
+            else str(subject or "")
+        ).strip().lower()
+        if not subject_code:
+            return False
+        fact_markers = re.compile(
+            r"(?:sales|order|transaction|payment|refund|流水|销售|订单|交易|退款)",
+            re.I,
+        )
+        for item in selected_metrics:
+            formula = str(item.get("calculation_formula") or "")
+            if fact_markers.search(formula):
+                return False
+            distinct = re.search(
+                r"COUNT\s*\(\s*DISTINCT\s+([A-Za-z_]\w*)\.[A-Za-z_]\w*\s*\)",
+                formula,
+                re.I,
+            )
+            if distinct is None or distinct.group(1).lower() != subject_code:
+                return False
+        return True
+
+    async def discover_metrics(
+        self,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> MetricDiscovery:
+        """Discover missing metrics against Oagnet's current SQL-verified view.
+
+        This preflight exists only to avoid asking the user for a metric that
+        was already expressed in natural language but published after this
+        process started. It does not reuse the returned ASL for execution.
+        """
+        if semantic_model_id is None:
+            return MetricDiscovery(metrics=[])
+        query = request.rewritten_question or request.original_question
+        generated = await self.client.post(
+            self.settings.asl_generator_base_url,
+            self.settings.asl_generator_path,
+            {
+                "query": query,
+                "retrieval_query": query,
+                "semantic_model_id": semantic_model_id,
+                "business_domain_id": business_domain_id,
+                "business_domain_ids": list(request.business_domain_ids),
+                "metric_ids": [],
+                "metricless_projection": False,
+                "intent_asl_contract": None,
+                "analysis_operator": None,
+                "result_contract": None,
+                "exploration_requirements": None,
+            },
+            identity=identity,
+            application_id=request.application_id,
+            idempotency_key=f"{request.request_id}:metric-discovery",
+            retryable=True,
+            timeout=self.settings.asl_generation_timeout_seconds,
+        )
+        if generated.get("success") is not True:
+            return MetricDiscovery(metrics=[])
+        raw_asl = generated.get("result")
+        evidence = generated.get("semantic_evidence")
+        if not isinstance(raw_asl, str) or not isinstance(evidence, dict):
+            raise AdapterError(
+                "SEMANTIC_DISCOVERY_INVALID",
+                "metric discovery omitted its semantic evidence",
+            )
+        if (
+            evidence.get("producer") != "OAGNET"
+            or evidence.get("semantic_model_id") != semantic_model_id
+            or evidence.get("evidence_version") != "1.0"
+            or evidence.get("asl_signature")
+            != "sha256:" + hashlib.sha256(raw_asl.encode("utf-8")).hexdigest()
+            or evidence.get("evidence_fingerprint")
+            != self._semantic_evidence_fingerprint(evidence)
+        ):
+            raise AdapterError(
+                "SEMANTIC_DISCOVERY_INVALID",
+                "metric discovery evidence did not match the current ASL snapshot",
+            )
+        asl = self._json_object(raw_asl, "SEMANTIC_DISCOVERY_INVALID")
+        selected = evidence.get("selected_metrics")
+        if not isinstance(selected, list):
+            raise AdapterError(
+                "SEMANTIC_DISCOVERY_INVALID",
+                "metric discovery evidence has an invalid metric list",
+            )
+        metric_codes = [
+            str(item.get("name"))
+            for item in (asl.get("metrics") or [])
+            if isinstance(item, dict) and item.get("name")
+        ]
+        evidence_codes: list[str] = []
+        metrics: list[MetricRef] = []
+        for item in selected:
+            if not isinstance(item, dict):
+                raise AdapterError(
+                    "SEMANTIC_DISCOVERY_INVALID",
+                    "metric discovery evidence contains an invalid item",
+                )
+            code = str(item.get("canonical_code") or "").strip()
+            name = str(item.get("canonical_name") or "").strip()
+            if (
+                not code
+                or not name
+                or item.get("semantic_model_id") != semantic_model_id
+                or item.get("metadata_source") != "MYSQL_SEMANTIC_LAYER"
+                or item.get("sql_verified") is not True
+            ):
+                # Never turn a stale vector-only hit into an authoritative
+                # caller binding. The ordinary clarification path stays open.
+                return MetricDiscovery(metrics=[])
+            evidence_codes.append(code)
+            metrics.append(MetricRef(
+                input=name,
+                metric_id=f"{semantic_model_id}:{code}",
+                version="current",
+                canonical_name=name,
+            ))
+        if (
+            not metrics
+            or len(set(evidence_codes)) != len(evidence_codes)
+            or metric_codes != evidence_codes
+        ):
+            return MetricDiscovery(metrics=[])
+        subject = asl.get("subject")
+        subject_code = (
+            str(subject.get("entity") or "").strip()
+            if isinstance(subject, dict)
+            else str(subject or "").strip()
+        ) or None
+        discovered_filters = tuple(
+            dict(item) for item in (asl.get("filters") or [])
+            if isinstance(item, dict)
+        )
+        discovered_dimensions = tuple(
+            str(item.get("name") or "").strip()
+            for item in (asl.get("dimensions") or [])
+            if isinstance(item, dict) and str(item.get("name") or "").strip()
+        )
+        return MetricDiscovery(
+            metrics=metrics,
+            time_independent_snapshot=self._is_time_independent_snapshot_metric(
+                asl, selected
+            ),
+            evidence_fingerprint=str(evidence.get("evidence_fingerprint")),
+            subject=subject_code,
+            filters=discovered_filters,
+            dimensions=discovered_dimensions,
         )
 
     @staticmethod
@@ -1543,6 +1727,7 @@ class HttpDataRetrievalAdapter:
         sql = sql.strip()
         sql = self._apply_current_metric_formulas(sql, metric_definitions)
         self._validate_read_only_sql(sql)
+        self._validate_sql_relationship_graph(sql)
         self._validate_query_to_sql_entity_alignment(request, sql)
         self._validate_geographic_hierarchy_alignment(asl, request, sql)
         metric_bindings = [
@@ -3218,6 +3403,48 @@ class HttpDataRetrievalAdapter:
         if forbidden.search(statements[0]):
             raise AdapterError(
                 "SQL_SAFETY_REJECTED", "generated SQL contains a prohibited operation"
+            )
+
+    @staticmethod
+    def _validate_sql_relationship_graph(sql: str) -> None:
+        """Reject SQL that references a relation table it never joined.
+
+        A stale/incomplete semantic relation can otherwise produce syntactically
+        plausible SQL whose ON/WHERE clauses mention a missing bridge table.
+        Detecting that defect before execution yields a stable retryable semantic
+        error instead of leaking a database-specific "unknown column" failure.
+        """
+        normalized = re.sub(r"/\*.*?\*/", " ", sql, flags=re.S)
+        normalized = re.sub(r"--[^\r\n]*", " ", normalized)
+        normalized = re.sub(r"'(?:''|\\.|[^'])*'", "''", normalized)
+        table_pattern = re.compile(
+            r"\b(?:FROM|JOIN)\s+`?([A-Za-z_]\w*)`?"
+            r"(?:\s+(?:AS\s+)?`?([A-Za-z_]\w*)`?)?",
+            re.I,
+        )
+        reserved = {
+            "on", "where", "left", "right", "inner", "outer", "join",
+            "group", "order", "having", "limit", "union", "cross",
+        }
+        declared: set[str] = set()
+        for match in table_pattern.finditer(normalized):
+            declared.add(match.group(1).lower())
+            alias = (match.group(2) or "").lower()
+            if alias and alias not in reserved:
+                declared.add(alias)
+        referenced = {
+            match.group(1).lower()
+            for match in re.finditer(
+                r"(?<![A-Za-z0-9_])`?([A-Za-z_]\w*)`?\s*\.\s*`?[A-Za-z_]\w*`?",
+                normalized,
+            )
+        }
+        missing = sorted(referenced - declared)
+        if missing:
+            raise AdapterError(
+                "SQL_RELATIONSHIP_GRAPH_INCOMPLETE",
+                "generated SQL references tables that are absent from FROM/JOIN",
+                details={"missing_tables": missing},
             )
 
     @staticmethod

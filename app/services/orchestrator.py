@@ -96,6 +96,7 @@ SEMANTIC_QUERY_RETRY_CODES = frozenset({
     "SQL_TRANSLATION_AMBIGUOUS",
     "SQL_QUERY_ENTITY_ALIGNMENT_FAILED",
     "SQL_QUERY_FILTER_OPERATOR_FAILED",
+    "SQL_RELATIONSHIP_GRAPH_INCOMPLETE",
 })
 _SALES_RECORD_TIME_ASSUMPTION = "TRANSACTION_TIME_SCOPE=SALES_RECORD"
 _INTERNAL_ASSUMPTIONS: ContextVar[tuple[str, ...]] = ContextVar(
@@ -1933,6 +1934,95 @@ class DataAnalysisOrchestrator:
             return chat.business_domain_ids[0]
         return None
 
+    async def _recover_live_published_metrics(
+        self,
+        request: CanonicalAnalysisRequest,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+    ) -> bool:
+        """Bind a newly published metric before asking the user to name it.
+
+        Static intent vocabulary remains useful for fast classification, but it
+        must not become a deployment-time copy of the semantic catalog. The
+        live Oagnet discovery contract supplies SQL-verified canonical metrics;
+        failure is non-destructive and leaves the existing clarification path.
+        """
+        rules = getattr(self.classifier, "rules", self.classifier)
+        known_metrics = set(getattr(rules, "_known_metrics", ()))
+        unbound_unknown_metric = bool(
+            request.metrics
+            and any(
+                metric.metric_id is None
+                and (metric.canonical_name or metric.input) not in known_metrics
+                for metric in request.metrics
+            )
+        )
+        if (
+            (
+                "metric" not in request.missing_slots
+                and not unbound_unknown_metric
+            )
+            or request.primary_intent in NO_DATA_INTENTS
+            or chat.semantic_model_id is None
+        ):
+            return False
+        discover = getattr(self.adapters.query, "discover_metrics", None)
+        if not callable(discover):
+            return False
+        try:
+            discovery = await discover(
+                request,
+                identity,
+                semantic_model_id=chat.semantic_model_id,
+                business_domain_id=self._effective_business_domain_id(chat),
+            )
+        except (AdapterError, httpx.HTTPError, ValueError, TypeError) as exc:
+            logger.warning(
+                "live semantic metric discovery degraded: request_id=%s error=%s",
+                request.request_id,
+                type(exc).__name__,
+            )
+            return False
+        if not discovery.metrics:
+            return False
+        request.metrics = [metric.model_copy(deep=True) for metric in discovery.metrics]
+        # The same live, source-validated preview that identified an unknown
+        # metric also has stronger schema grounding than classifier heuristics.
+        # Replace structural guesses as one atomic semantic frame so a city
+        # prefix inside an institution name cannot survive as a fake region
+        # filter (and analogous future entity shapes update automatically).
+        request.filters = [dict(item) for item in discovery.filters]
+        request.rewritten_question = request.original_question
+        if request.turn_admission is not None:
+            explicit_filters = (
+                request.turn_admission.current_turn_facts.explicit_slots.get("filters")
+            )
+            if explicit_filters is not None:
+                explicit_filters.value = [dict(item) for item in discovery.filters]
+        request.assumptions.extend((
+            "METRIC_BINDING_SOURCE=LIVE_SQL_VERIFIED_SEMANTIC_SNAPSHOT",
+            "QUERY_FRAME_SOURCE=LIVE_SQL_VERIFIED_SEMANTIC_SNAPSHOT",
+            f"METRIC_DISCOVERY_EVIDENCE={discovery.evidence_fingerprint or 'UNAVAILABLE'}",
+        ))
+        if (
+            discovery.time_independent_snapshot
+            and "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
+        ):
+            request.time_range = None
+            request.assumptions = [
+                value for value in request.assumptions
+                if value != "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"
+            ]
+            request.assumptions.extend((
+                "TIME_SCOPE=ALL_TIME",
+                "TIME_SCOPE_SOURCE=LIVE_SEMANTIC_SNAPSHOT_METRIC",
+            ))
+        required_missing_slots = getattr(rules, "required_missing_slots", None)
+        if callable(required_missing_slots):
+            request.missing_slots = required_missing_slots(request)
+        request.assumptions = list(dict.fromkeys(request.assumptions))
+        return "metric" not in request.missing_slots
+
     @staticmethod
     def _pending_scope_matches(request: CanonicalAnalysisRequest, chat: ChatRequest) -> bool:
         return (
@@ -3001,6 +3091,24 @@ class DataAnalysisOrchestrator:
             if response is not None:
                 await self.sessions.put_last_request(request)
                 return await self._finish_terminal(request, response)
+
+        if query_result is None and (
+            "metric" in request.missing_slots
+            or any(metric.metric_id is None for metric in request.metrics)
+        ):
+            recovered_metric = await self._recover_live_published_metrics(
+                request, chat, identity
+            )
+            if recovered_metric:
+                await emit_progress(
+                    "COMPLETENESS_CHECK",
+                    "RUNNING",
+                    "已从当前发布的语义层识别并核验指标，正在继续检查执行参数。",
+                    metric_ids=[
+                        metric.metric_id for metric in request.metrics
+                        if metric.metric_id is not None
+                    ],
+                )
 
         if request.missing_slots and query_result is None:
             await emit_progress(

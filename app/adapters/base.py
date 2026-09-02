@@ -26,10 +26,36 @@ class SemanticAdapter(Protocol):
     async def lineage(self, metric: MetricRef, identity: TrustedIdentity) -> EvidenceItem: ...
 
 
+@dataclass(frozen=True)
+class MetricDiscovery:
+    """Current semantic-snapshot evidence used before completeness gating.
+
+    This is deliberately smaller than an executable ASL plan. It only lets
+    orchestration bind a metric that the current SQL semantic layer verified;
+    normal query planning still regenerates and validates the final ASL.
+    """
+
+    metrics: list[MetricRef]
+    time_independent_snapshot: bool = False
+    evidence_fingerprint: str | None = None
+    subject: str | None = None
+    filters: tuple[dict[str, Any], ...] = ()
+    dimensions: tuple[str, ...] = ()
+
+
 class DataRetrievalAdapter(Protocol):
     async def health(self) -> bool: ...
 
     async def rewrite_health(self) -> bool: ...
+
+    async def discover_metrics(
+        self,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> MetricDiscovery: ...
 
     async def query(
         self,
@@ -52,6 +78,15 @@ class SemanticQueryTool(Protocol):
         semantic_model_id: int | None,
         business_domain_id: int | None,
     ) -> DataQueryResult: ...
+
+    async def discover_metrics(
+        self,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> MetricDiscovery: ...
 
 
 class KnowledgeAdapter(Protocol):

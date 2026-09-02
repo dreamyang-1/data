@@ -39,6 +39,159 @@ class ContractClient:
         return next(self.results)
 
 
+@pytest.mark.asyncio
+async def test_live_metric_discovery_accepts_sql_verified_published_metric():
+    asl = {
+        "version": "2.0",
+        "intent": "query",
+        "subject": {"entity": "department"},
+        "metrics": [{
+            "name": "hospital_affiliated_department_count",
+            "alias": "科室数量",
+        }],
+        "dimensions": [],
+        "filters": [{
+            "field": "hospital.hospital_name",
+            "operator": "=",
+            "value": "上海市皮肤病医院",
+        }],
+        "time_context": None,
+        "sort": None,
+        "limit": None,
+        "having": [],
+        "ambiguity": [],
+    }
+    raw_asl = json.dumps(asl, ensure_ascii=False, separators=(",", ":"))
+    evidence = {
+        "evidence_version": "1.0",
+        "producer": "OAGNET",
+        "semantic_model_id": 81,
+        "requested_business_domain_ids": [205],
+        "resolved_business_domain_ids": [205],
+        "selected_metrics": [{
+            "canonical_code": "hospital_affiliated_department_count",
+            "canonical_name": "医院下属科室数量",
+            "semantic_model_id": 81,
+            "business_domain_id": 205,
+            "calculation_formula": (
+                "hospital_affiliated_department_count="
+                "COUNT(DISTINCT department.dept_code)"
+            ),
+            "metadata_source": "MYSQL_SEMANTIC_LAYER",
+            "sql_verified": True,
+        }],
+        "asl_signature": "sha256:" + hashlib.sha256(
+            raw_asl.encode("utf-8")
+        ).hexdigest(),
+    }
+    evidence["evidence_fingerprint"] = (
+        HttpDataRetrievalAdapter._semantic_evidence_fingerprint(evidence)
+    )
+    client = StubClient([{
+        "success": True,
+        "result": raw_asl,
+        "semantic_evidence": evidence,
+    }])
+    req = CanonicalAnalysisRequest(
+        conversation_id="live-metric-discovery",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询上海市皮肤病医院有多少个科室",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        business_domain_ids=[205],
+    )
+
+    result = await HttpDataRetrievalAdapter(
+        Settings(adapter_mode="http"), client
+    ).discover_metrics(
+        req,
+        IDENTITY,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert [metric.metric_id for metric in result.metrics] == [
+        "81:hospital_affiliated_department_count"
+    ]
+    assert result.metrics[0].canonical_name == "医院下属科室数量"
+    assert result.time_independent_snapshot is True
+    assert result.subject == "department"
+    assert result.filters == ({
+        "field": "hospital.hospital_name",
+        "operator": "=",
+        "value": "上海市皮肤病医院",
+    },)
+    assert result.dimensions == ()
+
+
+@pytest.mark.asyncio
+async def test_live_metric_discovery_rejects_vector_only_metric_hit():
+    raw_asl = json.dumps({
+        "subject": {"entity": "department"},
+        "metrics": [{"name": "stale_metric"}],
+        "time_context": None,
+    }, separators=(",", ":"))
+    evidence = {
+        "evidence_version": "1.0",
+        "producer": "OAGNET",
+        "semantic_model_id": 81,
+        "requested_business_domain_ids": [],
+        "resolved_business_domain_ids": [],
+        "selected_metrics": [{
+            "canonical_code": "stale_metric",
+            "canonical_name": "旧指标",
+            "semantic_model_id": 81,
+            "calculation_formula": "stale_metric=COUNT(*)",
+            "metadata_source": "VECTOR_INDEX_FALLBACK",
+            "sql_verified": False,
+        }],
+        "asl_signature": "sha256:" + hashlib.sha256(
+            raw_asl.encode("utf-8")
+        ).hexdigest(),
+    }
+    evidence["evidence_fingerprint"] = (
+        HttpDataRetrievalAdapter._semantic_evidence_fingerprint(evidence)
+    )
+    client = StubClient([{
+        "success": True,
+        "result": raw_asl,
+        "semantic_evidence": evidence,
+    }])
+
+    result = await HttpDataRetrievalAdapter(
+        Settings(adapter_mode="http"), client
+    ).discover_metrics(
+        request(), IDENTITY, semantic_model_id=81, business_domain_id=None
+    )
+
+    assert result.metrics == []
+
+
+def test_sql_relationship_graph_rejects_unjoined_bridge_reference():
+    sql = (
+        "SELECT COUNT(DISTINCT department.dept_code) FROM department "
+        "LEFT JOIN hospital ON hospital.hospital_id = "
+        "hospital_dept_relation.hospital_id "
+        "WHERE hospital.hospital_name = '测试医院'"
+    )
+
+    with pytest.raises(AdapterError) as exc:
+        HttpDataRetrievalAdapter._validate_sql_relationship_graph(sql)
+
+    assert exc.value.code == "SQL_RELATIONSHIP_GRAPH_INCOMPLETE"
+    assert exc.value.details == {"missing_tables": ["hospital_dept_relation"]}
+
+
+def test_sql_relationship_graph_accepts_declared_bridge_relation():
+    HttpDataRetrievalAdapter._validate_sql_relationship_graph(
+        "SELECT COUNT(DISTINCT department.dept_code) FROM department "
+        "LEFT JOIN hospital_dept_relation ON "
+        "hospital_dept_relation.dept_code = department.dept_code "
+        "LEFT JOIN hospital ON hospital.hospital_id = "
+        "hospital_dept_relation.hospital_id"
+    )
+
+
 def test_http_error_code_reads_nested_fastapi_detail() -> None:
     import httpx
 

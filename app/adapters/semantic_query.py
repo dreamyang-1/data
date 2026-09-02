@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from app.adapters.base import AdapterError, DataRetrievalAdapter, SemanticAdapter
+from app.adapters.base import (
+    AdapterError,
+    DataRetrievalAdapter,
+    MetricDiscovery,
+    SemanticAdapter,
+)
 from app.domain.models import (
     CanonicalAnalysisRequest,
     DataQueryResult,
@@ -28,6 +33,25 @@ class CompositeSemanticQueryTool:
     async def rewrite_health(self) -> bool:
         """Expose entity-rewrite readiness expected by the application probe."""
         return bool(await self.retrieval.rewrite_health())
+
+    async def discover_metrics(
+        self,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> MetricDiscovery:
+        """Resolve newly published metrics from the live semantic snapshot."""
+        discover = getattr(self.retrieval, "discover_metrics", None)
+        if not callable(discover):
+            return MetricDiscovery(metrics=[])
+        return await discover(
+            request,
+            identity,
+            semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id,
+        )
 
     async def query(
         self,
