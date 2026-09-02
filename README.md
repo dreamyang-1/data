@@ -929,6 +929,11 @@ flowchart LR
 - `POST /agent_chat`
 - `POST /agent_chat/stream`
 
+流式接口采用与 `New_Agent` 一致的 data-only SSE：每条记录为
+`data: {JSON}\n\n`，不发送 `event:` 行。最终答案在完成数据与可靠性校验后，
+按 6 个 Unicode 字符拆成 `type=message_chunk`、`step=output` 的片段依次推送；
+最后一片可少于 6 个字符，随后发送 `answer` 和 `complete` 终态事件。
+
 Java 网关必须从登录态注入 `X-Tenant-Id`、`X-User-Id`、`X-Application-Id`，可选注入逗号分隔的 `X-Roles`；应用 Header 必须与 Body 一致。
 
 ```json
@@ -967,7 +972,9 @@ Java 网关必须从登录态注入 `X-Tenant-Id`、`X-User-Id`、`X-Application
 ```text
 data: {"step":"","type":"updata_state","data":"accepted","message_id":"message-001"}
 
-data: {"step":"output","type":"message_chunk","content":"请提供商品编码。","role":"assistant","node":"data_analysis","index":0,"is_last":true}
+data: {"step":"output","type":"message_chunk","content":"请提供商品编","role":"assistant","node":"data_analysis","index":0,"is_last":false}
+
+data: {"step":"output","type":"message_chunk","content":"码。","role":"assistant","node":"data_analysis","index":1,"is_last":true}
 
 data: {"step":"output","type":"answer","content":"请提供商品编码。","status":"NEEDS_CLARIFICATION"}
 

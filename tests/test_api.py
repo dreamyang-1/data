@@ -2,6 +2,7 @@ import json
 import re
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.config import Settings
@@ -121,11 +122,12 @@ def test_question_collection_failure_does_not_break_chat(tmp_path):
     assert response.json()["status"] == "COMPLETED"
 
 
-def test_answer_transport_chunks_preserve_full_answer_and_bound_event_count():
+def test_answer_transport_chunks_use_new_agent_six_character_rule():
     answer = "上海地区振德医疗品牌医用外科口罩销售分析。" * 200
     chunks = _answer_chunks(answer)
     assert "".join(chunks) == answer
-    assert len(chunks) <= 300
+    assert all(len(chunk) == 6 for chunk in chunks[:-1])
+    assert 1 <= len(chunks[-1]) <= 6
     assert _answer_chunk_delay(len(chunks)) * len(chunks) <= 0.901
 
 
@@ -134,7 +136,13 @@ def test_normal_answer_uses_small_streaming_chunks():
     chunks = _answer_chunks(answer)
     assert "".join(chunks) == answer
     assert len(chunks) > 1
-    assert max(map(len, chunks)) <= 12
+    assert all(len(chunk) == 6 for chunk in chunks[:-1])
+    assert 1 <= len(chunks[-1]) <= 6
+
+
+def test_answer_transport_chunk_size_must_be_positive():
+    with pytest.raises(ValueError, match="chunk_size must be greater than zero"):
+        _answer_chunks("答案", chunk_size=0)
 
 
 def test_file_inspection_summary_reports_successful_parse_without_internal_path():
@@ -402,6 +410,8 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     answer = next(data for data in events if data["type"] == "answer")
     completed = next(data for data in events if data["type"] == "complete")
     assert "".join(chunks) == answer["content"] == completed["answer"]
+    assert all(len(chunk) == 6 for chunk in chunks[:-1])
+    assert 1 <= len(chunks[-1]) <= 6
     assert completed["content"] == ""
     assert any(
         data["type"] == "message_chunk" and data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"

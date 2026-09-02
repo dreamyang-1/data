@@ -310,6 +310,8 @@ async def chat_refresh(
         "这是 POST SSE，采用与 New_Agent 相同的 data-only Envelope；"
         "事件类型放在JSON的 type 字段中，不输出 event: 行。"
         "常用类型为 updata_state、message_chunk、tool_result、answer、complete。"
+        "最终答案完成可靠性校验后，按 New_Agent 的规则每 6 个 Unicode 字符"
+        "推送一个 output/message_chunk（末片可少于 6 字）。"
         "身份、请求格式和已存在的 message_id 冲突在建立事件流前保持标准 HTTP 状态；"
         "流建立后的超时或运行异常使用 error 事件返回。"
     ),
@@ -679,34 +681,25 @@ def _new_agent_think_step(stage: str) -> str:
     return "step1"
 
 
-def _answer_chunks(
-    answer: str, *, max_chars: int = 12, max_chunks: int = 300
-) -> list[str]:
+def _answer_chunks(answer: str, *, chunk_size: int = 6) -> list[str]:
     """Split only the already validated final answer into transport chunks.
 
     The Qwen synthesis result is structured and evidence-validated before it
     reaches this function.  Streaming unvalidated model tokens would bypass
-    those safety gates, so chunks are produced from the approved answer.
+    those safety gates, so chunks are produced from the approved answer.  Use
+    the same fixed six-Unicode-character slicing rule as New_Agent's
+    ``stream_text_to_frontend`` transport helper; only the final chunk may be
+    shorter.
     """
 
     if not answer:
         return []
-    # A normal answer is emitted in short, readable pieces. Very large tables
-    # use a larger adaptive piece size so the SSE event count stays bounded.
-    max_chars = max(max_chars, (len(answer) + max_chunks - 1) // max_chunks)
-    chunks: list[str] = []
-    buffer: list[str] = []
-    punctuation = {"。", "！", "？", "；", "\n"}
-    for character in answer:
-        buffer.append(character)
-        if len(buffer) >= max_chars or (
-            character in punctuation and len(buffer) >= 8
-        ):
-            chunks.append("".join(buffer))
-            buffer = []
-    if buffer:
-        chunks.append("".join(buffer))
-    return chunks
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be greater than zero")
+    return [
+        answer[index:index + chunk_size]
+        for index in range(0, len(answer), chunk_size)
+    ]
 
 
 def _answer_chunk_delay(chunk_count: int) -> float:
