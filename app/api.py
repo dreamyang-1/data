@@ -630,13 +630,13 @@ def _thinking_section(stage: str) -> str | None:
 
 def _thinking_title(section: str) -> str:
     return {
-        "intent": "### ◉ 意图识别",
-        "file": "### ◉ 文件感知与解析",
-        "planning": "### ◉ 任务拆分与规划",
-        "execution": "### ◉ 调度执行",
-        "validation": "### ◉ 结果校验",
-        "insight": "### ◉ 数据洞察分析",
-        "summary": "### ◉ 输出总结",
+        "intent": "#### ◉ 意图识别",
+        "file": "#### ◉ 文件感知与解析",
+        "planning": "#### ◉ 任务拆分与规划",
+        "execution": "#### ◉ 调度执行",
+        "validation": "#### ◉ 结果校验",
+        "insight": "#### ◉ 数据洞察分析",
+        "summary": "#### ◉ 输出总结",
     }[section]
 
 

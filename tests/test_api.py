@@ -433,9 +433,9 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     )
     all_thinking_content = "".join(data["content"] for data in think_chunks)
     expected_headings = [
-        "### ◉ 意图识别",
-        "### ◉ 任务拆分与规划",
-        "### ◉ 输出总结",
+        "#### ◉ 意图识别",
+        "#### ◉ 任务拆分与规划",
+        "#### ◉ 输出总结",
     ]
     assert all(all_thinking_content.count(heading) == 1 for heading in expected_headings)
     assert len(re.findall(r"(?m)^\s*#{1,6}\s+", all_thinking_content)) == 3
@@ -444,19 +444,19 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
     )
     assert intent_chunk["step"] == "step1"
-    assert "### ◉ 意图识别" not in intent_chunk["content"]
+    assert "#### ◉ 意图识别" not in intent_chunk["content"]
     completed_intent_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
         and data.get("meta", {}).get("status") == "COMPLETED"
     )
-    assert "### ◉ 意图识别" in completed_intent_chunk["content"]
+    assert "#### ◉ 意图识别" in completed_intent_chunk["content"]
     planning_running_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "TASK_PLANNING"
         and data.get("meta", {}).get("status") == "RUNNING"
     )
-    assert "### ◉ 任务拆分与规划" in planning_running_chunk["content"]
+    assert "#### ◉ 任务拆分与规划" in planning_running_chunk["content"]
     assert "正在判断是否需要拆分" in planning_running_chunk["content"]
     summary_chunk = next(
         data for data in think_chunks
@@ -476,13 +476,13 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
 
 def test_all_seven_thinking_stages_have_normalized_unnumbered_headings():
     expected = {
-        "INTENT_RECOGNITION": "### ◉ 意图识别",
-        "FILE_INSPECTION": "### ◉ 文件感知与解析",
-        "TASK_PLANNING": "### ◉ 任务拆分与规划",
-        "DATA_RETRIEVAL": "### ◉ 调度执行",
-        "RELIABILITY_CHECK": "### ◉ 结果校验",
-        "INSIGHT_ANALYSIS": "### ◉ 数据洞察分析",
-        "OUTPUT_SUMMARY": "### ◉ 输出总结",
+        "INTENT_RECOGNITION": "#### ◉ 意图识别",
+        "FILE_INSPECTION": "#### ◉ 文件感知与解析",
+        "TASK_PLANNING": "#### ◉ 任务拆分与规划",
+        "DATA_RETRIEVAL": "#### ◉ 调度执行",
+        "RELIABILITY_CHECK": "#### ◉ 结果校验",
+        "INSIGHT_ANALYSIS": "#### ◉ 数据洞察分析",
+        "OUTPUT_SUMMARY": "#### ◉ 输出总结",
     }
 
     assert {
