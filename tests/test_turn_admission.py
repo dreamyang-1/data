@@ -83,6 +83,41 @@ def _filter_value(request: CanonicalAnalysisRequest, field: str) -> str | None:
     )
 
 
+def test_model_grounded_short_followup_replaces_active_entity_filter():
+    gate, previous, current, decision = _decision(
+        "空心纤维血液透析器产品的经销商有哪些",
+        "那费森尤斯呢",
+        "model-grounded-entity-replacement",
+    )
+    previous.asl_template = {"query_object": "dealer", "filters": [
+        {"field": "商品名称", "operator": "EQ", "value": "空心纤维血液透析器"}
+    ]}
+    previous.source_dataset_id = "old-product-dataset"
+    current.semantic_entity_mentions = ["费森尤斯"]
+    current.intent_confidence = 0.95
+
+    gate.promote_model_entity_replacement(
+        decision=decision,
+        current=current,
+        previous=previous,
+        raw_question="那费森尤斯呢",
+    )
+    merged = gate.apply_explicit_slot_protection(
+        previous.model_copy(deep=True), current, decision
+    )
+
+    assert decision.relation == TurnRelation.CURRENT_TOPIC_MODIFICATION
+    assert "MODEL_GROUNDED_ENTITY_REPLACEMENT" in decision.reason_codes
+    assert _filter_value(merged, "商品名称") == "费森尤斯"
+    assert all(
+        str(item.get("value") or "") != "空心纤维血液透析器"
+        for item in merged.filters
+    )
+    assert merged.asl_template is None
+    assert merged.source_dataset_id is None
+    assert "CORE_SUBJECT_CHANGE_REPLAN_REQUIRED" in merged.assumptions
+
+
 def test_catalog_category_scope_does_not_become_a_synthetic_product_fact():
     question = (
         "查询上海市江苏苏云品牌低值耗材的经销商清单，"

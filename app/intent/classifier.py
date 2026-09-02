@@ -72,6 +72,8 @@ def render_execution_question(
         )
     elif "TIME_SCOPE=ALL_AVAILABLE_HISTORY" in request.assumptions:
         parts.append("时间范围：数据源全部可用历史")
+    if "TRANSACTION_TIME_SCOPE=SALES_RECORD" in request.assumptions:
+        parts.append("时间口径：按销售记录时间统计")
     granularity_labels = {
         "day": "日", "week": "周", "month": "月",
         "quarter": "季度", "year": "年",
@@ -1784,8 +1786,21 @@ class RuleBasedIntentClassifier:
             # a current brand/category/manufacturer attribute when appropriate.
             "field": "商品名称", "operator": "EQ", "value": scope,
         })
+        request.semantic_entity_mentions = list(dict.fromkeys([
+            *request.semantic_entity_mentions,
+            scope,
+        ]))
         if "SET_RELATIONSHIP_PROJECTION" not in request.assumptions:
             request.assumptions.append("SET_RELATIONSHIP_PROJECTION")
+        if "TRANSACTION_TIME_SCOPE=SALES_RECORD" not in request.assumptions:
+            # Product-to-partner relationships in this agent are defined by
+            # sales facts in the requested/default active period. Preserve
+            # that trusted time meaning when an entity follow-up forces a new
+            # ASL plan; otherwise the semantic service can ask an unnecessary
+            # transaction-time clarification.
+            request.assumptions.append(
+                "TRANSACTION_TIME_SCOPE=SALES_RECORD"
+            )
 
     @staticmethod
     def _apply_relationship_product_scope(

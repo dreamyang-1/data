@@ -44,6 +44,7 @@ class StructuredIntentOutput(BaseModel):
     dimensions: list[str] = Field(default_factory=list)
     entity: str | None = None
     fields: list[str] = Field(default_factory=list)
+    current_entity_values: list[str] = Field(default_factory=list, max_length=20)
     comparison_type: str | None = None
     ambiguities: list[str] = Field(default_factory=list)
     completed_question: str | None = Field(default=None, max_length=4000)
@@ -73,6 +74,8 @@ SYSTEM_PROMPT = """你是企业数据分析系统的意图分类器，只分类�
 20. 实体、维度、字段和指标都要由语义理解给出；规则或关键词只能作为证据，不能因为句式常见就省略抽取。
 21. “销售趋势、销售走势、销售变化”是已登记的业务省略表达：用户未明确“销量、销售量、销售数量”时，metrics 填“销售额”，completed_question 补成“销售额趋势/走势/变化”；用户明确数量口径时必须填“销售量”。“订单趋势、业务趋势”等没有已登记默认口径的泛化表达仍需指出歧义，不得照抄“订单、业务”作为指标。
 22. metrics 中的每一项都必须能独立表示可计算度量；completed_question 中的指标口径必须与 metrics 一致。
+23. current_entity_values 只提取当前用户问题（“已确认的上一轮上下文”之前）明确出现的具体业务实体值，例如产品名、品牌名、厂家名、经销商名、医院名或地区名；不得填写“产品、经销商、医院”等对象类别，不得复制只存在于上一轮上下文中的值，也不得包含“那、呢、换成”等语气或操作词。例如“那费森尤斯呢”必须提取为 ["费森尤斯"]。
+24. 当前问题出现新的实体值时，completed_question 必须用新值替换上一轮同一筛选槽，不得同时保留冲突旧值，也不得把新实体值臆造成查询对象或指标。
 """
 
 
@@ -219,6 +222,39 @@ class HybridIntentClassifier:
         request.intent_source = "STRUCTURED_MODEL"
         request.intent_confidence = model.confidence
         semantic_extraction_applied = False
+        current_entity_candidates = list(model.current_entity_values)
+        current_fragment = question.split(
+            "\n已确认的上一轮上下文", 1
+        )[0].strip()
+        if (
+            not current_entity_candidates
+            and re.fullmatch(
+                r"(?:那|那么|再看|换成|改成)?[^，,。；;？?]{1,100}"
+                r"(?:呢|怎么样)[。！!？?]*",
+                re.sub(r"\s+", "", current_fragment),
+            )
+        ):
+            # Some compatible models put the current value in ``evidence``
+            # despite the dedicated schema field.  Evidence is still model
+            # extraction, but it is accepted only for a tightly-scoped
+            # elliptical turn and must pass the same literal grounding gate.
+            current_entity_candidates = list(model.evidence)
+            if current_entity_candidates:
+                request.assumptions.append(
+                    "CURRENT_ENTITY_VALUE_RECOVERED_FROM_MODEL_EVIDENCE"
+                )
+        if current_entity_candidates:
+            current_entity_values = self._grounded_current_entity_values(
+                current_entity_candidates,
+                question,
+            )
+            if current_entity_values:
+                request.semantic_entity_mentions = current_entity_values
+                semantic_extraction_applied = True
+            if len(current_entity_values) != len(current_entity_candidates):
+                request.assumptions.append(
+                    "UNGROUNDED_CURRENT_ENTITY_VALUE_DROPPED"
+                )
         if model.metrics:
             grounded_metrics = self._grounded_metric_names(model.metrics, question)
             if grounded_metrics:
@@ -768,6 +804,33 @@ class HybridIntentClassifier:
         return canonical if any(
             signal in normalized for signal in signals.get(canonical, ())
         ) else None
+
+    @staticmethod
+    def _grounded_current_entity_values(
+        values: list[str], question: str
+    ) -> list[str]:
+        """Keep only model values literally grounded in the current raw turn."""
+
+        current = question.split("\n已确认的上一轮上下文", 1)[0]
+        compact = re.sub(r"\s+", "", current)
+        generic = {
+            "产品", "商品", "经销商", "供应商", "医院", "客户", "门店",
+            "厂家", "实体", "对象", "指标", "销售额", "销售量", "订单量",
+        }
+        grounded: list[str] = []
+        for value in values:
+            candidate = re.sub(r"\s+", "", str(value or ""))
+            candidate = re.sub(r"^(?:那|那么|再看|换成|改成)", "", candidate)
+            candidate = re.sub(r"(?:呢|怎么样)[？?。！!]*$", "", candidate)
+            candidate = candidate.strip("，,。；;：:！？?、")
+            if (
+                1 <= len(candidate) <= 100
+                and candidate not in generic
+                and candidate in compact
+                and candidate not in grounded
+            ):
+                grounded.append(candidate)
+        return grounded
 
     @staticmethod
     def _passes_deterministic_constraints(model: StructuredIntentOutput, question: str) -> bool:

@@ -776,7 +776,133 @@ class TurnAdmissionGate:
             request.asl_template = None
             request.source_dataset_id = None
             request.conversation_control = current.conversation_control
+        elif decision.core_subject_changed:
+            # A semantic subject replacement invalidates both the prior query
+            # plan and its materialized dataset.  Reusing either would execute
+            # the old entity filter even though the canonical request already
+            # contains the new value (for example, product A -> brand B).
+            request.asl_template = None
+            request.source_dataset_id = None
+            if "CORE_SUBJECT_CHANGE_REPLAN_REQUIRED" not in request.assumptions:
+                request.assumptions.append(
+                    "CORE_SUBJECT_CHANGE_REPLAN_REQUIRED"
+                )
         return request
+
+    @classmethod
+    def promote_model_entity_replacement(
+        cls,
+        *,
+        decision: TurnAdmissionDecision,
+        current: CanonicalAnalysisRequest,
+        previous: CanonicalAnalysisRequest | None,
+        raw_question: str,
+    ) -> None:
+        """Promote an LLM-extracted elliptical entity to a protected slot.
+
+        The raw-turn gate intentionally cannot guess a bare value in ``那X呢``.
+        Once the structured model has extracted a value that is literally
+        grounded in the current text, replace the only compatible active
+        filter and mark it as current-turn reference resolution.  This runs
+        before contextual merging, so stale active-thread values cannot win.
+        """
+
+        if (
+            previous is None
+            or not decision.inherit_business_context
+            or len(current.semantic_entity_mentions) != 1
+            or not re.fullmatch(
+                r"(?:那|那么|再看|换成|改成)?[^，,。；;？?]{1,100}"
+                r"(?:呢|怎么样)[。！!？?]*",
+                re.sub(r"\s+", "", raw_question),
+            )
+        ):
+            return
+        value = current.semantic_entity_mentions[0].strip()
+        if not value or value not in re.sub(r"\s+", "", raw_question):
+            return
+
+        candidates = [
+            dict(item)
+            for item in previous.filters
+            if isinstance(item, dict)
+            and cls._semantic_field_family(str(item.get("field") or ""))
+            and str(item.get("operator") or "EQ").upper() in {"EQ", "=", "IN"}
+        ]
+        if len(candidates) > 1:
+            looks_region = bool(re.search(
+                r"(?:省|市|自治区|特别行政区|地区)$", value
+            ))
+            looks_company = value.endswith(
+                ("公司", "有限公司", "有限责任公司", "股份有限公司")
+            )
+            preferred_families = (
+                {"region"}
+                if looks_region
+                else {"dealer", "manufacturer"}
+                if looks_company
+                else {"product", "brand", "category"}
+            )
+            candidates = [
+                item for item in candidates
+                if cls._semantic_field_family(str(item.get("field") or ""))
+                in preferred_families
+            ]
+        if len(candidates) != 1:
+            return
+
+        prior = candidates[0]
+        if str(prior.get("value") or "").strip() == value:
+            return
+        replacement = {
+            "field": str(prior.get("field") or ""),
+            "operator": "EQ",
+            "value": value,
+        }
+        current.filters = [
+            dict(item) for item in previous.filters
+            if str(item.get("field") or "") != replacement["field"]
+        ]
+        current.filters.append(replacement)
+        facts = decision.current_turn_facts
+        facts.explicit_slots["filters"] = SlotProvenance(
+            value=[dict(item) for item in current.filters],
+            source=SlotSource.CURRENT_REFERENCE_RESOLUTION,
+            source_turn=next(
+                (
+                    slot.source_turn for slot in facts.explicit_slots.values()
+                    if slot.source_turn
+                ),
+                None,
+            ),
+            confidence=max(current.intent_confidence, 0.8),
+        )
+        family = cls._semantic_field_family(replacement["field"])
+        if family:
+            facts.core_subjects[family] = value
+            facts.explicit_slots[family] = SlotProvenance(
+                value=value,
+                source=SlotSource.CURRENT_REFERENCE_RESOLUTION,
+                source_turn=facts.explicit_slots["filters"].source_turn,
+                confidence=max(current.intent_confidence, 0.8),
+            )
+        decision.relation = TurnRelation.CURRENT_TOPIC_MODIFICATION
+        decision.core_subject_changed = True
+        decision.reason_codes = list(dict.fromkeys([
+            *decision.reason_codes,
+            "MODEL_GROUNDED_ENTITY_REPLACEMENT",
+            "CURRENT_EXPLICIT_WINS",
+        ]))
+        decision.protected_slots = list(dict.fromkeys([
+            *decision.protected_slots,
+            "filters",
+            *( [family] if family else [] ),
+        ]))
+        decision.inheritance_slots = [
+            slot for slot in decision.inheritance_slots
+            if slot not in {"filters", family}
+        ]
+        decision.context_delta = cls._facts_delta(facts)
 
     @classmethod
     def rebind_current_semantic_shape(

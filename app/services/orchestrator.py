@@ -2166,6 +2166,7 @@ class DataAnalysisOrchestrator:
         await emit_progress(
             "INTENT_RECOGNITION", "RUNNING", "正在识别查询意图和关键分析参数。"
         )
+        model_entity_mentions: list[str] = []
         if pending:
             explicit_replacement_task = bool(re.search(
                 r"(?:算了|不想问|不问了|不用了|换个问题|新问题|新任务)"
@@ -2249,6 +2250,15 @@ class DataAnalysisOrchestrator:
                 )
             )
             current_request = request.model_copy(deep=True)
+            self.turn_admission_gate.promote_model_entity_replacement(
+                decision=turn_decision,
+                current=current_request,
+                previous=previous_for_rewrite,
+                raw_question=chat.question,
+            )
+            model_entity_mentions = list(
+                current_request.semantic_entity_mentions
+            )
             rounds = 1
             # The raw-turn admission decision is authoritative.  Legacy
             # history recovery used to treat any analysis beginning with
@@ -2509,6 +2519,8 @@ class DataAnalysisOrchestrator:
             raw_rule_request,
             turn_decision,
         )
+        if model_entity_mentions:
+            request.semantic_entity_mentions = model_entity_mentions
         # A closed-form “按月/季度统计” is a grouped metric table. Structured
         # completion sometimes rewrites it as “分析趋势”, changing both the
         # deliverable and follow-up behavior. Keep the deterministic current
@@ -3898,7 +3910,11 @@ class DataAnalysisOrchestrator:
             query_result.dataset.columns,
             query_result.dataset.rows,
         )
-        if not request.metrics and request.temporal_anchor is not None:
+        if (
+            request.primary_intent == PrimaryIntent.TREND_ANALYSIS
+            and not request.metrics
+            and request.temporal_anchor is not None
+        ):
             metric_candidates = [
                 str(column)
                 for column in query_result.dataset.columns
@@ -5497,6 +5513,14 @@ class DataAnalysisOrchestrator:
             f"{str(item.get('value', ''))[:80]}"
             for item in request.filters[:10]
         ]
+        entity_values = list(dict.fromkeys([
+            *request.semantic_entity_mentions,
+            *(
+                str(item.get("value") or "").strip()
+                for item in request.filters
+                if str(item.get("value") or "").strip()
+            ),
+        ]))
         intent_label = cls._intent_label(request.primary_intent)
         intent_display = f"基于用户文件进行{intent_label}" if file_based else intent_label
         relation = request.turn_relation
@@ -5544,7 +5568,8 @@ class DataAnalysisOrchestrator:
             f"{file_judgement}"
             f"任务意图：{intent_display}"
             f"（{request.primary_intent.value}，置信度 {request.intent_confidence:.2f}）\n"
-            f"结构化提取：指标={metrics or ['未提取']}；实体={request.entity or '未提取'}；"
+            f"结构化提取：指标={metrics or ['未提取']}；查询对象={request.entity or '未提取'}；"
+            f"业务实体值={entity_values or ['未提取']}；"
             f"维度={request.dimensions or ['未提取']}；字段={request.fields or ['未提取']}；"
             f"时间={time_text}；筛选={filters or ['无']}；排序数量={request.ranking_limit or '无'}。\n"
             f"轮次关系={relation_label}"

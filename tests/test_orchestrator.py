@@ -738,6 +738,11 @@ async def test_complete_new_query_discards_unanswered_pending_clarification():
         "t1", "u1", "app1", "abandon-pending"
     )
     assert pending is None
+    remembered = await agent.sessions.get_last_request(
+        "t1", "u1", "app1", "abandon-pending"
+    )
+    assert remembered is not None
+    assert remembered.metrics == []
 
 
 @pytest.mark.asyncio

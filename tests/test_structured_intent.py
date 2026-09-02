@@ -76,6 +76,54 @@ async def test_model_metric_guess_cannot_turn_relationship_question_into_metric_
     ]
     assert "metric" not in result.missing_slots
     assert result.ambiguities == []
+    assert "TRANSACTION_TIME_SCOPE=SALES_RECORD" in result.assumptions
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("dedicated_field", [True, False])
+async def test_short_followup_keeps_model_extracted_current_entity_value(
+    dedicated_field: bool,
+):
+    output = {
+        "primary_intent": "METRIC_QUERY",
+        "secondary_intents": [],
+        "operators": ["FILTER"],
+        "conversation_control": "FOLLOW_UP",
+        "confidence": 0.95,
+        "evidence": ["费森尤斯"],
+        "metrics": [],
+        "dimensions": [],
+        "entity": None,
+        "fields": [],
+        "comparison_type": None,
+        "ambiguities": [],
+    }
+    if dedicated_field:
+        output["current_entity_values"] = ["费森尤斯"]
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "那费森尤斯呢\n已确认的上一轮上下文（当前问题明确内容优先）："
+        "实体=经销商；过滤条件=[商品名称=空心纤维血液透析器]",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "c-current-entity",
+    )
+
+    assert result.semantic_entity_mentions == ["费森尤斯"]
+    if not dedicated_field:
+        assert (
+            "CURRENT_ENTITY_VALUE_RECOVERED_FROM_MODEL_EVIDENCE"
+            in result.assumptions
+        )
 
 
 @pytest.mark.parametrize(
