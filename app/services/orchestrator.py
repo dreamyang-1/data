@@ -4273,6 +4273,42 @@ class DataAnalysisOrchestrator:
         return None
 
     @staticmethod
+    def _dataset_ordering_proof(reference: Any) -> dict[str, Any] | None:
+        """Return trusted ordering provenance for rank-preserving follow-ups.
+
+        A row position is meaningful only when the source query or an audited
+        dataset transformation established an order.  Merely receiving rows in
+        a particular sequence is not proof that “第一名” or “前三名” denotes a
+        business ranking.
+        """
+
+        raw_log = (
+            reference.get("transformation_log", ())
+            if isinstance(reference, dict)
+            else getattr(reference, "transformation_log", ())
+        )
+        for item in reversed(tuple(raw_log or ())):
+            if not isinstance(item, dict):
+                continue
+            operation_type = str(item.get("type") or "").lower()
+            if operation_type in {"sort", "sort_limit"} and item.get("field"):
+                return dict(item)
+            if operation_type == "query_provenance" and (
+                item.get("ranked") or item.get("ordered_by")
+            ):
+                return dict(item)
+            if operation_type == "pipeline":
+                for operation in reversed(item.get("operations") or []):
+                    if (
+                        isinstance(operation, dict)
+                        and str(operation.get("type") or "").lower()
+                        in {"sort", "sort_limit"}
+                        and operation.get("field")
+                    ):
+                        return dict(operation)
+        return None
+
+    @staticmethod
     def _expandable_dataset_reference(
         selected: dict[str, Any],
         references: list[dict[str, Any]],
@@ -4392,6 +4428,7 @@ class DataAnalysisOrchestrator:
                 operation_question,
                 loaded.reference.columns,
                 loaded.rows,
+                ordering_proof=self._dataset_ordering_proof(loaded.reference),
             )
             requested_limit = self._operation_limit(operation)
             if (
@@ -4415,6 +4452,9 @@ class DataAnalysisOrchestrator:
                         operation_question,
                         loaded.reference.columns,
                         loaded.rows,
+                        ordering_proof=self._dataset_ordering_proof(
+                            loaded.reference
+                        ),
                     )
                     request.assumptions.append(
                         "TOP_N_EXPANDED_FROM_BASE_RESULT"
@@ -4425,6 +4465,9 @@ class DataAnalysisOrchestrator:
                     operation_question,
                     loaded.reference.columns,
                     loaded.rows,
+                    ordering_proof=self._dataset_ordering_proof(
+                        loaded.reference
+                    ),
                 )
                 explicit_dataset_selection = (
                     "EXPLICIT_SOURCE_DATASET_SELECTION" in request.assumptions
@@ -4554,50 +4597,187 @@ class DataAnalysisOrchestrator:
             logger.warning("dataset follow-up unavailable; regenerating query: %s", exc)
             return None, None
 
-    @staticmethod
+    @classmethod
     def _bind_result_entity_reference(
+        cls,
         request: CanonicalAnalysisRequest,
         question: str,
         columns: list[str],
         rows: list[dict[str, Any]],
+        *,
+        ordering_proof: dict[str, Any] | None = None,
     ) -> None:
-        """Resolve a singular pronoun from the immediately preceding table.
+        """Bind typed references to verified rows from the preceding result.
 
-        This is deliberately limited to a one-value result and an explicit
-        product-to-hospital relationship question.  It does not guess among
-        multiple rows and therefore cannot silently select the wrong entity.
+        Row order is used for ordinals only when the persisted dataset carries
+        ordering provenance.  Set references such as “这些科室” do not require
+        order, but still bind from structured result columns rather than from
+        assistant prose.  Punctuation-only inherited values are rejected.
         """
+
+        def valid_value(value: Any) -> bool:
+            if value is None:
+                return False
+            text = str(value).strip()
+            return bool(text and re.search(r"[\w\u4e00-\u9fff]", text))
+
+        cleaned_filters: list[dict[str, Any]] = []
+        removed_invalid = False
+        for item in request.filters:
+            if (
+                isinstance(item, dict)
+                and str(item.get("operator") or "").upper()
+                in {"IS_NULL", "IS_NOT_NULL"}
+            ):
+                cleaned_filters.append(item)
+                continue
+            value = item.get("value") if isinstance(item, dict) else None
+            if isinstance(value, list):
+                values = [candidate for candidate in value if valid_value(candidate)]
+                if not values:
+                    removed_invalid = True
+                    continue
+                cleaned_filters.append({**item, "value": values})
+            elif valid_value(value):
+                cleaned_filters.append(item)
+            else:
+                removed_invalid = True
+        request.filters = cleaned_filters
+        if removed_invalid:
+            request.assumptions.append("INVALID_INHERITED_FILTER_VALUE_DROPPED")
+
         compact = re.sub(r"\s+", "", question)
+        role_specs = {
+            "经销商": (
+                "经销商名称",
+                {"经销商", "经销商名称", "dealer", "dealername"},
+            ),
+            "供应商": (
+                "供应商名称",
+                {"供应商", "供应商名称", "supplier", "suppliername"},
+            ),
+            "医院": (
+                "医院名称",
+                {"医院", "医院名称", "hospital", "hospitalname"},
+            ),
+            "厂家": (
+                "厂家名称",
+                {"厂家", "厂家名称", "厂商", "厂商名称", "manufacturer", "manufacturername"},
+            ),
+            "科室": (
+                "科室名称",
+                {"科室", "科室名称", "适用科室", "主科室", "maindepartment"},
+            ),
+            "商品": (
+                "商品名称",
+                {"商品", "产品", "商品名称", "产品名称", "product", "productname"},
+            ),
+        }
+
+        def normalized_column(value: str) -> str:
+            return re.sub(r"[^a-z0-9\u4e00-\u9fff]", "", value.casefold())
+
+        def column_for_role(role: str) -> str | None:
+            _, aliases = role_specs[role]
+            normalized_aliases = {normalized_column(value) for value in aliases}
+            candidates = [
+                column for column in columns
+                if normalized_column(str(column)) in normalized_aliases
+            ]
+            return candidates[0] if len(candidates) == 1 else None
+
+        def values_for_role(role: str, count: int | None = None) -> list[str]:
+            column = column_for_role(role)
+            if column is None:
+                return []
+            source_rows = rows if count is None else rows[:count]
+            return list(dict.fromkeys(
+                str(row[column]).strip()
+                for row in source_rows
+                if valid_value(row.get(column))
+            ))
+
+        def bind_values(role: str, values: list[str]) -> None:
+            field, aliases = role_specs[role]
+            request.filters = [
+                item for item in request.filters
+                if normalized_column(str(item.get("field") or ""))
+                not in {normalized_column(value) for value in {*aliases, field}}
+            ]
+            request.filters.append({
+                "field": field,
+                "operator": "EQ" if len(values) == 1 else "IN",
+                "value": values[0] if len(values) == 1 else values,
+            })
+            request.assumptions.append(f"RESULT_ENTITY_REFERENCE={field}")
+
+        ordinal_count: int | None = None
+        if re.search(r"(?:第一名|排名第一|排第一|第一个)", compact):
+            ordinal_count = 1
+        else:
+            ordinal_match = re.search(
+                r"前(?P<count>\d{1,3}|[一二两三四五六七八九十]{1,3})名",
+                compact,
+            )
+            if ordinal_match is not None:
+                token = ordinal_match.group("count")
+                digits = {
+                    "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
+                    "五": 5, "六": 6, "七": 7, "八": 8, "九": 9,
+                    "十": 10,
+                }
+                ordinal_count = int(token) if token.isdigit() else digits.get(token)
+
+        source_role = next(
+            (role for role in ("经销商", "供应商", "医院", "厂家", "科室", "商品") if role in compact),
+            None,
+        )
+        if ordinal_count is not None and source_role is not None:
+            if ordering_proof is None:
+                request.assumptions.append("UNVERIFIED_RESULT_ORDINAL_NOT_BOUND")
+                return
+            values = values_for_role(source_role, ordinal_count)
+            if len(values) != ordinal_count:
+                return
+            bind_values(source_role, values)
+            if "销售差异" in compact and not request.metrics:
+                request.primary_intent = PrimaryIntent.COMPARISON_ANALYSIS
+                request.comparison_type = "对象间比较"
+                request.metrics = [MetricRef(input="含税销售总额")]
+                if source_role not in request.dimensions:
+                    request.dimensions.append(source_role)
+                request.assumptions.append(
+                    "SALES_DIFFERENCE_DEFAULT_METRIC=含税销售总额"
+                )
+            target_match = re.search(
+                r"哪些(?P<target>厂家|医院|经销商|供应商|科室)", compact
+            )
+            if target_match is not None:
+                target = target_match.group("target")
+                request.primary_intent = PrimaryIntent.DETAIL_QUERY
+                request.entity = target
+                request.fields = [f"{target}名称"]
+                request.dimensions = [target]
+                request.metrics = []
+            return
+
+        if re.search(r"(?:这些|上述|前述)科室", compact):
+            department_values = values_for_role("科室")
+            if department_values:
+                bind_values("科室", department_values)
+                if "含税销售总额" in compact and not request.metrics:
+                    request.metrics = [MetricRef(input="含税销售总额")]
+                return
+
         if not re.search(
             r"(?:它|该产品|这个产品).{0,16}(?:卖给|销售给)(?:了)?哪些医院",
             compact,
         ):
             return
-        candidate_columns = [
-            column for column in columns
-            if column in {"商品", "产品", "商品名称", "产品名称"}
-        ]
-        if len(candidate_columns) != 1:
-            return
-        source_column = candidate_columns[0]
-        values = list(dict.fromkeys(
-            str(row[source_column]).strip()
-            for row in rows
-            if row.get(source_column) is not None
-            and str(row[source_column]).strip()
-        ))
+        values = values_for_role("商品")
         if len(values) != 1:
             return
-        request.filters = [
-            item for item in request.filters
-            if str(item.get("field") or "") not in {"商品名称", "产品名称"}
-        ]
-        request.filters.append({
-            "field": "商品名称",
-            "operator": "EQ",
-            "value": values[0],
-        })
-        request.assumptions.append("RESULT_ENTITY_REFERENCE=商品名称")
+        bind_values("商品", values)
 
     @staticmethod
     def _dataset_reference_matches_scope(
@@ -4619,6 +4799,20 @@ class DataAnalysisOrchestrator:
         try:
             if int(model_id) != request.semantic_model_id:
                 return False
+            if request.semantic_model_version:
+                provenance = next((
+                    item
+                    for item in reversed(reference.get("transformation_log", []))
+                    if isinstance(item, dict)
+                    and item.get("type") == "query_provenance"
+                ), None)
+                reference_version = (
+                    str(provenance.get("semantic_model_version") or "").strip()
+                    if provenance is not None
+                    else ""
+                )
+                if reference_version != str(request.semantic_model_version):
+                    return False
             reference_domains = sorted(
                 int(item) for item in reference.get("business_domain_ids", [])
             )
@@ -4634,6 +4828,37 @@ class DataAnalysisOrchestrator:
         if self.dataset_store is None:
             return None
         try:
+            metric_names = [
+                metric.metric_id or metric.canonical_name or metric.input
+                for metric in request.metrics
+            ]
+            ranked = any(
+                operator in request.operators
+                for operator in (
+                    AnalysisOperator.TOP_N,
+                    AnalysisOperator.BOTTOM_N,
+                    AnalysisOperator.SORT,
+                )
+            )
+            query_fingerprint = hashlib.sha256(json.dumps({
+                "semantic_model_id": request.semantic_model_id,
+                "semantic_model_version": request.semantic_model_version,
+                "intent": request.primary_intent.value,
+                "metrics": metric_names,
+                "dimensions": request.dimensions,
+                "filters": request.filters,
+                "ranking_limit": request.ranking_limit,
+                "operators": [operator.value for operator in request.operators],
+            }, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+            provenance = {
+                "type": "query_provenance",
+                "query_fingerprint": query_fingerprint,
+                "semantic_model_version": request.semantic_model_version,
+                "ranked": ranked,
+                "ordered_by": metric_names if ranked else [],
+                "descending": AnalysisOperator.BOTTOM_N not in request.operators,
+                "ranking_limit": request.ranking_limit,
+            }
             reference = await asyncio.to_thread(
                 self.dataset_store.save_dataset,
                 scope=scope_for_request(request),
@@ -4649,6 +4874,7 @@ class DataAnalysisOrchestrator:
                     metric.metric_id or metric.canonical_name or metric.input
                     for metric in request.metrics
                 ],
+                transformation_log=(provenance,),
                 ttl_seconds=self.settings.dataset_ttl_seconds,
             )
             await self.sessions.put_dataset_reference(
@@ -4843,6 +5069,10 @@ class DataAnalysisOrchestrator:
             "created_date": "销售记录日期",
             "sales_order.order_key": "订单号",
             "product.category_id": "商品分类",
+            "product.product_name": "商品名称",
+            "dealer.dealer_name": "经销商名称",
+            "hospital.hospital_name": "医院名称",
+            "manufacturer.manufacturer_name": "厂家名称",
             "sales_order.amount_with_tax": "含税销售总额",
         }
         sanitized = answer
@@ -4851,6 +5081,31 @@ class DataAnalysisOrchestrator:
                 re.escape(physical), business, sanitized, flags=re.IGNORECASE
             )
         return sanitized
+
+    @classmethod
+    def _sanitize_clarification_text(cls, text: str) -> str:
+        """Convert upstream diagnostics into a bounded business question."""
+
+        raw = str(text or "").strip()
+        if not raw:
+            return "请确认本次查询希望采用的业务口径。"
+        compact = re.sub(r"\s+", "", raw).casefold()
+        if "metrics必须为空" in compact or "未指定具体聚合指标" in compact:
+            return "请确认本次需要查看明细名单，还是按销售额、数量等指标汇总？"
+        if re.search(
+            r"(?:sql_query_|asl_|dependency_|schema_|internal|constraint|traceback)",
+            compact,
+            re.I,
+        ):
+            return "当前业务口径未能唯一匹配，请确认要查询的业务对象或筛选范围。"
+        sanitized = cls._sanitize_user_visible_answer(raw)
+        sanitized = re.sub(
+            r"(?:根据|按照)?(?:内部)?约束[^。；;]*[。；;]?",
+            "",
+            sanitized,
+            flags=re.I,
+        ).strip()
+        return sanitized or "请确认本次查询希望采用的业务口径。"
 
     @staticmethod
     def _append_download_links(response: AgentResponse) -> None:
@@ -6675,20 +6930,28 @@ class DataAnalysisOrchestrator:
             lines.append(f"| {target} | {content} |")
         return "\n".join(lines)
 
-    @staticmethod
-    def _ambiguity_texts(exc: AdapterError) -> list[str]:
+    @classmethod
+    def _ambiguity_texts(cls, exc: AdapterError) -> list[str]:
         if isinstance(exc.details, list):
-            return [
+            raw = [
                 str(value.get("message") or value.get("question") or value)
                 if isinstance(value, dict)
                 else str(value)
                 for value in exc.details
             ]
-        try:
-            value = json.loads(str(exc))
-            return [str(v.get("message") or v.get("question") or v) if isinstance(v, dict) else str(v) for v in value]
-        except (ValueError, TypeError):
-            return [str(exc)]
+        else:
+            try:
+                value = json.loads(str(exc))
+                raw = [
+                    str(v.get("message") or v.get("question") or v)
+                    if isinstance(v, dict) else str(v)
+                    for v in value
+                ]
+            except (ValueError, TypeError):
+                raw = [str(exc)]
+        return list(dict.fromkeys(
+            cls._sanitize_clarification_text(value) for value in raw
+        ))
 
     @staticmethod
     def _semantic_ambiguities(exc: AdapterError) -> list[SemanticAmbiguity]:
@@ -6756,8 +7019,10 @@ class DataAnalysisOrchestrator:
                 continue
         return result
 
-    @staticmethod
-    def _clarification_questions(request: CanonicalAnalysisRequest) -> list[str]:
+    @classmethod
+    def _clarification_questions(
+        cls, request: CanonicalAnalysisRequest
+    ) -> list[str]:
         prompts = {"turn_relation": "请确认这句话是在补充上一轮，还是一个独立新问题？", "metric": "要查询或分析哪个指标？", "time_range": "要分析哪个时间范围？", "entity": "要查询哪类业务明细？", "fields": "明细中需要哪些字段？", "comparison_type": "希望同比、环比、目标值还是对象间比较？", "comparison_objects": "请提供要对比的具体经销商或供应商名称，并用顿号或逗号分隔。", "dimension": "希望按哪个维度分析？", "product": "要计算哪个具体商品的科室匹配度？", "semantic_ambiguity": "请确认存在歧义的业务口径。"}
         normalized_question = re.sub(r"\s+", "", request.original_question or "")
         if "推荐" in normalized_question or "画像" in normalized_question:
@@ -6775,7 +7040,13 @@ class DataAnalysisOrchestrator:
                 if prompt not in questions:
                     questions.append(prompt)
             elif slot == "semantic_ambiguity" and request.ambiguities:
-                questions.extend(text for text in request.ambiguities if text not in questions)
+                questions.extend(
+                    text
+                    for value in request.ambiguities
+                    if (
+                        text := cls._sanitize_clarification_text(value)
+                    ) not in questions
+                )
             else:
                 prompt = prompts.get(slot, f"请补充 {slot}。")
                 if prompt not in questions:

@@ -358,6 +358,39 @@ def test_limit_replacement_preserves_existing_multi_metric_ranking_order():
         "改成前3名，其他条件不变。",
         ["经销商", "销售额", "合作次数"],
         rows,
+        ordering_proof={
+            "type": "query_provenance",
+            "ranked": True,
+            "ordered_by": ["销售额"],
+        },
+    ) == {"type": "limit", "count": 3}
+
+
+def test_business_ranking_does_not_sort_the_only_name_column():
+    rows = [{"经销商名称": "乙"}, {"经销商名称": "甲"}]
+
+    assert plan_dataset_followup(
+        "按整体业务规模从高到低排序。",
+        ["经销商名称"],
+        rows,
+    ) is None
+
+
+def test_ranked_name_limit_requires_ordering_proof():
+    rows = [{"经销商名称": "甲"}, {"经销商名称": "乙"}]
+
+    assert plan_dataset_followup(
+        "只显示前三名。", ["经销商名称"], rows
+    ) is None
+    assert plan_dataset_followup(
+        "只显示前三名。",
+        ["经销商名称"],
+        rows,
+        ordering_proof={
+            "type": "query_provenance",
+            "ranked": True,
+            "ordered_by": ["含税销售总额"],
+        },
     ) == {"type": "limit", "count": 3}
 
 

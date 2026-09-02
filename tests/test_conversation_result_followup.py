@@ -497,3 +497,41 @@ async def test_8_semantic_filter_followup_requeries_instead_of_replaying_old_lis
     assert request.execution_mode == "QUERY_DATABASE"
     assert request.source_dataset_id is None
     assert "INHERITED_DATASET_INSUFFICIENT_REQUERY" in request.assumptions
+
+
+@pytest.mark.asyncio
+async def test_9_business_scale_sort_requeries_when_old_list_has_no_metric():
+    agent, retrieval, _, _ = _list_agent()
+    conversation_id = "followup-business-scale-requery"
+    await agent.handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id=conversation_id,
+            message_id="m1",
+            question="查询A产品合作的经销商名单。",
+            semantic_model_id=81,
+        ),
+        IDENTITY,
+    )
+
+    second = await agent.handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id=conversation_id,
+            message_id="m2",
+            question="按整体业务规模从高到低排序。",
+            semantic_model_id=81,
+        ),
+        IDENTITY,
+    )
+
+    # The lightweight retrieval fixture always returns a name-only table, so
+    # the result contract may safely reject it.  The regression assertion is
+    # that the semantic query is executed instead of reusing/sorting that list.
+    assert second.status in {"COMPLETED", "SAFE_FALLBACK"}
+    assert len(retrieval.requests) == 2
+    request = retrieval.requests[-1]
+    assert request.execution_mode == "QUERY_DATABASE"
+    assert request.source_dataset_id is None
+    assert request.metrics
+    assert "INHERITED_DATASET_INSUFFICIENT_REQUERY" in request.assumptions

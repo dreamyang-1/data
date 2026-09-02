@@ -269,6 +269,8 @@ def test_transaction_partner_scope_separates_activity_words_from_catalog_value()
         "空心纤维血液透析器产品有哪些经销商",
         "空心纤维血液透析器产品由哪些经销商销售",
         "哪些经销商销售空心纤维血液透析器产品",
+        "空心纤维血液透析器都有哪些经销商在卖？",
+        "我想知道空心纤维血液透析器这个产品都通过哪些经销商渠道销售的，给我一份名单。",
     ),
 )
 def test_interrogative_product_partner_word_orders_are_relationship_details(question):
@@ -421,6 +423,41 @@ def test_concrete_product_after_brand_remains_exact_product_scope():
             "value": "超声血管导引穿刺套件",
         },
     ]
+
+
+def test_brand_product_interrogative_tail_is_not_part_of_product_value():
+    request = RuleBasedIntentClassifier().classify(
+        "振德医疗品牌的医用外科口罩有哪些经销商？",
+        IDENTITY,
+        "c-brand-product-interrogative",
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.entity == "经销商"
+    assert request.fields == ["经销商名称"]
+    assert request.filters == [
+        {"field": "商品品牌", "operator": "EQ", "value": "振德医疗"},
+        {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
+    ]
+
+
+def test_medical_product_metric_without_product_suffix_keeps_exact_entity_scope():
+    request = RuleBasedIntentClassifier().classify(
+        "查询上海市紫杉醇释放冠脉球囊导管的含税销售总额。",
+        IDENTITY,
+        "c-device-metric-without-product-suffix",
+    )
+
+    assert request.entity == "产品"
+    assert request.filters == [
+        {
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "紫杉醇释放冠脉球囊导管",
+        },
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+    ]
+    assert "GEOGRAPHIC_ROLE=SALES_BUSINESS_CITY" in request.assumptions
 
 
 def test_supplier_contact_shape_replaces_generic_model_fields():

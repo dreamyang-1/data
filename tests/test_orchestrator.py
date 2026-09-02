@@ -138,12 +138,178 @@ def test_singular_product_pronoun_is_bound_from_previous_result_table():
     assert "RESULT_ENTITY_REFERENCE=商品名称" in request.assumptions
 
 
+def test_ranked_dealer_reference_binds_from_verified_result_rows():
+    request = CanonicalAnalysisRequest(
+        conversation_id="ranked-dealer-reference",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="第一名经销商合作了哪些厂家？",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+    )
+
+    DataAnalysisOrchestrator._bind_result_entity_reference(
+        request,
+        request.original_question,
+        ["经销商名称", "含税销售总额"],
+        [
+            {"经销商名称": "甲公司", "含税销售总额": 100},
+            {"经销商名称": "乙公司", "含税销售总额": 90},
+        ],
+        ordering_proof={
+            "type": "query_provenance",
+            "ranked": True,
+            "ordered_by": ["含税销售总额"],
+        },
+    )
+
+    assert request.filters == [
+        {"field": "经销商名称", "operator": "EQ", "value": "甲公司"}
+    ]
+    assert request.entity == "厂家"
+    assert request.fields == ["厂家名称"]
+    assert request.metrics == []
+
+
+def test_unordered_result_does_not_resolve_first_ranked_dealer():
+    request = CanonicalAnalysisRequest(
+        conversation_id="unverified-rank",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="第一名经销商合作了哪些厂家？",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+    )
+
+    DataAnalysisOrchestrator._bind_result_entity_reference(
+        request,
+        request.original_question,
+        ["经销商名称"],
+        [{"经销商名称": "甲公司"}, {"经销商名称": "乙公司"}],
+    )
+
+    assert request.filters == []
+    assert "UNVERIFIED_RESULT_ORDINAL_NOT_BOUND" in request.assumptions
+
+
+def test_top_two_sales_difference_binds_entities_and_governed_metric():
+    request = CanonicalAnalysisRequest(
+        conversation_id="top-two-difference",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="对比前两名经销商的销售差异。",
+        primary_intent=PrimaryIntent.COMPARISON_ANALYSIS,
+    )
+
+    DataAnalysisOrchestrator._bind_result_entity_reference(
+        request,
+        request.original_question,
+        ["经销商名称", "含税销售总额"],
+        [
+            {"经销商名称": "甲公司", "含税销售总额": 100},
+            {"经销商名称": "乙公司", "含税销售总额": 90},
+        ],
+        ordering_proof={
+            "type": "query_provenance",
+            "ranked": True,
+            "ordered_by": ["含税销售总额"],
+        },
+    )
+
+    assert request.filters == [{
+        "field": "经销商名称",
+        "operator": "IN",
+        "value": ["甲公司", "乙公司"],
+    }]
+    assert request.metrics == [MetricRef(input="含税销售总额")]
+    assert request.comparison_type == "对象间比较"
+
+
+def test_result_reference_drops_punctuation_only_inherited_filter():
+    request = CanonicalAnalysisRequest(
+        conversation_id="punctuation-filter",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="它的订单主要集中在哪些医院？",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        filters=[{"field": "经销商名称", "operator": "NE", "value": "）"}],
+    )
+
+    DataAnalysisOrchestrator._bind_result_entity_reference(
+        request,
+        request.original_question,
+        ["厂家名称"],
+        [{"厂家名称": "某厂家"}],
+    )
+
+    assert request.filters == []
+    assert "INVALID_INHERITED_FILTER_VALUE_DROPPED" in request.assumptions
+
+
+def test_ordering_proof_is_read_from_query_provenance():
+    proof = DataAnalysisOrchestrator._dataset_ordering_proof({
+        "transformation_log": [{
+            "type": "query_provenance",
+            "ranked": True,
+            "ordered_by": ["含税销售总额"],
+        }]
+    })
+
+    assert proof is not None
+    assert proof["ordered_by"] == ["含税销售总额"]
+
+
+def test_automatic_dataset_reuse_requires_current_semantic_version():
+    request = CanonicalAnalysisRequest(
+        conversation_id="semantic-version-scope",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询经销商名单",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=81,
+        semantic_model_version="v2",
+    )
+    reference = {
+        "source_type": "DATABASE_QUERY",
+        "semantic_model_id": 81,
+        "business_domain_ids": [],
+        "transformation_log": [{
+            "type": "query_provenance",
+            "semantic_model_version": "v1",
+        }],
+    }
+
+    assert not DataAnalysisOrchestrator._dataset_reference_matches_scope(
+        reference, request
+    )
+    reference["transformation_log"][0]["semantic_model_version"] = "v2"
+    assert DataAnalysisOrchestrator._dataset_reference_matches_scope(
+        reference, request
+    )
+
+
 def test_user_visible_answer_hides_known_physical_identifiers():
     answer = DataAnalysisOrchestrator._sanitize_user_visible_answer(
         "按 sales_order.created_date 排序，来源 sales_order.order_key"
     )
 
     assert answer == "按 销售记录日期 排序，来源 订单号"
+
+
+def test_semantic_clarification_hides_physical_fields_and_constraints():
+    field_message = DataAnalysisOrchestrator._sanitize_clarification_text(
+        "过滤值使用了未注册字段 product.product_name，请确认。"
+    )
+    constraint_message = DataAnalysisOrchestrator._sanitize_clarification_text(
+        "查询明细未指定具体聚合指标，根据约束 metrics 必须为空。"
+    )
+    technical_message = DataAnalysisOrchestrator._sanitize_clarification_text(
+        "SQL_QUERY_ENTITY_ALIGNMENT_FAILED"
+    )
+
+    assert "product.product_name" not in field_message
+    assert "商品名称" in field_message
+    assert "metrics" not in constraint_message
+    assert "明细名单" in constraint_message
+    assert "SQL_QUERY_ENTITY_ALIGNMENT_FAILED" not in technical_message
 
 
 def test_filter_cancellation_is_not_whole_task_cancellation():

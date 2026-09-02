@@ -5,7 +5,12 @@ import pytest
 from pydantic import SecretStr
 
 from app.config import Settings
-from app.domain.models import AnalysisOperator, PrimaryIntent, TrustedIdentity
+from app.domain.models import (
+    AnalysisOperator,
+    CanonicalAnalysisRequest,
+    PrimaryIntent,
+    TrustedIdentity,
+)
 from app.intent import HybridIntentClassifier, StructuredIntentModelClient
 
 
@@ -141,6 +146,25 @@ def test_grounded_custom_business_metrics_remain_eligible(metric):
     assert HybridIntentClassifier._grounded_metric_names(
         [metric], f"按月分析直营网点的{metric}趋势"
     ) == [metric]
+
+
+def test_model_normalized_display_field_is_grounded_by_business_role():
+    baseline = CanonicalAnalysisRequest(
+        conversation_id="model-field-role",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="空心纤维血液透析器都有哪些经销商在卖？",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        filters=[{
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "空心纤维血液透析器",
+        }],
+    )
+
+    assert HybridIntentClassifier._supported_business_field(
+        "经销商名称", baseline.original_question, baseline
+    )
 
 
 @pytest.mark.asyncio

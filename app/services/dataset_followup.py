@@ -61,6 +61,8 @@ def plan_dataset_followup(
     question: str,
     columns: Sequence[str],
     rows: Sequence[Mapping[str, Any]],
+    *,
+    ordering_proof: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Map only unambiguous local follow-ups to whitelisted dataset operations.
 
@@ -77,6 +79,17 @@ def plan_dataset_followup(
         "",
         compact,
     )
+    # A result reference followed by a new relationship, metric or comparison
+    # is not a presentation operation over the old rows.  Examples include
+    # “第一名经销商合作哪些厂家”, “这些科室对应的销售额” and
+    # “对比前两名经销商的销售差异”.  Route these turns back through canonical
+    # rewrite + ASL/SQL so new projections and joins cannot be skipped.
+    if re.search(
+        r"(?:合作|集中|分布|对应).{0,30}(?:厂家|医院|科室|销售额|金额|订单)"
+        r"|(?:对比|比较).{0,30}(?:差异|差额|销售额|金额|订单)",
+        compact,
+    ):
+        return None
     sheet_filter: dict[str, Any] | None = None
     if "_sheet_name" in columns:
         sheet_names = {
@@ -231,7 +244,12 @@ def plan_dataset_followup(
                 compact,
                 re.I,
             ))
-            if rank and limit_only:
+            asks_for_ranked_names = bool(re.search(
+                rf"(?:前|Top){count_pattern}名", compact, re.I
+            ))
+            if rank and limit_only and (
+                not asks_for_ranked_names or ordering_proof is not None
+            ):
                 return _with_sheet_filter(sheet_filter, {
                     "type": "limit",
                     "count": _ranking_count(match.group(1)),
@@ -242,7 +260,11 @@ def plan_dataset_followup(
             visible_columns = [
                 column for column in columns if not str(column).startswith("_")
             ]
-            if len(visible_columns) == 1 and rank:
+            if (
+                len(visible_columns) == 1
+                and rank
+                and not asks_for_ranked_names
+            ):
                 return _with_sheet_filter(sheet_filter, {
                     "type": "limit",
                     "count": _ranking_count(match.group(1)),
@@ -278,7 +300,12 @@ def plan_dataset_followup(
         return _with_sheet_filter(sheet_filter, operation)
 
     if any(word in compact for word in ("排序", "升序", "降序", "从高到低", "从低到高", "从大到小", "从小到大")):
-        target = _mentioned_or_unique_column(compact, columns)
+        # A business ranking requires a numeric measure.  Falling back to the
+        # only visible text column turns requests such as “按整体业务规模排序”
+        # into an alphabetical dealer-name sort and silently changes meaning.
+        # If the requested measure is absent from the materialized result,
+        # return None so the orchestrator performs a fresh semantic query.
+        target = _mentioned_or_unique_column(compact, numeric_columns)
         if target is None:
             return None
         operation = {

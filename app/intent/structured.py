@@ -333,6 +333,13 @@ class HybridIntentClassifier:
                 request.assumptions.append("UNGROUNDED_MODEL_ENTITY_DROPPED")
         if model.fields:
             grounded_fields = self._grounded_text_values(model.fields, question)
+            grounded_fields.extend(
+                value
+                for value in model.fields
+                if value not in grounded_fields
+                and self._supported_business_field(value, question, request)
+            )
+            grounded_fields = list(dict.fromkeys(grounded_fields))
             if grounded_fields:
                 request.fields = grounded_fields
                 semantic_extraction_applied = True
@@ -887,7 +894,8 @@ class HybridIntentClassifier:
             detail_signals = (
                 "明细", "名单", "清单", "列表", "记录", "逐笔", "每一条",
                 "联系方式", "属于哪些", "适用于哪些", "筛选出", "哪些产品",
-                "哪些商品", "哪些医院", "卖给了哪些", "销售给哪些",
+                "哪些商品", "哪些医院", "哪些经销商", "哪些供应商", "哪些厂家",
+                "都有哪些", "卖给了哪些", "销售给哪些",
             )
             # A model-proposed entity is not evidence that the user requested
             # row-level data; require a literal detail signal in the question.
@@ -918,7 +926,8 @@ class HybridIntentClassifier:
             PrimaryIntent.DETAIL_QUERY: (
                 "明细", "名单", "清单", "列表", "逐笔", "联系方式",
                 "属于哪些", "适用于哪些", "筛选出", "哪些产品",
-                "哪些商品", "哪些医院", "卖给了哪些", "销售给哪些",
+                "哪些商品", "哪些医院", "哪些经销商", "哪些供应商", "哪些厂家",
+                "都有哪些", "卖给了哪些", "销售给哪些",
             ),
             PrimaryIntent.TREND_ANALYSIS: (
                 "趋势", "走势", "历史变化", "按日统计", "按周统计",
@@ -1039,3 +1048,36 @@ class HybridIntentClassifier:
             "订单": "订单" in compact,
         }
         return evidence.get(category, False)
+
+    @classmethod
+    def _supported_business_field(
+        cls,
+        value: str,
+        question: str,
+        baseline: CanonicalAnalysisRequest,
+    ) -> bool:
+        """Accept a model-normalized display field backed by a business role.
+
+        The canonical field label does not need to occur verbatim in colloquial
+        questions.  For example, “哪些经销商在卖” grounds ``经销商名称`` even
+        though the user did not say the word “名称”.  This is a validation of
+        the model's semantic role, not a regex replacement of the extractor.
+        """
+
+        canonical = re.sub(r"\s+", "", value)
+        field_roles = {
+            "经销商名称": "经销商",
+            "供应商名称": "供应商",
+            "医院名称": "医院",
+            "厂家名称": "厂家",
+            "制造商名称": "制造商",
+            "科室名称": "科室",
+            "商品名称": "产品",
+            "产品名称": "产品",
+        }
+        role = field_roles.get(canonical)
+        if role is None:
+            return False
+        if role == "科室":
+            return "科室" in re.sub(r"\s+", "", question)
+        return cls._supported_entity_category(role, question, baseline)

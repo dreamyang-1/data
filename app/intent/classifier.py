@@ -1460,6 +1460,43 @@ class RuleBasedIntentClassifier:
             and re.search(r"(?:对比|比较).{0,20}(?:家|个|名|供应商|经销商|门店)", compact)
         ):
             request.comparison_type = "对象间比较"
+        cls._drop_invalid_filter_values(request)
+
+    @staticmethod
+    def _drop_invalid_filter_values(request: CanonicalAnalysisRequest) -> None:
+        """Reject punctuation-only slot values before they enter memory/ASL."""
+
+        def valid(value: object) -> bool:
+            if value is None:
+                return False
+            text = str(value).strip()
+            return bool(text and re.search(r"[\w\u4e00-\u9fff]", text))
+
+        cleaned: list[dict[str, object]] = []
+        removed = False
+        for item in request.filters:
+            if not isinstance(item, dict):
+                removed = True
+                continue
+            if str(item.get("operator") or "").upper() in {
+                "IS_NULL", "IS_NOT_NULL",
+            }:
+                cleaned.append(item)
+                continue
+            value = item.get("value")
+            if isinstance(value, list):
+                values = [candidate for candidate in value if valid(candidate)]
+                if not values:
+                    removed = True
+                    continue
+                cleaned.append({**item, "value": values})
+            elif valid(value):
+                cleaned.append(item)
+            else:
+                removed = True
+        request.filters = cleaned
+        if removed and "INVALID_FILTER_VALUE_DROPPED" not in request.assumptions:
+            request.assumptions.append("INVALID_FILTER_VALUE_DROPPED")
 
     @staticmethod
     def _apply_metric_subject_scope(
@@ -1483,9 +1520,28 @@ class RuleBasedIntentClassifier:
             text,
         )
         if match is None:
+            # Concrete medical-device names are commonly used without the
+            # redundant “产品/商品” suffix.  Let the semantic layer validate the
+            # provisional catalog value, but keep the complete current-turn
+            # entity span so SQL cannot execute without a product filter.
+            match = re.search(
+                r"(?:查询|统计|分析|查看|看看|按(?:日|周|月|季度|年)(?:统计|汇总|分析)?)"
+                r"(?P<subject>[^，,。；;？?]{2,100}?(?:导管|透析器|口罩|套件|球囊|"
+                r"支架|导丝|耗材|器械|设备))的?"
+                r"(?:含税销售总额|销售总额|销售额|订单量|订单笔数|销售量)",
+                text,
+            )
+        if match is None:
             return
         subject = match.group("subject").strip("的")
         subject = re.sub(r"^(?:最近|过去).{1,8}(?:年|月|周|天)", "", subject)
+        subject = re.sub(
+            r"^(?:(?:北京|上海|天津|重庆)(?:市|地区)?|"
+            r"(?:香港|澳门)特别行政区|"
+            r"[\u4e00-\u9fff]{2,12}(?:省|自治区|市|地区))",
+            "",
+            subject,
+        )
         if (
             not 2 <= len(subject) <= 100
             or subject in {"全部", "所有", "各类", "每个", "这个", "该"}
@@ -1538,19 +1594,27 @@ class RuleBasedIntentClassifier:
         ordered_regions = list(dict.fromkeys(
             region for _, region in sorted(matches, key=lambda item: item[0])
         ))
+        region_role = (
+            "业务城市"
+            if request.entity == "产品" and bool(request.metrics)
+            else "地区"
+        )
         if (
             request.primary_intent == PrimaryIntent.COMPARISON_ANALYSIS
             and len(ordered_regions) >= 2
         ):
             replacement = {
-                "field": "地区", "operator": "IN", "value": ordered_regions,
+                "field": region_role, "operator": "IN", "value": ordered_regions,
             }
-            if "地区" not in request.dimensions:
-                request.dimensions.append("地区")
+            if region_role not in request.dimensions:
+                request.dimensions.append(region_role)
         else:
             region = ordered_regions[-1]
-            replacement = {"field": "地区", "operator": "EQ", "value": region}
-        region_fields = {"地区", "省份", "业务省份"}
+            replacement = {"field": region_role, "operator": "EQ", "value": region}
+        region_fields = {
+            "地区", "省份", "城市", "业务省份", "业务城市",
+            "医院省份", "医院城市", "经销商省份", "经销商城市",
+        }
         updated: list[dict] = []
         replaced = False
         for item in request.filters:
@@ -1562,6 +1626,10 @@ class RuleBasedIntentClassifier:
         if not replaced:
             updated.append(replacement)
         request.filters = updated
+        if region_role == "业务城市" and (
+            "GEOGRAPHIC_ROLE=SALES_BUSINESS_CITY" not in request.assumptions
+        ):
+            request.assumptions.append("GEOGRAPHIC_ROLE=SALES_BUSINESS_CITY")
 
     @staticmethod
     def _apply_hospital_level_scope(
@@ -1761,6 +1829,16 @@ class RuleBasedIntentClassifier:
                 r"(?P<scope>.+?)(?:产品|商品)[。！!？?]*$",
                 compact,
             ),
+            # A都有哪些经销商在卖 / A产品都通过哪些经销商渠道销售。
+            # These colloquial forms express the same product-to-partner set
+            # projection as an explicit “经销商名单”.
+            re.search(
+                rf"(?P<scope>.+?)(?:这个)?(?:产品|商品)?(?:都)?"
+                rf"(?:有|通过)?(?:{ask_pattern})(?P<target>{target_pattern})"
+                r"(?:渠道)?(?:在卖|销售|经销|代理|供应|合作)?(?:的)?"
+                r"[，,]?(?:给我|提供)?(?:一份)?(?:名单|清单|列表)?[。！!？?]*$",
+                compact,
+            ),
             # 查询A产品合作经销商 / 列出A产品厂家。The explicit query
             # verb already supplies the list action, so no interrogative or
             # 名单 suffix is required.
@@ -1796,7 +1874,7 @@ class RuleBasedIntentClassifier:
             else None
         )
         scope = re.sub(
-            r"^(?:请|麻烦|帮我|给我|请帮我)?"
+            r"^(?:请|麻烦|帮我|给我|请帮我|我想知道|我想查|我想查询)?"
             r"(?:查询|查找|找出|列出|展示|显示|查看|看看|筛选|提供)?",
             "",
             scope,
@@ -2262,6 +2340,16 @@ class RuleBasedIntentClassifier:
             "",
             scope,
         )
+        # The partner matcher may begin at the target noun in colloquial
+        # questions such as “振德品牌的医用外科口罩有哪些经销商”.  Remove the
+        # interrogative tail before splitting brand and catalog slots; otherwise
+        # ``医用外科口罩有哪些`` becomes a bogus product master-data value and
+        # later triggers SQL_QUERY_ENTITY_ALIGNMENT_FAILED.
+        scope = re.sub(
+            r"(?:都)?(?:有|包括|包含)?(?:哪些|哪几家|都有谁|有谁|是谁|什么)$",
+            "",
+            scope,
+        ).strip("的，,；;、")
 
         region_match = re.match(
             r"(?P<region>"
