@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import pytest
 
-from app.adapters.base import AdapterBundle
+from app.adapters.base import AdapterBundle, MetricDiscovery
 from app.analysis import AnalysisError, AnalysisOutput
 from app.analysis.synthesis import SynthesisClaim, SynthesisOutput
 from app.config import Settings
@@ -59,6 +60,68 @@ def test_transaction_activity_definition_is_disclosed_with_exact_period():
         "活跃口径：本次将 2025-08-28 至 2026-08-28 "
         "期间内存在销售记录的对象定义为活跃对象。"
     )
+
+
+@pytest.mark.asyncio
+async def test_missing_metric_can_become_published_attribute_detail():
+    class QueryStub:
+        async def discover_metrics(self, *args, **kwargs):
+            return MetricDiscovery(metrics=[])
+
+        async def discover_attribute_details(self, *args, **kwargs):
+            return MetricDiscovery(
+                metrics=[],
+                evidence_fingerprint="sha256:attribute-snapshot",
+                subject="device_inspection_data",
+                dimensions=(
+                    "detection_value",
+                    "detection_unit",
+                ),
+                filters=(
+                    {"field": "device_daily.device_name", "operator": "=", "value": "卧式成缆1"},
+                    {"field": "device_daily.model_name", "operator": "=", "value": "摇篮2#3150盘径"},
+                ),
+            )
+
+    orchestrator = object.__new__(DataAnalysisOrchestrator)
+    orchestrator.classifier = SimpleNamespace(rules=RuleBasedIntentClassifier())
+    orchestrator.adapters = SimpleNamespace(query=QueryStub())
+    request = CanonicalAnalysisRequest(
+        conversation_id="raw-attribute-detail",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="卧式成缆1的摇篮2#3150盘径近两个月的检测值",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        operators=[AnalysisOperator.FILTER],
+        semantic_entity_mentions=["卧式成缆1", "摇篮2#3150盘径"],
+        missing_slots=["metric"],
+        time_range=TimeRange(
+            start=date(2026, 7, 2), end_exclusive=date(2026, 9, 3)
+        ),
+    )
+    chat = ChatRequest(
+        application_id="app",
+        conversation_id=request.conversation_id,
+        message_id="m1",
+        question=request.original_question,
+        semantic_model_id=85,
+        business_domain_id=217,
+    )
+
+    recovered = await orchestrator._recover_live_published_metrics(
+        request, chat, TrustedIdentity(tenant_id="tenant", user_id="user")
+    )
+
+    assert recovered is True
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.metrics == []
+    assert request.entity == "device_inspection_data"
+    assert request.fields == [
+        "detection_value", "detection_unit",
+    ]
+    assert request.semantic_entity_mentions == []
+    assert request.missing_slots == []
+    assert "QUERY_SHAPE_TRANSFORM=METRIC_TO_PUBLISHED_ATTRIBUTE_DETAIL" in request.assumptions
 
 
 def test_optional_presentation_failure_does_not_lower_data_reliability() -> None:

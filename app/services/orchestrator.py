@@ -1984,7 +1984,80 @@ class DataAnalysisOrchestrator:
             )
             return False
         if not discovery.metrics:
-            return False
+            # A user-visible value can be a published entity attribute rather
+            # than an aggregate indicator. Try this only for a plain metric
+            # lookup after live metric resolution found nothing; analytical
+            # intents (trend, comparison, ranking, etc.) must keep their metric
+            # contract instead of being silently downgraded to raw rows.
+            if (
+                request.primary_intent != PrimaryIntent.METRIC_QUERY
+                or any(
+                    operator != AnalysisOperator.FILTER
+                    for operator in request.operators
+                )
+                or request.ranking_limit is not None
+            ):
+                return False
+            discover_attributes = getattr(
+                self.adapters.query, "discover_attribute_details", None
+            )
+            if not callable(discover_attributes):
+                return False
+            try:
+                attribute_discovery = await discover_attributes(
+                    request,
+                    identity,
+                    semantic_model_id=chat.semantic_model_id,
+                    business_domain_id=self._effective_business_domain_id(chat),
+                )
+            except (AdapterError, httpx.HTTPError, ValueError, TypeError) as exc:
+                logger.warning(
+                    "live semantic attribute discovery degraded: request_id=%s error=%s",
+                    request.request_id,
+                    type(exc).__name__,
+                )
+                return False
+            if not attribute_discovery.subject or not attribute_discovery.dimensions:
+                return False
+            if request.semantic_entity_mentions and not attribute_discovery.filters:
+                # Do not turn a source-scoped question into an unfiltered table
+                # scan when its literal entity values were not proven.
+                return False
+            request.primary_intent = PrimaryIntent.DETAIL_QUERY
+            request.metrics = []
+            request.entity = attribute_discovery.subject
+            request.fields = list(attribute_discovery.dimensions)
+            request.dimensions = []
+            request.filters = [dict(item) for item in attribute_discovery.filters]
+            request.semantic_entity_mentions = []
+            request.rewritten_question = request.original_question
+            request.assumptions.extend((
+                "QUERY_SHAPE_TRANSFORM=METRIC_TO_PUBLISHED_ATTRIBUTE_DETAIL",
+                "ATTRIBUTE_BINDING_SOURCE=LIVE_SEMANTIC_SNAPSHOT",
+                (
+                    "ATTRIBUTE_DISCOVERY_EVIDENCE="
+                    f"{attribute_discovery.evidence_fingerprint or 'UNAVAILABLE'}"
+                ),
+            ))
+            if request.turn_admission is not None:
+                explicit_slots = (
+                    request.turn_admission.current_turn_facts.explicit_slots
+                )
+                if "filters" in explicit_slots:
+                    explicit_slots["filters"].value = [
+                        dict(item) for item in attribute_discovery.filters
+                    ]
+                if "fields" in explicit_slots:
+                    explicit_slots["fields"].value = list(
+                        attribute_discovery.dimensions
+                    )
+            required_missing_slots = getattr(
+                rules, "required_missing_slots", None
+            )
+            if callable(required_missing_slots):
+                request.missing_slots = required_missing_slots(request)
+            request.assumptions = list(dict.fromkeys(request.assumptions))
+            return not request.missing_slots
         request.metrics = [metric.model_copy(deep=True) for metric in discovery.metrics]
         # The same live, source-validated preview that identified an unknown
         # metric also has stronger schema grounding than classifier heuristics.
@@ -3103,7 +3176,7 @@ class DataAnalysisOrchestrator:
                 await emit_progress(
                     "COMPLETENESS_CHECK",
                     "RUNNING",
-                    "已从当前发布的语义层识别并核验指标，正在继续检查执行参数。",
+                    "已从当前发布的语义层识别并核验查询字段，正在继续检查执行参数。",
                     metric_ids=[
                         metric.metric_id for metric in request.metrics
                         if metric.metric_id is not None

@@ -57,6 +57,15 @@ class DataRetrievalAdapter(Protocol):
         business_domain_id: int | None,
     ) -> MetricDiscovery: ...
 
+    async def discover_attribute_details(
+        self,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> MetricDiscovery: ...
+
     async def query(
         self,
         request: CanonicalAnalysisRequest,
@@ -80,6 +89,15 @@ class SemanticQueryTool(Protocol):
     ) -> DataQueryResult: ...
 
     async def discover_metrics(
+        self,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> MetricDiscovery: ...
+
+    async def discover_attribute_details(
         self,
         request: CanonicalAnalysisRequest,
         identity: TrustedIdentity,

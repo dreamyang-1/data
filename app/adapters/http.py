@@ -728,6 +728,124 @@ class HttpDataRetrievalAdapter:
             dimensions=discovered_dimensions,
         )
 
+    async def discover_attribute_details(
+        self,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> MetricDiscovery:
+        """Resolve a raw entity-attribute request without inventing a metric.
+
+        Oagnet remains the semantic owner: it selects only published entity
+        attributes and proves literal filters against the registered source
+        catalog. This preflight only changes the canonical query shape after
+        that validated, current-snapshot plan contains a real detail projection.
+        """
+        if semantic_model_id is None:
+            return MetricDiscovery(metrics=[])
+        query = request.rewritten_question or request.original_question
+        generated = await self.client.post(
+            self.settings.asl_generator_base_url,
+            self.settings.asl_generator_path,
+            {
+                "query": query,
+                "retrieval_query": query,
+                "semantic_model_id": semantic_model_id,
+                "business_domain_id": business_domain_id,
+                "business_domain_ids": list(request.business_domain_ids),
+                "metric_ids": [],
+                "metricless_projection": True,
+                "intent_asl_contract": None,
+                "analysis_operator": None,
+                "result_contract": None,
+                "exploration_requirements": None,
+            },
+            identity=identity,
+            application_id=request.application_id,
+            idempotency_key=f"{request.request_id}:attribute-detail-discovery",
+            retryable=True,
+            timeout=self.settings.asl_generation_timeout_seconds,
+        )
+        if generated.get("success") is not True:
+            return MetricDiscovery(metrics=[])
+        raw_asl = generated.get("result")
+        evidence = generated.get("semantic_evidence")
+        if not isinstance(raw_asl, str) or not isinstance(evidence, dict):
+            return MetricDiscovery(metrics=[])
+        if (
+            evidence.get("producer") != "OAGNET"
+            or evidence.get("semantic_model_id") != semantic_model_id
+            or evidence.get("evidence_version") != "1.0"
+            or evidence.get("asl_signature")
+            != "sha256:" + hashlib.sha256(raw_asl.encode("utf-8")).hexdigest()
+            or evidence.get("evidence_fingerprint")
+            != self._semantic_evidence_fingerprint(evidence)
+        ):
+            raise AdapterError(
+                "SEMANTIC_DISCOVERY_INVALID",
+                "attribute discovery evidence did not match the current ASL snapshot",
+            )
+        asl = self._json_object(raw_asl, "SEMANTIC_DISCOVERY_INVALID")
+        if asl.get("metrics"):
+            return MetricDiscovery(metrics=[])
+        ambiguities = [
+            item for item in (asl.get("ambiguity") or [])
+            if isinstance(item, dict)
+        ]
+        # An empty metric catalog is immaterial for an explicitly metricless
+        # attribute projection. Any other ambiguity still blocks conversion.
+        if any(str(item.get("type") or "") != "metric" for item in ambiguities):
+            return MetricDiscovery(metrics=[])
+        subject = asl.get("subject")
+        subject_code = (
+            str(subject.get("entity") or "").strip()
+            if isinstance(subject, dict)
+            else ""
+        )
+        dimensions = tuple(dict.fromkeys(
+            str(item.get("name") or "").strip().rsplit(".", 1)[-1]
+            for item in (asl.get("dimensions") or [])
+            if isinstance(item, dict) and str(item.get("name") or "").strip()
+        ))
+        if not subject_code or not dimensions:
+            return MetricDiscovery(metrics=[])
+
+        filters: list[dict[str, Any]] = []
+        for repair in generated.get("asl_repair") or []:
+            if (
+                not isinstance(repair, dict)
+                or repair.get("type") != "ADD_SOURCE_RESOLVED_ENTITY_FILTER"
+            ):
+                continue
+            field = str(repair.get("resolved_field") or "").strip()
+            value = repair.get("canonical_value")
+            if field and value not in (None, ""):
+                filters.append({"field": field, "operator": "=", "value": value})
+        for item in asl.get("filters") or []:
+            if not isinstance(item, dict):
+                continue
+            field = str(item.get("field") or "").strip()
+            operator = str(item.get("operator") or "").upper()
+            value = item.get("value")
+            candidate = {"field": field, "operator": "=", "value": value}
+            if (
+                field
+                and "." in field
+                and operator in {"=", "EQ"}
+                and value not in (None, "")
+                and candidate not in filters
+            ):
+                filters.append(candidate)
+        return MetricDiscovery(
+            metrics=[],
+            evidence_fingerprint=str(evidence.get("evidence_fingerprint") or "") or None,
+            subject=subject_code,
+            filters=tuple(filters),
+            dimensions=dimensions,
+        )
+
     @staticmethod
     def _constraint_field_family(value: str) -> str | None:
         normalized = value.lower()

@@ -167,6 +167,80 @@ async def test_live_metric_discovery_rejects_vector_only_metric_hit():
     assert result.metrics == []
 
 
+@pytest.mark.asyncio
+async def test_attribute_detail_discovery_accepts_published_metricless_projection():
+    asl = {
+        "version": "2.0",
+        "intent": "query",
+        "subject": {"entity": "device_inspection_data"},
+        "metrics": [],
+        "dimensions": [
+            {"name": "device_daily.detection_value"},
+            {"name": "device_daily.detection_unit"},
+        ],
+        "filters": [
+            {"field": "device_daily.device_name", "operator": "=", "value": "卧式成缆1"},
+            {"field": "device_daily.model_name", "operator": "=", "value": "摇篮2#3150盘径"},
+        ],
+        "time_context": None,
+        "sort": None,
+        "limit": None,
+        "having": [],
+        "ambiguity": [{
+            "type": "metric", "question": "指标目录为空", "candidates": [],
+        }],
+    }
+    raw_asl = json.dumps(asl, ensure_ascii=False, separators=(",", ":"))
+    evidence = {
+        "evidence_version": "1.0",
+        "producer": "OAGNET",
+        "semantic_model_id": 85,
+        "requested_business_domain_ids": [217],
+        "resolved_business_domain_ids": [217],
+        "selected_metrics": [],
+        "asl_signature": "sha256:" + hashlib.sha256(
+            raw_asl.encode("utf-8")
+        ).hexdigest(),
+    }
+    evidence["evidence_fingerprint"] = (
+        HttpDataRetrievalAdapter._semantic_evidence_fingerprint(evidence)
+    )
+    client = StubClient([{
+        "success": True,
+        "result": raw_asl,
+        "semantic_evidence": evidence,
+        "asl_repair": [],
+    }])
+    req = CanonicalAnalysisRequest(
+        conversation_id="attribute-detail-discovery",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="卧式成缆1的摇篮2#3150盘径近两个月的检测值",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        business_domain_ids=[217],
+    )
+
+    result = await HttpDataRetrievalAdapter(
+        Settings(adapter_mode="http"), client
+    ).discover_attribute_details(
+        req,
+        IDENTITY,
+        semantic_model_id=85,
+        business_domain_id=217,
+    )
+
+    assert result.metrics == []
+    assert result.subject == "device_inspection_data"
+    assert result.dimensions == (
+        "detection_value", "detection_unit",
+    )
+    assert result.filters == (
+        {"field": "device_daily.device_name", "operator": "=", "value": "卧式成缆1"},
+        {"field": "device_daily.model_name", "operator": "=", "value": "摇篮2#3150盘径"},
+    )
+    assert client.calls[0][2]["metricless_projection"] is True
+
+
 def test_sql_relationship_graph_rejects_unjoined_bridge_reference():
     sql = (
         "SELECT COUNT(DISTINCT department.dept_code) FROM department "

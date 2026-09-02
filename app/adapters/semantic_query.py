@@ -53,6 +53,25 @@ class CompositeSemanticQueryTool:
             business_domain_id=business_domain_id,
         )
 
+    async def discover_attribute_details(
+        self,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> MetricDiscovery:
+        """Resolve a metricless entity-attribute query from the live snapshot."""
+        discover = getattr(self.retrieval, "discover_attribute_details", None)
+        if not callable(discover):
+            return MetricDiscovery(metrics=[])
+        return await discover(
+            request,
+            identity,
+            semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id,
+        )
+
     async def query(
         self,
         request: CanonicalAnalysisRequest,
