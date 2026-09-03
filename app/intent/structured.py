@@ -357,6 +357,7 @@ class HybridIntentClassifier:
                 request.assumptions.append("UNGROUNDED_MODEL_COMPARISON_DROPPED")
         if semantic_extraction_applied:
             request.assumptions.append("MODEL_ENTITY_EXTRACTION_APPLIED")
+        self.rules.sanitize_semantic_entity_mentions(request)
         if model.completed_question:
             completed_question = self._safe_completed_question(
                 model.completed_question,
@@ -372,6 +373,7 @@ class HybridIntentClassifier:
         # The structured model may otherwise downgrade a supplier list to a
         # metric query or treat recommendation wording as out of scope.
         self.rules.apply_business_query_shapes(request, question)
+        self.rules.sanitize_semantic_entity_mentions(request)
         request.risk_level = (
             "HIGH"
             if request.primary_intent == PrimaryIntent.DETAIL_QUERY

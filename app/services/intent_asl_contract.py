@@ -112,13 +112,30 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         and normalized_role(value) not in normalized_filter_roles
     ))
     default_time_only = "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
-    period_independent_scope = any(
+    profile_snapshot_scope = any(
         value in {
             "TIME_SCOPE=PROFILE_SNAPSHOT",
-            "TIME_SCOPE=ALL_TIME",
-            "TIME_SCOPE=ALL_AVAILABLE_HISTORY",
         }
         for value in request.assumptions
+    )
+    all_history_scope = any(
+        value in {"TIME_SCOPE=ALL_TIME", "TIME_SCOPE=ALL_AVAILABLE_HISTORY"}
+        for value in request.assumptions
+    )
+    time_grouping_requested = (
+        AnalysisOperator.TIME_BUCKET in request.operators
+        or any(
+            value.startswith("DEFAULT_TIME_GRANULARITY=")
+            for value in request.assumptions
+        )
+    )
+    # ALL_TIME controls the date predicate, not whether a time dimension may
+    # be projected. An all-history monthly/quarterly statistic therefore has
+    # an OPTIONAL range and a required bucket, while snapshot/profile queries
+    # still prohibit transaction-time grouping.
+    period_independent_scope = (
+        profile_snapshot_scope
+        or all_history_scope and not time_grouping_requested
     )
     time_policy = (
         "FORBIDDEN"
@@ -141,6 +158,16 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
             if detail_like and requires_distinct_relationship_projection(request)
             else "ROWS"
             if detail_like
+            else None
+        ),
+        # Relationship lists in this sales-analysis agent describe observed
+        # transaction relationships, not incidental shared attributes such as
+        # two parties being in the same city.  This remains a semantic entity
+        # label; Oagnet resolves its current code and joins only through the
+        # published relationship graph.
+        "relationship_anchor": (
+            "销售订单"
+            if "SET_RELATIONSHIP_PROJECTION" in request.assumptions
             else None
         ),
         "filters": positive_filters,

@@ -2208,13 +2208,12 @@ class DataAnalysisOrchestrator:
                 identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id
             )
         elif pending is None and not independent_chat:
-            # The task frame is written before external execution and therefore
-            # intentionally contains no verified ASL.  A successfully completed
-            # last request does contain that template.  Prefer it when the
-            # semantic scope is unchanged so time-only follow-ups preserve
-            # grounded joins and filters instead of asking the ASL model to
-            # reinterpret them (for example, brand = 费森尤斯 must not become a
-            # product-name LIKE condition).
+            # A task frame is provisional: it is written before ASL/SQL runs and
+            # may contain an entity or slot interpretation that execution later
+            # rejected.  Once a verified request exists, it is the only safe base
+            # for an elliptical follow-up.  The provisional frame remains useful
+            # only for a cold conversation whose very first upstream execution
+            # failed, preserving the existing recovery behaviour in that case.
             completed = await self.sessions.get_last_request(
                 identity.tenant_id,
                 identity.user_id,
@@ -2226,37 +2225,12 @@ class DataAnalysisOrchestrator:
                 and completed.asl_template is not None
                 and self._pending_scope_matches(completed, chat)
             ):
-                # Keep the newest task-frame slots even when that execution
-                # ended with an empty result.  Replacing the entire frame with
-                # the older completed request dropped explicit follow-up
-                # filters (for example the dealer selected in turn 2) when
-                # turn 3 only changed the month.  Only borrow the last verified
-                # ASL template when the newer frame does not already carry it.
-                successful_updates: dict[str, Any] = {}
-                if previous_for_rewrite.asl_template is None:
-                    successful_updates["asl_template"] = copy.deepcopy(
-                        completed.asl_template
-                    )
-                if completed.temporal_anchor is not None:
-                    successful_updates["temporal_anchor"] = (
-                        completed.temporal_anchor.model_copy(deep=True)
-                    )
-                if completed.source_dataset_id is not None:
-                    successful_updates["source_dataset_id"] = (
-                        completed.source_dataset_id
-                    )
-                if not previous_for_rewrite.metrics and completed.metrics:
-                    successful_updates["metrics"] = [
-                        item.model_copy(deep=True) for item in completed.metrics
-                    ]
-                if completed.analysis_thread_id is not None:
-                    successful_updates["analysis_thread_id"] = (
-                        completed.analysis_thread_id
-                    )
-                if successful_updates:
-                    previous_for_rewrite = previous_for_rewrite.model_copy(
-                        deep=True,
-                        update=successful_updates,
+                previous_for_rewrite = completed.model_copy(deep=True)
+                if "VERIFIED_EXECUTION_FRAME_SELECTED" not in (
+                    previous_for_rewrite.assumptions
+                ):
+                    previous_for_rewrite.assumptions.append(
+                        "VERIFIED_EXECUTION_FRAME_SELECTED"
                     )
         turn_decision = self.turn_admission_gate.evaluate(
             question=admission_question,
@@ -2654,7 +2628,8 @@ class DataAnalysisOrchestrator:
             # The entity-attribute endpoint is scoped to the current semantic
             # model/domain.  Use its latest dimension labels for both the raw
             # provenance frame and the executable request before current-turn
-            # slot protection runs; values and turn relation remain unchanged.
+            # slot protection runs. Accepted vector hits also make their stored
+            # entity value authoritative over the model-extracted surface form.
             QuestionRewriter.ground_request_dimensions(
                 raw_rule_request, rewrite.semantic_matches
             )
@@ -2704,8 +2679,261 @@ class DataAnalysisOrchestrator:
             raw_rule_request,
             turn_decision,
         )
+        relationship_count_shape = next(
+            (
+                value for value in raw_rule_request.assumptions
+                if value.startswith("RELATIONSHIP_COUNT_PROJECTION=")
+            ),
+            None,
+        )
+        if relationship_count_shape is not None:
+            # “一共有多少家经销商” changes a relationship list into one
+            # distinct-count measure. Preserve the verified subject filters,
+            # but make the current result shape authoritative; otherwise the
+            # inherited DETAIL_QUERY executes an unfiltered full list and the
+            # renderer merely counts those rows.
+            request.primary_intent = PrimaryIntent.METRIC_QUERY
+            request.secondary_intents = []
+            request.metrics = [
+                metric.model_copy(deep=True)
+                for metric in raw_rule_request.metrics
+            ]
+            request.entity = None
+            request.fields = []
+            counted_role = relationship_count_shape.split("=", 1)[1]
+            request.dimensions = [
+                value for value in request.dimensions
+                if value != counted_role
+            ]
+            count_context = previous_for_rewrite
+            if (
+                count_context is None
+                and not re.search(
+                    r"切换话题|换个话题|另一个问题|重新开始|不看(?:之前|上面)",
+                    chat.question,
+                )
+            ):
+                count_context = await self.sessions.get_last_request(
+                    identity.tenant_id,
+                    identity.user_id,
+                    chat.application_id,
+                    chat.conversation_id,
+                )
+            if (
+                count_context is not None
+                and self._pending_scope_matches(count_context, chat)
+            ):
+                preserved_filters = [
+                    dict(item) for item in count_context.filters
+                ]
+                for current_filter in raw_rule_request.filters:
+                    current_field = str(current_filter.get("field") or "")
+                    current_family = self.turn_admission_gate._semantic_field_family(
+                        current_field
+                    )
+                    preserved_filters = [
+                        item for item in preserved_filters
+                        if (
+                            str(item.get("field") or "") != current_field
+                            and self.turn_admission_gate._semantic_field_family(
+                                str(item.get("field") or "")
+                            ) != current_family
+                        )
+                    ]
+                    preserved_filters.append(dict(current_filter))
+                request.filters = preserved_filters
+                request.semantic_entity_mentions = list(dict.fromkeys([
+                    *count_context.semantic_entity_mentions,
+                    *raw_rule_request.semantic_entity_mentions,
+                ]))
+                request.assumptions = list(dict.fromkeys([
+                    *request.assumptions,
+                    *(
+                        value for value in count_context.assumptions
+                        if value in {"SET_RELATIONSHIP_PROJECTION"}
+                        or value.startswith((
+                            "TRANSACTION_TIME_SCOPE=", "ACTIVE_DEFINITION=",
+                            "GEOGRAPHIC_ROLE=", "TIME_SCOPE=",
+                        ))
+                    ),
+                ]))
+            request.operators = list(raw_rule_request.operators)
+            request.asl_template = None
+            request.source_dataset_id = None
+            if relationship_count_shape not in request.assumptions:
+                request.assumptions.append(relationship_count_shape)
+        relationship_projection_followup = bool(
+            "SET_RELATIONSHIP_PROJECTION" in raw_rule_request.assumptions
+            and not raw_rule_request.filters
+            and not raw_rule_request.semantic_entity_mentions
+            and not re.search(
+                r"切换话题|换个话题|另一个问题|重新开始|不看(?:之前|上面)",
+                chat.question,
+            )
+        )
+        relationship_scope_context = previous_for_rewrite
+        if relationship_projection_followup and relationship_scope_context is None:
+            relationship_scope_context = await self.sessions.get_last_request(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+            if (
+                relationship_scope_context is not None
+                and not self._pending_scope_matches(relationship_scope_context, chat)
+            ):
+                relationship_scope_context = None
+        if (
+            relationship_projection_followup
+            and relationship_scope_context is not None
+        ):
+            # “合作的经销商有哪些/主要向哪些医院供货” supplies a new
+            # relationship endpoint but intentionally omits the already-known
+            # subject.  Restore only the verified subject constraints; the
+            # current endpoint/projection remains authoritative and old result
+            # columns can never be replayed as the new answer.
+            request.primary_intent = PrimaryIntent.DETAIL_QUERY
+            request.secondary_intents = []
+            request.metrics = []
+            request.entity = raw_rule_request.entity
+            request.fields = list(raw_rule_request.fields)
+            request.dimensions = list(raw_rule_request.dimensions)
+            request.filters = [
+                dict(item) for item in relationship_scope_context.filters
+            ]
+            request.semantic_entity_mentions = list(
+                relationship_scope_context.semantic_entity_mentions
+            )
+            request.time_range = (
+                relationship_scope_context.time_range.model_copy(deep=True)
+                if relationship_scope_context.time_range is not None
+                else None
+            )
+            request.operators = list(raw_rule_request.operators)
+            request.asl_template = None
+            request.source_dataset_id = None
+            request.query_resolution_type = "FOLLOWUP_ANALYSIS"
+            request.execution_mode = "QUERY_DATABASE"
+            request.assumptions = list(dict.fromkeys([
+                *request.assumptions,
+                *raw_rule_request.assumptions,
+                "RELATIONSHIP_FOLLOWUP_SCOPE_INHERITED",
+            ]))
+        metric_only_followup = bool(
+            raw_rule_request.metrics
+            and not raw_rule_request.filters
+            and not raw_rule_request.semantic_entity_mentions
+            and not re.search(
+                r"切换话题|换个话题|另一个问题|重新开始|不看(?:之前|上面)",
+                chat.question,
+            )
+            and re.fullmatch(
+                r"(?:那|那么|再看|再查|再统计|然后)?"
+                r"(?:它的|该对象的|这个对象的|上述对象的)?"
+                r"(?:含税销售总额|销售总额|销售额|销售总数量|销售数量|销售量|"
+                r"订单笔数|订单数|订单量|合作次数|合作时长|医院数量|经销商数量)"
+                r"(?:是|为)?(?:多少|多少个|多少家)?(?:呢|呀|吗)?[。！!？?]?",
+                re.sub(r"\s+", "", chat.question),
+            )
+        )
+        metric_scope_context = previous_for_rewrite
+        if metric_only_followup and metric_scope_context is None:
+            metric_scope_context = await self.sessions.get_last_request(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+            if (
+                metric_scope_context is not None
+                and not self._pending_scope_matches(metric_scope_context, chat)
+            ):
+                metric_scope_context = None
+        if metric_only_followup and metric_scope_context is not None:
+            # A measure-only utterance is a delta over the last verified
+            # business scope.  The measure is replaced by the current turn,
+            # while entity/value filters and the user's explicit time window
+            # remain intact.  Without this guard a model may correctly detect
+            # “订单笔数” yet classify the short utterance as standalone and
+            # silently execute the all-database total.
+            request.primary_intent = PrimaryIntent.METRIC_QUERY
+            request.secondary_intents = []
+            request.metrics = [
+                metric.model_copy(deep=True)
+                for metric in raw_rule_request.metrics
+            ]
+            request.fields = []
+            request.filters = [
+                dict(item) for item in metric_scope_context.filters
+            ]
+            request.semantic_entity_mentions = list(
+                metric_scope_context.semantic_entity_mentions
+            )
+            request.time_range = (
+                metric_scope_context.time_range.model_copy(deep=True)
+                if metric_scope_context.time_range is not None
+                else None
+            )
+            if not raw_rule_request.dimensions:
+                request.dimensions = (
+                    list(metric_scope_context.dimensions)
+                    if AnalysisOperator.TIME_BUCKET
+                    in metric_scope_context.operators
+                    else []
+                )
+            request.operators = list(raw_rule_request.operators)
+            request.asl_template = None
+            request.source_dataset_id = None
+            request.assumptions = list(dict.fromkeys([
+                *request.assumptions,
+                *(
+                    value for value in metric_scope_context.assumptions
+                    if value.startswith((
+                        "TIME_SCOPE=", "GEOGRAPHIC_ROLE=", "ACTIVE_DEFINITION=",
+                        "TRANSACTION_TIME_SCOPE=", "DEFAULT_TIME_GRANULARITY=",
+                    ))
+                ),
+                "METRIC_ONLY_FOLLOWUP_SCOPE_INHERITED",
+            ]))
         if model_entity_mentions:
-            request.semantic_entity_mentions = model_entity_mentions
+            # A current explicit subject may replace the previous subject.  A
+            # metric/grain/result-reference follow-up may not.  Previously any
+            # non-empty model list replaced the inherited list wholesale, so a
+            # fake mention such as “那” or “按月看” silently removed the verified
+            # product filter from the active query.
+            if (
+                not turn_decision.inherit_business_context
+                or turn_decision.core_subject_changed
+            ):
+                request.semantic_entity_mentions = model_entity_mentions
+            else:
+                request.semantic_entity_mentions = list(dict.fromkeys([
+                    *request.semantic_entity_mentions,
+                    *model_entity_mentions,
+                ]))
+        # Model enrichment and contextual merging are two independent entity
+        # producers.  Re-run the same literal guard after they converge so
+        # equivalent spans such as ``透析器`` and ``透析器产品`` cannot both
+        # cross the service boundary when the shorter span is already owned by
+        # a typed filter.  The semantic layer still performs catalog and source
+        # value resolution; this pass only removes redundant query spans.
+        rules = getattr(self.classifier, "rules", self.classifier)
+        sanitize_mentions = getattr(
+            rules, "sanitize_semantic_entity_mentions", None
+        )
+        if callable(sanitize_mentions):
+            sanitize_mentions(request)
+        if rewrite is not None and rewrite.semantic_matches:
+            # Context restoration and model enrichment above can re-introduce a
+            # raw model span after the first grounding pass. Canonicalize once
+            # more at the convergence point so the request, ASL input, memory,
+            # and debug output all expose only the current vector-catalog value.
+            QuestionRewriter.ground_request_dimensions(
+                request, rewrite.semantic_matches
+            )
+            if callable(sanitize_mentions):
+                sanitize_mentions(request)
         # A closed-form “按月/季度统计” is a grouped metric table. Structured
         # completion sometimes rewrites it as “分析趋势”, changing both the
         # deliverable and follow-up behavior. Keep the deterministic current
@@ -2745,6 +2973,28 @@ class DataAnalysisOrchestrator:
                 if not value.startswith("DEFAULT_TIME_GRANULARITY=")
             ]
             request.assumptions.append(raw_grain)
+            # ``按月/季度统计`` is intentionally normalized to a grouped metric
+            # table even when structured completion called it a trend. Keep
+            # the current-turn provenance snapshot aligned with that audited
+            # normalization; otherwise the outbound completeness gate sees a
+            # stale TREND_ANALYSIS fact and rejects an otherwise complete
+            # METRIC_QUERY contract as EXPLICIT_INTENT_MISSING.
+            explicit_slots = (
+                turn_decision.current_turn_facts.explicit_slots
+            )
+            explicit_intent = explicit_slots.get("analysis_type")
+            if (
+                explicit_intent is not None
+                and explicit_intent.value != PrimaryIntent.METRIC_QUERY.value
+            ):
+                normalized_intent = explicit_intent.model_copy(update={
+                    "value": PrimaryIntent.METRIC_QUERY.value,
+                })
+                explicit_slots["analysis_type"] = normalized_intent
+                request.slot_provenance["analysis_type"] = normalized_intent
+            request.assumptions.append(
+                "QUERY_SHAPE_TRANSFORM=GROUPED_STATISTIC"
+            )
         additive_metric_turn = bool(re.search(
             r"(?:再|同时|并)?(?:加上|增加|新增|补充|带上|显示|返回).{0,20}"
             r"(?:指标|金额|销售|数量|笔数|次数|均价|单价|利润|成本|收入)",
@@ -2781,30 +3031,235 @@ class DataAnalysisOrchestrator:
             request.source_dataset_id = None
             if previous_for_rewrite.time_range is None:
                 request.assumptions.append("TIME_SCOPE=ALL_TIME")
+        sort_only_turn = bool(
+            raw_rule_request.metrics
+            and not raw_rule_request.filters
+            and not raw_rule_request.semantic_entity_mentions
+            and re.fullmatch(
+                r"按(?:整体业务规模|业务规模|含税销售总额|销售总额|销售额|"
+                r"订单金额|销售数量|订单笔数)"
+                r"(?:从高到低|从低到高|升序|降序)?(?:进行)?排序[。！!？?]?",
+                re.sub(r"\s+", "", chat.question),
+            )
+        )
+        sort_scope_context = previous_for_rewrite
+        if sort_only_turn and sort_scope_context is None:
+            sort_scope_context = await self.sessions.get_last_request(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+            if (
+                sort_scope_context is not None
+                and not self._pending_scope_matches(sort_scope_context, chat)
+            ):
+                sort_scope_context = None
+        if sort_only_turn and sort_scope_context is not None:
+            counted_role = next(
+                (
+                    value.split("=", 1)[1]
+                    for value in sort_scope_context.assumptions
+                    if value.startswith("RELATIONSHIP_COUNT_PROJECTION=")
+                    and value.partition("=")[2]
+                ),
+                None,
+            )
+            grouping = (
+                [sort_scope_context.entity]
+                if sort_scope_context.entity
+                else [counted_role]
+                if counted_role
+                else [
+                    value for value in sort_scope_context.dimensions
+                    if value not in {"时间", "日期", "年", "季度", "月", "周", "日"}
+                ]
+            )
+            request.primary_intent = PrimaryIntent.METRIC_QUERY
+            request.secondary_intents = []
+            request.metrics = [
+                metric.model_copy(deep=True)
+                for metric in raw_rule_request.metrics
+            ]
+            request.entity = sort_scope_context.entity or counted_role
+            request.fields = []
+            request.dimensions = list(dict.fromkeys(value for value in grouping if value))
+            request.filters = [dict(item) for item in sort_scope_context.filters]
+            request.semantic_entity_mentions = list(
+                sort_scope_context.semantic_entity_mentions
+            )
+            request.time_range = (
+                sort_scope_context.time_range.model_copy(deep=True)
+                if sort_scope_context.time_range is not None
+                else None
+            )
+            request.operators = list(dict.fromkeys([
+                AnalysisOperator.AGGREGATE,
+                AnalysisOperator.SORT,
+                *raw_rule_request.operators,
+            ]))
+            request.ranking_limit = raw_rule_request.ranking_limit
+            request.asl_template = None
+            request.source_dataset_id = None
+            direction = (
+                "ASC" if re.search(r"从低到高|升序", chat.question) else "DESC"
+            )
+            request.assumptions = [
+                value for value in dict.fromkeys([
+                    *sort_scope_context.assumptions,
+                    *request.assumptions,
+                ])
+                if not value.startswith("SORT_DIRECTION=")
+            ]
+            request.assumptions.extend([
+                f"SORT_DIRECTION={direction}",
+                "SORT_ONLY_FOLLOWUP_SCOPE_INHERITED",
+            ])
+        explicit_group_ranking_followup = bool(
+            previous_for_rewrite is not None
+            and raw_rule_request.primary_intent == PrimaryIntent.METRIC_QUERY
+            and raw_rule_request.metrics
+            and raw_rule_request.dimensions
+            and raw_rule_request.ranking_limit is not None
+            and any(
+                operator in raw_rule_request.operators
+                for operator in (
+                    AnalysisOperator.TOP_N,
+                    AnalysisOperator.BOTTOM_N,
+                    AnalysisOperator.SORT,
+                )
+            )
+            and re.search(
+                r"(?:按|分|各|每个).{0,12}(?:统计|汇总|排名|排行)|"
+                r"(?:排名|排行)(?:前|后)?[一二三四五六七八九十\d]+",
+                re.sub(r"\s+", "", chat.question),
+            )
+        )
+        if explicit_group_ranking_followup:
+            # An explicit current grouping changes the result object while an
+            # omitted predicate still denotes the active business scope.  For
+            # example, after querying one hospital's partners, ``按产品统计销售
+            # 额前5`` must keep the hospital filter but replace the dealer
+            # projection with product grouping.  Treat the current analytical
+            # shape atomically so no prior detail projection can survive.
+            request.primary_intent = PrimaryIntent.METRIC_QUERY
+            request.secondary_intents = list(raw_rule_request.secondary_intents)
+            request.metrics = [
+                metric.model_copy(deep=True)
+                for metric in raw_rule_request.metrics
+            ]
+            request.entity = raw_rule_request.entity
+            request.fields = []
+            request.dimensions = list(raw_rule_request.dimensions)
+            request.operators = list(raw_rule_request.operators)
+            request.ranking_limit = raw_rule_request.ranking_limit
+            if not raw_rule_request.filters:
+                request.filters = [
+                    dict(item) for item in previous_for_rewrite.filters
+                ]
+            request.semantic_entity_mentions = list(dict.fromkeys([
+                *previous_for_rewrite.semantic_entity_mentions,
+                *raw_rule_request.semantic_entity_mentions,
+            ]))
+            request.time_range = (
+                previous_for_rewrite.time_range.model_copy(deep=True)
+                if previous_for_rewrite.time_range is not None
+                else raw_rule_request.time_range.model_copy(deep=True)
+                if raw_rule_request.time_range is not None
+                else None
+            )
+            request.asl_template = None
+            request.source_dataset_id = None
+            request.query_resolution_type = "FOLLOWUP_ANALYSIS"
+            request.execution_mode = "QUERY_DATABASE"
+            request.assumptions = list(dict.fromkeys([
+                *previous_for_rewrite.assumptions,
+                *raw_rule_request.assumptions,
+                "EXPLICIT_GROUP_RANKING_SCOPE_INHERITED",
+            ]))
         limit_only_turn = bool(re.fullmatch(
             r"(?:改成|改为|换成|只(?:显示|展示|返回|保留)?|展示|显示|返回)?"
             r"(?:前|top)(?:\d{1,5}|[一二三四五六七八九十]{1,3})(?:名|条|个)?"
             r"(?:，?(?:其他|其余)(?:筛选)?条件不变)?[。！!？?]?",
             re.sub(r"\s+", "", chat.question).lower(),
         ))
-        if limit_only_turn and previous_for_rewrite is not None:
-            request.primary_intent = previous_for_rewrite.primary_intent
-            request.secondary_intents = list(previous_for_rewrite.secondary_intents)
-            request.metrics = [
-                metric.model_copy(deep=True)
-                for metric in previous_for_rewrite.metrics
-            ]
-            request.entity = previous_for_rewrite.entity
-            request.fields = list(previous_for_rewrite.fields)
-            request.dimensions = list(previous_for_rewrite.dimensions)
-            request.filters = [dict(item) for item in previous_for_rewrite.filters]
+        limit_scope_context = previous_for_rewrite
+        if limit_only_turn and limit_scope_context is None:
+            limit_scope_context = await self.sessions.get_last_request(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+            if (
+                limit_scope_context is not None
+                and not self._pending_scope_matches(limit_scope_context, chat)
+            ):
+                limit_scope_context = None
+        if limit_only_turn and limit_scope_context is not None:
+            promote_unsorted_relationship_list = bool(
+                limit_scope_context.primary_intent == PrimaryIntent.DETAIL_QUERY
+                and "SET_RELATIONSHIP_PROJECTION" in limit_scope_context.assumptions
+                and not any(
+                    operator in limit_scope_context.operators
+                    for operator in (AnalysisOperator.SORT, AnalysisOperator.TOP_N)
+                )
+            )
+            request.primary_intent = (
+                PrimaryIntent.METRIC_QUERY
+                if promote_unsorted_relationship_list
+                else limit_scope_context.primary_intent
+            )
+            request.secondary_intents = list(limit_scope_context.secondary_intents)
+            request.metrics = (
+                [MetricRef(input="含税销售总额")]
+                if promote_unsorted_relationship_list
+                else [
+                    metric.model_copy(deep=True)
+                    for metric in limit_scope_context.metrics
+                ]
+            )
+            request.entity = limit_scope_context.entity
+            request.fields = (
+                [] if promote_unsorted_relationship_list
+                else list(limit_scope_context.fields)
+            )
+            request.dimensions = (
+                [limit_scope_context.entity]
+                if promote_unsorted_relationship_list and limit_scope_context.entity
+                else list(limit_scope_context.dimensions)
+            )
+            request.filters = [dict(item) for item in limit_scope_context.filters]
+            request.semantic_entity_mentions = list(
+                limit_scope_context.semantic_entity_mentions
+            )
             request.time_range = (
-                previous_for_rewrite.time_range.model_copy(deep=True)
-                if previous_for_rewrite.time_range is not None
+                limit_scope_context.time_range.model_copy(deep=True)
+                if limit_scope_context.time_range is not None
                 else None
             )
-            request.asl_template = copy.deepcopy(previous_for_rewrite.asl_template)
-            request.source_dataset_id = previous_for_rewrite.source_dataset_id
+            request.asl_template = (
+                None if promote_unsorted_relationship_list
+                else copy.deepcopy(limit_scope_context.asl_template)
+            )
+            request.source_dataset_id = (
+                None if promote_unsorted_relationship_list
+                else limit_scope_context.source_dataset_id
+            )
+            request.assumptions = list(dict.fromkeys([
+                *limit_scope_context.assumptions,
+                *request.assumptions,
+            ]))
+            if promote_unsorted_relationship_list:
+                request.operators = list(dict.fromkeys([
+                    AnalysisOperator.AGGREGATE,
+                    AnalysisOperator.SORT,
+                    AnalysisOperator.TOP_N,
+                ]))
+                request.assumptions.extend([
+                    "SORT_DIRECTION=DESC",
+                    "RANKING_DEFAULT_METRIC=含税销售总额",
+                ])
         grain_only_turn = bool(re.fullmatch(
             r"(?:改成|改为|换成|还是)?按(?:日|天|周|月|季度|年)"
             r"(?:统计|汇总|分析|看|给我|吧)?"
@@ -2846,6 +3301,7 @@ class DataAnalysisOrchestrator:
             request.asl_template = copy.deepcopy(previous_for_rewrite.asl_template)
             request.source_dataset_id = None
             request.assumptions.append("DETERMINISTIC_GRAIN_FAST_PATH")
+        await self._apply_recent_region_set_reference(request, chat, identity)
         rules = getattr(self.classifier, "rules", self.classifier)
         required_missing_slots = getattr(rules, "required_missing_slots", None)
         if callable(required_missing_slots):
@@ -4922,35 +5378,94 @@ class DataAnalysisOrchestrator:
             })
             request.assumptions.append(f"RESULT_ENTITY_REFERENCE={field}")
 
-        ordinal_count: int | None = None
-        if re.search(r"(?:第一名|排名第一|排第一|第一个)", compact):
-            ordinal_count = 1
-        else:
-            ordinal_match = re.search(
-                r"前(?P<count>\d{1,3}|[一二两三四五六七八九十]{1,3})名",
-                compact,
-            )
-            if ordinal_match is not None:
-                token = ordinal_match.group("count")
-                digits = {
-                    "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
-                    "五": 5, "六": 6, "七": 7, "八": 8, "九": 9,
-                    "十": 10,
-                }
-                ordinal_count = int(token) if token.isdigit() else digits.get(token)
+        digits = {
+            "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
+            "五": 5, "六": 6, "七": 7, "八": 8, "九": 9,
+            "十": 10,
+        }
 
-        source_role = next(
-            (role for role in ("经销商", "供应商", "医院", "厂家", "科室", "商品") if role in compact),
-            None,
+        def ordinal_number(token: str) -> int | None:
+            if token.isdigit():
+                return int(token)
+            if token in digits:
+                return digits[token]
+            if token.startswith("十") and len(token) == 2:
+                tail = digits.get(token[1:])
+                return 10 + tail if tail is not None else None
+            if len(token) == 2 and token.endswith("十"):
+                head = digits.get(token[:1])
+                return head * 10 if head is not None else None
+            if len(token) == 3 and token[1] == "十":
+                head = digits.get(token[:1])
+                tail = digits.get(token[2:])
+                return head * 10 + tail if head and tail is not None else None
+            return None
+
+        ordinal_index: int | None = None
+        ordinal_match = re.search(
+            r"(?:第|排名第?|排第?)(?P<count>\d{1,3}|[一二两三四五六七八九十]{1,3})(?:名|个)?",
+            compact,
         )
-        if ordinal_count is not None and source_role is not None:
+        if ordinal_match is not None:
+            ordinal_index = ordinal_number(ordinal_match.group("count"))
+        elif re.search(r"(?:第一名|排名第一|排第一|第一个)", compact):
+            ordinal_index = 1
+
+        leading_count: int | None = None
+        leading_match = re.search(
+            r"前(?P<count>\d{1,3}|[一二两三四五六七八九十]{1,3})名",
+            compact,
+        )
+        if leading_match is not None:
+            leading_count = ordinal_number(leading_match.group("count"))
+
+        target_match = re.search(
+            r"哪些(?P<target>厂家|医院|经销商|供应商|科室)", compact
+        )
+        target_role = target_match.group("target") if target_match is not None else None
+        mentioned_roles = [
+            role
+            for role in ("经销商", "供应商", "医院", "厂家", "科室", "商品")
+            if role in compact and role != target_role
+        ]
+        source_role = mentioned_roles[0] if len(mentioned_roles) == 1 else None
+        if source_role is None:
+            # Natural result references commonly omit the role: “第一名的销售额”
+            # and “那第二名呢”. Infer it only when the verified result exposes a
+            # single recognized identity column; never guess between two roles.
+            result_roles = [
+                role for role in role_specs
+                if role != target_role and column_for_role(role) is not None
+            ]
+            if len(result_roles) == 1:
+                source_role = result_roles[0]
+
+        if (
+            (ordinal_index is not None or leading_count is not None)
+            and source_role is not None
+        ):
             if ordering_proof is None:
                 request.assumptions.append("UNVERIFIED_RESULT_ORDINAL_NOT_BOUND")
                 return
-            values = values_for_role(source_role, ordinal_count)
-            if len(values) != ordinal_count:
+
+            available = values_for_role(source_role)
+            if ordinal_index is not None:
+                values = (
+                    [available[ordinal_index - 1]]
+                    if 0 < ordinal_index <= len(available)
+                    else []
+                )
+                expected_count = 1
+            else:
+                values = available[:leading_count]
+                expected_count = leading_count or 0
+            if len(values) != expected_count:
                 return
             bind_values(source_role, values)
+            if ordinal_index is not None:
+                request.assumptions.append(
+                    f"RESULT_ORDINAL_REFERENCE={ordinal_index}"
+                )
             if "销售差异" in compact and not request.metrics:
                 request.primary_intent = PrimaryIntent.COMPARISON_ANALYSIS
                 request.comparison_type = "对象间比较"
@@ -4960,9 +5475,6 @@ class DataAnalysisOrchestrator:
                 request.assumptions.append(
                     "SALES_DIFFERENCE_DEFAULT_METRIC=含税销售总额"
                 )
-            target_match = re.search(
-                r"哪些(?P<target>厂家|医院|经销商|供应商|科室)", compact
-            )
             if target_match is not None:
                 target = target_match.group("target")
                 request.primary_intent = PrimaryIntent.DETAIL_QUERY
@@ -4989,6 +5501,84 @@ class DataAnalysisOrchestrator:
         if len(values) != 1:
             return
         bind_values("商品", values)
+
+    async def _apply_recent_region_set_reference(
+        self,
+        request: CanonicalAnalysisRequest,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+    ) -> None:
+        """Resolve “这两个省” from the two most recent explicit region turns.
+
+        The reference denotes discourse selections, not every row in the latest
+        grouped result. Task frames are newest-first and retain those explicit
+        selections even when each intermediate result contains only one row.
+        """
+
+        compact = re.sub(r"\s+", "", chat.question)
+        if not re.search(
+            r"这(?:两|2)个省份?.{0,12}(?:加起来|合计|总共|一共)", compact
+        ):
+            return
+        recall = getattr(self.sessions, "get_recent_task_frames", None)
+        if not callable(recall):
+            return
+        frames = await recall(
+            identity.tenant_id,
+            identity.user_id,
+            chat.application_id,
+            chat.conversation_id,
+            limit=8,
+        )
+        selections: list[tuple[str, str]] = []
+        for frame in frames:
+            frame_regions = [
+                item for item in frame.filters
+                if isinstance(item, dict)
+                and self.turn_admission_gate._semantic_field_family(
+                    str(item.get("field") or "")
+                ) == "region"
+                and str(item.get("operator") or "EQ").upper() in {"EQ", "="}
+                and isinstance(item.get("value"), (str, int, float))
+            ]
+            if len(frame_regions) != 1:
+                continue
+            field = str(frame_regions[0].get("field") or "")
+            value = str(frame_regions[0].get("value") or "").strip()
+            if value and all(existing[1] != value for existing in selections):
+                selections.append((field, value))
+            if len(selections) == 2:
+                break
+        if len(selections) != 2:
+            return
+        field = selections[0][0]
+        values = [value for _, value in reversed(selections)]
+        request.filters = [
+            item for item in request.filters
+            if self.turn_admission_gate._semantic_field_family(
+                str(item.get("field") or "")
+            ) != "region"
+        ]
+        request.filters.append({"field": field, "operator": "IN", "value": values})
+        request.dimensions = [
+            value for value in request.dimensions
+            if self.turn_admission_gate._semantic_field_family(value) != "region"
+        ]
+        request.primary_intent = PrimaryIntent.METRIC_QUERY
+        request.operators = [
+            operator for operator in request.operators
+            if operator not in {
+                AnalysisOperator.GROUP_BY,
+                AnalysisOperator.TOP_N,
+                AnalysisOperator.BOTTOM_N,
+                AnalysisOperator.SORT,
+            }
+        ]
+        if AnalysisOperator.AGGREGATE not in request.operators:
+            request.operators.append(AnalysisOperator.AGGREGATE)
+        request.asl_template = None
+        request.source_dataset_id = None
+        request.assumptions.append("RESULT_SET_REFERENCE=RECENT_TWO_REGIONS")
 
     @staticmethod
     def _dataset_reference_matches_scope(
@@ -8240,6 +8830,19 @@ class DataAnalysisOrchestrator:
             "ASL_METRIC_SELECTION_INVALID": "当前问题匹配到的指标口径存在冲突，请联系管理员检查指标名称和别名配置。",
             "ASL_DIMENSION_INVALID": "当前分析维度没有完成有效字段映射，请联系管理员完善语义配置。",
             "ASL_SCOPE_INVALID": "当前语义模型与业务域配置不一致，请联系管理员检查应用绑定关系。",
+            "ASL_ENTITY_MENTION_UNRESOLVED": (
+                "当前问题中的业务名称无法在最新发布的语义模型和数据目录中唯一匹配。"
+                "请确认名称或补充它属于产品、品牌、医院、经销商还是厂家。"
+            ),
+            "ASL_FILTER_INVALID": (
+                "当前筛选条件无法唯一绑定到可执行的语义字段或关系路径，"
+                "请检查语义模型中的字段角色和实体关系配置。"
+            ),
+            "ASL_REQUIRED_FILTER_MISSING": "语义查询未保留当前问题要求的筛选条件，本次未执行可能扩大范围的查询。",
+            "ASL_REQUIRED_DIMENSION_MISSING": "语义查询未保留当前问题要求的分组维度，本次未执行不完整查询。",
+            "ASL_DETAIL_FIELDS_INCOMPLETE": "语义查询未返回用户明确要求的全部明细字段。",
+            "ASL_DETAIL_PROJECTION_MISSING": "当前语义模型无法唯一确定所请求明细字段的投影。",
+            "ASL_GROUPING_DIMENSION_MISSING": "当前语义模型无法唯一确定所请求的分组维度。",
             "RELATIONSHIP_COUNT_PROJECTION_INVALID": (
                 "合作对象数量查询未返回可识别的名称投影，本次不输出可能错误的数量。"
             ),

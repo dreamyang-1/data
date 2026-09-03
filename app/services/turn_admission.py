@@ -26,8 +26,13 @@ from app.domain.models import (
 
 _REFERENCE_PATTERNS: tuple[tuple[str, str], ...] = (
     ("HISTORICAL", r"最开始|最早|之前|前面|上次|早些时候|回到|恢复"),
-    ("PRONOUN", r"这个|那个|这些|那些|它|上述|前述|其中"),
-    ("ORDINAL", r"第[一二三四五六七八九十\d]+个|前\d+个|前十个|前三个|前几个"),
+    ("PRONOUN", r"这个|那个|这些|那些|它|上述|前述|其中|该省份?|这两个省份?|这两个产品"),
+    (
+        "ORDINAL",
+        r"第[一二两三四五六七八九十百\d]+(?:个|名)|"
+        r"排名第?[一二两三四五六七八九十百\d]+|"
+        r"前(?:\d+|[一二两三四五六七八九十百]+)(?:个|名)|前几个",
+    ),
     ("ELLIPSIS", r"呢[？?。]?$|怎么样[？?。]?$|继续[。！!？?]?$"),
 )
 _FOLLOWUP_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -67,9 +72,11 @@ _FOLLOWUP_PATTERNS: tuple[tuple[str, str], ...] = (
         r"(?:指标|金额|销售|数量|笔数|次数|均价|单价|利润|成本|收入)",
     ),
     ("MODIFY", r"改成|改为|换成|只看|只保留|去掉|取消"),
+    ("CLEAR_REGION_SCOPE", r"^(?:那|那么)?(?:全国|全国整体|整体|全部地区)(?:呢|怎么样)?[。！!？?]?$"),
+    ("RESULT_SET_AGGREGATE", r"这(?:两|2|几个)个省份?.{0,12}(?:加起来|合计|总共|一共)"),
 )
 _TOPIC_SHIFT_PATTERNS: tuple[tuple[str, str], ...] = (
-    ("EXPLICIT_NEW_TASK", r"换个问题|新问题|新任务|重新开始|另外(?:查询|分析|统计)"),
+    ("EXPLICIT_NEW_TASK", r"换个问题|新问题|新任务|重新开始|切换话题|另外(?:查询|分析|统计)"),
 )
 _ACTION_PATTERN = re.compile(
     r"查询|查找|列出|统计|计算|分析|比较|对比|排名|排行|趋势|走势|"
@@ -857,6 +864,21 @@ class TurnAdmissionGate:
                     if str(item.get("field") or "") != field
                 ]
                 request.filters.append(dict(current_filter))
+        if apply_current_slots and "CLEAR_REGION_SCOPE" in facts.followup_signals:
+            request.filters = [
+                item for item in request.filters
+                if TurnAdmissionGate._semantic_field_family(
+                    str(item.get("field") or "")
+                ) != "region"
+            ]
+            request.dimensions = [
+                value for value in request.dimensions
+                if TurnAdmissionGate._semantic_field_family(value) != "region"
+            ]
+            request.asl_template = None
+            request.source_dataset_id = None
+            if "EXPLICIT_REGION_SCOPE_CLEARED" not in request.assumptions:
+                request.assumptions.append("EXPLICIT_REGION_SCOPE_CLEARED")
         if apply_current_slots and "time_range" in facts.explicit_slots:
             request.time_range = current.time_range
             request.assumptions = [
@@ -1405,6 +1427,9 @@ class TurnAdmissionGate:
             ("brand", ("商品品牌", "品牌", "brand")),
             ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
             ("dealer", ("经销商", "供应商", "dealer", "supplier", "vendor")),
+            ("hospital", ("医院名称", "医院", "医疗机构", "hospital")),
+            ("manufacturer", ("厂家名称", "制造商名称", "生产厂家", "厂家", "制造商", "manufacturer")),
+            ("department", ("科室名称", "适用科室", "主科室", "科室", "department")),
             ("product", ("商品名称", "产品名称", "product_name", "goods_name")),
         )
         return next(

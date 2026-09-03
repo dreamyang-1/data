@@ -616,6 +616,7 @@ class RuleBasedIntentClassifier:
                 "SORT_DIRECTION=" + ("ASC" if ascending else "DESC")
             )
         self.apply_business_query_shapes(request, question)
+        self.sanitize_semantic_entity_mentions(request)
         self._apply_default_time_range(request)
         request.missing_slots = self.required_missing_slots(request)
         return request
@@ -953,6 +954,7 @@ class RuleBasedIntentClassifier:
         cls._apply_interrogative_relationship_scope(
             request, re.sub(r"\s+", "", question)
         )
+        cls._apply_relationship_projection_defaults(request, question)
         cls._apply_brand_product_scope(request, compact)
         cls._apply_explicit_dealer_metric_scope(request, question)
         cls._apply_time_grouped_metric_scope(request, compact)
@@ -1932,9 +1934,18 @@ class RuleBasedIntentClassifier:
         if assumption not in request.assumptions:
             request.assumptions.append(assumption)
 
-    @staticmethod
-    def _drop_invalid_filter_values(request: CanonicalAnalysisRequest) -> None:
-        """Reject punctuation-only slot values before they enter memory/ASL."""
+    @classmethod
+    def _drop_invalid_filter_values(
+        cls, request: CanonicalAnalysisRequest
+    ) -> None:
+        """Reject invalid or structural catalog values before memory/ASL.
+
+        Open-world entity extraction remains model-led.  This guard only
+        removes closed-class query scaffolding accidentally assigned to a
+        provisional product/catalog field, such as ``该省份`` in ``按月统计该
+        省份`` or ``含税`` in ``按产品统计含税销售总额``.  Those phrases describe
+        context, grouping or a metric and can never be a catalog entity value.
+        """
 
         def valid(value: object) -> bool:
             if value is None:
@@ -1942,6 +1953,10 @@ class RuleBasedIntentClassifier:
             text = str(value).strip()
             return bool(text and re.search(r"[\w\u4e00-\u9fff]", text))
 
+        provisional_catalog_fields = {
+            "商品名称", "产品名称", "商品", "产品",
+            "商品品牌", "品牌名称", "母品牌", "商品品类", "商品分类",
+        }
         cleaned: list[dict[str, object]] = []
         removed = False
         for item in request.filters:
@@ -1953,14 +1968,27 @@ class RuleBasedIntentClassifier:
             }:
                 cleaned.append(item)
                 continue
+            field = str(item.get("field") or "").strip()
             value = item.get("value")
+
+            def valid_for_field(candidate: object) -> bool:
+                if not valid(candidate):
+                    return False
+                return not (
+                    field in provisional_catalog_fields
+                    and cls._is_structural_entity_mention(str(candidate))
+                )
+
             if isinstance(value, list):
-                values = [candidate for candidate in value if valid(candidate)]
+                values = [
+                    candidate for candidate in value
+                    if valid_for_field(candidate)
+                ]
                 if not values:
                     removed = True
                     continue
                 cleaned.append({**item, "value": values})
-            elif valid(value):
+            elif valid_for_field(value):
                 cleaned.append(item)
             else:
                 removed = True
@@ -1972,7 +2000,14 @@ class RuleBasedIntentClassifier:
     def _apply_metric_subject_scope(
         request: CanonicalAnalysisRequest, text: str
     ) -> None:
-        """Turn ``<specific product>产品的<metric>`` into an exact filter."""
+        """Turn an explicit business subject before a metric into a filter.
+
+        The structured model remains the primary extractor.  This boundary
+        pass prevents it from forwarding the whole clause (query verb + entity
+        + metric) as one catalog literal, and provides a lossless fallback for
+        newly published product names that do not end in a fixed device suffix.
+        Physical fields are still selected and validated by the semantic layer.
+        """
         if request.primary_intent not in {
             PrimaryIntent.METRIC_QUERY,
             PrimaryIntent.TREND_ANALYSIS,
@@ -2002,26 +2037,50 @@ class RuleBasedIntentClassifier:
                 text,
             )
         if match is None:
+            match = re.search(
+                r"(?:查询|统计|分析|查看|看看)"
+                r"(?P<subject>[^，,。；;？?]{2,100}?)"
+                r"(?:产品|商品)?(?:整体)?(?:的)?"
+                r"(?:含税销售总额|销售总额|销售额|订单量|订单笔数|销售量)",
+                text,
+            )
+        if match is None:
             return
         subject = match.group("subject").strip("的")
         subject = re.sub(r"^(?:最近|过去).{1,8}(?:年|月|周|天)", "", subject)
-        subject = re.sub(
-            r"^(?:(?:北京|上海|天津|重庆)(?:市|地区)?|"
-            r"(?:香港|澳门)特别行政区|"
-            r"[\u4e00-\u9fff]{2,12}(?:省|自治区|市|地区))",
-            "",
-            subject,
-        )
+        if re.search(r"(?:医院|卫生院|医疗中心)$", subject):
+            filter_field = "医院名称"
+        elif re.search(
+            r"(?:有限责任公司|股份有限公司|有限公司|公司)$", subject
+        ):
+            filter_field = "经销商名称"
+        else:
+            if re.fullmatch(
+                r"(?:全国|全国整体|国内|境内|国外|境外|海外|"
+                r"(?:香港|澳门)特别行政区|"
+                r"[\u4e00-\u9fff]{2,12}(?:省|自治区|市|地区))",
+                subject,
+            ):
+                return
+            subject = re.sub(
+                r"^(?:(?:北京|上海|天津|重庆)(?:市|地区)?|"
+                r"(?:香港|澳门)特别行政区|"
+                r"[\u4e00-\u9fff]{2,12}(?:省|自治区|市|地区))",
+                "",
+                subject,
+            )
+            filter_field = "商品名称"
         if (
             not 2 <= len(subject) <= 100
             or subject in {"全部", "所有", "各类", "每个", "这个", "该"}
             or any(marker in subject for marker in ("趋势", "报表", "报告", "维度"))
         ):
             return
-        request.entity = request.entity or "产品"
+        if filter_field == "商品名称":
+            request.entity = request.entity or "产品"
         request.filters = [
             item for item in request.filters
-            if str(item.get("field") or "") != "商品名称"
+            if str(item.get("field") or "") != filter_field
         ]
         request.filters = [
             {
@@ -2033,8 +2092,12 @@ class RuleBasedIntentClassifier:
             for item in request.filters
         ]
         request.filters.append({
-            "field": "商品名称", "operator": "EQ", "value": subject,
+            "field": filter_field, "operator": "EQ", "value": subject,
         })
+        request.semantic_entity_mentions = list(dict.fromkeys([
+            *request.semantic_entity_mentions,
+            subject,
+        ]))
 
     @staticmethod
     def _apply_common_region_filter(
@@ -2049,26 +2112,83 @@ class RuleBasedIntentClassifier:
             "贵州": "贵州省", "云南": "云南省", "陕西": "陕西省", "甘肃": "甘肃省",
             "青海": "青海省", "河北": "河北省", "山西": "山西省", "辽宁": "辽宁省",
             "吉林": "吉林省", "黑龙江": "黑龙江省",
+            "广西": "广西壮族自治区", "内蒙古": "内蒙古自治区",
+            "西藏": "西藏自治区", "宁夏": "宁夏回族自治区",
+            "新疆": "新疆维吾尔自治区", "香港": "香港特别行政区",
+            "澳门": "澳门特别行政区", "国外": "国外",
         }
-        matches = [
-            (text.rfind(surface), canonical)
-            for surface, canonical in regions.items()
-            if surface in text
-            and not re.search(
-                rf"{re.escape(surface)}[^，,。；;]{{1,50}}(?:有限责任公司|股份有限公司|有限公司)",
-                text,
-            )
-        ]
+        region_fields = {
+            "地区", "区域", "省份", "城市", "业务省份", "业务城市",
+            "医院省份", "医院城市", "经销商省份", "经销商城市",
+        }
+        protected_spans: list[tuple[int, int]] = []
+        for item in request.filters:
+            if str(item.get("field") or "") in region_fields:
+                continue
+            raw_values = item.get("value")
+            values = raw_values if isinstance(raw_values, list) else [raw_values]
+            for raw_value in values:
+                value = str(raw_value or "").strip()
+                if not value:
+                    continue
+                protected_spans.extend(
+                    (match.start(), match.end())
+                    for match in re.finditer(re.escape(value), text)
+                )
+
+        matches: list[tuple[int, str]] = []
+        for surface, canonical in regions.items():
+            for match in re.finditer(re.escape(surface), text):
+                if any(
+                    start <= match.start() and match.end() <= end
+                    for start, end in protected_spans
+                ):
+                    continue
+                suffix = text[match.end() : match.end() + 50]
+                if re.search(
+                    r"^[^，,。；;]{1,50}(?:有限责任公司|股份有限公司|有限公司)",
+                    suffix,
+                ):
+                    continue
+                matches.append((match.start(), canonical))
         if not matches:
             return
         ordered_regions = list(dict.fromkeys(
             region for _, region in sorted(matches, key=lambda item: item[0])
         ))
-        region_role = (
-            "业务城市"
-            if request.entity == "产品" and bool(request.metrics)
-            else "地区"
+        # A bare administrative area qualifies the transaction's governed
+        # business geography.  It does not mean that a returned dealer or
+        # hospital is physically registered there ("四川省的经销商" can include
+        # an out-of-province dealer serving Sichuan orders).  Entity-location
+        # wording remains explicit and is bound to that entity's own location.
+        # The label, not a physical field, is passed downstream; the current
+        # published semantic registry still selects the executable attribute.
+        last_region = ordered_regions[-1]
+        is_province_scope = bool(
+            last_region == "国外"
+            or last_region.endswith(("省", "自治区", "特别行政区"))
         )
+        explicit_entity_location = bool(re.search(
+            r"(?:位于|所在(?:地|省|市)?|注册(?:地|在)|地址(?:在|为))",
+            text,
+        ))
+        located_entity = request.entity
+        if located_entity not in {"医院", "经销商"}:
+            located_entity = next(
+                (role for role in ("医院", "经销商") if role in text),
+                None,
+            )
+        if explicit_entity_location and located_entity in {"医院", "经销商"}:
+            region_role = located_entity + ("省份" if is_province_scope else "城市")
+        elif not (
+            request.primary_intent == PrimaryIntent.COMPARISON_ANALYSIS
+            and len(ordered_regions) >= 2
+        ):
+            region_role = "业务省份" if is_province_scope else "业务城市"
+        else:
+            # Mixed-level comparisons retain the neutral governed dimension;
+            # semantic validation will reject a genuinely incompatible set.
+            region_role = "地区"
         if (
             request.primary_intent == PrimaryIntent.COMPARISON_ANALYSIS
             and len(ordered_regions) >= 2
@@ -2096,10 +2216,12 @@ class RuleBasedIntentClassifier:
         if not replaced:
             updated.append(replacement)
         request.filters = updated
-        if region_role == "业务城市" and (
-            "GEOGRAPHIC_ROLE=SALES_BUSINESS_CITY" not in request.assumptions
-        ):
-            request.assumptions.append("GEOGRAPHIC_ROLE=SALES_BUSINESS_CITY")
+        geographic_assumption = {
+            "业务城市": "GEOGRAPHIC_ROLE=SALES_BUSINESS_CITY",
+            "业务省份": "GEOGRAPHIC_ROLE=SALES_BUSINESS_PROVINCE",
+        }.get(region_role)
+        if geographic_assumption and geographic_assumption not in request.assumptions:
+            request.assumptions.append(geographic_assumption)
 
     @staticmethod
     def _apply_hospital_level_scope(
@@ -2112,6 +2234,10 @@ class RuleBasedIntentClassifier:
         request.filters = [
             item for item in request.filters
             if str(item.get("field") or "") not in {"医院等级", "医院级别"}
+            and not (
+                str(item.get("field") or "") in {"医院", "医院名称"}
+                and str(item.get("value") or "") == value
+            )
         ]
         request.filters.append({
             "field": "医院等级", "operator": "EQ", "value": value,
@@ -2277,6 +2403,137 @@ class RuleBasedIntentClassifier:
         if "品牌" not in request.dimensions:
             request.dimensions.append("品牌")
         request.comparison_type = "对象间比较"
+
+    @staticmethod
+    def _apply_relationship_projection_defaults(
+        request: CanonicalAnalysisRequest, text: str
+    ) -> None:
+        """Complete common relationship list/count result shapes.
+
+        Entity values are still extracted by the structured model and grounded
+        against the currently published semantic catalog.  This method only
+        supplies the unambiguous projection contract (list versus distinct
+        count), so a natural question such as “某医院采购了哪些产品” is not sent
+        back to the user for an aggregate metric or a physical field name.
+        """
+
+        compact = re.sub(r"\s+", "", text)
+
+        count_match = re.search(
+            r"(?:一共|总共|共有|合计)?(?:有)?多少(?:家|个)?"
+            r"(?P<target>经销商|供应商|医院|客户|门店|厂家)",
+            compact,
+        )
+        if count_match is not None:
+            target = count_match.group("target")
+            metric_target = "供应商" if target == "厂家" else target
+            request.primary_intent = PrimaryIntent.METRIC_QUERY
+            request.entity = None
+            request.fields = []
+            request.metrics = [MetricRef(input=f"已合作{metric_target}数")]
+            request.dimensions = [
+                value for value in request.dimensions
+                if value not in {target, metric_target}
+            ]
+            request.operators = [
+                operator for operator in request.operators
+                if operator not in {
+                    AnalysisOperator.GROUP_BY,
+                    AnalysisOperator.TOP_N,
+                    AnalysisOperator.BOTTOM_N,
+                    AnalysisOperator.SORT,
+                }
+            ]
+            if AnalysisOperator.AGGREGATE not in request.operators:
+                request.operators.append(AnalysisOperator.AGGREGATE)
+            request.assumptions.append(
+                f"RELATIONSHIP_COUNT_PROJECTION={metric_target}"
+            )
+            return
+
+        target: str | None = None
+        source_field: str | None = None
+        source_value: str | None = None
+
+        hospital_products = re.search(
+            r"(?P<source>[^，,。；;？?]{2,100}?(?:医院|卫生院|医疗中心))"
+            r"(?:采购|购买|使用)(?:了|过)?(?:什么|哪些)(?:产品|商品)",
+            compact,
+        )
+        partner_products = re.search(
+            r"(?P<source>[^，,。；;？?]{2,100}?(?:有限责任公司|股份有限公司|有限公司|公司))"
+            r"(?:都|主要)?(?:销售|经销|代理|经营)(?:了|过)?(?:什么|哪些)(?:产品|商品)",
+            compact,
+        )
+        if hospital_products is not None:
+            target = "商品"
+            source_field = "医院名称"
+            source_value = hospital_products.group("source")
+        elif partner_products is not None:
+            target = "商品"
+            source_field = "经销商名称"
+            source_value = partner_products.group("source")
+        elif re.search(
+            r"(?:合作的)?(?:经销商)(?:都)?(?:有|包括|包含)?(?:哪些|哪几家|有谁)",
+            compact,
+        ):
+            target = "经销商"
+        elif re.search(
+            r"(?:合作的)?(?:厂家|生产厂家|制造商)(?:都)?(?:有|包括|包含)?(?:哪些|哪几家|有谁)",
+            compact,
+        ):
+            target = "厂家"
+        elif re.search(
+            r"(?:主要)?(?:向|给)?(?:哪些|哪几家)医院(?:供货|供应|销售|采购)?"
+            r"|(?:主要)?(?:向|给)(?:哪些|哪几家)医院(?:供货|供应|销售)",
+            compact,
+        ):
+            target = "医院"
+        elif re.search(
+            r"(?:省|省份|市|城市|地区|国外)(?:的)?经销商"
+            r"(?:都)?(?:有|包括|包含)?(?:哪些|哪几家|有谁)",
+            compact,
+        ):
+            target = "经销商"
+
+        if target is None:
+            return
+
+        request.primary_intent = PrimaryIntent.DETAIL_QUERY
+        request.entity = target
+        request.metrics = []
+        request.fields = ["商品名称" if target == "商品" else f"{target}名称"]
+        request.dimensions = [target]
+        request.risk_level = "HIGH"
+        request.operators = [
+            operator for operator in request.operators
+            if operator not in {
+                AnalysisOperator.AGGREGATE,
+                AnalysisOperator.GROUP_BY,
+                AnalysisOperator.COMPARE,
+                AnalysisOperator.TOP_N,
+                AnalysisOperator.BOTTOM_N,
+                AnalysisOperator.SORT,
+            }
+        ]
+        for operator in (AnalysisOperator.FILTER, AnalysisOperator.RENDER_TABLE):
+            if operator not in request.operators:
+                request.operators.append(operator)
+        if source_field and source_value and not any(
+            str(item.get("field") or "") == source_field
+            for item in request.filters
+        ):
+            request.filters.append({
+                "field": source_field,
+                "operator": "EQ",
+                "value": source_value,
+            })
+            request.semantic_entity_mentions = list(dict.fromkeys([
+                *request.semantic_entity_mentions,
+                source_value,
+            ]))
+        if "SET_RELATIONSHIP_PROJECTION" not in request.assumptions:
+            request.assumptions.append("SET_RELATIONSHIP_PROJECTION")
 
     @staticmethod
     def _apply_interrogative_relationship_scope(
@@ -2936,8 +3193,19 @@ class RuleBasedIntentClassifier:
             request.filters.append({"field": field, "operator": "EQ", "value": value})
 
         if region:
+            region_field = (
+                "业务省份"
+                if region == "国外"
+                or region.endswith(("省", "自治区", "特别行政区"))
+                else "业务城市"
+            )
             replace_filter(
-                "城市", region, {"地区", "区域", "省份", "城市", "业务城市"}
+                region_field,
+                region,
+                {
+                    "地区", "区域", "省份", "城市",
+                    "业务省份", "业务城市",
+                },
             )
         replace_filter(
             "商品品牌", brand, {"品牌", "品牌名称", "商品品牌", "母品牌"}
@@ -3047,7 +3315,27 @@ class RuleBasedIntentClassifier:
             region = re.sub(r"地区$", "", region)
             if region in {"北京", "上海", "天津", "重庆"}:
                 region += "市"
-            put_filter("地区", "EQ", region)
+            request.filters = [
+                item for item in request.filters
+                if str(item.get("field") or "") not in {
+                    "地区", "区域", "省份", "城市",
+                    "业务省份", "业务城市",
+                }
+            ]
+            region_field = (
+                "业务省份"
+                if region == "国外"
+                or region.endswith(("省", "自治区", "特别行政区"))
+                else "业务城市"
+            )
+            put_filter(region_field, "EQ", region)
+            assumption = (
+                "GEOGRAPHIC_ROLE=SALES_BUSINESS_PROVINCE"
+                if region_field == "业务省份"
+                else "GEOGRAPHIC_ROLE=SALES_BUSINESS_CITY"
+            )
+            if assumption not in request.assumptions:
+                request.assumptions.append(assumption)
         if brand_match:
             brand = brand_match.group("value").strip("的")
             if 2 <= len(brand) <= 40:
@@ -3448,6 +3736,101 @@ class RuleBasedIntentClassifier:
             pending, confirmation=confirmation
         )
         return pending
+
+    @staticmethod
+    def _is_structural_entity_mention(value: str) -> bool:
+        """Reject discourse/query operators that cannot be business entities.
+
+        The LLM remains responsible for extracting open-world entity mentions.
+        This guard only removes closed-class conversational scaffolding.  Without
+        it, phrases such as ``那销售数量是多少`` and ``按月看销售额`` can produce
+        the fake entities ``那`` and ``按月看`` and overwrite the verified subject
+        inherited from the preceding turn.
+        """
+
+        compact = re.sub(r"\s+", "", str(value or "")).strip("的，,。；;？！?")
+        if not compact:
+            return True
+        if compact in {
+            "那", "那么", "它", "这个", "那个", "这些", "那些", "其中",
+            "上述", "前述", "该对象", "该产品", "这个产品", "整体", "全部",
+            "全国整体", "全国", "各省", "各省份", "各城市", "各医院",
+            "各经销商", "各产品", "各商品", "该省", "该省份", "这两个省",
+            "这两个省份", "这两个产品", "这两个商品",
+            "看", "看看", "查看", "查询", "统计", "分析", "计算", "展示",
+            "含税", "销售", "订单", "金额", "数量", "总额", "销售额",
+            "销售总额", "含税销售", "含税销售总额", "订单笔数",
+        }:
+            return True
+        if re.fullmatch(
+            r"(?:第[一二两三四五六七八九十百\d]+名|排名第?[一二两三四五六七八九十百\d]+|"
+            r"前[一二两三四五六七八九十百\d]+名)(?:的)?",
+            compact,
+        ):
+            return True
+        if re.fullmatch(
+            r"(?:再|也|改成|换成)?按(?:日|天|周|月|季度|年|省份?|城市|医院|"
+            r"经销商|供应商|科室|医院等级)(?:度|份)?"
+            r"(?:统计|计算|分析|查看|查询|展示|返回|汇总|拆分|分组|看)?",
+            compact,
+        ):
+            return True
+        if re.fullmatch(
+            r"(?:查询|查找|查看|统计|计算|分析|展示|返回)?"
+            r"(?:各|每个)(?:省份?|城市|医院|经销商|供应商|科室|产品|商品|厂家)",
+            compact,
+        ):
+            return True
+        return False
+
+    @classmethod
+    def sanitize_semantic_entity_mentions(
+        cls, request: CanonicalAnalysisRequest
+    ) -> None:
+        """Keep only literal, non-operator mentions from the current user turn."""
+
+        raw_compact = re.sub(r"\s+", "", request.original_question or "")
+        current_filter_mentions: list[str] = []
+        for item in request.filters:
+            if not isinstance(item, dict):
+                continue
+            values = item.get("value")
+            if not isinstance(values, list):
+                values = [values]
+            for candidate in values:
+                value = str(candidate or "").strip()
+                compact = re.sub(r"\s+", "", value)
+                if (
+                    value
+                    and not cls._is_structural_entity_mention(value)
+                    and value not in current_filter_mentions
+                ):
+                    current_filter_mentions.append(value)
+
+        cleaned: list[str] = []
+        for candidate in request.semantic_entity_mentions:
+            value = str(candidate or "").strip()
+            compact = re.sub(r"\s+", "", value)
+            if (
+                not value
+                or (
+                    compact not in raw_compact
+                    and value not in current_filter_mentions
+                )
+                or cls._is_structural_entity_mention(value)
+                or any(
+                    re.sub(r"\s+", "", mention) in compact
+                    and mention != value
+                    for mention in current_filter_mentions
+                )
+            ):
+                continue
+            if value not in cleaned:
+                cleaned.append(value)
+        request.semantic_entity_mentions = list(dict.fromkeys([
+            *cleaned,
+            *current_filter_mentions,
+        ]))
 
     def required_missing_slots(self, request: CanonicalAnalysisRequest) -> list[str]:
         intent = request.primary_intent

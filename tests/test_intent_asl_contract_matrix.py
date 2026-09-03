@@ -26,14 +26,14 @@ MATRIX = (
     (2, "查询紫杉醇释放冠脉球囊导管产品合作医院", PrimaryIntent.DETAIL_QUERY, "医院", False, None, "医院名称", "商品名称", None, False),
     (3, "查询振德医疗厂家产品", PrimaryIntent.DETAIL_QUERY, "商品", False, None, "商品名称", "厂家名称", None, False),
     (4, "查询紫杉醇释放冠脉球囊导管产品厂家", PrimaryIntent.DETAIL_QUERY, "厂家", False, None, "厂家名称", "商品名称", None, False),
-    (5, "查询上海经销商", PrimaryIntent.DETAIL_QUERY, "经销商", False, None, "经销商名称", "地区", None, False),
+    (5, "查询上海经销商", PrimaryIntent.DETAIL_QUERY, "经销商", False, None, "经销商名称", "业务城市", None, False),
     (6, "查询紫杉醇释放冠脉球囊导管产品规格", PrimaryIntent.DETAIL_QUERY, "商品", False, None, "商品规格", "商品名称", None, False),
     (7, "查询紫杉醇释放冠脉球囊导管产品销售额", PrimaryIntent.METRIC_QUERY, "产品", True, "销售额", None, "商品名称", None, False),
     (8, "查询紫杉醇释放冠脉球囊导管产品销售量", PrimaryIntent.METRIC_QUERY, "产品", True, "销售量", None, "商品名称", None, False),
     (9, "紫杉醇释放冠脉球囊导管产品销售额最高的经销商", PrimaryIntent.METRIC_QUERY, "经销商", True, "销售额", None, "商品名称", None, True),
-    (10, "上海销售规模最大的医院", PrimaryIntent.METRIC_QUERY, "医院", True, "整体业务规模", None, "地区", None, True),
+    (10, "上海销售规模最大的医院", PrimaryIntent.METRIC_QUERY, "医院", True, "整体业务规模", None, "业务城市", None, True),
     (11, "紫杉醇释放冠脉球囊导管产品按月销售趋势", PrimaryIntent.TREND_ANALYSIS, "产品", True, "销售额", None, "商品名称", None, False),
-    (12, "上海紫杉醇释放冠脉球囊导管产品经销商", PrimaryIntent.DETAIL_QUERY, "经销商", False, None, "经销商名称", "地区", None, False),
+    (12, "上海紫杉醇释放冠脉球囊导管产品经销商", PrimaryIntent.DETAIL_QUERY, "经销商", False, None, "经销商名称", "业务城市", None, False),
     (13, "排除振德医疗厂家的医用外科口罩产品经销商", PrimaryIntent.DETAIL_QUERY, "经销商", False, None, "经销商名称", "商品名称", "厂家名称", False),
 )
 
@@ -42,15 +42,15 @@ EXPECTED_FILTERS = {
     2: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
     3: ([{"field": "厂家名称", "operator": "EQ", "value": "振德医疗"}], []),
     4: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
-    5: ([{"field": "地区", "operator": "EQ", "value": "上海市"}], []),
+    5: ([{"field": "业务城市", "operator": "EQ", "value": "上海市"}], []),
     6: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
     7: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
     8: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
     9: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
-    10: ([{"field": "地区", "operator": "EQ", "value": "上海市"}], []),
+    10: ([{"field": "业务城市", "operator": "EQ", "value": "上海市"}], []),
     11: ([{"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"}], []),
     12: ([
-        {"field": "地区", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {"field": "商品名称", "operator": "EQ", "value": "紫杉醇释放冠脉球囊导管"},
     ], []),
     13: (
@@ -101,19 +101,44 @@ def test_intent_asl_contract_regression_matrix(
         assert contract["sorting"]["direction"] == "DESC"
         assert contract["sorting"]["limit"] == 1
     assert contract["time_dimension_required"] is (intent == PrimaryIntent.TREND_ANALYSIS)
-    period_independent = any(
-        item in {
-            "TIME_SCOPE=PROFILE_SNAPSHOT",
-            "TIME_SCOPE=ALL_TIME",
-            "TIME_SCOPE=ALL_AVAILABLE_HISTORY",
-        }
+    profile_snapshot = "TIME_SCOPE=PROFILE_SNAPSHOT" in request.assumptions
+    all_history = any(
+        item in {"TIME_SCOPE=ALL_TIME", "TIME_SCOPE=ALL_AVAILABLE_HISTORY"}
         for item in request.assumptions
     )
+    time_grouping = (
+        any(item.value == "TIME_BUCKET" for item in request.operators)
+        or any(
+            item.startswith("DEFAULT_TIME_GRANULARITY=")
+            for item in request.assumptions
+        )
+    )
+    period_independent = profile_snapshot or all_history and not time_grouping
     assert contract["time_policy"] == (
         "FORBIDDEN" if intent == PrimaryIntent.DETAIL_QUERY or period_independent
         else "REQUIRED" if request.time_range is not None
         else "OPTIONAL"
     )
+    assert validate_intent_asl_contract_definition(contract) == []
+
+
+def test_all_history_monthly_statistic_allows_time_projection_without_range():
+    request = RuleBasedIntentClassifier().classify(
+        "按月统计空心纤维血液透析器产品的含税销售总额。",
+        IDENTITY,
+        "all-history-monthly-statistic",
+    )
+    request.time_range = None
+    request.assumptions = list(dict.fromkeys([
+        *request.assumptions,
+        "TIME_SCOPE=ALL_TIME",
+    ]))
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["intent"] == PrimaryIntent.METRIC_QUERY.value
+    assert contract["time_policy"] == "OPTIONAL"
+    assert contract["canonical_time_range"] is None
     assert validate_intent_asl_contract_definition(contract) == []
 
 
@@ -124,7 +149,9 @@ def test_canonical_detail_rewrite_does_not_disable_relationship_set_semantics():
     request.rewritten_question = "查询明细；对象：经销商；字段：经销商名称"
 
     assert requires_distinct_relationship_projection(request) is True
-    assert build_intent_asl_contract(request)["projection_mode"] == "DISTINCT"
+    contract = build_intent_asl_contract(request)
+    assert contract["projection_mode"] == "DISTINCT"
+    assert contract["relationship_anchor"] == "销售订单"
 
 
 @pytest.mark.parametrize(
@@ -136,7 +163,7 @@ def test_canonical_detail_rewrite_does_not_disable_relationship_set_semantics():
             "经销商",
             "整体业务规模",
                 [
-                    {"field": "地区", "operator": "EQ", "value": "上海市"},
+                    {"field": "业务城市", "operator": "EQ", "value": "上海市"},
                     {"field": "厂家名称", "operator": "NE", "value": "上海洁安"},
                     {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
             ],

@@ -155,7 +155,7 @@ def test_catalog_category_scope_does_not_become_a_synthetic_product_fact():
     )
 
     assert request.filters == [
-        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
         {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
     ]
@@ -407,7 +407,7 @@ def test_case_6_region_ellipsis_is_current_topic_modification():
     final = gate.apply_explicit_slot_protection(
         previous.model_copy(deep=True), current, decision
     )
-    assert _filter_value(final, "地区") == "北京市"
+    assert _filter_value(final, "业务城市") == "北京市"
     assert _filter_value(final, "商品名称") == "A"
 
 
@@ -423,10 +423,44 @@ def test_case_7_complete_region_product_ranking_is_new_topic():
     final = gate.apply_explicit_slot_protection(
         current.model_copy(deep=True), current, decision
     )
-    assert _filter_value(final, "地区") == "广东省"
+    assert _filter_value(final, "业务省份") == "广东省"
     assert _filter_value(final, "商品名称") == "B"
     assert "上海" not in str(final.filters)
     assert "A" not in str(final.filters)
+
+
+def test_explicit_topic_switch_prefix_starts_a_new_thread():
+    _, _, current, decision = _decision(
+        "查询A产品的含税销售总额。",
+        "切换话题：查询B产品的订单笔数。",
+        "explicit-topic-switch",
+    )
+
+    assert current.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert decision.inherit_business_context is False
+    assert "EXPLICIT_TOPIC_SHIFT" in decision.reason_codes
+
+
+def test_nationwide_followup_clears_only_region_scope():
+    gate, previous, current, decision = _decision(
+        "查询广东省空心纤维血液透析器产品的含税销售总额。",
+        "那全国整体呢？",
+        "clear-region-scope",
+    )
+
+    final = gate.apply_explicit_slot_protection(
+        previous.model_copy(deep=True), current, decision
+    )
+
+    assert decision.inherit_business_context is True
+    assert all(
+        gate._semantic_field_family(str(item.get("field") or "")) != "region"
+        for item in final.filters
+    )
+    assert _filter_value(final, "商品名称") == "空心纤维血液透析器"
+    assert [metric.input for metric in final.metrics] == ["含税销售总额"]
+    assert "EXPLICIT_REGION_SCOPE_CLEARED" in final.assumptions
 
 
 def test_query_to_sql_alignment_rejects_missing_or_stale_current_entity():

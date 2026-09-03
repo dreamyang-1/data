@@ -227,6 +227,15 @@ class PlatformHttpClient:
                     )
                 if response.status_code == 429 or response.status_code >= 500:
                     upstream_code = self._upstream_error_code(response)
+                    if upstream_code in _NON_RETRYABLE_UPSTREAM_CODES:
+                        raise AdapterError(
+                            "DEPENDENCY_CONTRACT_REJECTED",
+                            "dependency rejected the semantic/query contract",
+                            retryable=False,
+                            status_code=response.status_code,
+                            upstream_code=upstream_code,
+                            details={"path": path},
+                        )
                     effective_retryable = bool(
                         retryable
                         and upstream_code not in _NON_RETRYABLE_UPSTREAM_CODES

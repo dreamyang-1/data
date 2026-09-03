@@ -495,7 +495,10 @@ class QuestionRewriter:
         its attribute names are fresher than application-side aliases.  A hit is
         accepted only when both its semantic family and its literal value agree
         with a caller-grounded filter.  Physical codes remain with Oagnet; this
-        method changes only user-facing semantic labels.
+        method changes user-facing semantic labels and, after a literal match,
+        replaces the model-extracted value with the canonical value stored by
+        the vector catalog.  The model span is only a retrieval candidate; it
+        must not survive beside the catalog value once the hit is accepted.
         """
 
         def family(value: Any) -> str | None:
@@ -540,20 +543,29 @@ class QuestionRewriter:
             candidate_family = family(reference)
             if candidate_family is None:
                 continue
+            canonical_value = str(
+                item.get("canonical_value")
+                or item.get("attribute_value")
+                or ""
+            ).strip()
             candidate_values = {
                 str(item.get(key) or "").strip()
-                for key in ("attribute_value", "canonical_value", "entity_name")
+                for key in ("attribute_value", "canonical_value")
                 if str(item.get(key) or "").strip()
             }
+            if not canonical_value:
+                continue
             candidates.append({
                 "family": candidate_family,
                 "label": label,
                 "values": candidate_values,
+                "canonical_value": canonical_value,
                 "score": float(item.get("score") or 0.0),
             })
 
         grounded_by_family: dict[str, str] = {}
         grounded_filters: list[dict[str, Any]] = []
+        canonicalized_literals: dict[str, str] = {}
         family_rebound = False
 
         def equivalent_literal(
@@ -651,11 +663,25 @@ class QuestionRewriter:
                         ranked = [best]
                         family_rebound = best["family"] != current_family
             if ranked and current_family is not None:
-                current["field"] = ranked[0]["label"]
-                grounded_by_family[ranked[0]["family"]] = ranked[0]["label"]
+                selected = ranked[0]
+                current["field"] = selected["label"]
+                grounded_by_family[selected["family"]] = selected["label"]
+                canonical_value = selected["canonical_value"]
+                for required in required_values:
+                    canonicalized_literals[required.casefold()] = canonical_value
+                if isinstance(raw_value, list):
+                    current["value"] = list(dict.fromkeys(
+                        canonicalized_literals.get(
+                            str(value).strip().strip("%").casefold(),
+                            value,
+                        )
+                        for value in raw_value
+                    ))
+                elif raw_value not in (None, ""):
+                    current["value"] = canonical_value
             grounded_filters.append(current)
 
-        if not grounded_by_family:
+        if not grounded_by_family and not canonicalized_literals:
             return request
         request.filters = grounded_filters
         request.dimensions = list(dict.fromkeys(
@@ -663,6 +689,40 @@ class QuestionRewriter:
             for value in request.dimensions
         ))
         request.assumptions.append("SEMANTIC_DIMENSIONS_GROUNDED_FROM_CURRENT_MODEL")
+        if canonicalized_literals:
+            normalized_mentions: list[str] = []
+            for mention in request.semantic_entity_mentions:
+                literal = str(mention or "").strip()
+                if not literal:
+                    continue
+                replacement = canonicalized_literals.get(literal.casefold())
+                if replacement is None:
+                    ranked_mentions = sorted(
+                        (
+                            candidate for candidate in candidates
+                            if candidate["score"] >= 0.70
+                            and any(
+                                equivalent_literal(
+                                    literal,
+                                    candidate_value,
+                                    candidate["family"],
+                                )
+                                for candidate_value in candidate["values"]
+                            )
+                        ),
+                        key=lambda candidate: (
+                            -candidate["score"],
+                            candidate["label"],
+                            candidate["canonical_value"],
+                        ),
+                    )
+                    if ranked_mentions:
+                        replacement = ranked_mentions[0]["canonical_value"]
+                normalized_mentions.append(replacement or literal)
+            request.semantic_entity_mentions = list(dict.fromkeys(normalized_mentions))
+            request.assumptions.append(
+                "SEMANTIC_ENTITY_VALUES_CANONICALIZED_FROM_CURRENT_MODEL"
+            )
         if family_rebound:
             request.assumptions.append(
                 "SEMANTIC_FILTER_FAMILY_REBOUND_FROM_CURRENT_MODEL"

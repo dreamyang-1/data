@@ -94,7 +94,11 @@ def test_current_semantic_matches_ground_filter_and_dimension_labels():
     assert grounded.dimensions == ["经销商", "城市", "商品品牌", "商品品类"]
     assert grounded.filters == [
         {"field": "城市", "operator": "EQ", "value": "上海市"},
-        {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
+        {
+            "field": "商品品牌",
+            "operator": "EQ",
+            "value": "江苏苏云医疗器材有限公司",
+        },
         {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
     ]
     assert "SEMANTIC_DIMENSIONS_GROUNDED_FROM_CURRENT_MODEL" in grounded.assumptions
@@ -154,9 +158,77 @@ def test_current_semantic_catalog_rebinds_manufacturer_to_published_name_field()
     assert grounded.filters == [{
         "field": "生产企业名称",
         "operator": "EQ",
-        "value": value,
+        "value": "B. Braun Surgical S.A.",
     }]
     assert "SEMANTIC_DIMENSIONS_GROUNDED_FROM_CURRENT_MODEL" in grounded.assumptions
+
+
+def test_vector_canonical_value_replaces_model_entity_span_everywhere():
+    request = CanonicalAnalysisRequest(
+        conversation_id="semantic-value-canonicalization",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询空心纤维血液透析器产品合作的经销商名单",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="经销商",
+        fields=["经销商名称"],
+        filters=[{
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "空心纤维血液透析器产品",
+        }],
+        semantic_entity_mentions=[
+            "空心纤维血液透析器",
+            "空心纤维血液透析器产品",
+        ],
+    )
+    matches = [{
+        "score": 0.98,
+        "entity_name": "产品",
+        "attribute_name": "商品名称",
+        "attribute_code": "product.product_name",
+        "attribute_value": "空心纤维血液透析器",
+    }]
+
+    grounded = QuestionRewriter.ground_request_dimensions(request, matches)
+
+    assert grounded.filters == [{
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "空心纤维血液透析器",
+    }]
+    assert grounded.semantic_entity_mentions == ["空心纤维血液透析器"]
+    assert (
+        "SEMANTIC_ENTITY_VALUES_CANONICALIZED_FROM_CURRENT_MODEL"
+        in grounded.assumptions
+    )
+
+
+def test_unmatched_model_entity_span_is_preserved_for_downstream_verification():
+    request = CanonicalAnalysisRequest(
+        conversation_id="semantic-value-no-hit",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询未入向量库的新产品",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        filters=[{
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "未入向量库的新产品",
+        }],
+        semantic_entity_mentions=["未入向量库的新产品"],
+    )
+
+    grounded = QuestionRewriter.ground_request_dimensions(request, [{
+        "score": 0.98,
+        "entity_name": "产品",
+        "attribute_name": "商品名称",
+        "attribute_code": "product.product_name",
+        "attribute_value": "其他产品",
+    }])
+
+    assert grounded.filters[0]["value"] == "未入向量库的新产品"
+    assert grounded.semantic_entity_mentions == ["未入向量库的新产品"]
 
 
 @pytest.mark.asyncio

@@ -247,7 +247,7 @@ def test_supplier_contact_list_is_detail_without_metric_or_time_clarification():
     assert request.fields == ["供应商名称", "联系人姓名", "联系人手机号"]
     assert request.missing_slots == []
     assert request.filters == [
-        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {"field": "商品品牌", "operator": "EQ", "value": "漫步者"},
         {"field": "商品名称", "operator": "EQ", "value": "耳机"},
     ]
@@ -367,7 +367,7 @@ def test_bare_regional_product_partner_shape_preserves_region_and_exclusion_filt
     assert regional.primary_intent == PrimaryIntent.DETAIL_QUERY
     assert regional.entity == "经销商"
     assert regional.filters == [
-        {"field": "地区", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {
             "field": "商品名称",
             "operator": "EQ",
@@ -410,7 +410,7 @@ def test_branded_consumable_partner_scope_is_not_one_product_name():
     assert AnalysisOperator.GROUP_BY in request.operators
     assert AnalysisOperator.AGGREGATE in request.operators
     assert request.filters == [
-        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
         {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
     ]
@@ -425,7 +425,7 @@ def test_branded_category_scope_is_generic_not_vendor_specific():
     )
 
     assert request.filters == [
-        {"field": "城市", "operator": "EQ", "value": "浙江省"},
+        {"field": "业务省份", "operator": "EQ", "value": "浙江省"},
         {"field": "商品品牌", "operator": "EQ", "value": "华美医疗"},
         {"field": "商品品类", "operator": "EQ", "value": "高值医用耗材"},
     ]
@@ -439,7 +439,7 @@ def test_concrete_product_after_brand_remains_exact_product_scope():
     )
 
     assert request.filters == [
-        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {"field": "商品品牌", "operator": "EQ", "value": "BD"},
         {
             "field": "商品名称",
@@ -568,6 +568,7 @@ def test_dealer_recommendation_uses_verified_profile_default():
     assert AnalysisOperator.TOP_N in request.operators
     assert request.missing_slots == []
     assert request.assumptions == [
+        "GEOGRAPHIC_ROLE=SALES_BUSINESS_CITY",
         "DEALER_RECOMMENDATION_DEFAULT_RANKING=经销商近一年销售额",
         "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR",
     ]
@@ -785,7 +786,7 @@ def test_all_dealers_followup_is_a_deduplicated_catalog_list():
     )
     assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
     assert request.metrics == []
-    assert {"field": "城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
     assert {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"} in request.filters
     assert {"field": "商品品类", "operator": "EQ", "value": "低值耗材"} in request.filters
     assert not any("所有" in str(item.get("value")) for item in request.filters)
@@ -818,7 +819,7 @@ def test_dealer_quantity_is_normalized_to_relationship_count_metric():
     assert request.primary_intent == PrimaryIntent.METRIC_QUERY
     assert [item.input for item in request.metrics] == ["已合作经销商数"]
     assert "经销商" not in request.dimensions
-    assert {"field": "城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
     assert {"field": "商品品牌", "operator": "EQ", "value": "BD"} in request.filters
     assert {
         "field": "商品名称", "operator": "EQ", "value": "超声血管导引穿刺套件"
@@ -915,8 +916,27 @@ def test_province_shorthand_is_normalized_and_replaces_prior_region_in_rewrite()
     )
 
     assert request.filters == [
-        {"field": "地区", "operator": "EQ", "value": "江苏省"}
+        {"field": "业务省份", "operator": "EQ", "value": "江苏省"}
     ]
+
+
+@pytest.mark.parametrize(
+    ("question", "field", "value"),
+    [
+        ("查询四川省的含税销售总额", "业务省份", "四川省"),
+        ("查询国外的含税销售总额", "业务省份", "国外"),
+        ("查询上海市的含税销售总额", "业务城市", "上海市"),
+        ("查询位于四川省的经销商", "经销商省份", "四川省"),
+    ],
+)
+def test_region_scope_distinguishes_transaction_geography_from_entity_location(
+    question, field, value,
+):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "c-region-role"
+    )
+
+    assert {"field": field, "operator": "EQ", "value": value} in request.filters
 
 
 def test_monthly_named_product_sales_total_keeps_exact_product_filter():
@@ -1181,7 +1201,7 @@ def test_report_without_time_defaults_to_latest_year_and_preserves_scope():
     assert request.primary_intent == PrimaryIntent.REPORT_GENERATION
     assert request.entity == "产品"
     assert request.filters == [
-        {"field": "地区", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {
             "field": "商品名称",
             "operator": "EQ",
@@ -1210,7 +1230,7 @@ def test_department_led_dealer_recommendation_uses_department_names():
             "operator": "IN",
             "value": ["泌尿外科", "肾脏内科"],
         },
-        {"field": "地区", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
     ]
     assert request.missing_slots == []
     assert [metric.input for metric in request.metrics] == ["经销商近一年销售额"]
@@ -1255,7 +1275,7 @@ def test_report_coverage_facets_infer_concrete_row_entities_and_fields():
     assert dealer.missing_slots == []
     assert dealer.time_range is not None
     assert hospital.filters == [
-        {"field": "地区", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {
             "field": "商品名称",
             "operator": "EQ",
@@ -1353,7 +1373,7 @@ def test_partner_list_ranked_by_snapshot_metric_is_complete_comparison():
     assert AnalysisOperator.SORT in request.operators
     assert request.missing_slots == []
     assert request.filters == [
-        {"field": "地区", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {"field": "厂家名称", "operator": "NE", "value": "上海洁安"},
         {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
     ]
@@ -1620,6 +1640,160 @@ def test_grouped_trend_keeps_only_business_noun_as_semantic_entity_mention():
     assert all("按月分析" not in value for value in request.semantic_entity_mentions)
 
 
+@pytest.mark.parametrize(
+    "question",
+    [
+        "那销售数量是多少？",
+        "订单笔数呢？",
+        "按月看销售额。",
+        "统计各省份的含税销售总额。",
+        "第一名的销售额是多少？",
+        "那全国整体呢？",
+    ],
+)
+def test_followup_scaffolding_is_never_emitted_as_semantic_entity(question):
+    request = RuleBasedIntentClassifier().classify(
+        question,
+        IDENTITY,
+        f"structural-entity-{question}",
+    )
+
+    assert request.semantic_entity_mentions == []
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "按产品统计含税销售总额排名前5。",
+        "按月统计该省份的含税销售总额。",
+    ],
+)
+def test_followup_scaffolding_is_never_emitted_as_catalog_filter(question):
+    request = RuleBasedIntentClassifier().classify(
+        question,
+        IDENTITY,
+        f"structural-filter-{question}",
+    )
+
+    assert all(
+        str(item.get("value") or "") not in {"含税", "该省", "该省份"}
+        for item in request.filters
+    )
+    assert request.semantic_entity_mentions == []
+
+
+def test_typed_entity_filter_deduplicates_product_suffix_model_span():
+    request = CanonicalAnalysisRequest(
+        conversation_id="entity-span-dedup",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询空心纤维血液透析器产品合作的经销商名单",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        filters=[{
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "空心纤维血液透析器",
+        }],
+        semantic_entity_mentions=[
+            "空心纤维血液透析器",
+            "空心纤维血液透析器产品",
+        ],
+    )
+
+    RuleBasedIntentClassifier.sanitize_semantic_entity_mentions(request)
+
+    assert request.semantic_entity_mentions == ["空心纤维血液透析器"]
+
+
+@pytest.mark.parametrize(
+    ("question", "entity", "field", "filter_field", "filter_value"),
+    [
+        (
+            "上海市儿童医院采购了哪些产品？",
+            "商品",
+            "商品名称",
+            "医院名称",
+            "上海市儿童医院",
+        ),
+        (
+            "杭州琅骏医疗科技有限公司销售了哪些产品？",
+            "商品",
+            "商品名称",
+            "经销商名称",
+            "杭州琅骏医疗科技有限公司",
+        ),
+        ("四川省的经销商有哪些？", "经销商", "经销商名称", None, None),
+        ("合作的经销商有哪些？", "经销商", "经销商名称", None, None),
+        ("合作的厂家有哪些？", "厂家", "厂家名称", None, None),
+        ("主要向哪些医院供货？", "医院", "医院名称", None, None),
+    ],
+)
+def test_natural_relationship_questions_have_complete_detail_projection(
+    question, entity, field, filter_field, filter_value
+):
+    request = RuleBasedIntentClassifier().classify(
+        question,
+        TrustedIdentity(tenant_id="tenant", user_id="user"),
+        "relationship-shape",
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.entity == entity
+    assert request.fields == [field]
+    assert request.metrics == []
+    assert "metric" not in request.missing_slots
+    assert "fields" not in request.missing_slots
+    if filter_field:
+        assert {
+            "field": filter_field,
+            "operator": "EQ",
+            "value": filter_value,
+        } in request.filters
+
+
+def test_relationship_count_question_uses_distinct_count_metric_without_grouping():
+    request = RuleBasedIntentClassifier().classify(
+        "一共有多少家经销商？",
+        TrustedIdentity(tenant_id="tenant", user_id="user"),
+        "relationship-count-shape",
+    )
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert [metric.input for metric in request.metrics] == ["已合作经销商数"]
+    assert "经销商" not in request.dimensions
+    assert request.missing_slots == []
+
+
+def test_metric_subject_boundary_extracts_new_product_without_suffix_dictionary():
+    request = RuleBasedIntentClassifier().classify(
+        "统计绝对计数管整体的含税销售总额和订单笔数。",
+        TrustedIdentity(tenant_id="tenant", user_id="user"),
+        "open-product-subject",
+    )
+
+    assert {
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "绝对计数管",
+    } in request.filters
+    assert request.semantic_entity_mentions == ["绝对计数管"]
+
+
+def test_metric_subject_boundary_preserves_company_role():
+    request = RuleBasedIntentClassifier().classify(
+        "查询杭州琅骏医疗科技有限公司的含税销售总额。",
+        TrustedIdentity(tenant_id="tenant", user_id="user"),
+        "company-metric-subject",
+    )
+
+    assert {
+        "field": "经销商名称",
+        "operator": "EQ",
+        "value": "杭州琅骏医疗科技有限公司",
+    } in request.filters
+    assert request.semantic_entity_mentions == ["杭州琅骏医疗科技有限公司"]
+
+
 def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
     request = RuleBasedIntentClassifier().classify(
         "帮我找出上海地区正在销售振德医疗品牌的医用外科口罩产品的"
@@ -1643,7 +1817,7 @@ def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
     )
     assert request.dimensions == ["经销商", "城市", "商品品牌", "商品名称"]
     assert request.filters == [
-        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {"field": "商品品牌", "operator": "EQ", "value": "振德医疗"},
         {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
     ]

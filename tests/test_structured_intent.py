@@ -206,7 +206,7 @@ async def test_model_detail_label_cannot_drop_metric_from_grouped_partner_list()
     assert result.dimensions == ["经销商", "城市", "商品品牌", "商品品类"]
     assert result.risk_level == "MEDIUM"
     assert result.filters == [
-        {"field": "城市", "operator": "EQ", "value": "上海市"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
         {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
     ]

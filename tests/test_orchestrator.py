@@ -256,6 +256,97 @@ def test_ranked_dealer_reference_binds_from_verified_result_rows():
     assert request.metrics == []
 
 
+def test_implicit_first_rank_role_is_inferred_from_verified_result_column():
+    request = CanonicalAnalysisRequest(
+        conversation_id="implicit-first-rank",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="第一名的销售额是多少？",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="含税销售总额")],
+    )
+
+    DataAnalysisOrchestrator._bind_result_entity_reference(
+        request,
+        request.original_question,
+        ["经销商名称", "含税销售总额"],
+        [
+            {"经销商名称": "甲公司", "含税销售总额": 100},
+            {"经销商名称": "乙公司", "含税销售总额": 90},
+        ],
+        ordering_proof={
+            "type": "query_provenance",
+            "ranked": True,
+            "ordered_by": ["含税销售总额"],
+        },
+    )
+
+    assert request.filters == [
+        {"field": "经销商名称", "operator": "EQ", "value": "甲公司"}
+    ]
+    assert "RESULT_ORDINAL_REFERENCE=1" in request.assumptions
+
+
+def test_implicit_second_rank_selects_only_second_verified_row():
+    request = CanonicalAnalysisRequest(
+        conversation_id="implicit-second-rank",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="那第二名呢？",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="含税销售总额")],
+    )
+
+    DataAnalysisOrchestrator._bind_result_entity_reference(
+        request,
+        request.original_question,
+        ["经销商名称", "含税销售总额"],
+        [
+            {"经销商名称": "甲公司", "含税销售总额": 100},
+            {"经销商名称": "乙公司", "含税销售总额": 90},
+        ],
+        ordering_proof={
+            "type": "query_provenance",
+            "ranked": True,
+            "ordered_by": ["含税销售总额"],
+        },
+    )
+
+    assert request.filters == [
+        {"field": "经销商名称", "operator": "EQ", "value": "乙公司"}
+    ]
+    assert "RESULT_ORDINAL_REFERENCE=2" in request.assumptions
+
+
+def test_ranked_relationship_infers_source_role_not_target_role():
+    request = CanonicalAnalysisRequest(
+        conversation_id="implicit-ranked-relation",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="第一名供货哪些医院？",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+    )
+
+    DataAnalysisOrchestrator._bind_result_entity_reference(
+        request,
+        request.original_question,
+        ["经销商名称", "含税销售总额"],
+        [{"经销商名称": "甲公司", "含税销售总额": 100}],
+        ordering_proof={
+            "type": "query_provenance",
+            "ranked": True,
+            "ordered_by": ["含税销售总额"],
+        },
+    )
+
+    assert request.filters == [
+        {"field": "经销商名称", "operator": "EQ", "value": "甲公司"}
+    ]
+    assert request.entity == "医院"
+    assert request.fields == ["医院名称"]
+    assert request.dimensions == ["医院"]
+
+
 def test_unordered_result_does_not_resolve_first_ranked_dealer():
     request = CanonicalAnalysisRequest(
         conversation_id="unverified-rank",
@@ -535,6 +626,27 @@ class FailingThenCapturingRetrieval:
             raise AdapterError("HTTP_502", "upstream unavailable", retryable=True)
         return await self.delegate.query(
             request, identity, semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id,
+        )
+
+
+class CapturingRetrieval:
+    def __init__(self, delegate) -> None:
+        self.delegate = delegate
+        self.request = None
+
+    async def health(self):
+        return True
+
+    async def rewrite_health(self):
+        return True
+
+    async def query(self, request, identity, *, semantic_model_id, business_domain_id):
+        self.request = request.model_copy(deep=True)
+        return await self.delegate.query(
+            request,
+            identity,
+            semantic_model_id=semantic_model_id,
             business_domain_id=business_domain_id,
         )
 
@@ -1209,6 +1321,440 @@ async def test_follow_up_inherits_last_completed_request():
     assert remembered.conversation_control.value == "FOLLOW_UP"
     assert "查询本月销售额" in remembered.original_question
     assert "那华东呢" in remembered.original_question
+
+
+@pytest.mark.asyncio
+async def test_failed_provisional_frame_cannot_replace_verified_product_scope():
+    adapters = build_mock_adapters()
+    retrieval = CapturingRetrieval(adapters.retrieval)
+    sessions = InMemorySessionStore()
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=AdapterBundle(
+            semantic=adapters.semantic,
+            retrieval=retrieval,
+            knowledge=adapters.knowledge,
+            policy=adapters.policy,
+            analysis=adapters.analysis,
+        ),
+        sessions=sessions,
+    )
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    verified = CanonicalAnalysisRequest(
+        conversation_id="verified-frame-wins",
+        application_id="app1",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询空心纤维血液透析器的含税销售总额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="含税销售总额")],
+        filters=[{
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "空心纤维血液透析器",
+        }],
+        semantic_entity_mentions=["空心纤维血液透析器"],
+        asl_template={"version": "2.0", "subject": {"entity": "sales_order"}},
+        assumptions=["TIME_SCOPE=ALL_TIME"],
+    )
+    provisional = verified.model_copy(
+        deep=True,
+        update={
+            "original_question": "查询错误产品的含税销售总额",
+            "filters": [{
+                "field": "商品名称",
+                "operator": "EQ",
+                "value": "错误产品",
+            }],
+            "semantic_entity_mentions": ["错误产品"],
+            "asl_template": None,
+        },
+    )
+    await sessions.put_last_request(verified)
+    await sessions.put_task_frame(provisional)
+
+    response = await agent.handle(
+        ChatRequest(
+            application_id="app1",
+            conversation_id="verified-frame-wins",
+            message_id="follow-up",
+            question="订单笔数呢？",
+        ),
+        identity,
+    )
+
+    assert response.status != "NEEDS_CLARIFICATION", response.model_dump()
+    assert retrieval.request is not None
+    assert retrieval.request.filters == verified.filters
+    assert retrieval.request.semantic_entity_mentions == ["空心纤维血液透析器"]
+    assert [metric.input for metric in retrieval.request.metrics] == ["订单笔数"]
+
+
+@pytest.mark.asyncio
+async def test_recent_two_region_reference_builds_verified_set_aggregation():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    base = CanonicalAnalysisRequest(
+        conversation_id="two-region-set",
+        application_id="app1",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询某产品在各省份的含税销售总额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="含税销售总额")],
+        dimensions=["业务省份"],
+        filters=[{"field": "商品名称", "operator": "EQ", "value": "某产品"}],
+    )
+    xinjiang = base.model_copy(
+        deep=True,
+        update={
+            "original_question": "只看新疆维吾尔自治区的",
+            "filters": [
+                *base.filters,
+                {
+                    "field": "业务省份",
+                    "operator": "EQ",
+                    "value": "新疆维吾尔自治区",
+                },
+            ],
+        },
+    )
+    shanghai = base.model_copy(
+        deep=True,
+        update={
+            "original_question": "再看上海市的",
+            "filters": [
+                *base.filters,
+                {"field": "业务省份", "operator": "EQ", "value": "上海市"},
+            ],
+        },
+    )
+    await agent.sessions.put_task_frame(xinjiang)
+    await agent.sessions.put_task_frame(shanghai)
+    request = base.model_copy(deep=True)
+
+    await agent._apply_recent_region_set_reference(
+        request,
+        ChatRequest(
+            application_id="app1",
+            conversation_id="two-region-set",
+            message_id="m4",
+            question="这两个省加起来是多少？",
+        ),
+        identity,
+    )
+
+    assert {
+        "field": "业务省份",
+        "operator": "IN",
+        "value": ["新疆维吾尔自治区", "上海市"],
+    } in request.filters
+    assert "业务省份" not in request.dimensions
+    assert AnalysisOperator.AGGREGATE in request.operators
+    assert "RESULT_SET_REFERENCE=RECENT_TWO_REGIONS" in request.assumptions
+
+
+@pytest.mark.asyncio
+async def test_relationship_count_followup_preserves_verified_subject_filter():
+    adapters = build_mock_adapters()
+    retrieval = CapturingRetrieval(adapters.retrieval)
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=AdapterBundle(
+            semantic=adapters.semantic,
+            retrieval=retrieval,
+            knowledge=adapters.knowledge,
+            policy=adapters.policy,
+            analysis=adapters.analysis,
+        ),
+        sessions=InMemorySessionStore(),
+    )
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    await agent.handle(
+        ChatRequest(
+            application_id="app1",
+            conversation_id="relationship-count-followup",
+            message_id="m1",
+            question="查询绝对计数管产品的经销商有哪些？",
+        ),
+        identity,
+    )
+
+    response = await agent.handle(
+        ChatRequest(
+            application_id="app1",
+            conversation_id="relationship-count-followup",
+            message_id="m2",
+            question="一共有多少家经销商？",
+        ),
+        identity,
+    )
+
+    assert response.status != "NEEDS_CLARIFICATION"
+    remembered = await agent.sessions.get_last_request(
+        "t1", "u1", "app1", "relationship-count-followup"
+    )
+    assert remembered is not None
+    assert remembered.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert [metric.input for metric in remembered.metrics] == [
+        "已合作经销商数"
+    ]
+    assert {
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "绝对计数管",
+    } in remembered.filters
+    assert remembered.entity is None
+    assert remembered.fields == []
+
+
+@pytest.mark.asyncio
+async def test_metric_only_followup_preserves_verified_region_filter():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    previous = RuleBasedIntentClassifier().classify(
+        "查询四川省的含税销售总额。",
+        identity,
+        "metric-scope-followup",
+    )
+    previous.application_id = "app1"
+    previous.asl_template = {"metrics": [{"name": "annual_total_sales"}]}
+    await agent.sessions.put_task_frame(previous)
+    await agent.sessions.put_last_request(previous)
+
+    response = await agent.handle(
+        ChatRequest(
+            application_id="app1",
+            conversation_id="metric-scope-followup",
+            message_id="m2",
+            question="订单笔数是多少？",
+        ),
+        identity,
+    )
+
+    assert response.status != "NEEDS_CLARIFICATION"
+    remembered = await agent.sessions.get_last_request(
+        "t1", "u1", "app1", "metric-scope-followup"
+    )
+    assert remembered is not None
+    assert [metric.input for metric in remembered.metrics] == ["订单笔数"]
+    assert remembered.filters == [{
+        "field": "业务省份",
+        "operator": "EQ",
+        "value": "四川省",
+    }]
+    assert "METRIC_ONLY_FOLLOWUP_SCOPE_INHERITED" in remembered.assumptions
+
+
+@pytest.mark.asyncio
+async def test_relationship_list_followup_preserves_verified_subject_filter():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    previous = RuleBasedIntentClassifier().classify(
+        "上海市儿童医院采购了哪些产品？",
+        identity,
+        "relationship-list-followup",
+    )
+    previous.application_id = "app1"
+    previous.asl_template = {"dimensions": [{"name": "product.product_name"}]}
+    await agent.sessions.put_task_frame(previous)
+    await agent.sessions.put_last_request(previous)
+
+    response = await agent.handle(
+        ChatRequest(
+            application_id="app1",
+            conversation_id="relationship-list-followup",
+            message_id="m2",
+            question="合作的经销商有哪些？",
+        ),
+        identity,
+    )
+
+    assert response.status != "NEEDS_CLARIFICATION"
+    remembered = await agent.sessions.get_last_request(
+        "t1", "u1", "app1", "relationship-list-followup"
+    )
+    assert remembered is not None
+    assert remembered.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert remembered.entity == "经销商"
+    assert remembered.fields == ["经销商名称"]
+    assert remembered.filters == [{
+        "field": "医院名称",
+        "operator": "EQ",
+        "value": "上海市儿童医院",
+    }]
+    assert "RELATIONSHIP_FOLLOWUP_SCOPE_INHERITED" in remembered.assumptions
+
+
+@pytest.mark.asyncio
+async def test_sort_only_followup_preserves_relationship_set_and_adds_grouping():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    previous = RuleBasedIntentClassifier().classify(
+        "查询绝对计数管产品的经销商有哪些？",
+        identity,
+        "sort-only-followup",
+    )
+    previous.application_id = "app1"
+    previous.asl_template = {"dimensions": [{"name": "dealer.dealer_name"}]}
+    await agent.sessions.put_task_frame(previous)
+    await agent.sessions.put_last_request(previous)
+
+    response = await agent.handle(
+        ChatRequest(
+            application_id="app1",
+            conversation_id="sort-only-followup",
+            message_id="m2",
+            question="按含税销售总额从高到低排序。",
+        ),
+        identity,
+    )
+
+    assert response.status != "NEEDS_CLARIFICATION"
+    remembered = await agent.sessions.get_last_request(
+        "t1", "u1", "app1", "sort-only-followup"
+    )
+    assert remembered is not None
+    assert remembered.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert [metric.input for metric in remembered.metrics] == ["含税销售总额"]
+    assert remembered.dimensions == ["经销商"]
+    assert remembered.filters == [{
+        "field": "商品名称", "operator": "EQ", "value": "绝对计数管",
+    }]
+    assert AnalysisOperator.SORT in remembered.operators
+    assert "SORT_DIRECTION=DESC" in remembered.assumptions
+    assert "SET_RELATIONSHIP_PROJECTION" in remembered.assumptions
+
+
+@pytest.mark.asyncio
+async def test_sort_after_relationship_count_restores_counted_entity_grouping():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    conversation_id = "sort-after-relationship-count"
+
+    for turn, question in enumerate(
+        (
+            "查询绝对计数管产品的经销商有哪些？",
+            "一共有多少家经销商？",
+            "按含税销售总额从高到低排序。",
+        ),
+        1,
+    ):
+        response = await agent.handle(
+            ChatRequest(
+                application_id="app1",
+                conversation_id=conversation_id,
+                message_id=f"m{turn}",
+                question=question,
+            ),
+            identity,
+        )
+        assert response.status != "NEEDS_CLARIFICATION"
+
+    remembered = await agent.sessions.get_last_request(
+        "t1", "u1", "app1", conversation_id
+    )
+    assert remembered is not None
+    assert remembered.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert remembered.entity == "经销商"
+    assert remembered.dimensions == ["经销商"]
+    assert [metric.input for metric in remembered.metrics] == ["含税销售总额"]
+    assert {
+        "field": "商品名称", "operator": "EQ", "value": "绝对计数管",
+    } in remembered.filters
+    assert "SET_RELATIONSHIP_PROJECTION" in remembered.assumptions
+
+
+@pytest.mark.asyncio
+async def test_explicit_group_ranking_replaces_prior_relationship_projection():
+    adapters = build_mock_adapters()
+    retrieval = CapturingRetrieval(adapters.retrieval)
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=AdapterBundle(
+            semantic=adapters.semantic,
+            retrieval=retrieval,
+            knowledge=adapters.knowledge,
+            policy=adapters.policy,
+            analysis=adapters.analysis,
+        ),
+        sessions=InMemorySessionStore(),
+    )
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    conversation_id = "hospital-product-ranking"
+
+    for turn, question in enumerate(
+        (
+            "查询上海市儿童医院的含税销售总额。",
+            "合作的经销商有哪些？",
+            "按产品统计含税销售总额排名前5。",
+        ),
+        1,
+    ):
+        response = await agent.handle(
+            ChatRequest(
+                application_id="app1",
+                conversation_id=conversation_id,
+                message_id=f"m{turn}",
+                question=question,
+            ),
+            identity,
+        )
+        assert response.status != "NEEDS_CLARIFICATION"
+
+    remembered = retrieval.request
+    assert remembered is not None
+    assert remembered.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert remembered.entity == "产品"
+    assert remembered.dimensions == ["产品"]
+    assert remembered.fields == []
+    assert remembered.ranking_limit == 5
+    assert [metric.input for metric in remembered.metrics] == ["含税销售总额"]
+    assert {
+        "field": "医院名称", "operator": "EQ", "value": "上海市儿童医院",
+    } in remembered.filters
+    assert "EXPLICIT_GROUP_RANKING_SCOPE_INHERITED" in remembered.assumptions
+
+
+@pytest.mark.asyncio
+async def test_top_n_only_followup_ranks_an_unordered_relationship_list():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    previous = RuleBasedIntentClassifier().classify(
+        "查询绝对计数管产品的经销商有哪些？",
+        identity,
+        "top-only-followup",
+    )
+    previous.application_id = "app1"
+    previous.asl_template = {"dimensions": [{"name": "dealer.dealer_name"}]}
+    await agent.sessions.put_task_frame(previous)
+    await agent.sessions.put_last_request(previous)
+
+    response = await agent.handle(
+        ChatRequest(
+            application_id="app1",
+            conversation_id="top-only-followup",
+            message_id="m2",
+            question="只显示前三名。",
+        ),
+        identity,
+    )
+
+    assert response.status != "NEEDS_CLARIFICATION"
+    remembered = await agent.sessions.get_task_frame(
+        "t1", "u1", "app1", "top-only-followup"
+    )
+    assert remembered is not None
+    assert remembered.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert [metric.input for metric in remembered.metrics] == ["含税销售总额"]
+    assert remembered.dimensions == ["经销商"]
+    assert remembered.ranking_limit == 3
+    assert AnalysisOperator.TOP_N in remembered.operators
+    assert "RANKING_DEFAULT_METRIC=含税销售总额" in remembered.assumptions
+    assert "SET_RELATIONSHIP_PROJECTION" in remembered.assumptions
 
 
 @pytest.mark.asyncio
