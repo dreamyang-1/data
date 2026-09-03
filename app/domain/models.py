@@ -940,6 +940,14 @@ class ClarificationItem(StrictModel):
     title: str = Field(min_length=1, max_length=20)
     question: str = Field(min_length=1, max_length=500)
     options: list[str] = Field(default_factory=list, max_length=10)
+    option_details: list[dict[str, Any]] = Field(
+        default_factory=list,
+        max_length=10,
+        description=(
+            "可选项对应的规范语义元数据；向量歧义时包含类型、规范名称、"
+            "规范编码、召回分数和记录ID"
+        ),
+    )
     multi_select: bool = False
     allow_free_text: bool = True
 

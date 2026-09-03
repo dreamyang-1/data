@@ -8001,6 +8001,7 @@ class DataAnalysisOrchestrator:
                     "title": semantic_titles[ambiguity.type],
                     "question": ambiguity.question,
                     "options": ambiguity.candidates,
+                    "option_details": ambiguity.candidate_details,
                     "multi_select": False,
                     "allow_free_text": True,
                 } for ambiguity in request.semantic_ambiguities)

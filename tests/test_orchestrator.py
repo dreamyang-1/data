@@ -20,6 +20,7 @@ from app.domain.models import (
     MetricRef,
     PrimaryIntent,
     ReliabilityReport,
+    SemanticAmbiguity,
     TaskPlan,
     TimeRange,
     TrustedIdentity,
@@ -48,6 +49,48 @@ def service() -> DataAnalysisOrchestrator:
 def test_recoverable_asl_contract_failures_receive_one_semantic_retry():
     assert "ASL_DETAIL_FIELDS_INCOMPLETE" in SEMANTIC_QUERY_RETRY_CODES
     assert "ASL_REQUIRED_FILTER_MISSING" in SEMANTIC_QUERY_RETRY_CODES
+
+
+def test_vector_ambiguity_clarification_returns_all_canonical_candidate_details():
+    request = CanonicalAnalysisRequest(
+        conversation_id="vector-choice-details",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询销售额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        missing_slots=["semantic_ambiguity"],
+        semantic_ambiguities=[SemanticAmbiguity(
+            type="metric",
+            phrase="销售额",
+            question="“销售额”命中多个指标，请选择本次要使用的规范项：",
+            candidates=[
+                "含税销售总额（annual_total_sales）",
+                "不含税销售额（net_sales_amount）",
+            ],
+            candidate_details=[
+                {
+                    "semantic_type": "metric",
+                    "canonical_code": "annual_total_sales",
+                    "canonical_name": "含税销售总额",
+                    "record_id": "metric-1",
+                    "score": 0.96,
+                },
+                {
+                    "semantic_type": "metric",
+                    "canonical_code": "net_sales_amount",
+                    "canonical_name": "不含税销售额",
+                    "record_id": "metric-2",
+                    "score": 0.94,
+                },
+            ],
+        )],
+    )
+
+    items = DataAnalysisOrchestrator._clarification_items(request)
+
+    assert items[0]["options"] == request.semantic_ambiguities[0].candidates
+    assert items[0]["option_details"] == request.semantic_ambiguities[0].candidate_details
+    assert items[0]["multi_select"] is False
 
 
 def test_explicit_field_projection_replaces_previous_table_columns():
