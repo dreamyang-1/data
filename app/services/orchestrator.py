@@ -6158,6 +6158,17 @@ class DataAnalysisOrchestrator:
         merged.risk_level = pending.risk_level
         merged.operators = list(pending.operators)
         merged.ranking_limit = pending.ranking_limit
+        if (
+            merged.ranking_limit is not None
+            and AnalysisOperator.SORT in merged.operators
+            and AnalysisOperator.TOP_N not in merged.operators
+            and AnalysisOperator.BOTTOM_N not in merged.operators
+        ):
+            # A numeric ranking contract remains a top-N request even when a
+            # lexical clarification parse only retained generic SORT/TABLE
+            # operators.  Losing TOP_N here can turn a bounded ranking into an
+            # unbounded result after the user merely supplies a missing slot.
+            merged.operators.append(AnalysisOperator.TOP_N)
 
         if "metric" not in missing and not semantic_clarification:
             merged.metrics = [item.model_copy(deep=True) for item in pending.metrics]

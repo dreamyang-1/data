@@ -490,11 +490,6 @@ class TurnAdmissionGate:
                 1.0 if metric_is_explicit else 0.9,
             )
 
-        filter_dimension_families = {
-            self._semantic_field_family(str(item.get("field") or ""))
-            for item in filters
-            if isinstance(item, dict)
-        }
         explicit_dimensions = [
             value for value in current.dimensions
             if re.search(
@@ -507,10 +502,6 @@ class TurnAdmissionGate:
                     marker in compact
                     for marker in ("名单", "清单", "列表", "列出", "显示", "展示")
                 )
-            )
-            or (
-                self._semantic_field_family(value) is not None
-                and self._semantic_field_family(value) in filter_dimension_families
             )
             or (
                 value == current.entity
@@ -829,11 +820,20 @@ class TurnAdmissionGate:
             request.fields = list(current.fields)
         if apply_current_slots and "dimensions" in facts.explicit_slots:
             explicit_dimensions = facts.explicit_slots["dimensions"].value
-            request.dimensions = (
-                list(explicit_dimensions)
-                if isinstance(explicit_dimensions, list)
-                else []
-            )
+            if isinstance(explicit_dimensions, list):
+                request.dimensions = (
+                    list(dict.fromkeys([
+                        *request.dimensions,
+                        *explicit_dimensions,
+                    ]))
+                    if (
+                        decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+                        or decision.previous_thread_id is None
+                    )
+                    else list(explicit_dimensions)
+                )
+            else:
+                request.dimensions = []
         if apply_current_slots and "filters" in facts.explicit_slots:
             explicit_filter_slot = facts.explicit_slots["filters"]
             explicit_filters = explicit_filter_slot.value
@@ -859,9 +859,18 @@ class TurnAdmissionGate:
                 field = str(current_filter.get("field") or "")
                 if not field:
                     continue
+                current_family = TurnAdmissionGate._semantic_field_family(field)
                 request.filters = [
                     item for item in request.filters
-                    if str(item.get("field") or "") != field
+                    if (
+                        str(item.get("field") or "") != field
+                        and (
+                            current_family is None
+                            or TurnAdmissionGate._semantic_field_family(
+                                str(item.get("field") or "")
+                            ) != current_family
+                        )
+                    )
                 ]
                 request.filters.append(dict(current_filter))
         if apply_current_slots and "CLEAR_REGION_SCOPE" in facts.followup_signals:

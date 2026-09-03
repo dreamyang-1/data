@@ -29,6 +29,10 @@ _WHY_PATTERN = re.compile(r"为什么|为何|怎么会|原因|归因")
 _RECOVERY_PATTERN = re.compile(r"恢复|回升|反弹")
 _DECLINE_PATTERN = re.compile(r"下降|减少|下跌")
 _PAIR_PATTERN = re.compile(r"较|相比|对比|比较|(?<!不)比")
+_EXPLICIT_DAY_PATTERN = re.compile(
+    r"(?:19|20)\d{2}(?:年|[-/.])(?:1[0-2]|0?[1-9])(?:月|[-/.])"
+    r"(?:3[01]|[12]\d|0?[1-9])日?"
+)
 
 
 @dataclass(frozen=True)
@@ -115,6 +119,26 @@ def resolve_conversation_temporal_context(
                 AnalysisOperator.DECOMPOSE,
                 AnalysisOperator.EXPLAIN,
             ]))
+        return request
+
+    # A date parser has already produced an exact day-level interval from the
+    # current utterance.  The generic reference list also contains its month
+    # tokens (for example 2025-10 and 2025-12); resolving those against the
+    # previous temporal anchor would broaden 10/17..12/30 into whole months.
+    # Explicit day precision is authoritative over contextual month buckets.
+    explicit_time = decision.current_turn_facts.explicit_slots.get("time_range")
+    if (
+        request.time_range is not None
+        and explicit_time is not None
+        and _EXPLICIT_DAY_PATTERN.search(question)
+    ):
+        request.slot_provenance["time_range"] = SlotProvenance(
+            value=request.time_range.model_dump(mode="json"),
+            source=explicit_time.source,
+            source_turn=explicit_time.source_turn,
+            source_thread=decision.previous_thread_id,
+            confidence=explicit_time.confidence,
+        )
         return request
 
     anchor = previous.temporal_anchor or build_temporal_anchor(previous)

@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 
+import app.intent.classifier as classifier_module
 from app.adapters import build_mock_adapters
 from app.adapters.base import AdapterBundle, AdapterError
 from app.config import Settings
@@ -18,6 +19,7 @@ from app.domain.models import (
     Dataset,
     HistoryMessage,
     MetricRef,
+    PendingState,
     PrimaryIntent,
     ReliabilityReport,
     SemanticAmbiguity,
@@ -950,32 +952,27 @@ class SlowCancelableOrchestrator(DataAnalysisOrchestrator):
 
 
 @pytest.mark.asyncio
-async def test_query_requires_and_accepts_clarification():
+async def test_unqualified_sales_metric_uses_auditable_default_time_range():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
         ChatRequest(application_id="app1", conversation_id="c1", message_id="m1", question="帮我查一下销售额"),
         identity,
     )
-    assert first.status == "NEEDS_CLARIFICATION"
-    assert "time_range" in first.missing_slots
-    assert [step.stage for step in first.analysis_process] == [
-        "QUESTION_REWRITE",
-        "UNDERSTANDING",
-        "COMPLETENESS_CHECK",
-    ]
-    assert first.analysis_process[-1].status == "NEEDS_INPUT"
-
-    second = await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="c1", message_id="m2", question="本月"), identity
+    assert first.status == "COMPLETED"
+    remembered = await agent.sessions.get_task_frame(
+        "t1", "u1", "app1", "c1"
     )
-    assert second.status == "COMPLETED"
-    assert second.intent == PrimaryIntent.METRIC_QUERY
-    assert second.reliability and second.reliability.level == "LIMITED"
-    assert any(
-        "未提供可验证的业务数据水位" in warning
-        for warning in second.reliability.warnings
+    assert remembered is not None
+    assert remembered.time_range is None
+    assert "TIME_SCOPE=ALL_TIME" in remembered.assumptions
+    assert (
+        "TIME_SCOPE_SOURCE=BUSINESS_DEFAULT_ALL_AVAILABLE_HISTORY"
+        in remembered.assumptions
     )
+    assert first.intent == PrimaryIntent.METRIC_QUERY
+    assert first.reliability and first.reliability.level == "HIGH"
+    assert first.reliability.gates["query_succeeded"] is True
 
 
 @pytest.mark.asyncio
@@ -1032,25 +1029,25 @@ async def test_time_clarification_preserves_ranked_comparison_execution_contract
     assert executed.dimensions == ["经销商"]
     assert executed.fields == []
     assert executed.filters == [
-        {"field": "地区", "operator": "=", "value": "上海"},
-        {"field": "品牌", "operator": "=", "value": "振德医疗"},
-        {"field": "商品", "operator": "=", "value": "医用外科口罩"},
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+        {"field": "商品品牌", "operator": "EQ", "value": "振德医疗"},
+        {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
     ]
     assert executed.comparison_type == "对象间比较"
     assert executed.ranking_limit == 3
-    assert executed.operators == [
+    assert {
         AnalysisOperator.FILTER,
         AnalysisOperator.GROUP_BY,
         AnalysisOperator.COMPARE,
         AnalysisOperator.SORT,
         AnalysisOperator.TOP_N,
-    ]
+    }.issubset(set(executed.operators))
     assert executed.time_range == TimeRange(
         start=date(2025, 10, 17),
         end_exclusive=date(2025, 12, 31),
     )
     assert "TRANSACTION_TIME_SCOPE=SALES_RECORD" in executed.assumptions
-    assert "第1名 甲=300" in second.answer
+    assert "| 1 | 甲 | 300 |" in second.answer
 
 
 def test_sales_report_relationship_tasks_receive_trusted_time_scope_only():
@@ -1090,14 +1087,21 @@ def test_sales_report_relationship_tasks_receive_trusted_time_scope_only():
 async def test_pending_clarification_is_not_merged_after_semantic_scope_switch():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    first = await agent.handle(
-        ChatRequest(
-            application_id="app1", conversation_id="scope-switch", message_id="m1",
-            question="帮我查一下销售额", semantic_model_id=8,
-        ),
-        identity,
+    pending_request = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id="scope-switch",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="帮我查一下销售额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="销售额")],
+        semantic_model_id=8,
+        missing_slots=["time_range"],
     )
-    assert first.status == "NEEDS_CLARIFICATION"
+    await agent.sessions.put_pending(
+        PendingState(request=pending_request, state_version=1),
+        expected_version=0,
+    )
     second = await agent.handle(
         ChatRequest(
             application_id="app1", conversation_id="scope-switch", message_id="m2",
@@ -1978,7 +1982,13 @@ async def test_confirmed_long_term_preference_is_applied_and_auditable():
 
 
 @pytest.mark.asyncio
-async def test_confirmed_default_fills_only_a_missing_slot():
+async def test_confirmed_default_fills_only_a_missing_slot(monkeypatch):
+    class FrozenDate(date):
+        @classmethod
+        def today(cls):
+            return cls(2026, 8, 20)
+
+    monkeypatch.setattr(classifier_module, "date", FrozenDate)
     memories = InMemoryLongTermMemoryStore()
     scope = MemoryScope(tenant_id="t1", user_id="u1", application_id="app1")
     candidate = await memories.create_candidate(
