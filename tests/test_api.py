@@ -247,6 +247,62 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
     assert "实体抽取来源=大模型+规则校验" in model_summary
 
 
+def test_intent_summary_hides_unverified_and_empty_semantic_slots():
+    request = CanonicalAnalysisRequest(
+        conversation_id="vector-display-only",
+        application_id="app",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询最近一年销售过费森尤斯产品的经销商名单",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="经销商",
+        dimensions=["经销商", "产品"],
+        fields=["经销商名称", "未提取"],
+        filters=[{"field": "商品名称", "operator": "EQ", "value": "费森尤斯"}],
+        semantic_entity_mentions=["费森尤斯", "模型猜测值"],
+        semantic_display_slots={
+            "entity": "经销商",
+            "fields": ["经销商名称"],
+            "entity_values": ["费森尤斯医疗用品股份有限公司"],
+            "filters": [{
+                "field": "商品品牌",
+                "operator": "EQ",
+                "value": "费森尤斯医疗用品股份有限公司",
+            }],
+        },
+    )
+
+    summary = DataAnalysisOrchestrator._intent_think_summary(request)
+
+    assert "查询对象=经销商" in summary
+    assert "字段=['经销商名称']" in summary
+    assert "业务实体值=['费森尤斯医疗用品股份有限公司']" in summary
+    assert "商品品牌 EQ 费森尤斯医疗用品股份有限公司" in summary
+    assert "维度=" not in summary
+    assert "商品名称 EQ 费森尤斯" not in summary
+    assert "模型猜测值" not in summary
+    assert "未提取" not in summary
+
+
+def test_intent_summary_omits_structure_line_when_nothing_is_vector_grounded():
+    request = CanonicalAnalysisRequest(
+        conversation_id="no-vector-display",
+        application_id="app",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查一下这个",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="模型猜测对象",
+        fields=["未提取"],
+    )
+
+    summary = DataAnalysisOrchestrator._intent_think_summary(request)
+
+    assert "结构化提取：" not in summary
+    assert "模型猜测对象" not in summary
+    assert "未提取" not in summary
+
+
 def test_readiness_checks_memory_dependencies():
     with TestClient(build_test_app()) as client:
         response = client.get("/ready")

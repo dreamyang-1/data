@@ -81,6 +81,7 @@ class Settings(BaseSettings):
     asl_plan_cache_max_items: int = Field(default=256, ge=0, le=2048)
     question_rewrite_enabled: bool = True
     entity_attribute_search_path: str = "/vector/entity-attributes/search"
+    semantic_display_resolve_path: str = "/vector/semantic-elements/resolve"
     question_rewrite_timeout_seconds: float = Field(default=3.0, gt=0, le=15)
     question_rewrite_top_k: int = Field(default=5, ge=1, le=20)
     question_rewrite_search_threshold: float = Field(default=0.70, ge=0, le=1)

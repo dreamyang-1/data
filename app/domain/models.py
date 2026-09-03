@@ -310,6 +310,9 @@ class CanonicalAnalysisRequest(StrictModel):
     knowledge_base_names: list[str] = Field(default_factory=list)
     semantic_model_id: int | None = Field(default=None, gt=0)
     semantic_model_version: str | None = Field(default=None, max_length=128)
+    # Presentation-only proof of slots resolved from the current semantic
+    # vector snapshot. It must not enter ASL payloads or persisted state.
+    semantic_display_slots: dict[str, Any] = Field(default_factory=dict, exclude=True)
     database_id: int | None = Field(
         default=None,
         gt=0,

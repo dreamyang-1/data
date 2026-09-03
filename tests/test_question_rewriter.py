@@ -27,6 +27,18 @@ class FakeSearcher:
         return self.matches
 
 
+class FakeDisplayResolver(FakeSearcher):
+    def __init__(self, matches):
+        super().__init__([])
+        self.display_matches = matches
+
+    async def resolve_display_slots(
+        self, candidates, *, semantic_model_id, business_domain_ids=None,
+    ):
+        self.calls.append((candidates, semantic_model_id, business_domain_ids))
+        return self.display_matches
+
+
 class FakeCandidateExtractor:
     def __init__(self, candidates=None, error=None):
         self.candidates = candidates or []
@@ -49,6 +61,56 @@ class CandidateFailingSearcher(FakeSearcher):
         if query == "candidate-brand":
             raise TimeoutError("candidate lookup timed out")
         return self.matches
+
+
+@pytest.mark.asyncio
+async def test_display_slots_only_keep_vector_resolved_canonical_values():
+    request = CanonicalAnalysisRequest(
+        conversation_id="semantic-display",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询费森尤斯产品的经销商名单",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=81,
+        entity="经销商",
+        dimensions=["经销商", "产品"],
+        fields=["经销商名称", "模型臆造字段"],
+        filters=[{"field": "商品名称", "operator": "EQ", "value": "费森尤斯"}],
+        semantic_entity_mentions=["费森尤斯", "产品"],
+    )
+    resolver = FakeDisplayResolver([
+        {"candidate_id": "entity:0", "canonical_name": "经销商"},
+        {"candidate_id": "dimension:0", "canonical_name": "经销商"},
+        {"candidate_id": "field:0", "canonical_name": "经销商名称"},
+        {
+            "candidate_id": "filter:0:0",
+            "canonical_name": "商品品牌",
+            "canonical_value": "费森尤斯医疗用品股份有限公司",
+        },
+        {
+            "candidate_id": "mention:0",
+            "canonical_name": "商品品牌",
+            "canonical_value": "费森尤斯医疗用品股份有限公司",
+        },
+    ])
+
+    await QuestionRewriter(resolver).ground_display_slots(request)
+
+    assert request.semantic_display_slots == {
+        "entity": "经销商",
+        "dimensions": ["经销商"],
+        "fields": ["经销商名称"],
+        "filters": [{
+            "field": "商品品牌",
+            "operator": "EQ",
+            "value": "费森尤斯医疗用品股份有限公司",
+        }],
+        "entity_values": ["费森尤斯医疗用品股份有限公司"],
+    }
+    # Display grounding is not allowed to rewrite executable intent state.
+    assert request.fields == ["经销商名称", "模型臆造字段"]
+    assert request.filters[0]["field"] == "商品名称"
+    assert "semantic_display_slots" not in request.model_dump(mode="json")
 
 
 def test_current_semantic_matches_ground_filter_and_dimension_labels():

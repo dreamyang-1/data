@@ -218,6 +218,7 @@ def build_container(settings: Settings) -> Container:
                     timeout_seconds=settings.question_rewrite_timeout_seconds,
                     top_k=settings.question_rewrite_top_k,
                     score_threshold=settings.question_rewrite_search_threshold,
+                    display_resolve_path=settings.semantic_display_resolve_path,
                 ),
                 candidate_extractor=entity_candidate_extractor,
                 candidate_mode=entity_candidate_mode,

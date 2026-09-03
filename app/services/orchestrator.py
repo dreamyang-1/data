@@ -3436,6 +3436,13 @@ class DataAnalysisOrchestrator:
         # never inherit an older scope or infer all globally available collections.
         request.knowledge_base_names = list(dict.fromkeys(chat.knowledge_base_names))
 
+        # Intent diagnostics are visible to end users. Resolve their semantic
+        # slots separately so raw LLM/rule candidates can never be presented as
+        # if they were current vector-catalog facts. This is display-only and
+        # intentionally cannot mutate the executable request.
+        if self.question_rewriter is not None:
+            await self.question_rewriter.ground_display_slots(request)
+
         await emit_progress(
             "INTENT_RECOGNITION",
             "COMPLETED",
@@ -6727,27 +6734,44 @@ class DataAnalysisOrchestrator:
         file_based: bool = False,
     ) -> str:
         question = request.rewritten_question or request.original_question
-        metrics = [
-            metric.canonical_name or metric.input for metric in request.metrics
+        display = request.semantic_display_slots or {}
+        metrics = [str(value) for value in display.get("metrics") or [] if str(value).strip()]
+        entity = str(display.get("entity") or "").strip()
+        dimensions = [str(value) for value in display.get("dimensions") or [] if str(value).strip()]
+        fields = [str(value) for value in display.get("fields") or [] if str(value).strip()]
+        entity_values = [
+            str(value) for value in display.get("entity_values") or [] if str(value).strip()
         ]
-        time_text = (
-            f"{request.time_range.start.isoformat()} 至 "
-            f"{request.time_range.end_exclusive.isoformat()}（右开区间）"
-            if request.time_range else "未提取"
-        )
         filters = [
             f"{item.get('field', '字段')} {item.get('operator', '=')} "
             f"{str(item.get('value', ''))[:80]}"
-            for item in request.filters[:10]
+            for item in (display.get("filters") or [])[:10]
+            if isinstance(item, dict)
         ]
-        entity_values = list(dict.fromkeys([
-            *request.semantic_entity_mentions,
-            *(
-                str(item.get("value") or "").strip()
-                for item in request.filters
-                if str(item.get("value") or "").strip()
-            ),
-        ]))
+        extracted_parts: list[str] = []
+        if metrics:
+            extracted_parts.append(f"指标={metrics}")
+        if entity:
+            extracted_parts.append(f"查询对象={entity}")
+        if entity_values:
+            extracted_parts.append(f"业务实体值={list(dict.fromkeys(entity_values))}")
+        if dimensions:
+            extracted_parts.append(f"维度={dimensions}")
+        if fields:
+            extracted_parts.append(f"字段={fields}")
+        if request.time_range:
+            extracted_parts.append(
+                f"时间={request.time_range.start.isoformat()} 至 "
+                f"{request.time_range.end_exclusive.isoformat()}（右开区间）"
+            )
+        if filters:
+            extracted_parts.append(f"筛选={filters}")
+        if request.ranking_limit is not None:
+            extracted_parts.append(f"排序数量={request.ranking_limit}")
+        extraction_line = (
+            "结构化提取：" + "；".join(extracted_parts) + "。\n"
+            if extracted_parts else ""
+        )
         intent_label = cls._intent_label(request.primary_intent)
         intent_display = f"基于用户文件进行{intent_label}" if file_based else intent_label
         relation = request.turn_relation
@@ -6795,10 +6819,7 @@ class DataAnalysisOrchestrator:
             f"{file_judgement}"
             f"任务意图：{intent_display}"
             f"（{request.primary_intent.value}，置信度 {request.intent_confidence:.2f}）\n"
-            f"结构化提取：指标={metrics or ['未提取']}；查询对象={request.entity or '未提取'}；"
-            f"业务实体值={entity_values or ['未提取']}；"
-            f"维度={request.dimensions or ['未提取']}；字段={request.fields or ['未提取']}；"
-            f"时间={time_text}；筛选={filters or ['无']}；排序数量={request.ranking_limit or '无'}。\n"
+            f"{extraction_line}"
             f"轮次关系={relation_label}"
             f"（{relation.value if relation is not None else 'UNKNOWN'}）；"
             f"是否为上下文追问={contextual_followup}；"
@@ -6806,7 +6827,10 @@ class DataAnalysisOrchestrator:
             f"问题改写使用上下文={'是' if request.rewrite_context_applied else '否'}；"
             f"问题补全来源={completion_source}；实体抽取来源={extraction_source}；"
             f"是否需要用户补充={'是：' + '、'.join(request.missing_slots) if request.missing_slots else '否'}；"
-            f"参数规范化={'已完成' if not request.rewrite_degraded else '降级完成'}。"
+            + (
+                "展示参数来源=当前语义模型向量库。"
+                if display else ""
+            )
         )
 
     @staticmethod

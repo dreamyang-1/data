@@ -53,6 +53,14 @@ class EntityAttributeSearcher(Protocol):
         business_domain_ids: list[int] | None = None,
     ) -> list[dict[str, Any]]: ...
 
+    async def resolve_display_slots(
+        self,
+        candidates: list[dict[str, str]],
+        *,
+        semantic_model_id: int,
+        business_domain_ids: list[int] | None = None,
+    ) -> list[dict[str, Any]]: ...
+
 
 class HttpEntityAttributeSearcher:
     def __init__(
@@ -63,12 +71,14 @@ class HttpEntityAttributeSearcher:
         timeout_seconds: float,
         top_k: int,
         score_threshold: float,
+        display_resolve_path: str = "/vector/semantic-elements/resolve",
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.path = path
         self.timeout_seconds = timeout_seconds
         self.top_k = top_k
         self.score_threshold = score_threshold
+        self.display_resolve_path = display_resolve_path
 
     async def search(
         self,
@@ -110,6 +120,31 @@ class HttpEntityAttributeSearcher:
                 normalized["semantic_model_version"] = str(version)
             result.append(normalized)
         return result
+
+    async def resolve_display_slots(
+        self,
+        candidates: list[dict[str, str]],
+        *,
+        semantic_model_id: int,
+        business_domain_ids: list[int] | None = None,
+    ) -> list[dict[str, Any]]:
+        if not candidates:
+            return []
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout_seconds) as client:
+            response = await client.post(
+                self.display_resolve_path,
+                json={
+                    "semantic_model_id": semantic_model_id,
+                    "business_domain_ids": list(business_domain_ids or []),
+                    "candidates": candidates,
+                },
+            )
+        response.raise_for_status()
+        payload = response.json()
+        matches = payload.get("matches", []) if isinstance(payload, dict) else []
+        if not isinstance(matches, list):
+            raise ValueError("semantic display resolver returned invalid matches")
+        return [dict(item) for item in matches if isinstance(item, dict)]
 
 
 class QuestionRewriter:
@@ -170,6 +205,141 @@ class QuestionRewriter:
         self.auto_replace_threshold = auto_replace_threshold
         self.candidate_gap = candidate_gap
         self.typo_similarity_threshold = typo_similarity_threshold
+
+    async def ground_display_slots(
+        self,
+        request: CanonicalAnalysisRequest,
+    ) -> CanonicalAnalysisRequest:
+        """Keep only user-visible slots proven by the current vector catalog.
+
+        This method never mutates executable metrics, dimensions, fields, or
+        filters. Resolver failures therefore hide diagnostics instead of
+        changing query behavior.
+        """
+        request.semantic_display_slots = {}
+        resolver = getattr(self.searcher, "resolve_display_slots", None)
+        if not callable(resolver) or request.semantic_model_id is None:
+            return request
+
+        hidden_placeholders = {
+            "未提取", "未识别", "未知", "无", "none", "null", "n/a", "-",
+        }
+
+        def visible_candidate(value: Any) -> str:
+            text = str(value or "").strip()
+            return "" if text.casefold() in hidden_placeholders else text
+
+        candidates: list[dict[str, str]] = []
+        for index, metric in enumerate(request.metrics):
+            value = visible_candidate(metric.canonical_name or metric.input)
+            if value:
+                candidates.append({"candidate_id": f"metric:{index}", "slot": "metric", "value": value})
+        entity_value = visible_candidate(request.entity)
+        if entity_value:
+            candidates.append({"candidate_id": "entity:0", "slot": "entity", "value": entity_value})
+        for index, value in enumerate(request.dimensions):
+            candidate_value = visible_candidate(value)
+            if candidate_value:
+                candidates.append({"candidate_id": f"dimension:{index}", "slot": "dimension", "value": candidate_value})
+        for index, value in enumerate(request.fields):
+            candidate_value = visible_candidate(value)
+            if candidate_value:
+                candidates.append({"candidate_id": f"field:{index}", "slot": "field", "value": candidate_value})
+        for index, item in enumerate(request.filters):
+            if not isinstance(item, dict):
+                continue
+            raw_value = item.get("value")
+            values = raw_value if isinstance(raw_value, list) else [raw_value]
+            for value_index, value in enumerate(values):
+                candidate_value = visible_candidate(value).strip("%")
+                if candidate_value:
+                    candidates.append({
+                        "candidate_id": f"filter:{index}:{value_index}",
+                        "slot": "filter",
+                        "value": candidate_value,
+                    })
+        for index, value in enumerate(request.semantic_entity_mentions):
+            candidate_value = visible_candidate(value)
+            if candidate_value:
+                candidates.append({
+                    "candidate_id": f"mention:{index}",
+                    "slot": "filter",
+                    "value": candidate_value,
+                })
+        if not candidates:
+            return request
+
+        try:
+            matches = await resolver(
+                candidates,
+                semantic_model_id=request.semantic_model_id,
+                business_domain_ids=request.business_domain_ids,
+            )
+        except Exception as exc:
+            logger.warning(
+                "semantic display grounding unavailable; hiding unverified slots: %s",
+                type(exc).__name__,
+            )
+            return request
+
+        by_id = {
+            str(item.get("candidate_id") or ""): item
+            for item in matches
+            if isinstance(item, dict) and str(item.get("candidate_id") or "")
+        }
+        display: dict[str, Any] = {}
+        metrics = [
+            str(by_id[f"metric:{index}"].get("canonical_name") or "").strip()
+            for index in range(len(request.metrics))
+            if f"metric:{index}" in by_id
+            and str(by_id[f"metric:{index}"].get("canonical_name") or "").strip()
+        ]
+        if metrics:
+            display["metrics"] = list(dict.fromkeys(metrics))
+        entity_match = by_id.get("entity:0")
+        if entity_match and str(entity_match.get("canonical_name") or "").strip():
+            display["entity"] = str(entity_match["canonical_name"]).strip()
+        for slot, values in (("dimensions", request.dimensions), ("fields", request.fields)):
+            candidate_slot = slot[:-1]
+            canonical = [
+                str(by_id[f"{candidate_slot}:{index}"].get("canonical_name") or "").strip()
+                for index in range(len(values))
+                if f"{candidate_slot}:{index}" in by_id
+                and str(by_id[f"{candidate_slot}:{index}"].get("canonical_name") or "").strip()
+            ]
+            if canonical:
+                display[slot] = list(dict.fromkeys(canonical))
+
+        display_filters: list[dict[str, Any]] = []
+        entity_values: list[str] = []
+        for index, item in enumerate(request.filters):
+            if not isinstance(item, dict):
+                continue
+            raw_value = item.get("value")
+            values = raw_value if isinstance(raw_value, list) else [raw_value]
+            resolved = [by_id.get(f"filter:{index}:{value_index}") for value_index in range(len(values))]
+            if not resolved or any(match is None for match in resolved):
+                continue
+            names = {str(match.get("canonical_name") or "").strip() for match in resolved if match}
+            canonical_values = [str(match.get("canonical_value") or "").strip() for match in resolved if match]
+            if len(names) != 1 or not next(iter(names), "") or any(not value for value in canonical_values):
+                continue
+            normalized = dict(item)
+            normalized["field"] = next(iter(names))
+            normalized["value"] = canonical_values if isinstance(raw_value, list) else canonical_values[0]
+            display_filters.append(normalized)
+            entity_values.extend(canonical_values)
+        for index in range(len(request.semantic_entity_mentions)):
+            match = by_id.get(f"mention:{index}")
+            value = str((match or {}).get("canonical_value") or "").strip()
+            if value:
+                entity_values.append(value)
+        if display_filters:
+            display["filters"] = display_filters
+        if entity_values:
+            display["entity_values"] = list(dict.fromkeys(entity_values))
+        request.semantic_display_slots = display
+        return request
 
     async def rewrite(
         self,
