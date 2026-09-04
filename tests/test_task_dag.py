@@ -77,6 +77,61 @@ async def test_single_continuous_analysis_is_not_split() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
+    "question",
+    (
+        "查询 TDC-3 产品的主要适用科室、次要适用科室",
+        "查询 TDC‑3 产品的主要和次要适用科室",
+        "查询 TDC-3 产品的次要适用科室、主要适用科室",
+    ),
+)
+async def test_single_action_parallel_qualified_facets_are_split(question: str) -> None:
+    planner = MultiQuestionPlanner(
+        Settings(env="test", multi_question_model_enabled=False)
+    )
+
+    plan = await planner.plan(question)
+
+    assert plan is not None
+    assert len(plan.tasks) == 2
+    assert {"主要适用科室", "次要适用科室"} == {
+        "主要适用科室" if "主要适用科室" in task.question else "次要适用科室"
+        for task in plan.tasks
+    }
+    assert all("TDC" in task.question and "3" in task.question for task in plan.tasks)
+    assert all(not task.depends_on for task in plan.tasks)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "question",
+    (
+        "查询TDC-3产品的适用科室",
+        "查询TDC-3产品的所有适用科室",
+        "查询TDC-3的商品名称、规格型号",
+        "按城市和品牌统计销售额",
+    ),
+)
+async def test_plain_projection_or_all_scope_is_not_split(question: str) -> None:
+    planner = MultiQuestionPlanner(
+        Settings(env="test", multi_question_model_enabled=False)
+    )
+
+    assert await planner.plan(question) is None
+
+
+def test_parallel_facet_validation_requires_every_branch_exactly_once() -> None:
+    source = "查询 TDC-3 产品的主要适用科室、次要适用科室"
+    invalid = TaskPlan(planner="STRUCTURED_MODEL", tasks=[
+        AtomicTask(task_id="task-1", question="查询TDC-3产品的主要适用科室"),
+        AtomicTask(task_id="task-2", question="查询TDC-3产品的主要适用科室"),
+    ])
+
+    with pytest.raises(TaskPlanningError, match="并列业务分支"):
+        MultiQuestionPlanner.validate(invalid, source_question=source)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     ("question", "expected"),
     (
         (

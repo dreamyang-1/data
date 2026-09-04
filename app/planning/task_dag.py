@@ -35,9 +35,11 @@ _SYSTEM_PROMPT = """你是企业数据分析任务拆分器，只输出JSON，�
 规则：
 1. 单个目标的连续步骤（例如“查询销售额并分析趋势”）通常是一个任务。
 2. 不同指标、不同实体、不同时间目标或不同交付物且可分别回答时，拆成多个任务。
-3. 每个任务必须补全原句中共享的指标、时间和对象，使其脱离其他任务也能理解；不得创造原文没有的信息。
-4. depends_on使用从0开始的任务下标。只有“基于上一步结果、再从其中、对上述结果”等确需复用前序结果时才建立依赖。
-5. 最多5个任务，保持用户原始顺序，不输出推理过程。
+3. 只有一个查询动作，但明确列出同一语义属性下需要分别返回的多个分类、关系类型、状态或时间切片，也要拆分。例如“查询TDC-3产品的主要适用科室、次要适用科室”必须拆成两个独立任务。
+4. 普通返回字段列表或共同分组维度不得拆分。例如“查询产品名称、规格型号”和“按城市和品牌统计销售额”都仍是一个任务；“所有适用科室”也不是多个任务。
+5. 每个任务必须补全原句中共享的指标、时间、对象和筛选值，使其脱离其他任务也能理解；不得创造原文没有的信息。
+6. depends_on使用从0开始的任务下标。只有“基于上一步结果、再从其中、对上述结果”等确需复用前序结果时才建立依赖；并列分类分支之间没有依赖。
+7. 最多5个任务，保持用户原始顺序，不输出推理过程。
 """
 
 
@@ -307,6 +309,9 @@ class MultiQuestionPlanner:
         return TaskPlan(tasks=tasks, planner="STRUCTURED_MODEL")
 
     def _rule_plan(self, question: str) -> TaskPlan | None:
+        qualified_facet_plan = self._parallel_qualified_facet_plan(question)
+        if qualified_facet_plan is not None:
+            return qualified_facet_plan
         normalized = re.sub(r"\r\n?", "\n", question).strip()
         normalized = re.sub(
             r"(?:^|[\s;；])[一二三四五12345][、.)．]\s*", "\n", normalized
@@ -367,6 +372,89 @@ class MultiQuestionPlanner:
                 )
             )
         return TaskPlan(tasks=tasks, planner="DETERMINISTIC_RULE")
+
+    @classmethod
+    def _parallel_qualified_facet_plan(cls, question: str) -> TaskPlan | None:
+        """Split one shared action into independently requested category facets.
+
+        This is a deterministic safety fallback for the structured planner. It
+        deliberately recognises only contrasting business qualifiers and never
+        splits an ordinary projection list such as ``名称、规格型号``.
+        """
+        parts = cls._qualified_facet_parts(question)
+        if parts is None:
+            return None
+        prefix, facets = parts
+        tasks = [
+            AtomicTask(
+                task_id=f"task-{index + 1}",
+                question=(prefix + facet).strip(),
+            )
+            for index, facet in enumerate(facets)
+        ]
+        return TaskPlan(tasks=tasks, planner="DETERMINISTIC_RULE")
+
+    @staticmethod
+    def _qualified_facet_parts(
+        question: str,
+    ) -> tuple[str, list[str]] | None:
+        """Return shared prefix and two contrasting, grounded facet phrases."""
+        normalized = question.strip(" ，,。！？?；;")
+        qualifier_groups = (
+            ("主要", "次要"),
+            ("正常", "异常"),
+            ("新增", "存量"),
+            ("线上", "线下"),
+            ("有效", "无效"),
+            ("合作", "未合作"),
+        )
+        qualifier_to_group = {
+            qualifier: frozenset(group)
+            for group in qualifier_groups
+            for qualifier in group
+        }
+        qualifier_pattern = re.compile("|".join(
+            re.escape(value)
+            for value in sorted(qualifier_to_group, key=len, reverse=True)
+        ))
+        split_match = re.search(r"(?:、|，|,|以及|和|与|及)", normalized)
+        if split_match is None:
+            return None
+        left = normalized[:split_match.start()].strip()
+        right = normalized[split_match.end():].strip()
+        if not left or not right or not MultiQuestionPlanner._has_action(left):
+            return None
+
+        right_match = qualifier_pattern.match(right)
+        right_qualifier = right_match.group(0) if right_match is not None else None
+        if right_qualifier is None:
+            return None
+        left_matches = list(qualifier_pattern.finditer(left))
+        if not left_matches:
+            return None
+        left_match = left_matches[-1]
+        left_start, left_qualifier = left_match.start(), left_match.group(0)
+        if (
+            left_qualifier == right_qualifier
+            or qualifier_to_group[left_qualifier]
+            != qualifier_to_group[right_qualifier]
+        ):
+            return None
+
+        prefix = left[:left_start]
+        left_tail = left[left_start + len(left_qualifier):].strip()
+        right_tail = right[len(right_qualifier):].strip()
+        if left_tail and right_tail:
+            if left_tail != right_tail:
+                return None
+            suffix = left_tail
+        elif not left_tail and right_tail:
+            suffix = right_tail
+        else:
+            return None
+        if not suffix or len(suffix) > 40:
+            return None
+        return prefix, [left_qualifier + suffix, right_qualifier + suffix]
 
     def _inline_dependent_plan(self, question: str) -> TaskPlan | None:
         """Split explicit query→calculation chains even without punctuation."""
@@ -465,6 +553,15 @@ class MultiQuestionPlanner:
         source_metrics = {value for value in metric_terms if value in source_compact}
         source_temporal = {value for value in temporal_terms if value in source_compact}
         source_quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", source_question))
+        shared_identifiers = set(re.findall(
+            r"(?<![0-9A-Za-z])(?=[0-9A-Za-z-]{3,64}(?![0-9A-Za-z-]))"
+            r"(?=[0-9A-Za-z-]*[A-Za-z])[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+",
+            source_question.translate(str.maketrans({
+                "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+                "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
+                "\uff0d": "-",
+            })),
+        ))
         for task in plan.tasks:
             compact = re.sub(r"\s+", "", task.question).casefold()
             if not set(re.findall(r"\d+(?:\.\d+)?", compact)).issubset(source_numbers):
@@ -476,6 +573,17 @@ class MultiQuestionPlanner:
             quoted = set(re.findall(r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", task.question))
             if not quoted.issubset(source_quoted):
                 raise TaskPlanningError("子任务包含原问题中不存在的过滤值")
+            normalized_task = task.question.translate(str.maketrans({
+                "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+                "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
+                "\uff0d": "-",
+            }))
+            if not shared_identifiers.issubset(set(re.findall(
+                r"(?<![0-9A-Za-z])(?=[0-9A-Za-z-]{3,64}(?![0-9A-Za-z-]))"
+                r"(?=[0-9A-Za-z-]*[A-Za-z])[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+",
+                normalized_task,
+            ))):
+                raise TaskPlanningError("子任务遗漏共享的业务型号或编码")
 
         # Grounding must be bidirectional: preventing invented information is
         # insufficient if a plan silently drops one part of the user's request.
@@ -489,6 +597,16 @@ class MultiQuestionPlanner:
             r"[‘’'\"“”]([^‘’'\"“”]{1,100})[‘’'\"“”]", " ".join(task.question for task in plan.tasks)
         ))):
             raise TaskPlanningError("任务计划遗漏原问题中的过滤值")
+
+        facet_parts = MultiQuestionPlanner._qualified_facet_parts(source_question)
+        if facet_parts is not None:
+            _, required_facets = facet_parts
+            coverage = {
+                facet: sum(facet in task.question for task in plan.tasks)
+                for facet in required_facets
+            }
+            if any(count != 1 for count in coverage.values()):
+                raise TaskPlanningError("任务计划遗漏或重复了并列业务分支")
 
         source_goals = MultiQuestionPlanner._goal_signals(source_compact)
         if plan.final_deliverable == "COMBINED_REPORT":
@@ -581,7 +699,7 @@ class MultiQuestionPlanner:
             question,
         ))
         separators = bool(re.search(
-            r"[;；?？\n]|(?:另外|同时|此外|然后|再帮我|还要|以及还要)", question
+            r"[;；?？\n、]|(?:另外|同时|此外|然后|再帮我|还要|以及还要|以及|和|与|及)", question
         ))
         numbered = len(re.findall(r"(?:^|\s)[一二三四五12345][、.)．]", question)) >= 2
         inline_dependency = bool(re.search(
@@ -593,7 +711,10 @@ class MultiQuestionPlanner:
             r")",
             question,
         ))
-        return action_count >= 2 and (separators or numbered or inline_dependency)
+        qualified_facets = MultiQuestionPlanner._qualified_facet_parts(question) is not None
+        return (
+            action_count >= 2 and (separators or numbered or inline_dependency)
+        ) or qualified_facets
 
     @staticmethod
     def _has_action(text: str) -> bool:

@@ -182,15 +182,29 @@ def build_intent_recognition_display_v2(
             continue
         field_name = _single_line(item.get("field"), 120)
         operator = _single_line(item.get("operator") or "=", 20)
+        source_index = item.get("_source_filter_index", index)
+        try:
+            source_index = int(source_index)
+        except (TypeError, ValueError):
+            source_index = index
         value = _single_line(item.get("value"), 120)
         if field_name and value:
             raw_item = (
-                request.filters[index]
-                if index < len(request.filters)
-                and isinstance(request.filters[index], dict)
+                request.filters[source_index]
+                if 0 <= source_index < len(request.filters)
+                and isinstance(request.filters[source_index], dict)
                 else {}
             )
             raw_value = raw_item.get("value")
+            raw_field = _single_line(raw_item.get("field"), 120)
+            if raw_field in {"适用类型", "适用科室类型", "关系类型"}:
+                enum_labels = {"1": "主要适用", "2": "次要适用"}
+                if isinstance(raw_value, list):
+                    value = "[" + ", ".join(
+                        enum_labels.get(str(item), str(item)) for item in raw_value
+                    ) + "]"
+                else:
+                    value = enum_labels.get(str(raw_value), value)
             raw_values = raw_value if isinstance(raw_value, list) else [raw_value]
             explicitly_typed = any(
                 (candidate_text := re.sub(

@@ -655,6 +655,15 @@ class RuleBasedIntentClassifier:
             detail_text = re.sub(
                 r"\s+", "", request.original_question or request.rewritten_question or ""
             )
+            # Product-to-department applicability is governed master-data
+            # state, not a transaction fact.  Its published snapshot must not
+            # acquire an unrelated rolling-year filter.
+            if (
+                "适用科室" in request.fields
+                and "TRANSACTION_TIME_SCOPE=SALES_RECORD" not in request.assumptions
+            ):
+                request.assumptions.append("TIME_SCOPE=ALL_TIME")
+                return
             transaction_markers = (
                 "销售", "订单", "交易", "退款", "流水", "逐笔",
                 "最近", "过去", "近一", "期间", "活跃", "合作", "覆盖",
@@ -1384,20 +1393,33 @@ class RuleBasedIntentClassifier:
                         "适用类型", "适用科室类型", "关系类型",
                     }
                 ]
-                relation_type = (
-                    1 if "主要适用科室" in compact
-                    else 2 if "次要适用科室" in compact
-                    else None
-                )
-                if relation_type is not None:
+                relation_types = []
+                if "主要适用科室" in compact:
+                    relation_types.append(1)
+                if "次要适用科室" in compact:
+                    relation_types.append(2)
+                if len(relation_types) == 1:
                     request.filters.append({
                         "field": "适用科室类型",
                         "operator": "EQ",
-                        "value": relation_type,
+                        "value": relation_types[0],
                     })
                     request.assumptions.append(
                         "APPLICABLE_DEPARTMENT_RELATION_TYPE="
-                        + ("PRIMARY" if relation_type == 1 else "SECONDARY")
+                        + ("PRIMARY" if relation_types[0] == 1 else "SECONDARY")
+                    )
+                elif len(relation_types) > 1:
+                    # The task planner normally turns these into independent
+                    # branches.  Keeping the complete union here is a fail-safe
+                    # for deployments where multi-question planning is disabled;
+                    # never silently prefer the first qualifier.
+                    request.filters.append({
+                        "field": "适用科室类型",
+                        "operator": "IN",
+                        "value": relation_types,
+                    })
+                    request.assumptions.append(
+                        "APPLICABLE_DEPARTMENT_RELATION_TYPE=BOTH"
                     )
             elif hospital_address_lookup:
                 request.entity = "医院"
@@ -3883,6 +3905,12 @@ class RuleBasedIntentClassifier:
         current_filter_mentions: list[str] = []
         for item in request.filters:
             if not isinstance(item, dict):
+                continue
+            field_name = str(item.get("field") or "").strip()
+            # Enum/control values describe a relation row; they are not
+            # business entity identities and must not be sent to entity-value
+            # grounding (for example relation_type=1 is not a product named 1).
+            if field_name in {"适用类型", "适用科室类型", "关系类型"}:
                 continue
             values = item.get("value")
             if not isinstance(values, list):

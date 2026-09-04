@@ -111,6 +111,44 @@ async def test_display_slots_only_keep_vector_resolved_canonical_values():
     assert request.fields == ["经销商名称", "模型臆造字段"]
     assert request.filters[0]["field"] == "商品名称"
     assert "semantic_display_slots" not in request.model_dump(mode="json")
+    candidates = resolver.calls[0][0]
+    filter_candidate = next(
+        item for item in candidates if item["candidate_id"] == "filter:0:0"
+    )
+    assert filter_candidate["field_name"] == "商品名称"
+
+
+@pytest.mark.asyncio
+async def test_control_filter_value_is_not_displayed_as_business_entity_value():
+    request = CanonicalAnalysisRequest(
+        conversation_id="semantic-enum-display",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询TDC-3产品的主要适用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=81,
+        filters=[{"field": "适用科室类型", "operator": "EQ", "value": 1}],
+        semantic_entity_mentions=["TDC-3"],
+    )
+    resolver = FakeDisplayResolver([
+        {
+            "candidate_id": "filter:0:0",
+            "canonical_name": "适用科室类型",
+            "canonical_value": "1",
+        },
+        {
+            "candidate_id": "mention:0",
+            "canonical_name": "规格型号",
+            "canonical_value": "TDC-3",
+        },
+    ])
+
+    await QuestionRewriter(resolver).ground_display_slots(request)
+
+    assert request.semantic_display_slots["entity_values"] == ["TDC-3"]
+    assert request.semantic_display_slots["filters"] == [{
+        "field": "适用科室类型", "operator": "EQ", "value": "1",
+    }]
 
 
 def test_current_semantic_matches_ground_filter_and_dimension_labels():

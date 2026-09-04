@@ -253,11 +253,15 @@ class QuestionRewriter:
             for value_index, value in enumerate(values):
                 candidate_value = visible_candidate(value).strip("%")
                 if candidate_value:
-                    candidates.append({
+                    candidate = {
                         "candidate_id": f"filter:{index}:{value_index}",
                         "slot": "filter",
                         "value": candidate_value,
-                    })
+                    }
+                    field_name = visible_candidate(item.get("field"))
+                    if field_name:
+                        candidate["field_name"] = field_name
+                    candidates.append(candidate)
         for index, value in enumerate(request.semantic_entity_mentions):
             candidate_value = visible_candidate(value)
             if candidate_value:
@@ -328,7 +332,6 @@ class QuestionRewriter:
             normalized["field"] = next(iter(names))
             normalized["value"] = canonical_values if isinstance(raw_value, list) else canonical_values[0]
             display_filters.append(normalized)
-            entity_values.extend(canonical_values)
         for index in range(len(request.semantic_entity_mentions)):
             match = by_id.get(f"mention:{index}")
             value = str((match or {}).get("canonical_value") or "").strip()

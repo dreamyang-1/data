@@ -333,6 +333,30 @@ def test_intent_display_v2_is_multiline_and_does_not_mutate_execution_request():
     assert "\n- 是否需要追问：否" in summary
 
 
+def test_intent_display_v2_renders_relation_enum_without_internal_code():
+    request = CanonicalAnalysisRequest(
+        conversation_id="intent-display-enum",
+        application_id="app",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询TDC-3产品的主要适用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        filters=[{"field": "适用科室类型", "operator": "EQ", "value": 1}],
+        semantic_display_slots={
+            "filters": [{
+                "field": "适用科室类型", "operator": "EQ", "value": "1",
+            }],
+            "entity_values": ["TDC-3"],
+        },
+    )
+
+    summary = DataAnalysisOrchestrator._intent_think_summary(request)
+
+    assert "适用科室类型 EQ 主要适用" in summary
+    assert "业务实体值：['TDC-3']" in summary
+    assert "业务实体值：['1'" not in summary
+
+
 def test_readiness_checks_memory_dependencies():
     with TestClient(build_test_app()) as client:
         response = client.get("/ready")
