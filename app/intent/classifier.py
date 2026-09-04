@@ -1375,6 +1375,30 @@ class RuleBasedIntentClassifier:
                 request.fields = list(dict.fromkeys([
                     *existing, "商品名称", "适用科室",
                 ]))
+                # relation_type classifies a product-department bridge row; it
+                # is never the displayed department field.  Unqualified/all
+                # requests intentionally keep both primary and secondary rows.
+                request.filters = [
+                    item for item in request.filters
+                    if str(item.get("field") or "") not in {
+                        "适用类型", "适用科室类型", "关系类型",
+                    }
+                ]
+                relation_type = (
+                    1 if "主要适用科室" in compact
+                    else 2 if "次要适用科室" in compact
+                    else None
+                )
+                if relation_type is not None:
+                    request.filters.append({
+                        "field": "适用科室类型",
+                        "operator": "EQ",
+                        "value": relation_type,
+                    })
+                    request.assumptions.append(
+                        "APPLICABLE_DEPARTMENT_RELATION_TYPE="
+                        + ("PRIMARY" if relation_type == 1 else "SECONDARY")
+                    )
             elif hospital_address_lookup:
                 request.entity = "医院"
                 generic_fields = {"医院", "地址"}
@@ -1486,6 +1510,7 @@ class RuleBasedIntentClassifier:
             request.comparison_type = "对象间比较"
         cls._apply_manufacturer_metric_scope(request, question)
         cls._apply_semantic_catalog_guardrails(request, question)
+        cls._apply_catalog_identifier_mentions(request, question)
         cls._drop_geographic_subspan_filters(request)
         cls._apply_name_projection_non_null_constraint(request)
         cls._drop_invalid_filter_values(request)
@@ -3805,13 +3830,56 @@ class RuleBasedIntentClassifier:
             return True
         return False
 
+    @staticmethod
+    def _normalize_catalog_punctuation(value: str) -> str:
+        """Normalize visually equivalent dashes without changing audit text."""
+        return value.translate(str.maketrans({
+            "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+            "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
+            "\uff0d": "-",
+        }))
+
+    @classmethod
+    def _apply_catalog_identifier_mentions(
+        cls,
+        request: CanonicalAnalysisRequest,
+        question: str,
+    ) -> None:
+        """Preserve specification-like literals for live catalog grounding.
+
+        The structured model remains the primary extractor.  This syntax-only
+        fallback deliberately does not assign 商品名称、规格型号 or any physical
+        field. Oagnet must bind the literal against the latest published entity
+        value catalog, so future searchable text attributes need no code change.
+        """
+        normalized = cls._normalize_catalog_punctuation(question)
+        if not re.search(r"产品|商品|物料|规格|型号|适用科室|对应科室", normalized):
+            return
+        candidates = re.findall(
+            r"(?<![0-9A-Za-z])"
+            r"(?=[0-9A-Za-z-]{3,64}(?![0-9A-Za-z-]))"
+            r"(?=[0-9A-Za-z-]*[A-Za-z])"
+            r"[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+",
+            normalized,
+        )
+        for candidate in candidates:
+            if candidate not in request.semantic_entity_mentions:
+                request.semantic_entity_mentions.append(candidate)
+        if (
+            candidates
+            and "CATALOG_IDENTIFIER_GROUNDING_REQUIRED" not in request.assumptions
+        ):
+            request.assumptions.append("CATALOG_IDENTIFIER_GROUNDING_REQUIRED")
+
     @classmethod
     def sanitize_semantic_entity_mentions(
         cls, request: CanonicalAnalysisRequest
     ) -> None:
         """Keep only literal, non-operator mentions from the current user turn."""
 
-        raw_compact = re.sub(r"\s+", "", request.original_question or "")
+        raw_compact = cls._normalize_catalog_punctuation(
+            re.sub(r"\s+", "", request.original_question or "")
+        )
         current_filter_mentions: list[str] = []
         for item in request.filters:
             if not isinstance(item, dict):
@@ -3821,7 +3889,9 @@ class RuleBasedIntentClassifier:
                 values = [values]
             for candidate in values:
                 value = str(candidate or "").strip()
-                compact = re.sub(r"\s+", "", value)
+                compact = cls._normalize_catalog_punctuation(
+                    re.sub(r"\s+", "", value)
+                )
                 if (
                     value
                     and not cls._is_structural_entity_mention(value)
@@ -3832,7 +3902,7 @@ class RuleBasedIntentClassifier:
         cleaned: list[str] = []
         for candidate in request.semantic_entity_mentions:
             value = str(candidate or "").strip()
-            compact = re.sub(r"\s+", "", value)
+            compact = cls._normalize_catalog_punctuation(re.sub(r"\s+", "", value))
             if (
                 not value
                 or (
@@ -3841,7 +3911,9 @@ class RuleBasedIntentClassifier:
                 )
                 or cls._is_structural_entity_mention(value)
                 or any(
-                    re.sub(r"\s+", "", mention) in compact
+                    cls._normalize_catalog_punctuation(
+                        re.sub(r"\s+", "", mention)
+                    ) in compact
                     and mention != value
                     for mention in current_filter_mentions
                 )

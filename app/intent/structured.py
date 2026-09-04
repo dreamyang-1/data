@@ -864,14 +864,21 @@ class HybridIntentClassifier:
         """Keep only model values literally grounded in the current raw turn."""
 
         current = question.split("\n已确认的上一轮上下文", 1)[0]
-        compact = re.sub(r"\s+", "", current)
+        dash_translation = str.maketrans({
+            "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+            "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
+            "\uff0d": "-",
+        })
+        compact = re.sub(r"\s+", "", current).translate(dash_translation)
         generic = {
             "产品", "商品", "经销商", "供应商", "医院", "客户", "门店",
             "厂家", "实体", "对象", "指标", "销售额", "销售量", "订单量",
         }
         grounded: list[str] = []
         for value in values:
-            candidate = re.sub(r"\s+", "", str(value or ""))
+            candidate = re.sub(r"\s+", "", str(value or "")).translate(
+                dash_translation
+            )
             candidate = re.sub(r"^(?:那|那么|再看|换成|改成)", "", candidate)
             candidate = re.sub(r"(?:呢|怎么样)[？?。！!]*$", "", candidate)
             candidate = candidate.strip("，,。；;：:！？?、")

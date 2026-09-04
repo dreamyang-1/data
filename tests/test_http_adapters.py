@@ -1137,6 +1137,71 @@ async def test_relation_detail_sends_relationship_aware_projection_contract():
     assert translated_asl["projection_mode"] == "DISTINCT"
 
 
+@pytest.mark.asyncio
+async def test_acknowledged_contract_uses_canonical_projection_validation():
+    """A logical dimension code must not fail a second static synonym gate."""
+
+    class EchoContractClient:
+        def __init__(self):
+            self.calls = []
+
+        async def post(self, base_url, path, payload, **kwargs):
+            self.calls.append((base_url, path, payload, kwargs))
+            if path.endswith("/agent/query"):
+                return {
+                    "success": True,
+                    "result": json.dumps({
+                        "version": "2.0",
+                        "subject": {"entity": "product"},
+                        "metrics": [],
+                        "dimensions": [
+                            {"name": "product", "attr": None},
+                            {
+                                "name": "applicable_department",
+                                "attr": "2093646189935833090",
+                            },
+                        ],
+                        "filters": [{
+                            "field": "product.specification",
+                            "operator": "=",
+                            "value": "TDC-3",
+                        }],
+                        "ambiguity": [],
+                    }, ensure_ascii=False),
+                    "asl_validation": "PASS",
+                    "asl_contract": payload["intent_asl_contract"],
+                }
+            if path.endswith("/asl/translate"):
+                return {
+                    "success": True,
+                    "sql": "SELECT product_name, dept_name FROM product JOIN department",
+                }
+            return {
+                "success": True,
+                "sql": "SELECT product_name, dept_name FROM product JOIN department",
+                "data": [{"商品名称": "一次性使用喉镜片", "适用科室": "急诊科"}],
+                "columns": ["商品名称", "适用科室"],
+                "row_count": 1,
+            }
+
+    detail = CanonicalAnalysisRequest(
+        conversation_id="canonical-detail-contract",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询 TDC-3 产品的适用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="产品",
+        fields=["商品名称", "适用科室"],
+        semantic_entity_mentions=["TDC-3"],
+    )
+
+    dataset = await HttpDataRetrievalAdapter(
+        Settings(adapter_mode="http"), EchoContractClient()
+    ).query(detail, IDENTITY, semantic_model_id=81, business_domain_id=205)
+
+    assert dataset.dataset.row_count == 1
+
+
 def test_transaction_detail_remains_row_shaped() -> None:
     detail = CanonicalAnalysisRequest(
         conversation_id="transaction-rows",

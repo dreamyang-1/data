@@ -1801,7 +1801,18 @@ class HttpDataRetrievalAdapter:
                     "ASL_ANALYSIS_SHAPE_INVALID",
                     "detail ASL must project at least one registered field",
                 )
-            missing_fields = self._missing_detail_fields(request.fields, dimensions)
+            # A current Oagnet response has already validated every requested
+            # projection against registered semantic attribute IDs/codes in the
+            # echoed Intent-ASL contract.  Re-checking those projections here
+            # with a static Chinese/English synonym table can reject a valid new
+            # dimension (for example applicable_department) before SQL runs.
+            # Keep the lexical check only for legacy ASL services that do not
+            # acknowledge the contract.
+            missing_fields = (
+                []
+                if intent_contract_confirmed
+                else self._missing_detail_fields(request.fields, dimensions)
+            )
             if missing_fields:
                 raise AdapterError(
                     "ASL_DETAIL_FIELDS_INCOMPLETE",
@@ -2425,7 +2436,12 @@ class HttpDataRetrievalAdapter:
             # same bilingual legal name.  Once the role-bound filter has been
             # source-validated, that formatting-only variant is already bound
             # and must not trigger a second untyped-entity lookup.
-            return re.sub(r"\s+", "", str(value or "").strip()).casefold()
+            normalized = str(value or "").translate(str.maketrans({
+                "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+                "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
+                "\uff0d": "-",
+            }))
+            return re.sub(r"\s+", "", normalized.strip()).casefold()
 
         for mention in mentions:
             direct = any(

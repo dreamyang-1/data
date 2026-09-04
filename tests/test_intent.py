@@ -757,6 +757,54 @@ def test_product_applicable_department_wording_is_detail_lookup():
     assert request.missing_slots == []
 
 
+@pytest.mark.parametrize("dash", ("-", "‑"))
+def test_specification_identifier_is_left_untyped_for_catalog_grounding(dash):
+    request = RuleBasedIntentClassifier().classify(
+        f"查询 TDC{dash}3 产品的适用科室",
+        IDENTITY,
+        "c-specification-department",
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.fields == ["商品名称", "适用科室"]
+    assert request.semantic_entity_mentions == ["TDC-3"]
+    assert not any(
+        item.get("field") == "商品名称" and item.get("value") == "TDC-3"
+        for item in request.filters
+    )
+
+
+@pytest.mark.parametrize(
+    ("scope", "expected_value"),
+    (("主要适用科室", 1), ("次要适用科室", 2)),
+)
+def test_applicable_department_class_is_a_bridge_filter(scope, expected_value):
+    request = RuleBasedIntentClassifier().classify(
+        f"查询 TDC-3 产品的{scope}",
+        IDENTITY,
+        "c-department-class",
+    )
+
+    assert request.fields == ["商品名称", "适用科室"]
+    assert {
+        "field": "适用科室类型", "operator": "EQ", "value": expected_value,
+    } in request.filters
+
+
+@pytest.mark.parametrize("scope", ("适用科室", "所有适用科室"))
+def test_all_applicable_departments_do_not_add_relation_type_filter(scope):
+    request = RuleBasedIntentClassifier().classify(
+        f"查询 TDC-3 产品的{scope}",
+        IDENTITY,
+        "c-all-departments",
+    )
+
+    assert not any(
+        item.get("field") in {"适用类型", "适用科室类型", "关系类型"}
+        for item in request.filters
+    )
+
+
 @pytest.mark.parametrize(
     ("question", "product"),
     (
