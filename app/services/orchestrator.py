@@ -8818,7 +8818,25 @@ class DataAnalysisOrchestrator:
             gates["analysis_succeeded"] = any(e.kind == "ANALYSIS_RESULT" for e in evidence)
         score = sum(gates.values()) / len(gates)
         warnings = [] if quality_status == "PASS" else [f"上游数据质量状态为 {quality_status}，结论需要复核。"]
-        if request.time_range is not None and not immutable_dataset_followup:
+        relationship_count_metrics = {
+            "已合作医院数", "已合作经销商数", "已合作供应商数",
+            "已合作客户数", "已合作门店数",
+        }
+        source_coverage_required = request.time_range is not None or (
+            any(
+                assumption in {
+                    "TIME_SCOPE=ALL_TIME",
+                    "TIME_SCOPE=ALL_AVAILABLE_HISTORY",
+                }
+                for assumption in request.assumptions
+            )
+            and any(
+                (metric.canonical_name or metric.input)
+                in relationship_count_metrics
+                for metric in request.metrics
+            )
+        )
+        if source_coverage_required and not immutable_dataset_followup:
             query_evidence = [item for item in evidence if item.kind == "QUERY_RESULT"]
             source_coverages = [
                 str(item.payload.get("requested_time_coverage"))

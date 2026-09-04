@@ -810,6 +810,30 @@ def test_relationship_counts_share_the_exact_product_scope_with_lists(question, 
     assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
 
 
+def test_period_free_grouped_relationship_count_uses_all_available_history():
+    request = RuleBasedIntentClassifier().classify(
+        "统计上海市各个经销商的已合作医院数",
+        IDENTITY,
+        "c-grouped-relationship-count-all-time",
+    )
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert [item.input for item in request.metrics] == ["已合作医院数"]
+    assert request.dimensions == ["经销商"]
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert not any(
+        item.get("field") == "商品名称" for item in request.filters
+    )
+    assert request.entity == "经销商"
+    assert request.time_range is None
+    assert "TIME_SCOPE=ALL_TIME" in request.assumptions
+    assert (
+        "TIME_SCOPE_SOURCE=BUSINESS_DEFAULT_ALL_AVAILABLE_HISTORY"
+        in request.assumptions
+    )
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in request.assumptions
+
+
 def test_dealer_quantity_is_normalized_to_relationship_count_metric():
     request = RuleBasedIntentClassifier().classify(
         "统计上海地区销售BD品牌超声血管导引穿刺套件的经销商数量。",

@@ -2757,6 +2757,21 @@ class RuleBasedIntentClassifier:
         product = (match.group("product") or match.group("plain") or "").strip("的")
         if not product:
             return
+        normalized_role = re.sub(
+            r"^(?:按)?(?:各个|各家|各|每个|每家|所有|全部)", "", product,
+        ).rstrip("的")
+        if normalized_role in {
+            "经销商", "供应商", "医院", "客户", "门店",
+            "商品", "产品", "厂家", "制造商",
+        }:
+            # “各个经销商的已合作医院数” uses 经销商 as a grouping
+            # role, not as a product literal.  Treating the text between the
+            # region and relationship metric as a product creates a bogus
+            # 商品名称=各个经销商 filter and an empty result.
+            request.entity = normalized_role
+            if normalized_role not in request.dimensions:
+                request.dimensions.append(normalized_role)
+            return
         request.filters = [
             item for item in request.filters
             if str(item.get("field") or "") != "商品名称"
@@ -3074,10 +3089,17 @@ class RuleBasedIntentClassifier:
         if not region or not subject:
             return
         subject = subject.strip("的，,；;、")
+        normalized_role = re.sub(
+            r"^(?:按)?(?:各个|各家|各|每个|每家|所有|全部)", "", subject,
+        ).rstrip("的")
         if (
             not 2 <= len(subject) <= 100
             or any(marker in subject for marker in ("报告", "报表", "趋势", "覆盖", "明细"))
             or any(ord(char) < 32 for char in subject)
+            or normalized_role in {
+                "经销商", "供应商", "医院", "客户", "门店",
+                "商品", "产品", "厂家", "制造商",
+            }
         ):
             return
         if region in {"北京", "上海", "天津", "重庆"}:
@@ -3981,9 +4003,13 @@ class RuleBasedIntentClassifier:
             "已合作医院数", "已合作经销商数", "已合作供应商数",
             "已合作客户数", "已合作门店数",
         }:
-            # These measures describe activity in a requested/current period,
-            # not immutable master-data totals.
-            return False
+            # Relationship-count metrics describe the governed relationship
+            # population.  Without an explicit user period, silently adding a
+            # rolling-year filter changes "已合作" into "最近一年有交易" and can
+            # also violate semantic models whose relationship projection has no
+            # transaction-time anchor.  Explicit time wording is parsed before
+            # this method and therefore still wins.
+            return True
         ranking_operators = {
             AnalysisOperator.TOP_N,
             AnalysisOperator.BOTTOM_N,
