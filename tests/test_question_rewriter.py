@@ -151,6 +151,32 @@ async def test_control_filter_value_is_not_displayed_as_business_entity_value():
     }]
 
 
+def test_department_followup_context_includes_semantic_entity_value():
+    previous = CanonicalAnalysisRequest(
+        conversation_id="department-context",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询 TDC-3 产品的主要适用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="产品",
+        fields=["商品名称", "适用科室"],
+        semantic_entity_mentions=["TDC-3"],
+        filters=[{"field": "适用科室类型", "operator": "EQ", "value": 1}],
+    )
+
+    rewritten, applied = QuestionRewriter(None)._apply_context(
+        "查询次要科室",
+        previous,
+        semantic_model_id=81,
+        business_domain_ids=[],
+        force_context=True,
+    )
+
+    assert applied is True
+    assert "业务实体值=TDC-3" in rewritten
+    assert '"value":1' in rewritten
+
+
 def test_current_semantic_matches_ground_filter_and_dimension_labels():
     request = CanonicalAnalysisRequest(
         conversation_id="semantic-dimension-grounding",

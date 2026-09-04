@@ -2899,7 +2899,9 @@ class HttpDataRetrievalAdapter:
                 aliases = HttpDataRetrievalAdapter._sql_entity_value_aliases(
                     field, value
                 )
-                if not any(alias.casefold() in folded_sql for alias in aliases):
+                if not HttpDataRetrievalAdapter._sql_filter_value_present(
+                    field, value, normalized_sql
+                ):
                     missing.append({"field": field, "value": value})
                     continue
                 if str(item.get("operator") or "EQ").upper() in negative_operators:
@@ -2918,15 +2920,10 @@ class HttpDataRetrievalAdapter:
                 elif str(item.get("operator") or "EQ").upper() in {
                     "EQ", "=", "EQUALS",
                 }:
-                    equality_preserved = any(
-                        re.search(
-                            rf"(?:(?<![<>!])=(?!=)\s*['\"]?{re.escape(alias)}['\"]?"
-                            rf"|\bin\s*\([^)]*['\"]?{re.escape(alias)}['\"]?[^)]*\))",
-                            normalized_sql,
-                            flags=re.I,
+                    equality_preserved = (
+                        HttpDataRetrievalAdapter._sql_filter_equality_present(
+                            field, value, normalized_sql
                         )
-                        is not None
-                        for alias in aliases
                     )
                     if not equality_preserved:
                         operator_errors.append({
@@ -2971,11 +2968,8 @@ class HttpDataRetrievalAdapter:
                         )
                         for current in current_by_field[field]
                     )
-                    and any(
-                        alias.casefold() in folded_sql
-                        for alias in HttpDataRetrievalAdapter._sql_entity_value_aliases(
-                            field, text
-                        )
+                    and HttpDataRetrievalAdapter._sql_filter_value_present(
+                        field, text, normalized_sql
                     )
                 ):
                     stale.append({"field": field, "value": text})
@@ -2989,6 +2983,71 @@ class HttpDataRetrievalAdapter:
             "status": "PASS",
             "checked_filters": len(explicit_filters),
         }
+
+    @staticmethod
+    def _is_applicable_department_relation_field(field: str) -> bool:
+        normalized = re.sub(r"[\s`\"']+", "", str(field or "")).casefold()
+        return normalized in {
+            "适用科室类型",
+            "科室关系类型",
+            "关系类型",
+            "relation_type",
+            "product_dept_relation.relation_type",
+        }
+
+    @staticmethod
+    def _sql_relation_value_present(value: str, sql: str) -> bool:
+        """Match a relation enum only inside its own SQL predicate.
+
+        Searching for bare enum values such as ``1`` or ``2`` across the SQL
+        creates false stale-context conflicts whenever the same digit occurs
+        in SELECT constants, semantic attribute IDs, LIMIT clauses, or other
+        predicates.  Relationship qualifiers therefore require the physical
+        relation column and its operator to be present together.
+        """
+
+        literal = re.escape(str(value).strip())
+        column = (
+            r"(?:(?:[a-zA-Z_]\w*)\.)?relation_type\b"
+            r"|适用科室类型|科室关系类型"
+        )
+        return re.search(
+            rf"(?:{column})\s*(?:"
+            rf"(?<![<>!])=(?!=)\s*['\"]?{literal}['\"]?(?![\w.-])"
+            rf"|\bin\s*\([^)]*(?<![\w.-])['\"]?{literal}['\"]?(?![\w.-])[^)]*\)"
+            rf")",
+            sql,
+            flags=re.I,
+        ) is not None
+
+    @staticmethod
+    def _sql_filter_value_present(field: str, value: str, sql: str) -> bool:
+        if HttpDataRetrievalAdapter._is_applicable_department_relation_field(field):
+            return HttpDataRetrievalAdapter._sql_relation_value_present(value, sql)
+        folded_sql = sql.casefold()
+        return any(
+            alias.casefold() in folded_sql
+            for alias in HttpDataRetrievalAdapter._sql_entity_value_aliases(
+                field, value
+            )
+        )
+
+    @staticmethod
+    def _sql_filter_equality_present(field: str, value: str, sql: str) -> bool:
+        if HttpDataRetrievalAdapter._is_applicable_department_relation_field(field):
+            return HttpDataRetrievalAdapter._sql_relation_value_present(value, sql)
+        return any(
+            re.search(
+                rf"(?:(?<![<>!])=(?!=)\s*['\"]?{re.escape(alias)}['\"]?"
+                rf"|\bin\s*\([^)]*['\"]?{re.escape(alias)}['\"]?[^)]*\))",
+                sql,
+                flags=re.I,
+            )
+            is not None
+            for alias in HttpDataRetrievalAdapter._sql_entity_value_aliases(
+                field, value
+            )
+        )
 
     @staticmethod
     def _sql_entity_value_aliases(field: str, value: str) -> set[str]:

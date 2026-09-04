@@ -72,6 +72,12 @@ _FOLLOWUP_PATTERNS: tuple[tuple[str, str], ...] = (
         r"(?:指标|金额|销售|数量|笔数|次数|均价|单价|利润|成本|收入)",
     ),
     ("MODIFY", r"改成|改为|换成|只看|只保留|去掉|取消"),
+    (
+        "RELATION_QUALIFIER_UPDATE",
+        r"^(?:再|重新|只)?(?:查询|查看|查找|列出|展示|显示|返回|看)?"
+        r"(?:主要|次要|主|次)(?:的)?(?:适用)?科室"
+        r"(?:有哪些|是什么|名单|列表|明细)?[。！!？?]?$",
+    ),
     ("CLEAR_REGION_SCOPE", r"^(?:那|那么)?(?:全国|全国整体|整体|全部地区)(?:呢|怎么样)?[。！!？?]?$"),
     ("RESULT_SET_AGGREGATE", r"这(?:两|2|几个)个省份?.{0,12}(?:加起来|合计|总共|一共)"),
 )
@@ -206,6 +212,16 @@ class TurnAdmissionGate:
             relation = TurnRelation.CURRENT_TOPIC_DRILLDOWN
             confidence = 0.94
             reasons = ["DRILLDOWN_LANGUAGE", "CONTEXT_REQUIRED"]
+        elif (
+            previous is not None
+            and "RELATION_QUALIFIER_UPDATE" in facts.followup_signals
+        ):
+            relation = TurnRelation.CURRENT_TOPIC_MODIFICATION
+            confidence = 0.99
+            reasons = [
+                "SEMANTIC_RELATION_QUALIFIER_REPLACEMENT",
+                "CURRENT_EXPLICIT_WINS",
+            ]
         elif subject_changed and has_reference:
             relation = TurnRelation.CURRENT_TOPIC_MODIFICATION
             confidence = 0.96
@@ -1304,6 +1320,9 @@ class TurnAdmissionGate:
             "dimensions": list(request.dimensions),
             "fields": list(request.fields),
             "filters": [dict(item) for item in request.filters],
+            "semantic_entity_mentions": list(request.semantic_entity_mentions),
+            "semantic_model_id": request.semantic_model_id,
+            "semantic_model_version": request.semantic_model_version,
             "time_range": (
                 request.time_range.model_dump(mode="json")
                 if request.time_range else None
@@ -1431,6 +1450,13 @@ class TurnAdmissionGate:
         if direct is not None:
             return direct
         folded = str(field or "").strip().casefold()
+        if folded in {
+            "适用类型", "适用科室类型", "关系类型",
+            "product_dept_relation.relation_type",
+        } or folded.endswith("product_dept_relation.relation_type"):
+            # A bridge-row qualifier changes which relationship class is
+            # selected; it is not a replacement of the department entity.
+            return None
         families = (
             ("category", ("商品分类", "产品分类", "商品品类", "品类", "类目", "类别", "category", "class")),
             ("brand", ("商品品牌", "品牌", "brand")),

@@ -1094,6 +1094,7 @@ class QuestionRewriter:
         context: list[str] = []
         relationship_followup = bool(re.search(
             r"(?:哪些|什么)(?:产品|商品|医院|经销商|供应商|等级|科室)"
+            r"|(?:主要|次要|主|次)(?:适用)?科室"
             r"|(?:卖给|销售给)(?:了)?哪些|(?:医院|产品|商品).{0,12}(?:等级|级别)",
             question,
         ))
@@ -1119,6 +1120,11 @@ class QuestionRewriter:
             context.append("指标=" + "、".join(dict.fromkeys(names)))
         if previous.entity:
             context.append("实体=" + previous.entity)
+        if previous.semantic_entity_mentions:
+            context.append(
+                "业务实体值="
+                + "、".join(dict.fromkeys(previous.semantic_entity_mentions))
+            )
         if previous.dimensions and not relationship_followup:
             context.append("维度=" + "、".join(previous.dimensions))
         elif (

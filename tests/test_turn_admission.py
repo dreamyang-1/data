@@ -84,6 +84,132 @@ def _filter_value(request: CanonicalAnalysisRequest, field: str) -> str | None:
     )
 
 
+@pytest.mark.parametrize(
+    "question",
+    ("查询次要科室", "只看次要科室", "查询主科室", "次要的科室有哪些？"),
+)
+def test_department_relation_qualifier_is_current_topic_modification(question):
+    _, previous, current, decision = _decision(
+        "查询 TDC-3 产品的主要适用科室",
+        question,
+        "department-relation-modification",
+    )
+
+    assert previous.semantic_entity_mentions == ["TDC-3"]
+    assert current.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert decision.relation == TurnRelation.CURRENT_TOPIC_MODIFICATION
+    assert decision.inherit_business_context is True
+    assert decision.needs_clarification is False
+    assert "SEMANTIC_RELATION_QUALIFIER_REPLACEMENT" in decision.reason_codes
+
+
+@pytest.mark.asyncio
+async def test_real_department_followup_keeps_spec_and_replaces_relation_type():
+    sessions = InMemorySessionStore()
+    adapters = build_mock_adapters()
+    planned_requests: list[CanonicalAnalysisRequest] = []
+    original_query = adapters.retrieval.query
+
+    async def capture_query(
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> DataQueryResult:
+        planned_requests.append(request.model_copy(deep=True))
+        return await original_query(
+            request,
+            identity,
+            semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id,
+        )
+
+    adapters.retrieval.query = capture_query
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(
+            env="test",
+            adapter_mode="mock",
+            intent_model_enabled=False,
+            multi_question_model_enabled=False,
+            analysis_synthesis_enabled=False,
+        ),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=adapters,
+        sessions=sessions,
+    )
+    conversation_id = "real-department-relation-followup"
+    first = await agent.handle(ChatRequest(
+        application_id="app-1",
+        conversation_id=conversation_id,
+        message_id="m1",
+        question="查询 TDC-3 产品的主要适用科室",
+        semantic_model_id=81,
+    ), IDENTITY)
+    second = await agent.handle(ChatRequest(
+        application_id="app-1",
+        conversation_id=conversation_id,
+        message_id="m2",
+        question="查询次要科室",
+        semantic_model_id=81,
+    ), IDENTITY)
+    executed = await sessions.get_last_request(
+        "tenant-1", "user-1", "app-1", conversation_id
+    )
+
+    assert first.status == "COMPLETED"
+    assert second.status == "COMPLETED"
+    assert executed is not None
+    assert executed.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert executed.metrics == []
+    assert executed.semantic_entity_mentions == ["TDC-3"]
+    assert executed.filters == [{
+        "field": "适用科室类型", "operator": "EQ", "value": 2,
+    }]
+    assert executed.time_range is None
+    assert executed.turn_relation == TurnRelation.CURRENT_TOPIC_MODIFICATION
+    assert executed.rewritten_question == "查询 TDC-3 产品的次要适用科室"
+    assert len(planned_requests) == 2
+    assert planned_requests[0].asl_template is None
+    # The previous verified ASL contains relation_type=1.  A short qualifier
+    # replacement must be replanned from the canonical request, never reused.
+    assert planned_requests[1].asl_template is None
+
+
+def test_department_relation_sql_guard_is_column_scoped_for_numeric_values():
+    gate, previous, current, decision = _decision(
+        "查询 TDC-3 产品的主要适用科室",
+        "查询次要科室",
+        "department-relation-sql-guard",
+    )
+    request = gate.apply_explicit_slot_protection(
+        previous.model_copy(deep=True), current, decision
+    )
+    request.turn_admission = decision
+
+    # Unrelated occurrences of the old enum value (SELECT 1, attribute IDs,
+    # LIMIT 1, and so on) must not be treated as a stale relation filter.
+    report = HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+        request,
+        "SELECT 1 AS ordinal, department.dept_name "
+        "FROM product_dept_relation "
+        "JOIN department ON department.id = product_dept_relation.dept_id "
+        "WHERE product_dept_relation.relation_type = 2",
+    )
+    assert report["status"] == "PASS"
+
+    # A SQL plan that really keeps both the replaced and current predicates is
+    # still rejected, now using the relation column rather than a bare digit.
+    with pytest.raises(AdapterError) as stale:
+        HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+            request,
+            "SELECT department.dept_name FROM product_dept_relation "
+            "JOIN department ON department.id = product_dept_relation.dept_id "
+            "WHERE product_dept_relation.relation_type IN (1, 2)",
+        )
+    assert stale.value.code == "STALE_CONTEXT_CONFLICT"
+
+
 def test_model_grounded_short_followup_defers_entity_role_to_semantic_layer():
     gate, previous, current, decision = _decision(
         "空心纤维血液透析器产品的经销商有哪些",

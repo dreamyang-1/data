@@ -793,6 +793,52 @@ def test_applicable_department_class_is_a_bridge_filter(scope, expected_value):
     assert request.time_range is None
 
 
+@pytest.mark.parametrize(
+    ("scope", "expected_value"),
+    (("主要科室", 1), ("主科室", 1), ("次要科室", 2), ("次科室", 2)),
+)
+def test_short_applicable_department_qualifier_is_detail_lookup(
+    scope, expected_value
+):
+    request = RuleBasedIntentClassifier().classify(
+        f"查询{scope}", IDENTITY, "c-short-department-class"
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.metrics == []
+    assert request.entity == "产品"
+    assert request.fields == ["商品名称", "适用科室"]
+    assert request.filters == [{
+        "field": "适用科室类型", "operator": "EQ", "value": expected_value,
+    }]
+    assert request.time_range is None
+    assert request.missing_slots == []
+
+
+def test_short_department_followup_replaces_relation_slot_and_keeps_specification():
+    classifier = RuleBasedIntentClassifier()
+    previous = classifier.classify(
+        "查询 TDC-3 产品的主要适用科室", IDENTITY, "c-department-followup"
+    )
+    previous.asl_template = {"subject": "product"}
+    previous.source_dataset_id = "old-main-departments"
+
+    merged = classifier.merge_clarification(previous, "查询次要科室")
+
+    assert merged.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert merged.metrics == []
+    assert merged.semantic_entity_mentions == ["TDC-3"]
+    assert merged.filters == [{
+        "field": "适用科室类型", "operator": "EQ", "value": 2,
+    }]
+    assert merged.time_range is None
+    assert merged.asl_template is None
+    assert merged.source_dataset_id is None
+    assert "APPLICABLE_DEPARTMENT_RELATION_TYPE=PRIMARY" not in merged.assumptions
+    assert "APPLICABLE_DEPARTMENT_RELATION_TYPE=SECONDARY" in merged.assumptions
+    assert merged.rewritten_question == "查询 TDC-3 产品的次要适用科室"
+
+
 def test_parallel_applicable_department_classes_preserve_both_values() -> None:
     request = RuleBasedIntentClassifier().classify(
         "查询 TDC-3 产品的主要适用科室、次要适用科室",

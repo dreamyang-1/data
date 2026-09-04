@@ -26,6 +26,47 @@ _NATIVE_DATE_CLASS = date
 _SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 
 
+_APPLICABLE_DEPARTMENT_RELATION_FIELDS = {
+    "适用类型",
+    "适用科室类型",
+    "关系类型",
+    "product_dept_relation.relation_type",
+}
+
+
+def applicable_department_relation_types(text: str) -> list[int]:
+    """Return explicit product-department qualifiers in user wording.
+
+    The semantic value is one slot with two governed enum values.  Business
+    users routinely omit ``适用`` in follow-ups (``查询次要科室``), so matching
+    only the full display label loses an otherwise deterministic slot update.
+    """
+
+    compact = re.sub(r"\s+", "", text or "")
+    both = bool(re.search(
+        r"(?:主要|主)(?:和|与|及|、)(?:次要|次)(?:适用)?科室"
+        r"|(?:次要|次)(?:和|与|及|、)(?:主要|主)(?:适用)?科室",
+        compact,
+    ))
+    values: list[int] = []
+    if both or re.search(r"(?:主要|主)(?:的)?(?:适用)?科室", compact):
+        values.append(1)
+    if both or re.search(r"(?:次要|次)(?:的)?(?:适用)?科室", compact):
+        values.append(2)
+    return values
+
+
+def applicable_department_filter_slot(field: object) -> str:
+    """Canonical slot key for display aliases and the physical bridge field."""
+
+    normalized = re.sub(r"\s+", "", str(field or "")).casefold()
+    if normalized in {
+        value.casefold() for value in _APPLICABLE_DEPARTMENT_RELATION_FIELDS
+    } or normalized.endswith("product_dept_relation.relation_type"):
+        return "applicable_department_relation_type"
+    return normalized
+
+
 _EXECUTION_ACTIONS = {
     PrimaryIntent.METRIC_QUERY: "查询指标",
     PrimaryIntent.DETAIL_QUERY: "查询明细",
@@ -54,6 +95,38 @@ def render_execution_question(
     action = _EXECUTION_ACTIONS.get(request.primary_intent)
     if action is None:
         return request.original_question
+    relation_filters = [
+        item for item in request.filters
+        if applicable_department_filter_slot(item.get("field"))
+        == "applicable_department_relation_type"
+    ]
+    if (
+        request.primary_intent == PrimaryIntent.DETAIL_QUERY
+        and "适用科室" in request.fields
+        and request.semantic_entity_mentions
+        and len(relation_filters) == len(request.filters)
+    ):
+        relation_values = {
+            int(value)
+            for item in relation_filters
+            for value in (
+                item.get("value")
+                if isinstance(item.get("value"), list)
+                else [item.get("value")]
+            )
+            if str(value) in {"1", "2"}
+        }
+        relation_label = (
+            "主要和次要"
+            if relation_values == {1, 2}
+            else "主要"
+            if relation_values == {1}
+            else "次要"
+            if relation_values == {2}
+            else "所有"
+        )
+        values = "、".join(dict.fromkeys(request.semantic_entity_mentions))
+        return f"查询 {values} 产品的{relation_label}适用科室"
     parts = [action]
     if request.metrics:
         metrics = [item.canonical_name or item.input for item in request.metrics]
@@ -978,6 +1051,13 @@ class RuleBasedIntentClassifier:
             r"(?:筛选|查找|匹配|推荐)(?:出)?(?:合适的)?经销商",
             compact,
         ))
+        qualified_department_lookup = bool(
+            applicable_department_relation_types(compact)
+        ) and bool(re.search(
+            r"(?:查询|查看|查找|列出|展示|显示|返回|只看|改成|换成)?"
+            r"(?:主要|次要|主|次)(?:的)?(?:适用)?科室(?:有哪些|是什么|名单|列表)?",
+            compact,
+        ))
         product_department_lookup = (
             "科室" in compact
             and any(
@@ -987,7 +1067,7 @@ class RuleBasedIntentClassifier:
                 )
             )
             and not department_to_dealer
-        )
+        ) or qualified_department_lookup
         hospital_address_lookup = (
             "医院" in compact
             and "地址" in compact
@@ -1393,11 +1473,7 @@ class RuleBasedIntentClassifier:
                         "适用类型", "适用科室类型", "关系类型",
                     }
                 ]
-                relation_types = []
-                if "主要适用科室" in compact:
-                    relation_types.append(1)
-                if "次要适用科室" in compact:
-                    relation_types.append(2)
+                relation_types = applicable_department_relation_types(compact)
                 if len(relation_types) == 1:
                     request.filters.append({
                         "field": "适用科室类型",
@@ -3712,15 +3788,57 @@ class RuleBasedIntentClassifier:
         # copied metrics/time/entity but silently discarded parsed filters, so
         # “那上海某某有限公司的销售额” retained only the prior brand/category
         # scope and never constrained the named dealer.
+        relation_filter_changed = False
         for parsed_filter in parsed.filters:
             field = str(parsed_filter.get("field") or "")
             if not field:
                 continue
+            slot_key = applicable_department_filter_slot(field)
+            previous_same_slot = [
+                item for item in pending.filters
+                if applicable_department_filter_slot(item.get("field")) == slot_key
+            ]
             pending.filters = [
                 item for item in pending.filters
-                if str(item.get("field") or "") != field
+                if applicable_department_filter_slot(item.get("field")) != slot_key
             ]
             pending.filters.append(dict(parsed_filter))
+            if (
+                slot_key == "applicable_department_relation_type"
+                and previous_same_slot != [parsed_filter]
+            ):
+                relation_filter_changed = True
+        if relation_filter_changed:
+            pending.assumptions = [
+                value for value in pending.assumptions
+                if not value.startswith("APPLICABLE_DEPARTMENT_RELATION_TYPE=")
+            ]
+            pending.assumptions.extend(
+                value for value in parsed.assumptions
+                if value.startswith("APPLICABLE_DEPARTMENT_RELATION_TYPE=")
+            )
+            pending.asl_template = None
+            pending.source_dataset_id = None
+            pending.assumptions.append(
+                "APPLICABLE_DEPARTMENT_RELATION_REPLAN_REQUIRED"
+            )
+            if (
+                "适用科室" in pending.fields
+                and "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in pending.assumptions
+                and not re.search(
+                    r"(?:19|20)\d{2}年|(?:1[0-2]|0?[1-9])月份?|"
+                    r"今天|昨天|本周|上周|本月|上月|今年|去年|最近|过去",
+                    answer,
+                )
+            ):
+                pending.time_range = None
+                pending.temporal_anchor = None
+                pending.assumptions = [
+                    value for value in pending.assumptions
+                    if value != "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"
+                ]
+                if "TIME_SCOPE=ALL_TIME" not in pending.assumptions:
+                    pending.assumptions.append("TIME_SCOPE=ALL_TIME")
         if parsed.comparison_type:
             pending.comparison_type = parsed.comparison_type
         if "comparison_objects" in prior_missing:
@@ -3902,6 +4020,21 @@ class RuleBasedIntentClassifier:
         raw_compact = cls._normalize_catalog_punctuation(
             re.sub(r"\s+", "", request.original_question or "")
         )
+        inherited_mentions = set()
+        if (
+            request.turn_admission is not None
+            and request.turn_admission.inherit_business_context
+            and not request.turn_admission.core_subject_changed
+        ):
+            inherited_mentions = {
+                str(value).strip()
+                for value in (
+                    request.turn_admission.context_before.get(
+                        "semantic_entity_mentions"
+                    ) or []
+                )
+                if str(value).strip()
+            }
         current_filter_mentions: list[str] = []
         for item in request.filters:
             if not isinstance(item, dict):
@@ -3936,6 +4069,7 @@ class RuleBasedIntentClassifier:
                 or (
                     compact not in raw_compact
                     and value not in current_filter_mentions
+                    and value not in inherited_mentions
                 )
                 or cls._is_structural_entity_mention(value)
                 or any(

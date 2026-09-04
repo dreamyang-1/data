@@ -21,6 +21,7 @@ from app.domain.models import (
     PrimaryIntent,
     TimeRange,
     TrustedIdentity,
+    TurnRelation,
 )
 from app.intent import RuleBasedIntentClassifier
 from app.services import DataAnalysisOrchestrator
@@ -122,6 +123,47 @@ async def test_missing_metric_can_become_published_attribute_detail():
     assert request.semantic_entity_mentions == []
     assert request.missing_slots == []
     assert "QUERY_SHAPE_TRANSFORM=METRIC_TO_PUBLISHED_ATTRIBUTE_DETAIL" in request.assumptions
+
+
+@pytest.mark.asyncio
+async def test_relationship_projection_never_uses_missing_metric_discovery():
+    class QueryStub:
+        async def discover_metrics(self, *args, **kwargs):
+            raise AssertionError("relationship projection must not discover a metric")
+
+    orchestrator = object.__new__(DataAnalysisOrchestrator)
+    orchestrator.classifier = SimpleNamespace(rules=RuleBasedIntentClassifier())
+    orchestrator.adapters = SimpleNamespace(query=QueryStub())
+    request = CanonicalAnalysisRequest(
+        conversation_id="department-followup-metric-guard",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="查询次要科室",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        fields=["商品名称", "适用科室"],
+        filters=[{
+            "field": "product_dept_relation.relation_type",
+            "operator": "=",
+            "value": 1,
+        }],
+        missing_slots=["metric"],
+        turn_relation=TurnRelation.CURRENT_TOPIC_FOLLOWUP,
+    )
+    chat = ChatRequest(
+        application_id="app",
+        conversation_id=request.conversation_id,
+        message_id="m1",
+        question=request.original_question,
+        semantic_model_id=81,
+    )
+
+    recovered = await orchestrator._recover_live_published_metrics(
+        request, chat, TrustedIdentity(tenant_id="tenant", user_id="user")
+    )
+
+    assert recovered is False
+    assert request.metrics == []
+    assert request.missing_slots == ["metric"]
 
 
 def test_optional_presentation_failure_does_not_lower_data_reliability() -> None:

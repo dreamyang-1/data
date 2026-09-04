@@ -35,6 +35,8 @@ from app.domain.models import AnalysisOperator, AnalysisProcessStep, AnalysisReq
 from app.planning import MultiQuestionPlanner, TaskPlanningError
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
+    applicable_department_filter_slot,
+    applicable_department_relation_types,
     render_execution_question,
     safe_semantic_confirmation,
 )
@@ -1696,6 +1698,14 @@ class DataAnalysisOrchestrator:
                 conversation_by_task=conversation_by_task,
             )
         if not awaiting_task_ids:
+            await self._persist_dag_root_context(
+                chat=chat,
+                identity=identity,
+                plan=plan,
+                responses=responses,
+                conversation_by_task=conversation_by_task,
+                root_message_id=root_message_id,
+            )
             if dag_pending is not None:
                 await self.sessions.clear_dag_pending(
                     identity.tenant_id, identity.user_id, chat.application_id,
@@ -1707,6 +1717,64 @@ class DataAnalysisOrchestrator:
                 chat.conversation_id, root_message_id,
             )
         return final_response
+
+    async def _persist_dag_root_context(
+        self,
+        *,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        plan: TaskPlan,
+        responses: dict[str, AgentResponse | Exception],
+        conversation_by_task: dict[str, str],
+        root_message_id: str,
+    ) -> None:
+        """Keep verified DAG branch frames available to root-conversation follow-ups.
+
+        Execution checkpoints are disposable recovery state.  Conversational
+        focus is not: a later ``只看次要科室`` must still be able to replace a
+        qualifier while retaining the branch's product/specification binding.
+        """
+
+        root_frames: list[CanonicalAnalysisRequest] = []
+        for task in plan.tasks:
+            response = responses.get(task.task_id)
+            child_conversation = conversation_by_task.get(task.task_id)
+            if (
+                not isinstance(response, AgentResponse)
+                or response.status not in {"COMPLETED", "PARTIAL_SUCCESS"}
+                or not child_conversation
+            ):
+                continue
+            child_request = await self.sessions.get_last_request(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                child_conversation,
+            )
+            if child_request is None:
+                continue
+            root_request = child_request.model_copy(
+                deep=True,
+                update={
+                    "request_id": uuid4(),
+                    "conversation_id": chat.conversation_id,
+                    "original_question": task.question,
+                    "analysis_thread_id": f"dag-thread-{root_message_id}",
+                },
+            )
+            root_request.assumptions = list(dict.fromkeys([
+                *root_request.assumptions,
+                f"DAG_ROOT_CONTEXT_BRANCH={task.task_id}",
+            ]))
+            root_frames.append(root_request)
+
+        for frame in root_frames:
+            await self.sessions.put_task_frame(frame)
+        if root_frames:
+            # The final branch is the default focus; recent_task_frames retains
+            # every sibling so explicit historical/branch references can select
+            # another one without preserving the execution checkpoint.
+            await self.sessions.put_last_request(root_frames[-1])
 
     @staticmethod
     def _shared_report_time_clarification(
@@ -1952,6 +2020,24 @@ class DataAnalysisOrchestrator:
         failure is non-destructive and leaves the existing clarification path.
         """
         rules = getattr(self.classifier, "rules", self.classifier)
+        relationship_projection = bool(
+            "适用科室" in request.fields
+            or any(
+                applicable_department_filter_slot(item.get("field"))
+                == "applicable_department_relation_type"
+                for item in request.filters
+            )
+            or applicable_department_relation_types(request.original_question)
+        )
+        if (
+            relationship_projection
+            or request.turn_relation == TurnRelation.AMBIGUOUS_RELATION
+            or "turn_relation" in request.missing_slots
+        ):
+            # Metric discovery normalizes a measure the user actually named; it
+            # must never invent a measure to repair a misclassified relationship
+            # projection or an unresolved conversational reference.
+            return False
         known_metrics = set(getattr(rules, "_known_metrics", ()))
         unbound_unknown_metric = bool(
             request.metrics
@@ -2683,6 +2769,34 @@ class DataAnalysisOrchestrator:
             raw_rule_request,
             turn_decision,
         )
+        # A relationship qualifier replacement (for example ``主要科室`` ->
+        # ``次要科室``) changes an executable ASL filter even though the
+        # subject entity and projection stay the same.  The admission base is
+        # intentionally cloned from the last completed request, so it also
+        # carries that request's verified ASL.  Reusing the template here
+        # would send both the stale relation_type=1 and the current
+        # relation_type=2 to the semantic planner; the SQL alignment gate then
+        # correctly rejects the result as STALE_CONTEXT_CONFLICT.  Force a
+        # fresh plan whenever the current turn explicitly supplies this
+        # semantic relationship slot.
+        current_relation_filters = [
+            item
+            for item in raw_rule_request.filters
+            if applicable_department_filter_slot(item.get("field"))
+            == "applicable_department_relation_type"
+        ]
+        if current_relation_filters:
+            request.asl_template = None
+            request.source_dataset_id = None
+            request.assumptions = list(dict.fromkeys([
+                *request.assumptions,
+                "RELATIONSHIP_QUALIFIER_REPLAN_REQUIRED",
+            ]))
+        # Downstream sanitizers need admission provenance to distinguish a
+        # confirmed inherited entity value from a stale value that leaked into
+        # a new topic.  Attach the decision before those sanitizers run; the
+        # finalized context snapshot is still refreshed later in this method.
+        request.turn_admission = turn_decision
         relationship_count_shape = next(
             (
                 value for value in raw_rule_request.assumptions
@@ -6121,6 +6235,10 @@ class DataAnalysisOrchestrator:
                         if str(value).strip()
                     ]
                 relation_request.entity = relation_request.entity or before.get("entity")
+                if not relation_request.semantic_entity_mentions:
+                    relation_request.semantic_entity_mentions = list(
+                        before.get("semantic_entity_mentions") or []
+                    )
                 if not relation_request.fields:
                     relation_request.fields = list(before.get("fields") or [])
                 if not relation_request.dimensions:
@@ -6140,6 +6258,57 @@ class DataAnalysisOrchestrator:
                 relation_request.ranking_limit = (
                     relation_request.ranking_limit or before.get("top_n")
                 )
+                raw_query = (
+                    relation_request.turn_admission.current_turn_facts.raw_query
+                    if relation_request.turn_admission is not None
+                    else relation_request.original_question
+                )
+                relation_types = applicable_department_relation_types(raw_query)
+                if relation_types:
+                    relation_request.primary_intent = PrimaryIntent.DETAIL_QUERY
+                    relation_request.metrics = []
+                    relation_request.entity = relation_request.entity or "产品"
+                    relation_request.fields = list(dict.fromkeys([
+                        *relation_request.fields,
+                        "商品名称",
+                        "适用科室",
+                    ]))
+                    relation_request.filters = [
+                        item for item in relation_request.filters
+                        if applicable_department_filter_slot(item.get("field"))
+                        != "applicable_department_relation_type"
+                    ]
+                    relation_request.filters.append({
+                        "field": "适用科室类型",
+                        "operator": "EQ" if len(relation_types) == 1 else "IN",
+                        "value": (
+                            relation_types[0]
+                            if len(relation_types) == 1 else relation_types
+                        ),
+                    })
+                    relation_request.time_range = None
+                    relation_request.temporal_anchor = None
+                    relation_request.asl_template = None
+                    relation_request.source_dataset_id = None
+                    relation_request.assumptions = [
+                        value for value in relation_request.assumptions
+                        if value != "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"
+                        and not value.startswith(
+                            "APPLICABLE_DEPARTMENT_RELATION_TYPE="
+                        )
+                    ]
+                    relation_request.assumptions.extend((
+                        "TIME_SCOPE=ALL_TIME",
+                        "APPLICABLE_DEPARTMENT_RELATION_TYPE="
+                        + (
+                            "PRIMARY"
+                            if relation_types == [1]
+                            else "SECONDARY"
+                            if relation_types == [2]
+                            else "BOTH"
+                        ),
+                        "APPLICABLE_DEPARTMENT_RELATION_REPLAN_REQUIRED",
+                    ))
                 relation_request.turn_relation = TurnRelation.CURRENT_TOPIC_FOLLOWUP
                 relation_request.context_mode = ContextMode.CURRENT_THREAD
                 relation_request.assumptions.append(

@@ -13,6 +13,7 @@ from app.config import Settings
 from app.domain.models import (
     AgentResponse,
     AtomicTask,
+    CanonicalAnalysisRequest,
     ChatRequest,
     ClarificationItem,
     EvidenceItem,
@@ -28,6 +29,78 @@ from app.services.orchestrator import DataAnalysisOrchestrator
 from app.stores import InMemorySessionStore
 from app.adapters import build_mock_adapters
 from minio_followup_store import DatasetReference, DatasetScope
+
+
+@pytest.mark.asyncio
+async def test_completed_dag_persists_branch_focus_in_root_conversation() -> None:
+    sessions = InMemorySessionStore()
+    service = object.__new__(DataAnalysisOrchestrator)
+    service.sessions = sessions
+    identity = TrustedIdentity(tenant_id="tenant", user_id="user")
+    chat = ChatRequest(
+        application_id="app",
+        conversation_id="root-compound-departments",
+        message_id="root-message",
+        question="查询 TDC-3 产品的主要适用科室、次要适用科室",
+        semantic_model_id=81,
+    )
+    tasks = [
+        AtomicTask(task_id="task-1", question="查询 TDC-3 产品的主要适用科室"),
+        AtomicTask(task_id="task-2", question="查询 TDC-3 产品的次要适用科室"),
+    ]
+    plan = TaskPlan(planner="DETERMINISTIC_RULE", tasks=tasks)
+    conversations = {
+        "task-1": "dag-child-primary",
+        "task-2": "dag-child-secondary",
+    }
+    responses = {}
+    for task, relation_type in zip(tasks, (1, 2), strict=True):
+        child = CanonicalAnalysisRequest(
+            conversation_id=conversations[task.task_id],
+            tenant_id="tenant",
+            user_id="user",
+            application_id="app",
+            original_question=task.question,
+            primary_intent=PrimaryIntent.DETAIL_QUERY,
+            entity="产品",
+            fields=["商品名称", "适用科室"],
+            semantic_entity_mentions=["TDC-3"],
+            filters=[{
+                "field": "适用科室类型",
+                "operator": "EQ",
+                "value": relation_type,
+            }],
+            missing_slots=[],
+            asl_template={"subject": "product"},
+        )
+        await sessions.put_last_request(child)
+        responses[task.task_id] = AgentResponse(
+            request_id=uuid4(),
+            conversation_id=child.conversation_id,
+            status="COMPLETED",
+            intent=PrimaryIntent.DETAIL_QUERY,
+            answer="查询完成",
+        )
+
+    await service._persist_dag_root_context(
+        chat=chat,
+        identity=identity,
+        plan=plan,
+        responses=responses,
+        conversation_by_task=conversations,
+        root_message_id=chat.message_id,
+    )
+
+    focused = await sessions.get_last_request(
+        "tenant", "user", "app", chat.conversation_id
+    )
+    branches = await sessions.get_recent_task_frames(
+        "tenant", "user", "app", chat.conversation_id, limit=12
+    )
+    assert focused is not None
+    assert focused.semantic_entity_mentions == ["TDC-3"]
+    assert focused.filters[-1]["value"] == 2
+    assert {frame.filters[-1]["value"] for frame in branches} == {1, 2}
 
 
 @pytest.mark.asyncio
