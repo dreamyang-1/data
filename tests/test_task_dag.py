@@ -20,6 +20,7 @@ from app.domain.models import (
     HistoryMessage,
     PrimaryIntent,
     ReliabilityReport,
+    TaskExecutionResult,
     TaskPlan,
     TrustedIdentity,
 )
@@ -589,11 +590,136 @@ async def test_orchestrator_executes_and_aggregates_independent_tasks() -> None:
     )
     assert response.status == "COMPLETED"
     assert response.intent_source == "TASK_DAG"
+    assert response.execution_shape == "COMPOSITE"
+    assert response.task_intents == [
+        PrimaryIntent.METRIC_QUERY,
+        PrimaryIntent.METRIC_QUERY,
+    ]
     assert response.task_plan is not None
     assert len(response.task_results) == 2
     assert all(item.status == "COMPLETED" for item in response.task_results)
     assert response.reliability is not None
     assert response.reliability.level == "HIGH"
+
+
+@pytest.mark.asyncio
+async def test_non_report_composite_response_keeps_every_dataset_id() -> None:
+    class DatasetStubOrchestrator(_StubOrchestrator):
+        async def _handle(self, chat, identity):
+            response = await super()._handle(chat, identity)
+            suffix = "primary" if "主要" in chat.question else "secondary"
+            response.dataset_id = f"ds-{suffix}"
+            return response
+
+    settings = Settings(
+        env="test",
+        multi_question_model_enabled=False,
+        analysis_synthesis_enabled=False,
+    )
+    service = DatasetStubOrchestrator(
+        settings=settings,
+        classifier=_Classifier(),
+        adapters=build_mock_adapters(),
+        sessions=InMemorySessionStore(7200, 7200),
+        task_planner=MultiQuestionPlanner(settings),
+    )
+
+    response = await service.handle(
+        ChatRequest(
+            conversation_id="multi-datasets",
+            message_id="m1",
+            question="查询 TDC-3 产品的主要适用科室、次要适用科室",
+            application_id="app",
+        ),
+        TrustedIdentity(tenant_id="t", user_id="u"),
+    )
+
+    assert response.execution_shape == "COMPOSITE"
+    assert response.dataset_ids == ["ds-primary", "ds-secondary"]
+    assert [item.dataset_id for item in response.task_results] == [
+        "ds-primary", "ds-secondary",
+    ]
+
+
+def test_composite_markdown_fallback_uses_sections_not_nested_tables() -> None:
+    results = [
+        TaskExecutionResult(
+            task_id="task-1",
+            question="查询主要适用科室",
+            status="COMPLETED",
+            intent=PrimaryIntent.DETAIL_QUERY,
+            answer="共 1 条。\n\n| 商品 | 适用科室 |\n| --- | --- |\n| A | 急诊科 |",
+        ),
+        TaskExecutionResult(
+            task_id="task-2",
+            question="查询次要适用科室",
+            status="COMPLETED",
+            intent=PrimaryIntent.DETAIL_QUERY,
+            answer="共 1 条。\n\n| 商品 | 适用科室 |\n| --- | --- |\n| A | 儿科 |",
+        ),
+    ]
+
+    answer = DataAnalysisOrchestrator._task_result_summary_table(results)
+
+    assert answer.count("### ") == 2
+    assert "| 查询目标 | 结果内容 |" not in answer
+    assert "\\|" not in answer
+    assert "<br>" not in answer
+    assert "| 商品 | 适用科室 |" in answer
+
+
+def test_homogeneous_composite_datasets_merge_with_facet_column() -> None:
+    plan = TaskPlan(
+        planner="DETERMINISTIC_RULE",
+        tasks=[
+            AtomicTask(
+                task_id="task-1",
+                question="查询 TDC-3 产品的主要适用科室",
+            ),
+            AtomicTask(
+                task_id="task-2",
+                question="查询 TDC-3 产品的次要适用科室",
+            ),
+        ],
+    )
+    results = [
+        TaskExecutionResult(
+            task_id=task.task_id,
+            question=task.question,
+            status="COMPLETED",
+            intent=PrimaryIntent.DETAIL_QUERY,
+            answer="unused",
+            dataset_id=f"ds-{index}",
+        )
+        for index, task in enumerate(plan.tasks, 1)
+    ]
+    datasets = {
+        "task-1": (
+            ["商品", "适用科室"],
+            [{"商品": "一次性使用喉镜片", "适用科室": "急诊科"}],
+        ),
+        "task-2": (
+            # Same semantic fields in a different SQL projection order must
+            # still be treated as one compatible result schema.
+            ["适用科室", "商品"],
+            [{"商品": "一次性使用喉镜片", "适用科室": "儿科"}],
+        ),
+    }
+
+    answer = DataAnalysisOrchestrator._render_homogeneous_task_datasets(
+        "查询 TDC-3 产品的主要适用科室、次要适用科室",
+        plan,
+        results,
+        datasets,
+    )
+
+    assert answer is not None
+    assert "规格型号 = `TDC-3`" in answer
+    assert "| 商品名称 | 适用类型 | 适用科室 |" in answer
+    assert "| 一次性使用喉镜片 | 主要适用 | 急诊科 |" in answer
+    assert "| 一次性使用喉镜片 | 次要适用 | 儿科 |" in answer
+    assert "\\|" not in answer
+    assert "<br>" not in answer
 
 
 @pytest.mark.asyncio

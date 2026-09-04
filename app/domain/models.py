@@ -478,6 +478,18 @@ class ChatRequest(StrictModel):
         exclude=True,
         description="强制隔离旧响应缓存和会话派生状态，完整重新生成本轮答案",
     )
+    # 修改问题重新提问（revise）场景专用：传被替换轮的原问题文本，
+    # 后端用它定位 history 末尾被替换的 user 轮并截断；纯刷新（问题不变）
+    # 可不传，此时用 question 本身匹配。
+    original_question: str | None = Field(
+        default=None,
+        max_length=4000,
+        exclude=True,
+        description=(
+            "修改问题重新提问时传原问题文本，用于在 history 中定位被替换的轮次；"
+            "纯刷新（问题未修改）可不传"
+        ),
+    )
     tools: list[ToolConfig] = Field(default_factory=list, max_length=30)
     skills: list[SkillConfig] = Field(default_factory=list, max_length=30)
     mcp: list[McpConfig] = Field(default_factory=list, max_length=10)
@@ -972,6 +984,8 @@ class AgentResponse(StrictModel):
     intent: PrimaryIntent
     intent_source: str = "RULE"
     intent_confidence: float = Field(default=0.6, ge=0, le=1)
+    execution_shape: Literal["SINGLE", "COMPOSITE"] = "SINGLE"
+    task_intents: list[PrimaryIntent] = Field(default_factory=list, max_length=5)
     answer: str
     clarification_questions: list[str] = Field(default_factory=list)
     clarification_items: list[ClarificationItem] = Field(default_factory=list, max_length=5)

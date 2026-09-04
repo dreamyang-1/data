@@ -234,7 +234,15 @@ async def bind_chat_spreadsheet(
 
 
 def _prepare_regeneration(payload: ChatRequest) -> tuple[ChatRequest, str, str]:
-    """Create an isolated execution while preserving external response IDs."""
+    """Create an isolated execution while preserving external response IDs.
+
+    刷新（问题不变）与修改重提（question 已改写）共用本路径：
+    - 纯刷新：question 即原问题，直接用它匹配 history 末尾的 user 轮；
+    - 修改重提：前端把原问题放在 original_question，用它匹配末尾 user 轮，
+      截断后新 question 基于更早的上下文重新生成，旧答案不进入上下文。
+    只会替换当前轮，因此只在 history 末尾定位最后一条 user 消息，
+    不会误伤历史轮次中恰好文本相同的问题。
+    """
     external_conversation_id = payload.conversation_id
     external_message_id = payload.message_id
     execution = payload.model_copy(deep=True)
@@ -243,19 +251,54 @@ def _prepare_regeneration(payload: ChatRequest) -> tuple[ChatRequest, str, str]:
     execution.message_id = refresh_id
     execution.regenerate = False
 
-    # Some refresh callers include the answer being replaced in history. Cut
-    # the refreshed turn and everything after it so the old answer cannot be
-    # treated as evidence or a follow-up result during regeneration.
-    normalized_question = re.sub(r"\s+", "", execution.question)
-    for index in range(len(execution.history) - 1, -1, -1):
-        item = execution.history[index]
+    # 匹配目标：修改重提时用 original_question（原问题在 history 里），
+    # 纯刷新时 question 本身就是原问题。
+    match_target = payload.original_question or payload.question
+    normalized_target = re.sub(r"\s+", "", match_target)
+
+    # 只定位 history 中最后一条 user 消息（被替换的当前轮）。
+    last_user_index = next(
+        (
+            index
+            for index in range(len(execution.history) - 1, -1, -1)
+            if execution.history[index].role == "user"
+        ),
+        None,
+    )
+    if last_user_index is None:
+        # history 为空或没有 user 轮：首轮刷新或前端不携带被替换轮，
+        # 无需截断，直接重新生成。
+        if payload.original_question:
+            logger.warning(
+                "regeneration carries original_question but history has no "
+                "user turn to replace; proceeding without truncation"
+            )
+    else:
+        item = execution.history[last_user_index]
         normalized_content = re.sub(r"\s+", "", item.content)
-        if item.role == "user" and (
-            normalized_content == normalized_question
-            or normalized_content.endswith(normalized_question)
+        if normalized_content == normalized_target or normalized_content.endswith(
+            normalized_target
         ):
-            execution.history = execution.history[:index]
-            break
+            # 截断被替换轮及其之后的所有消息（含旧答案），旧答案不得
+            # 作为证据或追问结果参与重新生成。
+            execution.history = execution.history[:last_user_index]
+        elif payload.original_question:
+            # 前端显式声明了原问题但 history 末尾对不上：调用约定被违反，
+            # 明确报错比静默不截断（旧答案残留污染上下文）更易排查。
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "original_question 与 history 末尾的 user 消息不一致，"
+                    "无法定位被替换的轮次"
+                ),
+            )
+        else:
+            # 未传 original_question 且 question 匹配不上：兼容不携带被
+            # 替换轮的老调用方，维持不截断，但留痕便于观察。
+            logger.warning(
+                "regeneration question does not match the last user turn in "
+                "history; history kept as-is (legacy caller?)"
+            )
     return execution, external_conversation_id, external_message_id
 
 
@@ -405,6 +448,14 @@ async def chat_stream(
 
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
+            if (
+                bool(event.get("is_child_task"))
+                and event.get("stage") == "INTENT_RECOGNITION"
+            ):
+                # A DAG child is not the user's root question. Rendering the
+                # first concurrently completed child as the public intent made
+                # composite requests appear truncated and race-dependent.
+                return []
             if event.get("stage") == "TASK_PLANNING" and not file_inspection_completed:
                 deferred_planning.append(event)
                 return []
@@ -413,6 +464,10 @@ async def chat_stream(
                 and event.get("status") == "COMPLETED"
             ):
                 intent_completed = True
+                if bool(event.get("is_composite")):
+                    ordered = [event, *deferred_planning]
+                    deferred_planning.clear()
+                    return ordered
             if (
                 event.get("stage") == "FILE_INSPECTION"
                 and event.get("status") == "COMPLETED"

@@ -597,6 +597,56 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         assert completed_think_stages.index("INTENT_RECOGNITION") < completed_think_stages.index("TASK_PLANNING")
 
 
+def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
+    with TestClient(build_test_app(multi_question_model_enabled=False)) as client:
+        response = client.post(
+            "/agent_chat/stream",
+            headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
+            json={
+                "application_id": "app1",
+                "conversation_id": "composite-intent-stream",
+                "message_id": "m1",
+                "question": "查询 TDC-3 产品的主要适用科室、次要适用科室",
+                "semantic_model_id": 81,
+            },
+        )
+
+    assert response.status_code == 200
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    intent_chunks = [
+        event for event in events
+        if event["type"] == "message_chunk"
+        and event.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
+    ]
+    assert len(intent_chunks) == 1
+    intent = intent_chunks[0]
+    assert intent["meta"]["display_model"] == "CompositeIntentRecognitionDisplayV2"
+    assert intent["meta"]["is_composite"] is True
+    assert "查询 TDC-3 产品的主要适用科室、次要适用科室" in intent["content"]
+    assert "子任务 1" in intent["content"]
+    assert "子任务 2" in intent["content"]
+    assert not intent["meta"].get("is_child_task")
+    completed = next(event for event in events if event["type"] == "complete")
+    assert completed["execution_shape"] == "COMPOSITE"
+    assert len(completed["task_results"]) == 2
+    assert "| 查询目标 | 结果内容 |" not in completed["answer"]
+    assert "\\|" not in completed["answer"]
+    assert "<br>" not in completed["answer"]
+    child_execution = [
+        event for event in events
+        if event["type"] == "message_chunk"
+        and event.get("meta", {}).get("is_child_task")
+        and event.get("meta", {}).get("stage") == "DATA_RETRIEVAL"
+    ]
+    assert child_execution
+    assert {event["meta"]["task_id"] for event in child_execution} == {
+        "task-1", "task-2",
+    }
+
+
 def test_all_seven_thinking_stages_have_normalized_unnumbered_headings():
     expected = {
         "INTENT_RECOGNITION": "#### 1、意图识别",

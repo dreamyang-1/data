@@ -15,6 +15,7 @@ from app.domain.models import (
     CanonicalAnalysisRequest,
     ContextMode,
     PrimaryIntent,
+    TaskPlan,
     TurnRelation,
 )
 
@@ -111,6 +112,26 @@ class IntentRecognitionDisplayV2:
     needs_clarification: bool = False
     clarification_reason: str = ""
     normalization_status: str = "已完成"
+
+
+@dataclass(frozen=True)
+class CompositeIntentTaskDisplayV2:
+    task_id: str
+    question: str
+    intent: str
+    depends_on: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class CompositeIntentRecognitionDisplayV2:
+    """Root-level display projection for a validated multi-task request."""
+
+    version: str = "V2"
+    original_question: str = ""
+    completed_question: str = ""
+    planner: str = ""
+    shared_identifiers: list[str] = field(default_factory=list)
+    tasks: list[CompositeIntentTaskDisplayV2] = field(default_factory=list)
 
 
 def _file_judgement(file_status: str, file_based: bool) -> str:
@@ -346,5 +367,89 @@ def render_intent_recognition_display_v2(
             f"{view.clarification_reason}"
         ),
         f"- 参数规范化：{view.normalization_status}",
+    ])
+    return "\n".join(lines)
+
+
+def build_composite_intent_recognition_display_v2(
+    original_question: str,
+    plan: TaskPlan,
+    *,
+    task_intents: list[PrimaryIntent] | None = None,
+) -> CompositeIntentRecognitionDisplayV2:
+    """Build one immutable root display instead of exposing a DAG child.
+
+    Task questions come from the already validated plan.  They are displayed
+    as planning facts only and are never fed back into ASL or SQL execution.
+    """
+
+    normalized_source = str(original_question).translate(str.maketrans({
+        "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+        "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
+        "\uff0d": "-",
+    }))
+    identifiers = list(dict.fromkeys(re.findall(
+        r"(?<![0-9A-Za-z])(?=[0-9A-Za-z-]{3,64}(?![0-9A-Za-z-]))"
+        r"(?=[0-9A-Za-z-]*[A-Za-z])[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+",
+        normalized_source,
+    )))
+    intents = task_intents or []
+    tasks = [
+        CompositeIntentTaskDisplayV2(
+            task_id=task.task_id,
+            question=_single_line(task.question, 1000),
+            intent=(
+                _INTENT_LABELS.get(intents[index], intents[index].value)
+                if index < len(intents)
+                else "待子任务语义校验"
+            ),
+            depends_on=list(task.depends_on),
+        )
+        for index, task in enumerate(plan.tasks)
+    ]
+    completed = "；".join(
+        f"{index}. {task.question}" for index, task in enumerate(tasks, 1)
+    )
+    return CompositeIntentRecognitionDisplayV2(
+        original_question=_single_line(original_question, 1000),
+        completed_question=completed,
+        planner=plan.planner,
+        shared_identifiers=identifiers,
+        tasks=tasks,
+    )
+
+
+def render_composite_intent_recognition_display_v2(
+    view: CompositeIntentRecognitionDisplayV2,
+) -> str:
+    """Render one deterministic parent trace for every DAG child."""
+
+    lines = [
+        "### 1、意图识别",
+        "",
+        f"- 用户原始问题：{view.original_question}",
+        f"- 补全后的问题：{view.completed_question}",
+        f"- 任务意图：复合查询（TASK_DAG，共 {len(view.tasks)} 个子任务）",
+        "- 意图判定依据：用户要求分别返回多个可独立交付的业务结果。",
+    ]
+    if view.shared_identifiers:
+        lines.append(
+            f"- 共享业务标识：{_list_text(view.shared_identifiers)}"
+            "（每个子任务继续按当前语义层独立规范化）"
+        )
+    lines.append("- 结构化拆分：")
+    for index, task in enumerate(view.tasks, 1):
+        dependency = (
+            f"；依赖={_list_text(task.depends_on)}" if task.depends_on else ""
+        )
+        lines.append(
+            f"  - 子任务 {index}（{task.task_id}）：{task.question}；"
+            f"意图={task.intent}{dependency}"
+        )
+    lines.extend([
+        "- 上下文补全：否（共享条件已写入每个完整子任务）",
+        "- 轮次关系：独立复合问题（TASK_DAG）",
+        "- 是否需要追问：由各子任务完成语义规范化后分别校验",
+        f"- 参数规范化：任务拆分已完成（规划器={view.planner}）",
     ])
     return "\n".join(lines)

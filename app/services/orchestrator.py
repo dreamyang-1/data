@@ -65,9 +65,11 @@ from app.services.history_compaction import compact_history
 from app.services.working_memory import recalls_prior_task, select_recalled_task_frame
 from app.services.extension_dispatcher import ExtensionDispatcher
 from app.services.tool_selector import OptionalToolSelector
-from app.services.progress import emit_progress
+from app.services.progress import emit_progress, task_progress_scope
 from app.presentation import (
+    build_composite_intent_recognition_display_v2,
     build_intent_recognition_display_v2,
+    render_composite_intent_recognition_display_v2,
     render_intent_recognition_display_v2,
 )
 from app.services.relationship_projection import (
@@ -467,6 +469,26 @@ class DataAnalysisOrchestrator:
                         plan = await self.task_planner.plan(chat.question)
                     except TaskPlanningError as exc:
                         logger.warning("multi-question plan rejected: %s", exc)
+                    if plan is not None:
+                        composite_view = (
+                            build_composite_intent_recognition_display_v2(
+                                chat.question,
+                                plan,
+                            )
+                        )
+                        await emit_progress(
+                            "INTENT_RECOGNITION",
+                            "COMPLETED",
+                            render_composite_intent_recognition_display_v2(
+                                composite_view
+                            ),
+                            intent="COMPOSITE_QUERY",
+                            confidence=1.0,
+                            display_model="CompositeIntentRecognitionDisplayV2",
+                            display_version="V2",
+                            is_composite=True,
+                            task_count=len(plan.tasks),
+                        )
                     await emit_progress(
                         "TASK_PLANNING",
                         "COMPLETED",
@@ -1201,6 +1223,9 @@ class DataAnalysisOrchestrator:
         plan_fingerprint = hashlib.sha256(
             plan.model_dump_json().encode("utf-8")
         ).hexdigest()
+        task_index_by_id = {
+            task.task_id: index for index, task in enumerate(plan.tasks)
+        }
         checkpoint = await self.sessions.get_dag_checkpoint(
             identity.tenant_id, identity.user_id, chat.application_id,
             chat.conversation_id, root_message_id,
@@ -1351,27 +1376,34 @@ class DataAnalysisOrchestrator:
                 ) if not requires_new_entity else None,
             )
             try:
-                if len(task.depends_on) >= 2 and self._is_join_task(task.question):
-                    value = await self._execute_cross_branch_join(
-                        task, chat, identity, responses, conversation_by_task
-                    )
-                else:
-                    assumptions_token = _INTERNAL_ASSUMPTIONS.set(
-                        self._report_task_internal_assumptions(plan, task)
-                    )
-                    try:
-                        value = await self._handle(child, identity)
-                    finally:
-                        _INTERNAL_ASSUMPTIONS.reset(assumptions_token)
-                    if dependency_constraints and value.status in {"COMPLETED", "PARTIAL_SUCCESS"}:
-                        if not any(item.kind == "QUERY_RESULT" for item in value.evidence):
-                            value = self._dependency_constraint_fallback(
-                                chat, task, "DEPENDENCY_QUERY_EVIDENCE_MISSING"
-                            )
-                        else:
-                            value = self._attach_dependency_constraint_evidence(
-                                value, dependency_constraints
-                            )
+                with task_progress_scope(
+                    parent_message_id=root_message_id,
+                    task_id=task.task_id,
+                    task_index=task_index_by_id[task.task_id],
+                    task_count=len(plan.tasks),
+                    is_child_task=True,
+                ):
+                    if len(task.depends_on) >= 2 and self._is_join_task(task.question):
+                        value = await self._execute_cross_branch_join(
+                            task, chat, identity, responses, conversation_by_task
+                        )
+                    else:
+                        assumptions_token = _INTERNAL_ASSUMPTIONS.set(
+                            self._report_task_internal_assumptions(plan, task)
+                        )
+                        try:
+                            value = await self._handle(child, identity)
+                        finally:
+                            _INTERNAL_ASSUMPTIONS.reset(assumptions_token)
+                        if dependency_constraints and value.status in {"COMPLETED", "PARTIAL_SUCCESS"}:
+                            if not any(item.kind == "QUERY_RESULT" for item in value.evidence):
+                                value = self._dependency_constraint_fallback(
+                                    chat, task, "DEPENDENCY_QUERY_EVIDENCE_MISSING"
+                                )
+                            else:
+                                value = self._attach_dependency_constraint_evidence(
+                                    value, dependency_constraints
+                                )
                 responses[task.task_id] = value
                 await save_checkpoint()
                 return task.task_id, value
@@ -1623,7 +1655,13 @@ class DataAnalysisOrchestrator:
                     "多任务追问状态已被另一条消息更新，请基于最新响应继续。",
                 )
 
-        combined_answer = self._task_result_summary_table(task_results)
+        combined_answer = await self._composite_task_answer(
+            chat=chat,
+            identity=identity,
+            plan=plan,
+            task_results=task_results,
+            conversation_by_task=conversation_by_task,
+        )
         if shared_clarification is not None:
             combined_answer = (
                 "## 综合分析报告\n"
@@ -1656,6 +1694,12 @@ class DataAnalysisOrchestrator:
                 ),
                 default=0.6,
             ),
+            execution_shape="COMPOSITE",
+            task_intents=[
+                result.intent
+                for result in task_results
+                if result.intent is not None
+            ],
             answer=combined_answer,
             clarification_questions=clarification_questions[:5],
             clarification_items=clarification_items[:5],
@@ -1670,9 +1714,7 @@ class DataAnalysisOrchestrator:
                 if plan.final_deliverable == "COMBINED_REPORT"
                 else dataset_id
             ),
-            dataset_ids=(
-                dataset_ids if plan.final_deliverable == "COMBINED_REPORT" else []
-            ),
+            dataset_ids=dataset_ids,
             chart_specs=chart_specs[:10],
             task_plan=plan,
             task_results=task_results,
@@ -4788,6 +4830,178 @@ class DataAnalysisOrchestrator:
             request.source_dataset_id = dataset_id
         await self.sessions.put_last_request(request)
         return await self._finish_terminal(request, response)
+
+    async def _composite_task_answer(
+        self,
+        *,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        plan: TaskPlan,
+        task_results: list[TaskExecutionResult],
+        conversation_by_task: dict[str, str],
+    ) -> str:
+        """Assemble DAG results from verified datasets, never nested Markdown.
+
+        Homogeneous, bounded datasets are rendered as one table with a branch
+        column. Heterogeneous, unavailable, large, partial, or failed results
+        remain independent sections. This keeps formatting deterministic while
+        preserving every branch's original status and explanation.
+        """
+
+        fallback = self._task_result_summary_table(task_results)
+        if (
+            self.dataset_store is None
+            or not task_results
+            or any(result.status != "COMPLETED" for result in task_results)
+            or any(not result.dataset_id for result in task_results)
+        ):
+            return fallback
+
+        datasets: dict[str, tuple[list[str], list[dict[str, Any]]]] = {}
+        try:
+            for task, result in zip(plan.tasks, task_results, strict=True):
+                child_conversation = conversation_by_task.get(task.task_id)
+                if not child_conversation or not result.dataset_id:
+                    return fallback
+                raw_items = await self.sessions.get_recent_dataset_references(
+                    identity.tenant_id,
+                    identity.user_id,
+                    chat.application_id,
+                    child_conversation,
+                    limit=self.settings.dataset_recent_limit,
+                )
+                raw = next(
+                    (
+                        item for item in raw_items
+                        if item.get("dataset_id") == result.dataset_id
+                    ),
+                    None,
+                )
+                if raw is None:
+                    return fallback
+                reference = restore_reference(raw)
+                # Final chat tables are bounded. Large datasets retain the
+                # child's preview and downloadable dataset reference instead of
+                # being fully materialized merely for presentation.
+                if reference.row_count > 200:
+                    return fallback
+                loaded = await asyncio.to_thread(
+                    self.dataset_store.load_dataset,
+                    reference,
+                    current_scope=reference.scope,
+                )
+                datasets[task.task_id] = (
+                    list(loaded.reference.columns),
+                    [dict(row) for row in loaded.rows],
+                )
+        except Exception as exc:
+            logger.warning("composite result presentation fallback: %s", exc)
+            return fallback
+
+        return self._render_homogeneous_task_datasets(
+            chat.question,
+            plan,
+            task_results,
+            datasets,
+        ) or fallback
+
+    @staticmethod
+    def _task_facet_label(question: str) -> tuple[str, str]:
+        compact = re.sub(r"\s+", "", question)
+        if "主要适用科室" in compact or "主科室" in compact:
+            return "适用类型", "主要适用"
+        if "次要适用科室" in compact or "次要科室" in compact or "次科室" in compact:
+            return "适用类型", "次要适用"
+        for label in ("正常", "异常", "新增", "存量", "线上", "线下", "有效", "无效"):
+            if label in compact:
+                return "查询分类", label
+        return "查询分支", question
+
+    @classmethod
+    def _render_homogeneous_task_datasets(
+        cls,
+        root_question: str,
+        plan: TaskPlan,
+        task_results: list[TaskExecutionResult],
+        datasets: dict[str, tuple[list[str], list[dict[str, Any]]]],
+    ) -> str | None:
+        if len(datasets) != len(task_results) or len(plan.tasks) != len(task_results):
+            return None
+        schemas = [tuple(datasets[task.task_id][0]) for task in plan.tasks]
+        if not schemas:
+            return None
+        # SQL engines and semantic projections may return the same logical
+        # columns in a different order for sibling branches.  Column order is
+        # presentation metadata, not a schema incompatibility: compare the
+        # normalized column identities while retaining one deterministic order
+        # for the merged table.  Length is checked separately so duplicate
+        # column names can never be hidden by the set comparison.
+        canonical_schema = schemas[0]
+        canonical_columns = set(canonical_schema)
+        if any(
+            len(schema) != len(canonical_schema)
+            or set(schema) != canonical_columns
+            for schema in schemas[1:]
+        ):
+            return None
+        facet_pairs = [cls._task_facet_label(task.question) for task in plan.tasks]
+        facet_columns = {column for column, _ in facet_pairs}
+        facet_column = facet_columns.pop() if len(facet_columns) == 1 else "查询分支"
+        columns = list(canonical_schema)
+        if facet_column == "适用类型":
+            # For applicability queries, keep the business subject first and
+            # the requested department last, regardless of the raw SQL order.
+            # This yields a stable ``商品名称 / 适用类型 / 适用科室`` table.
+            columns.sort(
+                key=lambda column: (
+                    0 if "商品" in cls._display_column_name(column) else
+                    2 if "科室" in cls._display_column_name(column) else
+                    1
+                )
+            )
+        display_columns = [
+            *columns[:-1], facet_column, *columns[-1:]
+        ] if columns else [facet_column]
+        rows: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for task, (_, label) in zip(plan.tasks, facet_pairs, strict=True):
+            _, task_rows = datasets[task.task_id]
+            for source_row in task_rows:
+                row = dict(source_row)
+                row[facet_column] = label
+                fingerprint = json.dumps(
+                    [row.get(column) for column in display_columns],
+                    ensure_ascii=False,
+                    default=str,
+                    separators=(",", ":"),
+                )
+                if fingerprint in seen:
+                    continue
+                seen.add(fingerprint)
+                rows.append(row)
+
+        total = sum(len(datasets[task.task_id][1]) for task in plan.tasks)
+        lines = [
+            f"已完成 {len(plan.tasks)} 个独立查询，共返回 {total} 条明细。",
+        ]
+        if facet_column == "适用类型":
+            normalized = root_question.translate(str.maketrans({
+                "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+                "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
+                "\uff0d": "-",
+            }))
+            identifier = re.search(
+                r"(?<![0-9A-Za-z])(?=[0-9A-Za-z-]{3,64}(?![0-9A-Za-z-]))"
+                r"(?=[0-9A-Za-z-]*[A-Za-z])[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+",
+                normalized,
+            )
+            if identifier is not None:
+                lines.append(
+                    f"查询条件：规格型号 = `{identifier.group(0)}`；"
+                    "“商品名称”列为该规格型号对应的规范商品名称。"
+                )
+        lines.extend(["", cls._markdown_result_table(display_columns, rows)])
+        return "\n".join(lines)
 
     @staticmethod
     def _requested_report_format(question: str) -> str:
@@ -7913,6 +8127,7 @@ class DataAnalysisOrchestrator:
             "product_name": "产品名称", "dealer_name": "经销商名称",
             "hospital_name": "医院名称", "customer_name": "客户名称",
             "supplier_name": "供应商名称", "store_name": "门店名称",
+            "商品": "商品名称",
         }
         tail = raw.rsplit(".", 1)[-1]
         return aliases.get(tail, tail.replace("_", " "))
@@ -7953,13 +8168,18 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _task_result_summary_table(results: list[TaskExecutionResult]) -> str:
-        lines = ["| 查询目标 | 结果内容 |", "| --- | --- |"]
-        for result in results:
-            content = result.answer or "未返回结果。"
-            content = DataAnalysisOrchestrator._markdown_cell(content)
-            target = DataAnalysisOrchestrator._markdown_cell(result.question)
-            lines.append(f"| {target} | {content} |")
-        return "\n".join(lines)
+        # A child answer may itself contain a Markdown table. Embedding it in
+        # an outer table forces pipes to be escaped and newlines to become
+        # ``<br>``, leaving raw table syntax visible in the UI. Independent
+        # sections are valid for every result shape and preserve child tables.
+        sections: list[str] = []
+        for index, result in enumerate(results, 1):
+            content = (result.answer or "未返回结果。").strip()
+            status = "" if result.status == "COMPLETED" else f"（{result.status}）"
+            sections.append(
+                f"### {index}. {result.question}{status}\n\n{content}"
+            )
+        return "\n\n".join(sections)
 
     @classmethod
     def _ambiguity_texts(cls, exc: AdapterError) -> list[str]:
