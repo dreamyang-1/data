@@ -11,7 +11,11 @@ import re
 
 import httpx
 
-from app.domain.models import CanonicalAnalysisRequest, SemanticAmbiguity
+from app.domain.models import (
+    CanonicalAnalysisRequest,
+    SemanticAmbiguity,
+    SemanticFilterBinding,
+)
 from app.services.entity_extraction import EntityCandidate, EntityCandidateExtractor
 
 
@@ -343,6 +347,110 @@ class QuestionRewriter:
             display["entity_values"] = list(dict.fromkeys(entity_values))
         request.semantic_display_slots = display
         return request
+
+    async def ground_executable_filters(
+        self,
+        request: CanonicalAnalysisRequest,
+        *,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+        business_domain_ids: list[int] | None = None,
+    ) -> list[SemanticAmbiguity]:
+        """Resolve each filter literal independently against the live catalog.
+
+        Whole-question embeddings are intentionally broad and can crowd an
+        exact brand/manufacturer hit out of a small top-k result set.  Querying
+        the already extracted literal closes that recall gap while the existing
+        family/gap gates still decide whether a binding is safe.  The model's
+        provisional field is replaced atomically with the vector-catalog field
+        and canonical value; ambiguous cross-attribute hits remain blocking.
+        """
+
+        if self.searcher is None or semantic_model_id is None:
+            return []
+        literals: list[str] = []
+        for item in request.filters:
+            if not isinstance(item, dict):
+                continue
+            raw = item.get("value")
+            values = raw if isinstance(raw, list) else [raw]
+            for value in values:
+                literal = str(value or "").strip().strip("%")
+                if (
+                    literal
+                    and len(literal) <= 500
+                    and not re.fullmatch(r"[-+]?\d+(?:\.\d+)?", literal)
+                ):
+                    literals.append(literal)
+        literals = list(dict.fromkeys(literals))[:20]
+        if not literals:
+            return []
+
+        results = await asyncio.gather(*[
+            self.searcher.search(
+                literal,
+                semantic_model_id=semantic_model_id,
+                business_domain_id=business_domain_id,
+                business_domain_ids=business_domain_ids,
+            )
+            for literal in literals
+        ], return_exceptions=True)
+        matches: list[dict[str, Any]] = []
+        ambiguities: list[SemanticAmbiguity] = []
+        for literal, result in zip(literals, results, strict=True):
+            if isinstance(result, Exception):
+                logger.warning(
+                    "isolated entity filter grounding skipped safely: literal=%r error=%s",
+                    literal,
+                    type(result).__name__,
+                )
+                continue
+            current = [dict(item) for item in result if isinstance(item, dict)]
+            matches.extend(current)
+            version = self._semantic_model_version(current)
+            ambiguities.extend(self._detect_semantic_ambiguities(
+                literal,
+                current,
+                semantic_model_id=semantic_model_id,
+                semantic_model_version=version,
+            ))
+
+        if matches:
+            # Stable deduplication prevents repeated refresh/index rows from
+            # manufacturing a false ambiguity or changing the winning score.
+            unique: dict[tuple[str, str, str, int | None], dict[str, Any]] = {}
+            for item in matches:
+                key = (
+                    str(item.get("attribute_code") or ""),
+                    str(item.get("attribute_name") or ""),
+                    str(item.get("attribute_value") or item.get("canonical_value") or ""),
+                    item.get("business_domain_id"),
+                )
+                previous = unique.get(key)
+                if previous is None or float(item.get("score") or 0.0) > float(
+                    previous.get("score") or 0.0
+                ):
+                    unique[key] = item
+            self.ground_request_dimensions(request, list(unique.values()))
+            versions = {
+                binding.semantic_model_version
+                for binding in request.semantic_filter_bindings
+                if binding.semantic_model_version
+            }
+            if len(versions) == 1:
+                request.semantic_model_version = next(iter(versions))
+            resolved_domains = sorted({
+                binding.business_domain_id
+                for binding in request.semantic_filter_bindings
+                if binding.business_domain_id is not None
+            })
+            if resolved_domains:
+                request.resolved_business_domain_ids = resolved_domains
+
+        by_id: dict[str, SemanticAmbiguity] = {}
+        for item in ambiguities:
+            by_id[item.ambiguity_id or f"{item.type}:{item.phrase}"] = item
+        return list(by_id.values())[:5]
 
     async def rewrite(
         self,
@@ -734,6 +842,12 @@ class QuestionRewriter:
                 "values": candidate_values,
                 "canonical_value": canonical_value,
                 "score": float(item.get("score") or 0.0),
+                "attribute_code": str(item.get("attribute_code") or "").strip(),
+                "record_id": str(item.get("record_id") or item.get("id") or "").strip() or None,
+                "business_domain_id": item.get("business_domain_id"),
+                "semantic_model_version": str(
+                    item.get("semantic_model_version") or item.get("model_version") or ""
+                ).strip() or None,
             })
 
         grounded_by_family: dict[str, str] = {}
@@ -778,7 +892,8 @@ class QuestionRewriter:
                 )
             )
 
-        for item in request.filters:
+        semantic_bindings: list[SemanticFilterBinding] = []
+        for filter_index, item in enumerate(request.filters):
             if not isinstance(item, dict):
                 grounded_filters.append(item)
                 continue
@@ -852,11 +967,26 @@ class QuestionRewriter:
                     ))
                 elif raw_value not in (None, ""):
                     current["value"] = canonical_value
+                attribute_code = selected["attribute_code"]
+                if attribute_code:
+                    for required in sorted(required_values):
+                        semantic_bindings.append(SemanticFilterBinding(
+                            filter_index=filter_index,
+                            input_value=required,
+                            canonical_value=canonical_value,
+                            canonical_name=selected["label"],
+                            attribute_code=attribute_code,
+                            record_id=selected["record_id"],
+                            score=selected["score"],
+                            business_domain_id=selected["business_domain_id"],
+                            semantic_model_version=selected["semantic_model_version"],
+                        ))
             grounded_filters.append(current)
 
         if not grounded_by_family and not canonicalized_literals:
             return request
         request.filters = grounded_filters
+        request.semantic_filter_bindings = semantic_bindings
         request.dimensions = list(dict.fromkeys(
             grounded_by_family.get(family(value) or "", value)
             for value in request.dimensions
@@ -900,7 +1030,43 @@ class QuestionRewriter:
             request.assumptions.append(
                 "SEMANTIC_FILTER_FAMILY_REBOUND_FROM_CURRENT_MODEL"
             )
+        cls._remove_filter_subject_from_trend_grouping(request)
         return request
+
+    @staticmethod
+    def _remove_filter_subject_from_trend_grouping(
+        request: CanonicalAnalysisRequest,
+    ) -> None:
+        """Keep ``某品牌产品`` as scope unless product grouping was explicit."""
+
+        if str(request.primary_intent) != "TREND_ANALYSIS":
+            return
+        has_brand_scope = any(
+            any(token in binding.attribute_code.casefold() for token in (
+                "brand", "manufacturer",
+            ))
+            for binding in request.semantic_filter_bindings
+        )
+        if not has_brand_scope:
+            return
+        compact = re.sub(r"\s+", "", request.original_question or "")
+        explicit_product_grouping = bool(re.search(
+            r"(?:按|分|各|每个|分别(?:按)?)(?:商品|产品|SKU|货品)"
+            r"|(?:商品|产品|SKU|货品)(?:维度|分别|各自)",
+            compact,
+            re.I,
+        ))
+        if explicit_product_grouping:
+            return
+        filtered = [
+            value for value in request.dimensions
+            if value not in {"商品", "产品", "商品名称", "产品名称"}
+        ]
+        if filtered != request.dimensions:
+            request.dimensions = filtered
+            request.assumptions.append(
+                "FILTER_SUBJECT_REMOVED_FROM_TREND_GROUPING"
+            )
 
     async def _extract_candidates(self, question: str) -> list[EntityCandidate]:
         if self.candidate_extractor is None or self.candidate_mode == "off":

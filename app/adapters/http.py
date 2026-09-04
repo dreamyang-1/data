@@ -890,7 +890,7 @@ class HttpDataRetrievalAdapter:
         families = (
             ("department", ("科室", "部门", "department", "dept")),
             ("category", ("商品分类", "产品分类", "商品品类", "分类", "类别", "品类", "类目", "category", "class")),
-            ("brand", ("商品品牌", "品牌", "brand")),
+            ("brand", ("商品品牌", "品牌", "母品牌", "母厂牌", "厂牌", "parent_brand", "brand")),
             ("manufacturer", ("厂家", "制造商", "厂商", "manufacturer", "maker", "producer")),
             ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
             ("supplier", ("供应商", "经销商", "supplier", "dealer", "vendor")),
@@ -1342,6 +1342,27 @@ class HttpDataRetrievalAdapter:
                 "必须使用召回元数据中商品实体自身的品牌名称属性，或沿已注册厂家关系"
                 "连接到厂家的名称属性进行精确名称过滤；禁止将名称值填入 *_code、ID、"
                 "关系键字段，也不得要求用户提供内部编码。"
+            )
+        if request.semantic_filter_bindings:
+            binding_contract = [
+                {
+                    "filter_index": item.filter_index,
+                    "attribute_code": item.attribute_code,
+                    "canonical_name": item.canonical_name,
+                    "canonical_value": item.canonical_value,
+                    "business_domain_id": item.business_domain_id,
+                }
+                for item in request.semantic_filter_bindings
+            ]
+            asl_query += (
+                "\n实体属性向量规范化约束：以下字段和值已经由当前语义模型的实体属性"
+                "向量库确认，必须按 attribute_code 对应的已发布语义属性生成筛选，不得"
+                "退化为同值的商品名称、编码或其他属性："
+                + json.dumps(
+                    binding_contract,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
             )
         if analysis_contract is not None:
             retry_feedback = next(
@@ -2302,9 +2323,14 @@ class HttpDataRetrievalAdapter:
                 and str(item.get("value")).strip() == ""
             )
         missing: list[dict[str, Any]] = []
-        for required in request.filters:
+        bindings_by_index = {
+            binding.filter_index: binding
+            for binding in request.semantic_filter_bindings
+        }
+        for required_index, required in enumerate(request.filters):
             if not isinstance(required, dict):
                 continue
+            binding = bindings_by_index.get(required_index)
             required_operator = str(required.get("operator") or "EQ").upper()
             if required_operator in null_operators:
                 expected_field = str(required.get("field") or "").strip()
@@ -2338,6 +2364,24 @@ class HttpDataRetrievalAdapter:
             required_negative = required_operator in negative_operators
             preserved = False
             for item in generated:
+                if binding is not None:
+                    candidate_field = str(item.get("field") or "").strip()
+                    expected_code = binding.attribute_code.casefold().rsplit(".", 1)[-1]
+                    candidate_code = candidate_field.casefold().rsplit(".", 1)[-1]
+                    exact_attribute = bool(
+                        expected_code and candidate_code == expected_code
+                    )
+                    expected_family = cls._constraint_field_family(
+                        f"{binding.canonical_name} {binding.attribute_code}"
+                    )
+                    candidate_family = cls._constraint_field_family(candidate_field)
+                    family_attribute = bool(
+                        expected_family
+                        and candidate_family
+                        and expected_family == candidate_family
+                    )
+                    if not exact_attribute and not family_attribute:
+                        continue
                 candidate_operator = str(
                     item.get("operator") or "EQ"
                 ).upper().replace("_", " ")

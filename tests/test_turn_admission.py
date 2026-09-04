@@ -84,6 +84,20 @@ def _filter_value(request: CanonicalAnalysisRequest, field: str) -> str | None:
     )
 
 
+def test_existing_monthly_trend_phrase_continues_active_business_task():
+    _, _, current, decision = _decision(
+        "按月分析费森尤斯产品的销售趋势",
+        "月份的趋势",
+        "existing-monthly-trend-followup",
+    )
+
+    assert current.missing_slots
+    assert decision.relation == TurnRelation.CURRENT_TOPIC_FOLLOWUP
+    assert decision.inherit_business_context is True
+    assert decision.needs_clarification is False
+    assert "EXISTING_MONTHLY_TREND" in decision.current_turn_facts.followup_signals
+
+
 @pytest.mark.parametrize(
     "question",
     ("查询次要科室", "只看次要科室", "查询主科室", "次要的科室有哪些？"),

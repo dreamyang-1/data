@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.domain.models import PrimaryIntent, TrustedIdentity
+from app.domain.models import PrimaryIntent, SemanticFilterBinding, TrustedIdentity
 from app.intent.classifier import RuleBasedIntentClassifier
 from app.services.intent_asl_contract import (
     build_intent_asl_contract,
@@ -320,3 +320,36 @@ def test_ranked_business_scale_contract_keeps_partner_grouping():
         "limit": None,
     }
     assert validate_intent_asl_contract_definition(contract) == []
+
+
+def test_contract_completeness_accepts_authoritative_vector_filter_rebinding():
+    request = RuleBasedIntentClassifier().classify(
+        "按月分析费森尤斯产品的销售趋势", IDENTITY, "vector-filter-rebinding"
+    )
+    request.turn_admission = TurnAdmissionGate().evaluate(
+        question=request.original_question,
+        current=request,
+        previous=None,
+        message_id="vector-filter-rebinding-message",
+    )
+    assert request.filters == [
+        {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"}
+    ]
+
+    request.filters = [
+        {"field": "母厂牌", "operator": "EQ", "value": "费森尤斯"}
+    ]
+    request.semantic_filter_bindings = [SemanticFilterBinding(
+        filter_index=0,
+        input_value="费森尤斯",
+        canonical_value="费森尤斯",
+        canonical_name="母厂牌",
+        attribute_code="parent_brand",
+        record_id="parent-brand-fresenius",
+        score=1.0,
+        business_domain_id=205,
+    )]
+
+    contract = build_intent_asl_contract(request)
+
+    assert validate_intent_asl_contract_completeness(contract, request) == []

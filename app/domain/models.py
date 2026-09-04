@@ -253,6 +253,28 @@ class DependencyConstraint(StrictModel):
     value_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
+class SemanticFilterBinding(StrictModel):
+    """Vector-catalog proof for one executable business filter.
+
+    The intent model may propose a field, but only the current semantic model's
+    entity-value catalog is allowed to bind the final attribute/value pair.
+    Keeping the proof on the canonical request lets ASL validation compare the
+    generated semantic attribute code instead of accepting a different field
+    merely because it happens to preserve the same literal value.
+    """
+
+    filter_index: int = Field(ge=0, le=99)
+    input_value: str = Field(min_length=1, max_length=500)
+    canonical_value: str = Field(min_length=1, max_length=500)
+    canonical_name: str = Field(min_length=1, max_length=100)
+    attribute_code: str = Field(min_length=1, max_length=257)
+    record_id: str | None = Field(default=None, max_length=512)
+    score: float = Field(ge=0, le=1)
+    business_domain_id: int | None = Field(default=None, gt=0)
+    semantic_model_version: str | None = Field(default=None, max_length=128)
+    source: Literal["ENTITY_ATTRIBUTE_VECTOR"] = "ENTITY_ATTRIBUTE_VECTOR"
+
+
 class CanonicalAnalysisRequest(StrictModel):
     schema_version: str = "1.0"
     request_id: UUID = Field(default_factory=uuid4)
@@ -292,6 +314,11 @@ class CanonicalAnalysisRequest(StrictModel):
     fields: list[str] = Field(default_factory=list)
     dimensions: list[str] = Field(default_factory=list)
     filters: list[dict[str, Any]] = Field(default_factory=list)
+    semantic_filter_bindings: list[SemanticFilterBinding] = Field(
+        default_factory=list,
+        max_length=100,
+        description="当前语义模型实体属性向量库确认的筛选字段和值",
+    )
     time_range: TimeRange | None = None
     comparison_type: str | None = None
     ranking_limit: int | None = Field(default=None, ge=1, le=100)
@@ -319,6 +346,11 @@ class CanonicalAnalysisRequest(StrictModel):
         description="后端为本次请求显式选择的平台已注册数据库ID",
     )
     business_domain_ids: list[int] = Field(default_factory=list)
+    resolved_business_domain_ids: list[int] = Field(
+        default_factory=list,
+        max_length=50,
+        description="AUTO 模式下由当前语义向量命中确定的执行域，不代表调用方显式选择",
+    )
     business_domain_selection_mode: Literal["AUTO", "EXPLICIT"] = "AUTO"
     confirmed_memory_ids: list[str] = Field(default_factory=list)
     confirmed_preferences: list[str] = Field(default_factory=list)

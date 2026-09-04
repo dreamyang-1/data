@@ -260,6 +260,89 @@ def test_current_semantic_catalog_rebinds_provisional_product_filter_to_brand():
     )
 
 
+@pytest.mark.asyncio
+async def test_isolated_filter_lookup_makes_parent_brand_binding_authoritative():
+    request = CanonicalAnalysisRequest(
+        conversation_id="fresenius-parent-brand",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="按月分析费森尤斯产品的销售趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        entity="产品",
+        dimensions=["商品"],
+        filters=[{"field": "商品名称", "operator": "EQ", "value": "费森尤斯"}],
+        semantic_entity_mentions=["费森尤斯"],
+    )
+    searcher = FakeSearcher([
+        {
+            "record_id": "parent-brand-fresenius",
+            "score": 1.0,
+            "entity_name": "生产厂家",
+            "attribute_name": "母厂牌",
+            "attribute_code": "parent_brand",
+            "attribute_value": "费森尤斯",
+            "business_domain_id": 205,
+            "semantic_model_version": "published-31",
+        },
+        {
+            "record_id": "manufacturer-fresenius",
+            "score": 0.75,
+            "entity_name": "生产厂家",
+            "attribute_name": "厂家名称",
+            "attribute_code": "manufacturer_name",
+            "attribute_value": "费森尤斯医疗用品股份有限公司",
+            "business_domain_id": 205,
+            "semantic_model_version": "published-31",
+        },
+    ])
+
+    ambiguities = await QuestionRewriter(searcher).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+    )
+
+    assert ambiguities == []
+    assert searcher.calls == [("费森尤斯", 81, None, [])]
+    assert request.filters == [
+        {"field": "母厂牌", "operator": "EQ", "value": "费森尤斯"},
+    ]
+    assert request.dimensions == []
+    assert request.resolved_business_domain_ids == [205]
+    assert len(request.semantic_filter_bindings) == 1
+    binding = request.semantic_filter_bindings[0]
+    assert binding.attribute_code == "parent_brand"
+    assert binding.canonical_value == "费森尤斯"
+    assert binding.score == 1.0
+    assert "FILTER_SUBJECT_REMOVED_FROM_TREND_GROUPING" in request.assumptions
+
+
+def test_explicit_per_product_trend_keeps_product_grouping_after_brand_binding():
+    request = CanonicalAnalysisRequest(
+        conversation_id="fresenius-product-series",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="按月分析费森尤斯各产品的销售趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        entity="产品",
+        dimensions=["商品"],
+        filters=[{"field": "商品名称", "operator": "EQ", "value": "费森尤斯"}],
+    )
+
+    QuestionRewriter.ground_request_dimensions(request, [{
+        "record_id": "parent-brand-fresenius",
+        "score": 1.0,
+        "entity_name": "生产厂家",
+        "attribute_name": "母厂牌",
+        "attribute_code": "parent_brand",
+        "attribute_value": "费森尤斯",
+        "business_domain_id": 205,
+    }])
+
+    assert request.dimensions == ["商品"]
+
+
 def test_current_semantic_catalog_rebinds_manufacturer_to_published_name_field():
     value = "B.Braun Surgical SA"
     request = CanonicalAnalysisRequest(

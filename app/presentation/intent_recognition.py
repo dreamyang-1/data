@@ -252,7 +252,16 @@ def build_intent_recognition_display_v2(
         else request.context_mode != ContextMode.NONE
     )
     context_used = bool(inherited or request.rewrite_context_applied)
-    if request.time_range is not None:
+    if (
+        request.time_range is not None
+        and "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
+        and request.primary_intent == PrimaryIntent.TREND_ANALYSIS
+    ):
+        # The concrete interval is finalized only after the query service
+        # returns its verified business-data watermark. Showing a wall-clock
+        # date here would contradict the later source-aware execution range.
+        time_range = "最近12个完整业务月份（执行时按数据水位确定）"
+    elif request.time_range is not None:
         time_range = (
             f"{request.time_range.start.isoformat()} 至 "
             f"{request.time_range.end_exclusive.isoformat()}（右开区间）"

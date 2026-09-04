@@ -2072,6 +2072,137 @@ class DataAnalysisOrchestrator:
             return chat.business_domain_ids[0]
         return None
 
+    @classmethod
+    def _effective_query_business_domain_id(
+        cls,
+        request: CanonicalAnalysisRequest,
+        chat: ChatRequest,
+    ) -> int | None:
+        """Use a unique vector-resolved domain only in caller AUTO mode."""
+
+        explicit = cls._effective_business_domain_id(chat)
+        if explicit is not None:
+            return explicit
+        if not chat.business_domain_ids and len(request.resolved_business_domain_ids) == 1:
+            return request.resolved_business_domain_ids[0]
+        return None
+
+    @staticmethod
+    def _shift_month_start(value: date, months: int) -> date:
+        ordinal = value.year * 12 + value.month - 1 + months
+        year, month_index = divmod(ordinal, 12)
+        return date(year, month_index + 1, 1)
+
+    @classmethod
+    def _watermark_default_trend_range(
+        cls,
+        request: CanonicalAnalysisRequest,
+        dataset: Dataset,
+    ) -> TimeRange | None:
+        """Return 12 complete source months for a system-default trend range."""
+
+        if (
+            request.primary_intent != PrimaryIntent.TREND_ANALYSIS
+            or request.time_range is None
+            or "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in request.assumptions
+            or dataset.source_data_as_of is None
+        ):
+            return None
+        watermark = (
+            dataset.source_data_as_of.date()
+            if isinstance(dataset.source_data_as_of, datetime)
+            else dataset.source_data_as_of
+        )
+        if request.time_range.end_exclusive <= watermark + timedelta(days=1):
+            return None
+        watermark_month = watermark.replace(day=1)
+        next_month = cls._shift_month_start(watermark_month, 1)
+        # A month is complete only when the verified source watermark reached
+        # its final calendar day. Partial current months are deliberately not
+        # mixed into a default trend without disclosure.
+        end_exclusive = (
+            next_month
+            if watermark == next_month - timedelta(days=1)
+            else watermark_month
+        )
+        start = cls._shift_month_start(end_exclusive, -12)
+        candidate = TimeRange(
+            start=start,
+            end_exclusive=end_exclusive,
+            timezone=request.time_range.timezone,
+        )
+        if candidate == request.time_range:
+            return None
+        return candidate
+
+    async def _requery_system_default_trend_at_watermark(
+        self,
+        request: CanonicalAnalysisRequest,
+        query_result: DataQueryResult,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+    ) -> DataQueryResult:
+        """Replan once when wall-clock defaults extend beyond business data."""
+
+        reanchored = self._watermark_default_trend_range(
+            request, query_result.dataset
+        )
+        if reanchored is None:
+            return query_result
+        retry_request = request.model_copy(deep=True, update={
+            "request_id": uuid4(),
+            "time_range": reanchored,
+            "temporal_anchor": None,
+            "resolved_periods": [],
+            "asl_template": None,
+            "source_dataset_id": None,
+            "assumptions": list(dict.fromkeys([
+                *(
+                    value for value in request.assumptions
+                    if value != "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"
+                ),
+                "DEFAULT_TIME_RANGE=LATEST_AVAILABLE_12_COMPLETE_MONTHS",
+                "TIME_SCOPE_SOURCE=SOURCE_WATERMARK",
+                "SOURCE_WATERMARK_REPLAN_ATTEMPTED",
+            ])),
+        })
+        retry_request.rewritten_question = render_execution_question(retry_request)
+        await emit_progress(
+            "DATA_RETRIEVAL",
+            "RUNNING",
+            "系统默认时间超过当前业务数据水位，正在按最新12个完整月份受控重查一次。",
+            source_data_as_of=query_result.dataset.source_data_as_of.isoformat(),
+            reanchored_start=reanchored.start.isoformat(),
+            reanchored_end_exclusive=reanchored.end_exclusive.isoformat(),
+        )
+        try:
+            retried = await self.adapters.query.query(
+                retry_request,
+                identity,
+                semantic_model_id=chat.semantic_model_id,
+                business_domain_id=self._effective_query_business_domain_id(
+                    retry_request, chat
+                ),
+            )
+        except AdapterError as exc:
+            logger.warning(
+                "source-watermark trend replan failed; preserving first verified result: "
+                "request_id=%s code=%s upstream_code=%s",
+                request.request_id,
+                exc.code,
+                exc.upstream_code,
+            )
+            request.assumptions.append("SOURCE_WATERMARK_REPLAN_FAILED")
+            return query_result
+        request.time_range = reanchored
+        request.temporal_anchor = None
+        request.resolved_periods = []
+        request.asl_template = None
+        request.source_dataset_id = None
+        request.rewritten_question = retry_request.rewritten_question
+        request.assumptions = list(dict.fromkeys(retry_request.assumptions))
+        return retried
+
     async def _recover_live_published_metrics(
         self,
         request: CanonicalAnalysisRequest,
@@ -2130,7 +2261,9 @@ class DataAnalysisOrchestrator:
                 request,
                 identity,
                 semantic_model_id=chat.semantic_model_id,
-                business_domain_id=self._effective_business_domain_id(chat),
+                business_domain_id=self._effective_query_business_domain_id(
+                    request, chat
+                ),
             )
         except (AdapterError, httpx.HTTPError, ValueError, TypeError) as exc:
             logger.warning(
@@ -2164,7 +2297,9 @@ class DataAnalysisOrchestrator:
                     request,
                     identity,
                     semantic_model_id=chat.semantic_model_id,
-                    business_domain_id=self._effective_business_domain_id(chat),
+                    business_domain_id=self._effective_query_business_domain_id(
+                        request, chat
+                    ),
                 )
             except (AdapterError, httpx.HTTPError, ValueError, TypeError) as exc:
                 logger.warning(
@@ -2497,6 +2632,7 @@ class DataAnalysisOrchestrator:
             "INTENT_RECOGNITION", "RUNNING", "正在识别查询意图和关键分析参数。"
         )
         model_entity_mentions: list[str] = []
+        filter_semantic_ambiguities: list[SemanticAmbiguity] = []
         if pending:
             explicit_replacement_task = bool(re.search(
                 r"(?:算了|不想问|不问了|不用了|换个问题|新问题|新任务)"
@@ -3140,6 +3276,21 @@ class DataAnalysisOrchestrator:
             )
             if callable(sanitize_mentions):
                 sanitize_mentions(request)
+        if self.question_rewriter is not None:
+            # Resolve extracted filter literals separately from the whole
+            # question.  A small whole-query top-k can otherwise omit an exact
+            # entity value (for example 费森尤斯=母厂牌) and leave the model's
+            # provisional 商品名称 field in the executable request.
+            filter_semantic_ambiguities = (
+                await self.question_rewriter.ground_executable_filters(
+                    request,
+                    semantic_model_id=chat.semantic_model_id,
+                    business_domain_id=self._effective_business_domain_id(chat),
+                    business_domain_ids=list(chat.business_domain_ids),
+                )
+            )
+            if callable(sanitize_mentions):
+                sanitize_mentions(request)
         # A closed-form “按月/季度统计” is a grouped metric table. Structured
         # completion sometimes rewrites it as “分析趋势”, changing both the
         # deliverable and follow-up behavior. Keep the deterministic current
@@ -3512,12 +3663,17 @@ class DataAnalysisOrchestrator:
         required_missing_slots = getattr(rules, "required_missing_slots", None)
         if callable(required_missing_slots):
             request.missing_slots = required_missing_slots(request)
-        if rewrite is not None and rewrite.semantic_ambiguities:
-            request.semantic_ambiguities = [
-                item.model_copy(deep=True)
-                for item in rewrite.semantic_ambiguities
-                if item.blocking
-            ]
+        rewrite_ambiguities = (
+            rewrite.semantic_ambiguities if rewrite is not None else []
+        )
+        if rewrite_ambiguities or filter_semantic_ambiguities:
+            combined_ambiguities: dict[str, SemanticAmbiguity] = {}
+            for item in [*rewrite_ambiguities, *filter_semantic_ambiguities]:
+                if not item.blocking:
+                    continue
+                key = item.ambiguity_id or f"{item.type}:{item.phrase}"
+                combined_ambiguities[key] = item.model_copy(deep=True)
+            request.semantic_ambiguities = list(combined_ambiguities.values())[:5]
             request.ambiguities = [
                 item.question for item in request.semantic_ambiguities
             ]
@@ -3898,7 +4054,9 @@ class DataAnalysisOrchestrator:
                     query_result = await self.adapters.query.query(
                         retrieval_request, identity,
                         semantic_model_id=chat.semantic_model_id,
-                        business_domain_id=self._effective_business_domain_id(chat),
+                        business_domain_id=self._effective_query_business_domain_id(
+                            retrieval_request, chat
+                        ),
                     )
                     if relationship_count_request is not None:
                         query_result = self._relationship_count_projection_result(
@@ -3955,7 +4113,9 @@ class DataAnalysisOrchestrator:
                     query_result = await self.adapters.query.query(
                         retry_request, identity,
                         semantic_model_id=chat.semantic_model_id,
-                        business_domain_id=self._effective_business_domain_id(chat),
+                        business_domain_id=self._effective_query_business_domain_id(
+                            retry_request, chat
+                        ),
                     )
                     if relationship_count_request is not None:
                         query_result = self._relationship_count_projection_result(
@@ -4003,6 +4163,12 @@ class DataAnalysisOrchestrator:
                     request, self._fallback(request, self._dependency_message(exc))
                 )
 
+        query_result = await self._requery_system_default_trend_at_watermark(
+            request,
+            query_result,
+            chat,
+            identity,
+        )
         self._restore_projected_filter_columns(request, query_result.dataset)
         query_result = self._enforce_name_projection_integrity(
             request, query_result
@@ -4271,7 +4437,14 @@ class DataAnalysisOrchestrator:
                         "所选区间在该日期之后的部分尚无数据。"
                     )
             if scope:
-                message += f"当前筛选条件：{scope}。请确认名称是否与主数据一致。"
+                message += f"当前筛选条件：{scope}。"
+                if request.semantic_filter_bindings:
+                    message += "筛选字段和值已经按当前语义模型的实体属性向量库规范化。"
+                else:
+                    message += (
+                        "本次没有获得可核验的实体属性向量绑定；"
+                        "请使用更完整的业务名称重新查询。"
+                    )
             response = self._fallback(request, message)
             response.dataset_id = dataset_id
             response.result_file_url = query_result.result_file_url
@@ -6151,6 +6324,7 @@ class DataAnalysisOrchestrator:
             return compact in {"同比", "环比", "目标值", "对象间比较"}
         if slot == "turn_relation":
             return compact in {
+                "补充", "继续", "上一轮", "修改",
                 "补充上一轮", "修改上一轮", "继续上一轮", "追问上一轮",
                 "补充或修改上一轮问题", "作为独立新问题", "独立新问题",
                 "新问题", "作为新问题",

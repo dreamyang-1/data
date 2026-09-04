@@ -12,7 +12,7 @@ from app.adapters.http import (
 )
 from app.config import Settings
 from datetime import date, datetime, timezone
-from app.domain.models import AnalysisOperator, CanonicalAnalysisRequest, Dataset, DependencyConstraint, MetricRef, PrimaryIntent, TimeRange, TrustedIdentity
+from app.domain.models import AnalysisOperator, CanonicalAnalysisRequest, Dataset, DependencyConstraint, MetricRef, PrimaryIntent, SemanticFilterBinding, TimeRange, TrustedIdentity
 from app.services.knowledge_retrieval import RedisKnowledgeSearchCache
 from app.services.relationship_projection import (
     requires_distinct_relationship_projection,
@@ -538,6 +538,49 @@ def test_required_non_null_name_filter_accepts_current_semantic_field():
         required,
     )
 
+
+def test_vector_bound_filter_requires_the_same_semantic_attribute():
+    required = CanonicalAnalysisRequest(
+        conversation_id="bound-parent-brand",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="按月分析费森尤斯产品的销售趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        filters=[{"field": "母厂牌", "operator": "EQ", "value": "费森尤斯"}],
+        semantic_filter_bindings=[SemanticFilterBinding(
+            filter_index=0,
+            input_value="费森尤斯",
+            canonical_value="费森尤斯",
+            canonical_name="母厂牌",
+            attribute_code="parent_brand",
+            record_id="parent-brand-fresenius",
+            score=1.0,
+            business_domain_id=205,
+        )],
+    )
+
+    HttpDataRetrievalAdapter._validate_request_filters(
+        {"filters": [{
+            "field": "manufacturer.parent_brand",
+            "operator": "=",
+            "value": "费森尤斯",
+        }]},
+        required,
+        exact_operator_contract=True,
+    )
+
+    with pytest.raises(AdapterError) as exc:
+        HttpDataRetrievalAdapter._validate_request_filters(
+            {"filters": [{
+                "field": "product.product_name",
+                "operator": "=",
+                "value": "费森尤斯",
+            }]},
+            required,
+            exact_operator_contract=True,
+        )
+
+    assert exc.value.code == "ASL_REQUIRED_FILTER_MISSING"
 
 def test_required_non_null_name_filter_cannot_be_dropped():
     required = CanonicalAnalysisRequest(

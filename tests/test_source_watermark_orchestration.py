@@ -94,3 +94,44 @@ def test_missing_source_watermark_downgrades_time_query_without_failing_it() -> 
 
     assert reliability.level == "LIMITED"
     assert any("未提供可验证的业务数据水位" in item for item in reliability.warnings)
+
+
+def test_system_default_trend_is_reanchored_to_latest_complete_source_months() -> None:
+    value = CanonicalAnalysisRequest(
+        conversation_id="watermark-default-trend",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="按月分析费森尤斯产品的销售趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        time_range=TimeRange(
+            start=date(2025, 9, 4),
+            end_exclusive=date(2026, 9, 5),
+        ),
+        assumptions=["DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"],
+    )
+
+    reanchored = DataAnalysisOrchestrator._watermark_default_trend_range(
+        value, dataset()
+    )
+
+    assert reanchored is not None
+    assert reanchored.start == date(2024, 12, 1)
+    assert reanchored.end_exclusive == date(2025, 12, 1)
+
+
+def test_explicit_trend_time_is_never_reanchored_by_source_watermark() -> None:
+    value = CanonicalAnalysisRequest(
+        conversation_id="watermark-explicit-trend",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="按月分析2025年费森尤斯产品的销售趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        time_range=TimeRange(
+            start=date(2025, 1, 1),
+            end_exclusive=date(2026, 1, 1),
+        ),
+    )
+
+    assert DataAnalysisOrchestrator._watermark_default_trend_range(
+        value, dataset()
+    ) is None

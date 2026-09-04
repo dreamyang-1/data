@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import date
 from uuid import uuid4
 
 import pytest
@@ -13,6 +14,7 @@ from app.domain.models import (
     ContextMode,
     ExtensionExecution,
     PrimaryIntent,
+    TimeRange,
     TurnRelation,
 )
 from app.main import create_app
@@ -343,6 +345,27 @@ def test_intent_display_v2_is_multiline_and_does_not_mutate_execution_request():
     assert "\n- 结构化提取：\n  - 指标：[]" in summary
     assert "商品品牌 EQ 费森尤斯（来源：用户原始输入，经当前语义模型向量库规范化）" in summary
     assert "\n- 是否需要追问：否" in summary
+
+
+def test_default_trend_time_display_waits_for_verified_source_watermark():
+    request = CanonicalAnalysisRequest(
+        conversation_id="intent-display-watermark-time",
+        application_id="app",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="按月分析费森尤斯产品的销售趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        time_range=TimeRange(
+            start=date(2025, 9, 4),
+            end_exclusive=date(2026, 9, 5),
+        ),
+        assumptions=["DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"],
+    )
+
+    summary = DataAnalysisOrchestrator._intent_think_summary(request)
+
+    assert "最近12个完整业务月份（执行时按数据水位确定）" in summary
+    assert "2025-09-04 至 2026-09-05" not in summary
 
 
 def test_intent_display_v2_renders_relation_enum_without_internal_code():

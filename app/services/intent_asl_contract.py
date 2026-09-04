@@ -97,6 +97,7 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
     role_aliases = {
         "产品": "商品", "产品名称": "商品名称",
         "品牌": "商品品牌", "品牌名称": "商品品牌", "母品牌": "商品品牌",
+        "母厂牌": "商品品牌", "厂牌": "商品品牌",
         "品类": "商品品类", "商品分类": "商品品类", "产品分类": "商品品类",
         "区域": "地区", "省份": "地区", "城市": "地区",
         "业务省份": "地区", "业务城市": "地区",
@@ -442,10 +443,66 @@ def validate_intent_asl_contract_completeness(
             if isinstance(item, dict)
         ]
         actual_signatures = {filter_signature(item) for item in contract_filters}
+
+        # Entity-value grounding is an authorized semantic normalization step:
+        # the current-turn parser may provisionally capture ``商品名称=费森尤斯``
+        # while the current vector catalog proves that the literal belongs to
+        # ``母厂牌/parent_brand``.  Completeness must still prove that the same
+        # operator and value survived, but it must compare against the grounded
+        # semantic attribute rather than requiring the parser's provisional
+        # field label forever.  Without this bridge the correct grounded ASL is
+        # rejected as EXPLICIT_FILTER_MISSING before it can execute.
+        # Keep this proof local to DataAnalysis_Agent.  The Oagnet request
+        # contract is intentionally versioned and strict, so internal grounding
+        # provenance must not be added to the wire schema.  The outbound
+        # ``filters`` are already canonicalized before this contract is built.
+        semantic_bindings = [
+            binding.model_dump(mode="json")
+            for binding in request.semantic_filter_bindings
+        ]
+
+        def has_grounded_equivalent(item: dict[str, Any]) -> bool:
+            raw_value = item.get("value")
+            expected_values = (
+                raw_value if isinstance(raw_value, list) else [raw_value]
+            )
+            expected_value_set = {
+                str(value).strip().strip("%")
+                for value in expected_values
+                if value not in (None, "")
+            }
+            expected_negative = (
+                str(item.get("operator") or "").upper() in negative_operators
+            )
+            for binding in semantic_bindings:
+                input_value = str(binding.get("input_value") or "").strip().strip("%")
+                canonical_value = (
+                    str(binding.get("canonical_value") or "").strip().strip("%")
+                )
+                if not expected_value_set.intersection({input_value, canonical_value}):
+                    continue
+                canonical_fields = {
+                    str(binding.get("canonical_name") or "").strip(),
+                    str(binding.get("attribute_code") or "").strip(),
+                }
+                canonical_fields.discard("")
+                if not canonical_fields:
+                    continue
+                for actual in contract_filters:
+                    actual_field, actual_negative, actual_values = filter_signature(actual)
+                    if (
+                        actual_field in canonical_fields
+                        and actual_negative == expected_negative
+                        and canonical_value in set(actual_values)
+                    ):
+                        return True
+            return False
+
         missing_filters = [
             item for item in expected_filters.value
             if isinstance(item, dict)
             and filter_signature(item) not in actual_signatures
+            and not has_grounded_equivalent(item)
         ]
         if missing_filters:
             add(
