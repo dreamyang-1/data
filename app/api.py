@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import re
 import time
+import unicodedata
 from collections.abc import AsyncIterator
 from typing import Any
 from uuid import uuid4
@@ -233,8 +235,63 @@ async def bind_chat_spreadsheet(
     }
 
 
+_DASH_TRANSLATION = str.maketrans({
+    "‐": "-", "‑": "-", "‒": "-", "–": "-", "—": "-", "―": "-",
+    "−": "-", "﹘": "-", "﹣": "-", "－": "-",
+})
+
+
+def _normalized_regeneration_text(value: str) -> str:
+    """Normalize only representation differences used to locate a history turn."""
+
+    normalized = unicodedata.normalize("NFKC", value).translate(_DASH_TRANSLATION)
+    return re.sub(r"\s+", "", normalized).casefold()
+
+
+def _normalized_history_question(value: str) -> str:
+    """Remove only known UI labels; never use fuzzy or arbitrary suffix matching."""
+
+    normalized = _normalized_regeneration_text(value)
+    return re.sub(
+        r"^(?:第(?:\d+|[一二三四五六七八九十]+)轮(?:问题)?|用户原始问题|用户问题|问题):",
+        "",
+        normalized,
+        count=1,
+    )
+
+
+def _regeneration_mode(payload: ChatRequest) -> str:
+    """Distinguish answer refresh from editing and resubmitting a question."""
+
+    if payload.original_question and (
+        _normalized_regeneration_text(payload.original_question)
+        != _normalized_regeneration_text(payload.question)
+    ):
+        return "REVISE"
+    return "REFRESH"
+
+
+async def _collect_revised_business_question(
+    request: Request, payload: ChatRequest
+) -> None:
+    """Record a revised user question once, while pure refresh stays silent."""
+
+    if _regeneration_mode(payload) != "REVISE":
+        return
+    revised = payload.model_copy(deep=True)
+    attempt = payload.refresh_request_id or payload.message_id
+    key = "\x1f".join((
+        payload.application_id,
+        payload.conversation_id,
+        attempt,
+        _normalized_regeneration_text(payload.question),
+    ))
+    revised.message_id = f"revision-{hashlib.sha256(key.encode('utf-8')).hexdigest()[:32]}"
+    await _collect_business_question(request, revised)
+
+
 def _prepare_regeneration(payload: ChatRequest) -> tuple[ChatRequest, str, str]:
-    """Create an isolated execution while preserving external response IDs.
+    """Prepare an idempotent refresh inside the original conversation scope.
 
     刷新（问题不变）与修改重提（question 已改写）共用本路径：
     - 纯刷新：question 即原问题，直接用它匹配 history 末尾的 user 轮；
@@ -246,15 +303,58 @@ def _prepare_regeneration(payload: ChatRequest) -> tuple[ChatRequest, str, str]:
     external_conversation_id = payload.conversation_id
     external_message_id = payload.message_id
     execution = payload.model_copy(deep=True)
-    refresh_id = f"refresh-{uuid4().hex}"
-    execution.conversation_id = refresh_id
-    execution.message_id = refresh_id
+    # Keep all generated state and datasets in the real conversation.  Only the
+    # message id is namespaced so a refresh cannot collide with the original
+    # answer.  The deterministic id makes an identical network retry idempotent;
+    # a deliberate later refresh supplies a new refresh_request_id.
+    mode = _regeneration_mode(payload)
+    refresh_attempt_id = payload.refresh_request_id or external_message_id
+    refresh_seed_parts = [
+        payload.application_id,
+        external_conversation_id,
+        refresh_attempt_id,
+    ]
+    if payload.refresh_request_id is None:
+        # Compatibility for older clients that reuse the original message id
+        # when editing: a changed question is a new deterministic attempt, not
+        # a message-id conflict with the prior pure refresh.
+        refresh_seed_parts.extend((
+            mode,
+            _normalized_regeneration_text(payload.question),
+            _normalized_regeneration_text(payload.original_question or ""),
+        ))
+    refresh_seed = "\x1f".join(refresh_seed_parts)
+    refresh_digest = hashlib.sha256(refresh_seed.encode("utf-8")).hexdigest()[:32]
+    execution.message_id = f"refresh-{refresh_digest}"
     execution.regenerate = False
+    execution._bypass_repeat_query_cache = True
+    execution._is_regeneration_execution = True
+    execution._regeneration_mode = mode
 
     # 匹配目标：修改重提时用 original_question（原问题在 history 里），
     # 纯刷新时 question 本身就是原问题。
     match_target = payload.original_question or payload.question
-    normalized_target = re.sub(r"\s+", "", match_target)
+    normalized_target = _normalized_regeneration_text(match_target)
+
+    # Prefer the immutable message id.  This supports editing an earlier turn
+    # and avoids accidentally replacing another user message with similar text.
+    if payload.replaces_message_id:
+        target_index = next(
+            (
+                index
+                for index in range(len(execution.history) - 1, -1, -1)
+                if execution.history[index].role == "user"
+                and execution.history[index].message_id == payload.replaces_message_id
+            ),
+            None,
+        )
+        if target_index is None:
+            raise HTTPException(
+                status_code=400,
+                detail="replaces_message_id 未匹配到 history 中的 user 消息",
+            )
+        execution.history = execution.history[:target_index]
+        return execution, external_conversation_id, external_message_id
 
     # 只定位 history 中最后一条 user 消息（被替换的当前轮）。
     last_user_index = next(
@@ -275,29 +375,18 @@ def _prepare_regeneration(payload: ChatRequest) -> tuple[ChatRequest, str, str]:
             )
     else:
         item = execution.history[last_user_index]
-        normalized_content = re.sub(r"\s+", "", item.content)
-        if normalized_content == normalized_target or normalized_content.endswith(
-            normalized_target
-        ):
+        normalized_content = _normalized_history_question(item.content)
+        if normalized_content == normalized_target:
             # 截断被替换轮及其之后的所有消息（含旧答案），旧答案不得
             # 作为证据或追问结果参与重新生成。
             execution.history = execution.history[:last_user_index]
-        elif payload.original_question:
-            # 前端显式声明了原问题但 history 末尾对不上：调用约定被违反，
-            # 明确报错比静默不截断（旧答案残留污染上下文）更易排查。
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "original_question 与 history 末尾的 user 消息不一致，"
-                    "无法定位被替换的轮次"
-                ),
-            )
         else:
-            # 未传 original_question 且 question 匹配不上：兼容不携带被
-            # 替换轮的老调用方，维持不截断，但留痕便于观察。
+            # Some clients send history *before* the replaced turn.  Without an
+            # explicit replaces_message_id, an exact miss is therefore not an
+            # error and must not be guessed with suffix/fuzzy matching.
             logger.warning(
-                "regeneration question does not match the last user turn in "
-                "history; history kept as-is (legacy caller?)"
+                "regeneration target not found by exact normalized text; "
+                "history kept as-is; pass replaces_message_id for strict replacement"
             )
     return execution, external_conversation_id, external_message_id
 
@@ -322,6 +411,8 @@ async def chat(
     is_regeneration = payload.regenerate
     if not is_regeneration:
         await _collect_business_question(request, payload)
+    else:
+        await _collect_revised_business_question(request, payload)
     if is_regeneration:
         payload, external_conversation_id, _ = _prepare_regeneration(payload)
     await bind_chat_spreadsheet(request, payload, identity)
@@ -392,6 +483,8 @@ async def chat_stream(
     is_regeneration = payload.regenerate
     if not is_regeneration:
         await _collect_business_question(request, payload)
+    else:
+        await _collect_revised_business_question(request, payload)
     if is_regeneration:
         payload, external_conversation_id, external_message_id = _prepare_regeneration(payload)
     await bind_chat_spreadsheet(request, payload, identity)

@@ -28,6 +28,7 @@ from app.domain.models import (
     TrustedIdentity,
 )
 from app.intent import RuleBasedIntentClassifier
+from app.api import _prepare_regeneration
 from app.services import DataAnalysisOrchestrator
 from app.services.orchestrator import SEMANTIC_QUERY_RETRY_CODES
 from app.stores import InMemorySessionStore
@@ -46,6 +47,54 @@ def service() -> DataAnalysisOrchestrator:
         adapters=build_mock_adapters(),
         sessions=InMemorySessionStore(),
     )
+
+
+@pytest.mark.asyncio
+async def test_regeneration_replaces_stale_continuation_state_in_original_scope():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    conversation_id = "refresh-original-scope"
+    pending_request = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id=conversation_id,
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询旧指标",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        missing_slots=["metric"],
+    )
+    await agent.sessions.put_pending(
+        PendingState(request=pending_request, state_version=1),
+        expected_version=0,
+    )
+    await agent.sessions.put_dag_pending(
+        "t1",
+        "u1",
+        "app1",
+        conversation_id,
+        {"state_version": 1, "stale": True},
+        expected_version=0,
+    )
+    execution, _, _ = _prepare_regeneration(ChatRequest(
+        application_id="app1",
+        conversation_id=conversation_id,
+        message_id="refresh-message",
+        refresh_request_id="refresh-attempt-1",
+        question="查询本月销售额",
+        regenerate=True,
+    ))
+
+    response = await agent.handle(execution, identity)
+
+    assert response.status == "COMPLETED"
+    assert response.conversation_id == conversation_id
+    assert await agent.sessions.get_pending("t1", "u1", "app1", conversation_id) is None
+    assert await agent.sessions.get_dag_pending("t1", "u1", "app1", conversation_id) is None
+    refreshed = await agent.sessions.get_last_request(
+        "t1", "u1", "app1", conversation_id
+    )
+    assert refreshed is not None
+    assert refreshed.original_question == "查询本月销售额"
 
 
 def test_recoverable_asl_contract_failures_receive_one_semantic_retry():

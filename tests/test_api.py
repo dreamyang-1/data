@@ -91,14 +91,26 @@ def test_chat_collects_sync_and_stream_questions_but_not_refresh(tmp_path):
                 "question": "这条刷新问题不应重复收集",
             },
         )
+        revise_response = client.post(
+            "/agent_chat/refresh",
+            json={
+                **base_payload,
+                "message_id": "business-revise-1",
+                "refresh_request_id": "business-revise-attempt-1",
+                "original_question": "查询旧产品销售额",
+                "question": "查询新产品销售额",
+            },
+        )
 
     assert sync_response.status_code == 200
     assert stream_response.status_code == 200
     assert refresh_response.status_code == 200
+    assert revise_response.status_code == 200
     content = document_path.read_text(encoding="utf-8")
     assert content.count("统计上海地区本月销售额") == 1
     assert content.count("按经销商展示销售额") == 1
     assert "这条刷新问题不应重复收集" not in content
+    assert content.count("查询新产品销售额") == 1
 
 
 def test_question_collection_failure_does_not_break_chat(tmp_path):
@@ -382,17 +394,22 @@ def test_identity_headers_are_not_required():
     assert response.status_code == 200
 
 
-def test_regeneration_uses_isolated_ids_and_removes_replaced_turn_from_history():
+def test_regeneration_keeps_conversation_and_removes_replaced_turn_from_history():
     payload = ChatRequest(
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="message-original",
         question="查询销售额",
         regenerate=True,
+        replaces_message_id="replaced-user-turn",
         history=[
             {"role": "user", "content": "查询销售量"},
             {"role": "assistant", "content": "旧销售量答案"},
-            {"role": "user", "content": "第2轮问题：查询销售额"},
+            {
+                "role": "user",
+                "message_id": "replaced-user-turn",
+                "content": "第2轮问题：查询销售额",
+            },
             {"role": "assistant", "content": "应被替换的旧销售额答案"},
         ],
     )
@@ -401,13 +418,168 @@ def test_regeneration_uses_isolated_ids_and_removes_replaced_turn_from_history()
 
     assert conversation_id == "conversation-original"
     assert message_id == "message-original"
-    assert execution.conversation_id.startswith("refresh-")
-    assert execution.message_id == execution.conversation_id
+    assert execution.conversation_id == "conversation-original"
+    assert execution.message_id.startswith("refresh-")
     assert execution.regenerate is False
+    assert execution._is_regeneration_execution is True
+    assert execution._bypass_repeat_query_cache is True
+    assert execution._regeneration_mode == "REFRESH"
     assert [item.content for item in execution.history] == [
         "查询销售量",
         "旧销售量答案",
     ]
+
+
+def test_regeneration_message_id_is_idempotent_per_refresh_attempt():
+    common = {
+        "application_id": "app-refresh",
+        "conversation_id": "conversation-original",
+        "message_id": "message-original",
+        "question": "查询 TDC-3 产品的适用科室",
+        "regenerate": True,
+    }
+    first, _, _ = _prepare_regeneration(
+        ChatRequest(**common, refresh_request_id="attempt-1")
+    )
+    retry, _, _ = _prepare_regeneration(
+        ChatRequest(**common, refresh_request_id="attempt-1")
+    )
+    next_click, _, _ = _prepare_regeneration(
+        ChatRequest(**common, refresh_request_id="attempt-2")
+    )
+
+    assert first.message_id == retry.message_id
+    assert first.message_id != next_click.message_id
+
+
+def test_legacy_modified_resubmit_is_distinct_from_pure_refresh():
+    common = {
+        "application_id": "app-refresh",
+        "conversation_id": "conversation-original",
+        "message_id": "original-message-id",
+        "regenerate": True,
+    }
+    refresh, _, _ = _prepare_regeneration(ChatRequest(
+        **common,
+        question="查询 TDC-3 产品的主要适用科室",
+    ))
+    revise, _, _ = _prepare_regeneration(ChatRequest(
+        **common,
+        original_question="查询 TDC-3 产品的主要适用科室",
+        question="查询 TDC-3 产品的所有适用科室",
+    ))
+
+    assert refresh._regeneration_mode == "REFRESH"
+    assert revise._regeneration_mode == "REVISE"
+    assert refresh.message_id != revise.message_id
+
+
+def test_regeneration_prefers_explicit_replacement_message_id():
+    payload = ChatRequest(
+        application_id="app-refresh",
+        conversation_id="conversation-original",
+        message_id="refresh-attempt",
+        refresh_request_id="attempt-1",
+        replaces_message_id="user-turn-2",
+        original_question="查询 TDC-3 产品的主要适用科室",
+        question="查询 TDC-3 产品的所有适用科室",
+        history=[
+            {"role": "user", "message_id": "user-turn-1", "content": "查询销售额"},
+            {"role": "assistant", "content": "旧销售额答案"},
+            {
+                "role": "user",
+                "message_id": "user-turn-2",
+                "content": "查询 TDC‑3 产品的主要适用科室",
+            },
+            {"role": "assistant", "content": "应移除的旧科室答案"},
+        ],
+    )
+
+    execution, _, _ = _prepare_regeneration(payload)
+
+    assert [item.message_id for item in execution.history] == ["user-turn-1", None]
+
+
+def test_regeneration_text_fallback_normalizes_unicode_dash():
+    payload = ChatRequest(
+        application_id="app-refresh",
+        conversation_id="conversation-original",
+        message_id="refresh-attempt",
+        original_question="查询 TDC-3 产品的主要适用科室",
+        question="查询 TDC-3 产品的所有适用科室",
+        history=[
+            {"role": "user", "content": "查询销售额"},
+            {"role": "assistant", "content": "旧销售额答案"},
+            {"role": "user", "content": "查询 TDC‑3 产品的主要适用科室"},
+            {"role": "assistant", "content": "应移除的旧科室答案"},
+        ],
+    )
+
+    execution, _, _ = _prepare_regeneration(payload)
+
+    assert [item.content for item in execution.history] == ["查询销售额", "旧销售额答案"]
+
+
+def test_regeneration_text_fallback_accepts_known_ui_question_prefix_only():
+    payload = ChatRequest(
+        application_id="app-refresh",
+        conversation_id="conversation-original",
+        message_id="refresh-attempt",
+        question="查询销售额",
+        history=[
+            {"role": "user", "content": "查询销售量"},
+            {"role": "assistant", "content": "旧销售量答案"},
+            {"role": "user", "content": "第2轮问题：查询销售额"},
+            {"role": "assistant", "content": "应移除的旧销售额答案"},
+        ],
+    )
+
+    execution, _, _ = _prepare_regeneration(payload)
+
+    assert [item.content for item in execution.history] == ["查询销售量", "旧销售量答案"]
+
+
+def test_refresh_endpoint_is_idempotent_and_keeps_original_session_scope():
+    app = build_test_app()
+    payload = {
+        "application_id": "app-refresh",
+        "conversation_id": "conversation-original",
+        "message_id": "external-message",
+        "refresh_request_id": "attempt-1",
+        "question": "查询本月销售额",
+    }
+
+    with TestClient(app) as client:
+        first = client.post("/agent_chat/refresh", json=payload)
+        retry = client.post("/agent_chat/refresh", json=payload)
+        next_click = client.post(
+            "/agent_chat/refresh",
+            json={**payload, "refresh_request_id": "attempt-2"},
+        )
+        response_keys = list(app.state.container.sessions._responses)
+
+    assert first.status_code == retry.status_code == next_click.status_code == 200
+    assert first.json()["conversation_id"] == "conversation-original"
+    assert retry.json()["request_id"] == first.json()["request_id"]
+    assert next_click.json()["request_id"] != first.json()["request_id"]
+    assert response_keys
+    assert all(key[3] == "conversation-original" for key in response_keys)
+
+
+def test_regeneration_rejects_unknown_explicit_replacement_message_id():
+    payload = ChatRequest(
+        application_id="app-refresh",
+        conversation_id="conversation-original",
+        message_id="refresh-attempt",
+        question="查询销售额",
+        replaces_message_id="missing-user-turn",
+        history=[{"role": "user", "message_id": "other", "content": "查询销售额"}],
+    )
+
+    with pytest.raises(Exception) as exc_info:
+        _prepare_regeneration(payload)
+
+    assert getattr(exc_info.value, "status_code", None) == 400
 
 
 def test_development_can_temporarily_use_fallback_identity():

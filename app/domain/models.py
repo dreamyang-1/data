@@ -445,6 +445,12 @@ class McpConfig(StrictModel):
 
 class ChatRequest(StrictModel):
     _file_inspection: dict[str, Any] = PrivateAttr(default_factory=dict)
+    # These flags are set only by the refresh endpoints.  Keeping them as
+    # private attributes prevents transport-only refresh semantics from
+    # leaking into ASL/SQL payloads or request fingerprints.
+    _bypass_repeat_query_cache: bool = PrivateAttr(default=False)
+    _is_regeneration_execution: bool = PrivateAttr(default=False)
+    _regeneration_mode: str = PrivateAttr(default="NONE")
     conversation_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=4000)
@@ -476,7 +482,9 @@ class ChatRequest(StrictModel):
         default=False,
         validation_alias=AliasChoices("regenerate", "refresh", "force_regenerate"),
         exclude=True,
-        description="强制隔离旧响应缓存和会话派生状态，完整重新生成本轮答案",
+        description=(
+            "在原会话范围内替换当前轮并完整重算；跳过旧答案缓存，但保留刷新请求幂等。"
+        ),
     )
     # 修改问题重新提问（revise）场景专用：传被替换轮的原问题文本，
     # 后端用它定位 history 末尾被替换的 user 轮并截断；纯刷新（问题不变）
@@ -489,6 +497,22 @@ class ChatRequest(StrictModel):
             "修改问题重新提问时传原问题文本，用于在 history 中定位被替换的轮次；"
             "纯刷新（问题未修改）可不传"
         ),
+    )
+    refresh_request_id: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=128,
+        exclude=True,
+        description=(
+            "刷新尝试的幂等键。同一次网络重试必须复用；用户再次主动刷新时应生成新值。"
+        ),
+    )
+    replaces_message_id: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=128,
+        exclude=True,
+        description="修改重提时被替换的 user 消息 ID，用于准确截断历史。",
     )
     tools: list[ToolConfig] = Field(default_factory=list, max_length=30)
     skills: list[SkillConfig] = Field(default_factory=list, max_length=30)
@@ -539,6 +563,8 @@ class ChatRequest(StrictModel):
         "application_id",
         "dataset_id",
         "dag_resume_token",
+        "refresh_request_id",
+        "replaces_message_id",
         mode="before",
     )
     @classmethod

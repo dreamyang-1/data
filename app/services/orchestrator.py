@@ -371,7 +371,10 @@ class DataAnalysisOrchestrator:
             return cached
         repeat_fingerprint = (
             self._repeat_query_fingerprint(chat, identity)
-            if self._is_repeat_cache_candidate(chat)
+            if (
+                not chat._bypass_repeat_query_cache
+                and self._is_repeat_cache_candidate(chat)
+            )
             else None
         )
         repeat_message_id = (
@@ -426,16 +429,37 @@ class DataAnalysisOrchestrator:
             )
             if cached is not None:
                 return cached
+            if chat._is_regeneration_execution:
+                # A refresh replaces the active turn in the same conversation.
+                # Clear only mutable continuation state after acquiring the
+                # message lease; exact retries returned from cache above never
+                # disturb state produced by the first execution.
+                await self.sessions.clear_pending(
+                    identity.tenant_id,
+                    identity.user_id,
+                    chat.application_id,
+                    chat.conversation_id,
+                )
+                await self.sessions.clear_dag_pending(
+                    identity.tenant_id,
+                    identity.user_id,
+                    chat.application_id,
+                    chat.conversation_id,
+                )
             response: AgentResponse
             raw_request = self._classify_with_rules(
                 chat.question, identity, chat.conversation_id
             )
             independent_chat = raw_request.primary_intent == PrimaryIntent.CHAT
-            dag_pending = await self.sessions.get_dag_pending(
-                identity.tenant_id,
-                identity.user_id,
-                chat.application_id,
-                chat.conversation_id,
+            dag_pending = (
+                None
+                if chat._is_regeneration_execution
+                else await self.sessions.get_dag_pending(
+                    identity.tenant_id,
+                    identity.user_id,
+                    chat.application_id,
+                    chat.conversation_id,
+                )
             )
             if independent_chat:
                 # A standalone social/lifestyle turn is never a DAG answer or
@@ -2255,7 +2279,16 @@ class DataAnalysisOrchestrator:
         await emit_progress(
             "CONTEXT_RESTORE", "RUNNING", "正在恢复当前会话的短期上下文和待补充状态。"
         )
-        pending = await self.sessions.get_pending(identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id)
+        pending = (
+            None
+            if chat._is_regeneration_execution
+            else await self.sessions.get_pending(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+        )
         # Recognize an unmistakable standalone chat turn before applying any
         # business task frame. Otherwise a previous data query can rewrite a
         # later lifestyle question back into the old product/dealer task.
@@ -2308,12 +2341,16 @@ class DataAnalysisOrchestrator:
             pending = None
         previous_for_rewrite = (
             None
-            if standalone_complete_business
+            if standalone_complete_business or chat._is_regeneration_execution
             else pending.request if pending else await self.sessions.get_task_frame(
                 identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id
             )
         )
-        if pending is None and recalls_prior_task(chat.question):
+        if (
+            not chat._is_regeneration_execution
+            and pending is None
+            and recalls_prior_task(chat.question)
+        ):
             recall = getattr(self.sessions, "get_recent_task_frames", None)
             recalled_frames = (
                 await recall(
@@ -2335,11 +2372,20 @@ class DataAnalysisOrchestrator:
             previous_for_rewrite, chat
         ):
             previous_for_rewrite = None
-        if not independent_chat and previous_for_rewrite is None and pending is None:
+        if (
+            not chat._is_regeneration_execution
+            and not independent_chat
+            and previous_for_rewrite is None
+            and pending is None
+        ):
             previous_for_rewrite = await self.sessions.get_last_request(
                 identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id
             )
-        elif pending is None and not independent_chat:
+        elif (
+            not chat._is_regeneration_execution
+            and pending is None
+            and not independent_chat
+        ):
             # A task frame is provisional: it is written before ASL/SQL runs and
             # may contain an entity or slot interpretation that execution later
             # rejected.  Once a verified request exists, it is the only safe base

@@ -30,6 +30,19 @@ def test_chat_request_accepts_regeneration_aliases(field):
     assert "regenerate" not in request.model_dump(mode="json")
 
 
+def test_chat_request_accepts_refresh_attempt_and_replacement_ids_as_transport_only_fields():
+    request = ChatRequest(**request_payload(
+        refresh_request_id="refresh-attempt-2",
+        replaces_message_id="user-message-1",
+    ))
+
+    dumped = request.model_dump(mode="json")
+    assert request.refresh_request_id == "refresh-attempt-2"
+    assert request.replaces_message_id == "user-message-1"
+    assert "refresh_request_id" not in dumped
+    assert "replaces_message_id" not in dumped
+
+
 @pytest.mark.parametrize("name", ["sql翻译器", "自然语言提取AST", "inventory.lookup-v2"])
 def test_tool_name_accepts_platform_unicode_identifiers(name):
     tool = ToolConfig(name=name, url="http://192.168.1.20/tool")
