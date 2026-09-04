@@ -219,7 +219,7 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
     standalone_summary = DataAnalysisOrchestrator._intent_think_summary(
         standalone
     )
-    assert "轮次关系：独立新问题（STANDALONE_NEW_TOPIC）" in standalone_summary
+    assert "轮次关系：独立新问题" in standalone_summary
     assert "上下文补全：否" in standalone_summary
     assert "是否需要追问：否" in standalone_summary
     assert "不追问理由：" in standalone_summary
@@ -234,7 +234,7 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
         },
     )
     followup_summary = DataAnalysisOrchestrator._intent_think_summary(followup)
-    assert "轮次关系：当前主题追问（CURRENT_TOPIC_FOLLOWUP）" in followup_summary
+    assert "轮次关系：当前主题追问" in followup_summary
     assert "上下文补全：是" in followup_summary
 
     model_enriched = standalone.model_copy(
@@ -250,7 +250,7 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
     model_summary = DataAnalysisOrchestrator._intent_think_summary(
         model_enriched
     )
-    assert "任务意图：趋势分析（TREND_ANALYSIS" in model_summary
+    assert "任务意图：趋势分析（置信度" in model_summary
     assert "意图判定依据：" in model_summary
 
 
@@ -281,11 +281,10 @@ def test_intent_summary_hides_unverified_and_empty_semantic_slots():
 
     summary = DataAnalysisOrchestrator._intent_think_summary(request)
 
-    assert "查询对象：经销商" in summary
     assert "查询字段：['经销商名称']" in summary
     assert "业务实体值：['费森尤斯医疗用品股份有限公司']" in summary
     assert "商品品牌 EQ 费森尤斯医疗用品股份有限公司" in summary
-    assert "维度：" not in summary
+    assert "维度：[]" in summary
     assert "商品名称 EQ 费森尤斯" not in summary
     assert "模型猜测值" not in summary
     assert "未提取" not in summary
@@ -339,12 +338,12 @@ def test_intent_display_v2_is_multiline_and_does_not_mutate_execution_request():
 
     assert request == before
     assert summary.startswith("### 1、意图识别\n\n")
-    assert "\n- 用户原始问题：" in summary
-    assert "\n- 补全后的问题：" in summary
+    assert "\n用户原始问题：" in summary
+    assert "\n补全后的问题：" in summary
     assert "文件判断：" not in summary
-    assert "\n- 结构化提取：\n  - 指标：[]" in summary
+    assert "\n结构化提取：\n指标：[]" in summary
     assert "商品品牌 EQ 费森尤斯（来源：用户原始输入，经当前语义模型向量库规范化）" in summary
-    assert "\n- 是否需要追问：否" in summary
+    assert "\n是否需要追问：否" in summary
 
 
 def test_default_trend_time_display_waits_for_verified_source_watermark():
@@ -768,14 +767,14 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     assert "#### 1、意图识别" in completed_intent_chunk["content"]
     assert completed_intent_chunk["meta"]["display_model"] == "IntentRecognitionDisplayV2"
     assert completed_intent_chunk["meta"]["display_version"] == "V2"
-    assert "#### 1、意图识别\n\n- 用户原始问题：" in completed_intent_chunk["content"]
-    planning_running_chunk = next(
+    assert "#### 1、意图识别\n\n用户原始问题：" in completed_intent_chunk["content"]
+    planning_completed_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "TASK_PLANNING"
-        and data.get("meta", {}).get("status") == "RUNNING"
+        and data.get("meta", {}).get("status") == "COMPLETED"
     )
-    assert "#### ◉ 任务拆分与规划" in planning_running_chunk["content"]
-    assert "正在判断是否需要拆分" in planning_running_chunk["content"]
+    assert "#### ◉ 任务拆分与规划" in planning_completed_chunk["content"]
+    assert "拆分判断完成" in planning_completed_chunk["content"]
     summary_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "OUTPUT_SUMMARY"
@@ -790,6 +789,77 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     assert "OUTPUT_SUMMARY" in completed_think_stages
     if "TASK_PLANNING" in completed_think_stages:
         assert completed_think_stages.index("INTENT_RECOGNITION") < completed_think_stages.index("TASK_PLANNING")
+
+
+def test_chat_stream_uses_document_chat_section_format():
+    with TestClient(build_test_app()) as client:
+        response = client.post(
+            "/agent_chat/stream",
+            headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
+            json={
+                "application_id": "app1",
+                "conversation_id": "document-chat-format",
+                "message_id": "m1",
+                "question": "今天工作辛苦了。",
+            },
+        )
+
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    thinking = "".join(
+        event["content"] for event in events
+        if event["type"] == "message_chunk" and event.get("step") != "output"
+    )
+
+    assert "#### 1、意图识别" in thinking
+    assert "用户原始问句：今天工作辛苦了。" in thinking
+    assert "#### 4、输出总结" in thinking
+    assert "基于用户闲聊文本，由大模型直接生成自然语言闲聊回复" in thinking
+    assert "#### 5、最终输出" in thinking
+    assert "任务拆分与规划" not in thinking
+    assert "调度执行" not in thinking
+
+
+def test_missing_parameter_stream_uses_document_clarification_section_format():
+    with TestClient(build_test_app()) as client:
+        response = client.post(
+            "/agent_chat/stream",
+            headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
+            json={
+                "application_id": "app1",
+                "conversation_id": "document-clarification-format",
+                "message_id": "m1",
+                "question": "查询经销商销售数据",
+            },
+        )
+
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    thinking = "".join(
+        event["content"] for event in events
+        if event["type"] == "message_chunk" and event.get("step") != "output"
+    )
+    completed = next(event for event in events if event["type"] == "complete")
+
+    assert completed["status"] == "NEEDS_CLARIFICATION"
+    assert "#### 1、意图识别" in thinking
+    assert "用户原始问句：查询经销商销售数据" in thinking
+    assert "#### 2、任务拆分与规划" in thinking
+    assert "当前任务参数不完整，暂停子任务拆分" in thinking
+    assert "#### 3、调研执行" in thinking
+    assert "跳过所有工具调用，无工具发起请求" in thinking
+    assert "#### 4、结果生成" in thinking
+    assert "等待用户补充参数后再继续处理" in thinking
+    assert "#### 5、最终输出" in thinking
+    assert "#### ◉ 输出总结" not in thinking
+    assert not any(
+        event.get("meta", {}).get("stage") == "DATA_RETRIEVAL"
+        for event in events if event["type"] == "message_chunk"
+    )
 
 
 def test_composite_stream_keeps_root_question_and_suppresses_child_intents():

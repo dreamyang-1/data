@@ -91,6 +91,7 @@ class IntentRecognitionDisplayV2:
     """Immutable display projection; never part of the execution contract."""
 
     version: str = "V2"
+    scenario: str = "ANALYTIC"
     original_question: str = ""
     completed_question: str = ""
     file_judgement: str = ""
@@ -169,7 +170,30 @@ def _time_source(request: CanonicalAnalysisRequest) -> str:
 
 def _clarification_reason(request: CanonicalAnalysisRequest) -> str:
     if request.missing_slots:
-        return "仍缺少必填参数：" + "、".join(request.missing_slots) + "。"
+        slot_labels = {
+            "metric": "统计指标（例如销售额、销售数量）",
+            "time_range": "查询时间范围",
+            "dimension": "分析维度",
+            "fields": "返回字段",
+            "product": "产品范围",
+            "comparison_type": "对比方式",
+            "comparison_objects": "对比对象",
+            "forecast_horizon": "预测周期",
+            "forecast_history_range": "预测所需历史时间范围",
+            "forecast_minimum_history": "足够的历史数据范围",
+            "turn_relation": "与上一轮问题的关系",
+            "semantic_ambiguity": "存在歧义的业务口径或实体",
+        }
+        missing = [
+            slot_labels.get(value, value)
+            for value in request.missing_slots
+        ]
+        return (
+            "用户已提出业务查询，但尚未提供"
+            + "、".join(missing)
+            + "，核心查询参数不全，无法生成可执行查询语句，"
+            "需向用户补充收集信息。"
+        )
     if request.primary_intent == PrimaryIntent.DETAIL_QUERY:
         return "查询对象、返回字段及筛选条件已满足明细查询要求，无缺失必填参数。"
     if request.primary_intent in {
@@ -273,9 +297,17 @@ def build_intent_recognition_display_v2(
     )
     task_intent = (
         f"{'基于用户文件进行' if file_based else ''}{intent_label}"
-        f"（{request.primary_intent.value}，置信度 {request.intent_confidence:.2f}）"
+        f"（置信度 {request.intent_confidence:.2f}）"
+    )
+    scenario = (
+        "CHAT"
+        if request.primary_intent == PrimaryIntent.CHAT
+        else "CLARIFICATION"
+        if request.missing_slots
+        else "ANALYTIC"
     )
     return IntentRecognitionDisplayV2(
+        scenario=scenario,
         original_question=_single_line(request.original_question),
         completed_question=_single_line(
             request.rewritten_question or request.original_question
@@ -304,13 +336,13 @@ def build_intent_recognition_display_v2(
         ranking_count=request.ranking_limit,
         context_completion="是" if context_used else "否",
         turn_relation=(
-            f"{_TURN_RELATION_LABELS.get(relation, relation.value)}（{relation.value}）"
+            _TURN_RELATION_LABELS.get(relation, relation.value)
             if relation is not None else "未判定"
         ),
         needs_clarification=bool(request.missing_slots),
         clarification_reason=_clarification_reason(request),
         normalization_status=(
-            "待补充必填参数" if request.missing_slots else "已完成"
+            "未执行，缺少必要参数" if request.missing_slots else "已完成"
         ),
     )
 
@@ -318,65 +350,77 @@ def build_intent_recognition_display_v2(
 def render_intent_recognition_display_v2(
     view: IntentRecognitionDisplayV2,
 ) -> str:
-    """Render V2 as stable Markdown with one fact per line."""
+    """Render the document-defined public trace with one fact per line."""
 
+    original_label = (
+        "用户原始问句"
+        if view.scenario in {"CHAT", "CLARIFICATION"}
+        else "用户原始问题"
+    )
     lines = [
         "### 1、意图识别",
         "",
-        f"- 用户原始问题：{view.original_question}",
-        f"- 补全后的问题：{view.completed_question}",
+        f"{original_label}：{view.original_question}",
+        f"补全后的问题：{view.completed_question}",
     ]
     if view.file_judgement:
-        lines.append(f"- 文件判断：{view.file_judgement}")
+        lines.append(f"文件判断：{view.file_judgement}")
     lines.extend([
-        f"- 任务意图：{view.task_intent}",
-        f"- 意图判定依据：{view.intent_basis}",
+        f"任务意图：{view.task_intent}",
+        f"意图判定依据：{view.intent_basis}",
     ])
     structured: list[str] = []
     if view.metrics:
         structured.append(
             f"指标：{_list_text(view.metrics)}（来源：当前语义模型向量库）"
         )
-    elif view.show_empty_metrics:
-        structured.append("指标：[]（用户未要求统计指标）")
-    if view.entity:
-        structured.append(f"查询对象：{view.entity}（来源：当前语义模型向量库）")
+    elif view.show_structure:
+        structured.append(
+            "指标：[]（用户未要求统计指标）"
+            if view.show_empty_metrics
+            else "指标：[]"
+        )
     if view.entity_values:
         structured.append(
             f"业务实体值：{_list_text(view.entity_values)}"
             "（来源：当前语义模型向量库）"
         )
-    if view.dimensions:
-        structured.append(
-            f"维度：{_list_text(view.dimensions)}（来源：当前语义模型向量库）"
-        )
-    if view.fields:
-        structured.append(
-            f"查询字段：{_list_text(view.fields)}（来源：当前语义模型向量库）"
-        )
-    if view.time_range:
-        structured.append(
-            f"时间区间：{view.time_range}（来源：{view.time_source}）"
-        )
-    if view.filters:
-        structured.append(f"筛选条件：{_list_text(view.filters)}")
+    elif view.entity:
+        structured.append(f"实体：{view.entity}")
+    structured.append(
+        f"维度：{_list_text(view.dimensions)}（来源：当前语义模型向量库）"
+        if view.dimensions else "维度：[]"
+    )
+    structured.append(
+        f"查询字段：{_list_text(view.fields)}（来源：当前语义模型向量库）"
+        if view.fields else "查询字段：[]"
+    )
+    structured.append(
+        f"时间区间：{view.time_range}（来源：{view.time_source}）"
+        if view.time_range else "时间区间：无"
+    )
+    structured.append(
+        f"筛选条件：{_list_text(view.filters)}"
+        if view.filters else "筛选条件：无"
+    )
     if view.show_structure:
         structured.append(
             f"排序数量：{view.ranking_count if view.ranking_count is not None else '无'}"
         )
     if structured and view.show_structure:
-        lines.append("- 结构化提取：")
-        lines.extend(f"  - {item}" for item in structured)
+        lines.append("结构化提取：")
+        lines.extend(structured)
     lines.extend([
-        f"- 上下文补全：{view.context_completion}",
-        f"- 轮次关系：{view.turn_relation}",
-        f"- 是否需要追问：{'是' if view.needs_clarification else '否'}",
+        f"轮次关系：{view.turn_relation}",
+        f"上下文补全：{view.context_completion}",
+        f"是否需要追问：{'是' if view.needs_clarification else '否'}",
         (
-            f"- {'追问' if view.needs_clarification else '不追问'}理由："
+            f"{'需要追问' if view.needs_clarification else '不追问'}理由："
             f"{view.clarification_reason}"
         ),
-        f"- 参数规范化：{view.normalization_status}",
     ])
+    if view.show_structure:
+        lines.append(f"参数规范化：{view.normalization_status}")
     return "\n".join(lines)
 
 
@@ -436,29 +480,29 @@ def render_composite_intent_recognition_display_v2(
     lines = [
         "### 1、意图识别",
         "",
-        f"- 用户原始问题：{view.original_question}",
-        f"- 补全后的问题：{view.completed_question}",
-        f"- 任务意图：复合查询（TASK_DAG，共 {len(view.tasks)} 个子任务）",
-        "- 意图判定依据：用户要求分别返回多个可独立交付的业务结果。",
+        f"用户原始问题：{view.original_question}",
+        f"补全后的问题：{view.completed_question}",
+        f"任务意图：复合查询（共 {len(view.tasks)} 个子任务）",
+        "意图判定依据：用户要求分别返回多个可独立交付的业务结果。",
     ]
     if view.shared_identifiers:
         lines.append(
-            f"- 共享业务标识：{_list_text(view.shared_identifiers)}"
+            f"共享业务标识：{_list_text(view.shared_identifiers)}"
             "（每个子任务继续按当前语义层独立规范化）"
         )
-    lines.append("- 结构化拆分：")
+    lines.append("结构化拆分：")
     for index, task in enumerate(view.tasks, 1):
         dependency = (
             f"；依赖={_list_text(task.depends_on)}" if task.depends_on else ""
         )
         lines.append(
-            f"  - 子任务 {index}（{task.task_id}）：{task.question}；"
+            f"子任务 {index}（{task.task_id}）：{task.question}；"
             f"意图={task.intent}{dependency}"
         )
     lines.extend([
-        "- 上下文补全：否（共享条件已写入每个完整子任务）",
-        "- 轮次关系：独立复合问题（TASK_DAG）",
-        "- 是否需要追问：由各子任务完成语义规范化后分别校验",
-        f"- 参数规范化：任务拆分已完成（规划器={view.planner}）",
+        "轮次关系：独立复合问题",
+        "上下文补全：否（共享条件已写入每个完整子任务）",
+        "是否需要追问：由各子任务完成语义规范化后分别校验",
+        f"参数规范化：任务拆分已完成（规划器={view.planner}）",
     ])
     return "\n".join(lines)

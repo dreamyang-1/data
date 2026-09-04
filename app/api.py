@@ -15,7 +15,13 @@ from fastapi import APIRouter, Header, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import Field
 
-from app.domain.models import AgentResponse, ChatRequest, StrictModel, TrustedIdentity
+from app.domain.models import (
+    AgentResponse,
+    ChatRequest,
+    PrimaryIntent,
+    StrictModel,
+    TrustedIdentity,
+)
 from app.stores import MessageIdReuseConflictError
 from app.services.file_ingestion import FileImportError
 from app.services.orchestrator import DataAnalysisOrchestrator
@@ -522,6 +528,8 @@ async def chat_stream(
         deferred_planning: list[dict[str, Any]] = []
         intent_completed = False
         file_inspection_completed = False
+        planning_released = False
+        presentation_scenario = "ANALYTIC"
         titled_think_sections: set[str] = set()
 
         def render_thinking(event: dict[str, Any]) -> str:
@@ -536,40 +544,95 @@ async def chat_stream(
                 titled_think_sections.add(section)
             return _thinking_event(
                 event,
-                heading=_thinking_title(section) if include_heading else None,
+                heading=(
+                    _thinking_title(section, presentation_scenario)
+                    if include_heading else None
+                ),
             )
 
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
+            nonlocal planning_released, presentation_scenario
+            stage = str(event.get("stage") or "").upper()
             if (
                 bool(event.get("is_child_task"))
-                and event.get("stage") == "INTENT_RECOGNITION"
+                and stage == "INTENT_RECOGNITION"
             ):
                 # A DAG child is not the user's root question. Rendering the
                 # first concurrently completed child as the public intent made
                 # composite requests appear truncated and race-dependent.
                 return []
-            if event.get("stage") == "TASK_PLANNING" and not file_inspection_completed:
-                deferred_planning.append(event)
+            if stage == "TASK_PLANNING" and not planning_released:
+                # The document format presents one stable planning block. Keep
+                # the latest completed planner message and release it only once
+                # completeness is known, so a missing-parameter request cannot
+                # first claim that it will execute and then immediately stop.
+                if str(event.get("status") or "").upper() == "COMPLETED":
+                    deferred_planning[:] = [event]
+                elif not deferred_planning:
+                    deferred_planning.append(event)
                 return []
             if (
-                event.get("stage") == "INTENT_RECOGNITION"
+                stage == "INTENT_RECOGNITION"
                 and event.get("status") == "COMPLETED"
             ):
                 intent_completed = True
+                presentation_scenario = str(
+                    event.get("presentation_scenario") or "ANALYTIC"
+                ).upper()
                 if bool(event.get("is_composite")):
                     ordered = [event, *deferred_planning]
                     deferred_planning.clear()
+                    planning_released = True
                     return ordered
             if (
-                event.get("stage") == "FILE_INSPECTION"
+                stage == "FILE_INSPECTION"
                 and event.get("status") == "COMPLETED"
             ):
                 file_inspection_completed = True
-                ordered = [event] if bool(event.get("file_based")) else []
-                ordered.extend(deferred_planning)
-                deferred_planning.clear()
+                return [event] if bool(event.get("file_based")) else []
+            if stage == "COMPLETENESS_CHECK":
+                ordered: list[dict[str, Any]] = []
+                needs_input = (
+                    str(event.get("status") or "").upper() == "NEEDS_INPUT"
+                )
+                if not needs_input and presentation_scenario == "CLARIFICATION":
+                    # Live semantic recovery may fill the provisional missing
+                    # slot after intent display. Once execution is authorized,
+                    # use the normal data-task section family consistently.
+                    presentation_scenario = "ANALYTIC"
+                if deferred_planning:
+                    if needs_input:
+                        presentation_scenario = "CLARIFICATION"
+                        planning = dict(deferred_planning[-1])
+                        planning["message"] = (
+                            "当前任务参数不完整，暂停子任务拆分。\n"
+                            "规划链路：终止 SQL 生成、数据库查询等后续取数流程，"
+                            "输出追问话术收集缺失条件。"
+                        )
+                        ordered.append(planning)
+                    else:
+                        ordered.append(deferred_planning[-1])
+                    deferred_planning.clear()
+                    planning_released = True
+                # Completeness is expressed inside the document-defined intent
+                # and planning blocks; do not render an extra unlabeled line.
                 return ordered
+            if stage == "DATA_RETRIEVAL" and deferred_planning:
+                ordered = [deferred_planning[-1], event]
+                deferred_planning.clear()
+                planning_released = True
+                return ordered
+            if stage in {
+                "REQUEST_VALIDATION",
+                "RESPONSE_CACHE",
+                "CONTEXT_RESTORE",
+                "QUESTION_REWRITE",
+                "MEMORY_RETRIEVAL",
+                "DETERMINISTIC_ANALYSIS",
+                "ANSWER_SYNTHESIS",
+            }:
+                return []
             return [event]
         yield _event("updata_state", {
             "step": "",
@@ -618,21 +681,46 @@ async def chat_stream(
             analysis_evidence = [
                 item for item in response.evidence if item.kind == "ANALYSIS_RESULT"
             ]
-            yield render_thinking({
-                "stage": "OUTPUT_SUMMARY",
-                "status": "COMPLETED",
-                "message": (
-                    "### 7、输出总结\n"
-                    f"任务状态：{response.status}；输出意图：{response.intent.value}。\n"
-                    f"数据查询结果：{'已生成并保留证据' if query_evidence else '本轮无数据查询结果'}；"
-                    f"数据分析结果：{'已生成' if analysis_evidence else '本轮未生成独立分析结论'}。\n"
-                    f"附件：{len(response.files)} 个；图表：{len(response.chart_specs)} 个；"
-                    f"证据：{len(response.evidence)} 项。"
-                ),
-                "file_count": len(response.files),
-                "chart_count": len(response.chart_specs),
-                "evidence_count": len(response.evidence),
-            })
+            response_scenario = (
+                "CHAT"
+                if response.intent == PrimaryIntent.CHAT
+                else "CLARIFICATION"
+                if response.status == "NEEDS_CLARIFICATION"
+                else "ANALYTIC"
+                if presentation_scenario == "CLARIFICATION"
+                else presentation_scenario
+            )
+            presentation_scenario = response_scenario
+            if response_scenario != "CLARIFICATION":
+                yield render_thinking({
+                    "stage": "OUTPUT_SUMMARY",
+                    "status": "COMPLETED",
+                    "presentation_scenario": response_scenario,
+                    "message": (
+                        "基于用户闲聊文本，由大模型直接生成自然语言闲聊回复，"
+                        "不拼接报表、指标、表格等业务结果。"
+                        if response_scenario == "CHAT"
+                        else (
+                            "任务状态：已完成；\n"
+                            f"输出意图：{response.intent.value}。\n"
+                            f"数据查询结果：{'已生成并保留证据' if query_evidence else '本轮无数据查询结果'}；"
+                            f"数据分析结果：{'已生成' if analysis_evidence else '本轮未生成独立分析结论'}。\n"
+                            f"附件：{len(response.files)} 个；图表：{len(response.chart_specs)} 个；"
+                            f"证据：{len(response.evidence)} 项。"
+                        )
+                    ),
+                    "file_count": len(response.files),
+                    "chart_count": len(response.chart_specs),
+                    "evidence_count": len(response.evidence),
+                })
+            if response_scenario in {"CHAT", "CLARIFICATION"}:
+                yield render_thinking({
+                    "stage": "FINAL_OUTPUT",
+                    "status": "COMPLETED",
+                    "presentation_scenario": response_scenario,
+                    "message": "",
+                    "heading_only": True,
+                })
             for extension in response.extension_executions:
                 tool_content = (
                     json.dumps(extension.output, ensure_ascii=False, default=str)
@@ -742,7 +830,11 @@ def _thinking_event(
         "step": "",
         "data": step,
     })
-    content = str(progress.get("message") or stage).strip()
+    content = (
+        ""
+        if bool(progress.get("heading_only"))
+        else str(progress.get("message") or stage).strip()
+    )
     # Remove node-owned headings, then emit one normalized public heading for
     # each of the seven data-agent stages at the SSE boundary.
     content = re.sub(r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", content).strip()
@@ -772,13 +864,41 @@ def _thinking_section(stage: str) -> str | None:
         "FILE_INSPECTION": "file",
         "TASK_PLANNING": "planning",
         "DATA_RETRIEVAL": "execution",
+        "SEMANTIC_QUERY_PLANNING": "execution",
+        "ASL_GENERATION": "execution",
+        "SQL_TRANSLATION": "execution",
+        "SQL_EXECUTION": "execution",
+        "KNOWLEDGE_RETRIEVAL": "execution",
+        "EXTERNAL_SEARCH": "execution",
         "RELIABILITY_CHECK": "validation",
         "INSIGHT_ANALYSIS": "insight",
         "OUTPUT_SUMMARY": "summary",
+        "CLARIFICATION_EXECUTION": "clarification_execution",
+        "CLARIFICATION_RESULT": "clarification_result",
+        "FINAL_OUTPUT": "final_output",
     }.get(stage)
 
 
-def _thinking_title(section: str) -> str:
+def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
+    normalized_scenario = scenario.strip().upper()
+    if normalized_scenario == "CLARIFICATION":
+        scenario_titles = {
+            "intent": "#### 1、意图识别",
+            "planning": "#### 2、任务拆分与规划",
+            "clarification_execution": "#### 3、调研执行",
+            "clarification_result": "#### 4、结果生成",
+            "final_output": "#### 5、最终输出",
+        }
+        if section in scenario_titles:
+            return scenario_titles[section]
+    if normalized_scenario == "CHAT":
+        scenario_titles = {
+            "intent": "#### 1、意图识别",
+            "summary": "#### 4、输出总结",
+            "final_output": "#### 5、最终输出",
+        }
+        if section in scenario_titles:
+            return scenario_titles[section]
     return {
         "intent": "#### 1、意图识别",
         "file": "#### ◉ 文件感知与解析",
@@ -787,6 +907,9 @@ def _thinking_title(section: str) -> str:
         "validation": "#### ◉ 结果校验",
         "insight": "#### ◉ 数据洞察分析",
         "summary": "#### ◉ 输出总结",
+        "clarification_execution": "#### 3、调研执行",
+        "clarification_result": "#### 4、结果生成",
+        "final_output": "#### 5、最终输出",
     }[section]
 
 
@@ -822,6 +945,9 @@ def _new_agent_think_step(stage: str) -> str:
         "RELIABILITY_CHECK",
         "INSIGHT_ANALYSIS",
         "OUTPUT_SUMMARY",
+        "CLARIFICATION_EXECUTION",
+        "CLARIFICATION_RESULT",
+        "FINAL_OUTPUT",
     }:
         return "response_result"
     # Validation, context restoration, question completion, intent extraction,

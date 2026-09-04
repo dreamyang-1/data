@@ -510,6 +510,7 @@ class DataAnalysisOrchestrator:
                             confidence=1.0,
                             display_model="CompositeIntentRecognitionDisplayV2",
                             display_version="V2",
+                            presentation_scenario="ANALYTIC",
                             is_composite=True,
                             task_count=len(plan.tasks),
                         )
@@ -525,7 +526,10 @@ class DataAnalysisOrchestrator:
                                     for index, task in enumerate(plan.tasks, 1)
                                 )
                                 if plan is not None
-                                else "当前问题无需拆分，按单任务执行。"
+                                else (
+                                    "当前问题无需拆分，按单任务执行。\n"
+                                    f"子任务1：{chat.question}"
+                                )
                             )
                             + "\n规划调用：语义解析 → ASL 查询规划 → 只读 SQL → 结果校验"
                         ),
@@ -3817,6 +3821,13 @@ class DataAnalysisOrchestrator:
             confidence=round(float(request.intent_confidence), 4),
             display_model="IntentRecognitionDisplayV2",
             display_version="V2",
+            presentation_scenario=(
+                "CHAT"
+                if request.primary_intent == PrimaryIntent.CHAT
+                else "CLARIFICATION"
+                if request.missing_slots
+                else "ANALYTIC"
+            ),
             file_status=str(chat._file_inspection.get("status") or "NOT_PROVIDED"),
             file_based=bool(chat._file_inspection.get("file_based")),
         )
@@ -4015,6 +4026,21 @@ class DataAnalysisOrchestrator:
                 "COMPLETENESS_CHECK",
                 "NEEDS_INPUT",
                 "关键信息不足，需要用户补充后继续。",
+                missing_slots=list(request.missing_slots),
+            )
+            await emit_progress(
+                "CLARIFICATION_EXECUTION",
+                "COMPLETED",
+                "任务状态 = 参数缺失待补充，命中暂停工具调用规则。\n"
+                "工具调用结果：跳过所有工具调用，无工具发起请求。",
+                tool_call_skipped=True,
+                missing_slots=list(request.missing_slots),
+            )
+            await emit_progress(
+                "CLARIFICATION_RESULT",
+                "COMPLETED",
+                "返回追问话术，本轮查询任务暂不执行，等待用户补充参数后再继续处理。\n"
+                "生成自然语言追问文本，引导用户补充缺失条件。",
                 missing_slots=list(request.missing_slots),
             )
             return await self._request_clarification(request, rounds)
