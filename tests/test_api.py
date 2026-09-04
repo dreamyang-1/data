@@ -184,11 +184,11 @@ def test_intent_summary_marks_file_based_analysis_only_when_selected():
         file_status="READ_SUCCESS",
         file_based=False,
     )
-    assert "### ◉ 问题补全与意图识别" in file_summary
+    assert "### 1、意图识别" in file_summary
     assert "任务意图：基于用户文件进行趋势分析" in file_summary
-    assert "文件判断：检测到用户上传文件" in file_summary
+    assert "文件判断：检测到用户上传文件，按文件数据链路处理" in file_summary
     assert "任务意图：基于用户文件进行" not in normal_summary
-    assert "文件判断：" not in normal_summary
+    assert "文件判断：检测到用户上传文件，但当前问题不使用该文件" in normal_summary
 
 
 def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
@@ -205,14 +205,11 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
     standalone_summary = DataAnalysisOrchestrator._intent_think_summary(
         standalone
     )
-    assert "轮次关系=独立新问题（STANDALONE_NEW_TOPIC）" in standalone_summary
-    assert "是否为上下文追问=否" in standalone_summary
-    assert "业务上下文继承=否" in standalone_summary
-    assert "问题改写使用上下文=否" in standalone_summary
-    assert "问题补全来源=规则降级" in standalone_summary
-    assert "实体抽取来源=规则降级" in standalone_summary
-    assert "是否需要用户补充=否" in standalone_summary
-    assert "是否需要追问=" not in standalone_summary
+    assert "轮次关系：独立新问题（STANDALONE_NEW_TOPIC）" in standalone_summary
+    assert "上下文补全：否" in standalone_summary
+    assert "是否需要追问：否" in standalone_summary
+    assert "不追问理由：" in standalone_summary
+    assert "参数规范化：已完成" in standalone_summary
 
     followup = standalone.model_copy(
         deep=True,
@@ -223,12 +220,8 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
         },
     )
     followup_summary = DataAnalysisOrchestrator._intent_think_summary(followup)
-    assert "轮次关系=当前主题追问（CURRENT_TOPIC_FOLLOWUP）" in followup_summary
-    assert "是否为上下文追问=是" in followup_summary
-    assert "业务上下文继承=是" in followup_summary
-    # Structured state inheritance is independent of whether the natural-
-    # language question rewriter happened to add text.
-    assert "问题改写使用上下文=否" in followup_summary
+    assert "轮次关系：当前主题追问（CURRENT_TOPIC_FOLLOWUP）" in followup_summary
+    assert "上下文补全：是" in followup_summary
 
     model_enriched = standalone.model_copy(
         deep=True,
@@ -243,8 +236,8 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
     model_summary = DataAnalysisOrchestrator._intent_think_summary(
         model_enriched
     )
-    assert "问题补全来源=大模型" in model_summary
-    assert "实体抽取来源=大模型+规则校验" in model_summary
+    assert "任务意图：趋势分析（TREND_ANALYSIS" in model_summary
+    assert "意图判定依据：" in model_summary
 
 
 def test_intent_summary_hides_unverified_and_empty_semantic_slots():
@@ -274,11 +267,11 @@ def test_intent_summary_hides_unverified_and_empty_semantic_slots():
 
     summary = DataAnalysisOrchestrator._intent_think_summary(request)
 
-    assert "查询对象=经销商" in summary
-    assert "字段=['经销商名称']" in summary
-    assert "业务实体值=['费森尤斯医疗用品股份有限公司']" in summary
+    assert "查询对象：经销商" in summary
+    assert "查询字段：['经销商名称']" in summary
+    assert "业务实体值：['费森尤斯医疗用品股份有限公司']" in summary
     assert "商品品牌 EQ 费森尤斯医疗用品股份有限公司" in summary
-    assert "维度=" not in summary
+    assert "维度：" not in summary
     assert "商品名称 EQ 费森尤斯" not in summary
     assert "模型猜测值" not in summary
     assert "未提取" not in summary
@@ -298,9 +291,46 @@ def test_intent_summary_omits_structure_line_when_nothing_is_vector_grounded():
 
     summary = DataAnalysisOrchestrator._intent_think_summary(request)
 
-    assert "结构化提取：" not in summary
     assert "模型猜测对象" not in summary
     assert "未提取" not in summary
+    assert "指标：[]（用户未要求统计指标）" in summary
+    assert "排序数量：无" in summary
+
+
+def test_intent_display_v2_is_multiline_and_does_not_mutate_execution_request():
+    request = CanonicalAnalysisRequest(
+        conversation_id="intent-display-v2",
+        application_id="app",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询费森尤斯产品的经销商名单",
+        rewritten_question="查询费森尤斯品牌产品的经销商名单",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="经销商",
+        fields=["经销商名称"],
+        filters=[{"field": "商品品牌", "operator": "EQ", "value": "费森尤斯"}],
+        semantic_display_slots={
+            "entity": "经销商",
+            "fields": ["经销商名称"],
+            "filters": [{
+                "field": "商品品牌",
+                "operator": "EQ",
+                "value": "费森尤斯",
+            }],
+        },
+    )
+    before = request.model_copy(deep=True)
+
+    summary = DataAnalysisOrchestrator._intent_think_summary(request)
+
+    assert request == before
+    assert summary.startswith("### 1、意图识别\n\n")
+    assert "\n- 用户原始问题：" in summary
+    assert "\n- 补全后的问题：" in summary
+    assert "文件判断：" not in summary
+    assert "\n- 结构化提取：\n  - 指标：[]" in summary
+    assert "商品品牌 EQ 费森尤斯（来源：用户原始输入，经当前语义模型向量库规范化）" in summary
+    assert "\n- 是否需要追问：否" in summary
 
 
 def test_readiness_checks_memory_dependencies():
@@ -499,7 +529,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     )
     all_thinking_content = "".join(data["content"] for data in think_chunks)
     expected_headings = [
-        "#### ◉ 意图识别",
+        "#### 1、意图识别",
         "#### ◉ 任务拆分与规划",
         "#### ◉ 输出总结",
     ]
@@ -510,13 +540,16 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
     )
     assert intent_chunk["step"] == "step1"
-    assert "#### ◉ 意图识别" not in intent_chunk["content"]
+    assert "#### 1、意图识别" not in intent_chunk["content"]
     completed_intent_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
         and data.get("meta", {}).get("status") == "COMPLETED"
     )
-    assert "#### ◉ 意图识别" in completed_intent_chunk["content"]
+    assert "#### 1、意图识别" in completed_intent_chunk["content"]
+    assert completed_intent_chunk["meta"]["display_model"] == "IntentRecognitionDisplayV2"
+    assert completed_intent_chunk["meta"]["display_version"] == "V2"
+    assert "#### 1、意图识别\n\n- 用户原始问题：" in completed_intent_chunk["content"]
     planning_running_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "TASK_PLANNING"
@@ -542,7 +575,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
 
 def test_all_seven_thinking_stages_have_normalized_unnumbered_headings():
     expected = {
-        "INTENT_RECOGNITION": "#### ◉ 意图识别",
+        "INTENT_RECOGNITION": "#### 1、意图识别",
         "FILE_INSPECTION": "#### ◉ 文件感知与解析",
         "TASK_PLANNING": "#### ◉ 任务拆分与规划",
         "DATA_RETRIEVAL": "#### ◉ 调度执行",

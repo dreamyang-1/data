@@ -64,6 +64,10 @@ from app.services.working_memory import recalls_prior_task, select_recalled_task
 from app.services.extension_dispatcher import ExtensionDispatcher
 from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress
+from app.presentation import (
+    build_intent_recognition_display_v2,
+    render_intent_recognition_display_v2,
+)
 from app.services.relationship_projection import (
     requires_distinct_relationship_projection,
 )
@@ -3453,6 +3457,8 @@ class DataAnalysisOrchestrator:
             ),
             intent=request.primary_intent.value,
             confidence=round(float(request.intent_confidence), 4),
+            display_model="IntentRecognitionDisplayV2",
+            display_version="V2",
             file_status=str(chat._file_inspection.get("status") or "NOT_PROVIDED"),
             file_based=bool(chat._file_inspection.get("file_based")),
         )
@@ -6733,105 +6739,12 @@ class DataAnalysisOrchestrator:
         file_status: str = "NOT_PROVIDED",
         file_based: bool = False,
     ) -> str:
-        question = request.rewritten_question or request.original_question
-        display = request.semantic_display_slots or {}
-        metrics = [str(value) for value in display.get("metrics") or [] if str(value).strip()]
-        entity = str(display.get("entity") or "").strip()
-        dimensions = [str(value) for value in display.get("dimensions") or [] if str(value).strip()]
-        fields = [str(value) for value in display.get("fields") or [] if str(value).strip()]
-        entity_values = [
-            str(value) for value in display.get("entity_values") or [] if str(value).strip()
-        ]
-        filters = [
-            f"{item.get('field', '字段')} {item.get('operator', '=')} "
-            f"{str(item.get('value', ''))[:80]}"
-            for item in (display.get("filters") or [])[:10]
-            if isinstance(item, dict)
-        ]
-        extracted_parts: list[str] = []
-        if metrics:
-            extracted_parts.append(f"指标={metrics}")
-        if entity:
-            extracted_parts.append(f"查询对象={entity}")
-        if entity_values:
-            extracted_parts.append(f"业务实体值={list(dict.fromkeys(entity_values))}")
-        if dimensions:
-            extracted_parts.append(f"维度={dimensions}")
-        if fields:
-            extracted_parts.append(f"字段={fields}")
-        if request.time_range:
-            extracted_parts.append(
-                f"时间={request.time_range.start.isoformat()} 至 "
-                f"{request.time_range.end_exclusive.isoformat()}（右开区间）"
-            )
-        if filters:
-            extracted_parts.append(f"筛选={filters}")
-        if request.ranking_limit is not None:
-            extracted_parts.append(f"排序数量={request.ranking_limit}")
-        extraction_line = (
-            "结构化提取：" + "；".join(extracted_parts) + "。\n"
-            if extracted_parts else ""
+        view = build_intent_recognition_display_v2(
+            request,
+            file_status=file_status,
+            file_based=file_based,
         )
-        intent_label = cls._intent_label(request.primary_intent)
-        intent_display = f"基于用户文件进行{intent_label}" if file_based else intent_label
-        relation = request.turn_relation
-        relation_label = cls._turn_relation_label(relation)
-        if relation is None:
-            contextual_followup = "未判定"
-        elif relation == TurnRelation.AMBIGUOUS_RELATION:
-            contextual_followup = "待确认"
-        elif relation == TurnRelation.STANDALONE_NEW_TOPIC:
-            contextual_followup = "否"
-        else:
-            contextual_followup = "是"
-        business_context_inherited = (
-            request.turn_admission.inherit_business_context
-            if request.turn_admission is not None
-            else request.context_mode != ContextMode.NONE
-        )
-        model_semantics_used = request.intent_source == "STRUCTURED_MODEL"
-        model_completion_used = (
-            "MODEL_QUESTION_COMPLETION_APPLIED" in request.assumptions
-            or any(
-                str(item.get("kind") or "") == "MODEL_QUESTION_COMPLETION"
-                for item in request.rewrite_events
-                if isinstance(item, dict)
-            )
-        )
-        completion_source = (
-            "大模型"
-            if model_completion_used
-            else "大模型未返回，规则安全补全"
-            if model_semantics_used
-            else "规则降级"
-        )
-        extraction_source = (
-            "大模型+规则校验" if model_semantics_used else "规则降级"
-        )
-        file_judgement = (
-            "文件判断：检测到用户上传文件，且当前问题需要基于文件内容处理。\n"
-            if file_based
-            else ""
-        )
-        return (
-            "### ◉ 问题补全与意图识别\n"
-            f"补全后的问题：{question[:600]}\n"
-            f"{file_judgement}"
-            f"任务意图：{intent_display}"
-            f"（{request.primary_intent.value}，置信度 {request.intent_confidence:.2f}）\n"
-            f"{extraction_line}"
-            f"轮次关系={relation_label}"
-            f"（{relation.value if relation is not None else 'UNKNOWN'}）；"
-            f"是否为上下文追问={contextual_followup}；"
-            f"业务上下文继承={'是' if business_context_inherited else '否'}；"
-            f"问题改写使用上下文={'是' if request.rewrite_context_applied else '否'}；"
-            f"问题补全来源={completion_source}；实体抽取来源={extraction_source}；"
-            f"是否需要用户补充={'是：' + '、'.join(request.missing_slots) if request.missing_slots else '否'}；"
-            + (
-                "展示参数来源=当前语义模型向量库。"
-                if display else ""
-            )
-        )
+        return render_intent_recognition_display_v2(view)
 
     @staticmethod
     def _file_inspection_think_summary(inspection: dict[str, Any]) -> str:

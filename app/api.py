@@ -599,7 +599,7 @@ def _thinking_event(
     # each of the seven data-agent stages at the SSE boundary.
     content = re.sub(r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", content).strip()
     if heading:
-        content = f"{heading}\n{content}" if content else heading
+        content = f"{heading}\n\n{content}" if content else heading
     # Keep each body milestone in a fresh block so adjacent chunks are not
     # concatenated into a single line by the platform renderer.
     content = f"\n\n{content}\n\n"
@@ -632,7 +632,7 @@ def _thinking_section(stage: str) -> str | None:
 
 def _thinking_title(section: str) -> str:
     return {
-        "intent": "#### ◉ 意图识别",
+        "intent": "#### 1、意图识别",
         "file": "#### ◉ 文件感知与解析",
         "planning": "#### ◉ 任务拆分与规划",
         "execution": "#### ◉ 调度执行",
