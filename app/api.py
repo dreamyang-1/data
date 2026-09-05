@@ -838,6 +838,7 @@ def _thinking_event(
     # Remove node-owned headings, then emit one normalized public heading for
     # each of the seven data-agent stages at the SSE boundary.
     content = re.sub(r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", content).strip()
+    content = _markdown_hard_line_breaks(content)
     if heading:
         content = f"{heading}\n\n{content}" if content else heading
     # Keep each body milestone in a fresh block so adjacent chunks are not
@@ -856,6 +857,23 @@ def _thinking_event(
         message_payload["task_index"] = int(progress.get("task_index") or 0)
     message_event = _event("message_chunk", message_payload)
     return state_event + message_event
+
+
+def _markdown_hard_line_breaks(content: str) -> str:
+    """Preserve document-style logical lines in CommonMark renderers.
+
+    A plain newline inside one Markdown paragraph is rendered as a space by
+    CommonMark.  Public thinking messages are intentionally sent as one SSE
+    chunk per milestone, so mark adjacent non-empty logical lines as hard
+    breaks while keeping existing blank-line paragraph boundaries intact.
+    """
+
+    lines = content.splitlines()
+    rendered: list[str] = []
+    for index, line in enumerate(lines):
+        next_line = lines[index + 1] if index + 1 < len(lines) else ""
+        rendered.append(f"{line}  " if line and next_line else line)
+    return "\n".join(rendered)
 
 
 def _thinking_section(stage: str) -> str | None:

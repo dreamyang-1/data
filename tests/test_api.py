@@ -21,6 +21,7 @@ from app.main import create_app
 from app.api import (
     _answer_chunk_delay,
     _answer_chunks,
+    _markdown_hard_line_breaks,
     _prepare_regeneration,
     _thinking_section,
     _thinking_title,
@@ -38,6 +39,15 @@ def build_test_app(**overrides):
     }
     defaults.update(overrides)
     return create_app(Settings(**defaults))
+
+
+def test_markdown_hard_line_breaks_preserve_document_logical_lines():
+    assert _markdown_hard_line_breaks(
+        "用户原始问题：查询销售额\n补全后的问题：查询销售额\n\n结构化提取：\n指标：销售额"
+    ) == (
+        "用户原始问题：查询销售额  \n补全后的问题：查询销售额\n\n"
+        "结构化提取：  \n指标：销售额"
+    )
 
 
 def test_chat_endpoint():
@@ -768,6 +778,10 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     assert completed_intent_chunk["meta"]["display_model"] == "IntentRecognitionDisplayV2"
     assert completed_intent_chunk["meta"]["display_version"] == "V2"
     assert "#### 1、意图识别\n\n用户原始问题：" in completed_intent_chunk["content"]
+    assert re.search(
+        r"用户原始问题：[^\n]+  \n补全后的问题：",
+        completed_intent_chunk["content"],
+    )
     planning_completed_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "TASK_PLANNING"
@@ -775,6 +789,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     )
     assert "#### ◉ 任务拆分与规划" in planning_completed_chunk["content"]
     assert "拆分判断完成" in planning_completed_chunk["content"]
+    assert "当前问题无需拆分，按单任务执行。  \n子任务1：" in planning_completed_chunk["content"]
     summary_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "OUTPUT_SUMMARY"
