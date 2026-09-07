@@ -17,6 +17,20 @@ from app.services.intent_asl_contract import build_intent_asl_contract
 IDENTITY = TrustedIdentity(tenant_id="tenant-a", user_id="user-a")
 
 
+def test_metric_internal_noun_does_not_replace_explicit_grouped_query_object():
+    request = RuleBasedIntentClassifier().classify(
+        "统计上海市各个经销商的区域医院覆盖率",
+        IDENTITY,
+        "coverage-query-object",
+    )
+
+    assert request.entity == "经销商"
+    assert request.dimensions == ["经销商"]
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert "医院" not in request.dimensions
+    assert "EXPLICIT_RESULT_OBJECT_FROM_GROUPING=经销商" in request.assumptions
+
+
 def test_forecast_is_not_historical_trend():
     classifier = RuleBasedIntentClassifier()
     forecast = classifier.classify("预测下个月销售额", IDENTITY, "c1")

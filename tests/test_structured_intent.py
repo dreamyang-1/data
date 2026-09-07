@@ -35,6 +35,28 @@ def model_response(output: dict) -> httpx.Response:
     )
 
 
+def test_metric_name_noun_is_not_query_entity_evidence():
+    baseline = CanonicalAnalysisRequest(
+        conversation_id="metric-name-entity-evidence",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="统计上海市各个经销商的区域医院覆盖率",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        filters=[{
+            "field": "业务城市",
+            "operator": "EQ",
+            "value": "上海市",
+        }],
+    )
+
+    assert HybridIntentClassifier._supported_entity_category(
+        "医院", baseline.original_question, baseline
+    ) is False
+    assert HybridIntentClassifier._supported_entity_category(
+        "经销商", baseline.original_question, baseline
+    ) is True
+
+
 @pytest.mark.asyncio
 async def test_model_metric_guess_cannot_turn_relationship_question_into_metric_clarification():
     output = {

@@ -270,6 +270,43 @@ async def test_live_metric_discovery_rejects_vector_only_metric_hit():
     assert result.metrics == []
 
 
+@pytest.mark.asyncio
+async def test_live_metric_discovery_forwards_current_query_shape_contract():
+    client = StubClient([{"success": False}])
+    req = CanonicalAnalysisRequest(
+        conversation_id="coverage-contract",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="统计上海市各个经销商的区域医院覆盖率",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="区域医院覆盖率")],
+        entity="经销商",
+        dimensions=["经销商"],
+        filters=[{
+            "field": "业务城市",
+            "operator": "EQ",
+            "value": "上海市",
+        }],
+    )
+
+    result = await HttpDataRetrievalAdapter(
+        Settings(adapter_mode="http"), client
+    ).discover_metrics(
+        req, IDENTITY, semantic_model_id=81, business_domain_id=205
+    )
+
+    assert result.metrics == []
+    contract = client.calls[0][2]["intent_asl_contract"]
+    assert contract["query_object"] == "经销商"
+    assert contract["required_metrics"] == ["区域医院覆盖率"]
+    assert contract["required_groupings"] == ["经销商"]
+    assert contract["filters"] == [{
+        "field": "业务城市",
+        "operator": "EQ",
+        "value": "上海市",
+    }]
+
+
 def test_subject_count_ratio_without_time_context_is_snapshot_metric():
     assert HttpDataRetrievalAdapter._is_time_independent_snapshot_metric(
         {

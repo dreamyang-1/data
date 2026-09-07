@@ -659,6 +659,11 @@ class HttpDataRetrievalAdapter:
         if semantic_model_id is None:
             return MetricDiscovery(metrics=[])
         query = request.rewritten_question or request.original_question
+        intent_asl_contract: dict[str, Any] | None = build_intent_asl_contract(
+            request
+        )
+        if validate_intent_asl_contract_definition(intent_asl_contract):
+            intent_asl_contract = None
         generated = await self.client.post(
             self.settings.asl_generator_base_url,
             self.settings.asl_generator_path,
@@ -670,7 +675,7 @@ class HttpDataRetrievalAdapter:
                 "business_domain_ids": list(request.business_domain_ids),
                 "metric_ids": [],
                 "metricless_projection": False,
-                "intent_asl_contract": None,
+                "intent_asl_contract": intent_asl_contract,
                 "analysis_operator": None,
                 "result_contract": None,
                 "exploration_requirements": None,

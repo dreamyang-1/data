@@ -2375,13 +2375,87 @@ class DataAnalysisOrchestrator:
                 request.missing_slots = required_missing_slots(request)
             request.assumptions = list(dict.fromkeys(request.assumptions))
             return not request.missing_slots
+        generic_metric_labels = {
+            "覆盖率", "增长率", "完成率", "转化率", "达成率", "占比", "比率",
+        }
+        question_compact = re.sub(
+            r"\s+", "", request.original_question or ""
+        ).casefold()
+        generic_inputs = {
+            re.sub(r"\s+", "", metric.canonical_name or metric.input).casefold()
+            for metric in request.metrics
+            if re.sub(r"\s+", "", metric.canonical_name or metric.input).casefold()
+            in generic_metric_labels
+        }
+        generic_question_metric = any(
+            re.search(
+                rf"(?:^|的|查询|统计|计算|分析|查看){re.escape(label)}"
+                rf"(?:$|是多少|多少|情况|趋势|[？?。])",
+                question_compact,
+            )
+            for label in generic_metric_labels
+        )
+        discovered_names = {
+            re.sub(r"\s+", "", metric.canonical_name or metric.input).casefold()
+            for metric in discovery.metrics
+            if (metric.canonical_name or metric.input)
+        }
+        canonical_name_was_explicit = any(
+            name and name in question_compact for name in discovered_names
+        )
+        if (generic_inputs or generic_question_metric) and not canonical_name_was_explicit:
+            request.metrics = [
+                metric for metric in request.metrics
+                if re.sub(
+                    r"\s+", "", metric.canonical_name or metric.input
+                ).casefold() not in generic_metric_labels
+            ]
+            if "metric" not in request.missing_slots:
+                request.missing_slots.append("metric")
+            ambiguity = (
+                "指标名称过于宽泛：请确认具体覆盖对象和计算口径，"
+                "例如医院覆盖率、区域医院覆盖率或其他覆盖率指标。"
+            )
+            if ambiguity not in request.ambiguities:
+                request.ambiguities.append(ambiguity)
+            request.assumptions.append("GENERIC_METRIC_DISCOVERY_REJECTED")
+            request.assumptions = list(dict.fromkeys(request.assumptions))
+            return False
+
+        required_groupings = list(request.dimensions)
+        discovered_groupings = list(discovery.dimensions)
+        dimension_family = getattr(rules, "_dimension_filter_family", None)
+
+        def grouping_key(value: object) -> str:
+            family = dimension_family(value) if callable(dimension_family) else None
+            return family or re.sub(r"[\s_.-]+", "", str(value or "")).casefold()
+
+        discovered_grouping_keys = {
+            grouping_key(value) for value in discovered_groupings
+        }
+        missing_groupings = [
+            value for value in required_groupings
+            if grouping_key(value) not in discovered_grouping_keys
+        ]
+        if missing_groupings:
+            logger.warning(
+                "live semantic metric discovery changed required grain; rejecting: "
+                "request_id=%s required=%s discovered=%s",
+                request.request_id,
+                required_groupings,
+                discovered_groupings,
+            )
+            request.assumptions.append("METRIC_DISCOVERY_REQUIRED_GRAIN_MISMATCH")
+            request.assumptions = list(dict.fromkeys(request.assumptions))
+            return False
+
         request.metrics = [metric.model_copy(deep=True) for metric in discovery.metrics]
         # The same live, source-validated preview that identified an unknown
         # metric also has stronger schema grounding than classifier heuristics.
         # Replace structural guesses as one atomic semantic frame so a city
         # prefix inside an institution name cannot survive as a fake region
         # filter (and analogous future entity shapes update automatically).
-        request.entity = discovery.subject
+        request.metric_subject_entity = discovery.subject
         request.dimensions = list(dict.fromkeys(discovery.dimensions))
         request.filters = [dict(item) for item in discovery.filters]
         # The discovery ASL has already converted every accepted literal into
@@ -2394,7 +2468,7 @@ class DataAnalysisOrchestrator:
         if request.turn_admission is not None:
             explicit_slots = request.turn_admission.current_turn_facts.explicit_slots
             for slot_name, value in (
-                ("entity", discovery.subject),
+                ("entity", request.entity),
                 ("dimensions", list(discovery.dimensions)),
                 ("filters", [dict(item) for item in discovery.filters]),
             ):
@@ -2404,6 +2478,7 @@ class DataAnalysisOrchestrator:
         request.assumptions.extend((
             "METRIC_BINDING_SOURCE=LIVE_SQL_VERIFIED_SEMANTIC_SNAPSHOT",
             "QUERY_FRAME_SOURCE=LIVE_SQL_VERIFIED_SEMANTIC_SNAPSHOT",
+            f"METRIC_SUBJECT_ENTITY={discovery.subject or 'UNAVAILABLE'}",
             f"METRIC_DISCOVERY_EVIDENCE={discovery.evidence_fingerprint or 'UNAVAILABLE'}",
         ))
         if (

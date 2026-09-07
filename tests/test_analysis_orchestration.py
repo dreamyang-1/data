@@ -155,8 +155,9 @@ async def test_live_metric_discovery_replaces_provisional_dimensions_atomically(
         user_id="user",
         original_question="统计上海市各个经销商的区域医院覆盖率",
         primary_intent=PrimaryIntent.METRIC_QUERY,
-        metrics=[MetricRef(input="覆盖率")],
-        dimensions=["经销商", "医院"],
+        metrics=[],
+        entity="经销商",
+        dimensions=["经销商"],
         semantic_entity_mentions=["各经销商的区域"],
         missing_slots=["metric"],
     )
@@ -175,7 +176,8 @@ async def test_live_metric_discovery_replaces_provisional_dimensions_atomically(
 
     assert recovered is True
     assert request.metrics[0].canonical_name == "区域医院覆盖率"
-    assert request.entity == "hospital"
+    assert request.entity == "经销商"
+    assert request.metric_subject_entity == "hospital"
     assert request.dimensions == ["dealer"]
     assert request.semantic_entity_mentions == []
     assert request.filters == [{
@@ -184,6 +186,58 @@ async def test_live_metric_discovery_replaces_provisional_dimensions_atomically(
         "value": "上海市",
     }]
     assert "QUERY_FRAME_SOURCE=LIVE_SQL_VERIFIED_SEMANTIC_SNAPSHOT" in request.assumptions
+
+
+@pytest.mark.asyncio
+async def test_generic_coverage_label_cannot_silently_bind_a_specific_metric():
+    class QueryStub:
+        async def discover_metrics(self, *args, **kwargs):
+            return MetricDiscovery(
+                metrics=[MetricRef(
+                    input="区域医院覆盖率",
+                    canonical_name="区域医院覆盖率",
+                    metric_id="81:screening_area_hospital_coverage",
+                    version="current",
+                )],
+                evidence_fingerprint="sha256:coverage-snapshot",
+                subject="hospital",
+                dimensions=("dealer",),
+            )
+
+    orchestrator = object.__new__(DataAnalysisOrchestrator)
+    orchestrator.classifier = SimpleNamespace(rules=RuleBasedIntentClassifier())
+    orchestrator.adapters = SimpleNamespace(query=QueryStub())
+    request = CanonicalAnalysisRequest(
+        conversation_id="generic-coverage-discovery",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="上海每个经销商的覆盖率",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[],
+        entity="经销商",
+        dimensions=["经销商"],
+        missing_slots=["metric"],
+    )
+    chat = ChatRequest(
+        application_id="app",
+        conversation_id=request.conversation_id,
+        message_id="m1",
+        question=request.original_question,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    recovered = await orchestrator._recover_live_published_metrics(
+        request, chat, TrustedIdentity(tenant_id="tenant", user_id="user")
+    )
+
+    assert recovered is False
+    assert request.entity == "经销商"
+    assert request.metric_subject_entity is None
+    assert request.metrics == []
+    assert "metric" in request.missing_slots
+    assert "GENERIC_METRIC_DISCOVERY_REJECTED" in request.assumptions
+    assert any("指标名称过于宽泛" in value for value in request.ambiguities)
 
 
 @pytest.mark.asyncio

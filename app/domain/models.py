@@ -311,6 +311,14 @@ class CanonicalAnalysisRequest(StrictModel):
     metrics: list[MetricRef] = Field(default_factory=list)
     asl_template: dict[str, Any] | None = None
     entity: str | None = None
+    metric_subject_entity: str | None = Field(
+        default=None,
+        max_length=128,
+        exclude=True,
+        description=(
+            "指标公式或事实表的内部计算主体；不得作为用户查询对象展示"
+        ),
+    )
     fields: list[str] = Field(default_factory=list)
     dimensions: list[str] = Field(default_factory=list)
     filters: list[dict[str, Any]] = Field(default_factory=list)

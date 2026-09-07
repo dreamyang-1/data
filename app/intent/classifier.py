@@ -1611,6 +1611,7 @@ class RuleBasedIntentClassifier:
         cls._apply_catalog_identifier_mentions(request, question)
         cls._drop_geographic_subspan_filters(request)
         cls._apply_name_projection_non_null_constraint(request)
+        cls._apply_explicit_grouped_result_object(request, question)
         cls._drop_invalid_filter_values(request)
         cls._reconcile_dimension_filter_roles(request, question)
 
@@ -2055,6 +2056,94 @@ class RuleBasedIntentClassifier:
             return
 
         assumption = f"REQUIRED_NAME_NON_NULL={name_field}"
+        if assumption not in request.assumptions:
+            request.assumptions.append(assumption)
+
+    @classmethod
+    def _apply_explicit_grouped_result_object(
+        cls,
+        request: CanonicalAnalysisRequest,
+        question: str,
+    ) -> None:
+        """Promote an explicitly expanded business role to the query object.
+
+        Metric names may contain entity-looking nouns (for example ``区域医院
+        覆盖率``).  Those nouns describe the metric formula, not necessarily the
+        rows the user asks to receive.  Conversely, ``各经销商`` and ``按经销商``
+        are direct evidence that dealer is the visible result grain.  Resolve
+        that evidence before live metric discovery so the metric's internal
+        subject can never replace the user-owned query object.
+        """
+
+        if request.primary_intent not in {
+            PrimaryIntent.METRIC_QUERY,
+            PrimaryIntent.TREND_ANALYSIS,
+            PrimaryIntent.COMPARISON_ANALYSIS,
+            PrimaryIntent.COMPOSITION_ANALYSIS,
+            PrimaryIntent.ANOMALY_ANALYSIS,
+            PrimaryIntent.ROOT_CAUSE_ANALYSIS,
+            PrimaryIntent.FORECAST_ANALYSIS,
+            PrimaryIntent.REPORT_GENERATION,
+        }:
+            return
+
+        compact = re.sub(r"\s+", "", (question or "").split(
+            "\n已确认的上一轮上下文", 1
+        )[0]).casefold()
+        role_aliases: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+            ("dealer", "经销商", ("经销商",)),
+            ("supplier", "供应商", ("供应商",)),
+            ("hospital", "医院", ("医院",)),
+            ("store", "门店", ("门店",)),
+            ("customer", "客户", ("客户",)),
+            ("product", "产品", ("商品", "产品")),
+            ("manufacturer", "制造商", ("生产厂家", "制造商", "厂家")),
+            ("department", "科室", ("适用科室", "科室")),
+            ("channel", "渠道", ("渠道",)),
+        )
+        matched: list[tuple[str, str]] = []
+        for family, canonical, aliases in role_aliases:
+            if (
+                family == "department"
+                and "DEPARTMENT_GRAIN=PRODUCT_MAIN_DEPARTMENT_COMBINATION"
+                in request.assumptions
+            ):
+                continue
+            if any(
+                re.search(
+                    rf"(?:各个|每一个|各|每个|每家|分别|各自|逐个){re.escape(alias)}"
+                    rf"(?!等级|级别|数量|家数|覆盖率)"
+                    rf"|(?:按|以|根据)(?:各个|每一个|各|每个|每家)?{re.escape(alias)}"
+                    rf"(?!等级|级别|数量|家数|覆盖率)",
+                    compact,
+                )
+                for alias in aliases
+            ):
+                matched.append((family, canonical))
+
+        matched = list(dict.fromkeys(matched))
+        if len(matched) != 1:
+            return
+        family, canonical = matched[0]
+        request.entity = canonical
+
+        temporal_dimensions = {"时间", "日期", "年", "季度", "月", "周", "日"}
+        dimensions = [
+            str(value).strip()
+            for value in request.dimensions
+            if str(value).strip() in temporal_dimensions
+            or cls._explicit_dimension_role_requested(question, str(value))
+        ]
+        if not any(cls._dimension_filter_family(value) == family for value in dimensions):
+            dimensions.append(canonical)
+        request.dimensions = list(dict.fromkeys(dimensions))
+
+        request.semantic_entity_mentions = [
+            value
+            for value in request.semantic_entity_mentions
+            if not cls._is_structural_entity_mention(value)
+        ]
+        assumption = f"EXPLICIT_RESULT_OBJECT_FROM_GROUPING={canonical}"
         if assumption not in request.assumptions:
             request.assumptions.append(assumption)
 
@@ -4102,6 +4191,13 @@ class RuleBasedIntentClassifier:
         if re.fullmatch(
             r"(?:第[一二两三四五六七八九十百\d]+名|排名第?[一二两三四五六七八九十百\d]+|"
             r"前[一二两三四五六七八九十百\d]+名)(?:的)?",
+            compact,
+        ):
+            return True
+        if re.fullmatch(
+            r"(?:各个|每一个|各|每个|每家|分别|各自|逐个)"
+            r"(?:经销商|供应商|医院|门店|客户|商品|产品|厂家|制造商|科室|渠道)"
+            r"(?:的(?:区域|地区|范围|覆盖范围|销售|销量|销售额))?",
             compact,
         ):
             return True
