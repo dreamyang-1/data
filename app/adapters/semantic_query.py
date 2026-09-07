@@ -11,6 +11,9 @@ from app.domain.models import (
     DataQueryResult,
     TrustedIdentity,
 )
+from app.services.semantic_context import build_semantic_context_snapshot
+
+
 class CompositeSemanticQueryTool:
     """Agent-facing facade over metric binding, ASL generation and SQL planning.
 
@@ -91,6 +94,12 @@ class CompositeSemanticQueryTool:
                         "semantic service returned only part of the requested metrics",
                     )
                 request.metrics = resolved
+        # Preserve the selected canonical assets as internal-only evidence.
+        # The field is excluded from serialization, so this does not change the
+        # ASL/SQL request contract or expose the snapshot downstream.
+        request.semantic_context_snapshot = build_semantic_context_snapshot(
+            request, semantic_model_id
+        )
         return await self.retrieval.query(
             request,
             identity,

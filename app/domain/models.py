@@ -275,6 +275,114 @@ class SemanticFilterBinding(StrictModel):
     source: Literal["ENTITY_ATTRIBUTE_VECTOR"] = "ENTITY_ATTRIBUTE_VECTOR"
 
 
+class SemanticAssetRef(StrictModel):
+    """Versioned semantic asset retained as internal planning evidence."""
+
+    asset_id: str = Field(min_length=1, max_length=256)
+    asset_type: Literal["METRIC", "ENTITY", "DIMENSION", "FIELD", "MODEL"]
+    canonical_name: str = Field(min_length=1, max_length=500)
+    version: str = Field(default="current", min_length=1, max_length=128)
+    source: str = Field(min_length=1, max_length=100)
+    confidence: float = Field(ge=0, le=1)
+    selection_reason: str = Field(min_length=1, max_length=1000)
+    grain: list[str] = Field(default_factory=list, max_length=100)
+    aggregation: str | None = Field(default=None, max_length=100)
+    additivity: str | None = Field(default=None, max_length=100)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class BusinessRuleRef(StrictModel):
+    """Declared catalog rule; never an inferred business truth."""
+
+    rule_id: str = Field(min_length=1, max_length=256)
+    version: str = Field(min_length=1, max_length=128)
+    source: str = Field(min_length=1, max_length=100)
+    confidence: float = Field(ge=0, le=1)
+    selection_reason: str = Field(min_length=1, max_length=1000)
+    rule_text: str = Field(min_length=1, max_length=4000)
+    applies_to: list[str] = Field(default_factory=list, max_length=100)
+
+
+class RelationshipPathRef(StrictModel):
+    """Catalog-declared relationship path with explicit join-risk evidence."""
+
+    path_id: str = Field(min_length=1, max_length=256)
+    source_asset_id: str = Field(min_length=1, max_length=256)
+    target_asset_id: str = Field(min_length=1, max_length=256)
+    relationship_ids: list[str] = Field(min_length=1, max_length=20)
+    canonical_path: list[str] = Field(min_length=2, max_length=21)
+    join_conditions: list[str] = Field(min_length=1, max_length=20)
+    cardinalities: list[str] = Field(min_length=1, max_length=20)
+    risk: str = Field(min_length=1, max_length=100)
+    version: str = Field(min_length=1, max_length=128)
+    source: str = Field(min_length=1, max_length=100)
+    confidence: float = Field(ge=0, le=1)
+    selection_reason: str = Field(min_length=1, max_length=1000)
+
+
+class SemanticRetrievalItem(StrictModel):
+    """Bounded semantic context selection evidence."""
+
+    ref_id: str = Field(min_length=1, max_length=256)
+    ref_type: str = Field(min_length=1, max_length=100)
+    score: float = Field(ge=0, le=1)
+    required: bool = False
+    char_cost: int = Field(ge=0)
+    selection_reason: str = Field(min_length=1, max_length=1000)
+
+
+class SemanticRetrievalSummary(StrictModel):
+    """Selected and dropped context under an explicit character budget."""
+
+    char_budget: int = Field(ge=1)
+    chars_used: int = Field(ge=0)
+    selected: list[SemanticRetrievalItem] = Field(default_factory=list)
+    dropped: list[SemanticRetrievalItem] = Field(default_factory=list)
+    budget_exceeded_by_required_context: bool = False
+
+
+class FilterResolutionEvidence(StrictModel):
+    """Resolution status for one filter field/value pair."""
+
+    field: str = Field(min_length=1, max_length=500)
+    operator: str = Field(min_length=1, max_length=50)
+    value_summary: str = Field(min_length=1, max_length=1000)
+    resolution: Literal["SEMANTIC_FIELD", "LOGICAL_DIMENSION", "UNRESOLVED"]
+    confidence: float = Field(ge=0, le=1)
+    selection_reason: str = Field(min_length=1, max_length=1000)
+
+
+class SemanticPlanEvidence(StrictModel):
+    """Internal, non-executable semantic plan evidence."""
+
+    plan_id: str = Field(min_length=1, max_length=256)
+    semantic_snapshot_id: str = Field(min_length=1, max_length=256)
+    semantic_model_id: int | None = Field(default=None, gt=0)
+    metric_ids: list[str] = Field(default_factory=list)
+    entity_ids: list[str] = Field(default_factory=list)
+    grouping_dimensions: list[str] = Field(default_factory=list)
+    relationship_path_ids: list[str] = Field(default_factory=list)
+    business_rule_ids: list[str] = Field(default_factory=list)
+    filter_resolutions: list[FilterResolutionEvidence] = Field(default_factory=list)
+    time_grain: str | None = Field(default=None, max_length=50)
+    validation_status: Literal["COMPLETE", "PARTIAL"]
+    warnings: list[str] = Field(default_factory=list)
+    plan_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class SemanticContextSnapshot(StrictModel):
+    """Internal context snapshot excluded from downstream request contracts."""
+
+    snapshot_id: str = Field(min_length=1, max_length=256)
+    semantic_model_id: int | None = Field(default=None, gt=0)
+    assets: list[SemanticAssetRef] = Field(default_factory=list)
+    business_rules: list[BusinessRuleRef] = Field(default_factory=list)
+    relationship_paths: list[RelationshipPathRef] = Field(default_factory=list)
+    validated_queries: list[Any] = Field(default_factory=list)
+    retrieval_summary: SemanticRetrievalSummary | None = None
+    context_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class CanonicalAnalysisRequest(StrictModel):
     schema_version: str = "1.0"
     request_id: UUID = Field(default_factory=uuid4)
@@ -348,6 +456,8 @@ class CanonicalAnalysisRequest(StrictModel):
     # Presentation-only proof of slots resolved from the current semantic
     # vector snapshot. It must not enter ASL payloads or persisted state.
     semantic_display_slots: dict[str, Any] = Field(default_factory=dict, exclude=True)
+    semantic_context_snapshot: SemanticContextSnapshot | None = Field(default=None, exclude=True)
+    semantic_plan_evidence: SemanticPlanEvidence | None = Field(default=None, exclude=True)
     database_id: int | None = Field(
         default=None,
         gt=0,
@@ -833,6 +943,9 @@ class DataQueryResult(StrictModel):
     execution_transforms: list[dict[str, Any]] = Field(
         default_factory=list, max_length=20
     )
+    semantic_validation_report: "SemanticSqlValidationReport | None" = Field(
+        default=None, exclude=True
+    )
     result_file_url: str | None = Field(
         default=None,
         max_length=4096,
@@ -915,6 +1028,21 @@ class ExplorationQueryRequirements(StrictModel):
         return self
 
 
+class AnalysisStep(StrictModel):
+    """One allowlisted step in a deterministic analysis runtime plan."""
+
+    id: str = Field(min_length=1, max_length=100)
+    action: str = Field(min_length=1, max_length=100)
+    tool: str = Field(min_length=1, max_length=200)
+    inputs: dict[str, Any] = Field(default_factory=dict)
+    depends_on: list[str] = Field(default_factory=list, max_length=20)
+    parallel_group: str | None = Field(default=None, max_length=100)
+    expected_output: str = Field(min_length=1, max_length=500)
+    required: bool = True
+    timeout_seconds: float = Field(default=30, gt=0, le=300)
+    max_attempts: int = Field(default=1, ge=1, le=3)
+
+
 class AnalysisPlan(StrictModel):
     """Public, auditable analysis plan; never contains hidden model reasoning."""
 
@@ -929,6 +1057,7 @@ class AnalysisPlan(StrictModel):
     conclusion_policy: list[str] = Field(min_length=1, max_length=10)
     data_contract: AnalysisDataContractSpec | None = None
     exploration_requirements: ExplorationQueryRequirements | None = None
+    steps: list[AnalysisStep] = Field(default_factory=list, max_length=20, exclude=True)
 
 
 class AnalysisProcessStep(StrictModel):
@@ -1009,6 +1138,7 @@ class GeneratedFile(StrictModel):
 
 
 class ExtensionExecution(StrictModel):
+    execution_id: str | None = Field(default=None, max_length=128, exclude=True)
     name: str = Field(min_length=1, max_length=100)
     kind: Literal["HTTP_TOOL", "MCP_TOOL"]
     status: Literal["COMPLETED", "FAILED", "REJECTED"]
@@ -1016,6 +1146,61 @@ class ExtensionExecution(StrictModel):
     error: str | None = Field(default=None, max_length=500)
     status_code: int | None = Field(default=None, ge=0, le=999)
     error_type: str | None = Field(default=None, max_length=100)
+    latency_ms: int = Field(default=0, ge=0, exclude=True)
+    attempts: int = Field(default=1, ge=0, le=10, exclude=True)
+    result_metadata: dict[str, Any] = Field(default_factory=dict, exclude=True)
+
+
+class ValidationCheck(StrictModel):
+    """One deterministic result validation check."""
+
+    code: str = Field(min_length=1, max_length=100)
+    status: Literal["PASS", "WARN", "FAIL", "NOT_APPLICABLE"]
+    message: str = Field(min_length=1, max_length=1000)
+    evidence_ids: list[str] = Field(default_factory=list, max_length=100)
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class ResultValidationReport(StrictModel):
+    """Auditable aggregate of deterministic result checks."""
+
+    status: Literal["PASS", "WARN", "FAIL"]
+    checks: list[ValidationCheck] = Field(default_factory=list, max_length=100)
+    confirmed_findings: list[str] = Field(default_factory=list, max_length=100)
+    possible_hypotheses: list[str] = Field(default_factory=list, max_length=100)
+    warnings: list[str] = Field(default_factory=list, max_length=100)
+    errors: list[str] = Field(default_factory=list, max_length=100)
+
+
+class SemanticSqlValidationCheck(StrictModel):
+    """One check emitted by a semantic SQL validation layer."""
+
+    code: str = Field(min_length=1, max_length=100)
+    status: Literal["PASS", "WARN", "FAIL"]
+    message: str = Field(min_length=1, max_length=1000)
+
+
+class SemanticSqlValidationLayer(StrictModel):
+    """Named validation layer with bounded checks."""
+
+    status: Literal["PASS", "WARN", "FAIL"]
+    checks: list[SemanticSqlValidationCheck] = Field(default_factory=list, max_length=100)
+
+
+class SemanticSqlValidationReport(StrictModel):
+    """Three-layer validation report used by safe query recall."""
+
+    status: Literal["PASS", "WARN", "FAIL"]
+    layers: dict[str, SemanticSqlValidationLayer]
+
+    @model_validator(mode="after")
+    def require_layers(self) -> "SemanticSqlValidationReport":
+        required = {"syntax", "semantic", "business"}
+        if set(self.layers) != required:
+            raise ValueError(
+                "semantic SQL validation requires syntax, semantic, and business layers"
+            )
+        return self
 
 
 class ClarificationItem(StrictModel):
@@ -1125,3 +1310,8 @@ class PendingState(StrictModel):
     clarification_rounds: int = 1
     state_version: int = 1
     remaining_questions: list[str] = Field(default_factory=list, max_length=100)
+
+
+# Resolve the validation-report forward reference after all compatibility
+# models are defined.  This does not alter serialized legacy request fields.
+DataQueryResult.model_rebuild()

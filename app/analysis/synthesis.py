@@ -5,7 +5,7 @@ import json
 import math
 import re
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -14,6 +14,9 @@ from app.analysis.engine import AnalysisOutput
 from app.config import Settings
 from app.observability.langfuse_client import trace_generation
 from app.domain.models import CanonicalAnalysisRequest, EvidenceItem
+
+if TYPE_CHECKING:
+    from app.services.context_builder import ContextEnvelope
 
 
 class ClaimCertainty(StrEnum):
@@ -80,7 +83,11 @@ class QwenAnalysisSynthesizer:
         request: CanonicalAnalysisRequest,
         analysis: AnalysisOutput,
         evidence: list[EvidenceItem],
+        *,
+        context: "ContextEnvelope | None" = None,
     ) -> tuple[str, SynthesisOutput]:
+        """Render verified facts with an optional bounded, row-free context."""
+
         if analysis.facts.get("decision_source") != "DETERMINISTIC_ALGORITHM":
             raise SynthesisValidationError(
                 "analysis decision must be locked by the deterministic algorithm before synthesis"
@@ -105,6 +112,8 @@ class QwenAnalysisSynthesizer:
             "warnings": analysis.warnings,
             "evidence": allowed_evidence,
         }
+        if context is not None:
+            prompt_input["agent_context"] = context.prompt_payload()
         schema = SynthesisOutput.model_json_schema()
         body = {
             "model": self.settings.analysis_synthesis_model_name,
