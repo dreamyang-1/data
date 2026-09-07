@@ -1,0 +1,52 @@
+[
+  {
+    "path": "tests/test_semantic_v2_contracts.py",
+    "line": 11,
+    "module": "app.semantic_v2.clarification"
+  },
+  {
+    "path": "tests/test_semantic_v2_contracts.py",
+    "line": 12,
+    "module": "app.semantic_v2.enums"
+  },
+  {
+    "path": "tests/test_semantic_v2_contracts.py",
+    "line": 28,
+    "module": "app.semantic_v2.legacy_adapter"
+  },
+  {
+    "path": "tests/test_semantic_v2_contracts.py",
+    "line": 29,
+    "module": "app.semantic_v2.models"
+  },
+  {
+    "path": "tests/test_semantic_v2_contracts.py",
+    "line": 61,
+    "module": "app.semantic_v2.result_contract"
+  },
+  {
+    "path": "tests/test_semantic_v2_contracts.py",
+    "line": 62,
+    "module": "app.semantic_v2.schema"
+  },
+  {
+    "path": "tests/test_semantic_v2_contracts.py",
+    "line": 63,
+    "module": "app.semantic_v2.slot_reducer"
+  },
+  {
+    "path": "tests/test_semantic_v2_contracts.py",
+    "line": 64,
+    "module": "app.semantic_v2.state_machine"
+  },
+  {
+    "path": "tests/test_semantic_v2_contracts.py",
+    "line": 74,
+    "module": "app.semantic_v2.trace_models"
+  },
+  {
+    "path": "tests/test_phase25_tools.py",
+    "line": 9,
+    "module": "tools.phase25.run_semantic_v2_shadow"
+  }
+]

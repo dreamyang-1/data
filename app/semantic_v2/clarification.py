@@ -3,7 +3,20 @@
 from __future__ import annotations
 
 from .enums import ErrorType
-from .models import ClarificationDecision
+from .models import ClarificationDecision, ReadinessBlocker, SystemRepairDecision, TerminalDecision
+
+
+def authorized_clarification_options(options, *, snapshot, permission, authorizations):
+    """Filter before rendering labels so denied candidates cannot leak through prompts."""
+    from .pipeline import validate_bound_ref_scope_and_permission
+    allowed = []
+    for option in options:
+        try:
+            validate_bound_ref_scope_and_permission(option, snapshot, permission, authorizations)
+        except ValueError:
+            continue
+        allowed.append(option)
+    return allowed
 
 
 def decide_clarification(
@@ -17,10 +30,18 @@ def decide_clarification(
     information_gain: float = 0.0,
     fallback_available: bool = False,
     assumption_available: bool = False,
-) -> ClarificationDecision:
+) -> ClarificationDecision | SystemRepairDecision | TerminalDecision:
     """Create a decision while preventing system failures from becoming prompts."""
 
     affected = list(dict.fromkeys(affected_plan_paths))
+    if reason_type != ErrorType.USER_AMBIGUITY:
+        if reason_type in {ErrorType.NO_DATA, ErrorType.PERMISSION_DENIED, ErrorType.DATA_NOT_READY}:
+            return TerminalDecision(reason_type=reason_type)
+        return SystemRepairDecision(blockers=[ReadinessBlocker(
+            blocker_id='legacy-decision', plan_path=affected[0] if affected else 'plan',
+            blocker_type=reason_type, source_stage='PLAN', system_repairable=True,
+            message_code=reason_type.value,
+        )])
     already_asked = bool(set(affected) & set(asked_slots))
     create_pending = reason_type == ErrorType.USER_AMBIGUITY and bool(affected) and not already_asked
     return ClarificationDecision(

@@ -1,0 +1,6003 @@
+[
+  {
+    "path": "app/intent/structured.py",
+    "sha256": "a8797333f90da5b46c2de6222e5cbe74bd1ad3ee7de151a2a6ad04438c9d24bf",
+    "lines": 1132,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "a8797333f90da5b46c2de6222e5cbe74bd1ad3ee7de151a2a6ad04438c9d24bf",
+    "definitions": [
+      {
+        "name": "StructuredSlotOperation",
+        "start": 39,
+        "end": 46
+      },
+      {
+        "name": "StructuredIntentOutput",
+        "start": 49,
+        "end": 68
+      },
+      {
+        "name": "StructuredIntentModelClient",
+        "start": 116,
+        "end": 194
+      },
+      {
+        "name": "HybridIntentClassifier",
+        "start": 197,
+        "end": 1132
+      },
+      {
+        "name": "__init__",
+        "start": 117,
+        "end": 119
+      },
+      {
+        "name": "classify",
+        "start": 121,
+        "end": 194
+      },
+      {
+        "name": "__init__",
+        "start": 205,
+        "end": 213
+      },
+      {
+        "name": "classify",
+        "start": 215,
+        "end": 413
+      },
+      {
+        "name": "merge_clarification",
+        "start": 415,
+        "end": 560
+      },
+      {
+        "name": "_custom_metric_candidates",
+        "start": 563,
+        "end": 585
+      },
+      {
+        "name": "_comparison_candidate",
+        "start": 588,
+        "end": 601
+      },
+      {
+        "name": "_dimension_candidates",
+        "start": 604,
+        "end": 624
+      },
+      {
+        "name": "_field_candidates",
+        "start": 627,
+        "end": 645
+      },
+      {
+        "name": "_entity_candidate",
+        "start": 648,
+        "end": 659
+      },
+      {
+        "name": "_correction_value",
+        "start": 662,
+        "end": 672
+      },
+      {
+        "name": "_looks_like_metric",
+        "start": 675,
+        "end": 685
+      },
+      {
+        "name": "_filter_ambiguities",
+        "start": 688,
+        "end": 737
+      },
+      {
+        "name": "_custom_metric_candidate",
+        "start": 740,
+        "end": 805
+      },
+      {
+        "name": "_normalize_metric_text",
+        "start": 808,
+        "end": 811
+      },
+      {
+        "name": "_grounded_metric_names",
+        "start": 814,
+        "end": 839
+      },
+      {
+        "name": "_grounded_text_values",
+        "start": 842,
+        "end": 858
+      },
+      {
+        "name": "_grounded_text_value",
+        "start": 861,
+        "end": 863
+      },
+      {
+        "name": "_grounded_comparison_type",
+        "start": 866,
+        "end": 880
+      },
+      {
+        "name": "_grounded_current_entity_values",
+        "start": 883,
+        "end": 914
+      },
+      {
+        "name": "_passes_deterministic_constraints",
+        "start": 917,
+        "end": 937
+      },
+      {
+        "name": "_has_strong_rule_signal",
+        "start": 940,
+        "end": 977
+      },
+      {
+        "name": "_should_skip_model",
+        "start": 980,
+        "end": 991
+      },
+      {
+        "name": "_safe_completed_question",
+        "start": 994,
+        "end": 1035
+      },
+      {
+        "name": "_supported_entity_category",
+        "start": 1038,
+        "end": 1099
+      },
+      {
+        "name": "_supported_business_field",
+        "start": 1102,
+        "end": 1132
+      }
+    ]
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "sha256": "45f023fdd88a48c8270fbc0adfba1966e916e16a009755aa5e0793692aad8df1",
+    "lines": 5062,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "45f023fdd88a48c8270fbc0adfba1966e916e16a009755aa5e0793692aad8df1",
+    "definitions": [
+      {
+        "name": "applicable_department_relation_types",
+        "start": 37,
+        "end": 56
+      },
+      {
+        "name": "applicable_department_filter_slot",
+        "start": 59,
+        "end": 67
+      },
+      {
+        "name": "render_execution_question",
+        "start": 86,
+        "end": 191
+      },
+      {
+        "name": "safe_semantic_confirmation",
+        "start": 194,
+        "end": 205
+      },
+      {
+        "name": "RuleBasedIntentClassifier",
+        "start": 306,
+        "end": 5062
+      },
+      {
+        "name": "_slot_is_negated",
+        "start": 361,
+        "end": 370
+      },
+      {
+        "name": "_clear_all_filters",
+        "start": 373,
+        "end": 379
+      },
+      {
+        "name": "_clear_all_metrics",
+        "start": 382,
+        "end": 388
+      },
+      {
+        "name": "_clear_all_dimensions",
+        "start": 391,
+        "end": 397
+      },
+      {
+        "name": "_replacement_filter_value",
+        "start": 400,
+        "end": 417
+      },
+      {
+        "name": "_filter_is_negated",
+        "start": 420,
+        "end": 435
+      },
+      {
+        "name": "classify",
+        "start": 437,
+        "end": 698
+      },
+      {
+        "name": "_apply_default_time_range",
+        "start": 701,
+        "end": 775
+      },
+      {
+        "name": "_extract_metric_refs",
+        "start": 778,
+        "end": 833
+      },
+      {
+        "name": "_chinese_window_count",
+        "start": 836,
+        "end": 850
+      },
+      {
+        "name": "_window_metric_definitions",
+        "start": 853,
+        "end": 874
+      },
+      {
+        "name": "_same_window_unit",
+        "start": 877,
+        "end": 879
+      },
+      {
+        "name": "_apply_precomputed_metric_windows",
+        "start": 882,
+        "end": 961
+      },
+      {
+        "name": "_is_casual_chat",
+        "start": 964,
+        "end": 978
+      },
+      {
+        "name": "apply_business_query_shapes",
+        "start": 981,
+        "end": 1619
+      },
+      {
+        "name": "_drop_geographic_subspan_filters",
+        "start": 1622,
+        "end": 1693
+      },
+      {
+        "name": "_apply_semantic_catalog_guardrails",
+        "start": 1696,
+        "end": 1936
+      },
+      {
+        "name": "_apply_manufacturer_metric_scope",
+        "start": 1939,
+        "end": 2016
+      },
+      {
+        "name": "_apply_name_projection_non_null_constraint",
+        "start": 2019,
+        "end": 2063
+      },
+      {
+        "name": "_apply_explicit_grouped_result_object",
+        "start": 2066,
+        "end": 2151
+      },
+      {
+        "name": "_drop_invalid_filter_values",
+        "start": 2154,
+        "end": 2213
+      },
+      {
+        "name": "_dimension_filter_family",
+        "start": 2216,
+        "end": 2252
+      },
+      {
+        "name": "_explicit_dimension_role_requested",
+        "start": 2255,
+        "end": 2300
+      },
+      {
+        "name": "_reconcile_dimension_filter_roles",
+        "start": 2303,
+        "end": 2354
+      },
+      {
+        "name": "_apply_metric_subject_scope",
+        "start": 2357,
+        "end": 2472
+      },
+      {
+        "name": "_apply_common_region_filter",
+        "start": 2475,
+        "end": 2596
+      },
+      {
+        "name": "_apply_hospital_level_scope",
+        "start": 2599,
+        "end": 2616
+      },
+      {
+        "name": "_apply_explicit_grouping_scope",
+        "start": 2619,
+        "end": 2635
+      },
+      {
+        "name": "_apply_department_grouping_grain",
+        "start": 2638,
+        "end": 2697
+      },
+      {
+        "name": "_apply_multidimensional_product_scope",
+        "start": 2700,
+        "end": 2746
+      },
+      {
+        "name": "_apply_brand_comparison_scope",
+        "start": 2749,
+        "end": 2777
+      },
+      {
+        "name": "_apply_relationship_projection_defaults",
+        "start": 2780,
+        "end": 2908
+      },
+      {
+        "name": "_apply_interrogative_relationship_scope",
+        "start": 2911,
+        "end": 3103
+      },
+      {
+        "name": "_apply_relationship_product_scope",
+        "start": 3106,
+        "end": 3159
+      },
+      {
+        "name": "_apply_transaction_partner_scope",
+        "start": 3162,
+        "end": 3230
+      },
+      {
+        "name": "_apply_brand_product_scope",
+        "start": 3233,
+        "end": 3263
+      },
+      {
+        "name": "_apply_explicit_dealer_metric_scope",
+        "start": 3266,
+        "end": 3303
+      },
+      {
+        "name": "_apply_time_grouped_metric_scope",
+        "start": 3306,
+        "end": 3342
+      },
+      {
+        "name": "_coverage_detail_shape",
+        "start": 3345,
+        "end": 3357
+      },
+      {
+        "name": "_apply_department_partner_scope",
+        "start": 3360,
+        "end": 3406
+      },
+      {
+        "name": "_apply_report_business_scope",
+        "start": 3409,
+        "end": 3494
+      },
+      {
+        "name": "_apply_catalog_partner_scope",
+        "start": 3497,
+        "end": 3658
+      },
+      {
+        "name": "_apply_ranked_partner_scope",
+        "start": 3661,
+        "end": 3751
+      },
+      {
+        "name": "_is_ranked_partner_recommendation",
+        "start": 3754,
+        "end": 3771
+      },
+      {
+        "name": "_generic_partner_count_needs_names",
+        "start": 3774,
+        "end": 3780
+      },
+      {
+        "name": "_expected_partner_count",
+        "start": 3783,
+        "end": 3797
+      },
+      {
+        "name": "_comparison_object_filter_present",
+        "start": 3800,
+        "end": 3812
+      },
+      {
+        "name": "_comparison_object_candidates",
+        "start": 3815,
+        "end": 3838
+      },
+      {
+        "name": "_has_explicit_comparison_pair",
+        "start": 3841,
+        "end": 3857
+      },
+      {
+        "name": "_has_explicit_object_comparison",
+        "start": 3860,
+        "end": 3878
+      },
+      {
+        "name": "merge_clarification",
+        "start": 3880,
+        "end": 4167
+      },
+      {
+        "name": "_is_structural_entity_mention",
+        "start": 4170,
+        "end": 4220
+      },
+      {
+        "name": "_normalize_catalog_punctuation",
+        "start": 4223,
+        "end": 4229
+      },
+      {
+        "name": "_apply_catalog_identifier_mentions",
+        "start": 4232,
+        "end": 4261
+      },
+      {
+        "name": "sanitize_semantic_entity_mentions",
+        "start": 4264,
+        "end": 4338
+      },
+      {
+        "name": "required_missing_slots",
+        "start": 4340,
+        "end": 4436
+      },
+      {
+        "name": "_uses_all_time_scope",
+        "start": 4439,
+        "end": 4465
+      },
+      {
+        "name": "_uses_business_default_all_time_scope",
+        "start": 4468,
+        "end": 4522
+      },
+      {
+        "name": "_forecast_target",
+        "start": 4525,
+        "end": 4562
+      },
+      {
+        "name": "_ranking_limit",
+        "start": 4565,
+        "end": 4584
+      },
+      {
+        "name": "_forecast_history_provided",
+        "start": 4587,
+        "end": 4593
+      },
+      {
+        "name": "_uses_precomputed_metric_window",
+        "start": 4596,
+        "end": 4617
+      },
+      {
+        "name": "_has_activity_time_filter",
+        "start": 4620,
+        "end": 4635
+      },
+      {
+        "name": "_uses_transaction_activity_definition",
+        "start": 4638,
+        "end": 4647
+      },
+      {
+        "name": "_uses_cooperation_activity_definition",
+        "start": 4650,
+        "end": 4665
+      },
+      {
+        "name": "_operators",
+        "start": 4668,
+        "end": 4692
+      },
+      {
+        "name": "_conversation_control",
+        "start": 4695,
+        "end": 4736
+      },
+      {
+        "name": "_time_range",
+        "start": 4739,
+        "end": 5062
+      },
+      {
+        "name": "compact",
+        "start": 1649,
+        "end": 1650
+      },
+      {
+        "name": "put_filter",
+        "start": 1714,
+        "end": 1730
+      },
+      {
+        "name": "valid",
+        "start": 2166,
+        "end": 2170
+      },
+      {
+        "name": "put_filter",
+        "start": 3480,
+        "end": 3485
+      },
+      {
+        "name": "replace_filter",
+        "start": 3582,
+        "end": 3587
+      },
+      {
+        "name": "put_filter",
+        "start": 3690,
+        "end": 3697
+      },
+      {
+        "name": "next_month_start",
+        "start": 4755,
+        "end": 4756
+      },
+      {
+        "name": "relative_year",
+        "start": 4758,
+        "end": 4763
+      },
+      {
+        "name": "parse_count",
+        "start": 4838,
+        "end": 4841
+      },
+      {
+        "name": "valid_for_field",
+        "start": 2190,
+        "end": 2196
+      }
+    ]
+  },
+  {
+    "path": "app/services/turn_admission.py",
+    "sha256": "dfc3157033c0d13f556b0286311f55b05131fa6bfe9a21188a5571847e8a9f36",
+    "lines": 1602,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "dfc3157033c0d13f556b0286311f55b05131fa6bfe9a21188a5571847e8a9f36",
+    "definitions": [
+      {
+        "name": "StaleContextConflictError",
+        "start": 148,
+        "end": 151
+      },
+      {
+        "name": "TurnAdmissionGate",
+        "start": 154,
+        "end": 1602
+      },
+      {
+        "name": "__init__",
+        "start": 149,
+        "end": 151
+      },
+      {
+        "name": "evaluate",
+        "start": 157,
+        "end": 333
+      },
+      {
+        "name": "reconcile_model_relation",
+        "start": 336,
+        "end": 425
+      },
+      {
+        "name": "extract_current_turn_facts",
+        "start": 427,
+        "end": 740
+      },
+      {
+        "name": "apply_explicit_slot_protection",
+        "start": 743,
+        "end": 1070
+      },
+      {
+        "name": "_replaces_commercial_subject_scope",
+        "start": 1073,
+        "end": 1109
+      },
+      {
+        "name": "promote_model_entity_replacement",
+        "start": 1112,
+        "end": 1217
+      },
+      {
+        "name": "rebind_current_semantic_shape",
+        "start": 1220,
+        "end": 1267
+      },
+      {
+        "name": "refresh_slot_operations",
+        "start": 1270,
+        "end": 1362
+      },
+      {
+        "name": "validate_context_consistency",
+        "start": 1365,
+        "end": 1402
+      },
+      {
+        "name": "context_snapshot",
+        "start": 1405,
+        "end": 1429
+      },
+      {
+        "name": "_signals",
+        "start": 1432,
+        "end": 1435
+      },
+      {
+        "name": "_temporal_references",
+        "start": 1438,
+        "end": 1450
+      },
+      {
+        "name": "_slot_value",
+        "start": 1453,
+        "end": 1472
+      },
+      {
+        "name": "_lexical_product_from_raw_turn",
+        "start": 1475,
+        "end": 1521
+      },
+      {
+        "name": "_core_subjects",
+        "start": 1524,
+        "end": 1540
+      },
+      {
+        "name": "_semantic_field_family",
+        "start": 1543,
+        "end": 1568
+      },
+      {
+        "name": "_facts_delta",
+        "start": 1571,
+        "end": 1578
+      },
+      {
+        "name": "_present_business_slots",
+        "start": 1581,
+        "end": 1602
+      },
+      {
+        "name": "put",
+        "start": 438,
+        "end": 450
+      }
+    ]
+  },
+  {
+    "path": "app/services/question_rewriter.py",
+    "sha256": "c6f612454784223e5c648a80c78eafca842684124aee86766ac2d222a5c8544e",
+    "lines": 1534,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "c6f612454784223e5c648a80c78eafca842684124aee86766ac2d222a5c8544e",
+    "definitions": [
+      {
+        "name": "RewriteEvent",
+        "start": 26,
+        "end": 31
+      },
+      {
+        "name": "RewriteResult",
+        "start": 35,
+        "end": 47
+      },
+      {
+        "name": "EntityAttributeSearcher",
+        "start": 50,
+        "end": 66
+      },
+      {
+        "name": "HttpEntityAttributeSearcher",
+        "start": 69,
+        "end": 151
+      },
+      {
+        "name": "QuestionRewriter",
+        "start": 154,
+        "end": 1534
+      },
+      {
+        "name": "search",
+        "start": 51,
+        "end": 58
+      },
+      {
+        "name": "resolve_display_slots",
+        "start": 60,
+        "end": 66
+      },
+      {
+        "name": "__init__",
+        "start": 70,
+        "end": 85
+      },
+      {
+        "name": "search",
+        "start": 87,
+        "end": 126
+      },
+      {
+        "name": "resolve_display_slots",
+        "start": 128,
+        "end": 151
+      },
+      {
+        "name": "__init__",
+        "start": 194,
+        "end": 211
+      },
+      {
+        "name": "ground_display_slots",
+        "start": 213,
+        "end": 378
+      },
+      {
+        "name": "ground_executable_filters",
+        "start": 380,
+        "end": 499
+      },
+      {
+        "name": "rewrite",
+        "start": 501,
+        "end": 605
+      },
+      {
+        "name": "_semantic_model_version",
+        "start": 608,
+        "end": 614
+      },
+      {
+        "name": "_detect_semantic_ambiguities",
+        "start": 616,
+        "end": 737
+      },
+      {
+        "name": "_semantic_match_family",
+        "start": 740,
+        "end": 760
+      },
+      {
+        "name": "_expected_semantic_family",
+        "start": 763,
+        "end": 781
+      },
+      {
+        "name": "_normalize_polite_word_order",
+        "start": 784,
+        "end": 802
+      },
+      {
+        "name": "_normalize_grouped_calculation_wording",
+        "start": 805,
+        "end": 820
+      },
+      {
+        "name": "ground_request_dimensions",
+        "start": 823,
+        "end": 1089
+      },
+      {
+        "name": "_remove_filter_subject_from_trend_grouping",
+        "start": 1092,
+        "end": 1124
+      },
+      {
+        "name": "_extract_candidates",
+        "start": 1126,
+        "end": 1133
+      },
+      {
+        "name": "is_deterministic_slot_update",
+        "start": 1136,
+        "end": 1162
+      },
+      {
+        "name": "is_deterministic_time_update",
+        "start": 1165,
+        "end": 1227
+      },
+      {
+        "name": "_normalize_local_metric_typos",
+        "start": 1230,
+        "end": 1240
+      },
+      {
+        "name": "_normalize_short_year",
+        "start": 1243,
+        "end": 1252
+      },
+      {
+        "name": "_apply_context",
+        "start": 1254,
+        "end": 1377
+      },
+      {
+        "name": "_normalize",
+        "start": 1379,
+        "end": 1467
+      },
+      {
+        "name": "_aliases",
+        "start": 1470,
+        "end": 1484
+      },
+      {
+        "name": "_best_typo",
+        "start": 1487,
+        "end": 1499
+      },
+      {
+        "name": "_single_substitution",
+        "start": 1502,
+        "end": 1512
+      },
+      {
+        "name": "_safe_typo_replacement",
+        "start": 1515,
+        "end": 1521
+      },
+      {
+        "name": "_critical_terms_preserved",
+        "start": 1523,
+        "end": 1534
+      },
+      {
+        "name": "visible_candidate",
+        "start": 232,
+        "end": 234
+      },
+      {
+        "name": "unique_candidates",
+        "start": 641,
+        "end": 656
+      },
+      {
+        "name": "family",
+        "start": 840,
+        "end": 858
+      },
+      {
+        "name": "equivalent_literal",
+        "start": 913,
+        "end": 948
+      },
+      {
+        "name": "organization_key",
+        "start": 932,
+        "end": 937
+      }
+    ]
+  },
+  {
+    "path": "app/services/intent_asl_contract.py",
+    "sha256": "6bbf85d9cbb5f33fd15bd0c8225a22bc1628c65011e6893e40d8cc1e142edcb0",
+    "lines": 592,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "6bbf85d9cbb5f33fd15bd0c8225a22bc1628c65011e6893e40d8cc1e142edcb0",
+    "definitions": [
+      {
+        "name": "_is_commercial_subject_filter",
+        "start": 39,
+        "end": 43
+      },
+      {
+        "name": "_is_negative_filter",
+        "start": 46,
+        "end": 49
+      },
+      {
+        "name": "_query_object",
+        "start": 52,
+        "end": 73
+      },
+      {
+        "name": "build_intent_asl_contract",
+        "start": 76,
+        "end": 244
+      },
+      {
+        "name": "validate_intent_asl_contract_definition",
+        "start": 247,
+        "end": 306
+      },
+      {
+        "name": "validate_intent_asl_contract_completeness",
+        "start": 309,
+        "end": 592
+      },
+      {
+        "name": "normalized_role",
+        "start": 143,
+        "end": 144
+      },
+      {
+        "name": "authorized_relationship_count_projection",
+        "start": 328,
+        "end": 367
+      },
+      {
+        "name": "add",
+        "start": 371,
+        "end": 377
+      },
+      {
+        "name": "entity_key",
+        "start": 435,
+        "end": 437
+      },
+      {
+        "name": "filter_signature",
+        "start": 472,
+        "end": 484
+      },
+      {
+        "name": "has_grounded_equivalent",
+        "start": 514,
+        "end": 549
+      }
+    ]
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "sha256": "f69795b266c2593d489c09632cdc61584331172eca585d16d085271c2a59027a",
+    "lines": 10114,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "f69795b266c2593d489c09632cdc61584331172eca585d16d085271c2a59027a",
+    "definitions": [
+      {
+        "name": "_sort_only_followup_direction",
+        "start": 135,
+        "end": 146
+      },
+      {
+        "name": "_business_datetime_text",
+        "start": 149,
+        "end": 153
+      },
+      {
+        "name": "_quality_status_text",
+        "start": 156,
+        "end": 157
+      },
+      {
+        "name": "_requires_deterministic_analysis",
+        "start": 160,
+        "end": 166
+      },
+      {
+        "name": "_compact_trace_value",
+        "start": 171,
+        "end": 180
+      },
+      {
+        "name": "select_data_execution_question",
+        "start": 183,
+        "end": 226
+      },
+      {
+        "name": "ExplicitDatasetUnavailableError",
+        "start": 229,
+        "end": 230
+      },
+      {
+        "name": "DependencyConstraintError",
+        "start": 233,
+        "end": 234
+      },
+      {
+        "name": "DataAnalysisOrchestrator",
+        "start": 236,
+        "end": 10114
+      },
+      {
+        "name": "__init__",
+        "start": 237,
+        "end": 305
+      },
+      {
+        "name": "_append_session_event",
+        "start": 307,
+        "end": 337
+      },
+      {
+        "name": "handle",
+        "start": 339,
+        "end": 390
+      },
+      {
+        "name": "_handle_request",
+        "start": 392,
+        "end": 634
+      },
+      {
+        "name": "_running_scope",
+        "start": 637,
+        "end": 645
+      },
+      {
+        "name": "_is_cancel_command",
+        "start": 648,
+        "end": 653
+      },
+      {
+        "name": "_cancel_running",
+        "start": 655,
+        "end": 661
+      },
+      {
+        "name": "_running_cancelled_response",
+        "start": 664,
+        "end": 684
+      },
+      {
+        "name": "_cancel_command_response",
+        "start": 687,
+        "end": 717
+      },
+      {
+        "name": "_intent_from_history",
+        "start": 719,
+        "end": 727
+      },
+      {
+        "name": "_wait_for_cached_response_or_claim",
+        "start": 729,
+        "end": 753
+      },
+      {
+        "name": "_dag_scope_fingerprint",
+        "start": 756,
+        "end": 765
+      },
+      {
+        "name": "_dag_resume_error",
+        "start": 768,
+        "end": 783
+      },
+      {
+        "name": "_resume_task_plan",
+        "start": 785,
+        "end": 954
+      },
+      {
+        "name": "_dag_requires_new_entity",
+        "start": 957,
+        "end": 978
+      },
+      {
+        "name": "_dag_references_dependency_result",
+        "start": 981,
+        "end": 989
+      },
+      {
+        "name": "_dependency_anchor_text",
+        "start": 992,
+        "end": 998
+      },
+      {
+        "name": "_dependency_column_family",
+        "start": 1001,
+        "end": 1018
+      },
+      {
+        "name": "_is_stable_dependency_key",
+        "start": 1021,
+        "end": 1029
+      },
+      {
+        "name": "_dependency_key_families",
+        "start": 1032,
+        "end": 1049
+      },
+      {
+        "name": "_with_dependency_join_keys",
+        "start": 1052,
+        "end": 1076
+      },
+      {
+        "name": "_select_dependency_column",
+        "start": 1079,
+        "end": 1119
+      },
+      {
+        "name": "_normalize_dependency_value",
+        "start": 1122,
+        "end": 1137
+      },
+      {
+        "name": "_compile_dependency_constraints",
+        "start": 1139,
+        "end": 1211
+      },
+      {
+        "name": "_dependency_constraint_fallback",
+        "start": 1214,
+        "end": 1242
+      },
+      {
+        "name": "_attach_dependency_constraint_evidence",
+        "start": 1245,
+        "end": 1272
+      },
+      {
+        "name": "_handle_task_plan",
+        "start": 1274,
+        "end": 1834
+      },
+      {
+        "name": "_persist_dag_root_context",
+        "start": 1836,
+        "end": 1892
+      },
+      {
+        "name": "_shared_report_time_clarification",
+        "start": 1895,
+        "end": 1918
+      },
+      {
+        "name": "_report_task_internal_assumptions",
+        "start": 1921,
+        "end": 1955
+      },
+      {
+        "name": "_is_join_task",
+        "start": 1958,
+        "end": 1959
+      },
+      {
+        "name": "_execute_cross_branch_join",
+        "start": 1961,
+        "end": 2056
+      },
+      {
+        "name": "_request_fingerprint",
+        "start": 2059,
+        "end": 2073
+      },
+      {
+        "name": "_is_repeat_cache_candidate",
+        "start": 2076,
+        "end": 2085
+      },
+      {
+        "name": "_repeat_query_fingerprint",
+        "start": 2088,
+        "end": 2109
+      },
+      {
+        "name": "_effective_business_domain_id",
+        "start": 2112,
+        "end": 2122
+      },
+      {
+        "name": "_effective_query_business_domain_id",
+        "start": 2125,
+        "end": 2137
+      },
+      {
+        "name": "_shift_month_start",
+        "start": 2140,
+        "end": 2143
+      },
+      {
+        "name": "_watermark_default_trend_range",
+        "start": 2146,
+        "end": 2185
+      },
+      {
+        "name": "_requery_system_default_trend_at_watermark",
+        "start": 2187,
+        "end": 2253
+      },
+      {
+        "name": "_recover_live_published_metrics",
+        "start": 2255,
+        "end": 2545
+      },
+      {
+        "name": "_pending_scope_matches",
+        "start": 2548,
+        "end": 2558
+      },
+      {
+        "name": "_handle",
+        "start": 2560,
+        "end": 5337
+      },
+      {
+        "name": "_composite_task_answer",
+        "start": 5339,
+        "end": 5411
+      },
+      {
+        "name": "_task_facet_label",
+        "start": 5414,
+        "end": 5423
+      },
+      {
+        "name": "_render_homogeneous_task_datasets",
+        "start": 5426,
+        "end": 5509
+      },
+      {
+        "name": "_requested_report_format",
+        "start": 5512,
+        "end": 5518
+      },
+      {
+        "name": "_attach_composite_report",
+        "start": 5520,
+        "end": 5613
+      },
+      {
+        "name": "_attach_requested_report",
+        "start": 5615,
+        "end": 5681
+      },
+      {
+        "name": "_knowledge_document_answer",
+        "start": 5683,
+        "end": 5756
+      },
+      {
+        "name": "_is_document_question",
+        "start": 5759,
+        "end": 5767
+      },
+      {
+        "name": "_operation_limit",
+        "start": 5770,
+        "end": 5786
+      },
+      {
+        "name": "_dataset_ordering_proof",
+        "start": 5789,
+        "end": 5822
+      },
+      {
+        "name": "_expandable_dataset_reference",
+        "start": 5825,
+        "end": 5851
+      },
+      {
+        "name": "_try_dataset_followup",
+        "start": 5853,
+        "end": 6111
+      },
+      {
+        "name": "_bind_result_entity_reference",
+        "start": 6114,
+        "end": 6349
+      },
+      {
+        "name": "_apply_recent_region_set_reference",
+        "start": 6351,
+        "end": 6427
+      },
+      {
+        "name": "_dataset_reference_matches_scope",
+        "start": 6430,
+        "end": 6470
+      },
+      {
+        "name": "_persist_query_dataset",
+        "start": 6472,
+        "end": 6535
+      },
+      {
+        "name": "_import_query_result_file",
+        "start": 6537,
+        "end": 6566
+      },
+      {
+        "name": "_classify",
+        "start": 6568,
+        "end": 6572
+      },
+      {
+        "name": "_classify_with_rules",
+        "start": 6574,
+        "end": 6586
+      },
+      {
+        "name": "_semantic_clarification_choice",
+        "start": 6589,
+        "end": 6675
+      },
+      {
+        "name": "_apply_semantic_clarification_choice",
+        "start": 6678,
+        "end": 6797
+      },
+      {
+        "name": "_is_deterministic_pending_reply",
+        "start": 6800,
+        "end": 6887
+      },
+      {
+        "name": "_finish_terminal",
+        "start": 6889,
+        "end": 6921
+      },
+      {
+        "name": "_sanitize_user_visible_answer",
+        "start": 6924,
+        "end": 6942
+      },
+      {
+        "name": "_sanitize_clarification_text",
+        "start": 6945,
+        "end": 6967
+      },
+      {
+        "name": "_append_download_links",
+        "start": 6970,
+        "end": 6993
+      },
+      {
+        "name": "_attach_query_result_file",
+        "start": 6995,
+        "end": 7017
+      },
+      {
+        "name": "_should_replace_pending",
+        "start": 7020,
+        "end": 7111
+      },
+      {
+        "name": "_preserve_pending_execution_contract",
+        "start": 7114,
+        "end": 7369
+      },
+      {
+        "name": "_has_explicit_sales_fact_event",
+        "start": 7372,
+        "end": 7378
+      },
+      {
+        "name": "_merge_explicit_collection_deltas",
+        "start": 7381,
+        "end": 7452
+      },
+      {
+        "name": "_explicit_field_projection",
+        "start": 7455,
+        "end": 7460
+      },
+      {
+        "name": "_literal_projected_fields",
+        "start": 7463,
+        "end": 7478
+      },
+      {
+        "name": "_explicit_field_addition",
+        "start": 7481,
+        "end": 7487
+      },
+      {
+        "name": "_literal_added_fields",
+        "start": 7490,
+        "end": 7506
+      },
+      {
+        "name": "_explicit_dimension_addition",
+        "start": 7509,
+        "end": 7515
+      },
+      {
+        "name": "_explicit_filter_addition",
+        "start": 7518,
+        "end": 7524
+      },
+      {
+        "name": "_literal_exclusion_filter",
+        "start": 7527,
+        "end": 7561
+      },
+      {
+        "name": "_apply_confirmed_memories",
+        "start": 7563,
+        "end": 7594
+      },
+      {
+        "name": "_apply_confirmed_memory_slots",
+        "start": 7596,
+        "end": 7644
+      },
+      {
+        "name": "_confirmed_memory_is_applicable",
+        "start": 7647,
+        "end": 7672
+      },
+      {
+        "name": "_render_confirmed_memory",
+        "start": 7675,
+        "end": 7698
+      },
+      {
+        "name": "_latest_previous_user_question",
+        "start": 7701,
+        "end": 7709
+      },
+      {
+        "name": "_is_contextual_analysis_follow_up",
+        "start": 7712,
+        "end": 7733
+      },
+      {
+        "name": "_history_recovery_candidate",
+        "start": 7736,
+        "end": 7761
+      },
+      {
+        "name": "_request_clarification",
+        "start": 7763,
+        "end": 7853
+      },
+      {
+        "name": "_intent_label",
+        "start": 7856,
+        "end": 7873
+      },
+      {
+        "name": "_turn_relation_label",
+        "start": 7876,
+        "end": 7888
+      },
+      {
+        "name": "_intent_think_summary",
+        "start": 7891,
+        "end": 7903
+      },
+      {
+        "name": "_file_inspection_think_summary",
+        "start": 7906,
+        "end": 7944
+      },
+      {
+        "name": "_insight_dimension_summary",
+        "start": 7947,
+        "end": 7960
+      },
+      {
+        "name": "_build_analysis_process",
+        "start": 7963,
+        "end": 8150
+      },
+      {
+        "name": "_metadata_answer",
+        "start": 8152,
+        "end": 8248
+      },
+      {
+        "name": "_bind_metrics_from_asl",
+        "start": 8251,
+        "end": 8294
+      },
+      {
+        "name": "_derived_metric_evidence",
+        "start": 8297,
+        "end": 8349
+      },
+      {
+        "name": "_semantic_metric_evidence",
+        "start": 8352,
+        "end": 8397
+      },
+      {
+        "name": "_projection_value_key",
+        "start": 8400,
+        "end": 8428
+      },
+      {
+        "name": "_restore_projected_filter_columns",
+        "start": 8431,
+        "end": 8496
+      },
+      {
+        "name": "_enforce_name_projection_integrity",
+        "start": 8499,
+        "end": 8603
+      },
+      {
+        "name": "_relationship_projection_rows",
+        "start": 8606,
+        "end": 8644
+      },
+      {
+        "name": "_relationship_count_projection_request",
+        "start": 8647,
+        "end": 8699
+      },
+      {
+        "name": "_relationship_count_projection_result",
+        "start": 8702,
+        "end": 8810
+      },
+      {
+        "name": "_analyze",
+        "start": 8813,
+        "end": 8893
+      },
+      {
+        "name": "_display_column_name",
+        "start": 8896,
+        "end": 8906
+      },
+      {
+        "name": "_markdown_cell",
+        "start": 8909,
+        "end": 8918
+      },
+      {
+        "name": "_markdown_result_table",
+        "start": 8921,
+        "end": 8940
+      },
+      {
+        "name": "_task_result_summary_table",
+        "start": 8943,
+        "end": 8955
+      },
+      {
+        "name": "_ambiguity_texts",
+        "start": 8958,
+        "end": 8978
+      },
+      {
+        "name": "_semantic_ambiguities",
+        "start": 8981,
+        "end": 9073
+      },
+      {
+        "name": "_clarification_questions",
+        "start": 9076,
+        "end": 9107
+      },
+      {
+        "name": "_clarification_items",
+        "start": 9110,
+        "end": 9159
+      },
+      {
+        "name": "_visible_clarification_prompt",
+        "start": 9162,
+        "end": 9206
+      },
+      {
+        "name": "_understood_slots",
+        "start": 9209,
+        "end": 9238
+      },
+      {
+        "name": "_understood_text",
+        "start": 9241,
+        "end": 9257
+      },
+      {
+        "name": "_external_search_mode",
+        "start": 9260,
+        "end": 9296
+      },
+      {
+        "name": "_enrich_ranked_entities",
+        "start": 9298,
+        "end": 9434
+      },
+      {
+        "name": "_ranked_entity_search_query",
+        "start": 9437,
+        "end": 9456
+      },
+      {
+        "name": "_web_record_matches_label",
+        "start": 9459,
+        "end": 9464
+      },
+      {
+        "name": "_attach_external_enrichment",
+        "start": 9467,
+        "end": 9516
+      },
+      {
+        "name": "_external_only_answer",
+        "start": 9518,
+        "end": 9627
+      },
+      {
+        "name": "_external_search_material",
+        "start": 9630,
+        "end": 9683
+      },
+      {
+        "name": "_consensus_chinese_address",
+        "start": 9686,
+        "end": 9725
+      },
+      {
+        "name": "_web_search_records",
+        "start": 9728,
+        "end": 9805
+      },
+      {
+        "name": "_bounded_external_text",
+        "start": 9808,
+        "end": 9812
+      },
+      {
+        "name": "_activity_definition_note",
+        "start": 9815,
+        "end": 9828
+      },
+      {
+        "name": "_direct",
+        "start": 9830,
+        "end": 9875
+      },
+      {
+        "name": "_source_watermark_payload",
+        "start": 9878,
+        "end": 9901
+      },
+      {
+        "name": "_source_watermark_note",
+        "start": 9904,
+        "end": 9920
+      },
+      {
+        "name": "_reliability",
+        "start": 9923,
+        "end": 10022
+      },
+      {
+        "name": "_dependency_message",
+        "start": 10025,
+        "end": 10071
+      },
+      {
+        "name": "_analysis_contract_requirements",
+        "start": 10074,
+        "end": 10110
+      },
+      {
+        "name": "_fallback",
+        "start": 10113,
+        "end": 10114
+      },
+      {
+        "name": "save_checkpoint",
+        "start": 1321,
+        "end": 1337
+      },
+      {
+        "name": "run",
+        "start": 1339,
+        "end": 1487
+      },
+      {
+        "name": "grouping_key",
+        "start": 2452,
+        "end": 2454
+      },
+      {
+        "name": "valid_value",
+        "start": 6131,
+        "end": 6135
+      },
+      {
+        "name": "normalized_column",
+        "start": 6190,
+        "end": 6191
+      },
+      {
+        "name": "column_for_role",
+        "start": 6193,
+        "end": 6200
+      },
+      {
+        "name": "values_for_role",
+        "start": 6202,
+        "end": 6211
+      },
+      {
+        "name": "bind_values",
+        "start": 6213,
+        "end": 6225
+      },
+      {
+        "name": "ordinal_number",
+        "start": 6233,
+        "end": 6248
+      },
+      {
+        "name": "normalize",
+        "start": 8539,
+        "end": 8542
+      },
+      {
+        "name": "valid_row",
+        "start": 8564,
+        "end": 8569
+      },
+      {
+        "name": "search",
+        "start": 9344,
+        "end": 9371
+      },
+      {
+        "name": "derived_metric_verified",
+        "start": 9930,
+        "end": 9940
+      }
+    ]
+  },
+  {
+    "path": "app/domain/models.py",
+    "sha256": "f374a95f642185fb9fab07d93cc16f066b78334b22c8d849d1311008a2bb7186",
+    "lines": 1317,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "f374a95f642185fb9fab07d93cc16f066b78334b22c8d849d1311008a2bb7186",
+    "definitions": [
+      {
+        "name": "StrictModel",
+        "start": 22,
+        "end": 23
+      },
+      {
+        "name": "PrimaryIntent",
+        "start": 26,
+        "end": 41
+      },
+      {
+        "name": "ConversationControl",
+        "start": 44,
+        "end": 50
+      },
+      {
+        "name": "TurnRelation",
+        "start": 53,
+        "end": 63
+      },
+      {
+        "name": "ContextMode",
+        "start": 66,
+        "end": 70
+      },
+      {
+        "name": "SlotSource",
+        "start": 73,
+        "end": 79
+      },
+      {
+        "name": "SlotOperationType",
+        "start": 82,
+        "end": 90
+      },
+      {
+        "name": "AnalysisOperator",
+        "start": 93,
+        "end": 108
+      },
+      {
+        "name": "TimeRange",
+        "start": 111,
+        "end": 114
+      },
+      {
+        "name": "SlotProvenance",
+        "start": 117,
+        "end": 123
+      },
+      {
+        "name": "SlotOperation",
+        "start": 126,
+        "end": 136
+      },
+      {
+        "name": "CurrentTurnFacts",
+        "start": 139,
+        "end": 149
+      },
+      {
+        "name": "TurnAdmissionDecision",
+        "start": 152,
+        "end": 175
+      },
+      {
+        "name": "TemporalAnchor",
+        "start": 178,
+        "end": 190
+      },
+      {
+        "name": "ResolvedPeriodComparison",
+        "start": 193,
+        "end": 196
+      },
+      {
+        "name": "MetricRef",
+        "start": 199,
+        "end": 204
+      },
+      {
+        "name": "IntentCandidate",
+        "start": 207,
+        "end": 210
+      },
+      {
+        "name": "SemanticAmbiguity",
+        "start": 213,
+        "end": 238
+      },
+      {
+        "name": "DependencyConstraint",
+        "start": 241,
+        "end": 253
+      },
+      {
+        "name": "SemanticFilterBinding",
+        "start": 256,
+        "end": 275
+      },
+      {
+        "name": "SemanticAssetRef",
+        "start": 278,
+        "end": 291
+      },
+      {
+        "name": "BusinessRuleRef",
+        "start": 294,
+        "end": 303
+      },
+      {
+        "name": "RelationshipPathRef",
+        "start": 306,
+        "end": 320
+      },
+      {
+        "name": "SemanticRetrievalItem",
+        "start": 323,
+        "end": 331
+      },
+      {
+        "name": "SemanticRetrievalSummary",
+        "start": 334,
+        "end": 341
+      },
+      {
+        "name": "FilterResolutionEvidence",
+        "start": 344,
+        "end": 352
+      },
+      {
+        "name": "SemanticPlanEvidence",
+        "start": 355,
+        "end": 370
+      },
+      {
+        "name": "SemanticContextSnapshot",
+        "start": 373,
+        "end": 383
+      },
+      {
+        "name": "CanonicalAnalysisRequest",
+        "start": 386,
+        "end": 482
+      },
+      {
+        "name": "HistoryMessage",
+        "start": 485,
+        "end": 489
+      },
+      {
+        "name": "ToolConfig",
+        "start": 492,
+        "end": 550
+      },
+      {
+        "name": "SkillConfig",
+        "start": 553,
+        "end": 572
+      },
+      {
+        "name": "McpConfig",
+        "start": 575,
+        "end": 593
+      },
+      {
+        "name": "ChatRequest",
+        "start": 596,
+        "end": 844
+      },
+      {
+        "name": "TrustedIdentity",
+        "start": 847,
+        "end": 850
+      },
+      {
+        "name": "QuerySpec",
+        "start": 853,
+        "end": 864
+      },
+      {
+        "name": "Dataset",
+        "start": 867,
+        "end": 929
+      },
+      {
+        "name": "DataQueryResult",
+        "start": 932,
+        "end": 953
+      },
+      {
+        "name": "EvidenceItem",
+        "start": 956,
+        "end": 960
+      },
+      {
+        "name": "KnowledgeDocument",
+        "start": 963,
+        "end": 970
+      },
+      {
+        "name": "KnowledgeContext",
+        "start": 973,
+        "end": 975
+      },
+      {
+        "name": "ReliabilityReport",
+        "start": 978,
+        "end": 982
+      },
+      {
+        "name": "AnalysisRequirement",
+        "start": 985,
+        "end": 989
+      },
+      {
+        "name": "AnalysisHypothesis",
+        "start": 992,
+        "end": 995
+      },
+      {
+        "name": "DataSufficiencyRule",
+        "start": 998,
+        "end": 1001
+      },
+      {
+        "name": "AnalysisDataContractSpec",
+        "start": 1004,
+        "end": 1009
+      },
+      {
+        "name": "ExplorationQueryRequirements",
+        "start": 1012,
+        "end": 1028
+      },
+      {
+        "name": "AnalysisStep",
+        "start": 1031,
+        "end": 1043
+      },
+      {
+        "name": "AnalysisPlan",
+        "start": 1046,
+        "end": 1060
+      },
+      {
+        "name": "AnalysisProcessStep",
+        "start": 1063,
+        "end": 1082
+      },
+      {
+        "name": "ChartSpec",
+        "start": 1085,
+        "end": 1098
+      },
+      {
+        "name": "AtomicTask",
+        "start": 1101,
+        "end": 1104
+      },
+      {
+        "name": "TaskPlan",
+        "start": 1107,
+        "end": 1111
+      },
+      {
+        "name": "TaskExecutionResult",
+        "start": 1114,
+        "end": 1124
+      },
+      {
+        "name": "GeneratedFile",
+        "start": 1127,
+        "end": 1137
+      },
+      {
+        "name": "ExtensionExecution",
+        "start": 1140,
+        "end": 1151
+      },
+      {
+        "name": "ValidationCheck",
+        "start": 1154,
+        "end": 1161
+      },
+      {
+        "name": "ResultValidationReport",
+        "start": 1164,
+        "end": 1172
+      },
+      {
+        "name": "SemanticSqlValidationCheck",
+        "start": 1175,
+        "end": 1180
+      },
+      {
+        "name": "SemanticSqlValidationLayer",
+        "start": 1183,
+        "end": 1187
+      },
+      {
+        "name": "SemanticSqlValidationReport",
+        "start": 1190,
+        "end": 1203
+      },
+      {
+        "name": "ClarificationItem",
+        "start": 1206,
+        "end": 1230
+      },
+      {
+        "name": "AgentResponse",
+        "start": 1233,
+        "end": 1305
+      },
+      {
+        "name": "PendingState",
+        "start": 1308,
+        "end": 1312
+      },
+      {
+        "name": "validate_available_periods",
+        "start": 186,
+        "end": 190
+      },
+      {
+        "name": "normalize_candidates",
+        "start": 233,
+        "end": 238
+      },
+      {
+        "name": "validate_http_url",
+        "start": 522,
+        "end": 526
+      },
+      {
+        "name": "validate_name",
+        "start": 530,
+        "end": 536
+      },
+      {
+        "name": "validate_headers",
+        "start": 540,
+        "end": 550
+      },
+      {
+        "name": "validate_platform_skill_slug",
+        "start": 562,
+        "end": 572
+      },
+      {
+        "name": "validate_mcp_url",
+        "start": 584,
+        "end": 588
+      },
+      {
+        "name": "validate_mcp_headers",
+        "start": 592,
+        "end": 593
+      },
+      {
+        "name": "normalize_required_text",
+        "start": 723,
+        "end": 726
+      },
+      {
+        "name": "validate_task_answers",
+        "start": 730,
+        "end": 746
+      },
+      {
+        "name": "normalize_knowledge_base_names",
+        "start": 750,
+        "end": 775
+      },
+      {
+        "name": "normalize_temp_file_paths",
+        "start": 779,
+        "end": 792
+      },
+      {
+        "name": "normalize_business_domain_ids",
+        "start": 798,
+        "end": 809
+      },
+      {
+        "name": "validate_history",
+        "start": 812,
+        "end": 844
+      },
+      {
+        "name": "validate_dataset_contract",
+        "start": 884,
+        "end": 929
+      },
+      {
+        "name": "validate_ranges",
+        "start": 1023,
+        "end": 1028
+      },
+      {
+        "name": "require_layers",
+        "start": 1197,
+        "end": 1203
+      },
+      {
+        "name": "validate_options",
+        "start": 1223,
+        "end": 1230
+      }
+    ]
+  },
+  {
+    "path": "app/stores/session.py",
+    "sha256": "58c21533db69b115b67d876cf5b2bc01b7cf76526b4fcf1081f52e5e265aa2e0",
+    "lines": 1042,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "58c21533db69b115b67d876cf5b2bc01b7cf76526b4fcf1081f52e5e265aa2e0",
+    "definitions": [
+      {
+        "name": "_task_frame_fingerprint",
+        "start": 19,
+        "end": 34
+      },
+      {
+        "name": "SessionConflictError",
+        "start": 37,
+        "end": 38
+      },
+      {
+        "name": "MessageIdReuseConflictError",
+        "start": 41,
+        "end": 57
+      },
+      {
+        "name": "SessionStore",
+        "start": 60,
+        "end": 87
+      },
+      {
+        "name": "InMemorySessionStore",
+        "start": 90,
+        "end": 480
+      },
+      {
+        "name": "RedisSessionStore",
+        "start": 483,
+        "end": 1042
+      },
+      {
+        "name": "__init__",
+        "start": 46,
+        "end": 57
+      },
+      {
+        "name": "get_pending",
+        "start": 61,
+        "end": 61
+      },
+      {
+        "name": "put_pending",
+        "start": 62,
+        "end": 62
+      },
+      {
+        "name": "clear_pending",
+        "start": 63,
+        "end": 63
+      },
+      {
+        "name": "get_response",
+        "start": 64,
+        "end": 64
+      },
+      {
+        "name": "put_response",
+        "start": 65,
+        "end": 65
+      },
+      {
+        "name": "get_last_request",
+        "start": 66,
+        "end": 66
+      },
+      {
+        "name": "put_last_request",
+        "start": 67,
+        "end": 67
+      },
+      {
+        "name": "get_task_frame",
+        "start": 68,
+        "end": 68
+      },
+      {
+        "name": "put_task_frame",
+        "start": 69,
+        "end": 69
+      },
+      {
+        "name": "get_recent_task_frames",
+        "start": 70,
+        "end": 70
+      },
+      {
+        "name": "put_dataset_reference",
+        "start": 71,
+        "end": 71
+      },
+      {
+        "name": "get_recent_dataset_references",
+        "start": 72,
+        "end": 72
+      },
+      {
+        "name": "list_expired_dataset_references",
+        "start": 73,
+        "end": 73
+      },
+      {
+        "name": "delete_dataset_reference",
+        "start": 74,
+        "end": 74
+      },
+      {
+        "name": "get_dag_checkpoint",
+        "start": 75,
+        "end": 75
+      },
+      {
+        "name": "put_dag_checkpoint",
+        "start": 76,
+        "end": 76
+      },
+      {
+        "name": "delete_dag_checkpoint",
+        "start": 77,
+        "end": 77
+      },
+      {
+        "name": "get_dag_pending",
+        "start": 78,
+        "end": 78
+      },
+      {
+        "name": "put_dag_pending",
+        "start": 79,
+        "end": 79
+      },
+      {
+        "name": "clear_dag_pending",
+        "start": 80,
+        "end": 80
+      },
+      {
+        "name": "claim_message_execution",
+        "start": 81,
+        "end": 81
+      },
+      {
+        "name": "release_message_execution",
+        "start": 82,
+        "end": 82
+      },
+      {
+        "name": "put_report_reference",
+        "start": 83,
+        "end": 83
+      },
+      {
+        "name": "list_expired_report_references",
+        "start": 84,
+        "end": 84
+      },
+      {
+        "name": "delete_report_reference",
+        "start": 85,
+        "end": 85
+      },
+      {
+        "name": "put_validated_query_example",
+        "start": 86,
+        "end": 86
+      },
+      {
+        "name": "get_validated_query_examples",
+        "start": 87,
+        "end": 87
+      },
+      {
+        "name": "__init__",
+        "start": 93,
+        "end": 120
+      },
+      {
+        "name": "get_pending",
+        "start": 122,
+        "end": 129
+      },
+      {
+        "name": "put_pending",
+        "start": 131,
+        "end": 138
+      },
+      {
+        "name": "clear_pending",
+        "start": 140,
+        "end": 149
+      },
+      {
+        "name": "get_response",
+        "start": 151,
+        "end": 184
+      },
+      {
+        "name": "put_response",
+        "start": 186,
+        "end": 222
+      },
+      {
+        "name": "get_last_request",
+        "start": 224,
+        "end": 231
+      },
+      {
+        "name": "put_last_request",
+        "start": 233,
+        "end": 237
+      },
+      {
+        "name": "get_task_frame",
+        "start": 239,
+        "end": 246
+      },
+      {
+        "name": "put_task_frame",
+        "start": 248,
+        "end": 265
+      },
+      {
+        "name": "get_recent_task_frames",
+        "start": 267,
+        "end": 279
+      },
+      {
+        "name": "put_dataset_reference",
+        "start": 281,
+        "end": 294
+      },
+      {
+        "name": "get_recent_dataset_references",
+        "start": 296,
+        "end": 308
+      },
+      {
+        "name": "list_expired_dataset_references",
+        "start": 310,
+        "end": 319
+      },
+      {
+        "name": "delete_dataset_reference",
+        "start": 321,
+        "end": 326
+      },
+      {
+        "name": "get_dag_checkpoint",
+        "start": 328,
+        "end": 335
+      },
+      {
+        "name": "put_dag_checkpoint",
+        "start": 337,
+        "end": 343
+      },
+      {
+        "name": "delete_dag_checkpoint",
+        "start": 345,
+        "end": 349
+      },
+      {
+        "name": "get_dag_pending",
+        "start": 351,
+        "end": 360
+      },
+      {
+        "name": "put_dag_pending",
+        "start": 362,
+        "end": 381
+      },
+      {
+        "name": "clear_dag_pending",
+        "start": 383,
+        "end": 396
+      },
+      {
+        "name": "claim_message_execution",
+        "start": 398,
+        "end": 412
+      },
+      {
+        "name": "release_message_execution",
+        "start": 414,
+        "end": 422
+      },
+      {
+        "name": "put_report_reference",
+        "start": 424,
+        "end": 428
+      },
+      {
+        "name": "list_expired_report_references",
+        "start": 430,
+        "end": 438
+      },
+      {
+        "name": "delete_report_reference",
+        "start": 440,
+        "end": 442
+      },
+      {
+        "name": "put_validated_query_example",
+        "start": 444,
+        "end": 460
+      },
+      {
+        "name": "get_validated_query_examples",
+        "start": 462,
+        "end": 480
+      },
+      {
+        "name": "__init__",
+        "start": 545,
+        "end": 548
+      },
+      {
+        "name": "from_url",
+        "start": 551,
+        "end": 552
+      },
+      {
+        "name": "_key",
+        "start": 554,
+        "end": 556
+      },
+      {
+        "name": "get_pending",
+        "start": 558,
+        "end": 568
+      },
+      {
+        "name": "put_pending",
+        "start": 570,
+        "end": 574
+      },
+      {
+        "name": "clear_pending",
+        "start": 576,
+        "end": 584
+      },
+      {
+        "name": "get_response",
+        "start": 586,
+        "end": 626
+      },
+      {
+        "name": "put_response",
+        "start": 628,
+        "end": 665
+      },
+      {
+        "name": "get_last_request",
+        "start": 667,
+        "end": 677
+      },
+      {
+        "name": "put_last_request",
+        "start": 679,
+        "end": 683
+      },
+      {
+        "name": "get_task_frame",
+        "start": 685,
+        "end": 695
+      },
+      {
+        "name": "put_task_frame",
+        "start": 697,
+        "end": 708
+      },
+      {
+        "name": "get_recent_task_frames",
+        "start": 710,
+        "end": 724
+      },
+      {
+        "name": "_dataset_expiry_key",
+        "start": 727,
+        "end": 728
+      },
+      {
+        "name": "_report_expiry_key",
+        "start": 731,
+        "end": 732
+      },
+      {
+        "name": "put_dataset_reference",
+        "start": 734,
+        "end": 754
+      },
+      {
+        "name": "get_recent_dataset_references",
+        "start": 756,
+        "end": 788
+      },
+      {
+        "name": "list_expired_dataset_references",
+        "start": 790,
+        "end": 816
+      },
+      {
+        "name": "delete_dataset_reference",
+        "start": 818,
+        "end": 837
+      },
+      {
+        "name": "get_dag_checkpoint",
+        "start": 839,
+        "end": 850
+      },
+      {
+        "name": "put_dag_checkpoint",
+        "start": 852,
+        "end": 857
+      },
+      {
+        "name": "delete_dag_checkpoint",
+        "start": 859,
+        "end": 862
+      },
+      {
+        "name": "get_dag_pending",
+        "start": 864,
+        "end": 879
+      },
+      {
+        "name": "put_dag_pending",
+        "start": 881,
+        "end": 894
+      },
+      {
+        "name": "clear_dag_pending",
+        "start": 896,
+        "end": 907
+      },
+      {
+        "name": "claim_message_execution",
+        "start": 909,
+        "end": 924
+      },
+      {
+        "name": "release_message_execution",
+        "start": 926,
+        "end": 934
+      },
+      {
+        "name": "put_report_reference",
+        "start": 936,
+        "end": 950
+      },
+      {
+        "name": "list_expired_report_references",
+        "start": 952,
+        "end": 979
+      },
+      {
+        "name": "delete_report_reference",
+        "start": 981,
+        "end": 985
+      },
+      {
+        "name": "put_validated_query_example",
+        "start": 987,
+        "end": 1014
+      },
+      {
+        "name": "get_validated_query_examples",
+        "start": 1016,
+        "end": 1042
+      }
+    ]
+  },
+  {
+    "path": "minio_followup_store.py",
+    "sha256": "93c71b5d95222037cfccac68a0fd1b56e537503aca5aa1ef13cec161cf14f05c",
+    "lines": 1547,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "93c71b5d95222037cfccac68a0fd1b56e537503aca5aa1ef13cec161cf14f05c",
+    "definitions": [
+      {
+        "name": "DatasetStorageRoute",
+        "start": 38,
+        "end": 41
+      },
+      {
+        "name": "choose_dataset_storage_route",
+        "start": 44,
+        "end": 60
+      },
+      {
+        "name": "estimate_dataset_json_bytes",
+        "start": 63,
+        "end": 70
+      },
+      {
+        "name": "DatasetStoreError",
+        "start": 73,
+        "end": 74
+      },
+      {
+        "name": "DatasetNotFound",
+        "start": 77,
+        "end": 78
+      },
+      {
+        "name": "DatasetExpired",
+        "start": 81,
+        "end": 82
+      },
+      {
+        "name": "DatasetScopeMismatch",
+        "start": 85,
+        "end": 86
+      },
+      {
+        "name": "InvalidFollowupOperation",
+        "start": 89,
+        "end": 90
+      },
+      {
+        "name": "MinioClientProtocol",
+        "start": 93,
+        "end": 106
+      },
+      {
+        "name": "DatasetScope",
+        "start": 110,
+        "end": 119
+      },
+      {
+        "name": "DatasetReference",
+        "start": 123,
+        "end": 152
+      },
+      {
+        "name": "LoadedDataset",
+        "start": 156,
+        "end": 158
+      },
+      {
+        "name": "FollowupResult",
+        "start": 162,
+        "end": 164
+      },
+      {
+        "name": "_utc_now",
+        "start": 167,
+        "end": 168
+      },
+      {
+        "name": "_parse_datetime",
+        "start": 171,
+        "end": 178
+      },
+      {
+        "name": "_json_value",
+        "start": 181,
+        "end": 200
+      },
+      {
+        "name": "_canonical_json",
+        "start": 203,
+        "end": 206
+      },
+      {
+        "name": "_scope_digest",
+        "start": 209,
+        "end": 211
+      },
+      {
+        "name": "_reference_from_dict",
+        "start": 214,
+        "end": 243
+      },
+      {
+        "name": "dataset_reference_from_dict",
+        "start": 246,
+        "end": 248
+      },
+      {
+        "name": "MinioFollowupStore",
+        "start": 251,
+        "end": 524
+      },
+      {
+        "name": "ParquetMinioFollowupStore",
+        "start": 527,
+        "end": 1037
+      },
+      {
+        "name": "HybridMinioFollowupStore",
+        "start": 1040,
+        "end": 1152
+      },
+      {
+        "name": "_join_with_store",
+        "start": 1155,
+        "end": 1285
+      },
+      {
+        "name": "apply_followup_operation",
+        "start": 1288,
+        "end": 1458
+      },
+      {
+        "name": "_require_column",
+        "start": 1461,
+        "end": 1465
+      },
+      {
+        "name": "_compare",
+        "start": 1468,
+        "end": 1495
+      },
+      {
+        "name": "_as_number",
+        "start": 1498,
+        "end": 1507
+      },
+      {
+        "name": "_numeric_or_none",
+        "start": 1510,
+        "end": 1514
+      },
+      {
+        "name": "_arithmetic",
+        "start": 1517,
+        "end": 1529
+      },
+      {
+        "name": "_aggregate",
+        "start": 1532,
+        "end": 1547
+      },
+      {
+        "name": "bucket_exists",
+        "start": 94,
+        "end": 94
+      },
+      {
+        "name": "put_object",
+        "start": 95,
+        "end": 103
+      },
+      {
+        "name": "get_object",
+        "start": 104,
+        "end": 104
+      },
+      {
+        "name": "stat_object",
+        "start": 105,
+        "end": 105
+      },
+      {
+        "name": "remove_object",
+        "start": 106,
+        "end": 106
+      },
+      {
+        "name": "validate",
+        "start": 116,
+        "end": 119
+      },
+      {
+        "name": "to_dict",
+        "start": 145,
+        "end": 152
+      },
+      {
+        "name": "__init__",
+        "start": 254,
+        "end": 267
+      },
+      {
+        "name": "from_env",
+        "start": 270,
+        "end": 290
+      },
+      {
+        "name": "check_ready",
+        "start": 292,
+        "end": 294
+      },
+      {
+        "name": "save_dataset",
+        "start": 296,
+        "end": 398
+      },
+      {
+        "name": "load_dataset",
+        "start": 400,
+        "end": 468
+      },
+      {
+        "name": "execute_followup",
+        "start": 470,
+        "end": 499
+      },
+      {
+        "name": "join_datasets",
+        "start": 501,
+        "end": 514
+      },
+      {
+        "name": "delete_dataset",
+        "start": 516,
+        "end": 524
+      },
+      {
+        "name": "__init__",
+        "start": 535,
+        "end": 552
+      },
+      {
+        "name": "_pyarrow",
+        "start": 555,
+        "end": 563
+      },
+      {
+        "name": "check_ready",
+        "start": 565,
+        "end": 568
+      },
+      {
+        "name": "save_dataset",
+        "start": 570,
+        "end": 707
+      },
+      {
+        "name": "_read_object",
+        "start": 709,
+        "end": 734
+      },
+      {
+        "name": "_load_manifest",
+        "start": 736,
+        "end": 794
+      },
+      {
+        "name": "load_dataset",
+        "start": 796,
+        "end": 829
+      },
+      {
+        "name": "read_for_followup",
+        "start": 831,
+        "end": 902
+      },
+      {
+        "name": "_read_filtered_rows",
+        "start": 904,
+        "end": 982
+      },
+      {
+        "name": "_read_projected_rows",
+        "start": 984,
+        "end": 1022
+      },
+      {
+        "name": "delete_dataset",
+        "start": 1024,
+        "end": 1037
+      },
+      {
+        "name": "__init__",
+        "start": 1043,
+        "end": 1059
+      },
+      {
+        "name": "check_ready",
+        "start": 1061,
+        "end": 1063
+      },
+      {
+        "name": "save_dataset",
+        "start": 1065,
+        "end": 1086
+      },
+      {
+        "name": "_store_for",
+        "start": 1088,
+        "end": 1093
+      },
+      {
+        "name": "load_dataset",
+        "start": 1095,
+        "end": 1096
+      },
+      {
+        "name": "execute_followup",
+        "start": 1098,
+        "end": 1135
+      },
+      {
+        "name": "join_datasets",
+        "start": 1137,
+        "end": 1149
+      },
+      {
+        "name": "delete_dataset",
+        "start": 1151,
+        "end": 1152
+      }
+    ]
+  },
+  {
+    "path": "tests/test_semantic_v2_contracts.py",
+    "sha256": "51dabf8706252794401a7417ec056ab0d6301ad510fc09371e0181a4ff42f13d",
+    "lines": 522,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "51dabf8706252794401a7417ec056ab0d6301ad510fc09371e0181a4ff42f13d",
+    "definitions": [
+      {
+        "name": "ref",
+        "start": 80,
+        "end": 100
+      },
+      {
+        "name": "time_spec",
+        "start": 103,
+        "end": 116
+      },
+      {
+        "name": "plan",
+        "start": 119,
+        "end": 155
+      },
+      {
+        "name": "operation",
+        "start": 158,
+        "end": 177
+      },
+      {
+        "name": "conversation",
+        "start": 180,
+        "end": 218
+      },
+      {
+        "name": "test_schema_passes_draft_2020_12_metaschema",
+        "start": 221,
+        "end": 223
+      },
+      {
+        "name": "test_schema_is_generated_from_pydantic",
+        "start": 226,
+        "end": 228
+      },
+      {
+        "name": "test_chat_payload_has_no_query_requirements",
+        "start": 231,
+        "end": 232
+      },
+      {
+        "name": "test_control_payload_has_no_query_requirements",
+        "start": 235,
+        "end": 236
+      },
+      {
+        "name": "test_time_series_without_measure_fails",
+        "start": 239,
+        "end": 241
+      },
+      {
+        "name": "test_time_series_without_grain_fails",
+        "start": 244,
+        "end": 250
+      },
+      {
+        "name": "test_ranking_without_rank_by_fails",
+        "start": 253,
+        "end": 255
+      },
+      {
+        "name": "test_ranking_without_limit_fails",
+        "start": 258,
+        "end": 260
+      },
+      {
+        "name": "test_relation_list_without_target_fails",
+        "start": 263,
+        "end": 267
+      },
+      {
+        "name": "test_dataset_transform_without_source_fails",
+        "start": 270,
+        "end": 272
+      },
+      {
+        "name": "test_lineage_does_not_require_metric_or_time",
+        "start": 275,
+        "end": 279
+      },
+      {
+        "name": "test_clear_requires_explicitly_cleared_presence",
+        "start": 282,
+        "end": 284
+      },
+      {
+        "name": "test_unknown_plan_field_is_rejected",
+        "start": 287,
+        "end": 291
+      },
+      {
+        "name": "test_empty_canonical_id_is_rejected",
+        "start": 294,
+        "end": 298
+      },
+      {
+        "name": "test_mention_span_mismatch_fails",
+        "start": 301,
+        "end": 312
+      },
+      {
+        "name": "test_lossy_unsafe_adapter_cannot_execute",
+        "start": 315,
+        "end": 317
+      },
+      {
+        "name": "test_unsupported_comparison_is_not_silently_dropped",
+        "start": 320,
+        "end": 333
+      },
+      {
+        "name": "test_result_contract_missing_column_fails",
+        "start": 336,
+        "end": 340
+      },
+      {
+        "name": "test_add_preserves_existing_metrics",
+        "start": 343,
+        "end": 347
+      },
+      {
+        "name": "test_replace_removes_same_slot_metrics",
+        "start": 350,
+        "end": 356
+      },
+      {
+        "name": "test_clear_blocks_later_inheritance",
+        "start": 359,
+        "end": 368
+      },
+      {
+        "name": "test_new_topic_does_not_inherit_old_filter",
+        "start": 371,
+        "end": 390
+      },
+      {
+        "name": "test_revise_invalidates_semantic_dataset",
+        "start": 393,
+        "end": 405
+      },
+      {
+        "name": "test_user_ambiguity_and_system_failure_are_distinct",
+        "start": 408,
+        "end": 426
+      },
+      {
+        "name": "test_system_failures_do_not_create_pending",
+        "start": 433,
+        "end": 442
+      },
+      {
+        "name": "test_cross_tenant_semantic_scope_is_rejected",
+        "start": 445,
+        "end": 448
+      },
+      {
+        "name": "test_state_version_conflict_is_rejected",
+        "start": 451,
+        "end": 456
+      },
+      {
+        "name": "test_applicable_and_administrative_department_are_distinct",
+        "start": 459,
+        "end": 467
+      },
+      {
+        "name": "test_first_five_rows_and_top_five_are_different_plans",
+        "start": 470,
+        "end": 483
+      },
+      {
+        "name": "test_slot_reducer_enforces_cas_version",
+        "start": 486,
+        "end": 491
+      },
+      {
+        "name": "test_refresh_preserves_task_version",
+        "start": 494,
+        "end": 499
+      },
+      {
+        "name": "test_completed_requires_all_proofs_to_pass",
+        "start": 502,
+        "end": 506
+      },
+      {
+        "name": "test_trace_rejects_sensitive_payload",
+        "start": 509,
+        "end": 522
+      }
+    ]
+  },
+  {
+    "path": "tests/test_phase25_tools.py",
+    "sha256": "5305326a2e8b246d5fbc949c9a60e55b49fae0045968294cf96be31ece9b0b6e",
+    "lines": 74,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "5305326a2e8b246d5fbc949c9a60e55b49fae0045968294cf96be31ece9b0b6e",
+    "definitions": [
+      {
+        "name": "test_catalog_lint_marks_unknown_business_rules_without_mutating_snapshot",
+        "start": 12,
+        "end": 33
+      },
+      {
+        "name": "test_catalog_lint_reports_duplicate_relation_codes",
+        "start": 36,
+        "end": 50
+      },
+      {
+        "name": "test_shadow_record_without_fixture_is_unavailable",
+        "start": 53,
+        "end": 56
+      },
+      {
+        "name": "test_shadow_invalid_fixture_is_partial_not_silently_accepted",
+        "start": 59,
+        "end": 62
+      },
+      {
+        "name": "test_shadow_loads_json_and_jsonl_locally",
+        "start": 65,
+        "end": 74
+      }
+    ]
+  },
+  {
+    "path": "tests/test_turn_admission.py",
+    "sha256": "e9ecf9f2774adcdc14f691970ddee2c93014d553e351e7b25b31e762434f0560",
+    "lines": 1205,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "e9ecf9f2774adcdc14f691970ddee2c93014d553e351e7b25b31e762434f0560",
+    "definitions": [
+      {
+        "name": "_finalized_standalone",
+        "start": 34,
+        "end": 53
+      },
+      {
+        "name": "_decision",
+        "start": 56,
+        "end": 73
+      },
+      {
+        "name": "_filter_value",
+        "start": 76,
+        "end": 84
+      },
+      {
+        "name": "test_existing_monthly_trend_phrase_continues_active_business_task",
+        "start": 87,
+        "end": 98
+      },
+      {
+        "name": "test_department_relation_qualifier_is_current_topic_modification",
+        "start": 105,
+        "end": 117
+      },
+      {
+        "name": "test_real_department_followup_keeps_spec_and_replaces_relation_type",
+        "start": 121,
+        "end": 190
+      },
+      {
+        "name": "test_department_relation_sql_guard_is_column_scoped_for_numeric_values",
+        "start": 193,
+        "end": 224
+      },
+      {
+        "name": "test_model_grounded_short_followup_defers_entity_role_to_semantic_layer",
+        "start": 227,
+        "end": 266
+      },
+      {
+        "name": "test_elliptical_product_replaces_prior_brand_subject_scope_atomically",
+        "start": 269,
+        "end": 312
+      },
+      {
+        "name": "test_explicit_additive_subject_wording_does_not_replace_prior_brand_scope",
+        "start": 315,
+        "end": 325
+      },
+      {
+        "name": "test_sql_alignment_rejects_replaced_brand_across_filter_families",
+        "start": 328,
+        "end": 370
+      },
+      {
+        "name": "test_incomplete_unreferenced_turn_exposes_relation_clarification_state",
+        "start": 373,
+        "end": 386
+      },
+      {
+        "name": "test_catalog_category_scope_does_not_become_a_synthetic_product_fact",
+        "start": 389,
+        "end": 414
+      },
+      {
+        "name": "test_ranked_partner_query_object_survives_explicit_slot_protection",
+        "start": 417,
+        "end": 435
+      },
+      {
+        "name": "test_catalog_category_alignment_accepts_split_sql_and_still_rejects_loss",
+        "start": 438,
+        "end": 476
+      },
+      {
+        "name": "test_catalog_category_change_is_a_core_subject_change_not_a_followup_leak",
+        "start": 479,
+        "end": 488
+      },
+      {
+        "name": "test_concrete_product_fact_remains_protected_when_no_category_was_parsed",
+        "start": 491,
+        "end": 501
+      },
+      {
+        "name": "test_semantic_dimension_rebind_updates_provenance_before_slot_protection",
+        "start": 504,
+        "end": 531
+      },
+      {
+        "name": "test_case_1_complete_new_product_trend_is_standalone_new_topic",
+        "start": 534,
+        "end": 556
+      },
+      {
+        "name": "test_interrogative_relationship_question_is_self_contained_new_topic",
+        "start": 559,
+        "end": 571
+      },
+      {
+        "name": "test_case_2_elliptical_product_replacement_is_current_topic_modification",
+        "start": 574,
+        "end": 592
+      },
+      {
+        "name": "test_case_3_complete_same_domain_query_is_still_new_topic",
+        "start": 595,
+        "end": 603
+      },
+      {
+        "name": "test_case_4_elliptical_analysis_action_inherits_product",
+        "start": 606,
+        "end": 621
+      },
+      {
+        "name": "test_case_5_complete_product_change_clears_dealer_task",
+        "start": 624,
+        "end": 639
+      },
+      {
+        "name": "test_case_6_region_ellipsis_is_current_topic_modification",
+        "start": 642,
+        "end": 655
+      },
+      {
+        "name": "test_case_7_complete_region_product_ranking_is_new_topic",
+        "start": 658,
+        "end": 673
+      },
+      {
+        "name": "test_explicit_topic_switch_prefix_starts_a_new_thread",
+        "start": 676,
+        "end": 686
+      },
+      {
+        "name": "test_nationwide_followup_clears_only_region_scope",
+        "start": 689,
+        "end": 707
+      },
+      {
+        "name": "test_query_to_sql_alignment_rejects_missing_or_stale_current_entity",
+        "start": 710,
+        "end": 740
+      },
+      {
+        "name": "test_product_name_alignment_accepts_only_the_generic_product_suffix_alias",
+        "start": 743,
+        "end": 766
+      },
+      {
+        "name": "test_product_suffix_alias_keeps_negative_filter_polarity_enforced",
+        "start": 769,
+        "end": 797
+      },
+      {
+        "name": "test_exact_product_filter_cannot_be_weakened_to_like",
+        "start": 800,
+        "end": 815
+      },
+      {
+        "name": "test_hospital_level_filter_accepts_registered_value_without_object_suffix",
+        "start": 818,
+        "end": 831
+      },
+      {
+        "name": "test_semantic_filter_change_invalidates_inherited_asl_and_dataset",
+        "start": 834,
+        "end": 849
+      },
+      {
+        "name": "test_complete_extrema_query_is_not_mistaken_for_result_followup",
+        "start": 852,
+        "end": 859
+      },
+      {
+        "name": "test_elliptical_extrema_question_is_admitted_as_result_followup",
+        "start": 862,
+        "end": 870
+      },
+      {
+        "name": "test_stale_product_detection_understands_the_same_suffix_alias",
+        "start": 873,
+        "end": 892
+      },
+      {
+        "name": "test_filter_polarity_is_preserved_in_asl_and_sql_guards",
+        "start": 895,
+        "end": 932
+      },
+      {
+        "name": "test_execution_query_policy_uses_raw_only_for_standalone_turns",
+        "start": 935,
+        "end": 969
+      },
+      {
+        "name": "_CapturingTwoTurnRetrieval",
+        "start": 972,
+        "end": 1023
+      },
+      {
+        "name": "test_real_two_turn_orchestration_does_not_leak_previous_product_or_dealer",
+        "start": 1027,
+        "end": 1122
+      },
+      {
+        "name": "test_standalone_admission_rebases_a_precontaminated_semantic_frame",
+        "start": 1125,
+        "end": 1158
+      },
+      {
+        "name": "_CountingModelClassifier",
+        "start": 1161,
+        "end": 1178
+      },
+      {
+        "name": "test_complete_business_query_does_not_bypass_enabled_model_classifier",
+        "start": 1182,
+        "end": 1205
+      },
+      {
+        "name": "capture_query",
+        "start": 127,
+        "end": 140
+      },
+      {
+        "name": "__init__",
+        "start": 973,
+        "end": 975
+      },
+      {
+        "name": "health",
+        "start": 977,
+        "end": 978
+      },
+      {
+        "name": "rewrite_health",
+        "start": 980,
+        "end": 981
+      },
+      {
+        "name": "query",
+        "start": 983,
+        "end": 1023
+      },
+      {
+        "name": "__init__",
+        "start": 1162,
+        "end": 1164
+      },
+      {
+        "name": "classify",
+        "start": 1166,
+        "end": 1175
+      },
+      {
+        "name": "merge_clarification",
+        "start": 1177,
+        "end": 1178
+      }
+    ]
+  },
+  {
+    "path": "tests/test_structured_intent.py",
+    "sha256": "3012c78734cb6d250a4763ac842c2b0eedfed02db62b52aec9fe82fee6a44080",
+    "lines": 583,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "3012c78734cb6d250a4763ac842c2b0eedfed02db62b52aec9fe82fee6a44080",
+    "definitions": [
+      {
+        "name": "settings",
+        "start": 17,
+        "end": 28
+      },
+      {
+        "name": "model_response",
+        "start": 31,
+        "end": 35
+      },
+      {
+        "name": "test_metric_name_noun_is_not_query_entity_evidence",
+        "start": 38,
+        "end": 57
+      },
+      {
+        "name": "test_model_metric_guess_cannot_turn_relationship_question_into_metric_clarification",
+        "start": 61,
+        "end": 106
+      },
+      {
+        "name": "test_short_followup_keeps_model_extracted_current_entity_value",
+        "start": 111,
+        "end": 153
+      },
+      {
+        "name": "test_grounded_generic_nouns_are_not_accepted_as_complete_metrics",
+        "start": 160,
+        "end": 163
+      },
+      {
+        "name": "test_grounded_custom_business_metrics_remain_eligible",
+        "start": 167,
+        "end": 170
+      },
+      {
+        "name": "test_model_normalized_display_field_is_grounded_by_business_role",
+        "start": 173,
+        "end": 189
+      },
+      {
+        "name": "test_model_detail_label_cannot_drop_metric_from_grouped_partner_list",
+        "start": 193,
+        "end": 234
+      },
+      {
+        "name": "test_model_handles_implicit_intent_without_strong_rule_signal",
+        "start": 238,
+        "end": 270
+      },
+      {
+        "name": "test_low_confidence_model_falls_back_to_rules",
+        "start": 274,
+        "end": 302
+      },
+      {
+        "name": "test_invalid_model_payload_fails_closed_to_rules",
+        "start": 306,
+        "end": 319
+      },
+      {
+        "name": "test_strong_comparison_rule_vetoes_model_misclassification",
+        "start": 323,
+        "end": 353
+      },
+      {
+        "name": "test_strong_business_rule_still_uses_model_for_completion_and_entity_extraction",
+        "start": 357,
+        "end": 399
+      },
+      {
+        "name": "test_generic_model_metric_cannot_override_registered_sales_trend_metric",
+        "start": 403,
+        "end": 446
+      },
+      {
+        "name": "test_generic_model_metric_is_dropped_when_no_default_convention_exists",
+        "start": 450,
+        "end": 487
+      },
+      {
+        "name": "test_explicit_quantity_metric_still_wins_over_generic_model_fragment",
+        "start": 491,
+        "end": 527
+      },
+      {
+        "name": "test_model_completion_guard_rejects_lost_current_numbers_and_sql",
+        "start": 530,
+        "end": 544
+      },
+      {
+        "name": "test_ranked_partner_shape_restores_sort_after_model_operator_overwrite",
+        "start": 548,
+        "end": 583
+      },
+      {
+        "name": "handler",
+        "start": 77,
+        "end": 78
+      },
+      {
+        "name": "handler",
+        "start": 131,
+        "end": 132
+      },
+      {
+        "name": "handler",
+        "start": 209,
+        "end": 210
+      },
+      {
+        "name": "handler",
+        "start": 254,
+        "end": 259
+      },
+      {
+        "name": "handler",
+        "start": 290,
+        "end": 291
+      },
+      {
+        "name": "handler",
+        "start": 307,
+        "end": 308
+      },
+      {
+        "name": "handler",
+        "start": 339,
+        "end": 340
+      },
+      {
+        "name": "handler",
+        "start": 375,
+        "end": 377
+      },
+      {
+        "name": "handler",
+        "start": 420,
+        "end": 421
+      },
+      {
+        "name": "handler",
+        "start": 467,
+        "end": 468
+      },
+      {
+        "name": "handler",
+        "start": 508,
+        "end": 509
+      },
+      {
+        "name": "handler",
+        "start": 564,
+        "end": 565
+      }
+    ]
+  },
+  {
+    "path": "tests/test_clarification_flow.py",
+    "sha256": "14e5bd2220a8c6321b61366557ca3e60e769e62de8bdb9cb74880a8135e6d490",
+    "lines": 270,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "14e5bd2220a8c6321b61366557ca3e60e769e62de8bdb9cb74880a8135e6d490",
+    "definitions": [
+      {
+        "name": "service",
+        "start": 11,
+        "end": 19
+      },
+      {
+        "name": "test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "start": 26,
+        "end": 54
+      },
+      {
+        "name": "test_natural_date_reply_completes_the_existing_metric_request",
+        "start": 58,
+        "end": 89
+      },
+      {
+        "name": "test_explicit_new_chat_interrupts_an_unrelated_pending_request",
+        "start": 93,
+        "end": 119
+      },
+      {
+        "name": "test_explicit_detail_task_replaces_an_unrelated_pending_metric_query",
+        "start": 123,
+        "end": 146
+      },
+      {
+        "name": "test_short_slot_reply_does_not_replace_the_pending_request",
+        "start": 150,
+        "end": 173
+      },
+      {
+        "name": "test_comparison_object_names_close_pending_comparison",
+        "start": 177,
+        "end": 207
+      },
+      {
+        "name": "test_explicit_new_task_wording_resets_a_pending_analysis",
+        "start": 211,
+        "end": 234
+      },
+      {
+        "name": "test_history_cold_recovery_does_not_swallow_new_task_or_cancel",
+        "start": 246,
+        "end": 270
+      }
+    ]
+  },
+  {
+    "path": "tests/test_pending_execution_transition.py",
+    "sha256": "3a3db0e89fb17eb9fedafc0ca7fc14a7ebfee36c24f2810c5af69b69d5e18c30",
+    "lines": 367,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "3a3db0e89fb17eb9fedafc0ca7fc14a7ebfee36c24f2810c5af69b69d5e18c30",
+    "definitions": [
+      {
+        "name": "AmbiguousThenSuccessfulRetrieval",
+        "start": 27,
+        "end": 44
+      },
+      {
+        "name": "FailingRetrieval",
+        "start": 47,
+        "end": 53
+      },
+      {
+        "name": "CapturingSuccessfulRetrieval",
+        "start": 56,
+        "end": 63
+      },
+      {
+        "name": "service",
+        "start": 66,
+        "end": 81
+      },
+      {
+        "name": "CountingHybridClassifier",
+        "start": 84,
+        "end": 94
+      },
+      {
+        "name": "pending_partner_request",
+        "start": 97,
+        "end": 111
+      },
+      {
+        "name": "resolved_partner_patch",
+        "start": 114,
+        "end": 122
+      },
+      {
+        "name": "test_time_clarification_can_add_explicit_exclusion_filter",
+        "start": 125,
+        "end": 138
+      },
+      {
+        "name": "test_time_clarification_can_add_explicit_field_without_replacing_old_fields",
+        "start": 141,
+        "end": 150
+      },
+      {
+        "name": "test_time_clarification_unions_explicit_dimension_delta_only",
+        "start": 153,
+        "end": 165
+      },
+      {
+        "name": "test_closed_form_pending_reply_skips_async_intent_model_path",
+        "start": 169,
+        "end": 195
+      },
+      {
+        "name": "test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "start": 199,
+        "end": 266
+      },
+      {
+        "name": "test_terminal_dependency_failure_clears_resolved_pending_state",
+        "start": 270,
+        "end": 303
+      },
+      {
+        "name": "test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "start": 307,
+        "end": 334
+      },
+      {
+        "name": "test_correction_after_completed_turn_replaces_old_dimension",
+        "start": 338,
+        "end": 367
+      },
+      {
+        "name": "__init__",
+        "start": 28,
+        "end": 30
+      },
+      {
+        "name": "query",
+        "start": 32,
+        "end": 44
+      },
+      {
+        "name": "__init__",
+        "start": 48,
+        "end": 49
+      },
+      {
+        "name": "query",
+        "start": 51,
+        "end": 53
+      },
+      {
+        "name": "__init__",
+        "start": 57,
+        "end": 59
+      },
+      {
+        "name": "query",
+        "start": 61,
+        "end": 63
+      },
+      {
+        "name": "__init__",
+        "start": 85,
+        "end": 87
+      },
+      {
+        "name": "classify",
+        "start": 89,
+        "end": 91
+      },
+      {
+        "name": "merge_clarification",
+        "start": 93,
+        "end": 94
+      }
+    ]
+  },
+  {
+    "path": "tests/test_conversation_result_followup.py",
+    "sha256": "fe3298b21d9e540cefefe145c3605b31c5e269ca2e4e4ea87e6ebf20e0eb8ac6",
+    "lines": 537,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "fe3298b21d9e540cefefe145c3605b31c5e269ca2e4e4ea87e6ebf20e0eb8ac6",
+    "definitions": [
+      {
+        "name": "_filter",
+        "start": 35,
+        "end": 43
+      },
+      {
+        "name": "_ResultStore",
+        "start": 46,
+        "end": 117
+      },
+      {
+        "name": "_CapturingRetrieval",
+        "start": 120,
+        "end": 170
+      },
+      {
+        "name": "_agent",
+        "start": 173,
+        "end": 195
+      },
+      {
+        "name": "_first_trend",
+        "start": 198,
+        "end": 208
+      },
+      {
+        "name": "test_1_period_decline_reuses_previous_result_without_sql",
+        "start": 212,
+        "end": 242
+      },
+      {
+        "name": "test_2_recovery_compares_with_immediately_preceding_period",
+        "start": 246,
+        "end": 262
+      },
+      {
+        "name": "test_3_why_decline_inherits_scope_but_requires_new_query",
+        "start": 266,
+        "end": 285
+      },
+      {
+        "name": "test_4_explicit_year_overrides_episode_year",
+        "start": 289,
+        "end": 305
+      },
+      {
+        "name": "test_5_explicit_metric_overrides_inherited_metric_but_month_uses_anchor",
+        "start": 309,
+        "end": 326
+      },
+      {
+        "name": "test_6_complete_new_product_with_explicit_year_is_new_topic",
+        "start": 330,
+        "end": 348
+      },
+      {
+        "name": "_ListRetrieval",
+        "start": 351,
+        "end": 386
+      },
+      {
+        "name": "_list_agent",
+        "start": 389,
+        "end": 410
+      },
+      {
+        "name": "test_7_expanding_top_n_restores_base_result_instead_of_reusing_slice",
+        "start": 414,
+        "end": 465
+      },
+      {
+        "name": "test_8_semantic_filter_followup_requeries_instead_of_replaying_old_list",
+        "start": 469,
+        "end": 499
+      },
+      {
+        "name": "test_9_business_scale_sort_requeries_when_old_list_has_no_metric",
+        "start": 503,
+        "end": 537
+      },
+      {
+        "name": "__init__",
+        "start": 47,
+        "end": 49
+      },
+      {
+        "name": "save_dataset",
+        "start": 51,
+        "end": 79
+      },
+      {
+        "name": "load_dataset",
+        "start": 81,
+        "end": 83
+      },
+      {
+        "name": "execute_followup",
+        "start": 85,
+        "end": 117
+      },
+      {
+        "name": "__init__",
+        "start": 121,
+        "end": 122
+      },
+      {
+        "name": "health",
+        "start": 124,
+        "end": 125
+      },
+      {
+        "name": "rewrite_health",
+        "start": 127,
+        "end": 128
+      },
+      {
+        "name": "query",
+        "start": 130,
+        "end": 170
+      },
+      {
+        "name": "__init__",
+        "start": 352,
+        "end": 353
+      },
+      {
+        "name": "health",
+        "start": 355,
+        "end": 356
+      },
+      {
+        "name": "rewrite_health",
+        "start": 358,
+        "end": 359
+      },
+      {
+        "name": "query",
+        "start": 361,
+        "end": 386
+      }
+    ]
+  },
+  {
+    "path": "Long-range Conversational Data Agent V2设计报告.md",
+    "sha256": "53af5a3707d3f43c73d14e6facddaa90b94aa46b2345ca59d232cdbed34f6a52",
+    "lines": 1203,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "53af5a3707d3f43c73d14e6facddaa90b94aa46b2345ca59d232cdbed34f6a52"
+  },
+  {
+    "path": "app/semantic_v2/clarification.py",
+    "sha256": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb",
+    "lines": 60,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "e47c444fd6705711ac776a8412fc03a133df3f781e53101416a02fe7f2767961",
+    "definitions": [
+      {
+        "name": "authorized_clarification_options",
+        "start": 9,
+        "end": 19
+      },
+      {
+        "name": "decide_clarification",
+        "start": 22,
+        "end": 60
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/enums.py",
+    "sha256": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159",
+    "lines": 302,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "02ed58d06086f34db43263e1fee4071c9e64209a32609366c9dad10ffbceccc7",
+    "definitions": [
+      {
+        "name": "DialogueAct",
+        "start": 6,
+        "end": 24
+      },
+      {
+        "name": "ServiceRoute",
+        "start": 27,
+        "end": 40
+      },
+      {
+        "name": "AnalysisGoal",
+        "start": 43,
+        "end": 56
+      },
+      {
+        "name": "QueryShape",
+        "start": 59,
+        "end": 78
+      },
+      {
+        "name": "CatalogType",
+        "start": 81,
+        "end": 91
+      },
+      {
+        "name": "SemanticRole",
+        "start": 94,
+        "end": 113
+      },
+      {
+        "name": "ResolutionStatus",
+        "start": 116,
+        "end": 120
+      },
+      {
+        "name": "SlotOperationType",
+        "start": 123,
+        "end": 131
+      },
+      {
+        "name": "Presence",
+        "start": 134,
+        "end": 140
+      },
+      {
+        "name": "FilterOperator",
+        "start": 143,
+        "end": 159
+      },
+      {
+        "name": "TimeGrain",
+        "start": 162,
+        "end": 168
+      },
+      {
+        "name": "CalendarType",
+        "start": 171,
+        "end": 174
+      },
+      {
+        "name": "MissingPeriodPolicy",
+        "start": 177,
+        "end": 180
+      },
+      {
+        "name": "ProofStatus",
+        "start": 183,
+        "end": 187
+      },
+      {
+        "name": "AdapterStatus",
+        "start": 190,
+        "end": 194
+      },
+      {
+        "name": "ErrorType",
+        "start": 197,
+        "end": 208
+      },
+      {
+        "name": "TaskVersionStatus",
+        "start": 211,
+        "end": 220
+      },
+      {
+        "name": "CandidateRejectionReason",
+        "start": 223,
+        "end": 236
+      },
+      {
+        "name": "ExecutionBackend",
+        "start": 239,
+        "end": 246
+      },
+      {
+        "name": "ControlAction",
+        "start": 249,
+        "end": 253
+      },
+      {
+        "name": "DeliveryMode",
+        "start": 256,
+        "end": 262
+      },
+      {
+        "name": "Severity",
+        "start": 265,
+        "end": 267
+      },
+      {
+        "name": "ComparisonType",
+        "start": 270,
+        "end": 277
+      },
+      {
+        "name": "Calculation",
+        "start": 280,
+        "end": 285
+      },
+      {
+        "name": "QualityCheckType",
+        "start": 288,
+        "end": 294
+      },
+      {
+        "name": "ExecutionStatus",
+        "start": 297,
+        "end": 302
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/legacy_adapter.py",
+    "sha256": "28067a1cdfd06f4039ce000265362b4131fed1228b013a9fa4a2cfb6f5c27621",
+    "lines": 59,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "a6511fce20f2e6ee15ed6c8054c8f111f1229b84d026894d25d0b30333fdb519",
+    "definitions": [
+      {
+        "name": "assess_legacy_adapter",
+        "start": 15,
+        "end": 59
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/migration.py",
+    "sha256": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6",
+    "lines": 100,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": null,
+    "definitions": [
+      {
+        "name": "SchemaMigrationResult",
+        "start": 12,
+        "end": 19
+      },
+      {
+        "name": "_migrate_payload",
+        "start": 22,
+        "end": 71
+      },
+      {
+        "name": "SchemaMigrationRegistry",
+        "start": 74,
+        "end": 100
+      },
+      {
+        "name": "walk",
+        "start": 25,
+        "end": 36
+      },
+      {
+        "name": "migrate",
+        "start": 77,
+        "end": 100
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/models.py",
+    "sha256": "ea4be3ce4605e17153be9076ceab40e9d3e75747b9b3f1578b22385562e2d6e2",
+    "lines": 1445,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "0ae495cd55ca0a1bc4b8906c3b435b22569e3276d9cadecdf85af0e05ef84a4a",
+    "definitions": [
+      {
+        "name": "FrozenList",
+        "start": 40,
+        "end": 48
+      },
+      {
+        "name": "FrozenDict",
+        "start": 51,
+        "end": 58
+      },
+      {
+        "name": "freeze_contract",
+        "start": 61,
+        "end": 74
+      },
+      {
+        "name": "StrictModel",
+        "start": 77,
+        "end": 94
+      },
+      {
+        "name": "DialogueSpec",
+        "start": 100,
+        "end": 106
+      },
+      {
+        "name": "TopicTarget",
+        "start": 109,
+        "end": 114
+      },
+      {
+        "name": "SemanticAxes",
+        "start": 117,
+        "end": 123
+      },
+      {
+        "name": "Mention",
+        "start": 126,
+        "end": 148
+      },
+      {
+        "name": "SemanticRef",
+        "start": 151,
+        "end": 164
+      },
+      {
+        "name": "BoundSemanticRef",
+        "start": 167,
+        "end": 195
+      },
+      {
+        "name": "SemanticCandidate",
+        "start": 198,
+        "end": 220
+      },
+      {
+        "name": "SemanticCandidateSet",
+        "start": 223,
+        "end": 242
+      },
+      {
+        "name": "PlanCandidateScore",
+        "start": 245,
+        "end": 260
+      },
+      {
+        "name": "PlanCandidate",
+        "start": 263,
+        "end": 271
+      },
+      {
+        "name": "SemanticResolutionContract",
+        "start": 274,
+        "end": 305
+      },
+      {
+        "name": "SlotOperation",
+        "start": 308,
+        "end": 332
+      },
+      {
+        "name": "StringValue",
+        "start": 335,
+        "end": 337
+      },
+      {
+        "name": "NumberValue",
+        "start": 340,
+        "end": 342
+      },
+      {
+        "name": "BooleanValue",
+        "start": 345,
+        "end": 347
+      },
+      {
+        "name": "DateValue",
+        "start": 350,
+        "end": 352
+      },
+      {
+        "name": "DateTimeValue",
+        "start": 355,
+        "end": 357
+      },
+      {
+        "name": "EnumValue",
+        "start": 360,
+        "end": 363
+      },
+      {
+        "name": "EntityValueRef",
+        "start": 366,
+        "end": 368
+      },
+      {
+        "name": "NullValue",
+        "start": 371,
+        "end": 373
+      },
+      {
+        "name": "ListValue",
+        "start": 382,
+        "end": 391
+      },
+      {
+        "name": "RangeValue",
+        "start": 394,
+        "end": 405
+      },
+      {
+        "name": "Predicate",
+        "start": 414,
+        "end": 442
+      },
+      {
+        "name": "BooleanFilterGroup",
+        "start": 445,
+        "end": 456
+      },
+      {
+        "name": "TimeRange",
+        "start": 462,
+        "end": 474
+      },
+      {
+        "name": "TimeComparison",
+        "start": 477,
+        "end": 479
+      },
+      {
+        "name": "TimeSpec",
+        "start": 482,
+        "end": 510
+      },
+      {
+        "name": "RankingSpec",
+        "start": 513,
+        "end": 519
+      },
+      {
+        "name": "LimitSpec",
+        "start": 522,
+        "end": 524
+      },
+      {
+        "name": "TimeBaseline",
+        "start": 527,
+        "end": 536
+      },
+      {
+        "name": "TaskBaseline",
+        "start": 539,
+        "end": 542
+      },
+      {
+        "name": "DatasetBaseline",
+        "start": 545,
+        "end": 547
+      },
+      {
+        "name": "SemanticBaseline",
+        "start": 550,
+        "end": 552
+      },
+      {
+        "name": "ComputedExpression",
+        "start": 558,
+        "end": 560
+      },
+      {
+        "name": "ComputedMeasureRef",
+        "start": 563,
+        "end": 571
+      },
+      {
+        "name": "ComparisonSpec",
+        "start": 574,
+        "end": 592
+      },
+      {
+        "name": "ChartPreferences",
+        "start": 595,
+        "end": 596
+      },
+      {
+        "name": "DeliverySpec",
+        "start": 599,
+        "end": 611
+      },
+      {
+        "name": "ProjectionItem",
+        "start": 614,
+        "end": 620
+      },
+      {
+        "name": "ProjectionSpec",
+        "start": 623,
+        "end": 636
+      },
+      {
+        "name": "RelationshipSpec",
+        "start": 639,
+        "end": 643
+      },
+      {
+        "name": "ScopePolicyDecision",
+        "start": 646,
+        "end": 650
+      },
+      {
+        "name": "OutputFieldRequirement",
+        "start": 653,
+        "end": 659
+      },
+      {
+        "name": "OrderingRequirement",
+        "start": 662,
+        "end": 667
+      },
+      {
+        "name": "CardinalityExpectation",
+        "start": 670,
+        "end": 672
+      },
+      {
+        "name": "ProofRequirement",
+        "start": 675,
+        "end": 677
+      },
+      {
+        "name": "ProofCheck",
+        "start": 680,
+        "end": 685
+      },
+      {
+        "name": "OutputBindingProof",
+        "start": 688,
+        "end": 695
+      },
+      {
+        "name": "RowBounds",
+        "start": 698,
+        "end": 708
+      },
+      {
+        "name": "NumericConstraint",
+        "start": 711,
+        "end": 721
+      },
+      {
+        "name": "ResultContract",
+        "start": 724,
+        "end": 742
+      },
+      {
+        "name": "ContractProof",
+        "start": 745,
+        "end": 768
+      },
+      {
+        "name": "CompensationStep",
+        "start": 771,
+        "end": 776
+      },
+      {
+        "name": "CompensationPlan",
+        "start": 779,
+        "end": 781
+      },
+      {
+        "name": "ProofChain",
+        "start": 784,
+        "end": 788
+      },
+      {
+        "name": "AdapterReport",
+        "start": 791,
+        "end": 812
+      },
+      {
+        "name": "ReadinessBlocker",
+        "start": 815,
+        "end": 831
+      },
+      {
+        "name": "ClarificationOption",
+        "start": 834,
+        "end": 845
+      },
+      {
+        "name": "ProceedDecision",
+        "start": 848,
+        "end": 850
+      },
+      {
+        "name": "SystemRepairDecision",
+        "start": 853,
+        "end": 862
+      },
+      {
+        "name": "UserDecision",
+        "start": 865,
+        "end": 869
+      },
+      {
+        "name": "TerminalDecision",
+        "start": 872,
+        "end": 875
+      },
+      {
+        "name": "ClarificationDecision",
+        "start": 878,
+        "end": 909
+      },
+      {
+        "name": "PermissionContext",
+        "start": 915,
+        "end": 924
+      },
+      {
+        "name": "SnapshotContext",
+        "start": 927,
+        "end": 937
+      },
+      {
+        "name": "VersionMetadata",
+        "start": 940,
+        "end": 954
+      },
+      {
+        "name": "Provenance",
+        "start": 957,
+        "end": 961
+      },
+      {
+        "name": "BasePayload",
+        "start": 964,
+        "end": 966
+      },
+      {
+        "name": "ControlPayload",
+        "start": 969,
+        "end": 971
+      },
+      {
+        "name": "ChatPayload",
+        "start": 974,
+        "end": 976
+      },
+      {
+        "name": "MetricQueryPayloadBase",
+        "start": 979,
+        "end": 982
+      },
+      {
+        "name": "ScalarAggregatePayload",
+        "start": 985,
+        "end": 987
+      },
+      {
+        "name": "GroupedAggregatePayload",
+        "start": 990,
+        "end": 992
+      },
+      {
+        "name": "TimeSeriesPayload",
+        "start": 995,
+        "end": 1005
+      },
+      {
+        "name": "RankingPayload",
+        "start": 1008,
+        "end": 1011
+      },
+      {
+        "name": "ComparisonPayload",
+        "start": 1014,
+        "end": 1016
+      },
+      {
+        "name": "RelationListPayload",
+        "start": 1019,
+        "end": 1033
+      },
+      {
+        "name": "DetailRowsPayload",
+        "start": 1036,
+        "end": 1045
+      },
+      {
+        "name": "DatasetFilterOperation",
+        "start": 1048,
+        "end": 1050
+      },
+      {
+        "name": "DatasetSortOperation",
+        "start": 1053,
+        "end": 1055
+      },
+      {
+        "name": "DatasetLimitOperation",
+        "start": 1058,
+        "end": 1061
+      },
+      {
+        "name": "DatasetProjectOperation",
+        "start": 1064,
+        "end": 1072
+      },
+      {
+        "name": "DrilldownSpec",
+        "start": 1075,
+        "end": 1077
+      },
+      {
+        "name": "DatasetDrilldownOperation",
+        "start": 1080,
+        "end": 1082
+      },
+      {
+        "name": "DatasetTransformPayload",
+        "start": 1088,
+        "end": 1100
+      },
+      {
+        "name": "MetricDefinitionPayload",
+        "start": 1103,
+        "end": 1105
+      },
+      {
+        "name": "MetadataPayload",
+        "start": 1108,
+        "end": 1110
+      },
+      {
+        "name": "MetricTarget",
+        "start": 1113,
+        "end": 1115
+      },
+      {
+        "name": "FieldTarget",
+        "start": 1118,
+        "end": 1120
+      },
+      {
+        "name": "ColumnTarget",
+        "start": 1123,
+        "end": 1125
+      },
+      {
+        "name": "TableTarget",
+        "start": 1128,
+        "end": 1130
+      },
+      {
+        "name": "EntityTarget",
+        "start": 1133,
+        "end": 1135
+      },
+      {
+        "name": "DatasetTarget",
+        "start": 1138,
+        "end": 1140
+      },
+      {
+        "name": "ReportTarget",
+        "start": 1143,
+        "end": 1145
+      },
+      {
+        "name": "LineagePayload",
+        "start": 1151,
+        "end": 1169
+      },
+      {
+        "name": "DataQualityPayload",
+        "start": 1172,
+        "end": 1175
+      },
+      {
+        "name": "AlgorithmRef",
+        "start": 1178,
+        "end": 1188
+      },
+      {
+        "name": "AnomalyPayload",
+        "start": 1191,
+        "end": 1193
+      },
+      {
+        "name": "RootCausePayload",
+        "start": 1196,
+        "end": 1198
+      },
+      {
+        "name": "ForecastPayload",
+        "start": 1201,
+        "end": 1213
+      },
+      {
+        "name": "ReportPayload",
+        "start": 1216,
+        "end": 1220
+      },
+      {
+        "name": "CapabilityHelpPayload",
+        "start": 1223,
+        "end": 1225
+      },
+      {
+        "name": "OutOfScopePayload",
+        "start": 1228,
+        "end": 1230
+      },
+      {
+        "name": "PlanEnvelope",
+        "start": 1260,
+        "end": 1321
+      },
+      {
+        "name": "DatasetAncestry",
+        "start": 1324,
+        "end": 1341
+      },
+      {
+        "name": "DatasetTransformSafetyContract",
+        "start": 1344,
+        "end": 1383
+      },
+      {
+        "name": "SourceDatasetRef",
+        "start": 1386,
+        "end": 1390
+      },
+      {
+        "name": "TaskSemanticState",
+        "start": 1393,
+        "end": 1406
+      },
+      {
+        "name": "ExecutionAttemptRecord",
+        "start": 1409,
+        "end": 1442
+      },
+      {
+        "name": "_deny",
+        "start": 42,
+        "end": 43
+      },
+      {
+        "name": "__deepcopy__",
+        "start": 46,
+        "end": 48
+      },
+      {
+        "name": "_deny",
+        "start": 52,
+        "end": 53
+      },
+      {
+        "name": "__deepcopy__",
+        "start": 56,
+        "end": 58
+      },
+      {
+        "name": "__setattr__",
+        "start": 82,
+        "end": 85
+      },
+      {
+        "name": "normalize_datetimes",
+        "start": 89,
+        "end": 94
+      },
+      {
+        "name": "validate_interval",
+        "start": 143,
+        "end": 148
+      },
+      {
+        "name": "accept_legacy_python_ref",
+        "start": 184,
+        "end": 195
+      },
+      {
+        "name": "validate_selection",
+        "start": 232,
+        "end": 242
+      },
+      {
+        "name": "total_score",
+        "start": 258,
+        "end": 260
+      },
+      {
+        "name": "validate_global_selection",
+        "start": 284,
+        "end": 305
+      },
+      {
+        "name": "validate_clear_presence",
+        "start": 324,
+        "end": 332
+      },
+      {
+        "name": "compatible_values",
+        "start": 387,
+        "end": 391
+      },
+      {
+        "name": "compatible_bounds",
+        "start": 400,
+        "end": 405
+      },
+      {
+        "name": "validate_null_operators",
+        "start": 425,
+        "end": 442
+      },
+      {
+        "name": "validate_not_arity",
+        "start": 451,
+        "end": 456
+      },
+      {
+        "name": "validate_range",
+        "start": 467,
+        "end": 474
+      },
+      {
+        "name": "validate_policies",
+        "start": 501,
+        "end": 510
+      },
+      {
+        "name": "one_reference",
+        "start": 533,
+        "end": 536
+      },
+      {
+        "name": "legacy_python_comparison",
+        "start": 584,
+        "end": 592
+      },
+      {
+        "name": "compatible_delivery",
+        "start": 606,
+        "end": 611
+      },
+      {
+        "name": "consistent_projection",
+        "start": 629,
+        "end": 636
+      },
+      {
+        "name": "validate_bounds",
+        "start": 703,
+        "end": 708
+      },
+      {
+        "name": "ordered_bounds",
+        "start": 718,
+        "end": 721
+      },
+      {
+        "name": "legacy_check_map",
+        "start": 753,
+        "end": 756
+      },
+      {
+        "name": "check_status",
+        "start": 759,
+        "end": 764
+      },
+      {
+        "name": "warnings",
+        "start": 767,
+        "end": 768
+      },
+      {
+        "name": "validate_safety",
+        "start": 801,
+        "end": 812
+      },
+      {
+        "name": "only_user_ambiguity",
+        "start": 828,
+        "end": 831
+      },
+      {
+        "name": "option_value",
+        "start": 842,
+        "end": 845
+      },
+      {
+        "name": "system_only",
+        "start": 859,
+        "end": 862
+      },
+      {
+        "name": "enforce_user_ambiguity_only",
+        "start": 897,
+        "end": 909
+      },
+      {
+        "name": "require_time_grain",
+        "start": 1000,
+        "end": 1005
+      },
+      {
+        "name": "require_target",
+        "start": 1028,
+        "end": 1033
+      },
+      {
+        "name": "require_projection",
+        "start": 1042,
+        "end": 1045
+      },
+      {
+        "name": "nonempty_projection",
+        "start": 1069,
+        "end": 1072
+      },
+      {
+        "name": "legacy_python_limit",
+        "start": 1095,
+        "end": 1100
+      },
+      {
+        "name": "legacy_python_target",
+        "start": 1158,
+        "end": 1162
+      },
+      {
+        "name": "target_catalog_type",
+        "start": 1165,
+        "end": 1169
+      },
+      {
+        "name": "governed_algorithm",
+        "start": 1185,
+        "end": 1188
+      },
+      {
+        "name": "coherent_forecast",
+        "start": 1208,
+        "end": 1213
+      },
+      {
+        "name": "validate_mentions_and_scope",
+        "start": 1293,
+        "end": 1321
+      },
+      {
+        "name": "ancestry_identity",
+        "start": 1334,
+        "end": 1341
+      },
+      {
+        "name": "safe_to_execute",
+        "start": 1359,
+        "end": 1371
+      },
+      {
+        "name": "failure_reason",
+        "start": 1374,
+        "end": 1375
+      },
+      {
+        "name": "coherent_counts",
+        "start": 1378,
+        "end": 1383
+      },
+      {
+        "name": "execution_lifecycle",
+        "start": 1431,
+        "end": 1442
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/pipeline.py",
+    "sha256": "a37732615f58c12f2730c516a4eb1968ac05f49d12780c9ed37c94cac7f85eea",
+    "lines": 303,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": null,
+    "definitions": [
+      {
+        "name": "OperationMarker",
+        "start": 19,
+        "end": 22
+      },
+      {
+        "name": "CurrentTurnSemanticParse",
+        "start": 25,
+        "end": 37
+      },
+      {
+        "name": "CandidateSelectionDecision",
+        "start": 40,
+        "end": 48
+      },
+      {
+        "name": "CurrentTurnParseResult",
+        "start": 51,
+        "end": 72
+      },
+      {
+        "name": "CurrentTurnParser",
+        "start": 75,
+        "end": 83
+      },
+      {
+        "name": "TurnReferentialCompleteness",
+        "start": 86,
+        "end": 89
+      },
+      {
+        "name": "TurnResolutionResult",
+        "start": 92,
+        "end": 99
+      },
+      {
+        "name": "TurnResolver",
+        "start": 102,
+        "end": 126
+      },
+      {
+        "name": "ExecutionReadiness",
+        "start": 129,
+        "end": 143
+      },
+      {
+        "name": "BoundRefAuthorization",
+        "start": 146,
+        "end": 157
+      },
+      {
+        "name": "collect_bound_refs",
+        "start": 160,
+        "end": 169
+      },
+      {
+        "name": "validate_bound_ref_scope_and_permission",
+        "start": 172,
+        "end": 191
+      },
+      {
+        "name": "LogicalPlan",
+        "start": 194,
+        "end": 231
+      },
+      {
+        "name": "BackendContract",
+        "start": 234,
+        "end": 238
+      },
+      {
+        "name": "ExecutablePlan",
+        "start": 241,
+        "end": 260
+      },
+      {
+        "name": "LogicalPlanCompiler",
+        "start": 263,
+        "end": 293
+      },
+      {
+        "name": "compile_executable_plan",
+        "start": 296,
+        "end": 303
+      },
+      {
+        "name": "validate_candidates",
+        "start": 44,
+        "end": 48
+      },
+      {
+        "name": "current_turn_only",
+        "start": 57,
+        "end": 72
+      },
+      {
+        "name": "parse",
+        "start": 78,
+        "end": 83
+      },
+      {
+        "name": "resolve",
+        "start": 104,
+        "end": 126
+      },
+      {
+        "name": "evaluate",
+        "start": 131,
+        "end": 143
+      },
+      {
+        "name": "query_shape",
+        "start": 215,
+        "end": 216
+      },
+      {
+        "name": "semantic_fingerprint",
+        "start": 219,
+        "end": 221
+      },
+      {
+        "name": "final_plan_invariants",
+        "start": 224,
+        "end": 231
+      },
+      {
+        "name": "deterministic_outputs",
+        "start": 250,
+        "end": 260
+      },
+      {
+        "name": "compile",
+        "start": 265,
+        "end": 293
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/registries.py",
+    "sha256": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7",
+    "lines": 123,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": null,
+    "definitions": [
+      {
+        "name": "PayloadDefinition",
+        "start": 12,
+        "end": 22
+      },
+      {
+        "name": "_definition",
+        "start": 25,
+        "end": 31
+      },
+      {
+        "name": "PayloadContractRegistry",
+        "start": 34,
+        "end": 94
+      },
+      {
+        "name": "SlotDefinition",
+        "start": 98,
+        "end": 105
+      },
+      {
+        "name": "SlotDefinitionRegistry",
+        "start": 108,
+        "end": 123
+      },
+      {
+        "name": "get",
+        "start": 65,
+        "end": 69
+      },
+      {
+        "name": "resolve_query_shape",
+        "start": 72,
+        "end": 73
+      },
+      {
+        "name": "validate",
+        "start": 76,
+        "end": 84
+      },
+      {
+        "name": "validate_algorithm",
+        "start": 87,
+        "end": 94
+      },
+      {
+        "name": "get",
+        "start": 119,
+        "end": 123
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/result_contract.py",
+    "sha256": "7a6fcc078f2e63b274b7f9e80d61403cebd686d5de34868b6b6538ae4e104fe0",
+    "lines": 219,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "92ba9a6bd966008f5a44c31c650d09873342d1368d5d14a6d9caeb4aa77629df",
+    "definitions": [
+      {
+        "name": "ResultContractCompiler",
+        "start": 14,
+        "end": 82
+      },
+      {
+        "name": "prove_result_contract",
+        "start": 85,
+        "end": 211
+      },
+      {
+        "name": "completed_allowed",
+        "start": 214,
+        "end": 219
+      },
+      {
+        "name": "compile",
+        "start": 16,
+        "end": 82
+      },
+      {
+        "name": "output",
+        "start": 21,
+        "end": 27
+      },
+      {
+        "name": "compare",
+        "start": 176,
+        "end": 190
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/schema.py",
+    "sha256": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad",
+    "lines": 20,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad",
+    "definitions": [
+      {
+        "name": "draft_2020_12_schema",
+        "start": 13,
+        "end": 20
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/slot_reducer.py",
+    "sha256": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf",
+    "lines": 313,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "98c1f6daa032d175ac5b9fb1cec24df180cdb10c2aa3ff4d2afc00c7e69f2949",
+    "definitions": [
+      {
+        "name": "SlotValue",
+        "start": 18,
+        "end": 24
+      },
+      {
+        "name": "TaskSlotState",
+        "start": 27,
+        "end": 31
+      },
+      {
+        "name": "SlotReducerError",
+        "start": 34,
+        "end": 35
+      },
+      {
+        "name": "_canonical",
+        "start": 45,
+        "end": 60
+      },
+      {
+        "name": "_json",
+        "start": 63,
+        "end": 64
+      },
+      {
+        "name": "canonicalize_task_semantics",
+        "start": 67,
+        "end": 72
+      },
+      {
+        "name": "semantic_fingerprint",
+        "start": 75,
+        "end": 76
+      },
+      {
+        "name": "TaskPatch",
+        "start": 79,
+        "end": 147
+      },
+      {
+        "name": "PatchResult",
+        "start": 150,
+        "end": 155
+      },
+      {
+        "name": "_identity",
+        "start": 158,
+        "end": 163
+      },
+      {
+        "name": "apply_task_patch",
+        "start": 166,
+        "end": 204
+      },
+      {
+        "name": "apply_slot_operations",
+        "start": 207,
+        "end": 282
+      },
+      {
+        "name": "_add_value",
+        "start": 285,
+        "end": 294
+      },
+      {
+        "name": "_remove_value",
+        "start": 297,
+        "end": 305
+      },
+      {
+        "name": "_item_identity",
+        "start": 308,
+        "end": 313
+      },
+      {
+        "name": "validate_declaration",
+        "start": 91,
+        "end": 119
+      },
+      {
+        "name": "compile",
+        "start": 122,
+        "end": 147
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/state_machine.py",
+    "sha256": "6fa7412eed16252188b48fca774856438d3c52aeb2f96e4dfadcf043527feab6",
+    "lines": 493,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "32a5d66f5e0376f5453e3e42fc320b0121b1241fd53908b2c0cba6ccb31b9648",
+    "definitions": [
+      {
+        "name": "StateEvent",
+        "start": 17,
+        "end": 35
+      },
+      {
+        "name": "PendingClarification",
+        "start": 38,
+        "end": 66
+      },
+      {
+        "name": "PendingBlocker",
+        "start": 69,
+        "end": 89
+      },
+      {
+        "name": "DatasetState",
+        "start": 95,
+        "end": 103
+      },
+      {
+        "name": "TaskVersion",
+        "start": 106,
+        "end": 128
+      },
+      {
+        "name": "TaskState",
+        "start": 131,
+        "end": 156
+      },
+      {
+        "name": "TopicState",
+        "start": 159,
+        "end": 169
+      },
+      {
+        "name": "ConversationState",
+        "start": 172,
+        "end": 249
+      },
+      {
+        "name": "StateTransitionError",
+        "start": 252,
+        "end": 253
+      },
+      {
+        "name": "apply_state_event",
+        "start": 256,
+        "end": 333
+      },
+      {
+        "name": "_scope_pending",
+        "start": 336,
+        "end": 342
+      },
+      {
+        "name": "PendingPatch",
+        "start": 345,
+        "end": 350
+      },
+      {
+        "name": "PointerUpdates",
+        "start": 353,
+        "end": 355
+      },
+      {
+        "name": "StateMutation",
+        "start": 358,
+        "end": 370
+      },
+      {
+        "name": "apply_state_mutation",
+        "start": 373,
+        "end": 490
+      },
+      {
+        "name": "pending_invariants",
+        "start": 58,
+        "end": 66
+      },
+      {
+        "name": "selected_option",
+        "start": 82,
+        "end": 89
+      },
+      {
+        "name": "immutable_semantics",
+        "start": 120,
+        "end": 123
+      },
+      {
+        "name": "slot_snapshot",
+        "start": 126,
+        "end": 128
+      },
+      {
+        "name": "version_pointers",
+        "start": 147,
+        "end": 156
+      },
+      {
+        "name": "pending",
+        "start": 192,
+        "end": 194
+      },
+      {
+        "name": "references_exist",
+        "start": 197,
+        "end": 249
+      },
+      {
+        "name": "walk_dataset",
+        "start": 237,
+        "end": 246
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/trace_models.py",
+    "sha256": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5",
+    "lines": 89,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5",
+    "definitions": [
+      {
+        "name": "TraceStage",
+        "start": 14,
+        "end": 36
+      },
+      {
+        "name": "TraceV2",
+        "start": 45,
+        "end": 89
+      },
+      {
+        "name": "reject_sensitive_keys",
+        "start": 75,
+        "end": 89
+      },
+      {
+        "name": "walk",
+        "start": 78,
+        "end": 86
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/validators.py",
+    "sha256": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15",
+    "lines": 23,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15",
+    "definitions": [
+      {
+        "name": "validate_plan",
+        "start": 8,
+        "end": 23
+      }
+    ]
+  },
+  {
+    "path": "app/semantic_v2/__init__.py",
+    "sha256": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93",
+    "lines": 9,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93",
+    "definitions": []
+  },
+  {
+    "path": "docs/phase25/asl1_adapter_loss_matrix.csv",
+    "sha256": "28d81d4683dbc2aaf38669b82ea0142c18e2cbe47381d1cd6a3cb4224e3b8337",
+    "lines": 7,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "28d81d4683dbc2aaf38669b82ea0142c18e2cbe47381d1cd6a3cb4224e3b8337"
+  },
+  {
+    "path": "docs/phase25/baseline_manifest.json",
+    "sha256": "af40c31a422fb03c45af3e035a6b5bf474f4a1983e1d489f17662297cbc3274f",
+    "lines": 61,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "af40c31a422fb03c45af3e035a6b5bf474f4a1983e1d489f17662297cbc3274f"
+  },
+  {
+    "path": "docs/phase25/baseline_test_report.md",
+    "sha256": "c5643accad4afaa3cc7f4a9623352492ed7c5fd0bf91921a804da5fdd09354a4",
+    "lines": 13,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "c5643accad4afaa3cc7f4a9623352492ed7c5fd0bf91921a804da5fdd09354a4"
+  },
+  {
+    "path": "docs/phase25/catalog_governance_overlay.json",
+    "sha256": "1bc711f4b3c564d1e7147983a5f81aed9464fe949c6b6693748f0f265918a1d1",
+    "lines": 230,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "1bc711f4b3c564d1e7147983a5f81aed9464fe949c6b6693748f0f265918a1d1"
+  },
+  {
+    "path": "docs/phase25/catalog_lint_report.json",
+    "sha256": "a4921ec2df2c5b0483cd596ecac36244b8b52179c05fe6a7e18b5aaa82ef4579",
+    "lines": 1248,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "a4921ec2df2c5b0483cd596ecac36244b8b52179c05fe6a7e18b5aaa82ef4579"
+  },
+  {
+    "path": "docs/phase25/catalog_owner_review_checklist.md",
+    "sha256": "91396474455d341f7d9bfc66121e44dc790db24cfa23de60941477da3609f02f",
+    "lines": 11,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "91396474455d341f7d9bfc66121e44dc790db24cfa23de60941477da3609f02f"
+  },
+  {
+    "path": "docs/phase25/change_manifest.json",
+    "sha256": "3b09a093107b5c61c7807417d8159053d2888bc02612d9e47cac0e09a13bb463",
+    "lines": 277,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "3b09a093107b5c61c7807417d8159053d2888bc02612d9e47cac0e09a13bb463"
+  },
+  {
+    "path": "docs/phase25/clarification_contract.md",
+    "sha256": "2d18c147b3e5553144889465642b013af609846d950f3736a5aab43db8e6014f",
+    "lines": 3,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "2d18c147b3e5553144889465642b013af609846d950f3736a5aab43db8e6014f"
+  },
+  {
+    "path": "docs/phase25/conversation_state_machine.md",
+    "sha256": "1993caa36dab53e7a8a693399a8adaa266e38c5051f97c2387f77b919766721a",
+    "lines": 9,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "1993caa36dab53e7a8a693399a8adaa266e38c5051f97c2387f77b919766721a"
+  },
+  {
+    "path": "docs/phase25/conversation_state_machine.mmd",
+    "sha256": "ab3eaf69f11e8a2d8c6811989fd08134cd8d9911790718fa29e05d44e9dece86",
+    "lines": 11,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "ab3eaf69f11e8a2d8c6811989fd08134cd8d9911790718fa29e05d44e9dece86"
+  },
+  {
+    "path": "docs/phase25/evaluation_annotation_guide.md",
+    "sha256": "f8b54fa8cf4c76e0bff866f5c0187f7380b36dfed591afc9b9f0510caad4614d",
+    "lines": 8,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "f8b54fa8cf4c76e0bff866f5c0187f7380b36dfed591afc9b9f0510caad4614d"
+  },
+  {
+    "path": "docs/phase25/evaluation_metric_spec_v2.json",
+    "sha256": "990dd858f9942df8485dd8c8fcd382673918610b99fc9152d0a3b04211a6ad3d",
+    "lines": 181,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "990dd858f9942df8485dd8c8fcd382673918610b99fc9152d0a3b04211a6ad3d"
+  },
+  {
+    "path": "docs/phase25/gold_v2_seed.jsonl",
+    "sha256": "99896b354cdbb01334106924d758ce1c27ee8c9daa431ee79848b70f3e6c99ff",
+    "lines": 200,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "99896b354cdbb01334106924d758ce1c27ee8c9daa431ee79848b70f3e6c99ff"
+  },
+  {
+    "path": "docs/phase25/implementation_backlog.md",
+    "sha256": "154e4610cb78dbcf953b276139639beb5c0912b2f578b34e640bbf66b604d699",
+    "lines": 31,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "154e4610cb78dbcf953b276139639beb5c0912b2f578b34e640bbf66b604d699"
+  },
+  {
+    "path": "docs/phase25/metric_dimension_compatibility_v2.json",
+    "sha256": "72e042de3eab43ee7c19e7a07fdd21bfdd793492549a4250fc443e859ce1a73c",
+    "lines": 872,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "72e042de3eab43ee7c19e7a07fdd21bfdd793492549a4250fc443e859ce1a73c"
+  },
+  {
+    "path": "docs/phase25/open_business_metadata_items.md",
+    "sha256": "b83a4481e4a60c198da898b8480ed8f66047479c0d64a06598a4798b6e3a5924",
+    "lines": 10,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "b83a4481e4a60c198da898b8480ed8f66047479c0d64a06598a4798b6e3a5924"
+  },
+  {
+    "path": "docs/phase25/phase25_closure_report.md",
+    "sha256": "4b8866b8f8046edc2a8c96d663f1b66d32897023d79eac35b2a8f640cf21f322",
+    "lines": 50,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "4b8866b8f8046edc2a8c96d663f1b66d32897023d79eac35b2a8f640cf21f322"
+  },
+  {
+    "path": "docs/phase25/phase2_corrections_and_addendum.md",
+    "sha256": "db0c208d496c15e19e4a7c112684288fa201e9e937e1a651f6390db2c979ea55",
+    "lines": 7,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "db0c208d496c15e19e4a7c112684288fa201e9e937e1a651f6390db2c979ea55"
+  },
+  {
+    "path": "docs/phase25/relation_governance_overlay.json",
+    "sha256": "ad95ac460a550a7ec006145747b17d1cd62b85a46e23e872b79977235f61103b",
+    "lines": 410,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "ad95ac460a550a7ec006145747b17d1cd62b85a46e23e872b79977235f61103b"
+  },
+  {
+    "path": "docs/phase25/result_contract_and_proof_chain.md",
+    "sha256": "62c96bb08320e12b8015c19974b2a4b9b58d5e530764e5d009549c68edf8f150",
+    "lines": 3,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "62c96bb08320e12b8015c19974b2a4b9b58d5e530764e5d009549c68edf8f150"
+  },
+  {
+    "path": "docs/phase25/semantic_resolution_v2.md",
+    "sha256": "11c28fba448a8847da36b9324853c5c1a056ab7f67c7a29a62b0aa08fea58781",
+    "lines": 5,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "11c28fba448a8847da36b9324853c5c1a056ab7f67c7a29a62b0aa08fea58781"
+  },
+  {
+    "path": "docs/phase25/shadow_runner_usage.md",
+    "sha256": "d698d95bf840f100c2e87355d576222298f8ea9c924536b8962e3b00bc7c20c2",
+    "lines": 9,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "d698d95bf840f100c2e87355d576222298f8ea9c924536b8962e3b00bc7c20c2"
+  },
+  {
+    "path": "docs/phase25/state_transition_table.csv",
+    "sha256": "f719dfe81034caaaed2b236153e5603eb1ac44f2b3b45a3464c57400b4859265",
+    "lines": 19,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "f719dfe81034caaaed2b236153e5603eb1ac44f2b3b45a3464c57400b4859265"
+  },
+  {
+    "path": "docs/phase25/surface_collision_inventory.json",
+    "sha256": "b0e3ee970f2d71b3e229cc7cd6fd6165bfcfc4bfa6ca219ea605eafd5b2c41a1",
+    "lines": 391,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "b0e3ee970f2d71b3e229cc7cd6fd6165bfcfc4bfa6ca219ea605eafd5b2c41a1"
+  },
+  {
+    "path": "docs/phase25/surface_collision_summary.csv",
+    "sha256": "290f7e1db8f47d1e1de345a5e6695d3550ffc0b6458d115746c68b392c6aecfd",
+    "lines": 23,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "290f7e1db8f47d1e1de345a5e6695d3550ffc0b6458d115746c68b392c6aecfd"
+  },
+  {
+    "path": "docs/phase25/synthetic_test_proposals_v2.jsonl",
+    "sha256": "2112130461f3b3df6aeedf37e481ad057effca498b1fefb71f9b87bd97872680",
+    "lines": 150,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "2112130461f3b3df6aeedf37e481ad057effca498b1fefb71f9b87bd97872680"
+  },
+  {
+    "path": "docs/phase25/test_failure_triage.json",
+    "sha256": "cf242a82f7b17071d2c473ff3fa918668efc87f53fb041ada61629d6fefcc43a",
+    "lines": 109,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "cf242a82f7b17071d2c473ff3fa918668efc87f53fb041ada61629d6fefcc43a"
+  },
+  {
+    "path": "docs/phase25/test_failure_triage.md",
+    "sha256": "513b52fe8dff11fc0b36a3560934149a27abbea5ae6f373b8d5ae8dfcbba06fa",
+    "lines": 16,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "513b52fe8dff11fc0b36a3560934149a27abbea5ae6f373b8d5ae8dfcbba06fa"
+  },
+  {
+    "path": "docs/phase25/trace_v2_contract.md",
+    "sha256": "48242f1be88bc7b41e7ae78a0ae367be3455824137e911b81266fddd23aecfa8",
+    "lines": 3,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "48242f1be88bc7b41e7ae78a0ae367be3455824137e911b81266fddd23aecfa8"
+  },
+  {
+    "path": "docs/phase25/typed_logical_plan_v0_2.schema.json",
+    "sha256": "0e16dbcc13ddf68aca136969570773befcc40e2083a246e0fb47bf2dcee9186a",
+    "lines": 3586,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "0e16dbcc13ddf68aca136969570773befcc40e2083a246e0fb47bf2dcee9186a"
+  },
+  {
+    "path": "docs/phase25/typed_logical_plan_v0_2_examples.jsonl",
+    "sha256": "52852a8253665667f7042f1286b8f14919a7bfa85d5bab2a507a7da26a28429e",
+    "lines": 4,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "52852a8253665667f7042f1286b8f14919a7bfa85d5bab2a507a7da26a28429e"
+  },
+  {
+    "path": "docs/phase2/architecture_evidence_map.json",
+    "sha256": "0dda3a7b1d12e5f57bf837562e63de13a02e6f2adb83c9b976698847c95a18be",
+    "lines": 310,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "0dda3a7b1d12e5f57bf837562e63de13a02e6f2adb83c9b976698847c95a18be"
+  },
+  {
+    "path": "docs/phase2/asl_nl2sql_contracts.json",
+    "sha256": "5c125075e6bc9382403cf3eadfde1fac73e468dcddc4411aa9317c964a3d579d",
+    "lines": 83,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "5c125075e6bc9382403cf3eadfde1fac73e468dcddc4411aa9317c964a3d579d"
+  },
+  {
+    "path": "docs/phase2/asl_nl2sql_contract_audit.md",
+    "sha256": "2bec438caeb2c13eaabc1dbeb8de4657905c77112ba5b090038f7cf8edb9b33a",
+    "lines": 40,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "2bec438caeb2c13eaabc1dbeb8de4657905c77112ba5b090038f7cf8edb9b33a"
+  },
+  {
+    "path": "docs/phase2/asl_nl2sql_gap_matrix.csv",
+    "sha256": "6600d2c2eea434c78a2405c0ee70f8656674cbff9c5c5eb8c23990639bcb677b",
+    "lines": 10,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "6600d2c2eea434c78a2405c0ee70f8656674cbff9c5c5eb8c23990639bcb677b"
+  },
+  {
+    "path": "docs/phase2/capability_implementation_matrix.md",
+    "sha256": "d7a5a2214c13fb354d920982fb541bbf6ddd5ee440ab7a3d5a738b0c4d0785d5",
+    "lines": 20,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "d7a5a2214c13fb354d920982fb541bbf6ddd5ee440ab7a3d5a738b0c4d0785d5"
+  },
+  {
+    "path": "docs/phase2/catalog_quality_summary.csv",
+    "sha256": "14ae6c1d26bb24984d14f54950c53224d5da25c1591262f7224f06b072a30ad7",
+    "lines": 25,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "14ae6c1d26bb24984d14f54950c53224d5da25c1591262f7224f06b072a30ad7"
+  },
+  {
+    "path": "docs/phase2/cross_repository_change_matrix.csv",
+    "sha256": "b569015c2449f1eeb1625f302403d75187b909fa2e7d8a3207b74e39455a2465",
+    "lines": 6,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "b569015c2449f1eeb1625f302403d75187b909fa2e7d8a3207b74e39455a2465"
+  },
+  {
+    "path": "docs/phase2/current_to_target_schema_mapping.md",
+    "sha256": "436fe57b223097e346597905ff398a7fd2181324dd06622c88993975969126b6",
+    "lines": 22,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "436fe57b223097e346597905ff398a7fd2181324dd06622c88993975969126b6"
+  },
+  {
+    "path": "docs/phase2/data_agent_phase2_semantic_execution_audit.md",
+    "sha256": "4c7aceda096c35ac6e414b4fff7c34f010f8f265f1c9f3ea9007650b84dd1228",
+    "lines": 166,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "4c7aceda096c35ac6e414b4fff7c34f010f8f265f1c9f3ea9007650b84dd1228"
+  },
+  {
+    "path": "docs/phase2/entity_relationship_inventory.json",
+    "sha256": "5f783aafd74f8ef2d592d0e4a93c4a30010607da7f526aa3b1772be09c185c15",
+    "lines": 370,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "5f783aafd74f8ef2d592d0e4a93c4a30010607da7f526aa3b1772be09c185c15"
+  },
+  {
+    "path": "docs/phase2/evaluation_framework_gap.md",
+    "sha256": "27401728008efadd06563d8281c92cce389a9441a9e98334feaf79373b73ad51",
+    "lines": 26,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "27401728008efadd06563d8281c92cce389a9441a9e98334feaf79373b73ad51"
+  },
+  {
+    "path": "docs/phase2/evaluation_metric_spec.json",
+    "sha256": "da8dc2ed9aa014cae46480e97477f0dbd91372b2d45624dd9395af529caec4d0",
+    "lines": 63,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "da8dc2ed9aa014cae46480e97477f0dbd91372b2d45624dd9395af529caec4d0"
+  },
+  {
+    "path": "docs/phase2/external_service_inventory.json",
+    "sha256": "ff6795ac706e4b674255e0fc1d942dc7ce090801b8264805212dd34e038caeb4",
+    "lines": 61,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "ff6795ac706e4b674255e0fc1d942dc7ce090801b8264805212dd34e038caeb4"
+  },
+  {
+    "path": "docs/phase2/failure_root_cause_summary.md",
+    "sha256": "621faaa0cae8159fc99f9cfbbb429b7350a99933dc30ea50ab8c8925fce4a161",
+    "lines": 29,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "621faaa0cae8159fc99f9cfbbb429b7350a99933dc30ea50ab8c8925fce4a161"
+  },
+  {
+    "path": "docs/phase2/failure_stage_distribution.csv",
+    "sha256": "084f3c20dc3e407d19521328ebca0e74296d8f6df865eadf2728778440e6f379",
+    "lines": 7,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "084f3c20dc3e407d19521328ebca0e74296d8f6df865eadf2728778440e6f379"
+  },
+  {
+    "path": "docs/phase2/failure_trace_replay.jsonl",
+    "sha256": "6ab25fada3b1d55dd724cadfe51e8c019aff06eade0a7959a2a24b2e811509ae",
+    "lines": 30,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "6ab25fada3b1d55dd724cadfe51e8c019aff06eade0a7959a2a24b2e811509ae"
+  },
+  {
+    "path": "docs/phase2/gold_cases_seed.jsonl",
+    "sha256": "1154ad211c0875f24e8a5bcd28911bb7ff283c0db02bcfece80ee7f3fd0658da",
+    "lines": 200,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "1154ad211c0875f24e8a5bcd28911bb7ff283c0db02bcfece80ee7f3fd0658da"
+  },
+  {
+    "path": "docs/phase2/integration_and_migration_map.md",
+    "sha256": "4b44a9a6775250ea7af190c41b76c9eb776a54ec5c76dcca96fca309499ae179",
+    "lines": 30,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "4b44a9a6775250ea7af190c41b76c9eb776a54ec5c76dcca96fca309499ae179"
+  },
+  {
+    "path": "docs/phase2/intent_confusion_analysis.md",
+    "sha256": "003040369619c1896caf7da9f094bc8cc50f2e7818616b952c3e3a52dceb0fb1",
+    "lines": 23,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "003040369619c1896caf7da9f094bc8cc50f2e7818616b952c3e3a52dceb0fb1"
+  },
+  {
+    "path": "docs/phase2/intent_confusion_matrix.csv",
+    "sha256": "fc274138ab27671582158a75bfe71826c0be8968ca7e2e25ed2d0e43b1c09eee",
+    "lines": 4,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "fc274138ab27671582158a75bfe71826c0be8968ca7e2e25ed2d0e43b1c09eee"
+  },
+  {
+    "path": "docs/phase2/metric_algebra_feasibility.md",
+    "sha256": "fe2c89dd4230b3d4d3c61869e02d4b9077c5e525e324eaea0c31f055d298d681",
+    "lines": 26,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "fe2c89dd4230b3d4d3c61869e02d4b9077c5e525e324eaea0c31f055d298d681"
+  },
+  {
+    "path": "docs/phase2/metric_dimension_compatibility.json",
+    "sha256": "6b71e20bc73ce44397a2a642cdcd73edb22cfdf4dc63183b43991c191e0f96e6",
+    "lines": 148,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "6b71e20bc73ce44397a2a642cdcd73edb22cfdf4dc63183b43991c191e0f96e6"
+  },
+  {
+    "path": "docs/phase2/semantic_candidate_examples.jsonl",
+    "sha256": "9af8fcb7b34cefbafd53d9cea8ded9c6626bafa1cb29814a79db598f8b151f21",
+    "lines": 3,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "9af8fcb7b34cefbafd53d9cea8ded9c6626bafa1cb29814a79db598f8b151f21"
+  },
+  {
+    "path": "docs/phase2/semantic_catalog_audit.md",
+    "sha256": "ceae45b174428a4be9d9ce259697635ade573ac9831dd0bd5a336879fd599e00",
+    "lines": 34,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "ceae45b174428a4be9d9ce259697635ade573ac9831dd0bd5a336879fd599e00"
+  },
+  {
+    "path": "docs/phase2/semantic_catalog_inventory.json",
+    "sha256": "774aa3ef36ee8730c39fca1c5d094303b220840223b47df9d1d72b11bb731f2d",
+    "lines": 2656,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "774aa3ef36ee8730c39fca1c5d094303b220840223b47df9d1d72b11bb731f2d"
+  },
+  {
+    "path": "docs/phase2/semantic_resolution_pipeline.md",
+    "sha256": "6c01b503c55da1adcc06e3d6bd3dc9d58d34a5bf7a2b536312a8631496459f27",
+    "lines": 35,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "6c01b503c55da1adcc06e3d6bd3dc9d58d34a5bf7a2b536312a8631496459f27"
+  },
+  {
+    "path": "docs/phase2/semantic_role_confusion_matrix.csv",
+    "sha256": "edca0798db9e72c06ecd4600d513ba971d245a4eb9ba68c5a26551f211623497",
+    "lines": 7,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "edca0798db9e72c06ecd4600d513ba971d245a4eb9ba68c5a26551f211623497"
+  },
+  {
+    "path": "docs/phase2/slot_role_confusion_matrix.csv",
+    "sha256": "11c5f8f1af5d2259fd366f4546c096e0d791a53e285484db569c266c878d26c1",
+    "lines": 5,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "11c5f8f1af5d2259fd366f4546c096e0d791a53e285484db569c266c878d26c1"
+  },
+  {
+    "path": "docs/phase2/synthetic_test_proposals.jsonl",
+    "sha256": "f22d2dbcd45bac49606541062e751c3e4f397be18e2e37d57280d11631b01ea3",
+    "lines": 5,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "f22d2dbcd45bac49606541062e751c3e4f397be18e2e37d57280d11631b01ea3"
+  },
+  {
+    "path": "docs/phase2/temporal_semantics_feasibility.md",
+    "sha256": "acb573d28b229a44d658635b9c4c3e25c80c124f285041a06a902e1f98de90b9",
+    "lines": 23,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "acb573d28b229a44d658635b9c4c3e25c80c124f285041a06a902e1f98de90b9"
+  },
+  {
+    "path": "docs/phase2/test_execution_report.md",
+    "sha256": "52bcd7b52ba5f8b3a0e560ccee09e5bc4f894872c91595f88799f953ab79ae32",
+    "lines": 30,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "52bcd7b52ba5f8b3a0e560ccee09e5bc4f894872c91595f88799f953ab79ae32"
+  },
+  {
+    "path": "docs/phase2/typed_logical_plan_schema_draft.json",
+    "sha256": "f5aaf6ce77c82f0f04ec14fea45d1f57febbe186fb34ed55d13ac241bfc3681c",
+    "lines": 321,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": "f5aaf6ce77c82f0f04ec14fea45d1f57febbe186fb34ed55d13ac241bfc3681c"
+  },
+  {
+    "path": "E:\\YouoAgent\\AGENTS.md",
+    "sha256": "28e1c4c475e5f57fb0f660760410802b7a35ff0019c6f3d23e413287088e577d",
+    "lines": 11,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": null
+  },
+  {
+    "path": "E:\\yy\\AGENTS.md",
+    "sha256": "0e655d69c6a08700468a48319bded509d4665c66bd4b791cd3863d671f0cd816",
+    "lines": 10,
+    "coverage": "FULL_FILE_STATIC_SCAN",
+    "initial_workspace_sha256": null
+  }
+]

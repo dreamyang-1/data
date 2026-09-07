@@ -1,0 +1,487 @@
+[
+  {
+    "path": "app/intent/structured.py",
+    "line": 444,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 148,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 146,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 773,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 2907,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 3093,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 3095,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 3222,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 3955,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 155,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1048,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1050,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1386,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1758,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1783,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 2745,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 2908,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 2932,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 3094,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 3102,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 3223,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 3342,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 692,
+    "marker": "SORT_DIRECTION="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 739,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 741,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 754,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1387,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1400,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1759,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1784,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 2746,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 4069,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 4082,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1185,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1401,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 3340,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 3961,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 4083,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 4124,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 4448,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 4448,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 173,
+    "marker": "SORT_DIRECTION="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 724,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1599,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 4080,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 4133,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 4137,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/intent/classifier.py",
+    "line": 1183,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/turn_admission.py",
+    "line": 669,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/services/turn_admission.py",
+    "line": 976,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/services/turn_admission.py",
+    "line": 967,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/turn_admission.py",
+    "line": 972,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/services/turn_admission.py",
+    "line": 981,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/services/turn_admission.py",
+    "line": 648,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/intent_asl_contract.py",
+    "line": 152,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/intent_asl_contract.py",
+    "line": 208,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/services/intent_asl_contract.py",
+    "line": 92,
+    "marker": "SORT_DIRECTION="
+  },
+  {
+    "path": "app/services/intent_asl_contract.py",
+    "line": 155,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/intent_asl_contract.py",
+    "line": 160,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/intent_asl_contract.py",
+    "line": 160,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/intent_asl_contract.py",
+    "line": 166,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 110,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 2156,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 2530,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 2538,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3294,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3576,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 7655,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 2535,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3490,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3567,
+    "marker": "SORT_DIRECTION="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3678,
+    "marker": "SORT_DIRECTION="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3812,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3870,
+    "marker": "SORT_DIRECTION="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 8696,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3516,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3892,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 7275,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 2213,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3670,
+    "marker": "SORT_DIRECTION="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 7199,
+    "marker": "SORT_DIRECTION="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 9979,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 9980,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3506,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3673,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 7196,
+    "marker": "SORT_DIRECTION="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 7269,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 7620,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3421,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3422,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3422,
+    "marker": "DEFAULT_TIME_GRANULARITY="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 7629,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 2211,
+    "marker": "DEFAULT_TIME_RANGE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3281,
+    "marker": "SET_RELATIONSHIP_PROJECTION"
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3283,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "app/services/orchestrator.py",
+    "line": 3284,
+    "marker": "TIME_SCOPE="
+  },
+  {
+    "path": "tests/test_structured_intent.py",
+    "line": 106,
+    "marker": "TIME_SCOPE="
+  }
+]

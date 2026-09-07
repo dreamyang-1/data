@@ -26,20 +26,26 @@ def assess_legacy_adapter(plan: PlanEnvelope) -> AdapterReport:
         approximated.append("relation_target")
     if isinstance(payload, DatasetTransformPayload):
         post.append("dataset_transform")
-    if plan.result_contract is not None:
+    if getattr(plan, 'result_contract', None) is not None:
         approximated.append("result_contract")
-    if plan.semantic_bindings:
+    if getattr(plan, 'semantic_bindings', None):
         approximated.append("typed_semantic_roles")
     if dropped:
         status = AdapterStatus.LOSSY_UNSAFE
         errors.append("ASL 1.0 cannot represent all required semantics")
         safe = False
     elif post:
-        status = AdapterStatus.LOSSY_COMPENSATED
-        safe = True
+        status = AdapterStatus.UNSUPPORTED
+        safe = False
+        errors.append('dataset transform compensation has no verified legacy implementation')
     elif approximated:
-        status = AdapterStatus.LOSSY_COMPENSATED
-        safe = True
+        status = AdapterStatus.LOSSY_UNSAFE
+        safe = False
+        errors.append('semantic approximation has no implemented and proven compensation')
+    elif hasattr(plan, 'service_route') and payload.payload_type not in {'CHAT', 'CONTROL', 'CAPABILITY_HELP', 'OUT_OF_SCOPE'}:
+        status = AdapterStatus.UNSUPPORTED
+        safe = False
+        errors.append('ASL 1.0 compilation is not implemented for this logical payload')
     else:
         status = AdapterStatus.LOSSLESS
         safe = True

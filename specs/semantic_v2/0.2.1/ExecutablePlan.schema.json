@@ -1,0 +1,4308 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "AdapterReport": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter_status": {
+          "$ref": "#/$defs/AdapterStatus"
+        },
+        "dropped_features": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Dropped Features",
+          "type": "array"
+        },
+        "approximated_features": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Approximated Features",
+          "type": "array"
+        },
+        "post_processing_required": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Post Processing Required",
+          "type": "array"
+        },
+        "validation_errors": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Validation Errors",
+          "type": "array"
+        },
+        "can_execute_safely": {
+          "title": "Can Execute Safely",
+          "type": "boolean"
+        },
+        "compensation_plan": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CompensationPlan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "adapter_status",
+        "can_execute_safely"
+      ],
+      "title": "AdapterReport",
+      "type": "object"
+    },
+    "AdapterStatus": {
+      "enum": [
+        "LOSSLESS",
+        "LOSSY_COMPENSATED",
+        "LOSSY_UNSAFE",
+        "UNSUPPORTED"
+      ],
+      "title": "AdapterStatus",
+      "type": "string"
+    },
+    "AlgorithmRef": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Algorithm Id",
+          "type": "string"
+        },
+        "algorithm_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Algorithm Version",
+          "type": "string"
+        },
+        "policy_source": {
+          "enum": [
+            "SYSTEM_POLICY",
+            "USER_GOVERNED_SELECTION"
+          ],
+          "title": "Policy Source",
+          "type": "string"
+        },
+        "parameter_profile_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parameter Profile Id"
+        }
+      },
+      "required": [
+        "algorithm_id",
+        "algorithm_version",
+        "policy_source"
+      ],
+      "title": "AlgorithmRef",
+      "type": "object"
+    },
+    "AnalysisGoal": {
+      "enum": [
+        "LOOKUP",
+        "AGGREGATE",
+        "TREND",
+        "COMPARE",
+        "RANK",
+        "COMPOSITION",
+        "CORRELATION",
+        "ANOMALY",
+        "CONTRIBUTION",
+        "ATTRIBUTION",
+        "ROOT_CAUSE",
+        "FORECAST",
+        "EXPLAIN"
+      ],
+      "title": "AnalysisGoal",
+      "type": "string"
+    },
+    "AnomalyPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
+                  "PREDICATE": "#/$defs/Predicate"
+                },
+                "propertyName": "node_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/BooleanFilterGroup"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filters"
+        },
+        "projection_spec": {
+          "$ref": "#/$defs/ProjectionSpec"
+        },
+        "measures": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Measures",
+          "type": "array"
+        },
+        "time": {
+          "$ref": "#/$defs/TimeSpec"
+        },
+        "group_by": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "title": "Group By",
+          "type": "array"
+        },
+        "payload_type": {
+          "const": "ANOMALY",
+          "default": "ANOMALY",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "algorithm": {
+          "$ref": "#/$defs/AlgorithmRef"
+        }
+      },
+      "required": [
+        "measures",
+        "time",
+        "algorithm"
+      ],
+      "title": "AnomalyPayload",
+      "type": "object"
+    },
+    "BackendContract": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "contract_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "semantic_fingerprint": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Semantic Fingerprint",
+          "type": "string"
+        },
+        "mode": {
+          "const": "SHADOW_ONLY",
+          "default": "SHADOW_ONLY",
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_id",
+        "contract_version",
+        "semantic_fingerprint"
+      ],
+      "title": "BackendContract",
+      "type": "object"
+    },
+    "BooleanFilterGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "node_type": {
+          "const": "BOOLEAN_GROUP",
+          "default": "BOOLEAN_GROUP",
+          "title": "Node Type",
+          "type": "string"
+        },
+        "operator": {
+          "enum": [
+            "AND",
+            "OR",
+            "NOT"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "children": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Predicate"
+              },
+              {
+                "$ref": "#/$defs/BooleanFilterGroup"
+              }
+            ]
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Children",
+          "type": "array"
+        }
+      },
+      "required": [
+        "operator",
+        "children"
+      ],
+      "title": "BooleanFilterGroup",
+      "type": "object"
+    },
+    "BooleanValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "BOOLEAN",
+          "default": "BOOLEAN",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "BooleanValue",
+      "type": "object"
+    },
+    "BoundRefAuthorization": {
+      "additionalProperties": false,
+      "description": "Per-plan decision evidence, not an ACL copy.",
+      "properties": {
+        "canonical_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Canonical Id",
+          "type": "string"
+        },
+        "catalog_type": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Catalog Type",
+          "type": "string"
+        },
+        "catalog_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "semantic_model_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Semantic Model Id",
+          "type": "string"
+        },
+        "tenant_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Tenant Id",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        },
+        "application_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Application Id",
+          "type": "string"
+        },
+        "authorization_decision_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Authorization Decision Id",
+          "type": "string"
+        },
+        "policy_snapshot_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Policy Snapshot Id",
+          "type": "string"
+        },
+        "allowed": {
+          "const": true,
+          "title": "Allowed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "canonical_id",
+        "catalog_type",
+        "catalog_version",
+        "semantic_model_id",
+        "tenant_id",
+        "user_id",
+        "application_id",
+        "authorization_decision_id",
+        "policy_snapshot_id",
+        "allowed"
+      ],
+      "title": "BoundRefAuthorization",
+      "type": "object"
+    },
+    "BoundSemanticRef": {
+      "additionalProperties": false,
+      "description": "Accepted catalog identity. Scope is proved again at the plan boundary.",
+      "properties": {
+        "catalog_type": {
+          "$ref": "#/$defs/CatalogType"
+        },
+        "semantic_role": {
+          "$ref": "#/$defs/SemanticRole"
+        },
+        "canonical_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Canonical Id",
+          "type": "string"
+        },
+        "canonical_code": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Canonical Code",
+          "type": "string"
+        },
+        "display_name": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "catalog_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "semantic_model_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Semantic Model Id",
+          "type": "string"
+        },
+        "business_domain_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Business Domain Ids",
+          "type": "array"
+        },
+        "source_mention_ids": {
+          "default": [],
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Source Mention Ids",
+          "type": "array"
+        },
+        "resolution_source": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Resolution Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "catalog_type",
+        "semantic_role",
+        "canonical_id",
+        "canonical_code",
+        "display_name",
+        "catalog_version",
+        "semantic_model_id",
+        "business_domain_ids",
+        "resolution_source"
+      ],
+      "title": "BoundSemanticRef",
+      "type": "object"
+    },
+    "Calculation": {
+      "enum": [
+        "ABS_DIFF",
+        "PERCENT_DIFF",
+        "GROWTH_RATE",
+        "RATIO",
+        "INDEX"
+      ],
+      "title": "Calculation",
+      "type": "string"
+    },
+    "CalendarType": {
+      "enum": [
+        "NATURAL",
+        "FISCAL",
+        "ROLLING"
+      ],
+      "title": "CalendarType",
+      "type": "string"
+    },
+    "CapabilityHelpPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "payload_type": {
+          "const": "CAPABILITY_HELP",
+          "default": "CAPABILITY_HELP",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "requested_route": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceRoute"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "CapabilityHelpPayload",
+      "type": "object"
+    },
+    "CardinalityExpectation": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "SCALAR",
+            "GROUPS",
+            "DETAIL_ROWS",
+            "DISTINCT_TARGETS",
+            "TIME_PERIODS"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "unique_output_field_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Unique Output Field Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "CardinalityExpectation",
+      "type": "object"
+    },
+    "CatalogType": {
+      "enum": [
+        "ENTITY",
+        "METRIC",
+        "DIMENSION",
+        "ATTRIBUTE",
+        "ENTITY_VALUE",
+        "RELATION",
+        "DATASET",
+        "REPORT",
+        "PHYSICAL_TABLE",
+        "PHYSICAL_COLUMN"
+      ],
+      "title": "CatalogType",
+      "type": "string"
+    },
+    "ChartPreferences": {
+      "additionalProperties": false,
+      "properties": {
+        "chart_type": {
+          "default": "AUTO",
+          "enum": [
+            "LINE",
+            "BAR",
+            "PIE",
+            "SCATTER",
+            "AUTO"
+          ],
+          "title": "Chart Type",
+          "type": "string"
+        }
+      },
+      "title": "ChartPreferences",
+      "type": "object"
+    },
+    "ChatPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "payload_type": {
+          "const": "CHAT",
+          "default": "CHAT",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "response_mode": {
+          "const": "LIGHTWEIGHT",
+          "default": "LIGHTWEIGHT",
+          "title": "Response Mode",
+          "type": "string"
+        }
+      },
+      "title": "ChatPayload",
+      "type": "object"
+    },
+    "ColumnTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "target_type": {
+          "const": "COLUMN",
+          "default": "COLUMN",
+          "title": "Target Type",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "ColumnTarget",
+      "type": "object"
+    },
+    "ComparisonPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
+                  "PREDICATE": "#/$defs/Predicate"
+                },
+                "propertyName": "node_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/BooleanFilterGroup"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filters"
+        },
+        "projection_spec": {
+          "$ref": "#/$defs/ProjectionSpec"
+        },
+        "measures": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Measures",
+          "type": "array"
+        },
+        "time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "group_by": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "title": "Group By",
+          "type": "array"
+        },
+        "payload_type": {
+          "const": "COMPARISON",
+          "default": "COMPARISON",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "comparison": {
+          "$ref": "#/$defs/ComparisonSpec"
+        }
+      },
+      "required": [
+        "measures",
+        "comparison"
+      ],
+      "title": "ComparisonPayload",
+      "type": "object"
+    },
+    "ComparisonSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "comparison_type": {
+          "$ref": "#/$defs/ComparisonType"
+        },
+        "baseline": {
+          "discriminator": {
+            "mapping": {
+              "DATASET": "#/$defs/DatasetBaseline",
+              "SEMANTIC": "#/$defs/SemanticBaseline",
+              "TASK": "#/$defs/TaskBaseline",
+              "TIME": "#/$defs/TimeBaseline"
+            },
+            "propertyName": "baseline_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/TimeBaseline"
+            },
+            {
+              "$ref": "#/$defs/TaskBaseline"
+            },
+            {
+              "$ref": "#/$defs/DatasetBaseline"
+            },
+            {
+              "$ref": "#/$defs/SemanticBaseline"
+            }
+          ],
+          "title": "Baseline"
+        },
+        "current_period": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "comparison_period": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "calculation": {
+          "$ref": "#/$defs/Calculation"
+        },
+        "output_metrics": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/BoundSemanticRef"
+              },
+              {
+                "$ref": "#/$defs/ComputedMeasureRef"
+              }
+            ]
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Output Metrics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "comparison_type",
+        "baseline",
+        "calculation",
+        "output_metrics"
+      ],
+      "title": "ComparisonSpec",
+      "type": "object"
+    },
+    "ComparisonType": {
+      "enum": [
+        "YOY",
+        "MOM",
+        "PERIOD_OVER_PERIOD",
+        "ABSOLUTE_DELTA",
+        "PERCENT_CHANGE",
+        "RATIO",
+        "CUSTOM_PERIOD"
+      ],
+      "title": "ComparisonType",
+      "type": "string"
+    },
+    "CompensationPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/CompensationStep"
+          },
+          "title": "Steps",
+          "type": "array"
+        },
+        "verified_checks": {
+          "items": {
+            "$ref": "#/$defs/ProofCheck"
+          },
+          "title": "Verified Checks",
+          "type": "array"
+        }
+      },
+      "title": "CompensationPlan",
+      "type": "object"
+    },
+    "CompensationStep": {
+      "additionalProperties": false,
+      "properties": {
+        "feature": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Feature",
+          "type": "string"
+        },
+        "implementation_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Implementation Id",
+          "type": "string"
+        },
+        "implementation_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Implementation Version",
+          "type": "string"
+        },
+        "precondition_check_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Precondition Check Ids",
+          "type": "array"
+        },
+        "proof_check_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Proof Check Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "feature",
+        "implementation_id",
+        "implementation_version",
+        "precondition_check_ids",
+        "proof_check_ids"
+      ],
+      "title": "CompensationStep",
+      "type": "object"
+    },
+    "ComputedExpression": {
+      "additionalProperties": false,
+      "properties": {
+        "calculation": {
+          "$ref": "#/$defs/Calculation"
+        },
+        "baseline": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "DATASET": "#/$defs/DatasetBaseline",
+                  "SEMANTIC": "#/$defs/SemanticBaseline",
+                  "TASK": "#/$defs/TaskBaseline",
+                  "TIME": "#/$defs/TimeBaseline"
+                },
+                "propertyName": "baseline_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/TimeBaseline"
+                },
+                {
+                  "$ref": "#/$defs/TaskBaseline"
+                },
+                {
+                  "$ref": "#/$defs/DatasetBaseline"
+                },
+                {
+                  "$ref": "#/$defs/SemanticBaseline"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline"
+        }
+      },
+      "required": [
+        "calculation"
+      ],
+      "title": "ComputedExpression",
+      "type": "object"
+    },
+    "ComputedMeasureRef": {
+      "additionalProperties": false,
+      "properties": {
+        "local_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Local Id",
+          "type": "string"
+        },
+        "display_name": {
+          "title": "Display Name",
+          "type": "string"
+        },
+        "computation_type": {
+          "enum": [
+            "DELTA",
+            "GROWTH_RATE",
+            "SHARE",
+            "CONTRIBUTION",
+            "ANOMALY_SCORE",
+            "FORECAST",
+            "FORECAST_LOWER",
+            "FORECAST_UPPER"
+          ],
+          "title": "Computation Type",
+          "type": "string"
+        },
+        "source_measure_refs": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "minItems": 1,
+          "title": "Source Measure Refs",
+          "type": "array"
+        },
+        "expression_spec": {
+          "$ref": "#/$defs/ComputedExpression"
+        },
+        "unit": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "format_rule": {
+          "enum": [
+            "NUMBER",
+            "CURRENCY",
+            "PERCENT"
+          ],
+          "title": "Format Rule",
+          "type": "string"
+        },
+        "provenance": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance",
+          "type": "array"
+        }
+      },
+      "required": [
+        "local_id",
+        "display_name",
+        "computation_type",
+        "source_measure_refs",
+        "expression_spec",
+        "unit",
+        "format_rule",
+        "provenance"
+      ],
+      "title": "ComputedMeasureRef",
+      "type": "object"
+    },
+    "ControlAction": {
+      "enum": [
+        "CANCEL",
+        "CONFIRM",
+        "REFRESH",
+        "REVISE"
+      ],
+      "title": "ControlAction",
+      "type": "string"
+    },
+    "ControlPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "payload_type": {
+          "const": "CONTROL",
+          "default": "CONTROL",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "control_action": {
+          "$ref": "#/$defs/ControlAction"
+        }
+      },
+      "required": [
+        "control_action"
+      ],
+      "title": "ControlPayload",
+      "type": "object"
+    },
+    "DataQualityPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "payload_type": {
+          "const": "DATA_QUALITY",
+          "default": "DATA_QUALITY",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "quality_target": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/QualityCheckType"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Checks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "quality_target",
+        "checks"
+      ],
+      "title": "DataQualityPayload",
+      "type": "object"
+    },
+    "DatasetBaseline": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_type": {
+          "const": "DATASET",
+          "default": "DATASET",
+          "title": "Baseline Type",
+          "type": "string"
+        },
+        "dataset_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Dataset Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataset_id"
+      ],
+      "title": "DatasetBaseline",
+      "type": "object"
+    },
+    "DatasetDrilldownOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "operation_type": {
+          "const": "DRILL_DOWN",
+          "default": "DRILL_DOWN",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "drilldown_spec": {
+          "$ref": "#/$defs/DrilldownSpec"
+        }
+      },
+      "required": [
+        "drilldown_spec"
+      ],
+      "title": "DatasetDrilldownOperation",
+      "type": "object"
+    },
+    "DatasetFilterOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "operation_type": {
+          "const": "FILTER",
+          "default": "FILTER",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "filter_expression": {
+          "discriminator": {
+            "mapping": {
+              "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
+              "PREDICATE": "#/$defs/Predicate"
+            },
+            "propertyName": "node_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Predicate"
+            },
+            {
+              "$ref": "#/$defs/BooleanFilterGroup"
+            }
+          ],
+          "title": "Filter Expression"
+        }
+      },
+      "required": [
+        "filter_expression"
+      ],
+      "title": "DatasetFilterOperation",
+      "type": "object"
+    },
+    "DatasetLimitOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "operation_type": {
+          "const": "LIMIT",
+          "default": "LIMIT",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "limit": {
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "preserve_existing_order": {
+          "const": true,
+          "default": true,
+          "title": "Preserve Existing Order",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "limit"
+      ],
+      "title": "DatasetLimitOperation",
+      "type": "object"
+    },
+    "DatasetProjectOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "operation_type": {
+          "const": "PROJECT",
+          "default": "PROJECT",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "projection_spec": {
+          "$ref": "#/$defs/ProjectionSpec"
+        }
+      },
+      "required": [
+        "projection_spec"
+      ],
+      "title": "DatasetProjectOperation",
+      "type": "object"
+    },
+    "DatasetSortOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "operation_type": {
+          "const": "SORT",
+          "default": "SORT",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "ordering": {
+          "items": {
+            "$ref": "#/$defs/OrderingRequirement"
+          },
+          "minItems": 1,
+          "title": "Ordering",
+          "type": "array"
+        }
+      },
+      "required": [
+        "ordering"
+      ],
+      "title": "DatasetSortOperation",
+      "type": "object"
+    },
+    "DatasetTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "target_type": {
+          "const": "DATASET",
+          "default": "DATASET",
+          "title": "Target Type",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "DatasetTarget",
+      "type": "object"
+    },
+    "DatasetTransformPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "payload_type": {
+          "const": "DATASET_TRANSFORM",
+          "default": "DATASET_TRANSFORM",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "source_dataset_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source Dataset Id",
+          "type": "string"
+        },
+        "operation": {
+          "discriminator": {
+            "mapping": {
+              "DRILL_DOWN": "#/$defs/DatasetDrilldownOperation",
+              "FILTER": "#/$defs/DatasetFilterOperation",
+              "LIMIT": "#/$defs/DatasetLimitOperation",
+              "PROJECT": "#/$defs/DatasetProjectOperation",
+              "SORT": "#/$defs/DatasetSortOperation"
+            },
+            "propertyName": "operation_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/DatasetFilterOperation"
+            },
+            {
+              "$ref": "#/$defs/DatasetSortOperation"
+            },
+            {
+              "$ref": "#/$defs/DatasetLimitOperation"
+            },
+            {
+              "$ref": "#/$defs/DatasetProjectOperation"
+            },
+            {
+              "$ref": "#/$defs/DatasetDrilldownOperation"
+            }
+          ],
+          "title": "Operation"
+        }
+      },
+      "required": [
+        "source_dataset_id",
+        "operation"
+      ],
+      "title": "DatasetTransformPayload",
+      "type": "object"
+    },
+    "DateTimeValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "DATETIME",
+          "default": "DATETIME",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "format": "date-time",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "DateTimeValue",
+      "type": "object"
+    },
+    "DateValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "DATE",
+          "default": "DATE",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "format": "date",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "DateValue",
+      "type": "object"
+    },
+    "DeliveryMode": {
+      "enum": [
+        "TEXT",
+        "TABLE",
+        "CHART",
+        "REPORT",
+        "EXPORT",
+        "DASHBOARD"
+      ],
+      "title": "DeliveryMode",
+      "type": "string"
+    },
+    "DeliverySpec": {
+      "additionalProperties": false,
+      "properties": {
+        "modes": {
+          "items": {
+            "$ref": "#/$defs/DeliveryMode"
+          },
+          "minItems": 1,
+          "title": "Modes",
+          "type": "array"
+        },
+        "export_format": {
+          "anyOf": [
+            {
+              "enum": [
+                "CSV",
+                "XLSX",
+                "PDF",
+                "DOCX"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Export Format"
+        },
+        "report_template_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Report Template Id"
+        },
+        "chart_preferences": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChartPreferences"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "DeliverySpec",
+      "type": "object"
+    },
+    "DetailRowsPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
+                  "PREDICATE": "#/$defs/Predicate"
+                },
+                "propertyName": "node_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/BooleanFilterGroup"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filters"
+        },
+        "projection_spec": {
+          "$ref": "#/$defs/ProjectionSpec"
+        },
+        "payload_type": {
+          "const": "DETAIL_ROWS",
+          "default": "DETAIL_ROWS",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "source_entity": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LimitSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "source_entity"
+      ],
+      "title": "DetailRowsPayload",
+      "type": "object"
+    },
+    "DrilldownSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "dimension": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "selected_values": {
+          "$ref": "#/$defs/ListValue"
+        }
+      },
+      "required": [
+        "dimension",
+        "selected_values"
+      ],
+      "title": "DrilldownSpec",
+      "type": "object"
+    },
+    "EntityTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "target_type": {
+          "const": "ENTITY",
+          "default": "ENTITY",
+          "title": "Target Type",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "EntityTarget",
+      "type": "object"
+    },
+    "EntityValueRef": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "ENTITY_REF",
+          "default": "ENTITY_REF",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "EntityValueRef",
+      "type": "object"
+    },
+    "EnumValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "ENUM",
+          "default": "ENUM",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "enum_code": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Enum Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "enum_code"
+      ],
+      "title": "EnumValue",
+      "type": "object"
+    },
+    "ExecutionBackend": {
+      "enum": [
+        "SEMANTIC_QUERY",
+        "DATASET_LOCAL",
+        "SEMANTIC_METADATA",
+        "ANALYTICS",
+        "CHAT_RESPONSE",
+        "CONTROL",
+        "REPORT_COMPOSITION"
+      ],
+      "title": "ExecutionBackend",
+      "type": "string"
+    },
+    "FieldTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "target_type": {
+          "const": "FIELD",
+          "default": "FIELD",
+          "title": "Target Type",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "FieldTarget",
+      "type": "object"
+    },
+    "FilterOperator": {
+      "enum": [
+        "AND",
+        "OR",
+        "NOT",
+        "EQ",
+        "NE",
+        "IN",
+        "NOT_IN",
+        "GT",
+        "GTE",
+        "LT",
+        "LTE",
+        "LIKE",
+        "NOT_LIKE",
+        "BETWEEN",
+        "IS_NULL",
+        "IS_NOT_NULL"
+      ],
+      "title": "FilterOperator",
+      "type": "string"
+    },
+    "ForecastPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
+                  "PREDICATE": "#/$defs/Predicate"
+                },
+                "propertyName": "node_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/BooleanFilterGroup"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filters"
+        },
+        "projection_spec": {
+          "$ref": "#/$defs/ProjectionSpec"
+        },
+        "measures": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Measures",
+          "type": "array"
+        },
+        "time": {
+          "$ref": "#/$defs/TimeSpec"
+        },
+        "group_by": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "title": "Group By",
+          "type": "array"
+        },
+        "payload_type": {
+          "const": "FORECAST",
+          "default": "FORECAST",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "horizon_periods": {
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Horizon Periods",
+          "type": "integer"
+        },
+        "horizon_grain": {
+          "$ref": "#/$defs/TimeGrain"
+        },
+        "algorithm": {
+          "$ref": "#/$defs/AlgorithmRef"
+        }
+      },
+      "required": [
+        "measures",
+        "time",
+        "horizon_periods",
+        "horizon_grain",
+        "algorithm"
+      ],
+      "title": "ForecastPayload",
+      "type": "object"
+    },
+    "GroupedAggregatePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
+                  "PREDICATE": "#/$defs/Predicate"
+                },
+                "propertyName": "node_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/BooleanFilterGroup"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filters"
+        },
+        "projection_spec": {
+          "$ref": "#/$defs/ProjectionSpec"
+        },
+        "measures": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Measures",
+          "type": "array"
+        },
+        "time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "group_by": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Group By",
+          "type": "array"
+        },
+        "payload_type": {
+          "const": "GROUPED_AGGREGATE",
+          "default": "GROUPED_AGGREGATE",
+          "title": "Payload Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "measures",
+        "group_by"
+      ],
+      "title": "GroupedAggregatePayload",
+      "type": "object"
+    },
+    "LimitSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "preserve_existing_order": {
+          "default": true,
+          "title": "Preserve Existing Order",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "limit"
+      ],
+      "title": "LimitSpec",
+      "type": "object"
+    },
+    "LineagePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "payload_type": {
+          "const": "LINEAGE",
+          "default": "LINEAGE",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "lineage_target": {
+          "discriminator": {
+            "mapping": {
+              "COLUMN": "#/$defs/ColumnTarget",
+              "DATASET": "#/$defs/DatasetTarget",
+              "ENTITY": "#/$defs/EntityTarget",
+              "FIELD": "#/$defs/FieldTarget",
+              "METRIC": "#/$defs/MetricTarget",
+              "REPORT": "#/$defs/ReportTarget",
+              "TABLE": "#/$defs/TableTarget"
+            },
+            "propertyName": "target_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/MetricTarget"
+            },
+            {
+              "$ref": "#/$defs/FieldTarget"
+            },
+            {
+              "$ref": "#/$defs/ColumnTarget"
+            },
+            {
+              "$ref": "#/$defs/TableTarget"
+            },
+            {
+              "$ref": "#/$defs/EntityTarget"
+            },
+            {
+              "$ref": "#/$defs/DatasetTarget"
+            },
+            {
+              "$ref": "#/$defs/ReportTarget"
+            }
+          ],
+          "title": "Lineage Target"
+        },
+        "direction": {
+          "default": "BOTH",
+          "enum": [
+            "UPSTREAM",
+            "DOWNSTREAM",
+            "BOTH"
+          ],
+          "title": "Direction",
+          "type": "string"
+        }
+      },
+      "required": [
+        "lineage_target"
+      ],
+      "title": "LineagePayload",
+      "type": "object"
+    },
+    "ListValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "LIST",
+          "default": "LIST",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "BOOLEAN": "#/$defs/BooleanValue",
+                "DATE": "#/$defs/DateValue",
+                "DATETIME": "#/$defs/DateTimeValue",
+                "ENTITY_REF": "#/$defs/EntityValueRef",
+                "ENUM": "#/$defs/EnumValue",
+                "NULL": "#/$defs/NullValue",
+                "NUMBER": "#/$defs/NumberValue",
+                "STRING": "#/$defs/StringValue"
+              },
+              "propertyName": "value_type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/StringValue"
+              },
+              {
+                "$ref": "#/$defs/NumberValue"
+              },
+              {
+                "$ref": "#/$defs/BooleanValue"
+              },
+              {
+                "$ref": "#/$defs/DateValue"
+              },
+              {
+                "$ref": "#/$defs/DateTimeValue"
+              },
+              {
+                "$ref": "#/$defs/EnumValue"
+              },
+              {
+                "$ref": "#/$defs/EntityValueRef"
+              },
+              {
+                "$ref": "#/$defs/NullValue"
+              }
+            ]
+          },
+          "maxItems": 1000,
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "values"
+      ],
+      "title": "ListValue",
+      "type": "object"
+    },
+    "LogicalPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "0.2.1",
+          "default": "0.2.1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "plan_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "topic_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Topic Id",
+          "type": "string"
+        },
+        "task_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Task Id",
+          "type": "string"
+        },
+        "task_version": {
+          "minimum": 1,
+          "title": "Task Version",
+          "type": "integer"
+        },
+        "service_route": {
+          "$ref": "#/$defs/ServiceRoute"
+        },
+        "analysis_goals": {
+          "items": {
+            "$ref": "#/$defs/AnalysisGoal"
+          },
+          "title": "Analysis Goals",
+          "type": "array"
+        },
+        "payload": {
+          "discriminator": {
+            "mapping": {
+              "ANOMALY": "#/$defs/AnomalyPayload",
+              "CAPABILITY_HELP": "#/$defs/CapabilityHelpPayload",
+              "CHAT": "#/$defs/ChatPayload",
+              "COMPARISON": "#/$defs/ComparisonPayload",
+              "CONTROL": "#/$defs/ControlPayload",
+              "DATASET_TRANSFORM": "#/$defs/DatasetTransformPayload",
+              "DATA_QUALITY": "#/$defs/DataQualityPayload",
+              "DETAIL_ROWS": "#/$defs/DetailRowsPayload",
+              "FORECAST": "#/$defs/ForecastPayload",
+              "GROUPED_AGGREGATE": "#/$defs/GroupedAggregatePayload",
+              "LINEAGE": "#/$defs/LineagePayload",
+              "METADATA": "#/$defs/MetadataPayload",
+              "METRIC_DEFINITION": "#/$defs/MetricDefinitionPayload",
+              "OUT_OF_SCOPE": "#/$defs/OutOfScopePayload",
+              "RANKING": "#/$defs/RankingPayload",
+              "RELATION_LIST": "#/$defs/RelationListPayload",
+              "REPORT_COMPOSITION": "#/$defs/ReportPayload",
+              "ROOT_CAUSE": "#/$defs/RootCausePayload",
+              "SCALAR_AGGREGATE": "#/$defs/ScalarAggregatePayload",
+              "TIME_SERIES": "#/$defs/TimeSeriesPayload"
+            },
+            "propertyName": "payload_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ControlPayload"
+            },
+            {
+              "$ref": "#/$defs/ChatPayload"
+            },
+            {
+              "$ref": "#/$defs/ScalarAggregatePayload"
+            },
+            {
+              "$ref": "#/$defs/GroupedAggregatePayload"
+            },
+            {
+              "$ref": "#/$defs/TimeSeriesPayload"
+            },
+            {
+              "$ref": "#/$defs/RankingPayload"
+            },
+            {
+              "$ref": "#/$defs/ComparisonPayload"
+            },
+            {
+              "$ref": "#/$defs/RelationListPayload"
+            },
+            {
+              "$ref": "#/$defs/DetailRowsPayload"
+            },
+            {
+              "$ref": "#/$defs/DatasetTransformPayload"
+            },
+            {
+              "$ref": "#/$defs/MetricDefinitionPayload"
+            },
+            {
+              "$ref": "#/$defs/MetadataPayload"
+            },
+            {
+              "$ref": "#/$defs/LineagePayload"
+            },
+            {
+              "$ref": "#/$defs/DataQualityPayload"
+            },
+            {
+              "$ref": "#/$defs/AnomalyPayload"
+            },
+            {
+              "$ref": "#/$defs/RootCausePayload"
+            },
+            {
+              "$ref": "#/$defs/ForecastPayload"
+            },
+            {
+              "$ref": "#/$defs/ReportPayload"
+            },
+            {
+              "$ref": "#/$defs/CapabilityHelpPayload"
+            },
+            {
+              "$ref": "#/$defs/OutOfScopePayload"
+            }
+          ],
+          "title": "Payload"
+        },
+        "delivery_spec": {
+          "$ref": "#/$defs/DeliverySpec"
+        },
+        "permission_requirement": {
+          "$ref": "#/$defs/PermissionContext"
+        },
+        "snapshot_requirement": {
+          "$ref": "#/$defs/SnapshotContext"
+        },
+        "policy_decisions": {
+          "items": {
+            "$ref": "#/$defs/ScopePolicyDecision"
+          },
+          "title": "Policy Decisions",
+          "type": "array"
+        },
+        "version_metadata": {
+          "$ref": "#/$defs/VersionMetadata"
+        },
+        "current_turn_ref": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Current Turn Ref",
+          "type": "string"
+        },
+        "current_turn_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Current Turn Digest",
+          "type": "string"
+        },
+        "sanitized_turn_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sanitized Turn Text"
+        },
+        "permission_proofs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/BoundRefAuthorization"
+          },
+          "title": "Permission Proofs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "plan_id",
+        "topic_id",
+        "task_id",
+        "task_version",
+        "service_route",
+        "analysis_goals",
+        "payload",
+        "delivery_spec",
+        "permission_requirement",
+        "snapshot_requirement",
+        "version_metadata",
+        "current_turn_ref",
+        "current_turn_digest"
+      ],
+      "title": "LogicalPlan",
+      "type": "object"
+    },
+    "MetadataPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "payload_type": {
+          "const": "METADATA",
+          "default": "METADATA",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Targets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "targets"
+      ],
+      "title": "MetadataPayload",
+      "type": "object"
+    },
+    "MetricDefinitionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "payload_type": {
+          "const": "METRIC_DEFINITION",
+          "default": "METRIC_DEFINITION",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "metric_refs": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Metric Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "metric_refs"
+      ],
+      "title": "MetricDefinitionPayload",
+      "type": "object"
+    },
+    "MetricTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "target_type": {
+          "const": "METRIC",
+          "default": "METRIC",
+          "title": "Target Type",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "MetricTarget",
+      "type": "object"
+    },
+    "MissingPeriodPolicy": {
+      "enum": [
+        "LEAVE_MISSING",
+        "ZERO_FILL",
+        "NULL_FILL"
+      ],
+      "title": "MissingPeriodPolicy",
+      "type": "string"
+    },
+    "NullValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "NULL",
+          "default": "NULL",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "default": null,
+          "title": "Value",
+          "type": "null"
+        }
+      },
+      "title": "NullValue",
+      "type": "object"
+    },
+    "NumberValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "NUMBER",
+          "default": "NUMBER",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "NumberValue",
+      "type": "object"
+    },
+    "NumericConstraint": {
+      "additionalProperties": false,
+      "properties": {
+        "column": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Column",
+          "type": "string"
+        },
+        "finite_only": {
+          "default": true,
+          "title": "Finite Only",
+          "type": "boolean"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        }
+      },
+      "required": [
+        "column"
+      ],
+      "title": "NumericConstraint",
+      "type": "object"
+    },
+    "OrderingRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "output_field_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Output Field Id",
+          "type": "string"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "direction": {
+          "enum": [
+            "ASC",
+            "DESC"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "nulls_policy": {
+          "default": "EXCLUDE",
+          "enum": [
+            "FIRST",
+            "LAST",
+            "EXCLUDE"
+          ],
+          "title": "Nulls Policy",
+          "type": "string"
+        },
+        "ties_policy": {
+          "default": "EXCLUDE_TIES",
+          "enum": [
+            "EXCLUDE_TIES",
+            "INCLUDE_TIES"
+          ],
+          "title": "Ties Policy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "output_field_id",
+        "direction"
+      ],
+      "title": "OrderingRequirement",
+      "type": "object"
+    },
+    "OutOfScopePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "payload_type": {
+          "const": "OUT_OF_SCOPE",
+          "default": "OUT_OF_SCOPE",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "reason_code": {
+          "enum": [
+            "UNSUPPORTED_REQUEST",
+            "UNSUPPORTED_CAPABILITY"
+          ],
+          "title": "Reason Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason_code"
+      ],
+      "title": "OutOfScopePayload",
+      "type": "object"
+    },
+    "OutputFieldRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "output_field_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Output Field Id",
+          "type": "string"
+        },
+        "semantic_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "$ref": "#/$defs/ComputedMeasureRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Semantic Ref"
+        },
+        "logical_role": {
+          "$ref": "#/$defs/SemanticRole"
+        },
+        "expected_data_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "STRING",
+                "DECIMAL",
+                "BOOLEAN",
+                "DATE",
+                "DATETIME"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Data Type"
+        },
+        "display_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Label"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "output_field_id",
+        "logical_role"
+      ],
+      "title": "OutputFieldRequirement",
+      "type": "object"
+    },
+    "PermissionContext": {
+      "additionalProperties": false,
+      "properties": {
+        "tenant_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Tenant Id",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        },
+        "application_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Application Id",
+          "type": "string"
+        },
+        "allowed_business_domain_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Allowed Business Domain Ids",
+          "type": "array"
+        },
+        "authorization_decision_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Authorization Decision Id"
+        },
+        "policy_snapshot_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Policy Snapshot Id"
+        },
+        "row_scope_hash": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Row Scope Hash"
+        },
+        "column_scope_hash": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column Scope Hash"
+        },
+        "metric_scope_hash": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metric Scope Hash"
+        }
+      },
+      "required": [
+        "tenant_id",
+        "user_id",
+        "application_id"
+      ],
+      "title": "PermissionContext",
+      "type": "object"
+    },
+    "Predicate": {
+      "additionalProperties": false,
+      "properties": {
+        "node_type": {
+          "const": "PREDICATE",
+          "default": "PREDICATE",
+          "title": "Node Type",
+          "type": "string"
+        },
+        "field_ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "operator": {
+          "$ref": "#/$defs/FilterOperator"
+        },
+        "value": {
+          "discriminator": {
+            "mapping": {
+              "BOOLEAN": "#/$defs/BooleanValue",
+              "DATE": "#/$defs/DateValue",
+              "DATETIME": "#/$defs/DateTimeValue",
+              "ENTITY_REF": "#/$defs/EntityValueRef",
+              "ENUM": "#/$defs/EnumValue",
+              "LIST": "#/$defs/ListValue",
+              "NULL": "#/$defs/NullValue",
+              "NUMBER": "#/$defs/NumberValue",
+              "RANGE": "#/$defs/RangeValue",
+              "STRING": "#/$defs/StringValue"
+            },
+            "propertyName": "value_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StringValue"
+            },
+            {
+              "$ref": "#/$defs/NumberValue"
+            },
+            {
+              "$ref": "#/$defs/BooleanValue"
+            },
+            {
+              "$ref": "#/$defs/DateValue"
+            },
+            {
+              "$ref": "#/$defs/DateTimeValue"
+            },
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "$ref": "#/$defs/EntityValueRef"
+            },
+            {
+              "$ref": "#/$defs/ListValue"
+            },
+            {
+              "$ref": "#/$defs/RangeValue"
+            },
+            {
+              "$ref": "#/$defs/NullValue"
+            }
+          ],
+          "title": "Value"
+        },
+        "source": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "mention_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Mention Ids",
+          "type": "array"
+        },
+        "scope": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Scope",
+          "type": "string"
+        },
+        "validation_status": {
+          "$ref": "#/$defs/ProofStatus",
+          "default": "UNKNOWN"
+        }
+      },
+      "required": [
+        "field_ref",
+        "operator",
+        "value",
+        "source",
+        "scope"
+      ],
+      "title": "Predicate",
+      "type": "object"
+    },
+    "ProjectionItem": {
+      "additionalProperties": false,
+      "properties": {
+        "output_field_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Output Field Id",
+          "type": "string"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "$ref": "#/$defs/ComputedMeasureRef"
+            }
+          ],
+          "title": "Ref"
+        },
+        "role": {
+          "$ref": "#/$defs/SemanticRole"
+        },
+        "display_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Label"
+        },
+        "alias_policy": {
+          "default": "STABLE_ID",
+          "enum": [
+            "STABLE_ID",
+            "GOVERNED_ALIAS"
+          ],
+          "title": "Alias Policy",
+          "type": "string"
+        },
+        "position": {
+          "minimum": 0,
+          "title": "Position",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "output_field_id",
+        "ref",
+        "role",
+        "position"
+      ],
+      "title": "ProjectionItem",
+      "type": "object"
+    },
+    "ProjectionSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "default": "EXPLICIT",
+          "enum": [
+            "EXPLICIT",
+            "SEMANTIC_DEFAULT"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ProjectionItem"
+          },
+          "maxItems": 100,
+          "title": "Items",
+          "type": "array"
+        },
+        "default_display_policy_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Display Policy Id"
+        }
+      },
+      "title": "ProjectionSpec",
+      "type": "object"
+    },
+    "ProofCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "check_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Check Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ProofStatus"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity",
+          "default": "BLOCKING"
+        },
+        "evidence_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "errors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Errors",
+          "type": "array"
+        }
+      },
+      "required": [
+        "check_id",
+        "status"
+      ],
+      "title": "ProofCheck",
+      "type": "object"
+    },
+    "ProofRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "check_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Check Id",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity",
+          "default": "BLOCKING"
+        }
+      },
+      "required": [
+        "check_id"
+      ],
+      "title": "ProofRequirement",
+      "type": "object"
+    },
+    "ProofStatus": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "UNKNOWN",
+        "NOT_APPLICABLE"
+      ],
+      "title": "ProofStatus",
+      "type": "string"
+    },
+    "QualityCheckType": {
+      "enum": [
+        "FRESHNESS",
+        "COMPLETENESS",
+        "NULL_RATE",
+        "DUPLICATION",
+        "CONSISTENCY",
+        "RECONCILIATION"
+      ],
+      "title": "QualityCheckType",
+      "type": "string"
+    },
+    "RangeValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "RANGE",
+          "default": "RANGE",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "start": {
+          "discriminator": {
+            "mapping": {
+              "BOOLEAN": "#/$defs/BooleanValue",
+              "DATE": "#/$defs/DateValue",
+              "DATETIME": "#/$defs/DateTimeValue",
+              "ENTITY_REF": "#/$defs/EntityValueRef",
+              "ENUM": "#/$defs/EnumValue",
+              "NULL": "#/$defs/NullValue",
+              "NUMBER": "#/$defs/NumberValue",
+              "STRING": "#/$defs/StringValue"
+            },
+            "propertyName": "value_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StringValue"
+            },
+            {
+              "$ref": "#/$defs/NumberValue"
+            },
+            {
+              "$ref": "#/$defs/BooleanValue"
+            },
+            {
+              "$ref": "#/$defs/DateValue"
+            },
+            {
+              "$ref": "#/$defs/DateTimeValue"
+            },
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "$ref": "#/$defs/EntityValueRef"
+            },
+            {
+              "$ref": "#/$defs/NullValue"
+            }
+          ],
+          "title": "Start"
+        },
+        "end": {
+          "discriminator": {
+            "mapping": {
+              "BOOLEAN": "#/$defs/BooleanValue",
+              "DATE": "#/$defs/DateValue",
+              "DATETIME": "#/$defs/DateTimeValue",
+              "ENTITY_REF": "#/$defs/EntityValueRef",
+              "ENUM": "#/$defs/EnumValue",
+              "NULL": "#/$defs/NullValue",
+              "NUMBER": "#/$defs/NumberValue",
+              "STRING": "#/$defs/StringValue"
+            },
+            "propertyName": "value_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StringValue"
+            },
+            {
+              "$ref": "#/$defs/NumberValue"
+            },
+            {
+              "$ref": "#/$defs/BooleanValue"
+            },
+            {
+              "$ref": "#/$defs/DateValue"
+            },
+            {
+              "$ref": "#/$defs/DateTimeValue"
+            },
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "$ref": "#/$defs/EntityValueRef"
+            },
+            {
+              "$ref": "#/$defs/NullValue"
+            }
+          ],
+          "title": "End"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "RangeValue",
+      "type": "object"
+    },
+    "RankingPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
+                  "PREDICATE": "#/$defs/Predicate"
+                },
+                "propertyName": "node_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/BooleanFilterGroup"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filters"
+        },
+        "projection_spec": {
+          "$ref": "#/$defs/ProjectionSpec"
+        },
+        "measures": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Measures",
+          "type": "array"
+        },
+        "time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "group_by": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Group By",
+          "type": "array"
+        },
+        "payload_type": {
+          "const": "RANKING",
+          "default": "RANKING",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "ranking_target": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "ranking": {
+          "$ref": "#/$defs/RankingSpec"
+        }
+      },
+      "required": [
+        "measures",
+        "group_by",
+        "ranking_target",
+        "ranking"
+      ],
+      "title": "RankingPayload",
+      "type": "object"
+    },
+    "RankingSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "rank_by": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "direction": {
+          "enum": [
+            "ASC",
+            "DESC"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "limit": {
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "ties_policy": {
+          "default": "EXCLUDE_TIES",
+          "enum": [
+            "EXCLUDE_TIES",
+            "INCLUDE_TIES"
+          ],
+          "title": "Ties Policy",
+          "type": "string"
+        },
+        "nulls_policy": {
+          "default": "EXCLUDE",
+          "enum": [
+            "FIRST",
+            "LAST",
+            "EXCLUDE"
+          ],
+          "title": "Nulls Policy",
+          "type": "string"
+        },
+        "stable_tiebreakers": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 20,
+          "title": "Stable Tiebreakers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rank_by",
+        "direction",
+        "limit"
+      ],
+      "title": "RankingSpec",
+      "type": "object"
+    },
+    "RelationListPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
+                  "PREDICATE": "#/$defs/Predicate"
+                },
+                "propertyName": "node_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/BooleanFilterGroup"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filters"
+        },
+        "projection_spec": {
+          "$ref": "#/$defs/ProjectionSpec"
+        },
+        "payload_type": {
+          "const": "RELATION_LIST",
+          "default": "RELATION_LIST",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "source_entity": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "target_entity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "relation_target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "relationship_spec": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LimitSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "source_entity"
+      ],
+      "title": "RelationListPayload",
+      "type": "object"
+    },
+    "RelationshipSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "relation_ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "target_ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "cardinality": {
+          "enum": [
+            "ONE_TO_ONE",
+            "ONE_TO_MANY",
+            "MANY_TO_ONE",
+            "MANY_TO_MANY"
+          ],
+          "title": "Cardinality",
+          "type": "string"
+        }
+      },
+      "required": [
+        "relation_ref",
+        "source_ref",
+        "target_ref",
+        "cardinality"
+      ],
+      "title": "RelationshipSpec",
+      "type": "object"
+    },
+    "ReportPayload": {
+      "additionalProperties": false,
+      "description": "Composition of existing tasks only; analysis delivery belongs to DeliverySpec.",
+      "properties": {
+        "payload_type": {
+          "const": "REPORT_COMPOSITION",
+          "default": "REPORT_COMPOSITION",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "source_task_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Source Task Ids",
+          "type": "array"
+        },
+        "delivery_target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "source_task_ids"
+      ],
+      "title": "ReportPayload",
+      "type": "object"
+    },
+    "ReportTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "target_type": {
+          "const": "REPORT",
+          "default": "REPORT",
+          "title": "Target Type",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "ReportTarget",
+      "type": "object"
+    },
+    "ResultContract": {
+      "additionalProperties": false,
+      "properties": {
+        "semantic_fingerprint": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Semantic Fingerprint"
+        },
+        "required_outputs": {
+          "items": {
+            "$ref": "#/$defs/OutputFieldRequirement"
+          },
+          "title": "Required Outputs",
+          "type": "array"
+        },
+        "required_metric_refs": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 100,
+          "title": "Required Metric Refs",
+          "type": "array"
+        },
+        "required_dimension_refs": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 100,
+          "title": "Required Dimension Refs",
+          "type": "array"
+        },
+        "required_entity_refs": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 100,
+          "title": "Required Entity Refs",
+          "type": "array"
+        },
+        "required_columns": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 500,
+          "title": "Required Columns",
+          "type": "array"
+        },
+        "required_time_grain": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeGrain"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "required_ordering": {
+          "items": {
+            "$ref": "#/$defs/OrderingRequirement"
+          },
+          "maxItems": 50,
+          "title": "Required Ordering",
+          "type": "array"
+        },
+        "row_bounds": {
+          "$ref": "#/$defs/RowBounds"
+        },
+        "uniqueness_keys": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "maxItems": 50,
+          "title": "Uniqueness Keys",
+          "type": "array"
+        },
+        "expected_cardinality": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CardinalityExpectation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "allow_empty": {
+          "default": true,
+          "title": "Allow Empty",
+          "type": "boolean"
+        },
+        "allow_truncated": {
+          "default": false,
+          "title": "Allow Truncated",
+          "type": "boolean"
+        },
+        "snapshot_requirement": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot Requirement"
+        },
+        "watermark_requirement": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Watermark Requirement"
+        },
+        "quality_requirement": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality Requirement"
+        },
+        "numeric_constraints": {
+          "items": {
+            "$ref": "#/$defs/NumericConstraint"
+          },
+          "maxItems": 100,
+          "title": "Numeric Constraints",
+          "type": "array"
+        },
+        "proof_requirements": {
+          "items": {
+            "$ref": "#/$defs/ProofRequirement"
+          },
+          "maxItems": 100,
+          "title": "Proof Requirements",
+          "type": "array"
+        }
+      },
+      "title": "ResultContract",
+      "type": "object"
+    },
+    "RootCausePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
+                  "PREDICATE": "#/$defs/Predicate"
+                },
+                "propertyName": "node_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/BooleanFilterGroup"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filters"
+        },
+        "projection_spec": {
+          "$ref": "#/$defs/ProjectionSpec"
+        },
+        "measures": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Measures",
+          "type": "array"
+        },
+        "time": {
+          "$ref": "#/$defs/TimeSpec"
+        },
+        "group_by": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "title": "Group By",
+          "type": "array"
+        },
+        "payload_type": {
+          "const": "ROOT_CAUSE",
+          "default": "ROOT_CAUSE",
+          "title": "Payload Type",
+          "type": "string"
+        },
+        "decomposition_dimensions": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Decomposition Dimensions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "measures",
+        "time",
+        "decomposition_dimensions"
+      ],
+      "title": "RootCausePayload",
+      "type": "object"
+    },
+    "RowBounds": {
+      "additionalProperties": false,
+      "properties": {
+        "minimum": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Minimum",
+          "type": "integer"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        }
+      },
+      "title": "RowBounds",
+      "type": "object"
+    },
+    "ScalarAggregatePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
+                  "PREDICATE": "#/$defs/Predicate"
+                },
+                "propertyName": "node_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/BooleanFilterGroup"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filters"
+        },
+        "projection_spec": {
+          "$ref": "#/$defs/ProjectionSpec"
+        },
+        "measures": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Measures",
+          "type": "array"
+        },
+        "time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "group_by": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 0,
+          "title": "Group By",
+          "type": "array"
+        },
+        "payload_type": {
+          "const": "SCALAR_AGGREGATE",
+          "default": "SCALAR_AGGREGATE",
+          "title": "Payload Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "measures"
+      ],
+      "title": "ScalarAggregatePayload",
+      "type": "object"
+    },
+    "ScopePolicyDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "policy_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "policy_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "CURRENT_DATASET",
+            "GLOBAL",
+            "EXPLICIT_TIME",
+            "DEFAULT_TIME"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "ALLOW",
+            "DENY",
+            "REQUERY",
+            "REQUIRE_USER_DECISION"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        }
+      },
+      "required": [
+        "policy_id",
+        "policy_version",
+        "scope",
+        "outcome"
+      ],
+      "title": "ScopePolicyDecision",
+      "type": "object"
+    },
+    "SemanticBaseline": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_type": {
+          "const": "SEMANTIC",
+          "default": "SEMANTIC",
+          "title": "Baseline Type",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "SemanticBaseline",
+      "type": "object"
+    },
+    "SemanticRole": {
+      "enum": [
+        "MEASURE",
+        "GROUP_BY",
+        "FILTER_FIELD",
+        "FILTER_VALUE",
+        "SOURCE_ENTITY",
+        "TARGET_ENTITY",
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD",
+        "RELATIONSHIP",
+        "RELATION_TARGET",
+        "TIME_FIELD",
+        "TIME_RANGE",
+        "TIME_GRAIN",
+        "COMPARISON_BASELINE",
+        "ORDER_BY",
+        "SORT_DIRECTION",
+        "LIMIT",
+        "DATASET_SOURCE",
+        "DELIVERY_TARGET"
+      ],
+      "title": "SemanticRole",
+      "type": "string"
+    },
+    "ServiceRoute": {
+      "enum": [
+        "CONTROL",
+        "DATA_QUERY",
+        "DATASET_OPERATION",
+        "ANALYTICS",
+        "METRIC_CATALOG",
+        "METADATA",
+        "LINEAGE",
+        "DATA_QUALITY",
+        "FORECAST",
+        "REPORTING",
+        "CAPABILITY_HELP",
+        "CHAT",
+        "OUT_OF_SCOPE"
+      ],
+      "title": "ServiceRoute",
+      "type": "string"
+    },
+    "Severity": {
+      "enum": [
+        "BLOCKING",
+        "ADVISORY"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "SnapshotContext": {
+      "additionalProperties": false,
+      "properties": {
+        "catalog_publish_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Catalog Publish Id"
+        },
+        "catalog_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "semantic_model_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Semantic Model Version",
+          "type": "string"
+        },
+        "vector_index_version": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vector Index Version"
+        },
+        "semantic_model_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Semantic Model Id"
+        },
+        "database_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Database Id"
+        },
+        "business_domain_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Business Domain Ids",
+          "type": "array"
+        },
+        "knowledge_base_names": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Knowledge Base Names",
+          "type": "array"
+        },
+        "data_snapshot_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data Snapshot Id"
+        },
+        "data_watermark": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data Watermark"
+        }
+      },
+      "required": [
+        "catalog_version",
+        "semantic_model_version"
+      ],
+      "title": "SnapshotContext",
+      "type": "object"
+    },
+    "StringValue": {
+      "additionalProperties": false,
+      "properties": {
+        "value_type": {
+          "const": "STRING",
+          "default": "STRING",
+          "title": "Value Type",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "StringValue",
+      "type": "object"
+    },
+    "TableTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "target_type": {
+          "const": "TABLE",
+          "default": "TABLE",
+          "title": "Target Type",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "TableTarget",
+      "type": "object"
+    },
+    "TaskBaseline": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_type": {
+          "const": "TASK",
+          "default": "TASK",
+          "title": "Baseline Type",
+          "type": "string"
+        },
+        "task_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Task Id",
+          "type": "string"
+        },
+        "task_version": {
+          "minimum": 1,
+          "title": "Task Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "task_id",
+        "task_version"
+      ],
+      "title": "TaskBaseline",
+      "type": "object"
+    },
+    "TimeBaseline": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_type": {
+          "const": "TIME",
+          "default": "TIME",
+          "title": "Baseline Type",
+          "type": "string"
+        },
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "relative_period": {
+          "anyOf": [
+            {
+              "enum": [
+                "PREVIOUS_YEAR",
+                "PREVIOUS_PERIOD"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relative Period"
+        }
+      },
+      "title": "TimeBaseline",
+      "type": "object"
+    },
+    "TimeComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "comparison_type": {
+          "$ref": "#/$defs/ComparisonType"
+        },
+        "comparison_range": {
+          "$ref": "#/$defs/TimeRange"
+        }
+      },
+      "required": [
+        "comparison_type",
+        "comparison_range"
+      ],
+      "title": "TimeComparison",
+      "type": "object"
+    },
+    "TimeGrain": {
+      "enum": [
+        "NONE",
+        "DAY",
+        "WEEK",
+        "MONTH",
+        "QUARTER",
+        "YEAR"
+      ],
+      "title": "TimeGrain",
+      "type": "string"
+    },
+    "TimeRange": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "format": "date-time",
+          "title": "Start",
+          "type": "string"
+        },
+        "end_exclusive": {
+          "format": "date-time",
+          "title": "End Exclusive",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end_exclusive"
+      ],
+      "title": "TimeRange",
+      "type": "object"
+    },
+    "TimeSeriesPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "filters": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
+                  "PREDICATE": "#/$defs/Predicate"
+                },
+                "propertyName": "node_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/BooleanFilterGroup"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filters"
+        },
+        "projection_spec": {
+          "$ref": "#/$defs/ProjectionSpec"
+        },
+        "measures": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Measures",
+          "type": "array"
+        },
+        "time": {
+          "$ref": "#/$defs/TimeSpec"
+        },
+        "group_by": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 50,
+          "title": "Group By",
+          "type": "array"
+        },
+        "payload_type": {
+          "const": "TIME_SERIES",
+          "default": "TIME_SERIES",
+          "title": "Payload Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "measures",
+        "time"
+      ],
+      "title": "TimeSeriesPayload",
+      "type": "object"
+    },
+    "TimeSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "range": {
+          "$ref": "#/$defs/TimeRange"
+        },
+        "grain": {
+          "$ref": "#/$defs/TimeGrain"
+        },
+        "boundary": {
+          "const": "LEFT_CLOSED_RIGHT_OPEN",
+          "default": "LEFT_CLOSED_RIGHT_OPEN",
+          "title": "Boundary",
+          "type": "string"
+        },
+        "timezone": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Timezone",
+          "type": "string"
+        },
+        "calendar": {
+          "$ref": "#/$defs/CalendarType",
+          "default": "NATURAL"
+        },
+        "source": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "data_watermark": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data Watermark"
+        },
+        "fiscal_calendar_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fiscal Calendar Id"
+        },
+        "calendar_policy_version": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calendar Policy Version"
+        },
+        "default_policy_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Policy Id"
+        },
+        "default_policy_version": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Policy Version"
+        },
+        "include_incomplete_period": {
+          "default": false,
+          "title": "Include Incomplete Period",
+          "type": "boolean"
+        },
+        "missing_period_policy": {
+          "$ref": "#/$defs/MissingPeriodPolicy",
+          "default": "LEAVE_MISSING"
+        },
+        "comparison": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeComparison"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "anchor",
+        "range",
+        "grain",
+        "timezone",
+        "source",
+        "as_of"
+      ],
+      "title": "TimeSpec",
+      "type": "object"
+    },
+    "VersionMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "prompt_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "policy_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "adapter_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Adapter Version",
+          "type": "string"
+        },
+        "plan_schema_version": {
+          "const": "0.2.1",
+          "default": "0.2.1",
+          "title": "Plan Schema Version",
+          "type": "string"
+        },
+        "current_turn_parser_version": {
+          "default": "fixture-parse-v1",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Current Turn Parser Version",
+          "type": "string"
+        },
+        "turn_resolver_version": {
+          "default": "turn-resolver-v1",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Turn Resolver Version",
+          "type": "string"
+        },
+        "semantic_resolver_version": {
+          "default": "bound-validator-v1",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Semantic Resolver Version",
+          "type": "string"
+        },
+        "candidate_scoring_version": {
+          "default": "weighted-v1",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Candidate Scoring Version",
+          "type": "string"
+        },
+        "logical_plan_compiler_version": {
+          "default": "logical-compiler-v1",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Logical Plan Compiler Version",
+          "type": "string"
+        },
+        "slot_reducer_version": {
+          "default": "atomic-reducer-v1",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Slot Reducer Version",
+          "type": "string"
+        },
+        "result_contract_compiler_version": {
+          "default": "result-compiler-v1",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Result Contract Compiler Version",
+          "type": "string"
+        },
+        "execution_router_version": {
+          "default": "payload-router-v1",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Execution Router Version",
+          "type": "string"
+        },
+        "temporal_policy_version": {
+          "default": "temporal-v1",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Temporal Policy Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "0.2.1",
+          "default": "0.2.1",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt_version",
+        "policy_version",
+        "adapter_version"
+      ],
+      "title": "VersionMetadata",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "logical_plan": {
+      "$ref": "#/$defs/LogicalPlan"
+    },
+    "execution_backend": {
+      "$ref": "#/$defs/ExecutionBackend"
+    },
+    "result_contract": {
+      "$ref": "#/$defs/ResultContract"
+    },
+    "backend_contract": {
+      "$ref": "#/$defs/BackendContract"
+    },
+    "adapter_report": {
+      "$ref": "#/$defs/AdapterReport"
+    },
+    "compensation_plan": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CompensationPlan"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "logical_plan",
+    "execution_backend",
+    "result_contract",
+    "backend_contract",
+    "adapter_report"
+  ],
+  "title": "ExecutablePlan",
+  "type": "object"
+}
