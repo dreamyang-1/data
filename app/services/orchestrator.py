@@ -2381,14 +2381,26 @@ class DataAnalysisOrchestrator:
         # Replace structural guesses as one atomic semantic frame so a city
         # prefix inside an institution name cannot survive as a fake region
         # filter (and analogous future entity shapes update automatically).
+        request.entity = discovery.subject
+        request.dimensions = list(dict.fromkeys(discovery.dimensions))
         request.filters = [dict(item) for item in discovery.filters]
+        # The discovery ASL has already converted every accepted literal into
+        # a SQL-verified filter.  Keeping broad model-extracted noun fragments
+        # (for example ``各经销商的区域``) would make final ASL validation treat
+        # them as additional unresolved entity values and reject an otherwise
+        # complete canonical plan.
+        request.semantic_entity_mentions = []
         request.rewritten_question = request.original_question
         if request.turn_admission is not None:
-            explicit_filters = (
-                request.turn_admission.current_turn_facts.explicit_slots.get("filters")
-            )
-            if explicit_filters is not None:
-                explicit_filters.value = [dict(item) for item in discovery.filters]
+            explicit_slots = request.turn_admission.current_turn_facts.explicit_slots
+            for slot_name, value in (
+                ("entity", discovery.subject),
+                ("dimensions", list(discovery.dimensions)),
+                ("filters", [dict(item) for item in discovery.filters]),
+            ):
+                slot = explicit_slots.get(slot_name)
+                if slot is not None:
+                    slot.value = value
         request.assumptions.extend((
             "METRIC_BINDING_SOURCE=LIVE_SQL_VERIFIED_SEMANTIC_SNAPSHOT",
             "QUERY_FRAME_SOURCE=LIVE_SQL_VERIFIED_SEMANTIC_SNAPSHOT",
@@ -3823,6 +3835,16 @@ class DataAnalysisOrchestrator:
         # current app binding.  Empty means no bound KB and must clear stale history;
         # never inherit an older scope or infer all globally available collections.
         request.knowledge_base_names = list(dict.fromkeys(chat.knowledge_base_names))
+
+        # Normalize newly published or model-extracted metric phrases before
+        # rendering intent diagnostics.  The former late-only recovery allowed
+        # the UI to announce stale dimensions/clarification even when the same
+        # turn subsequently obtained a SQL-verified canonical semantic frame.
+        if (
+            "metric" in request.missing_slots
+            or any(metric.metric_id is None for metric in request.metrics)
+        ):
+            await self._recover_live_published_metrics(request, chat, identity)
 
         # Intent diagnostics are visible to end users. Resolve their semantic
         # slots separately so raw LLM/rule candidates can never be presented as

@@ -596,11 +596,12 @@ class HttpDataRetrievalAdapter:
     def _is_time_independent_snapshot_metric(
         asl: dict[str, Any], selected_metrics: list[dict[str, Any]]
     ) -> bool:
-        """Recognize a schema-backed master-data count without naming a domain.
+        """Recognize a schema-backed master-data count or count ratio.
 
         The decision is intentionally conservative: every selected metric must
-        be a distinct count over the ASL subject's own table, the live planner
-        must omit time_context, and no fact/event table marker may occur. This
+        be a distinct count over the ASL subject's own table, or a ratio whose
+        numerator and denominator are both subject count identifiers. The live
+        planner must omit time_context and no fact/event marker may occur. This
         keeps ordinary sales/order metrics on their configured time policy.
         """
         if asl.get("time_context") is not None or not selected_metrics:
@@ -621,6 +622,17 @@ class HttpDataRetrievalAdapter:
             formula = str(item.get("calculation_formula") or "")
             if fact_markers.search(formula):
                 return False
+            right_hand_side = formula.split("=", 1)[-1].strip()
+            ratio = re.fullmatch(
+                r"([A-Za-z_]\w*)\s*/\s*([A-Za-z_]\w*)",
+                right_hand_side,
+            )
+            if ratio is not None and all(
+                "count" in operand.casefold()
+                and subject_code in operand.casefold()
+                for operand in ratio.groups()
+            ):
+                continue
             distinct = re.search(
                 r"COUNT\s*\(\s*DISTINCT\s+([A-Za-z_]\w*)\.[A-Za-z_]\w*\s*\)",
                 formula,

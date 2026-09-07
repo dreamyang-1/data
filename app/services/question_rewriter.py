@@ -234,10 +234,32 @@ class QuestionRewriter:
             return "" if text.casefold() in hidden_placeholders else text
 
         candidates: list[dict[str, str]] = []
+        metric_candidate_ids: dict[int, list[str]] = {}
+        metric_context = visible_candidate(request.original_question)[:300]
         for index, metric in enumerate(request.metrics):
             value = visible_candidate(metric.canonical_name or metric.input)
             if value:
-                candidates.append({"candidate_id": f"metric:{index}", "slot": "metric", "value": value})
+                direct_id = f"metric:{index}"
+                metric_candidate_ids[index] = [direct_id]
+                candidates.append({"candidate_id": direct_id, "slot": "metric", "value": value})
+                if (
+                    metric_context
+                    and metric_context != value
+                    and value in metric_context
+                ):
+                    # The intent model may reduce a governed compound metric to
+                    # a generic suffix (for example ``区域医院覆盖率`` ->
+                    # ``覆盖率``).  Keep the direct candidate fail-closed, then
+                    # let Oagnet prove a complete registered name/alias from
+                    # the bounded original question.  This remains strictly a
+                    # presentation candidate and never changes ASL/SQL state.
+                    context_id = f"metric:{index}:context"
+                    metric_candidate_ids[index].append(context_id)
+                    candidates.append({
+                        "candidate_id": context_id,
+                        "slot": "metric",
+                        "value": metric_context,
+                    })
         entity_value = visible_candidate(request.entity)
         if entity_value:
             candidates.append({"candidate_id": "entity:0", "slot": "entity", "value": entity_value})
@@ -296,12 +318,19 @@ class QuestionRewriter:
             if isinstance(item, dict) and str(item.get("candidate_id") or "")
         }
         display: dict[str, Any] = {}
-        metrics = [
-            str(by_id[f"metric:{index}"].get("canonical_name") or "").strip()
-            for index in range(len(request.metrics))
-            if f"metric:{index}" in by_id
-            and str(by_id[f"metric:{index}"].get("canonical_name") or "").strip()
-        ]
+        metrics: list[str] = []
+        for index in range(len(request.metrics)):
+            match = next(
+                (
+                    by_id[candidate_id]
+                    for candidate_id in metric_candidate_ids.get(index, [])
+                    if candidate_id in by_id
+                    and str(by_id[candidate_id].get("canonical_name") or "").strip()
+                ),
+                None,
+            )
+            if match is not None:
+                metrics.append(str(match["canonical_name"]).strip())
         if metrics:
             display["metrics"] = list(dict.fromkeys(metrics))
         entity_match = by_id.get("entity:0")

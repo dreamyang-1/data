@@ -270,6 +270,33 @@ async def test_live_metric_discovery_rejects_vector_only_metric_hit():
     assert result.metrics == []
 
 
+def test_subject_count_ratio_without_time_context_is_snapshot_metric():
+    assert HttpDataRetrievalAdapter._is_time_independent_snapshot_metric(
+        {
+            "subject": {"entity": "hospital"},
+            "time_context": None,
+        },
+        [{
+            "calculation_formula": (
+                "screening_area_hospital_coverage="
+                "cooperating_hospital_count / total_hospital_count_by_region"
+            ),
+        }],
+    ) is True
+
+
+def test_fact_count_ratio_is_not_treated_as_snapshot_metric():
+    assert HttpDataRetrievalAdapter._is_time_independent_snapshot_metric(
+        {
+            "subject": {"entity": "order"},
+            "time_context": None,
+        },
+        [{
+            "calculation_formula": "conversion=paid_order_count / order_count",
+        }],
+    ) is False
+
+
 @pytest.mark.asyncio
 async def test_attribute_detail_discovery_accepts_published_metricless_projection():
     asl = {

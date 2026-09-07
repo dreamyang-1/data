@@ -119,6 +119,37 @@ async def test_display_slots_only_keep_vector_resolved_canonical_values():
 
 
 @pytest.mark.asyncio
+async def test_display_metric_uses_registered_compound_name_from_question_context():
+    request = CanonicalAnalysisRequest(
+        conversation_id="semantic-metric-context",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="统计上海市各个经销商的区域医院覆盖率",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        semantic_model_id=81,
+        business_domain_ids=[205],
+        metrics=[MetricRef(input="覆盖率")],
+    )
+    resolver = FakeDisplayResolver([{
+        "candidate_id": "metric:0:context",
+        "canonical_name": "区域医院覆盖率",
+        "canonical_code": "screening_area_hospital_coverage",
+    }])
+
+    await QuestionRewriter(resolver).ground_display_slots(request)
+
+    assert request.semantic_display_slots["metrics"] == ["区域医院覆盖率"]
+    # Display grounding stays isolated from executable intent state.
+    assert request.metrics == [MetricRef(input="覆盖率")]
+    candidates = resolver.calls[0][0]
+    assert {
+        "candidate_id": "metric:0:context",
+        "slot": "metric",
+        "value": "统计上海市各个经销商的区域医院覆盖率",
+    } in candidates
+
+
+@pytest.mark.asyncio
 async def test_control_filter_value_is_not_displayed_as_business_entity_value():
     request = CanonicalAnalysisRequest(
         conversation_id="semantic-enum-display",
