@@ -4,7 +4,7 @@
     "old_pass_now_fail": 0,
     "old_fail_now_pass": 0,
     "old_fail_still_fail": 32,
-    "new_pass": 198,
+    "new_pass": 201,
     "new_fail": 0
   },
   "nodes": {
@@ -1569,6 +1569,7 @@
       "tests/test_phase25_1_contracts.py::test_atomic_patch_permutations_have_same_fingerprint[permutation9]",
       "tests/test_phase25_1_contracts.py::test_candidate_invariants_and_scoring_cannot_be_forged",
       "tests/test_phase25_1_contracts.py::test_clarification_does_not_expose_unauthorized_option_labels",
+      "tests/test_phase25_1_contracts.py::test_compatibility_envelope_cannot_bypass_adapter_implementation_gate",
       "tests/test_phase25_1_contracts.py::test_compiler_requires_selected_catalog_candidates_and_deterministic_outputs",
       "tests/test_phase25_1_contracts.py::test_control_actions_are_closed[ADD]",
       "tests/test_phase25_1_contracts.py::test_control_actions_are_closed[CHAT]",
@@ -1593,6 +1594,7 @@
       "tests/test_phase25_1_contracts.py::test_dataset_operation_rejects_missing_required_value_and_unrelated_fields[SORT]",
       "tests/test_phase25_1_contracts.py::test_dataset_truncation_limits_global_operations",
       "tests/test_phase25_1_contracts.py::test_decimal_temporal_and_range_contracts",
+      "tests/test_phase25_1_contracts.py::test_execution_success_cannot_be_asserted_with_empty_proof_checks",
       "tests/test_phase25_1_contracts.py::test_explicit_operations_override_system_default_in_any_input_order",
       "tests/test_phase25_1_contracts.py::test_filter_operator_value_contract[AND-value10-False]",
       "tests/test_phase25_1_contracts.py::test_filter_operator_value_contract[BETWEEN-value2-True]",
@@ -1661,6 +1663,7 @@
       "tests/test_phase25_1_contracts.py::test_registry_rejects_incompatible_route_and_goals[TIME_SERIES]",
       "tests/test_phase25_1_contracts.py::test_report_delivery_retains_root_cause_and_help_is_not_chat",
       "tests/test_phase25_1_contracts.py::test_schema_migration_keeps_history_readable_without_inventing_algorithms",
+      "tests/test_phase25_1_contracts.py::test_single_row_ordering_still_enforces_excluded_nulls",
       "tests/test_phase25_1_contracts.py::test_system_errors_cannot_create_business_pending[ASL_CONTRACT_FAILURE]",
       "tests/test_phase25_1_contracts.py::test_system_errors_cannot_create_business_pending[DATA_NOT_READY]",
       "tests/test_phase25_1_contracts.py::test_system_errors_cannot_create_business_pending[EXECUTION_FAILURE]",
@@ -1747,7 +1750,7 @@
   "removed_old_nodes": [],
   "changed_old_test_files": [],
   "full_suite_counts": {
-    "passed": 1693,
+    "passed": 1696,
     "failed": 32
   },
   "baseline_suite_counts": {
@@ -1755,5 +1758,5 @@
     "failed": 32
   },
   "comparison_method": "IDENTICAL_FROZEN_NODE_IDS",
-  "final_gate_file": "verified_final_test_gate.json"
+  "final_gate_file": "final_verified_test_gate.json"
 }

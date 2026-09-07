@@ -84,6 +84,11 @@ class StrictModel(BaseModel):
             raise TypeError('finalized logical plan is immutable')
         super().__setattr__(name, value)
 
+    def __delattr__(self, name):
+        if getattr(self, '_contract_frozen', False):
+            raise TypeError('finalized logical plan is immutable')
+        super().__delattr__(name)
+
     @field_validator('*', mode='after')
     @classmethod
     def normalize_datetimes(cls, value):
@@ -1439,6 +1444,9 @@ class ExecutionAttemptRecord(StrictModel):
             from .result_contract import completed_allowed
             if self.error_type or self.proof_chain is None or not completed_allowed(self.proof_chain.plan, self.proof_chain.asl, self.proof_chain.sql_plan, self.proof_chain.result):
                 raise ValueError('successful execution requires all blocking proofs to pass')
+            if not all(any(check.severity == Severity.BLOCKING for check in proof.checks)
+                       for proof in (self.proof_chain.plan, self.proof_chain.asl, self.proof_chain.sql_plan, self.proof_chain.result)):
+                raise ValueError('successful execution requires explicit checks in every proof stage')
         return self
 
 

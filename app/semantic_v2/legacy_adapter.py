@@ -42,7 +42,7 @@ def assess_legacy_adapter(plan: PlanEnvelope) -> AdapterReport:
         status = AdapterStatus.LOSSY_UNSAFE
         safe = False
         errors.append('semantic approximation has no implemented and proven compensation')
-    elif hasattr(plan, 'service_route') and payload.payload_type not in {'CHAT', 'CONTROL', 'CAPABILITY_HELP', 'OUT_OF_SCOPE'}:
+    elif payload.payload_type not in {'CHAT', 'CONTROL', 'CAPABILITY_HELP', 'OUT_OF_SCOPE'}:
         status = AdapterStatus.UNSUPPORTED
         safe = False
         errors.append('ASL 1.0 compilation is not implemented for this logical payload')

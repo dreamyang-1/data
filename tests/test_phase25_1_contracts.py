@@ -64,7 +64,7 @@ def test_query_shape_is_derived_unserialized_and_plan_is_deeply_immutable():
     plan = logical(original)
     assert 'query_shape' not in plan.model_dump() and 'query_shape' not in LogicalPlan.model_json_schema()['properties']
     assert plan.query_shape == QueryShape.TIME_SERIES
-    for mutate in (lambda: plan.payload.measures.append(ref('volume')), lambda: setattr(plan.payload.time, 'grain', TimeGrain.YEAR), lambda: setattr(plan, 'task_id', 'other')):
+    for mutate in (lambda: plan.payload.measures.append(ref('volume')), lambda: setattr(plan.payload.time, 'grain', TimeGrain.YEAR), lambda: setattr(plan, 'task_id', 'other'), lambda: delattr(plan.payload, 'time')):
         with pytest.raises((TypeError, ValidationError)):
             mutate()
     original.measures.append(ref('volume'))
@@ -338,3 +338,30 @@ def test_clarification_does_not_expose_unauthorized_option_labels():
     hidden = ClarificationOption(option_id='hidden', display_label='private metric', canonical_ref=ref('private'), evidence=['fixture'])
     assert authorized_clarification_options([visible, hidden], snapshot=snapshot(), permission=permission(),
                                             authorizations=authorizations(ScalarAggregatePayload(measures=[ref()]))) == [visible]
+
+
+def test_compatibility_envelope_cannot_bypass_adapter_implementation_gate():
+    from app.semantic_v2.legacy_adapter import assess_legacy_adapter
+    from tests.test_semantic_v2_contracts import plan
+    envelope = plan(payload=ScalarAggregatePayload(measures=[ref()]))
+    assert assess_legacy_adapter(envelope).adapter_status == AdapterStatus.UNSUPPORTED
+    assert assess_legacy_adapter(envelope).can_execute_safely is False
+
+
+def test_single_row_ordering_still_enforces_excluded_nulls():
+    contract = ResultContract(semantic_fingerprint='f', required_outputs=[OutputFieldRequirement(output_field_id='metric', semantic_ref=ref(), logical_role='MEASURE')],
+        required_ordering=[OrderingRequirement(output_field_id='metric', direction='DESC', nulls_policy='EXCLUDE')])
+    binding = OutputBindingProof(output_field_id='metric', asl_projection_id='p', sql_alias='x', result_column_index=0,
+                                 result_column_name='x', status='PASS', semantic_fingerprint='f')
+    proof = prove_result_contract(contract, columns=['x'], rows=[{'x':None}], truncated=False, output_bindings=[binding])
+    assert proof.status == ProofStatus.FAIL
+    assert next(c for c in proof.checks if c.check_id == 'required_ordering').status == ProofStatus.FAIL
+
+
+def test_execution_success_cannot_be_asserted_with_empty_proof_checks():
+    proof = ContractProof(status='PASS')
+    with pytest.raises(ValidationError, match='explicit checks'):
+        ExecutionAttemptRecord(execution_id='x', task_id='t', task_version=1, attempt_number=1,
+            status='SUCCEEDED', started_at=NOW, completed_at=NOW, execution_backend='SEMANTIC_QUERY',
+            snapshot_id='s', catalog_version='c', vector_index_version='v', semantic_model_version='m', policy_version='p',
+            proof_chain=ProofChain(plan=proof, asl=proof, sql_plan=proof, result=proof))

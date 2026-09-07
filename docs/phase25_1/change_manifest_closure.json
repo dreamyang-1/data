@@ -1,0 +1,83 @@
+{
+  "changed_files": [
+    "app/semantic_v2/models.py",
+    "app/semantic_v2/legacy_adapter.py",
+    "app/semantic_v2/result_contract.py",
+    "tests/test_phase25_1_contracts.py",
+    "docs/phase25_1/source_inventory.json",
+    "docs/phase25_1/test_gate_comparison.json"
+  ],
+  "added_files": [
+    "docs/phase25_1/final_verified_test_gate.json",
+    "docs/phase25_1/safety_gate.json",
+    "docs/phase25_1/README.md",
+    "docs/phase25_1/phase25_1_closure_report.md",
+    "docs/phase25_1/final_workspace_git_drift.json"
+  ],
+  "deleted_files": [],
+  "files": [
+    {
+      "path": "app/semantic_v2/models.py",
+      "sha256": "983bd8c5c39ffae765ab4f6dbe736dcf83b946cd1b2e2169023a85a2e983a7b1",
+      "previous_git_sha256": "ea4be3ce4605e17153be9076ceab40e9d3e75747b9b3f1578b22385562e2d6e2",
+      "change": "changed"
+    },
+    {
+      "path": "app/semantic_v2/legacy_adapter.py",
+      "sha256": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f",
+      "previous_git_sha256": "28067a1cdfd06f4039ce000265362b4131fed1228b013a9fa4a2cfb6f5c27621",
+      "change": "changed"
+    },
+    {
+      "path": "app/semantic_v2/result_contract.py",
+      "sha256": "3adafe39a060161d10442c060e77b8269418afd4d233a445fcc84839c133a6e0",
+      "previous_git_sha256": "7a6fcc078f2e63b274b7f9e80d61403cebd686d5de34868b6b6538ae4e104fe0",
+      "change": "changed"
+    },
+    {
+      "path": "tests/test_phase25_1_contracts.py",
+      "sha256": "e9d0210d111bb01712aac6485eeede560089bdd3730987e676b1bfd80f2dba2f",
+      "previous_git_sha256": "ba607cf2bcb89cb7bade9917641ef8221397384b73253062e5334a8df926e8f6",
+      "change": "changed"
+    },
+    {
+      "path": "docs/phase25_1/source_inventory.json",
+      "sha256": "dd18da3a8e97245b924939e671c0fec1b275f726f7fc922f0abe6124ca57448f",
+      "previous_git_sha256": "178f978be85832560578c06cc1774146d7731d387093d48052c2e0d8de239756",
+      "change": "changed"
+    },
+    {
+      "path": "docs/phase25_1/test_gate_comparison.json",
+      "sha256": "506b9386c8542bd8dc65f9054fe289c466fdd66dabcbaec72d0c4472413cfdea",
+      "previous_git_sha256": "2c1406298d466cf1983aeeeb381af6945fb3b469e5d0c0dc8a72d324dd23e6d8",
+      "change": "changed"
+    },
+    {
+      "path": "docs/phase25_1/final_verified_test_gate.json",
+      "sha256": "f963de960dd0172e6fe8e3188087e57042560276296bb88f8ffd093d956c9f54",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/safety_gate.json",
+      "sha256": "9ecd652e4b91b6c437afaa7d1450ed161382725d5be807b25556be7677d32f18",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/README.md",
+      "sha256": "c79af2b70351b5db4c9ad3803ef867decd3cd07db4785bf08b859f4620804186",
+      "previous_git_sha256": null,
+      "change": "added"
+    },
+    {
+      "path": "docs/phase25_1/phase25_1_closure_report.md",
+      "sha256": "056b8196ef7de564689f89cb86c8232328ad1074cda74531d344fa3d3c79eb5b",
+      "previous_git_sha256": null,
+      "change": "added"
+    }
+  ],
+  "sensitive_scan": "PASS",
+  "preexisting_drift_preserved": true,
+  "audit_digest_policy": "Final drift report is SHA-256 checked separately after generation and staging to avoid a manifest/audit hash cycle."
+}

@@ -170,7 +170,10 @@ def prove_result_contract(
     if contract.snapshot_requirement:
         checks['snapshot'] = ProofStatus.UNKNOWN if snapshot_id is None else ProofStatus.PASS if snapshot_id == contract.snapshot_requirement else ProofStatus.FAIL
     if contract.required_ordering:
-        ordering_ok = bindings_ok
+        ordering_ok = bindings_ok and all(
+            order.output_field_id in bindings and
+            (order.nulls_policy != 'EXCLUDE' or all(row.get(bindings[order.output_field_id]) is not None for row in rows))
+            for order in contract.required_ordering)
         from functools import cmp_to_key
 
         def compare(left, right):

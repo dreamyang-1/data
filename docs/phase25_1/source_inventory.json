@@ -4165,7 +4165,7 @@
   },
   {
     "path": "app/semantic_v2/legacy_adapter.py",
-    "sha256": "28067a1cdfd06f4039ce000265362b4131fed1228b013a9fa4a2cfb6f5c27621",
+    "sha256": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f",
     "lines": 59,
     "coverage": "FULL_FILE_STATIC_SCAN",
     "initial_workspace_sha256": "a6511fce20f2e6ee15ed6c8054c8f111f1229b84d026894d25d0b30333fdb519",
@@ -4213,8 +4213,8 @@
   },
   {
     "path": "app/semantic_v2/models.py",
-    "sha256": "ea4be3ce4605e17153be9076ceab40e9d3e75747b9b3f1578b22385562e2d6e2",
-    "lines": 1445,
+    "sha256": "983bd8c5c39ffae765ab4f6dbe736dcf83b946cd1b2e2169023a85a2e983a7b1",
+    "lines": 1453,
     "coverage": "FULL_FILE_STATIC_SCAN",
     "initial_workspace_sha256": "0ae495cd55ca0a1bc4b8906c3b435b22569e3276d9cadecdf85af0e05ef84a4a",
     "definitions": [
@@ -4236,552 +4236,552 @@
       {
         "name": "StrictModel",
         "start": 77,
-        "end": 94
+        "end": 99
       },
       {
         "name": "DialogueSpec",
-        "start": 100,
-        "end": 106
+        "start": 105,
+        "end": 111
       },
       {
         "name": "TopicTarget",
-        "start": 109,
-        "end": 114
+        "start": 114,
+        "end": 119
       },
       {
         "name": "SemanticAxes",
-        "start": 117,
-        "end": 123
+        "start": 122,
+        "end": 128
       },
       {
         "name": "Mention",
-        "start": 126,
-        "end": 148
+        "start": 131,
+        "end": 153
       },
       {
         "name": "SemanticRef",
-        "start": 151,
-        "end": 164
+        "start": 156,
+        "end": 169
       },
       {
         "name": "BoundSemanticRef",
-        "start": 167,
-        "end": 195
+        "start": 172,
+        "end": 200
       },
       {
         "name": "SemanticCandidate",
-        "start": 198,
-        "end": 220
+        "start": 203,
+        "end": 225
       },
       {
         "name": "SemanticCandidateSet",
-        "start": 223,
-        "end": 242
+        "start": 228,
+        "end": 247
       },
       {
         "name": "PlanCandidateScore",
-        "start": 245,
-        "end": 260
+        "start": 250,
+        "end": 265
       },
       {
         "name": "PlanCandidate",
-        "start": 263,
-        "end": 271
+        "start": 268,
+        "end": 276
       },
       {
         "name": "SemanticResolutionContract",
-        "start": 274,
-        "end": 305
+        "start": 279,
+        "end": 310
       },
       {
         "name": "SlotOperation",
-        "start": 308,
-        "end": 332
-      },
-      {
-        "name": "StringValue",
-        "start": 335,
+        "start": 313,
         "end": 337
       },
       {
-        "name": "NumberValue",
+        "name": "StringValue",
         "start": 340,
         "end": 342
       },
       {
-        "name": "BooleanValue",
+        "name": "NumberValue",
         "start": 345,
         "end": 347
       },
       {
-        "name": "DateValue",
+        "name": "BooleanValue",
         "start": 350,
         "end": 352
       },
       {
-        "name": "DateTimeValue",
+        "name": "DateValue",
         "start": 355,
         "end": 357
       },
       {
-        "name": "EnumValue",
+        "name": "DateTimeValue",
         "start": 360,
-        "end": 363
+        "end": 362
       },
       {
-        "name": "EntityValueRef",
-        "start": 366,
+        "name": "EnumValue",
+        "start": 365,
         "end": 368
       },
       {
-        "name": "NullValue",
+        "name": "EntityValueRef",
         "start": 371,
         "end": 373
       },
       {
+        "name": "NullValue",
+        "start": 376,
+        "end": 378
+      },
+      {
         "name": "ListValue",
-        "start": 382,
-        "end": 391
+        "start": 387,
+        "end": 396
       },
       {
         "name": "RangeValue",
-        "start": 394,
-        "end": 405
+        "start": 399,
+        "end": 410
       },
       {
         "name": "Predicate",
-        "start": 414,
-        "end": 442
+        "start": 419,
+        "end": 447
       },
       {
         "name": "BooleanFilterGroup",
-        "start": 445,
-        "end": 456
+        "start": 450,
+        "end": 461
       },
       {
         "name": "TimeRange",
-        "start": 462,
-        "end": 474
-      },
-      {
-        "name": "TimeComparison",
-        "start": 477,
+        "start": 467,
         "end": 479
       },
       {
-        "name": "TimeSpec",
+        "name": "TimeComparison",
         "start": 482,
-        "end": 510
+        "end": 484
+      },
+      {
+        "name": "TimeSpec",
+        "start": 487,
+        "end": 515
       },
       {
         "name": "RankingSpec",
-        "start": 513,
-        "end": 519
-      },
-      {
-        "name": "LimitSpec",
-        "start": 522,
+        "start": 518,
         "end": 524
       },
       {
-        "name": "TimeBaseline",
+        "name": "LimitSpec",
         "start": 527,
-        "end": 536
+        "end": 529
+      },
+      {
+        "name": "TimeBaseline",
+        "start": 532,
+        "end": 541
       },
       {
         "name": "TaskBaseline",
-        "start": 539,
-        "end": 542
-      },
-      {
-        "name": "DatasetBaseline",
-        "start": 545,
+        "start": 544,
         "end": 547
       },
       {
-        "name": "SemanticBaseline",
+        "name": "DatasetBaseline",
         "start": 550,
         "end": 552
       },
       {
+        "name": "SemanticBaseline",
+        "start": 555,
+        "end": 557
+      },
+      {
         "name": "ComputedExpression",
-        "start": 558,
-        "end": 560
+        "start": 563,
+        "end": 565
       },
       {
         "name": "ComputedMeasureRef",
-        "start": 563,
-        "end": 571
+        "start": 568,
+        "end": 576
       },
       {
         "name": "ComparisonSpec",
-        "start": 574,
-        "end": 592
+        "start": 579,
+        "end": 597
       },
       {
         "name": "ChartPreferences",
-        "start": 595,
-        "end": 596
+        "start": 600,
+        "end": 601
       },
       {
         "name": "DeliverySpec",
-        "start": 599,
-        "end": 611
+        "start": 604,
+        "end": 616
       },
       {
         "name": "ProjectionItem",
-        "start": 614,
-        "end": 620
+        "start": 619,
+        "end": 625
       },
       {
         "name": "ProjectionSpec",
-        "start": 623,
-        "end": 636
+        "start": 628,
+        "end": 641
       },
       {
         "name": "RelationshipSpec",
-        "start": 639,
-        "end": 643
+        "start": 644,
+        "end": 648
       },
       {
         "name": "ScopePolicyDecision",
-        "start": 646,
-        "end": 650
+        "start": 651,
+        "end": 655
       },
       {
         "name": "OutputFieldRequirement",
-        "start": 653,
-        "end": 659
+        "start": 658,
+        "end": 664
       },
       {
         "name": "OrderingRequirement",
-        "start": 662,
-        "end": 667
-      },
-      {
-        "name": "CardinalityExpectation",
-        "start": 670,
+        "start": 667,
         "end": 672
       },
       {
-        "name": "ProofRequirement",
+        "name": "CardinalityExpectation",
         "start": 675,
         "end": 677
       },
       {
-        "name": "ProofCheck",
+        "name": "ProofRequirement",
         "start": 680,
-        "end": 685
+        "end": 682
+      },
+      {
+        "name": "ProofCheck",
+        "start": 685,
+        "end": 690
       },
       {
         "name": "OutputBindingProof",
-        "start": 688,
-        "end": 695
+        "start": 693,
+        "end": 700
       },
       {
         "name": "RowBounds",
-        "start": 698,
-        "end": 708
+        "start": 703,
+        "end": 713
       },
       {
         "name": "NumericConstraint",
-        "start": 711,
-        "end": 721
+        "start": 716,
+        "end": 726
       },
       {
         "name": "ResultContract",
-        "start": 724,
-        "end": 742
+        "start": 729,
+        "end": 747
       },
       {
         "name": "ContractProof",
-        "start": 745,
-        "end": 768
+        "start": 750,
+        "end": 773
       },
       {
         "name": "CompensationStep",
-        "start": 771,
-        "end": 776
-      },
-      {
-        "name": "CompensationPlan",
-        "start": 779,
+        "start": 776,
         "end": 781
       },
       {
-        "name": "ProofChain",
+        "name": "CompensationPlan",
         "start": 784,
-        "end": 788
+        "end": 786
+      },
+      {
+        "name": "ProofChain",
+        "start": 789,
+        "end": 793
       },
       {
         "name": "AdapterReport",
-        "start": 791,
-        "end": 812
+        "start": 796,
+        "end": 817
       },
       {
         "name": "ReadinessBlocker",
-        "start": 815,
-        "end": 831
+        "start": 820,
+        "end": 836
       },
       {
         "name": "ClarificationOption",
-        "start": 834,
-        "end": 845
-      },
-      {
-        "name": "ProceedDecision",
-        "start": 848,
+        "start": 839,
         "end": 850
       },
       {
-        "name": "SystemRepairDecision",
+        "name": "ProceedDecision",
         "start": 853,
-        "end": 862
+        "end": 855
+      },
+      {
+        "name": "SystemRepairDecision",
+        "start": 858,
+        "end": 867
       },
       {
         "name": "UserDecision",
-        "start": 865,
-        "end": 869
+        "start": 870,
+        "end": 874
       },
       {
         "name": "TerminalDecision",
-        "start": 872,
-        "end": 875
+        "start": 877,
+        "end": 880
       },
       {
         "name": "ClarificationDecision",
-        "start": 878,
-        "end": 909
+        "start": 883,
+        "end": 914
       },
       {
         "name": "PermissionContext",
-        "start": 915,
-        "end": 924
+        "start": 920,
+        "end": 929
       },
       {
         "name": "SnapshotContext",
-        "start": 927,
-        "end": 937
+        "start": 932,
+        "end": 942
       },
       {
         "name": "VersionMetadata",
-        "start": 940,
-        "end": 954
+        "start": 945,
+        "end": 959
       },
       {
         "name": "Provenance",
-        "start": 957,
-        "end": 961
-      },
-      {
-        "name": "BasePayload",
-        "start": 964,
+        "start": 962,
         "end": 966
       },
       {
-        "name": "ControlPayload",
+        "name": "BasePayload",
         "start": 969,
         "end": 971
       },
       {
-        "name": "ChatPayload",
+        "name": "ControlPayload",
         "start": 974,
         "end": 976
       },
       {
-        "name": "MetricQueryPayloadBase",
+        "name": "ChatPayload",
         "start": 979,
-        "end": 982
+        "end": 981
       },
       {
-        "name": "ScalarAggregatePayload",
-        "start": 985,
+        "name": "MetricQueryPayloadBase",
+        "start": 984,
         "end": 987
       },
       {
-        "name": "GroupedAggregatePayload",
+        "name": "ScalarAggregatePayload",
         "start": 990,
         "end": 992
       },
       {
-        "name": "TimeSeriesPayload",
+        "name": "GroupedAggregatePayload",
         "start": 995,
-        "end": 1005
+        "end": 997
+      },
+      {
+        "name": "TimeSeriesPayload",
+        "start": 1000,
+        "end": 1010
       },
       {
         "name": "RankingPayload",
-        "start": 1008,
-        "end": 1011
-      },
-      {
-        "name": "ComparisonPayload",
-        "start": 1014,
+        "start": 1013,
         "end": 1016
       },
       {
-        "name": "RelationListPayload",
+        "name": "ComparisonPayload",
         "start": 1019,
-        "end": 1033
+        "end": 1021
+      },
+      {
+        "name": "RelationListPayload",
+        "start": 1024,
+        "end": 1038
       },
       {
         "name": "DetailRowsPayload",
-        "start": 1036,
-        "end": 1045
-      },
-      {
-        "name": "DatasetFilterOperation",
-        "start": 1048,
+        "start": 1041,
         "end": 1050
       },
       {
-        "name": "DatasetSortOperation",
+        "name": "DatasetFilterOperation",
         "start": 1053,
         "end": 1055
       },
       {
-        "name": "DatasetLimitOperation",
+        "name": "DatasetSortOperation",
         "start": 1058,
-        "end": 1061
+        "end": 1060
+      },
+      {
+        "name": "DatasetLimitOperation",
+        "start": 1063,
+        "end": 1066
       },
       {
         "name": "DatasetProjectOperation",
-        "start": 1064,
-        "end": 1072
-      },
-      {
-        "name": "DrilldownSpec",
-        "start": 1075,
+        "start": 1069,
         "end": 1077
       },
       {
-        "name": "DatasetDrilldownOperation",
+        "name": "DrilldownSpec",
         "start": 1080,
         "end": 1082
       },
       {
-        "name": "DatasetTransformPayload",
-        "start": 1088,
-        "end": 1100
+        "name": "DatasetDrilldownOperation",
+        "start": 1085,
+        "end": 1087
       },
       {
-        "name": "MetricDefinitionPayload",
-        "start": 1103,
+        "name": "DatasetTransformPayload",
+        "start": 1093,
         "end": 1105
       },
       {
-        "name": "MetadataPayload",
+        "name": "MetricDefinitionPayload",
         "start": 1108,
         "end": 1110
       },
       {
-        "name": "MetricTarget",
+        "name": "MetadataPayload",
         "start": 1113,
         "end": 1115
       },
       {
-        "name": "FieldTarget",
+        "name": "MetricTarget",
         "start": 1118,
         "end": 1120
       },
       {
-        "name": "ColumnTarget",
+        "name": "FieldTarget",
         "start": 1123,
         "end": 1125
       },
       {
-        "name": "TableTarget",
+        "name": "ColumnTarget",
         "start": 1128,
         "end": 1130
       },
       {
-        "name": "EntityTarget",
+        "name": "TableTarget",
         "start": 1133,
         "end": 1135
       },
       {
-        "name": "DatasetTarget",
+        "name": "EntityTarget",
         "start": 1138,
         "end": 1140
       },
       {
-        "name": "ReportTarget",
+        "name": "DatasetTarget",
         "start": 1143,
         "end": 1145
       },
       {
+        "name": "ReportTarget",
+        "start": 1148,
+        "end": 1150
+      },
+      {
         "name": "LineagePayload",
-        "start": 1151,
-        "end": 1169
+        "start": 1156,
+        "end": 1174
       },
       {
         "name": "DataQualityPayload",
-        "start": 1172,
-        "end": 1175
+        "start": 1177,
+        "end": 1180
       },
       {
         "name": "AlgorithmRef",
-        "start": 1178,
-        "end": 1188
-      },
-      {
-        "name": "AnomalyPayload",
-        "start": 1191,
+        "start": 1183,
         "end": 1193
       },
       {
-        "name": "RootCausePayload",
+        "name": "AnomalyPayload",
         "start": 1196,
         "end": 1198
       },
       {
-        "name": "ForecastPayload",
+        "name": "RootCausePayload",
         "start": 1201,
-        "end": 1213
+        "end": 1203
+      },
+      {
+        "name": "ForecastPayload",
+        "start": 1206,
+        "end": 1218
       },
       {
         "name": "ReportPayload",
-        "start": 1216,
-        "end": 1220
-      },
-      {
-        "name": "CapabilityHelpPayload",
-        "start": 1223,
+        "start": 1221,
         "end": 1225
       },
       {
-        "name": "OutOfScopePayload",
+        "name": "CapabilityHelpPayload",
         "start": 1228,
         "end": 1230
       },
       {
+        "name": "OutOfScopePayload",
+        "start": 1233,
+        "end": 1235
+      },
+      {
         "name": "PlanEnvelope",
-        "start": 1260,
-        "end": 1321
+        "start": 1265,
+        "end": 1326
       },
       {
         "name": "DatasetAncestry",
-        "start": 1324,
-        "end": 1341
+        "start": 1329,
+        "end": 1346
       },
       {
         "name": "DatasetTransformSafetyContract",
-        "start": 1344,
-        "end": 1383
+        "start": 1349,
+        "end": 1388
       },
       {
         "name": "SourceDatasetRef",
-        "start": 1386,
-        "end": 1390
+        "start": 1391,
+        "end": 1395
       },
       {
         "name": "TaskSemanticState",
-        "start": 1393,
-        "end": 1406
+        "start": 1398,
+        "end": 1411
       },
       {
         "name": "ExecutionAttemptRecord",
-        "start": 1409,
-        "end": 1442
+        "start": 1414,
+        "end": 1450
       },
       {
         "name": "_deny",
@@ -4809,214 +4809,219 @@
         "end": 85
       },
       {
+        "name": "__delattr__",
+        "start": 87,
+        "end": 90
+      },
+      {
         "name": "normalize_datetimes",
-        "start": 89,
-        "end": 94
+        "start": 94,
+        "end": 99
       },
       {
         "name": "validate_interval",
-        "start": 143,
-        "end": 148
+        "start": 148,
+        "end": 153
       },
       {
         "name": "accept_legacy_python_ref",
-        "start": 184,
-        "end": 195
+        "start": 189,
+        "end": 200
       },
       {
         "name": "validate_selection",
-        "start": 232,
-        "end": 242
+        "start": 237,
+        "end": 247
       },
       {
         "name": "total_score",
-        "start": 258,
-        "end": 260
+        "start": 263,
+        "end": 265
       },
       {
         "name": "validate_global_selection",
-        "start": 284,
-        "end": 305
+        "start": 289,
+        "end": 310
       },
       {
         "name": "validate_clear_presence",
-        "start": 324,
-        "end": 332
+        "start": 329,
+        "end": 337
       },
       {
         "name": "compatible_values",
-        "start": 387,
-        "end": 391
+        "start": 392,
+        "end": 396
       },
       {
         "name": "compatible_bounds",
-        "start": 400,
-        "end": 405
+        "start": 405,
+        "end": 410
       },
       {
         "name": "validate_null_operators",
-        "start": 425,
-        "end": 442
+        "start": 430,
+        "end": 447
       },
       {
         "name": "validate_not_arity",
-        "start": 451,
-        "end": 456
+        "start": 456,
+        "end": 461
       },
       {
         "name": "validate_range",
-        "start": 467,
-        "end": 474
+        "start": 472,
+        "end": 479
       },
       {
         "name": "validate_policies",
-        "start": 501,
-        "end": 510
+        "start": 506,
+        "end": 515
       },
       {
         "name": "one_reference",
-        "start": 533,
-        "end": 536
+        "start": 538,
+        "end": 541
       },
       {
         "name": "legacy_python_comparison",
-        "start": 584,
-        "end": 592
+        "start": 589,
+        "end": 597
       },
       {
         "name": "compatible_delivery",
-        "start": 606,
-        "end": 611
+        "start": 611,
+        "end": 616
       },
       {
         "name": "consistent_projection",
-        "start": 629,
-        "end": 636
+        "start": 634,
+        "end": 641
       },
       {
         "name": "validate_bounds",
-        "start": 703,
-        "end": 708
+        "start": 708,
+        "end": 713
       },
       {
         "name": "ordered_bounds",
-        "start": 718,
-        "end": 721
+        "start": 723,
+        "end": 726
       },
       {
         "name": "legacy_check_map",
-        "start": 753,
-        "end": 756
+        "start": 758,
+        "end": 761
       },
       {
         "name": "check_status",
-        "start": 759,
-        "end": 764
+        "start": 764,
+        "end": 769
       },
       {
         "name": "warnings",
-        "start": 767,
-        "end": 768
+        "start": 772,
+        "end": 773
       },
       {
         "name": "validate_safety",
-        "start": 801,
-        "end": 812
+        "start": 806,
+        "end": 817
       },
       {
         "name": "only_user_ambiguity",
-        "start": 828,
-        "end": 831
+        "start": 833,
+        "end": 836
       },
       {
         "name": "option_value",
-        "start": 842,
-        "end": 845
+        "start": 847,
+        "end": 850
       },
       {
         "name": "system_only",
-        "start": 859,
-        "end": 862
+        "start": 864,
+        "end": 867
       },
       {
         "name": "enforce_user_ambiguity_only",
-        "start": 897,
-        "end": 909
+        "start": 902,
+        "end": 914
       },
       {
         "name": "require_time_grain",
-        "start": 1000,
-        "end": 1005
+        "start": 1005,
+        "end": 1010
       },
       {
         "name": "require_target",
-        "start": 1028,
-        "end": 1033
+        "start": 1033,
+        "end": 1038
       },
       {
         "name": "require_projection",
-        "start": 1042,
-        "end": 1045
+        "start": 1047,
+        "end": 1050
       },
       {
         "name": "nonempty_projection",
-        "start": 1069,
-        "end": 1072
+        "start": 1074,
+        "end": 1077
       },
       {
         "name": "legacy_python_limit",
-        "start": 1095,
-        "end": 1100
+        "start": 1100,
+        "end": 1105
       },
       {
         "name": "legacy_python_target",
-        "start": 1158,
-        "end": 1162
+        "start": 1163,
+        "end": 1167
       },
       {
         "name": "target_catalog_type",
-        "start": 1165,
-        "end": 1169
+        "start": 1170,
+        "end": 1174
       },
       {
         "name": "governed_algorithm",
-        "start": 1185,
-        "end": 1188
+        "start": 1190,
+        "end": 1193
       },
       {
         "name": "coherent_forecast",
-        "start": 1208,
-        "end": 1213
+        "start": 1213,
+        "end": 1218
       },
       {
         "name": "validate_mentions_and_scope",
-        "start": 1293,
-        "end": 1321
+        "start": 1298,
+        "end": 1326
       },
       {
         "name": "ancestry_identity",
-        "start": 1334,
-        "end": 1341
+        "start": 1339,
+        "end": 1346
       },
       {
         "name": "safe_to_execute",
-        "start": 1359,
-        "end": 1371
+        "start": 1364,
+        "end": 1376
       },
       {
         "name": "failure_reason",
-        "start": 1374,
-        "end": 1375
+        "start": 1379,
+        "end": 1380
       },
       {
         "name": "coherent_counts",
-        "start": 1378,
-        "end": 1383
+        "start": 1383,
+        "end": 1388
       },
       {
         "name": "execution_lifecycle",
-        "start": 1431,
-        "end": 1442
+        "start": 1436,
+        "end": 1450
       }
     ]
   },
@@ -5225,8 +5230,8 @@
   },
   {
     "path": "app/semantic_v2/result_contract.py",
-    "sha256": "7a6fcc078f2e63b274b7f9e80d61403cebd686d5de34868b6b6538ae4e104fe0",
-    "lines": 219,
+    "sha256": "3adafe39a060161d10442c060e77b8269418afd4d233a445fcc84839c133a6e0",
+    "lines": 222,
     "coverage": "FULL_FILE_STATIC_SCAN",
     "initial_workspace_sha256": "92ba9a6bd966008f5a44c31c650d09873342d1368d5d14a6d9caeb4aa77629df",
     "definitions": [
@@ -5238,12 +5243,12 @@
       {
         "name": "prove_result_contract",
         "start": 85,
-        "end": 211
+        "end": 214
       },
       {
         "name": "completed_allowed",
-        "start": 214,
-        "end": 219
+        "start": 217,
+        "end": 222
       },
       {
         "name": "compile",
@@ -5257,8 +5262,8 @@
       },
       {
         "name": "compare",
-        "start": 176,
-        "end": 190
+        "start": 179,
+        "end": 193
       }
     ]
   },
