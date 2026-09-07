@@ -9,6 +9,7 @@ from app.domain.models import (
 from app.intent import RuleBasedIntentClassifier
 from app.presentation.intent_recognition import (
     build_intent_recognition_display_v2,
+    render_intent_recognition_display_v2,
 )
 
 
@@ -74,3 +75,69 @@ def test_contextual_metric_sort_displays_a_natural_completed_question():
         "按区域医院覆盖率从高到低排序"
     )
     assert "查询指标；" not in view.completed_question
+
+
+def test_catalog_resolved_scope_value_is_displayed_as_entity_not_query_object():
+    request = CanonicalAnalysisRequest(
+        conversation_id="coverage-entity-display",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="统计上海市各个经销商的区域医院覆盖率",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(
+            input="区域医院覆盖率",
+            canonical_name="区域医院覆盖率",
+        )],
+        entity="经销商",
+        dimensions=["dealer"],
+        filters=[{
+            "field": "dim_city.city_name",
+            "operator": "EQ",
+            "value": "上海市",
+        }],
+        semantic_display_slots={
+            "metrics": ["区域医院覆盖率"],
+            "entity": "经销商",
+            "dimensions": ["经销商"],
+            "filters": [{
+                "field": "城市名称",
+                "operator": "EQ",
+                "value": "上海市",
+            }],
+        },
+    )
+
+    before = request.model_copy(deep=True)
+    view = build_intent_recognition_display_v2(request)
+    rendered = render_intent_recognition_display_v2(view)
+
+    assert view.entity_values == ["上海市"]
+    assert "实体：上海市（来源：当前语义模型向量库）" in rendered
+    assert "实体：经销商" not in rendered
+    # Presentation V2 must not rewrite the ASL/SQL-facing query object.
+    assert request == before
+    assert request.entity == "经销商"
+
+
+def test_control_enum_filter_is_not_promoted_to_display_entity():
+    request = CanonicalAnalysisRequest(
+        conversation_id="control-filter-entity-display",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="查询TDC-3产品的主要适用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="产品",
+        semantic_display_slots={
+            "entity": "产品",
+            "filters": [{
+                "field": "适用科室类型",
+                "operator": "EQ",
+                "value": "1",
+            }],
+        },
+    )
+
+    view = build_intent_recognition_display_v2(request)
+
+    assert view.entity_values == []
+    assert view.entity == "产品"

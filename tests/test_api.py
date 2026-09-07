@@ -304,7 +304,7 @@ def test_intent_summary_hides_unverified_and_empty_semantic_slots():
     summary = DataAnalysisOrchestrator._intent_think_summary(request)
 
     assert "查询字段：['经销商名称']" in summary
-    assert "业务实体值：['费森尤斯医疗用品股份有限公司']" in summary
+    assert "实体：费森尤斯医疗用品股份有限公司" in summary
     assert "商品品牌 EQ 费森尤斯医疗用品股份有限公司" in summary
     assert "维度：[]" in summary
     assert "商品名称 EQ 费森尤斯" not in summary
@@ -409,8 +409,8 @@ def test_intent_display_v2_renders_relation_enum_without_internal_code():
     summary = DataAnalysisOrchestrator._intent_think_summary(request)
 
     assert "适用科室类型 EQ 主要适用" in summary
-    assert "业务实体值：['TDC-3']" in summary
-    assert "业务实体值：['1'" not in summary
+    assert "实体：TDC-3" in summary
+    assert "实体：1" not in summary
 
 
 def test_readiness_checks_memory_dependencies():

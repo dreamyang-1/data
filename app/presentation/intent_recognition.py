@@ -87,6 +87,54 @@ def _list_text(values: list[str]) -> str:
     return "[" + ", ".join(f"'{value}'" for value in values) + "]"
 
 
+_ENTITY_FILTER_FIELD_MARKERS = (
+    "名称", "城市", "省份", "区域", "品牌", "厂牌", "厂家", "制造商",
+    "经销商", "供应商", "医院", "科室", "客户", "门店", "商品", "产品",
+    "规格", "型号", "品类", "类别",
+)
+_NON_ENTITY_FILTER_FIELD_MARKERS = (
+    "适用类型", "关系类型", "状态", "标志", "是否", "日期", "时间",
+    "数量", "金额", "销售额", "覆盖率", "比例", "占比",
+)
+
+
+def _display_entity_values_from_filters(display: dict[str, Any]) -> list[str]:
+    """Project catalog-proven scope values as public display entities.
+
+    The executable ``request.entity`` is the query object/result grain (for
+    example 经销商), while the public V2 "实体" row follows the general
+    business convention of showing concrete values that scope the question
+    (for example 上海市 or TDC-3).  Only already-resolved display filters are
+    considered here, so this projection cannot create or alter ASL/SQL input.
+    """
+
+    values: list[str] = []
+    for item in display.get("filters") or []:
+        if not isinstance(item, dict):
+            continue
+        field_name = _single_line(item.get("field"), 120)
+        compact_field = re.sub(r"\s+", "", field_name).casefold()
+        operator = _single_line(item.get("operator") or "EQ", 20).upper()
+        if operator not in {"=", "EQ", "IN"}:
+            continue
+        if not any(marker.casefold() in compact_field for marker in _ENTITY_FILTER_FIELD_MARKERS):
+            continue
+        if any(marker.casefold() in compact_field for marker in _NON_ENTITY_FILTER_FIELD_MARKERS):
+            continue
+        raw_value = item.get("value")
+        candidates = raw_value if isinstance(raw_value, list) else [raw_value]
+        for candidate in candidates:
+            value = _single_line(candidate, 120)
+            if not value or re.fullmatch(r"[-+]?\d+(?:\.\d+)?", value):
+                continue
+            values.append(value)
+    return list(dict.fromkeys(values))
+
+
+def _entity_text(values: list[str]) -> str:
+    return values[0] if len(values) == 1 else "、".join(values)
+
+
 @dataclass(frozen=True)
 class IntentRecognitionDisplayV2:
     """Immutable display projection; never part of the execution contract."""
@@ -393,6 +441,10 @@ def build_intent_recognition_display_v2(
     display = dict(request.semantic_display_slots or {})
     metrics = _unique_text(display.get("metrics"))
     entity_values = _unique_text(display.get("entity_values"))
+    entity_values = list(dict.fromkeys([
+        *entity_values,
+        *_display_entity_values_from_filters(display),
+    ]))
     dimensions = _unique_text(display.get("dimensions"))
     fields = _unique_text(display.get("fields"))
     entity = _single_line(display.get("entity"), 120)
@@ -556,7 +608,7 @@ def render_intent_recognition_display_v2(
         )
     if view.entity_values:
         structured.append(
-            f"业务实体值：{_list_text(view.entity_values)}"
+            f"实体：{_entity_text(view.entity_values)}"
             "（来源：当前语义模型向量库）"
         )
     elif view.entity:
