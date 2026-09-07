@@ -620,7 +620,11 @@ class TurnAdmissionGate:
                     "direction": (
                         "ASC"
                         if AnalysisOperator.BOTTOM_N in current.operators
-                        or re.search(r"最低|最小|升序|从低到高", compact)
+                        or re.search(
+                            r"最低|最小|升序|从低到高|由低到高|"
+                            r"从小到大|由小到大",
+                            compact,
+                        )
                         else "DESC"
                     ),
                     "limit": current.ranking_limit,

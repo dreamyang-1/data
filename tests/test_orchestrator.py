@@ -1831,10 +1831,22 @@ async def test_sort_only_followup_preserves_relationship_set_and_adds_grouping()
 
 
 @pytest.mark.asyncio
-async def test_coverage_metric_sort_followup_reuses_verified_semantic_frame():
+@pytest.mark.parametrize(
+    ("sort_question", "expected_direction", "expected_display_direction"),
+    [
+        ("区域医院覆盖率按从高到低排序", "DESC", "从高到低"),
+        ("区域医院覆盖率按从大到小排序", "DESC", "从高到低"),
+        ("区域医院覆盖率按从小到大排序", "ASC", "从低到高"),
+    ],
+)
+async def test_coverage_metric_sort_followup_reuses_verified_semantic_frame(
+    sort_question,
+    expected_direction,
+    expected_display_direction,
+):
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    conversation_id = "coverage-sort-followup"
+    conversation_id = f"coverage-sort-followup-{expected_direction}-{sort_question}"
     previous = CanonicalAnalysisRequest(
         application_id="app1",
         conversation_id=conversation_id,
@@ -1871,7 +1883,7 @@ async def test_coverage_metric_sort_followup_reuses_verified_semantic_frame():
             application_id="app1",
             conversation_id=conversation_id,
             message_id="m2",
-            question="区域医院覆盖率按从高到低排序",
+            question=sort_question,
             semantic_model_id=81,
             business_domain_ids=[205],
         ),
@@ -1894,7 +1906,7 @@ async def test_coverage_metric_sort_followup_reuses_verified_semantic_frame():
     assert remembered.time_range is None
     assert remembered.missing_slots == []
     assert AnalysisOperator.SORT in remembered.operators
-    assert "SORT_DIRECTION=DESC" in remembered.assumptions
+    assert f"SORT_DIRECTION={expected_direction}" in remembered.assumptions
     assert "DETERMINISTIC_SORT_FOLLOWUP" in remembered.turn_admission.reason_codes
     assert "query_object" not in (
         remembered.turn_admission.current_turn_facts.explicit_slots
@@ -1902,6 +1914,13 @@ async def test_coverage_metric_sort_followup_reuses_verified_semantic_frame():
     assert "dimensions" not in (
         remembered.turn_admission.current_turn_facts.explicit_slots
     )
+    summary = DataAnalysisOrchestrator._intent_think_summary(remembered)
+    assert (
+        "补全后的问题：统计上海市各个经销商的区域医院覆盖率，"
+        f"按区域医院覆盖率{expected_display_direction}排序"
+    ) in summary
+    assert "最近一年" not in summary
+    assert "各个医院" not in summary
 
 
 @pytest.mark.asyncio

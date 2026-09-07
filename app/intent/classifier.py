@@ -684,7 +684,10 @@ class RuleBasedIntentClassifier:
             risk_level="HIGH" if intent == PrimaryIntent.DETAIL_QUERY else "MEDIUM",
         )
         if AnalysisOperator.SORT in request.operators:
-            ascending = bool(re.search(r"升序|从低到高|由低到高", normalized))
+            ascending = bool(re.search(
+                r"升序|从低到高|由低到高|从小到大|由小到大",
+                normalized,
+            ))
             request.assumptions.append(
                 "SORT_DIRECTION=" + ("ASC" if ascending else "DESC")
             )
@@ -4680,7 +4683,11 @@ class RuleBasedIntentClassifier:
             result.append(AnalysisOperator.TOP_N)
             if re.search(r"(?:后\s*(?:\d|[一二三四五六七八九十])|最少(?:的)?)", compact):
                 result.append(AnalysisOperator.BOTTOM_N)
-        if re.search(r"排序|排名|升序|降序|从高到低|从低到高|由高到低|由低到高", text):
+        if re.search(
+            r"排序|排名|升序|降序|从高到低|从低到高|由高到低|由低到高|"
+            r"从大到小|从小到大|由大到小|由小到大",
+            text,
+        ):
             result.append(AnalysisOperator.SORT)
         return result
 

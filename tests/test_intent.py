@@ -112,6 +112,26 @@ def test_additive_metric_clarification_preserves_descending_sort_semantics():
     assert "排序要求：按含税销售总额从高到低" in execution_question
 
 
+@pytest.mark.parametrize(
+    ("wording", "expected_direction"),
+    [
+        ("区域医院覆盖率按从大到小排序", "DESC"),
+        ("区域医院覆盖率按由大到小排序", "DESC"),
+        ("区域医院覆盖率按从小到大排序", "ASC"),
+        ("区域医院覆盖率按由小到大排序", "ASC"),
+    ],
+)
+def test_large_small_sort_wording_is_normalized(wording, expected_direction):
+    request = RuleBasedIntentClassifier().classify(
+        wording,
+        IDENTITY,
+        f"large-small-sort-{expected_direction}-{wording}",
+    )
+
+    assert AnalysisOperator.SORT in request.operators
+    assert f"SORT_DIRECTION={expected_direction}" in request.assumptions
+
+
 def test_monthly_statistics_is_a_grouped_metric_table_not_trend_analysis():
     request = RuleBasedIntentClassifier().classify(
         "按月统计某产品的含税销售总额。", IDENTITY, "c-monthly-stat"

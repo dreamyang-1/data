@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from app.domain.models import (
     AnalysisOperator,
     CanonicalAnalysisRequest,
@@ -68,9 +70,20 @@ def test_relation_clarification_restores_only_confirmed_active_context():
     assert resolved.turn_admission.needs_clarification is False
 
 
-def test_sort_relation_confirmation_restores_last_completed_contract():
+@pytest.mark.parametrize(
+    ("question", "expected_direction"),
+    [
+        ("区域医院覆盖率按从高到低排序", "DESC"),
+        ("区域医院覆盖率按从大到小排序", "DESC"),
+        ("区域医院覆盖率按从小到大排序", "ASC"),
+    ],
+)
+def test_sort_relation_confirmation_restores_last_completed_contract(
+    question,
+    expected_direction,
+):
     pending = _ambiguous_relation_request()
-    pending.original_question = "区域医院覆盖率按从高到低排序"
+    pending.original_question = question
     pending.metrics = [MetricRef(input="区域医院覆盖率")]
     pending.dimensions = ["城市名称", "医院"]
     pending.turn_admission.current_turn_facts.raw_query = pending.original_question
@@ -112,7 +125,7 @@ def test_sort_relation_confirmation_restores_last_completed_contract():
     }]
     assert resolved.time_range is None
     assert AnalysisOperator.SORT in resolved.operators
-    assert "SORT_DIRECTION=DESC" in resolved.assumptions
+    assert f"SORT_DIRECTION={expected_direction}" in resolved.assumptions
     assert "COMPLETED_FRAME_RESTORED_AFTER_RELATION_CONFIRMATION" in resolved.assumptions
 
 

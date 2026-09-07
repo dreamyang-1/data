@@ -121,6 +121,29 @@ _QUALITY_STATUS_LABELS = {
     "DEGRADED": "降级",
     "LIMITED": "受限",
 }
+_SORT_ONLY_FOLLOWUP_PATTERN = re.compile(
+    r"(?:按)?[^，,。；;！!？?]{0,100}?(?:按)?"
+    r"(?:从高到低|从低到高|由高到低|由低到高|"
+    r"从大到小|从小到大|由大到小|由小到大|升序|降序)"
+    r"(?:进行)?排序[。！!？?]?"
+)
+_ASCENDING_SORT_PATTERN = re.compile(
+    r"从低到高|由低到高|从小到大|由小到大|升序"
+)
+
+
+def _sort_only_followup_direction(text: str) -> str | None:
+    """Return the direction for a deterministic sort-only modification.
+
+    Business users commonly use 大/小 and 高/低 interchangeably for metric
+    ordering.  Keeping this recognition deterministic prevents a sort-only
+    turn from being reparsed as a new query with invented dimensions or time.
+    """
+
+    compact = re.sub(r"\s+", "", text)
+    if _SORT_ONLY_FOLLOWUP_PATTERN.fullmatch(compact) is None:
+        return None
+    return "ASC" if _ASCENDING_SORT_PATTERN.search(compact) else "DESC"
 
 
 def _business_datetime_text(value: datetime) -> str:
@@ -3553,11 +3576,8 @@ class DataAnalysisOrchestrator:
                 request.assumptions.append("TIME_SCOPE=ALL_TIME")
         sort_scope_context = previous_for_rewrite
         compact_sort_question = re.sub(r"\s+", "", chat.question)
-        sort_wording_only = bool(re.fullmatch(
-            r"(?:按)?[^，,。；;！!？?]{0,100}?(?:按)?"
-            r"(?:从高到低|从低到高|升序|降序)(?:进行)?排序[。！!？?]?",
-            compact_sort_question,
-        ))
+        sort_direction = _sort_only_followup_direction(compact_sort_question)
+        sort_wording_only = sort_direction is not None
         previous_metric_names = {
             re.sub(r"\s+", "", metric.canonical_name or metric.input).casefold()
             for metric in (sort_scope_context.metrics if sort_scope_context else [])
@@ -3640,9 +3660,7 @@ class DataAnalysisOrchestrator:
             request.ranking_limit = raw_rule_request.ranking_limit
             request.asl_template = None
             request.source_dataset_id = None
-            direction = (
-                "ASC" if re.search(r"从低到高|升序", chat.question) else "DESC"
-            )
+            direction = sort_direction or "DESC"
             request.assumptions = [
                 value for value in dict.fromkeys([
                     *sort_scope_context.assumptions,
@@ -7144,11 +7162,12 @@ class DataAnalysisOrchestrator:
                     else relation_request.original_question
                 )
                 compact_raw_query = re.sub(r"\s+", "", raw_query)
-                deterministic_sort_followup = bool(re.fullmatch(
-                    r"(?:按)?[^，,。；;！!？?]{0,100}?(?:按)?"
-                    r"(?:从高到低|从低到高|升序|降序)(?:进行)?排序[。！!？?]?",
-                    compact_raw_query,
-                ))
+                deterministic_sort_direction = _sort_only_followup_direction(
+                    compact_raw_query
+                )
+                deterministic_sort_followup = (
+                    deterministic_sort_direction is not None
+                )
                 if (
                     completed_before_pending is not None
                     and deterministic_sort_followup
@@ -7171,9 +7190,7 @@ class DataAnalysisOrchestrator:
                         AnalysisOperator.AGGREGATE,
                         AnalysisOperator.SORT,
                     ]))
-                    direction = (
-                        "ASC" if re.search(r"从低到高|升序", raw_query) else "DESC"
-                    )
+                    direction = deterministic_sort_direction or "DESC"
                     relation_request.assumptions = [
                         value for value in relation_request.assumptions
                         if not value.startswith("SORT_DIRECTION=")
