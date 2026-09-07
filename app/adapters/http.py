@@ -2926,6 +2926,7 @@ class HttpDataRetrievalAdapter:
         polarity_errors: list[dict[str, Any]] = []
         operator_errors: list[dict[str, Any]] = []
         current_by_field: dict[str, set[str]] = {}
+        current_subject_families: set[str] = set()
         for item in explicit_filters:
             if not isinstance(item, dict):
                 continue
@@ -2939,6 +2940,9 @@ class HttpDataRetrievalAdapter:
             }
             if field and texts:
                 current_by_field.setdefault(field, set()).update(texts)
+                family = HttpDataRetrievalAdapter._constraint_field_family(field)
+                if family in {"product", "brand", "category", "manufacturer"}:
+                    current_subject_families.add(family)
             for value in texts:
                 aliases = HttpDataRetrievalAdapter._sql_entity_value_aliases(
                     field, value
@@ -2995,22 +2999,38 @@ class HttpDataRetrievalAdapter:
             )
 
         stale: list[dict[str, Any]] = []
+        replaces_subject_scope = (
+            "COMMERCIAL_SUBJECT_SCOPE_REPLACEMENT"
+            in admission.reason_codes
+        )
         for item in admission.context_before.get("filters", []):
             if not isinstance(item, dict):
                 continue
             field = str(item.get("field") or "")
+            old_family = HttpDataRetrievalAdapter._constraint_field_family(field)
             raw_values = item.get("value")
             values = raw_values if isinstance(raw_values, list) else [raw_values]
             for value in values:
                 text = str(value or "").strip().strip("%")
                 if (
                     text
-                    and field in current_by_field
-                    and not any(
-                        HttpDataRetrievalAdapter._sql_entity_values_equivalent(
-                            field, text, current
+                    and (
+                        (
+                            field in current_by_field
+                            and not any(
+                                HttpDataRetrievalAdapter._sql_entity_values_equivalent(
+                                    field, text, current
+                                )
+                                for current in current_by_field[field]
+                            )
                         )
-                        for current in current_by_field[field]
+                        or (
+                            replaces_subject_scope
+                            and old_family in {
+                                "product", "brand", "category", "manufacturer",
+                            }
+                            and bool(current_subject_families)
+                        )
                     )
                     and HttpDataRetrievalAdapter._sql_filter_value_present(
                         field, text, normalized_sql

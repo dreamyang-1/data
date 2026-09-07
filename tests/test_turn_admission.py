@@ -266,6 +266,110 @@ def test_model_grounded_short_followup_defers_entity_role_to_semantic_layer():
     assert replacement.new_value == []
 
 
+def test_elliptical_product_replaces_prior_brand_subject_scope_atomically():
+    classifier = RuleBasedIntentClassifier()
+    gate = TurnAdmissionGate()
+    previous = _finalized_standalone(
+        classifier,
+        gate,
+        "查询最近一年销售过费森尤斯产品的经销商名单",
+        "brand-to-product-followup",
+    )
+    # The live semantic catalog grounds 费森尤斯 as 母厂牌 rather than the
+    # rule parser's provisional 商品名称 role.
+    previous.filters = [{
+        "field": "母厂牌", "operator": "EQ", "value": "费森尤斯",
+    }]
+    previous.semantic_entity_mentions = ["费森尤斯"]
+    current = classifier.classify(
+        "那空心纤维血液透析器呢",
+        IDENTITY,
+        "brand-to-product-followup",
+    )
+    decision = gate.evaluate(
+        question="那空心纤维血液透析器呢",
+        current=current,
+        previous=previous,
+        message_id="m2",
+    )
+
+    assert decision.relation == TurnRelation.CURRENT_TOPIC_MODIFICATION
+    assert decision.core_subject_changed is True
+    assert "COMMERCIAL_SUBJECT_SCOPE_REPLACEMENT" in decision.reason_codes
+
+    final = gate.apply_explicit_slot_protection(
+        previous.model_copy(deep=True), current, decision
+    )
+    assert final.entity == "经销商"
+    assert final.fields == ["经销商名称"]
+    assert final.time_range == previous.time_range
+    assert final.filters == [{
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "空心纤维血液透析器",
+    }]
+    assert final.semantic_entity_mentions == []
+    assert "费森尤斯" not in str(final.filters)
+
+
+def test_explicit_additive_subject_wording_does_not_replace_prior_brand_scope():
+    gate, previous, current, decision = _decision(
+        "查询最近一年销售过费森尤斯产品的经销商名单",
+        "其中空心纤维血液透析器呢",
+        "additive-brand-product-followup",
+    )
+    previous.filters = [{
+        "field": "母厂牌", "operator": "EQ", "value": "费森尤斯",
+    }]
+
+    assert "COMMERCIAL_SUBJECT_SCOPE_REPLACEMENT" not in decision.reason_codes
+
+
+def test_sql_alignment_rejects_replaced_brand_across_filter_families():
+    classifier = RuleBasedIntentClassifier()
+    gate = TurnAdmissionGate()
+    previous = _finalized_standalone(
+        classifier,
+        gate,
+        "查询最近一年销售过费森尤斯产品的经销商名单",
+        "cross-family-stale-sql",
+    )
+    previous.filters = [{
+        "field": "母厂牌", "operator": "EQ", "value": "费森尤斯",
+    }]
+    current = classifier.classify(
+        "那空心纤维血液透析器呢", IDENTITY, "cross-family-stale-sql"
+    )
+    decision = gate.evaluate(
+        question="那空心纤维血液透析器呢",
+        current=current,
+        previous=previous,
+        message_id="m2",
+    )
+    request = gate.apply_explicit_slot_protection(
+        previous.model_copy(deep=True), current, decision
+    )
+    request.turn_admission = decision
+
+    valid_sql = (
+        "SELECT DISTINCT dealer.dealer_name FROM sales_order "
+        "JOIN dealer ON dealer.dealer_code=sales_order.dealer_code "
+        "JOIN product ON product.product_code=sales_order.product_code "
+        "WHERE product.product_name='空心纤维血液透析器'"
+    )
+    assert HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+        request, valid_sql
+    )["status"] == "PASS"
+
+    with pytest.raises(AdapterError) as stale:
+        HttpDataRetrievalAdapter._validate_query_to_sql_entity_alignment(
+            request,
+            valid_sql
+            + " AND manufacturer.parent_brand='费森尤斯'",
+        )
+    assert stale.value.code == "STALE_CONTEXT_CONFLICT"
+
+
 def test_incomplete_unreferenced_turn_exposes_relation_clarification_state():
     gate, _, _, decision = _decision(
         "查询2026年8月含税销售总额",

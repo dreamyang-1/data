@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import timedelta
 from typing import Any
 
 from app.domain.models import (
@@ -206,6 +207,89 @@ def _clarification_reason(request: CanonicalAnalysisRequest) -> str:
     return "当前任务所需参数已经完整，无缺失必填参数。"
 
 
+def _completed_question_for_display(
+    request: CanonicalAnalysisRequest,
+) -> str:
+    """Render a natural standalone question without changing execution state.
+
+    ``rewritten_question`` is a canonical ASL-facing description after a
+    follow-up merge.  Showing it verbatim as the completed user question leaks
+    implementation syntax such as ``查询明细；对象：...`` into the UI.  This
+    projection recognizes the governed transaction-partner list shape and
+    renders its natural business wording from final slots only; it never reads
+    or replays stale history text.
+    """
+
+    active_sales_scope = any(
+        value == "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
+        for value in request.assumptions
+    )
+    if (
+        request.primary_intent == PrimaryIntent.DETAIL_QUERY
+        and request.entity in {"经销商", "供应商"}
+        and active_sales_scope
+    ):
+        commercial_markers = (
+            "商品名称", "产品名称", "product_name", "goods_name",
+            "商品品牌", "品牌", "母品牌", "母厂牌", "parent_brand",
+            "商品分类", "产品分类", "商品品类", "品类", "类别", "category",
+            "厂家名称", "制造商名称", "生产厂家", "manufacturer",
+        )
+        subject_values: list[str] = []
+        for item in request.filters:
+            if not isinstance(item, dict):
+                continue
+            field = str(item.get("field") or "").casefold()
+            if not any(marker.casefold() in field for marker in commercial_markers):
+                continue
+            raw = item.get("value")
+            values = raw if isinstance(raw, list) else [raw]
+            subject_values.extend(
+                str(value).strip()
+                for value in values
+                if value not in (None, "") and str(value).strip()
+            )
+        if not subject_values:
+            subject_values = [
+                str(value).strip()
+                for value in request.semantic_entity_mentions
+                if str(value).strip()
+            ]
+        subject_values = list(dict.fromkeys(subject_values))
+        if len(subject_values) == 1:
+            subject = subject_values[0]
+            product_text = subject if subject.endswith(("产品", "商品")) else f"{subject}产品"
+            rolling_year_days = (
+                (request.time_range.end_exclusive - request.time_range.start).days
+                if request.time_range is not None else None
+            )
+            relative_year_wording = bool(re.search(
+                r"最近一年|近一年|过去一年",
+                request.original_question or "",
+            )) or bool(
+                request.context_mode != ContextMode.NONE
+                and rolling_year_days in {365, 366, 367}
+            )
+            if relative_year_wording or any(
+                value in {
+                    "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR",
+                    "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE",
+                }
+                for value in request.assumptions
+            ):
+                time_text = "最近一年"
+            elif request.time_range is not None:
+                end_inclusive = request.time_range.end_exclusive - timedelta(days=1)
+                time_text = (
+                    f"{request.time_range.start.isoformat()}至"
+                    f"{end_inclusive.isoformat()}期间"
+                )
+            else:
+                time_text = ""
+            return f"查询{time_text}销售过{product_text}的{request.entity}名单"
+    return request.rewritten_question or request.original_question
+
+
 def build_intent_recognition_display_v2(
     request: CanonicalAnalysisRequest,
     *,
@@ -309,9 +393,7 @@ def build_intent_recognition_display_v2(
     return IntentRecognitionDisplayV2(
         scenario=scenario,
         original_question=_single_line(request.original_question),
-        completed_question=_single_line(
-            request.rewritten_question or request.original_question
-        ),
+        completed_question=_single_line(_completed_question_for_display(request)),
         file_judgement=_file_judgement(file_status, file_based),
         task_intent=task_intent,
         intent_basis=_INTENT_BASES.get(

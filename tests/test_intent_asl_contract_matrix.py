@@ -122,6 +122,48 @@ def test_intent_asl_contract_regression_matrix(
     assert validate_intent_asl_contract_definition(contract) == []
 
 
+def test_cross_attribute_subject_replacement_emits_forbidden_prior_filter():
+    classifier = RuleBasedIntentClassifier()
+    gate = TurnAdmissionGate()
+    previous = classifier.classify(
+        "查询最近一年销售过费森尤斯产品的经销商名单",
+        IDENTITY,
+        "subject-replacement-contract",
+    )
+    previous.filters = [{
+        "field": "母厂牌", "operator": "EQ", "value": "费森尤斯",
+    }]
+    current = classifier.classify(
+        "那空心纤维血液透析器呢",
+        IDENTITY,
+        "subject-replacement-contract",
+    )
+    decision = gate.evaluate(
+        question="那空心纤维血液透析器呢",
+        current=current,
+        previous=previous,
+        message_id="m2",
+    )
+    request = gate.apply_explicit_slot_protection(
+        previous.model_copy(deep=True), current, decision
+    )
+    request.turn_admission = decision
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["intent"] == "DETAIL_QUERY"
+    assert contract["query_object"] == "经销商"
+    assert contract["filters"] == [{
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "空心纤维血液透析器",
+    }]
+    assert contract["forbidden_filters"] == [{
+        "field": "母厂牌", "operator": "EQ", "value": "费森尤斯",
+    }]
+    assert validate_intent_asl_contract_definition(contract) == []
+
+
 def test_all_history_monthly_statistic_allows_time_projection_without_range():
     request = RuleBasedIntentClassifier().classify(
         "按月统计空心纤维血液透析器产品的含税销售总额。",

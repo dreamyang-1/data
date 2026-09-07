@@ -127,6 +127,23 @@ _CORE_FILTER_FIELDS = {
     "业务省份": "region",
 }
 
+# Product, brand, category and manufacturer are alternative ways to identify
+# the commercial subject of a sales query.  They may legitimately coexist in
+# a self-contained request ("A品牌的B产品"), but an elliptical switch such as
+# "那B产品呢" replaces the active subject scope as one unit.  Region, time,
+# relationship qualifiers and the requested result object are deliberately
+# outside this group and continue to inherit.
+_COMMERCIAL_SUBJECT_FAMILIES = {
+    "product", "brand", "category", "manufacturer",
+}
+_SUBJECT_SCOPE_ADDITIVE_PATTERN = re.compile(
+    r"其中|再加|加上|同时|以及|并且|且|条件下|范围内|品牌中|品牌下"
+)
+_ELLIPTICAL_SUBJECT_REPLACEMENT_PATTERN = re.compile(
+    r"^(?:那|那么|再看|再查|再查询|换成|改成)?"
+    r"[^，,。；;？?]{1,100}(?:呢|怎么样)[。！!？?]*$"
+)
+
 
 class StaleContextConflictError(ValueError):
     def __init__(self, conflicts: list[dict[str, Any]]) -> None:
@@ -153,7 +170,12 @@ class TurnAdmissionGate:
         )
         before = self.context_snapshot(previous)
         previous_subjects = self._core_subjects(previous)
-        subject_changed = any(
+        subject_scope_replaced = self._replaces_commercial_subject_scope(
+            question=question,
+            current_subjects=facts.core_subjects,
+            previous_subjects=previous_subjects,
+        )
+        subject_changed = subject_scope_replaced or any(
             key in previous_subjects and previous_subjects[key] != value
             for key, value in facts.core_subjects.items()
         )
@@ -232,7 +254,12 @@ class TurnAdmissionGate:
         elif subject_changed and has_reference:
             relation = TurnRelation.CURRENT_TOPIC_MODIFICATION
             confidence = 0.96
-            reasons = ["EXPLICIT_SUBJECT_REPLACEMENT", "ELLIPTICAL_REFERENCE"]
+            reasons = [
+                "EXPLICIT_SUBJECT_REPLACEMENT",
+                "ELLIPTICAL_REFERENCE",
+            ]
+            if subject_scope_replaced:
+                reasons.append("COMMERCIAL_SUBJECT_SCOPE_REPLACEMENT")
         elif context_dependent:
             relation = TurnRelation.CURRENT_TOPIC_FOLLOWUP
             confidence = 0.93
@@ -861,6 +888,24 @@ class TurnAdmissionGate:
             explicit_filter_slot = facts.explicit_slots["filters"]
             explicit_filters = explicit_filter_slot.value
             if (
+                "COMMERCIAL_SUBJECT_SCOPE_REPLACEMENT"
+                in decision.reason_codes
+            ):
+                # The active frame is cloned before the current delta is
+                # applied.  Clear every old alternative commercial-subject
+                # predicate first, then append the uniquely grounded current
+                # predicate below.  This prevents a brand -> product switch
+                # from becoming an unintended brand AND product intersection.
+                request.filters = [
+                    item for item in request.filters
+                    if TurnAdmissionGate._semantic_field_family(
+                        str(item.get("field") or "")
+                    ) not in _COMMERCIAL_SUBJECT_FAMILIES
+                ]
+                request.semantic_entity_mentions = list(
+                    current.semantic_entity_mentions
+                )
+            if (
                 explicit_filter_slot.source
                 == SlotSource.CURRENT_REFERENCE_RESOLUTION
                 and isinstance(explicit_filters, list)
@@ -1019,6 +1064,45 @@ class TurnAdmissionGate:
                     "SEMANTIC_SLOT_CHANGE_REPLAN_REQUIRED"
                 )
         return request
+
+    @staticmethod
+    def _replaces_commercial_subject_scope(
+        *,
+        question: str,
+        current_subjects: dict[str, str],
+        previous_subjects: dict[str, str],
+    ) -> bool:
+        """Recognize a cross-attribute subject switch in an elliptical turn.
+
+        Field-family equality is intentionally insufficient here: the user can
+        replace a brand with an exact product or a category with a manufacturer.
+        Additive language remains opt-in and therefore never enters this path.
+        """
+
+        compact = re.sub(r"\s+", "", question)
+        if (
+            _SUBJECT_SCOPE_ADDITIVE_PATTERN.search(compact)
+            or _ELLIPTICAL_SUBJECT_REPLACEMENT_PATTERN.fullmatch(compact)
+            is None
+        ):
+            return False
+        current = {
+            family: value
+            for family, value in current_subjects.items()
+            if family in _COMMERCIAL_SUBJECT_FAMILIES and value
+        }
+        previous = {
+            family: value
+            for family, value in previous_subjects.items()
+            if family in _COMMERCIAL_SUBJECT_FAMILIES and value
+        }
+        if len(current) != 1 or not previous:
+            return False
+        current_family, current_value = next(iter(current.items()))
+        return any(
+            family != current_family or value != current_value
+            for family, value in previous.items()
+        )
 
     @classmethod
     def promote_model_entity_replacement(

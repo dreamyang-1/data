@@ -28,6 +28,20 @@ _RELATIONSHIP_COUNT_PROJECTIONS = {
     "已合作门店数": ("门店", "门店名称"),
 }
 
+_COMMERCIAL_SUBJECT_FILTER_MARKERS = (
+    "商品名称", "产品名称", "product_name", "goods_name",
+    "商品品牌", "品牌", "母品牌", "母厂牌", "厂牌", "parent_brand",
+    "商品分类", "产品分类", "商品品类", "品类", "类目", "类别", "category",
+    "厂家名称", "制造商名称", "生产厂家", "厂家", "制造商", "manufacturer",
+)
+
+
+def _is_commercial_subject_filter(item: dict[str, Any]) -> bool:
+    field = str(item.get("field") or "").strip().casefold()
+    return bool(field) and any(
+        marker.casefold() in field for marker in _COMMERCIAL_SUBJECT_FILTER_MARKERS
+    )
+
 
 def _is_negative_filter(item: dict[str, Any]) -> bool:
     return str(item.get("operator") or "").upper() in {
@@ -89,6 +103,17 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
 
     positive_filters = [item for item in request.filters if not _is_negative_filter(item)]
     negative_filters = [item for item in request.filters if _is_negative_filter(item)]
+    forbidden_filters: list[dict[str, Any]] = []
+    admission = request.turn_admission
+    if (
+        admission is not None
+        and "COMMERCIAL_SUBJECT_SCOPE_REPLACEMENT" in admission.reason_codes
+    ):
+        forbidden_filters = [
+            dict(item)
+            for item in admission.context_before.get("filters", [])
+            if isinstance(item, dict) and _is_commercial_subject_filter(item)
+        ]
     filter_roles = {
         str(item.get("field") or "").strip()
         for item in request.filters
@@ -173,6 +198,11 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         ),
         "filters": positive_filters,
         "negative_filters": negative_filters,
+        # Filters explicitly removed by a cross-attribute subject replacement
+        # are part of the execution contract.  Oagnet and the final SQL guard
+        # must reject them even when their physical field differs from the new
+        # subject field (for example parent_brand -> product_name).
+        "forbidden_filters": forbidden_filters,
         # The caller owns the literal mention, while Oagnet owns its semantic
         # field and canonical source value.  This prevents the intent parser
         # from guessing 商品名称 for an ambiguous ``X产品`` phrase.
@@ -247,6 +277,14 @@ def validate_intent_asl_contract_definition(contract: dict[str, Any]) -> list[st
         for value in mentions
     ):
         errors.append("SEMANTIC_ENTITY_MENTIONS_INVALID")
+    forbidden_filters = contract.get("forbidden_filters", [])
+    if not isinstance(forbidden_filters, list) or any(
+        not isinstance(item, dict)
+        or not str(item.get("field") or "").strip()
+        or item.get("value") in (None, "")
+        for item in forbidden_filters
+    ):
+        errors.append("FORBIDDEN_FILTERS_INVALID")
     sorting = contract.get("sorting")
     if sorting is not None and (
         sorting.get("required") is not True
