@@ -673,8 +673,33 @@ class HttpDataRetrievalAdapter:
         if semantic_model_id is None:
             return MetricDiscovery(metrics=[])
         query = request.rewritten_question or request.original_question
+        discovery_request = request
+        if (
+            request.time_range is not None
+            and "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
+        ):
+            # The one-year range is a caller fallback chosen before the live
+            # metric definition is known.  Feeding it into discovery creates a
+            # circular decision: snapshot metrics receive a REQUIRED time
+            # contract, Oagnet adds/requires a transaction anchor, and the
+            # snapshot detector can no longer prove that time is forbidden.
+            # Remove only this system-generated default from the discovery
+            # copy.  User-authored ranges remain authoritative and the source
+            # request is left untouched until the orchestrator has verified
+            # the published metric semantics.
+            discovery_request = request.model_copy(
+                deep=True,
+                update={
+                    "time_range": None,
+                    "temporal_anchor": None,
+                    "assumptions": [
+                        value for value in request.assumptions
+                        if value != "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"
+                    ],
+                },
+            )
         intent_asl_contract: dict[str, Any] | None = build_intent_asl_contract(
-            request
+            discovery_request
         )
         if validate_intent_asl_contract_definition(intent_asl_contract):
             intent_asl_contract = None

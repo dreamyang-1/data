@@ -144,6 +144,111 @@ def test_vector_ambiguity_clarification_returns_all_canonical_candidate_details(
     assert items[0]["multi_select"] is False
 
 
+def _shanghai_region_ambiguity_request() -> CanonicalAnalysisRequest:
+    return CanonicalAnalysisRequest(
+        conversation_id="shanghai-region-choice",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="统计上海市各个经销商的区域医院覆盖率",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="区域医院覆盖率")],
+        entity="经销商",
+        dimensions=["经销商"],
+        filters=[{"field": "地区", "operator": "EQ", "value": "上海市"}],
+        missing_slots=["semantic_ambiguity"],
+        semantic_ambiguities=[SemanticAmbiguity(
+            ambiguity_id="shanghai-city-or-province",
+            type="entity_role",
+            phrase="上海市",
+            affected_slots=["filters"],
+            question="“上海市”在当前语义层有多个业务含义，请确认本次指的是哪一个？",
+            candidates=["省份名称：省份", "城市名称：市"],
+            candidate_details=[
+                {
+                    "label": "省份名称：省份",
+                    "value": "上海市",
+                    "entity_name": "省份",
+                    "attribute_name": "省份名称",
+                    "attribute_code": "province_name",
+                    "record_id": "province-shanghai",
+                    "business_domain_id": 205,
+                    "score": 1.0,
+                },
+                {
+                    "label": "城市名称：市",
+                    "value": "上海市",
+                    "entity_name": "市",
+                    "attribute_name": "城市名称",
+                    "attribute_code": "city_name",
+                    "record_id": "city-shanghai",
+                    "business_domain_id": 205,
+                    "score": 1.0,
+                },
+            ],
+            semantic_model_id=81,
+        )],
+    )
+
+
+def test_semantic_ambiguity_is_rendered_as_numbered_business_choices():
+    request = _shanghai_region_ambiguity_request()
+    item = DataAnalysisOrchestrator._clarification_items(request)[0]
+
+    rendered = DataAnalysisOrchestrator._visible_clarification_prompt(
+        request.semantic_ambiguities[0].question,
+        item,
+    )
+
+    assert "可选业务含义：" in rendered
+    assert "1. 省份名称：省份（取值：上海市）" in rendered
+    assert "2. 城市名称：市（取值：上海市）" in rendered
+    assert "请回复序号或完整的候选名称" in rendered
+
+
+@pytest.mark.asyncio
+async def test_semantic_ambiguity_choices_are_visible_in_clarification_answer():
+    agent = service()
+
+    response = await agent._request_clarification(
+        _shanghai_region_ambiguity_request(),
+        rounds=1,
+    )
+
+    assert response.status == "NEEDS_CLARIFICATION"
+    assert "可选业务含义：" in response.answer
+    assert "1. 省份名称：省份（取值：上海市）" in response.answer
+    assert "2. 城市名称：市（取值：上海市）" in response.answer
+    assert response.clarification_items[0].options == [
+        "省份名称：省份",
+        "城市名称：市",
+    ]
+
+
+def test_semantic_ambiguity_numeric_choice_binds_selected_catalog_attribute():
+    pending = _shanghai_region_ambiguity_request()
+    choice = DataAnalysisOrchestrator._semantic_clarification_choice(pending, "选2")
+
+    assert choice is not None
+    assert choice["confirmation"] == "城市名称是上海市"
+    resolved = DataAnalysisOrchestrator._apply_semantic_clarification_choice(
+        pending,
+        pending.model_copy(deep=True),
+        choice,
+    )
+
+    assert resolved.filters == [
+        {"field": "城市名称", "operator": "EQ", "value": "上海市"}
+    ]
+    assert resolved.semantic_filter_bindings[0].attribute_code == "city_name"
+    assert "semantic_ambiguity" not in resolved.missing_slots
+    assert resolved.semantic_ambiguities == []
+    assert "用户对语义歧义的确认：城市名称是上海市" in resolved.rewritten_question
+    assert (
+        "SEMANTIC_AMBIGUITY_CONFIRMED_ATTRIBUTE=city_name"
+        in resolved.assumptions
+    )
+
+
 def test_explicit_field_projection_replaces_previous_table_columns():
     classifier = RuleBasedIntentClassifier()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")

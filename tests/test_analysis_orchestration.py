@@ -144,6 +144,7 @@ async def test_live_metric_discovery_replaces_provisional_dimensions_atomically(
                     "operator": "=",
                     "value": "上海市",
                 },),
+                time_independent_snapshot=True,
             )
 
     orchestrator = object.__new__(DataAnalysisOrchestrator)
@@ -160,6 +161,11 @@ async def test_live_metric_discovery_replaces_provisional_dimensions_atomically(
         dimensions=["经销商"],
         semantic_entity_mentions=["各经销商的区域"],
         missing_slots=["metric"],
+        time_range=TimeRange(
+            start=date(2025, 9, 7),
+            end_exclusive=date(2026, 9, 8),
+        ),
+        assumptions=["DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"],
     )
     chat = ChatRequest(
         application_id="app",
@@ -185,6 +191,9 @@ async def test_live_metric_discovery_replaces_provisional_dimensions_atomically(
         "operator": "=",
         "value": "上海市",
     }]
+    assert request.time_range is None
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in request.assumptions
+    assert "TIME_SCOPE=ALL_TIME" in request.assumptions
     assert "QUERY_FRAME_SOURCE=LIVE_SQL_VERIFIED_SEMANTIC_SNAPSHOT" in request.assumptions
 
 

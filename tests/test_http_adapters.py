@@ -307,6 +307,39 @@ async def test_live_metric_discovery_forwards_current_query_shape_contract():
     }]
 
 
+@pytest.mark.asyncio
+async def test_live_metric_discovery_does_not_treat_system_default_as_user_time():
+    client = StubClient([{"success": False}])
+    req = CanonicalAnalysisRequest(
+        conversation_id="coverage-default-time-discovery",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="统计上海市各个经销商的区域医院覆盖率",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="区域医院覆盖率")],
+        entity="经销商",
+        dimensions=["经销商"],
+        filters=[{"field": "城市名称", "operator": "EQ", "value": "上海市"}],
+        time_range=TimeRange(
+            start=date(2025, 9, 7),
+            end_exclusive=date(2026, 9, 8),
+        ),
+        assumptions=["DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"],
+    )
+
+    result = await HttpDataRetrievalAdapter(
+        Settings(adapter_mode="http"), client
+    ).discover_metrics(
+        req, IDENTITY, semantic_model_id=81, business_domain_id=205
+    )
+
+    assert result.metrics == []
+    contract = client.calls[0][2]["intent_asl_contract"]
+    assert contract["time_policy"] == "OPTIONAL"
+    assert req.time_range is not None
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in req.assumptions
+
+
 def test_subject_count_ratio_without_time_context_is_snapshot_metric():
     assert HttpDataRetrievalAdapter._is_time_independent_snapshot_metric(
         {

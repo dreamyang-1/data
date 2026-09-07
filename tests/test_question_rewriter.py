@@ -6,6 +6,7 @@ from app.domain.models import (
     CanonicalAnalysisRequest,
     MetricRef,
     PrimaryIntent,
+    SemanticFilterBinding,
     TimeRange,
 )
 from app.services.question_rewriter import QuestionRewriter
@@ -1060,6 +1061,61 @@ async def test_semantic_model_version_is_carried_into_live_ambiguity():
     assert result.semantic_model_version == "v2026-09-02"
     assert result.semantic_ambiguities[0].semantic_model_version == "v2026-09-02"
     assert result.semantic_ambiguities[0].affected_slots == ["filters"]
+
+
+@pytest.mark.asyncio
+async def test_confirmed_city_attribute_does_not_reopen_province_city_ambiguity():
+    matches = [
+        {
+            "score": 1.0,
+            "record_id": "province-shanghai",
+            "entity_name": "省份",
+            "attribute_name": "省份名称",
+            "attribute_code": "province_name",
+            "attribute_value": "上海市",
+            "business_domain_id": 205,
+        },
+        {
+            "score": 1.0,
+            "record_id": "city-shanghai",
+            "entity_name": "市",
+            "attribute_name": "城市名称",
+            "attribute_code": "city_name",
+            "attribute_value": "上海市",
+            "business_domain_id": 205,
+        },
+    ]
+    request = CanonicalAnalysisRequest(
+        conversation_id="confirmed-shanghai-city",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="统计上海市各个经销商的区域医院覆盖率",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        filters=[{"field": "城市名称", "operator": "EQ", "value": "上海市"}],
+        semantic_filter_bindings=[SemanticFilterBinding(
+            filter_index=0,
+            input_value="上海市",
+            canonical_value="上海市",
+            canonical_name="城市名称",
+            attribute_code="city_name",
+            record_id="city-shanghai",
+            score=1.0,
+            business_domain_id=205,
+        )],
+        assumptions=["SEMANTIC_AMBIGUITY_CONFIRMED_ATTRIBUTE=city_name"],
+    )
+
+    ambiguities = await QuestionRewriter(
+        FakeSearcher(matches)
+    ).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert ambiguities == []
+    assert request.filters[0]["field"] == "城市名称"
+    assert request.semantic_filter_bindings[0].attribute_code == "city_name"
 
 
 @pytest.mark.asyncio

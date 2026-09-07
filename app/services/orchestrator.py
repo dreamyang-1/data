@@ -32,7 +32,7 @@ from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLaye
 from app.services.chat_responder import QwenChatResponder
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
-from app.domain.models import AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
+from app.domain.models import AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
 from app.planning import MultiQuestionPlanner, TaskPlanningError
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
@@ -2758,6 +2758,11 @@ class DataAnalysisOrchestrator:
             clarification_answer = (
                 chat.question if deterministic_slot_reply else classification_question
             )
+            semantic_choice = self._semantic_clarification_choice(
+                pending.request, chat.question
+            )
+            if semantic_choice is not None:
+                clarification_answer = semantic_choice["confirmation"]
             incoming = (
                 self._classify_with_rules(
                     clarification_answer, identity, chat.conversation_id
@@ -2815,6 +2820,12 @@ class DataAnalysisOrchestrator:
                     clarification_answer=clarification_answer,
                     incoming=incoming,
                 )
+                if semantic_choice is not None:
+                    request = self._apply_semantic_clarification_choice(
+                        pending.request,
+                        request,
+                        semantic_choice,
+                    )
                 preserve_merged_question = True
                 request.pending_state_version = pending.state_version
                 rounds = pending.clarification_rounds + 1
@@ -6445,6 +6456,217 @@ class DataAnalysisOrchestrator:
             raise RuntimeError("deterministic intent rules must be synchronous")
         return classified
 
+    @classmethod
+    def _semantic_clarification_choice(
+        cls,
+        pending: CanonicalAnalysisRequest,
+        answer: str,
+    ) -> dict[str, Any] | None:
+        """Resolve a visible option number/name to one catalog candidate."""
+
+        if (
+            "semantic_ambiguity" not in pending.missing_slots
+            or not pending.semantic_ambiguities
+        ):
+            return None
+        ambiguity = pending.semantic_ambiguities[0]
+        if not ambiguity.candidates:
+            return None
+        compact = re.sub(r"\s+", "", answer).strip("，,。.!！?？;；：:")
+        chinese_numbers = {
+            "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
+            "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
+        }
+        ordinal = re.fullmatch(
+            r"(?:我)?(?:选择|选|用|采用)?(?:第)?"
+            r"(?P<number>10|[1-9]|[一二三四五六七八九十])(?:个|项|条)?",
+            compact,
+        )
+        selected_index: int | None = None
+        if ordinal is not None:
+            token = ordinal.group("number")
+            selected_index = int(token) - 1 if token.isdigit() else chinese_numbers[token] - 1
+            if not 0 <= selected_index < len(ambiguity.candidates):
+                return None
+        else:
+            matched_indexes: list[int] = []
+            for index, candidate in enumerate(ambiguity.candidates):
+                detail = (
+                    ambiguity.candidate_details[index]
+                    if index < len(ambiguity.candidate_details)
+                    else {}
+                )
+                aliases = {
+                    str(candidate).strip(),
+                    *(
+                        str(detail.get(key) or "").strip()
+                        for key in (
+                            "label", "canonical_name", "canonical_code",
+                            "attribute_name", "entity_name", "value",
+                        )
+                    ),
+                }
+                aliases.discard("")
+                normalized_aliases = {
+                    re.sub(r"\s+", "", value).strip("，,。.!！?？;；：:")
+                    for value in aliases
+                }
+                if compact in normalized_aliases:
+                    matched_indexes.append(index)
+            if len(set(matched_indexes)) != 1:
+                return None
+            selected_index = matched_indexes[0]
+
+        detail = (
+            dict(ambiguity.candidate_details[selected_index])
+            if selected_index < len(ambiguity.candidate_details)
+            else {}
+        )
+        label = ambiguity.candidates[selected_index]
+        canonical_name = str(
+            detail.get("canonical_name") or detail.get("attribute_name") or ""
+        ).strip()
+        canonical_value = str(detail.get("value") or "").strip()
+        if ambiguity.type == "metric":
+            confirmation = "指标是" + (canonical_name or label)
+        elif ambiguity.type == "dimension":
+            confirmation = "维度是" + (canonical_name or label)
+        elif canonical_name and canonical_value:
+            confirmation = f"{canonical_name}是{canonical_value}"
+        elif ambiguity.type in {"subject", "entity_role", "entity_value"}:
+            confirmation = "对象是" + (canonical_name or label)
+        else:
+            confirmation = label
+        return {
+            "ambiguity": ambiguity,
+            "index": selected_index,
+            "label": label,
+            "detail": detail,
+            "confirmation": confirmation,
+        }
+
+    @classmethod
+    def _apply_semantic_clarification_choice(
+        cls,
+        pending: CanonicalAnalysisRequest,
+        target: CanonicalAnalysisRequest,
+        choice: dict[str, Any],
+    ) -> CanonicalAnalysisRequest:
+        """Apply one catalog-backed choice without losing the pending query."""
+
+        ambiguity: SemanticAmbiguity = choice["ambiguity"]
+        detail = choice["detail"]
+        # A semantic-choice turn changes only the ambiguous slot. Everything
+        # else comes from the already admitted pending request.
+        target.metrics = [item.model_copy(deep=True) for item in pending.metrics]
+        target.entity = pending.entity
+        target.fields = list(pending.fields)
+        target.dimensions = list(pending.dimensions)
+        target.filters = [dict(item) for item in pending.filters]
+        target.semantic_filter_bindings = [
+            item.model_copy(deep=True) for item in pending.semantic_filter_bindings
+        ]
+        target.time_range = (
+            pending.time_range.model_copy(deep=True)
+            if pending.time_range is not None else None
+        )
+        target.comparison_type = pending.comparison_type
+        target.forecast_horizon_periods = pending.forecast_horizon_periods
+        target.forecast_granularity = pending.forecast_granularity
+        target.forecast_history_provided = pending.forecast_history_provided
+
+        canonical_name = str(
+            detail.get("canonical_name") or detail.get("attribute_name") or ""
+        ).strip()
+        canonical_code = str(
+            detail.get("canonical_code") or detail.get("attribute_code")
+            or detail.get("semantic_id") or ""
+        ).strip()
+        canonical_value = str(detail.get("value") or ambiguity.phrase or "").strip()
+        if ambiguity.type == "metric":
+            metric_name = canonical_name or choice["label"]
+            metric_id = str(detail.get("metric_id") or "").strip() or None
+            if metric_id is None and canonical_code:
+                metric_id = (
+                    canonical_code
+                    if ":" in canonical_code or ambiguity.semantic_model_id is None
+                    else f"{ambiguity.semantic_model_id}:{canonical_code}"
+                )
+            target.metrics = [MetricRef(
+                input=metric_name,
+                canonical_name=metric_name,
+                metric_id=metric_id,
+                version=str(detail.get("version") or "current"),
+                unit=(str(detail.get("unit")) if detail.get("unit") else None),
+            )]
+        elif ambiguity.type == "dimension" and canonical_name:
+            target.dimensions = [canonical_name]
+        elif ambiguity.type in {"subject"} and canonical_name:
+            target.entity = canonical_name
+        elif canonical_name and canonical_code and canonical_value:
+            phrase = str(ambiguity.phrase or "").strip()
+            matched_indexes: list[int] = []
+            for index, item in enumerate(target.filters):
+                raw_values = item.get("value")
+                values = raw_values if isinstance(raw_values, list) else [raw_values]
+                if any(
+                    str(value or "").strip() in {phrase, canonical_value}
+                    for value in values
+                ):
+                    item["field"] = canonical_name
+                    if not isinstance(raw_values, list):
+                        item["value"] = canonical_value
+                    matched_indexes.append(index)
+            if len(matched_indexes) == 1:
+                filter_index = matched_indexes[0]
+                target.semantic_filter_bindings = [
+                    item for item in target.semantic_filter_bindings
+                    if item.filter_index != filter_index
+                ]
+                target.semantic_filter_bindings.append(SemanticFilterBinding(
+                    filter_index=filter_index,
+                    input_value=phrase or canonical_value,
+                    canonical_value=canonical_value,
+                    canonical_name=canonical_name,
+                    attribute_code=canonical_code,
+                    record_id=str(detail.get("record_id") or "").strip() or None,
+                    score=float(detail.get("score") or 1.0),
+                    business_domain_id=(
+                        int(detail["business_domain_id"])
+                        if detail.get("business_domain_id") else None
+                    ),
+                    semantic_model_version=(
+                        str(detail.get("semantic_model_version"))
+                        if detail.get("semantic_model_version") else None
+                    ),
+                ))
+                target.assumptions.append(
+                    "SEMANTIC_AMBIGUITY_CONFIRMED_ATTRIBUTE=" + canonical_code
+                )
+
+        remaining = [
+            item.model_copy(deep=True)
+            for item in pending.semantic_ambiguities
+            if item.ambiguity_id != ambiguity.ambiguity_id
+            or item.ambiguity_id is None and item is not ambiguity
+        ]
+        target.semantic_ambiguities = remaining
+        target.ambiguities = [item.question for item in remaining]
+        target.missing_slots = [
+            slot for slot in pending.missing_slots if slot != "semantic_ambiguity"
+        ]
+        if remaining:
+            target.missing_slots.append("semantic_ambiguity")
+        target.assumptions = list(dict.fromkeys([
+            *pending.assumptions,
+            *target.assumptions,
+            "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER",
+        ]))
+        target.rewritten_question = render_execution_question(
+            target, confirmation=choice["confirmation"]
+        )
+        return target
+
     @staticmethod
     def _is_deterministic_pending_reply(
         question: str, pending: CanonicalAnalysisRequest
@@ -7394,6 +7616,14 @@ class DataAnalysisOrchestrator:
         )
         questions = all_questions[:question_limit]
         clarification_items = self._clarification_items(request)[:question_limit]
+        visible_questions = [
+            self._visible_clarification_prompt(
+                question,
+                clarification_items[index]
+                if index < len(clarification_items) else None,
+            )
+            for index, question in enumerate(questions)
+        ]
         remaining_questions = all_questions[question_limit:]
         try:
             await self.sessions.put_pending(
@@ -7432,7 +7662,12 @@ class DataAnalysisOrchestrator:
             intent=request.primary_intent,
             intent_source=request.intent_source,
             intent_confidence=request.intent_confidence,
-            answer=prefix + "还需要补充：" + "；".join(questions),
+            answer=(
+                prefix
+                + "还需要补充："
+                + ("\n" if any("\n" in item for item in visible_questions) else "")
+                + "；".join(visible_questions)
+            ),
             clarification_questions=questions,
             clarification_items=clarification_items,
             remaining_question_count=len(remaining_questions),
@@ -8588,11 +8823,43 @@ class DataAnalysisOrchestrator:
             if not question:
                 continue
             raw_candidates = value.get("candidates")
-            candidates = (
-                [str(item).strip() for item in raw_candidates if str(item).strip()]
-                if isinstance(raw_candidates, list)
-                else []
-            )
+            supplied_details = [
+                dict(item) for item in value.get("candidate_details") or []
+                if isinstance(item, dict)
+            ][:10]
+            candidates: list[str] = []
+            candidate_details: list[dict[str, Any]] = []
+            if isinstance(raw_candidates, list):
+                for index, item in enumerate(raw_candidates[:10]):
+                    detail = dict(item) if isinstance(item, dict) else (
+                        supplied_details[index]
+                        if index < len(supplied_details) else {}
+                    )
+                    label = str(
+                        detail.get("label")
+                        or detail.get("canonical_name")
+                        or detail.get("name")
+                        or detail.get("display_name")
+                        or detail.get("value")
+                        or (item if not isinstance(item, dict) else "")
+                    ).strip()
+                    if not label:
+                        continue
+                    candidates.append(label)
+                    candidate_details.append(detail)
+            elif supplied_details:
+                for detail in supplied_details:
+                    label = str(
+                        detail.get("label")
+                        or detail.get("canonical_name")
+                        or detail.get("name")
+                        or detail.get("display_name")
+                        or detail.get("value")
+                        or ""
+                    ).strip()
+                    if label:
+                        candidates.append(label)
+                        candidate_details.append(detail)
             ambiguity_type = str(value.get("type") or "unknown")
             if ambiguity_type not in allowed_types:
                 ambiguity_type = "unknown"
@@ -8614,10 +8881,7 @@ class DataAnalysisOrchestrator:
                         for item in value.get("affected_slots") or []
                         if str(item).strip()
                     ][:20],
-                    candidate_details=[
-                        dict(item) for item in value.get("candidate_details") or []
-                        if isinstance(item, dict)
-                    ][:10],
+                    candidate_details=candidate_details,
                     material_impact=(
                         str(value.get("material_impact"))[:300]
                         if value.get("material_impact") else None
@@ -8721,6 +8985,53 @@ class DataAnalysisOrchestrator:
                 "allow_free_text": True,
             })
         return items
+
+    @staticmethod
+    def _visible_clarification_prompt(
+        question: str,
+        item: ClarificationItem | dict[str, Any] | None,
+    ) -> str:
+        """Render semantic choices for clients that only display answer text."""
+
+        if item is None:
+            return question
+        payload = item.model_dump() if isinstance(item, ClarificationItem) else item
+        if payload.get("slot") != "semantic_ambiguity":
+            return question
+        options = [
+            str(value).strip() for value in payload.get("options") or []
+            if str(value).strip()
+        ]
+        if not options:
+            return question
+        details = [
+            value if isinstance(value, dict) else {}
+            for value in payload.get("option_details") or []
+        ]
+        rendered: list[str] = []
+        for index, option in enumerate(options, 1):
+            detail = details[index - 1] if index <= len(details) else {}
+            value = str(detail.get("value") or "").strip()
+            description = str(
+                detail.get("attribute_description")
+                or detail.get("entity_description")
+                or detail.get("description")
+                or detail.get("business_desc")
+                or ""
+            ).strip()
+            suffixes: list[str] = []
+            if value and value not in option:
+                suffixes.append(f"取值：{value}")
+            if description and description not in option:
+                suffixes.append(description)
+            suffix = f"（{'；'.join(suffixes)}）" if suffixes else ""
+            rendered.append(f"{index}. {option}{suffix}")
+        return (
+            question.rstrip()
+            + "\n可选业务含义：\n"
+            + "\n".join(rendered)
+            + "\n请回复序号或完整的候选名称。"
+        )
 
     @staticmethod
     def _understood_slots(request: CanonicalAnalysisRequest) -> dict[str, Any]:

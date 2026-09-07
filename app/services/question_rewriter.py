@@ -424,6 +424,12 @@ class QuestionRewriter:
             )
             for literal in literals
         ], return_exceptions=True)
+        confirmed_attribute_codes = {
+            value.split("=", 1)[1].strip()
+            for value in request.assumptions
+            if value.startswith("SEMANTIC_AMBIGUITY_CONFIRMED_ATTRIBUTE=")
+            and value.partition("=")[2].strip()
+        }
         matches: list[dict[str, Any]] = []
         ambiguities: list[SemanticAmbiguity] = []
         for literal, result in zip(literals, results, strict=True):
@@ -435,6 +441,17 @@ class QuestionRewriter:
                 )
                 continue
             current = [dict(item) for item in result if isinstance(item, dict)]
+            # A user-selected ambiguity option is stronger than another
+            # equal-score vector search.  Limit this literal to the confirmed
+            # semantic attribute so the same province/city (or similar)
+            # ambiguity cannot immediately reappear on the next turn.
+            confirmed = [
+                item for item in current
+                if str(item.get("attribute_code") or "").strip()
+                in confirmed_attribute_codes
+            ]
+            if confirmed:
+                current = confirmed
             matches.extend(current)
             version = self._semantic_model_version(current)
             ambiguities.extend(self._detect_semantic_ambiguities(
@@ -683,10 +700,19 @@ class QuestionRewriter:
                 labels.append(label)
                 details.append({
                     "semantic_id": str(item.get("attribute_code") or item.get("id") or ""),
+                    "record_id": str(item.get("record_id") or item.get("id") or "") or None,
                     "label": label,
                     "value": attribute_value,
                     "entity_name": entity_name,
                     "attribute_name": attribute_name,
+                    "attribute_code": str(item.get("attribute_code") or ""),
+                    "business_domain_id": item.get("business_domain_id"),
+                    "entity_description": str(
+                        item.get("entity_description") or ""
+                    ).strip() or None,
+                    "attribute_description": str(
+                        item.get("attribute_description") or ""
+                    ).strip() or None,
                     "score": float(item.get("score") or 0.0),
                     "semantic_model_version": semantic_model_version,
                 })
