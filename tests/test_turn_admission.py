@@ -403,7 +403,7 @@ def test_catalog_category_scope_does_not_become_a_synthetic_product_fact():
         {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
         {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
     ]
-    assert request.dimensions == ["经销商", "城市", "商品品牌", "商品品类"]
+    assert request.dimensions == ["经销商"]
     facts = request.turn_admission.current_turn_facts
     assert facts.core_subjects == {
         "region": "上海市",

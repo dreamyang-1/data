@@ -203,7 +203,7 @@ async def test_model_detail_label_cannot_drop_metric_from_grouped_partner_list()
 
     assert result.primary_intent == PrimaryIntent.METRIC_QUERY
     assert [metric.input for metric in result.metrics] == ["销售总额"]
-    assert result.dimensions == ["经销商", "城市", "商品品牌", "商品品类"]
+    assert result.dimensions == ["经销商"]
     assert result.risk_level == "MEDIUM"
     assert result.filters == [
         {"field": "业务城市", "operator": "EQ", "value": "上海市"},

@@ -1612,6 +1612,7 @@ class RuleBasedIntentClassifier:
         cls._drop_geographic_subspan_filters(request)
         cls._apply_name_projection_non_null_constraint(request)
         cls._drop_invalid_filter_values(request)
+        cls._reconcile_dimension_filter_roles(request, question)
 
     @staticmethod
     def _drop_geographic_subspan_filters(
@@ -2120,6 +2121,147 @@ class RuleBasedIntentClassifier:
             request.assumptions.append("INVALID_FILTER_VALUE_DROPPED")
 
     @staticmethod
+    def _dimension_filter_family(value: object) -> str | None:
+        """Return the semantic role shared by a dimension and filter field.
+
+        Canonical requests use business-facing dimension labels while filters
+        may already use grounded labels (for example ``城市`` versus
+        ``业务城市``). Comparing raw strings leaves filter-only roles in
+        ``dimensions`` and makes the public trace disagree with the ASL grain.
+        Province, city and district deliberately remain different families.
+        """
+
+        normalized = re.sub(r"[\s_.-]+", "", str(value or "")).casefold()
+        if not normalized:
+            return None
+        families: tuple[tuple[str, tuple[str, ...]], ...] = (
+            ("hospital_level", ("医院等级", "医院级别", "hospitallevel")),
+            ("province", ("业务省份", "所在省份", "省份", "province")),
+            ("city", ("业务城市", "所在城市", "城市", "city")),
+            ("district", ("业务区县", "所在区县", "区县", "district", "county")),
+            ("region", ("地区", "区域", "地域", "region")),
+            ("brand", ("商品品牌", "产品品牌", "品牌名称", "母品牌", "母厂牌", "品牌", "brand")),
+            ("category", ("商品品类", "商品分类", "产品分类", "品类", "类目", "类别", "category")),
+            ("product", ("商品名称", "产品名称", "商品", "产品", "product", "goods")),
+            ("manufacturer", ("厂家名称", "制造商名称", "生产厂家", "厂家", "制造商", "manufacturer")),
+            ("dealer", ("经销商名称", "经销商", "dealer")),
+            ("supplier", ("供应商名称", "供应商", "supplier")),
+            ("hospital", ("医院名称", "医院", "hospital")),
+            ("department", ("适用科室", "科室名称", "科室", "department")),
+            ("store", ("门店名称", "门店", "store")),
+            ("customer", ("客户名称", "客户", "customer")),
+            ("channel", ("渠道名称", "渠道", "channel")),
+            ("order_status", ("订单状态", "orderstatus")),
+            ("payment_method", ("支付方式", "paymentmethod")),
+        )
+        for family, aliases in families:
+            if any(alias.casefold() in normalized for alias in aliases):
+                return family
+        return None
+
+    @classmethod
+    def _explicit_dimension_role_requested(
+        cls,
+        question: str,
+        dimension: str,
+        *,
+        comparison_axis: bool = False,
+    ) -> bool:
+        """Return whether wording independently asks to expand a role."""
+
+        compact = re.sub(r"\s+", "", question or "").casefold()
+        family = cls._dimension_filter_family(dimension)
+        aliases_by_family: dict[str, tuple[str, ...]] = {
+            "hospital_level": ("医院等级", "医院级别", "等级", "级别"),
+            "province": ("业务省份", "省份", "省"),
+            "city": ("业务城市", "城市", "市"),
+            "district": ("区县", "县区"),
+            "region": ("地区", "区域", "地域"),
+            "brand": ("商品品牌", "产品品牌", "品牌", "母品牌"),
+            "category": ("商品品类", "商品分类", "产品分类", "品类", "类目", "类别"),
+            "product": ("商品名称", "产品名称", "商品", "产品"),
+            "manufacturer": ("厂家", "制造商", "生产厂家"),
+            "dealer": ("经销商",),
+            "supplier": ("供应商",),
+            "hospital": ("医院",),
+            "department": ("适用科室", "科室"),
+            "store": ("门店",),
+            "customer": ("客户",),
+            "channel": ("渠道",),
+            "order_status": ("订单状态", "状态"),
+            "payment_method": ("支付方式",),
+        }
+        aliases = aliases_by_family.get(family or "", (str(dimension),))
+        for alias in aliases:
+            escaped = re.escape(alias.casefold())
+            if re.search(
+                rf"(?:按|以|根据)(?:每个|每家|各个|各)?{escaped}"
+                rf"(?:维度)?(?:统计|分组|汇总|拆分|展示|输出|比较|对比)?",
+                compact,
+            ) or re.search(
+                rf"(?:各个|各|每一个|每个|每家|分别|各自|逐个){escaped}",
+                compact,
+            ) or re.search(rf"{escaped}(?:维度|分组|分别统计|逐项统计)", compact):
+                return True
+        return comparison_axis and any(
+            marker in compact for marker in ("分别", "各自", "逐个", "对比", "比较")
+        )
+
+    @classmethod
+    def _reconcile_dimension_filter_roles(
+        cls,
+        request: CanonicalAnalysisRequest,
+        question: str,
+    ) -> None:
+        """Keep dimensions as result grain instead of a mentioned-role bag.
+
+        A role already used by a filter is removed from dimensions unless the
+        user independently requests per-value expansion. This preserves the
+        valid dual-role case while preventing fixed city, brand, category or
+        product values from leaking into GROUP BY.
+        """
+
+        filter_families: dict[str, list[dict[str, object]]] = {}
+        for item in request.filters:
+            if not isinstance(item, dict):
+                continue
+            family = cls._dimension_filter_family(item.get("field"))
+            if family:
+                filter_families.setdefault(family, []).append(item)
+
+        reconciled: list[str] = []
+        for raw_dimension in request.dimensions:
+            dimension = str(raw_dimension).strip()
+            if not dimension:
+                continue
+            family = cls._dimension_filter_family(dimension)
+            matching_filters = filter_families.get(family or "", [])
+            if not matching_filters:
+                reconciled.append(dimension)
+                continue
+
+            has_multiple_values = any(
+                isinstance(item.get("value"), list)
+                and len([
+                    value for value in item.get("value", [])
+                    if value not in (None, "")
+                ]) > 1
+                for item in matching_filters
+            )
+            comparison_axis = bool(
+                request.primary_intent == PrimaryIntent.COMPARISON_ANALYSIS
+                and has_multiple_values
+            )
+            if cls._explicit_dimension_role_requested(
+                question,
+                dimension,
+                comparison_axis=comparison_axis,
+            ):
+                reconciled.append(dimension)
+
+        request.dimensions = list(dict.fromkeys(reconciled))
+
+    @staticmethod
     def _apply_metric_subject_scope(
         request: CanonicalAnalysisRequest, text: str
     ) -> None:
@@ -2171,6 +2313,15 @@ class RuleBasedIntentClassifier:
             return
         subject = match.group("subject").strip("的")
         subject = re.sub(r"^(?:最近|过去).{1,8}(?:年|月|周|天)", "", subject)
+        # Grouping phrases describe result grain, not a product literal.  For
+        # example, “统计上海市各个经销商的销售额” previously created the bogus
+        # filter 商品名称=各个经销商 after removing the geographic prefix.
+        if re.fullmatch(
+            r"(?:各个|各|每一个|每个|每家|分别|逐个)"
+            r"(?:经销商|供应商|医院|门店|客户|产品|商品|品牌|品类|城市|省份)",
+            subject,
+        ):
+            return
         if re.search(r"(?:医院|卫生院|医疗中心)$", subject):
             filter_field = "医院名称"
         elif re.search(
@@ -2192,6 +2343,12 @@ class RuleBasedIntentClassifier:
                 "",
                 subject,
             )
+            if re.fullmatch(
+                r"(?:各个|各|每一个|每个|每家|分别|逐个)"
+                r"(?:经销商|供应商|医院|门店|客户|产品|商品|品牌|品类|城市|省份)",
+                subject,
+            ):
+                return
             filter_field = "商品名称"
         if (
             not 2 <= len(subject) <= 100
@@ -3376,11 +3533,11 @@ class RuleBasedIntentClassifier:
                 "商品名称", product, {"商品名称", "产品名称", "商品", "产品"}
             )
 
-        # These are semantic dimension roles, not database columns.  Oagnet
-        # resolves each role against the dimensions and relationship graph of
-        # the *current* semantic-model version.  Keeping every explicit scope
-        # role visible prevents a compound partner query from being flattened
-        # to only ``经销商`` or from inventing one synthetic product dimension.
+        # The partner is the returned/grouped object. Region, brand and catalog
+        # values above are fixed filters and must not be copied into dimensions;
+        # doing so makes the public intent trace claim a grain that ASL later
+        # (correctly) removes. An independently requested dual role is restored
+        # by the final dimension/filter reconciliation step.
         partner = "经销商" if "经销商" in compact else "供应商"
         scalar_relationship_count = any(
             metric.input in {"已合作经销商数", "已合作供应商数"}
@@ -3392,13 +3549,6 @@ class RuleBasedIntentClassifier:
         scoped_dimensions: list[str] = []
         if not scalar_relationship_count:
             scoped_dimensions.append(partner)
-            if region:
-                scoped_dimensions.append("城市")
-            scoped_dimensions.append("商品品牌")
-            if category:
-                scoped_dimensions.append("商品品类")
-            elif product:
-                scoped_dimensions.append("商品名称")
         catalog_dimension_aliases = {
             "地区", "区域", "省份", "城市", "业务城市",
             "品牌", "品牌名称", "商品品牌", "母品牌",

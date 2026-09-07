@@ -406,7 +406,7 @@ def test_branded_consumable_partner_scope_is_not_one_product_name():
     assert request.entity == "经销商"
     assert request.fields == []
     assert [metric.input for metric in request.metrics] == ["销售总额"]
-    assert request.dimensions == ["经销商", "城市", "商品品牌", "商品品类"]
+    assert request.dimensions == ["经销商"]
     assert AnalysisOperator.GROUP_BY in request.operators
     assert AnalysisOperator.AGGREGATE in request.operators
     assert request.filters == [
@@ -415,6 +415,48 @@ def test_branded_consumable_partner_scope_is_not_one_product_name():
         {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
     ]
     assert all(item["field"] != "商品名称" for item in request.filters)
+
+
+def test_filter_only_roles_do_not_leak_into_metric_grouping_dimensions():
+    request = RuleBasedIntentClassifier().classify(
+        "查询上海市江苏苏云品牌低值耗材的经销商清单，并附带含税销售总额",
+        IDENTITY,
+        "c-filter-only-roles",
+    )
+
+    assert request.dimensions == ["经销商"]
+    assert request.filters == [
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+        {"field": "商品品牌", "operator": "EQ", "value": "江苏苏云"},
+        {"field": "商品品类", "operator": "EQ", "value": "低值耗材"},
+    ]
+
+
+def test_same_city_role_can_be_both_filter_and_explicit_dimension():
+    request = RuleBasedIntentClassifier().classify(
+        "只看上海市，按城市统计含税销售总额",
+        IDENTITY,
+        "c-city-filter-and-dimension",
+    )
+
+    assert request.dimensions == ["城市"]
+    assert request.filters == [
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+    ]
+
+
+def test_grouping_phrase_is_not_invented_as_a_product_filter():
+    request = RuleBasedIntentClassifier().classify(
+        "统计上海市各个经销商的含税销售总额",
+        IDENTITY,
+        "c-group-role-not-product-value",
+    )
+
+    assert request.dimensions == ["经销商"]
+    assert request.filters == [
+        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+    ]
+    assert request.entity != "产品"
 
 
 def test_branded_category_scope_is_generic_not_vendor_specific():
@@ -1951,7 +1993,7 @@ def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
         "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
         in request.assumptions
     )
-    assert request.dimensions == ["经销商", "城市", "商品品牌", "商品名称"]
+    assert request.dimensions == ["经销商"]
     assert request.filters == [
         {"field": "业务城市", "operator": "EQ", "value": "上海市"},
         {"field": "商品品牌", "operator": "EQ", "value": "振德医疗"},
