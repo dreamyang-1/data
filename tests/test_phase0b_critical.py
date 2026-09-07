@@ -133,6 +133,10 @@ def test_c13_quantity_surface_is_not_lost_as_attribute():
 
 
 def test_c14_product_name_role_depends_on_requested_operation():
+    bare = parse('商品名称')
+    assert bare.missing_slots == ['semantic_ambiguity']
+    assert bare.semantic_ambiguities[0].type == 'operation_intent'
+    assert len(bare.semantic_ambiguities[0].candidates) == 2
     listing, grouping = parse('列出商品名称'), parse('按商品名称统计销售额')
     assert listing.primary_intent == PrimaryIntent.DETAIL_QUERY
     assert '商品名称' in listing.fields

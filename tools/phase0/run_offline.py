@@ -50,6 +50,7 @@ def main():
         def __init__(self, output):
             super().__init__(output)
             self.failures = {}
+            self.clarification_coverage = {'public_clarification_responses': 0, 'with_reason_trace': 0, 'untraced': 0, 'unsafe_asks': 0}
 
         @pytest.fixture(autouse=True)
         def business_clock(self, monkeypatch):
@@ -61,6 +62,19 @@ def main():
                     return cls(2026, 9, 7)
 
             monkeypatch.setattr(classifier, 'date', FixedDate)
+            from app.services.orchestrator import DataAnalysisOrchestrator
+            delegate = DataAnalysisOrchestrator._ensure_clarification_trace
+            async def record_trace(agent, response, chat):
+                await delegate(agent, response, chat)
+                if response.status == 'NEEDS_CLARIFICATION' or response.clarification_questions:
+                    counts = self.clarification_coverage
+                    counts['public_clarification_responses'] += 1
+                    traces = response.clarification_decision_traces
+                    counts['with_reason_trace' if traces and all(t.reason_type for t in traces) else 'untraced'] += 1
+                    asks = [t for t in traces if t.decision == 'ASK']
+                    if not asks or any(not t.is_user_ambiguity or t.already_asked or t.safe_default_available or t.system_repair_possible for t in asks):
+                        counts['unsafe_asks'] += 1
+            monkeypatch.setattr(DataAnalysisOrchestrator, '_ensure_clarification_trace', record_trace)
 
         def pytest_runtest_logreport(self, report):
             super().pytest_runtest_logreport(report)
@@ -71,7 +85,7 @@ def main():
             super().pytest_sessionfinish(session, exitstatus)
             d = json.loads(self.output.read_text(encoding='utf-8'))
             d.update(failures=self.failures, business_clock='2026-09-07 Asia/Shanghai; classifier.date monkeypatch seam',
-                     real_model_calls=0, production_external_writes=0)
+                     real_model_calls=0, production_external_writes=0, clarification_coverage=self.clarification_coverage)
             self.output.write_text(json.dumps(d, ensure_ascii=False, indent=2) + '\n', encoding='utf-8', newline='\n')
 
     return pytest.main(([opts.node] if opts.node else []) + (remaining or ['-q']), plugins=[Evidence(opts.output)])

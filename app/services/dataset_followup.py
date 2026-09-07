@@ -63,6 +63,7 @@ def plan_dataset_followup(
     rows: Sequence[Mapping[str, Any]],
     *,
     ordering_proof: Mapping[str, Any] | None = None,
+    source_complete: bool = True,
 ) -> dict[str, Any] | None:
     """Map only unambiguous local follow-ups to whitelisted dataset operations.
 
@@ -71,6 +72,18 @@ def plan_dataset_followup(
     the wrong historical snapshot.
     """
     compact = re.sub(r"\s+", "", question)
+    # Explicit display limits preserve row order even for numeric datasets.
+    display = re.fullmatch(r"(?:只看|只显示|只展示|只返回|只保留|显示|展示|返回)前(\d{1,5}|[一二三四五六七八九十]{1,3})条[。？！?!]?", compact)
+    if display:
+        return {'type': 'limit', 'count': _ranking_count(display.group(1))}
+    if not source_complete:
+        candidate = plan_dataset_followup(question, columns, rows, ordering_proof=ordering_proof)
+        family = dataset_operation_family(candidate)
+        if family in {'DISPLAY_LIMIT', 'PROJECTION'}:
+            return candidate
+        if family == 'LOCAL_SORT' and any(marker in compact for marker in _DATASET_REFERENCE_MARKERS):
+            return candidate
+        return None
     # “其他筛选条件不变” describes inherited query scope; it is not itself a
     # request to filter the materialized result. Remove this suffix before
     # choosing the local operation so “只返回前5个” reaches the limit parser.
@@ -174,11 +187,12 @@ def plan_dataset_followup(
         })
 
     if (wants_maximum or wants_minimum) and extrema_target is not None:
+        explicit_count = re.search(r"(?:最高|最低|最大|最小)(\d{1,5}|[一二三四五六七八九十]{1,3})(?:名|条|个)", compact)
         return _with_sheet_filter(sheet_filter, {
             "type": "sort_limit",
             "field": extrema_target,
             "descending": wants_maximum,
-            "count": 1,
+            "count": _ranking_count(explicit_count.group(1)) if explicit_count else 1,
         })
 
     if any(marker in compact for marker in (
@@ -329,6 +343,15 @@ def plan_dataset_followup(
         if selected:
             return _with_sheet_filter(sheet_filter, {"type": "select", "columns": selected})
     return sheet_filter
+
+
+def dataset_operation_family(operation: Mapping[str, Any] | None) -> str | None:
+    if operation is None:
+        return None
+    return {'limit':'DISPLAY_LIMIT', 'sort':'LOCAL_SORT', 'select':'PROJECTION',
+            'sort_limit':'GLOBAL_RANKING', 'aggregate':'GLOBAL_RANKING',
+            'extrema':'GLOBAL_RANKING', 'extrema_difference':'GLOBAL_RANKING',
+            'drilldown':'DRILLDOWN'}.get(str(operation.get('type')))
 
 
 def _ranking_count(value: str) -> int:

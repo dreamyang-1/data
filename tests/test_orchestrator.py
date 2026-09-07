@@ -1147,18 +1147,19 @@ async def test_time_clarification_preserves_ranked_comparison_execution_contract
         sessions=InMemorySessionStore(),
     )
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    first = await agent.handle(
-        ChatRequest(
-            application_id="app1",
-            conversation_id="ranked-time-clarification",
-            message_id="m1",
-            question=(
-                "帮我找出上海地区正在销售振德医疗品牌的医用外科口罩产品的"
-                "经销商名单，并按他们现有的整体业务规模排序。"
-            ),
-        ),
-        identity,
+    # ST-0B-02: seed a genuinely missing-period pending contract. The normal
+    # first-turn parser now provides a safe default, so forcing a missing slot
+    # on that ready request no longer exercises a valid clarification setup.
+    pending_request = agent.classifier.classify(
+        "帮我找出上海地区正在销售振德医疗品牌的医用外科口罩产品的"
+        "经销商名单，并按他们现有的整体业务规模排序。",
+        identity, "ranked-time-clarification",
     )
+    pending_request.application_id = "app1"
+    pending_request.filters = RuleBasedIntentClassifier().classify(
+        pending_request.original_question, identity, pending_request.conversation_id
+    ).filters
+    first = await agent._request_clarification(pending_request, 1)
     assert first.status == "NEEDS_CLARIFICATION"
     assert first.intent == PrimaryIntent.COMPARISON_ANALYSIS
     assert first.missing_slots == ["time_range"]

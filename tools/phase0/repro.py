@@ -33,7 +33,7 @@ def write_json(path, value):
 
 def write_csv(path, rows):
     with path.open('w', encoding='utf-8', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator='\n')
         writer.writeheader()
         for row in rows:
             writer.writerow({k: json.dumps(v, ensure_ascii=False) if isinstance(v, (list, dict)) else v for k, v in row.items()})
@@ -155,7 +155,8 @@ def sync_manifest(paths, manifest_path):
         source, target = ROOT / p, REPO / p
         source.resolve().relative_to(ROOT.resolve())
         target.resolve().relative_to(REPO.resolve())
-        if any(part in {'.env', '.git', '__pycache__', '_backups', 'logs'} for part in rel.parts) or rel.suffix in {'.log', '.bak'}:
+        if (rel.name == '实际业务问题.md' or any(part.startswith('.env') and part not in {'.env.example', '.env.template'} for part in rel.parts)
+                or any(part in {'.git', '__pycache__', '_backups', 'logs'} for part in rel.parts) or rel.suffix in {'.log', '.bak'}):
             raise ValueError('Excluded path: ' + p)
         b = source.read_bytes()
         if SECRET.search(b):

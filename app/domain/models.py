@@ -383,7 +383,15 @@ class SemanticContextSnapshot(StrictModel):
     context_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
+class LegacyLineageTarget(StrictModel):
+    kind: Literal['METRIC', 'FIELD', 'COLUMN', 'TABLE', 'ENTITY', 'DATASET']
+    name: str = Field(min_length=1, max_length=500)
+
+
 class CanonicalAnalysisRequest(StrictModel):
+    # Literal user targets and an explicit inheritance barrier, not V2 state.
+    lineage_target: LegacyLineageTarget | None = None
+    cleared_filter_families: list[Literal["region"]] = Field(default_factory=list)
     schema_version: str = "1.0"
     request_id: UUID = Field(default_factory=uuid4)
     conversation_id: str
@@ -1230,7 +1238,26 @@ class ClarificationItem(StrictModel):
         return self
 
 
+class ClarificationDecisionTrace(StrictModel):
+    conversation_id: str
+    message_id: str | None = None
+    source_stage: str
+    reason_type: Literal['MISSING_USER_SLOT', 'USER_SEMANTIC_AMBIGUITY', 'USER_REFERENCE_AMBIGUITY', 'CATALOG_GOVERNANCE_GAP', 'SYSTEM_FAILURE', 'REPEATED_QUESTION']
+    blocking_slot: str
+    expected_answer_type: str
+    candidate_ids: list[str] = Field(default_factory=list)
+    already_asked: bool = False
+    base_task_reference: str | None = None
+    pending_reference: str | None = None
+    evidence_codes: list[str] = Field(default_factory=list)
+    is_user_ambiguity: bool
+    system_repair_possible: bool
+    safe_default_available: bool = False
+    decision: Literal['ASK', 'SUPPRESS']
+
+
 class AgentResponse(StrictModel):
+    clarification_decision_traces: list[ClarificationDecisionTrace] = Field(default_factory=list)
     request_id: UUID
     conversation_id: str
     status: str
@@ -1306,6 +1333,7 @@ class AgentResponse(StrictModel):
 
 
 class PendingState(StrictModel):
+    asked_clarification_keys: list[str] = Field(default_factory=list)
     request: CanonicalAnalysisRequest
     clarification_rounds: int = 1
     state_version: int = 1
