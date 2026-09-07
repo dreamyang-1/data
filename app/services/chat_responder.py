@@ -7,6 +7,7 @@ from typing import Any, Mapping, Sequence
 import httpx
 
 from app.config import Settings
+from app.observability.langfuse_client import trace_generation
 
 
 CHAT_SYSTEM_PROMPT = """你是数据智能体中的温和闲聊助手，只负责轻量日常交流。
@@ -60,24 +61,30 @@ class QwenChatResponder:
             ),
             "Content-Type": "application/json",
         }
-        async with httpx.AsyncClient(
-            base_url=self.settings.intent_model_base_url.rstrip("/"),
-            timeout=self.settings.chat_model_timeout_seconds,
-            transport=self._transport,
-        ) as client:
-            payload: dict[str, Any] | None = None
-            for attempt in range(self.settings.chat_model_max_retries + 1):
-                try:
-                    response = await client.post(
-                        "/chat/completions", headers=headers, json=body
-                    )
-                    response.raise_for_status()
-                    payload = response.json()
-                    break
-                except (httpx.TimeoutException, httpx.NetworkError):
-                    if attempt >= self.settings.chat_model_max_retries:
-                        raise
-                    await asyncio.sleep(0.2 * (2**attempt))
+        with trace_generation(
+            name="chat-response",
+            model=body.get("model"),
+            messages=body.get("messages"),
+        ) as generation:
+            async with httpx.AsyncClient(
+                base_url=self.settings.intent_model_base_url.rstrip("/"),
+                timeout=self.settings.chat_model_timeout_seconds,
+                transport=self._transport,
+            ) as client:
+                payload: dict[str, Any] | None = None
+                for attempt in range(self.settings.chat_model_max_retries + 1):
+                    try:
+                        response = await client.post(
+                            "/chat/completions", headers=headers, json=body
+                        )
+                        response.raise_for_status()
+                        payload = response.json()
+                        generation.set_response(payload)
+                        break
+                    except (httpx.TimeoutException, httpx.NetworkError):
+                        if attempt >= self.settings.chat_model_max_retries:
+                            raise
+                        await asyncio.sleep(0.2 * (2**attempt))
         if payload is None:
             raise RuntimeError("chat model returned no payload")
         content = str(payload["choices"][0]["message"].get("content") or "").strip()

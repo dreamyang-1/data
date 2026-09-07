@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.analysis.engine import AnalysisOutput
 from app.config import Settings
+from app.observability.langfuse_client import trace_generation
 from app.domain.models import CanonicalAnalysisRequest, EvidenceItem
 
 
@@ -128,27 +129,38 @@ class QwenAnalysisSynthesizer:
             "Authorization": f"Bearer {self.settings.intent_model_api_key.get_secret_value()}",
             "Content-Type": "application/json",
         }
-        async with httpx.AsyncClient(
-            base_url=self.settings.intent_model_base_url.rstrip("/"),
-            timeout=self.settings.analysis_synthesis_timeout_seconds,
-            transport=self._transport,
-        ) as client:
-            payload: dict[str, Any] | None = None
-            for attempt in range(self.settings.analysis_synthesis_max_retries + 1):
-                try:
-                    response = await client.post("/chat/completions", headers=headers, json=body)
-                    response.raise_for_status()
-                    payload = response.json()
-                    break
-                except (httpx.TimeoutException, httpx.NetworkError):
-                    if attempt >= self.settings.analysis_synthesis_max_retries:
-                        raise
-                    await asyncio.sleep(0.2 * (2**attempt))
-                except httpx.HTTPStatusError as exc:
-                    retryable = exc.response.status_code == 429 or exc.response.status_code >= 500
-                    if not retryable or attempt >= self.settings.analysis_synthesis_max_retries:
-                        raise
-                    await asyncio.sleep(0.2 * (2**attempt))
+        with trace_generation(
+            name="analysis-synthesis",
+            model=body.get("model"),
+            messages=body.get("messages"),
+        ) as generation:
+            async with httpx.AsyncClient(
+                base_url=self.settings.intent_model_base_url.rstrip("/"),
+                timeout=self.settings.analysis_synthesis_timeout_seconds,
+                transport=self._transport,
+            ) as client:
+                payload: dict[str, Any] | None = None
+                for attempt in range(self.settings.analysis_synthesis_max_retries + 1):
+                    try:
+                        response = await client.post(
+                            "/chat/completions", headers=headers, json=body
+                        )
+                        response.raise_for_status()
+                        payload = response.json()
+                        generation.set_response(payload)
+                        break
+                    except (httpx.TimeoutException, httpx.NetworkError):
+                        if attempt >= self.settings.analysis_synthesis_max_retries:
+                            raise
+                        await asyncio.sleep(0.2 * (2**attempt))
+                    except httpx.HTTPStatusError as exc:
+                        retryable = (
+                            exc.response.status_code == 429
+                            or exc.response.status_code >= 500
+                        )
+                        if not retryable or attempt >= self.settings.analysis_synthesis_max_retries:
+                            raise
+                        await asyncio.sleep(0.2 * (2**attempt))
         if payload is None:
             raise RuntimeError("analysis synthesis returned no payload")
         content = payload["choices"][0]["message"].get("content")

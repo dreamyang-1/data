@@ -23,9 +23,17 @@ from app.domain.models import (
     TrustedIdentity,
 )
 from app.stores import MessageIdReuseConflictError
+from app.observability.langfuse_client import (
+    StageSpanTracker,
+    hash_identifier,
+    observe_span,
+    summarize_value,
+    text_metadata,
+    trace_attributes,
+)
 from app.services.file_ingestion import FileImportError
 from app.services.orchestrator import DataAnalysisOrchestrator
-from app.services.progress import progress_scope
+from app.services.progress import _progress_callback, progress_scope
 from minio_followup_store import DatasetScope
 
 
@@ -125,12 +133,83 @@ def trusted_identity(roles: str | None) -> TrustedIdentity:
 
 
 async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
+    stage_tracker = StageSpanTracker()
+    existing_progress = _progress_callback.get()
+
+    def trace_progress(event: dict[str, Any]) -> Any:
+        stage_tracker.handle(event)
+        if existing_progress is not None:
+            return existing_progress(event)
+        return None
+
     try:
-        result = await asyncio.wait_for(
-            request.app.state.container.workflow.ainvoke({"chat": chat, "identity": identity}),
-            timeout=request.app.state.container.settings.request_timeout_seconds,
-        )
-        return result["response"]
+        user_hash = hash_identifier(identity.user_id)
+        session_hash = hash_identifier(chat.conversation_id)
+        with trace_attributes(
+            user_id=user_hash,
+            session_id=session_hash,
+            trace_name="DataAnalysis_Agent",
+            tags=["DataAnalysis_Agent"],
+            metadata={
+                "tenant_id_hash": hash_identifier(identity.tenant_id),
+                "application_id_hash": hash_identifier(chat.application_id),
+                "message_id_hash": hash_identifier(chat.message_id),
+            },
+        ):
+            with observe_span(
+                as_type="agent",
+                name="data-analysis-request",
+                input={
+                    "question": text_metadata(chat.question),
+                    "conversation_id_hash": session_hash,
+                    "application_id_hash": hash_identifier(chat.application_id),
+                    "message_id_hash": hash_identifier(chat.message_id),
+                    "regenerate": bool(chat.regenerate),
+                },
+            ) as root_span:
+                try:
+                    with progress_scope(trace_progress):
+                        result = await asyncio.wait_for(
+                            request.app.state.container.workflow.ainvoke(
+                                {"chat": chat, "identity": identity}
+                            ),
+                            timeout=(
+                                request.app.state.container.settings.request_timeout_seconds
+                            ),
+                        )
+                    response = result["response"]
+                    _record_extension_tool_spans(response)
+                    root_span.update(output={
+                        "status": response.status,
+                        "intent": response.intent.value,
+                        "answer": text_metadata(response.answer, allow_content=False),
+                        "evidence_count": len(response.evidence),
+                        "extension_count": len(response.extension_executions),
+                        "file_count": len(response.files),
+                        "chart_count": len(response.chart_specs),
+                    })
+                    return response
+                except TimeoutError:
+                    root_span.update(
+                        output={"status": "TIMEOUT"},
+                        level="ERROR",
+                        status_message="analysis request deadline exceeded",
+                    )
+                    raise
+                except MessageIdReuseConflictError:
+                    root_span.update(
+                        output={"status": "MESSAGE_ID_REUSE_CONFLICT"},
+                        level="ERROR",
+                        status_message="message id reuse conflict",
+                    )
+                    raise
+                except Exception as exc:
+                    root_span.update(
+                        output={"status": "FAILED", "error_type": type(exc).__name__},
+                        level="ERROR",
+                        status_message=type(exc).__name__,
+                    )
+                    raise
     except TimeoutError as exc:
         raise HTTPException(status_code=504, detail="analysis request deadline exceeded") from exc
     except MessageIdReuseConflictError as exc:
@@ -138,6 +217,34 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
             status_code=409,
             detail={"code": exc.code, "message": str(exc)},
         ) from exc
+    finally:
+        stage_tracker.close_all()
+
+
+def _record_extension_tool_spans(response: AgentResponse) -> None:
+    """Record tool shape/status without exporting raw tool results."""
+
+    for execution in response.extension_executions:
+        with observe_span(
+            as_type="tool",
+            name=f"tool:{execution.name}",
+            input={
+                "kind": execution.kind,
+                "status_code": execution.status_code,
+            },
+        ) as tool_span:
+            tool_span.update(
+                output={
+                    "status": execution.status,
+                    "result": summarize_value(
+                        execution.output
+                        if execution.output is not None
+                        else execution.error
+                    ),
+                    "error_type": execution.error_type,
+                },
+                level=("DEFAULT" if execution.status == "COMPLETED" else "ERROR"),
+            )
 
 
 async def _collect_business_question(request: Request, chat: ChatRequest) -> None:

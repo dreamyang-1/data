@@ -12,6 +12,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import Settings
+from app.observability.langfuse_client import trace_generation
 from app.domain.models import (
     AnalysisOperator,
     CanonicalAnalysisRequest,
@@ -146,26 +147,37 @@ class StructuredIntentModelClient:
             "Authorization": f"Bearer {self.settings.intent_model_api_key.get_secret_value()}",
             "Content-Type": "application/json",
         }
-        async with httpx.AsyncClient(
-            base_url=self.settings.intent_model_base_url.rstrip("/"),
-            timeout=self.settings.intent_model_timeout_seconds,
-            transport=self._transport,
-        ) as client:
-            for attempt in range(self.settings.intent_model_max_retries + 1):
-                try:
-                    response = await client.post("/chat/completions", headers=headers, json=body)
-                    response.raise_for_status()
-                    payload = response.json()
-                    break
-                except (httpx.TimeoutException, httpx.NetworkError):
-                    if attempt >= self.settings.intent_model_max_retries:
-                        raise
-                    await asyncio.sleep(0.2 * (2**attempt))
-                except httpx.HTTPStatusError as exc:
-                    retryable = exc.response.status_code == 429 or exc.response.status_code >= 500
-                    if not retryable or attempt >= self.settings.intent_model_max_retries:
-                        raise
-                    await asyncio.sleep(0.2 * (2**attempt))
+        with trace_generation(
+            name="intent-recognition",
+            model=body.get("model"),
+            messages=body.get("messages"),
+        ) as generation:
+            async with httpx.AsyncClient(
+                base_url=self.settings.intent_model_base_url.rstrip("/"),
+                timeout=self.settings.intent_model_timeout_seconds,
+                transport=self._transport,
+            ) as client:
+                for attempt in range(self.settings.intent_model_max_retries + 1):
+                    try:
+                        response = await client.post(
+                            "/chat/completions", headers=headers, json=body
+                        )
+                        response.raise_for_status()
+                        payload = response.json()
+                        generation.set_response(payload)
+                        break
+                    except (httpx.TimeoutException, httpx.NetworkError):
+                        if attempt >= self.settings.intent_model_max_retries:
+                            raise
+                        await asyncio.sleep(0.2 * (2**attempt))
+                    except httpx.HTTPStatusError as exc:
+                        retryable = (
+                            exc.response.status_code == 429
+                            or exc.response.status_code >= 500
+                        )
+                        if not retryable or attempt >= self.settings.intent_model_max_retries:
+                            raise
+                        await asyncio.sleep(0.2 * (2**attempt))
         content = payload["choices"][0]["message"].get("content")
         if not content:
             raise ValueError("intent model returned empty content")

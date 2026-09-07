@@ -8,6 +8,11 @@ from fastapi.responses import JSONResponse
 from app.api import router
 from app.config import Settings, get_settings
 from app.dependencies import build_container
+from app.observability.langfuse_client import (
+    configure_langfuse,
+    is_enabled as langfuse_is_enabled,
+    shutdown_langfuse,
+)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -16,6 +21,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.container = build_container(effective_settings)
+        configure_langfuse(effective_settings)
         if app.state.container.dataset_cleaner is not None:
             app.state.container.dataset_cleaner.start()
         try:
@@ -26,6 +32,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             redis = getattr(app.state.container.sessions, "redis", None)
             if redis is not None:
                 await redis.aclose()
+            await asyncio.to_thread(shutdown_langfuse)
 
     application = FastAPI(
         title="YouoAgent Data Analysis Agent",
@@ -146,6 +153,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "full_feature": full_feature_ready,
                 },
                 "degraded_capabilities": degraded_capabilities,
+                "observability": {
+                    "langfuse_enabled": langfuse_is_enabled(),
+                    "content_capture": bool(
+                        effective_settings.langfuse_capture_content
+                    ),
+                },
             },
         )
 

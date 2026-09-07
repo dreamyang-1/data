@@ -150,6 +150,76 @@ class Settings(BaseSettings):
     chat_model_name: str = "qwen3.6-plus"
     chat_model_timeout_seconds: float = Field(default=8, gt=0, le=20)
     chat_model_max_retries: int = Field(default=0, ge=0, le=1)
+    # Optional Langfuse export. Content is hash/shape-only unless the explicit
+    # capture flag is enabled; tests never export even when developer env files
+    # contain shared Langfuse credentials.
+    langfuse_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("LANGFUSE_ENABLED", "DATA_AGENT_LANGFUSE_ENABLED"),
+    )
+    langfuse_public_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "LANGFUSE_PUBLIC_KEY", "DATA_AGENT_LANGFUSE_PUBLIC_KEY"
+        ),
+    )
+    langfuse_secret_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "LANGFUSE_SECRET_KEY", "DATA_AGENT_LANGFUSE_SECRET_KEY"
+        ),
+    )
+    langfuse_host: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "LANGFUSE_BASE_URL",
+            "LANGFUSE_HOST",
+            "DATA_AGENT_LANGFUSE_BASE_URL",
+            "DATA_AGENT_LANGFUSE_HOST",
+        ),
+    )
+    langfuse_capture_content: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LANGFUSE_CAPTURE_CONTENT", "DATA_AGENT_LANGFUSE_CAPTURE_CONTENT"
+        ),
+    )
+    langfuse_max_content_chars: int = Field(
+        default=1000,
+        ge=100,
+        le=10000,
+        validation_alias=AliasChoices(
+            "LANGFUSE_MAX_CONTENT_CHARS", "DATA_AGENT_LANGFUSE_MAX_CONTENT_CHARS"
+        ),
+    )
+    langfuse_sample_rate: float = Field(
+        default=1.0,
+        ge=0,
+        le=1,
+        validation_alias=AliasChoices(
+            "LANGFUSE_SAMPLE_RATE", "DATA_AGENT_LANGFUSE_SAMPLE_RATE"
+        ),
+    )
+    langfuse_environment: str = Field(
+        default="",
+        max_length=100,
+        validation_alias=AliasChoices(
+            "LANGFUSE_ENVIRONMENT", "DATA_AGENT_LANGFUSE_ENVIRONMENT"
+        ),
+    )
+    langfuse_release: str = Field(
+        default="",
+        max_length=200,
+        validation_alias=AliasChoices(
+            "LANGFUSE_RELEASE", "DATA_AGENT_LANGFUSE_RELEASE"
+        ),
+    )
+    langfuse_hash_salt: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "LANGFUSE_HASH_SALT", "DATA_AGENT_LANGFUSE_HASH_SALT"
+        ),
+    )
     long_term_memory_mode: Literal["disabled", "mysql"] = "mysql"
     long_term_memory_max_items: int = Field(default=20, ge=1, le=100)
     mysql_host: str | None = Field(

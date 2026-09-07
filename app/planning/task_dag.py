@@ -9,6 +9,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import Settings
+from app.observability.langfuse_client import trace_generation
 from app.domain.models import AtomicTask, TaskPlan
 
 
@@ -285,14 +286,23 @@ class MultiQuestionPlanner:
             ),
             "Content-Type": "application/json",
         }
-        async with httpx.AsyncClient(
-            base_url=self.settings.intent_model_base_url.rstrip("/"),
-            timeout=self.settings.multi_question_model_timeout_seconds,
-            transport=self._transport,
-        ) as client:
-            response = await client.post("/chat/completions", headers=headers, json=body)
-            response.raise_for_status()
-        content = response.json()["choices"][0]["message"].get("content")
+        with trace_generation(
+            name="task-dag-planning",
+            model=body.get("model"),
+            messages=body.get("messages"),
+        ) as generation:
+            async with httpx.AsyncClient(
+                base_url=self.settings.intent_model_base_url.rstrip("/"),
+                timeout=self.settings.multi_question_model_timeout_seconds,
+                transport=self._transport,
+            ) as client:
+                response = await client.post(
+                    "/chat/completions", headers=headers, json=body
+                )
+                response.raise_for_status()
+                payload = response.json()
+                generation.set_response(payload)
+        content = payload["choices"][0]["message"].get("content")
         if not content:
             raise ValueError("task planner returned empty content")
         result = _ModelPlan.model_validate(json.loads(content))
