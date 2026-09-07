@@ -1853,6 +1853,193 @@ def test_current_metric_formula_rejects_unprovable_stale_sql():
     assert exc.value.code == "METRIC_FORMULA_STALE"
 
 
+def _dealer_shared_hospital_coverage_request():
+    return CanonicalAnalysisRequest(
+        conversation_id="dealer-shared-hospital-coverage",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="统计上海市各个经销商的区域医院覆盖率",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(
+            input="区域医院覆盖率",
+            metric_id="81:screening_area_hospital_coverage",
+            version="current",
+            canonical_name="区域医院覆盖率",
+        )],
+        entity="经销商",
+        dimensions=["经销商"],
+        filters=[{
+            "field": "城市名称",
+            "operator": "EQ",
+            "value": "上海市",
+        }],
+    )
+
+
+def _dealer_shared_hospital_coverage_asl():
+    return {
+        "version": "2.0",
+        "subject": {"entity": "hospital"},
+        "metrics": [{
+            "name": "screening_area_hospital_coverage",
+            "alias": "区域医院覆盖率",
+        }],
+        "dimensions": [{"name": "dealer.dealer_name", "alias": "经销商"}],
+        "filters": [{
+            "field": "dim_city.city_name",
+            "operator": "=",
+            "value": "上海市",
+        }],
+        "time_context": None,
+        "sort": None,
+        "limit": None,
+        "ambiguity": [],
+    }
+
+
+def test_dealer_hospital_coverage_compiles_dealer_numerator_and_shared_denominator():
+    stale_sql = (
+        "SELECT dealer.dealer_name, "
+        "COUNT(DISTINCT hospital.hospital_code) / "
+        "COUNT(DISTINCT hospital.hospital_id) AS 区域医院覆盖率 "
+        "FROM hospital "
+        "JOIN dim_city ON hospital.city_id = dim_city.city_id "
+        "JOIN dealer ON dealer.city_id = dim_city.city_id "
+        "WHERE dim_city.city_name = '上海市' "
+        "GROUP BY dealer.dealer_name"
+    )
+
+    compiled = HttpDataRetrievalAdapter._apply_shared_region_hospital_coverage_policy(
+        stale_sql,
+        asl=_dealer_shared_hospital_coverage_asl(),
+        request=_dealer_shared_hospital_coverage_request(),
+        metric_definitions=[{
+            "metric_id": "81:screening_area_hospital_coverage",
+            "version": "current",
+            "formula": (
+                "screening_area_hospital_coverage="
+                "cooperating_hospital_count / total_hospital_count_by_region"
+            ),
+            "global_filters": [],
+        }],
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert "FROM sales_order" in compiled
+    assert "sales_order.dealer_code = dealer.dealer_code" in compiled
+    assert "sales_order.hospital_id = hospital.hospital_id" in compiled
+    assert "COUNT(DISTINCT hospital.hospital_code)" in compiled
+    assert "sales_order.quantity > 0" in compiled
+    assert "SELECT COUNT(DISTINCT denominator_hospital.hospital_id)" in compiled
+    assert "denominator_city.city_name = '上海市'" in compiled
+    denominator = compiled.split("NULLIF((", 1)[1].split("), 0)", 1)[0]
+    assert "dealer" not in denominator
+    assert "sales_order" not in denominator
+    assert "dealer.city_id = dim_city.city_id" not in compiled
+
+
+def test_dealer_hospital_coverage_rejects_filter_with_undeclared_ratio_scope():
+    asl = _dealer_shared_hospital_coverage_asl()
+    asl["filters"].append({
+        "field": "product.product_name",
+        "operator": "=",
+        "value": "空心纤维血液透析器",
+    })
+
+    with pytest.raises(AdapterError) as exc:
+        HttpDataRetrievalAdapter._apply_shared_region_hospital_coverage_policy(
+            "SELECT 1",
+            asl=asl,
+            request=_dealer_shared_hospital_coverage_request(),
+            metric_definitions=[{
+                "metric_id": "81:screening_area_hospital_coverage",
+                "formula": (
+                    "screening_area_hospital_coverage="
+                    "cooperating_hospital_count / total_hospital_count_by_region"
+                ),
+            }],
+            semantic_model_id=81,
+            business_domain_id=205,
+        )
+
+    assert exc.value.code == "SHARED_DENOMINATOR_FILTER_UNSUPPORTED"
+
+
+@pytest.mark.asyncio
+async def test_dealer_hospital_coverage_executes_compiled_public_denominator_sql():
+    class CoverageClient:
+        def __init__(self):
+            self.calls = []
+
+        async def get(self, base_url, path, **kwargs):
+            self.calls.append(("GET", path, None, kwargs))
+            return {
+                "metric_id": "81:screening_area_hospital_coverage",
+                "version": "current",
+                "calculation_formula": (
+                    "screening_area_hospital_coverage="
+                    "cooperating_hospital_count / total_hospital_count_by_region"
+                ),
+                "global_filters": [],
+            }
+
+        async def post(self, base_url, path, payload, **kwargs):
+            self.calls.append(("POST", path, payload, kwargs))
+            if path == "/agent/query":
+                return {
+                    "success": True,
+                    "result": json.dumps(
+                        _dealer_shared_hospital_coverage_asl(),
+                        ensure_ascii=False,
+                    ),
+                }
+            if path == "/api/translate":
+                return {
+                    "success": True,
+                    "sql": (
+                        "SELECT dealer.dealer_name AS 经销商, "
+                        "COUNT(DISTINCT hospital.hospital_code) / "
+                        "COUNT(DISTINCT hospital.hospital_id) AS 区域医院覆盖率 "
+                        "FROM hospital "
+                        "JOIN dim_city ON hospital.city_id = dim_city.city_id "
+                        "JOIN dealer ON dealer.city_id = dim_city.city_id "
+                        "WHERE dim_city.city_name = '上海市' "
+                        "GROUP BY dealer.dealer_name"
+                    ),
+                    "dataSourceId": "58",
+                }
+            assert path == "/api/execute"
+            assert "FROM sales_order" in payload["sql"]
+            assert "sales_order.quantity > 0" in payload["sql"]
+            assert "SELECT COUNT(DISTINCT denominator_hospital.hospital_id)" in payload["sql"]
+            return {
+                "success": True,
+                "sql": payload["sql"],
+                "data": [{"经销商": "经销商甲", "区域医院覆盖率": 0.4}],
+                "columns": ["经销商", "区域医院覆盖率"],
+                "row_count": 1,
+            }
+
+    client = CoverageClient()
+    result = await HttpDataRetrievalAdapter(
+        Settings(adapter_mode="http"), client
+    ).query(
+        _dealer_shared_hospital_coverage_request(),
+        IDENTITY,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert result.dataset.rows == [{"经销商": "经销商甲", "区域医院覆盖率": 0.4}]
+    assert [call[1] for call in client.calls] == [
+        "/v1/semantic/metrics/81:screening_area_hospital_coverage/versions/current",
+        "/agent/query",
+        "/api/translate",
+        "/api/execute",
+    ]
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("limit", [None, 10])
 async def test_grouped_metric_removes_duplicate_identity_before_sql_translation(limit):

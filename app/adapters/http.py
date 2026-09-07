@@ -543,6 +543,20 @@ class HttpKnowledgeAdapter:
 class HttpDataRetrievalAdapter:
     """Calls the existing platform-owned Oagnet and SQL translation services."""
 
+    # This policy is intentionally keyed by the version-bound semantic metric,
+    # rather than by a display label such as "覆盖率".  Model 81 defines this
+    # metric as a dealer-specific covered-hospital numerator divided by one
+    # regional hospital-master denominator shared by every dealer.  The current
+    # platform SQL translator can expand the two atomic metrics into the same
+    # joined rowset, which incorrectly lets dealer grouping reduce the
+    # denominator.  Until the platform translator exposes a first-class
+    # numerator/denominator scope contract, this adapter compiles that one
+    # published policy into an auditable read-only query and fails closed for
+    # unsupported filters.
+    _SHARED_REGION_HOSPITAL_COVERAGE_METRIC_ID = (
+        "81:screening_area_hospital_coverage"
+    )
+
     def __init__(self, settings: Settings, client: PlatformHttpClient) -> None:
         self.settings = settings
         self.client = client
@@ -2013,6 +2027,14 @@ class HttpDataRetrievalAdapter:
             )
         sql = sql.strip()
         sql = self._apply_current_metric_formulas(sql, metric_definitions)
+        sql = self._apply_shared_region_hospital_coverage_policy(
+            sql,
+            asl=asl,
+            request=request,
+            metric_definitions=metric_definitions,
+            semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id,
+        )
         self._validate_read_only_sql(sql)
         self._validate_sql_relationship_graph(sql)
         self._validate_query_to_sql_entity_alignment(request, sql)
@@ -2310,6 +2332,211 @@ class HttpDataRetrievalAdapter:
             stale = candidates[0]
             current = current[:stale.start(1)] + expected_field + current[stale.end(1):]
         return current
+
+    @classmethod
+    def _apply_shared_region_hospital_coverage_policy(
+        cls,
+        sql: str,
+        *,
+        asl: dict[str, Any],
+        request: CanonicalAnalysisRequest,
+        metric_definitions: list[dict[str, Any]],
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+    ) -> str:
+        """Compile model 81's dealer coverage metric with a shared denominator.
+
+        The governed meaning is:
+
+        * numerator: distinct hospitals reached by each dealer's positive-quantity
+          sales orders inside the selected province/city;
+        * denominator: every distinct hospital in that province/city from the
+          hospital master, evaluated independently of dealer and sales-order rows.
+
+        The rewrite is deliberately narrow.  A query carrying another business
+        filter is rejected instead of silently placing that filter on the wrong
+        side of the ratio.  This preserves correctness while leaving all other
+        metrics and grains on the ordinary translator path.
+        """
+
+        definition_ids = {
+            str(item.get("metric_id") or "").strip()
+            for item in metric_definitions
+            if isinstance(item, dict)
+        }
+        if (
+            semantic_model_id != 81
+            or business_domain_id != 205
+            or cls._SHARED_REGION_HOSPITAL_COVERAGE_METRIC_ID
+            not in definition_ids
+        ):
+            return sql
+
+        request_roles = [request.entity or "", *request.dimensions]
+        if not any(cls._is_dealer_role(value) for value in request_roles):
+            return sql
+
+        asl_dimensions = [
+            str(item.get("name") or "").strip()
+            for item in (asl.get("dimensions") or [])
+            if isinstance(item, dict)
+        ]
+        if not any(cls._is_dealer_role(value) for value in asl_dimensions):
+            raise AdapterError(
+                "SHARED_DENOMINATOR_GRAIN_MISSING",
+                "区域医院覆盖率缺少经销商分组，无法安全应用公共分母口径",
+            )
+
+        region_specs = {
+            "dim_city.city_name": {
+                "outer_join": (
+                    "JOIN dim_city ON hospital.city_id = dim_city.city_id"
+                ),
+                "denominator_join": (
+                    "JOIN dim_city AS denominator_city "
+                    "ON denominator_hospital.city_id = denominator_city.city_id"
+                ),
+                "denominator_field": "denominator_city.city_name",
+            },
+            "dim_province.province_name": {
+                "outer_join": (
+                    "JOIN dim_province "
+                    "ON hospital.province_id = dim_province.province_id"
+                ),
+                "denominator_join": (
+                    "JOIN dim_province AS denominator_province "
+                    "ON denominator_hospital.province_id = "
+                    "denominator_province.province_id"
+                ),
+                "denominator_field": "denominator_province.province_name",
+            },
+        }
+        selected_regions: list[tuple[str, str, dict[str, str]]] = []
+        unsupported_filters: list[dict[str, Any]] = []
+        for item in (asl.get("filters") or []):
+            if not isinstance(item, dict):
+                unsupported_filters.append({"filter": item})
+                continue
+            field = str(item.get("field") or "").strip().strip("`").lower()
+            operator = str(item.get("operator") or "=").strip().upper()
+            value = item.get("value")
+            spec = region_specs.get(field)
+            if (
+                spec is not None
+                and operator in {"=", "EQ", "EQUAL", "EQUALS"}
+                and isinstance(value, str)
+                and value.strip()
+            ):
+                selected_regions.append((field, value.strip(), spec))
+                continue
+            # A generated non-empty-name guard is already guaranteed by the
+            # canonical SQL below and does not alter either ratio scope.
+            if (
+                field == "dealer.dealer_name"
+                and operator in {"!=", "NE", "IS NOT NULL", "IS_NOT_NULL"}
+                and value in (None, "")
+            ):
+                continue
+            unsupported_filters.append({
+                "field": item.get("field"),
+                "operator": item.get("operator"),
+            })
+
+        if not selected_regions:
+            raise AdapterError(
+                "SHARED_DENOMINATOR_REGION_REQUIRED",
+                "区域医院覆盖率按经销商统计时必须明确省份或城市公共分母范围",
+            )
+        if unsupported_filters:
+            raise AdapterError(
+                "SHARED_DENOMINATOR_FILTER_UNSUPPORTED",
+                "当前公共分母指标包含尚未声明作用域的附加筛选条件",
+                details={"unsupported_filters": unsupported_filters},
+            )
+        if asl.get("time_context") not in (None, {}):
+            raise AdapterError(
+                "SHARED_DENOMINATOR_TIME_SCOPE_UNSUPPORTED",
+                "当前区域医院覆盖率是主数据快照指标，不能附加订单时间范围",
+            )
+
+        outer_joins = list(dict.fromkeys(
+            spec["outer_join"] for _, _, spec in selected_regions
+        ))
+        denominator_joins = list(dict.fromkeys(
+            spec["denominator_join"] for _, _, spec in selected_regions
+        ))
+        outer_predicates: list[str] = []
+        denominator_predicates: list[str] = []
+        for field, value, spec in selected_regions:
+            literal = cls._quote_sql_literal(value)
+            outer_predicates.append(f"{field} = {literal}")
+            denominator_predicates.append(
+                f"{spec['denominator_field']} = {literal}"
+            )
+
+        denominator_sql = " ".join((
+            "SELECT COUNT(DISTINCT denominator_hospital.hospital_id)",
+            "FROM hospital AS denominator_hospital",
+            *denominator_joins,
+            "WHERE " + " AND ".join(denominator_predicates),
+        ))
+        compiled = " ".join((
+            "SELECT dealer.dealer_name AS 经销商,",
+            "COUNT(DISTINCT hospital.hospital_code) /",
+            f"NULLIF(({denominator_sql}), 0) AS 区域医院覆盖率",
+            "FROM sales_order",
+            "JOIN dealer ON sales_order.dealer_code = dealer.dealer_code",
+            "JOIN hospital ON sales_order.hospital_id = hospital.hospital_id",
+            *outer_joins,
+            "WHERE sales_order.quantity > 0",
+            "AND dealer.dealer_name IS NOT NULL",
+            "AND " + " AND ".join(outer_predicates),
+            "GROUP BY dealer.dealer_code, dealer.dealer_name",
+        ))
+
+        sort = asl.get("sort")
+        if isinstance(sort, dict) and sort:
+            direction = str(sort.get("direction") or "").upper()
+            if (
+                str(sort.get("field_type") or "").lower() != "metric"
+                or direction not in {"ASC", "DESC"}
+            ):
+                raise AdapterError(
+                    "SHARED_DENOMINATOR_SORT_UNSUPPORTED",
+                    "公共分母指标仅支持按指标值排序",
+                )
+            compiled += f" ORDER BY 区域医院覆盖率 {direction}"
+        limit = asl.get("limit")
+        if limit is not None:
+            if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 10000:
+                raise AdapterError(
+                    "SHARED_DENOMINATOR_LIMIT_INVALID",
+                    "公共分母指标的结果上限必须是1到10000之间的整数",
+                )
+            compiled += f" LIMIT {limit}"
+        return compiled
+
+    @staticmethod
+    def _is_dealer_role(value: object) -> bool:
+        raw = str(value or "").strip().strip("`").lower()
+        parts = [
+            re.sub(r"[^0-9a-z\u4e00-\u9fff]", "", part)
+            for part in raw.split(".")
+        ]
+        return any(part in {
+            "经销商", "经销商名称", "dealer", "dealername",
+        } for part in parts)
+
+    @staticmethod
+    def _quote_sql_literal(value: str) -> str:
+        """Quote a catalog-grounded scalar for the controlled SQL compiler."""
+
+        if len(value) > 500 or "\x00" in value:
+            raise AdapterError(
+                "SHARED_DENOMINATOR_FILTER_INVALID",
+                "公共分母区域筛选值无效",
+            )
+        return "'" + value.replace("'", "''") + "'"
 
     @classmethod
     def _validate_request_filters(
@@ -3820,8 +4047,12 @@ class HttpDataRetrievalAdapter:
         normalized = re.sub(r"--[^\r\n]*", " ", normalized)
         normalized = re.sub(r"'(?:''|\\.|[^'])*'", "''", normalized)
         table_pattern = re.compile(
+            r"\b(?:FROM|JOIN)\s+`?([A-Za-z_]\w*)`?",
+            re.I,
+        )
+        alias_pattern = re.compile(
             r"\b(?:FROM|JOIN)\s+`?([A-Za-z_]\w*)`?"
-            r"(?:\s+(?:AS\s+)?`?([A-Za-z_]\w*)`?)?",
+            r"\s+(?:AS\s+)?`?([A-Za-z_]\w*)`?",
             re.I,
         )
         reserved = {
@@ -3831,6 +4062,7 @@ class HttpDataRetrievalAdapter:
         declared: set[str] = set()
         for match in table_pattern.finditer(normalized):
             declared.add(match.group(1).lower())
+        for match in alias_pattern.finditer(normalized):
             alias = (match.group(2) or "").lower()
             if alias and alias not in reserved:
                 declared.add(alias)
