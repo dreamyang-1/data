@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.services.legacy_guards import pending_answer_admissibility, apply_region_clear_barrier
+
 from app.domain.models import (
     AnalysisOperator,
     CanonicalAnalysisRequest,
@@ -73,7 +75,7 @@ _FOLLOWUP_PATTERNS: tuple[tuple[str, str], ...] = (
     ("CONTINUE", r"继续|接着|再看|再查|同样"),
     (
         "ADDITIVE_METRIC",
-        r"(?:再|同时|并)?(?:加上|增加|新增|补充|带上|显示|返回).{0,20}"
+        r"(?:再|同时|并)?(?:加上?|增加|新增|补充|带上|显示|返回).{0,20}"
         r"(?:指标|金额|销售|数量|笔数|次数|均价|单价|利润|成本|收入)",
     ),
     ("MODIFY", r"改成|改为|换成|只看|只保留|去掉|取消"),
@@ -222,7 +224,9 @@ class TurnAdmissionGate:
                 "EXPLICIT_ANALYSIS_ACTION",
                 "NO_REFERENCE_DEPENDENCY",
             ]
-        elif pending:
+        elif pending and previous is not None and pending_answer_admissibility(
+            current, previous, self_contained=facts.is_self_contained
+        ) == 'ANSWER_PENDING':
             relation = TurnRelation.CLARIFICATION_RESPONSE
             confidence = 0.95
             reasons = ["ACTIVE_CLARIFICATION", "INCOMPLETE_WITHOUT_PENDING_STATE"]
@@ -264,10 +268,6 @@ class TurnAdmissionGate:
             relation = TurnRelation.CURRENT_TOPIC_FOLLOWUP
             confidence = 0.93
             reasons = ["CONTEXT_DEPENDENT_UTTERANCE"]
-        elif current.missing_slots:
-            relation = TurnRelation.AMBIGUOUS_RELATION
-            confidence = 0.72
-            reasons = ["CURRENT_QUERY_INCOMPLETE", "NO_STRONG_RELATION_SIGNAL"]
         else:
             # A complete business utterance without reference language must not
             # inherit merely because its domain resembles the previous turn.
@@ -451,6 +451,12 @@ class TurnAdmissionGate:
 
         reference_signals = self._signals(question, _REFERENCE_PATTERNS)
         followup_signals = self._signals(question, _FOLLOWUP_PATTERNS)
+        if AnalysisOperator.SORT in current.operators and not _ACTION_PATTERN.search(compact):
+            followup_signals.append('EXPLICIT_RESULT_SORT')
+        if current.conversation_control.value == 'CORRECTION':
+            followup_signals.append('EXPLICIT_SLOT_CORRECTION')
+        if compact.rstrip('。？！?!') in {'不限地区', '不限制地区', '不限区域', '不限制区域'}:
+            followup_signals.append('CLEAR_REGION_SCOPE')
         topic_shift_signals = self._signals(question, _TOPIC_SHIFT_PATTERNS)
         temporal_references = self._temporal_references(compact)
         action_explicit = bool(_ACTION_PATTERN.search(compact))
@@ -709,8 +715,7 @@ class TurnAdmissionGate:
             )
         )
         self_contained = bool(
-            not current.missing_slots
-            and action_explicit
+            action_explicit
             and payload_complete
             and no_reference_dependency
         )
@@ -868,7 +873,15 @@ class TurnAdmissionGate:
             request.operators = list(current.operators)
         apply_current_slots = request.pending_state_version is None
         if apply_current_slots and "metrics" in facts.explicit_slots:
-            request.metrics = [item.model_copy(deep=True) for item in current.metrics]
+            from app.intent.classifier import RuleBasedIntentClassifier
+            raw = facts.raw_query
+            if 'ADDITIVE_METRIC' in facts.followup_signals:
+                by_name = {m.canonical_name or m.input: m for m in [*request.metrics, *current.metrics]}
+                request.metrics = list(by_name.values())
+            elif any(RuleBasedIntentClassifier._slot_is_negated(raw, m.input) for m in current.metrics):
+                request.metrics = [m for m in request.metrics if not RuleBasedIntentClassifier._slot_is_negated(raw, m.input)]
+            else:
+                request.metrics = [item.model_copy(deep=True) for item in current.metrics]
         if apply_current_slots and "query_object" in facts.explicit_slots:
             request.entity = current.entity
             request.fields = list(current.fields)
@@ -1067,6 +1080,11 @@ class TurnAdmissionGate:
                 request.assumptions.append(
                     "SEMANTIC_SLOT_CHANGE_REPLAN_REQUIRED"
                 )
+        if 'CLEAR_REGION_SCOPE' in facts.followup_signals:
+            request.cleared_filter_families = ['region']
+        elif any(TurnAdmissionGate._semantic_field_family(str(f.get('field') or '')) == 'region' for f in current.filters):
+            request.cleared_filter_families = []
+        apply_region_clear_barrier(request)
         return request
 
     @staticmethod
@@ -1276,6 +1294,7 @@ class TurnAdmissionGate:
         """
 
         before = decision.context_before
+        from app.intent.classifier import RuleBasedIntentClassifier
         operations: list[SlotOperation] = []
         snapshot_keys = {
             "analysis_type": "intent",
@@ -1320,6 +1339,14 @@ class TurnAdmissionGate:
                 if old_value not in (None, [], {}, False) and old_value != new_value
                 else SlotOperationType.ADD
             )
+            if slot == 'metrics' and decision.inherit_business_context:
+                raw = decision.current_turn_facts.raw_query
+                if 'ADDITIVE_METRIC' in decision.current_turn_facts.followup_signals:
+                    operation = SlotOperationType.ADD
+                elif isinstance(new_value, list) and any(
+                    RuleBasedIntentClassifier._slot_is_negated(raw, str(value)) for value in new_value
+                ):
+                    operation = SlotOperationType.REMOVE
             operations.append(SlotOperation(
                 slot=slot,
                 operation=operation,
@@ -1333,10 +1360,17 @@ class TurnAdmissionGate:
                 source=provenance.source,
                 confidence=provenance.confidence,
                 reason_code=(
-                    "CURRENT_VALUE_REPLACES_ACTIVE_SLOT"
-                    if operation == SlotOperationType.REPLACE
-                    else "CURRENT_VALUE_ADDED"
+                    'CURRENT_EXPLICIT_REMOVE' if operation == SlotOperationType.REMOVE
+                    else 'CURRENT_VALUE_REPLACES_ACTIVE_SLOT' if operation == SlotOperationType.REPLACE
+                    else 'CURRENT_VALUE_ADDED'
                 ),
+            ))
+
+        if 'CLEAR_REGION_SCOPE' in decision.current_turn_facts.followup_signals:
+            operations.append(SlotOperation(
+                slot='region', operation=SlotOperationType.CLEAR,
+                source=SlotSource.CURRENT_EXPLICIT, confidence=decision.confidence,
+                reason_code='REGION_INHERITANCE_BARRIER',
             ))
 
         current_names = set(current_slots)

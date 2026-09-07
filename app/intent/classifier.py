@@ -11,6 +11,8 @@ from app.domain.models import (
     CanonicalAnalysisRequest,
     ConversationControl,
     MetricRef,
+    LegacyLineageTarget,
+    SemanticAmbiguity,
     PrimaryIntent,
     TimeRange,
     TrustedIdentity,
@@ -692,7 +694,36 @@ class RuleBasedIntentClassifier:
                 "SORT_DIRECTION=" + ("ASC" if ascending else "DESC")
             )
         self.apply_business_query_shapes(request, question)
+        if request.primary_intent == PrimaryIntent.DATA_LINEAGE and not request.metrics:
+            # A literal metadata target is different from a requested measure.
+            for marker, kind in [('数据集', 'DATASET'), ('字段', 'FIELD'), ('列', 'COLUMN'), ('实体', 'ENTITY'), ('表', 'TABLE')]:
+                target, found, _ = question.partition(marker)
+                if not found or not target.strip():
+                    continue
+                for prefix in ('请查询', '查询', '查看', '请解释', '解释'):
+                    target = target.removeprefix(prefix)
+                target = target.strip(' “”。？?')
+                if target and not any(x in target for x in ('来自', '哪个', '哪张')):
+                    request.lineage_target = LegacyLineageTarget(kind=kind, name=target)
+                    break
+        if request.primary_intent == PrimaryIntent.DETAIL_QUERY and not request.fields:
+            # Explicit naming requests reuse the existing entity vocabulary;
+            # this is a projection mention, never a catalog default.
+            for dimension in self._known_dimensions:
+                field = dimension + '名称'
+                if field in normalized:
+                    request.fields.append(field)
+                    request.entity = request.entity or dimension
         self.sanitize_semantic_entity_mentions(request)
+        if not request.metrics and normalized.rstrip('。？！?!') in {d + '名称' for d in self._known_dimensions}:
+            surface = normalized.rstrip('。？！?!')
+            request.semantic_ambiguities = [SemanticAmbiguity(
+                type='operation_intent', ambiguity_id='LEGACY_BARE_NAME_OPERATION', phrase=surface,
+                question='要查看名称列表，还是按名称分组统计？',
+                candidates=['查看名称列表', '按名称分组统计'], affected_slots=['fields', 'dimensions'],
+                candidate_details=[{'operation': 'PROJECTION'}, {'operation': 'GROUPING'}],
+            )]
+            request.ambiguities = [request.semantic_ambiguities[0].question]
         self._apply_default_time_range(request)
         request.missing_slots = self.required_missing_slots(request)
         return request
@@ -2404,6 +2435,17 @@ class RuleBasedIntentClassifier:
         if match is None:
             return
         subject = match.group("subject").strip("的")
+        # Strip already parsed temporal/grouping syntax before considering an
+        # open-world product literal. It must not become a fabricated filter.
+        dimension_names = '|'.join(re.escape(d) for d in request.dimensions) or r'(?!)'
+        structural_scope = re.fullmatch(
+            rf'(?:(?:19|20)\d{{2}}年(?:\d{{1,2}}月(?:\d{{1,2}}(?:日|号))?)?|(?:本|上|下)(?:月|季度)|今年|去年)?'
+            rf'(?:按(?:{dimension_names})(?:拆分|分组|统计|汇总))?', subject,
+        )
+        if structural_scope and RuleBasedIntentClassifier._time_range(subject) is not None:
+            return
+        if RuleBasedIntentClassifier._is_structural_entity_mention(subject):
+            return
         subject = re.sub(r"^(?:最近|过去).{1,8}(?:年|月|周|天)", "", subject)
         # Grouping phrases describe result grain, not a product literal.  For
         # example, “统计上海市各个经销商的销售额” previously created the bogus
@@ -3081,6 +3123,10 @@ class RuleBasedIntentClassifier:
             request.filters.append({
                 "field": "厂家名称", "operator": "NE", "value": excluded_maker,
             })
+        regional_values = [str(f.get('value') or '') for f in request.filters if str(f.get('field') or '') in {'业务省份', '业务城市', '地区'}]
+        region_only = any(scope == value or scope == value.removesuffix('省').removesuffix('市') for value in regional_values)
+        if region_only:
+            return
         request.filters.append({
             # Provisional family: semantic grounding may rebind this value to
             # a current brand/category/manufacturer attribute when appropriate.
@@ -3939,7 +3985,7 @@ class RuleBasedIntentClassifier:
                     if replacement_names:
                         metrics = [MetricRef(input=name) for name in replacement_names]
             additive_metric_change = bool(re.search(
-                r"(?:再|同时|并)?(?:加上|增加|新增|补充|带上|显示|返回).{0,20}"
+                r"(?:再|同时|并)?(?:加上?|增加|新增|补充|带上|显示|返回).{0,20}"
                 r"(?:指标|金额|销售|数量|笔数|次数|均价|单价|利润|成本|收入)",
                 answer,
             ))
@@ -4164,6 +4210,15 @@ class RuleBasedIntentClassifier:
         pending.rewritten_question = render_execution_question(
             pending, confirmation=confirmation
         )
+        from app.services.legacy_guards import apply_region_clear_barrier
+        if answer.strip().rstrip('。？！?!') in {'不限地区', '不限制地区', '不限区域', '不限制区域'}:
+            pending.cleared_filter_families = ['region']
+        else:
+            from app.services.turn_admission import TurnAdmissionGate
+            if any(TurnAdmissionGate._semantic_field_family(str(f.get('field') or '')) == 'region' for f in parsed.filters):
+                pending.cleared_filter_families = []
+        apply_region_clear_barrier(pending)
+        pending.rewritten_question = render_execution_question(pending, confirmation=confirmation)
         return pending
 
     @staticmethod
@@ -4338,6 +4393,8 @@ class RuleBasedIntentClassifier:
         ]))
 
     def required_missing_slots(self, request: CanonicalAnalysisRequest) -> list[str]:
+        if any(a.ambiguity_id == 'LEGACY_BARE_NAME_OPERATION' and a.blocking for a in request.semantic_ambiguities):
+            return ['semantic_ambiguity']
         intent = request.primary_intent
         missing: list[str] = []
         normalized_question = re.sub(r"\s+", "", request.original_question or "")
@@ -4364,7 +4421,9 @@ class RuleBasedIntentClassifier:
                 )
             )
         )
-        if intent in data_intents and not request.metrics and not quality_object_provided:
+        from app.services.legacy_guards import lineage_target_present
+        has_lineage_target = intent == PrimaryIntent.DATA_LINEAGE and lineage_target_present(request)
+        if intent in data_intents and not request.metrics and not quality_object_provided and not has_lineage_target:
             missing.append("metric")
         if intent in data_intents - {
             PrimaryIntent.METRIC_DEFINITION,

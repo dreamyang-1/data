@@ -62,6 +62,8 @@ from app.services.conversation_followup import (
     resolve_conversation_temporal_context,
 )
 from app.services.turn_admission import TurnAdmissionGate
+from app.services.clarification_policy import decide_clarification
+from app.services.legacy_guards import pending_answer_admissibility, apply_snapshot_display_default, apply_region_clear_barrier
 from app.services.history_compaction import compact_history
 from app.services.working_memory import recalls_prior_task, select_recalled_task_frame
 from app.services.extension_dispatcher import ExtensionDispatcher
@@ -413,6 +415,7 @@ class DataAnalysisOrchestrator:
             cached.business_domain_selection_mode = (
                 "EXPLICIT" if chat.business_domain_ids else "AUTO"
             )
+            await self._ensure_clarification_trace(cached, chat)
             return cached
         repeat_fingerprint = (
             self._repeat_query_fingerprint(chat, identity)
@@ -520,7 +523,13 @@ class DataAnalysisOrchestrator:
                     )
                 response = await self._handle(chat, identity)
             elif dag_pending is not None:
-                response = await self._resume_task_plan(chat, identity, dag_pending)
+                current = self._classify_with_rules(chat.question, identity, chat.conversation_id)
+                facts = self.turn_admission_gate.extract_current_turn_facts(question=chat.question, current=current, message_id=chat.message_id)
+                if facts.is_self_contained and not chat.task_answers:
+                    await self.sessions.clear_dag_pending(identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id, expected_version=int(dag_pending.get('state_version', 0)))
+                    response = await self._handle(chat, identity)
+                else:
+                    response = await self._resume_task_plan(chat, identity, dag_pending)
             elif chat.dag_resume_token is not None:
                 response = self._dag_resume_error(
                     chat,
@@ -585,6 +594,7 @@ class DataAnalysisOrchestrator:
                     if plan is not None
                     else await self._handle(chat, identity)
                 )
+            await self._ensure_clarification_trace(response, chat)
             # Echo the effective routing contract on every outcome, including
             # clarification and safe-fallback responses which are not terminalized
             # through _finish_terminal.
@@ -873,43 +883,46 @@ class DataAnalysisOrchestrator:
             if RuleBasedIntentClassifier._time_range(chat.question) is not None:
                 answers.update({task_id: chat.question for task_id in awaiting})
             else:
-                questions = [
-                    str(item) for item in state.get("clarification_questions", [])
-                ]
+                seed = CanonicalAnalysisRequest(tenant_id=identity.tenant_id, user_id=identity.user_id,
+                    conversation_id=chat.conversation_id, original_question=chat.question, primary_intent=PrimaryIntent.REPORT_GENERATION)
+                key, _ = decide_clarification(seed, 'time_range', source_stage='SESSION_STATE', asked_keys=set())
+                _, trace = decide_clarification(seed, 'time_range', source_stage='SESSION_STATE', asked_keys={key})
+                trace.pending_reference = str(state_version)
+                trace.base_task_reference = root_message_id
                 return AgentResponse(
                     request_id=uuid4(), conversation_id=chat.conversation_id,
-                    status="NEEDS_CLARIFICATION",
+                    status="SAFE_FALLBACK",
                     intent=PrimaryIntent.REPORT_GENERATION,
                     intent_source="TASK_DAG", intent_confidence=1.0,
-                    answer=(
-                        "这些报告维度共用一个时间范围，但本轮没有识别出完整、"
-                        "有效的起止时间，请补充后再继续。"
-                    ),
-                    clarification_questions=questions[:1],
-                    clarification_items=[ClarificationItem(
-                        slot="shared:time_range",
-                        title="共享时间范围",
-                        question=(questions[0] if questions else "这份报告要分析哪个时间范围？"),
-                        options=["本月", "上月", "最近30天", "自定义起止日期"],
-                        multi_select=False,
-                    )],
+                    answer='本轮内容未能确定共享时间范围，原待确认任务和选项继续保留。',
+                    clarification_decision_traces=[trace],
                     missing_slots=["shared:time_range"],
                     task_plan=plan,
                     dag_resume_token=supplied_token or None,
                     awaiting_task_ids=awaiting,
                 )
         elif len(awaiting) > 1 and not answers:
-            questions = state.get("clarification_questions", [])
+            seed = CanonicalAnalysisRequest(tenant_id=identity.tenant_id, user_id=identity.user_id,
+                conversation_id=chat.conversation_id, original_question=chat.question, primary_intent=PrimaryIntent.OUT_OF_SCOPE)
+            key, trace = decide_clarification(seed, 'task_answer_mapping', source_stage='SESSION_STATE', asked_keys=set(state.get('asked_clarification_keys', [])))
+            trace.candidate_ids = awaiting
+            trace.pending_reference = str(state_version)
+            trace.base_task_reference = root_message_id
+            if trace.decision == 'ASK':
+                updated = {**state, 'state_version': state_version + 1,
+                    'asked_clarification_keys': [*state.get('asked_clarification_keys', []), key]}
+                try:
+                    await self.sessions.put_dag_pending(identity.tenant_id, identity.user_id,
+                        chat.application_id, chat.conversation_id, updated, expected_version=state_version)
+                except SessionConflictError:
+                    return self._dag_resume_error(chat, '待确认任务已更新，请基于最新响应继续。')
             return AgentResponse(
                 request_id=uuid4(), conversation_id=chat.conversation_id,
-                status="NEEDS_CLARIFICATION", intent=PrimaryIntent.OUT_OF_SCOPE,
+                status="NEEDS_CLARIFICATION" if trace.decision == 'ASK' else 'SAFE_FALLBACK', intent=PrimaryIntent.OUT_OF_SCOPE,
                 intent_source="TASK_DAG", intent_confidence=1.0,
-                answer=(
-                    "有多个子任务同时需要补充信息。为避免把答案填错任务，请在 task_answers "
-                    "中按 task_id 分别提交。"
-                ),
-                clarification_questions=[str(item) for item in questions][:5],
-                remaining_question_count=max(0, len(questions) - 5),
+                answer='这份补充信息分别用于哪个问题？' if trace.decision == 'ASK' else '问题对应关系尚未确定，原待确认任务继续保留。',
+                clarification_questions=['这份补充信息分别用于哪个问题？'] if trace.decision == 'ASK' else [],
+                clarification_decision_traces=[trace],
                 task_plan=plan,
                 dag_resume_token=supplied_token,
                 awaiting_task_ids=awaiting,
@@ -1751,6 +1764,7 @@ class DataAnalysisOrchestrator:
                 + combined_answer
             )
         final_response = AgentResponse(
+            clarification_decision_traces=[trace.model_copy(deep=True) for value in responses.values() if isinstance(value, AgentResponse) for trace in value.clarification_decision_traces],
             request_id=uuid4(),
             conversation_id=chat.conversation_id,
             status=status,
@@ -2726,6 +2740,12 @@ class DataAnalysisOrchestrator:
             message_id=chat.message_id,
             pending=pending is not None,
         )
+        if pending is not None and not turn_decision.current_turn_facts.is_self_contained and pending_answer_admissibility(
+            raw_rule_request, pending.request, self_contained=False
+        ) == 'UNBOUND':
+            # Keep the existing pending state without binding unrelated input
+            # or repeating its question. A complete new task was handled first.
+            return self._fallback(raw_rule_request, '本轮输入未能对应当前待确认项，原任务保持待确认状态。')
         turn_decision.selected_thread_id = (
             f"thread-{uuid4()}"
             if turn_decision.create_new_analysis_thread
@@ -2848,9 +2868,9 @@ class DataAnalysisOrchestrator:
                 pending.request.model_copy(deep=True), clarification_answer
             )
             resolved_slots = set(pending.request.missing_slots) - set(merged.missing_slots)
-            if explicit_replacement_task or self._should_replace_pending(
+            if turn_decision.relation == TurnRelation.STANDALONE_NEW_TOPIC or explicit_replacement_task or (semantic_choice is None and self._should_replace_pending(
                 pending.request, incoming, resolved_slots, raw_question=chat.question
-            ):
+            )):
                 # A clear new task must not be forced into an unrelated pending
                 # clarification.  Delete the old state before creating a possible
                 # new pending state so its CAS starts from version zero.
@@ -3914,6 +3934,8 @@ class DataAnalysisOrchestrator:
         await self._apply_recent_region_set_reference(request, chat, identity)
         rules = getattr(self.classifier, "rules", self.classifier)
         required_missing_slots = getattr(rules, "required_missing_slots", None)
+        apply_region_clear_barrier(request)
+        apply_snapshot_display_default(request)
         if callable(required_missing_slots):
             request.missing_slots = required_missing_slots(request)
         rewrite_ambiguities = (
@@ -4411,7 +4433,7 @@ class DataAnalysisOrchestrator:
                     request.semantic_ambiguities = self._semantic_ambiguities(exc)
                     request.ambiguities = self._ambiguity_texts(exc)
                     request.missing_slots = ["semantic_ambiguity"]
-                    return await self._request_clarification(request, rounds)
+                    return await self._request_clarification(request, rounds, source_stage='SQL_TRANSLATOR' if exc.code == 'SQL_TRANSLATION_AMBIGUOUS' else 'OAGNET_ASL_GENERATION')
                 if exc.code == "ANALYSIS_RESULT_CONTRACT_INVALID":
                     requirements = self._analysis_contract_requirements(exc)
                     response = self._fallback(
@@ -5932,6 +5954,7 @@ class DataAnalysisOrchestrator:
                 source_reference,
                 current_scope=scope,
             )
+            source_complete = len(loaded.rows) == loaded.reference.row_count and not any(entry.get('truncated') or entry.get('source_truncated') for entry in loaded.reference.transformation_log)
             operation_question = (
                 request.original_question.rsplit("补充：", 1)[-1].strip()
                 if "补充：" in request.original_question
@@ -5942,6 +5965,7 @@ class DataAnalysisOrchestrator:
                 loaded.reference.columns,
                 loaded.rows,
                 ordering_proof=self._dataset_ordering_proof(loaded.reference),
+                source_complete=source_complete,
             )
             requested_limit = self._operation_limit(operation)
             if (
@@ -5961,10 +5985,12 @@ class DataAnalysisOrchestrator:
                         source_reference,
                         current_scope=scope,
                     )
+                    source_complete = len(loaded.rows) == loaded.reference.row_count and not any(entry.get('truncated') or entry.get('source_truncated') for entry in loaded.reference.transformation_log)
                     operation = plan_dataset_followup(
                         operation_question,
                         loaded.reference.columns,
                         loaded.rows,
+                        source_complete=source_complete,
                         ordering_proof=self._dataset_ordering_proof(
                             loaded.reference
                         ),
@@ -5973,6 +5999,12 @@ class DataAnalysisOrchestrator:
                         "TOP_N_EXPANDED_FROM_BASE_RESULT"
                     )
             if operation is None:
+                if not source_complete:
+                    if 'EXPLICIT_SOURCE_DATASET_SELECTION' in request.assumptions:
+                        raise ExplicitDatasetUnavailableError('当前数据集不完整，无法据此计算全局排名或汇总。需要完整数据集。')
+                    request.source_dataset_id = None
+                    request.execution_mode = 'QUERY_DATABASE'
+                    return None, None
                 self._bind_result_entity_reference(
                     request,
                     operation_question,
@@ -6499,6 +6531,7 @@ class DataAnalysisOrchestrator:
             }, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest()
             provenance = {
                 "type": "query_provenance",
+                "source_truncated": query_result.dataset.truncated,
                 "query_fingerprint": query_fingerprint,
                 "semantic_model_version": request.semantic_model_version,
                 "ranked": ranked,
@@ -6656,7 +6689,9 @@ class DataAnalysisOrchestrator:
             detail.get("canonical_name") or detail.get("attribute_name") or ""
         ).strip()
         canonical_value = str(detail.get("value") or "").strip()
-        if ambiguity.type == "metric":
+        if ambiguity.ambiguity_id == 'LEGACY_BARE_NAME_OPERATION' and ambiguity.phrase:
+            confirmation = ('列出' if detail.get('operation') == 'PROJECTION' else '按') + ambiguity.phrase
+        elif ambiguity.type == "metric":
             confirmation = "指标是" + (canonical_name or label)
         elif ambiguity.type == "dimension":
             confirmation = "维度是" + (canonical_name or label)
@@ -6712,7 +6747,17 @@ class DataAnalysisOrchestrator:
             or detail.get("semantic_id") or ""
         ).strip()
         canonical_value = str(detail.get("value") or ambiguity.phrase or "").strip()
-        if ambiguity.type == "metric":
+        if ambiguity.ambiguity_id == 'LEGACY_BARE_NAME_OPERATION' and ambiguity.phrase:
+            if detail.get('operation') == 'PROJECTION':
+                target.primary_intent = PrimaryIntent.DETAIL_QUERY
+                target.fields = [ambiguity.phrase]
+                target.entity = ambiguity.phrase.removesuffix('名称')
+                target.dimensions = []
+            elif detail.get('operation') == 'GROUPING':
+                target.primary_intent = PrimaryIntent.METRIC_QUERY
+                target.dimensions = [ambiguity.phrase.removesuffix('名称')]
+                target.fields = []
+        elif ambiguity.type == "metric":
             metric_name = canonical_name or choice["label"]
             metric_id = str(detail.get("metric_id") or "").strip() or None
             if metric_id is None and canonical_code:
@@ -7760,7 +7805,39 @@ class DataAnalysisOrchestrator:
                 return prior_user, turn.content
         return None
 
-    async def _request_clarification(self, request: CanonicalAnalysisRequest, rounds: int) -> AgentResponse:
+    async def _ensure_clarification_trace(self, response: AgentResponse, chat: ChatRequest) -> None:
+        """Cover ordinary, composite, compatibility and cached public responses."""
+        if response.status == 'NEEDS_CLARIFICATION' or response.clarification_questions:
+            if not response.clarification_decision_traces:
+                seed = CanonicalAnalysisRequest(conversation_id=chat.conversation_id, tenant_id='trace-only', user_id='trace-only', original_question=chat.question, primary_intent=response.intent)
+                for slot in response.missing_slots or (['task_answer_mapping'] if len(response.awaiting_task_ids) > 1 else ['unknown']):
+                    _, trace = decide_clarification(seed, slot.rsplit(':', 1)[-1], source_stage='SESSION_STATE', asked_keys=set())
+                    if slot == 'task_answer_mapping':
+                        trace.candidate_ids = list(response.awaiting_task_ids)
+                        trace.evidence_codes.append('MULTIPLE_PENDING_TASKS')
+                    response.clarification_decision_traces.append(trace)
+            if not any(t.decision == 'ASK' for t in response.clarification_decision_traces):
+                response.status = 'SAFE_FALLBACK'
+                response.clarification_questions = []
+                response.clarification_items = []
+                response.answer = '当前请求暂时无法继续，系统尚未取得足够的语义或执行依据。'
+        for trace in response.clarification_decision_traces:
+            trace.conversation_id = chat.conversation_id
+            trace.message_id = chat.message_id
+
+    async def _request_clarification(self, request: CanonicalAnalysisRequest, rounds: int, *, source_stage: str = 'INTENT_ASL_CONTRACT') -> AgentResponse:
+        previous = await self.sessions.get_pending(request.tenant_id, request.user_id, request.application_id, request.conversation_id)
+        asked_keys = set(previous.asked_clarification_keys) if previous is not None and request.pending_state_version else set()
+        decisions = [decide_clarification(request, slot, source_stage=source_stage, asked_keys=asked_keys) for slot in request.missing_slots]
+        traces = [trace for _, trace in decisions]
+        allowed_slots = {trace.blocking_slot for trace in traces if trace.decision == 'ASK'}
+        if not allowed_slots:
+            response = self._fallback(request, '该问题已在当前待确认任务中提出，原选项继续保留。' if any(t.already_asked for t in traces) else '当前语义目录或执行服务尚未提供足够依据，系统无法安全继续处理。')
+            response.clarification_decision_traces = traces
+            return response
+        # Keep unresolved slots in state, but never ask the same pending
+        # question again or expose a system/catalog failure as user ambiguity.
+        display_request = request.model_copy(update={'missing_slots': [s for s in request.missing_slots if s in allowed_slots]})
         if rounds > self.settings.max_clarification_rounds:
             logger.warning(
                 "clarification limit exceeded: request_id=%s intent=%s missing_slots=%s rounds=%s",
@@ -7777,7 +7854,7 @@ class DataAnalysisOrchestrator:
                 expected_version=request.pending_state_version,
             )
             return self._fallback(request, "关键信息多轮补充后仍不完整，请重新描述分析目标。")
-        all_questions = self._clarification_questions(request)
+        all_questions = self._clarification_questions(display_request)
         question_limit = (
             1
             if any(
@@ -7787,7 +7864,7 @@ class DataAnalysisOrchestrator:
             else 5
         )
         questions = all_questions[:question_limit]
-        clarification_items = self._clarification_items(request)[:question_limit]
+        clarification_items = self._clarification_items(display_request)[:question_limit]
         visible_questions = [
             self._visible_clarification_prompt(
                 question,
@@ -7797,9 +7874,15 @@ class DataAnalysisOrchestrator:
             for index, question in enumerate(questions)
         ]
         remaining_questions = all_questions[question_limit:]
+        visible_slots = {item['slot'] for item in clarification_items}
+        for trace in traces:
+            if trace.decision == 'ASK' and trace.blocking_slot not in visible_slots:
+                trace.decision = 'SUPPRESS'
+                trace.evidence_codes.append('DEFERRED_BY_QUESTION_LIMIT')
         try:
             await self.sessions.put_pending(
                 PendingState(
+                    asked_clarification_keys=list(dict.fromkeys([*asked_keys, *(key for key, trace in decisions if trace.decision == 'ASK')])),
                     request=request,
                     clarification_rounds=rounds,
                     state_version=rounds,
@@ -7831,6 +7914,7 @@ class DataAnalysisOrchestrator:
             request_id=request.request_id,
             conversation_id=request.conversation_id,
             status="NEEDS_CLARIFICATION",
+            clarification_decision_traces=traces,
             intent=request.primary_intent,
             intent_source=request.intent_source,
             intent_confidence=request.intent_confidence,
@@ -8150,6 +8234,10 @@ class DataAnalysisOrchestrator:
         return steps
 
     async def _metadata_answer(self, request: CanonicalAnalysisRequest, identity: TrustedIdentity, semantic_model_id: int | None) -> AgentResponse:
+        if request.primary_intent == PrimaryIntent.DATA_LINEAGE and not request.metrics:
+            # Legacy's downstream protocol supports metric lineage only. Do not
+            # disguise this external contract gap as missing user information.
+            return self._fallback(request, "已识别要追溯的对象，但当前血缘服务尚不支持该类对象。需要由血缘服务补齐支持后查询。")
         try:
             resolved = await self.adapters.semantic.resolve_metrics(request, semantic_model_id)
             if len(resolved) != 1:

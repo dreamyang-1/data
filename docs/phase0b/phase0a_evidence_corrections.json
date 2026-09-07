@@ -1,0 +1,10 @@
+{
+  "phase0a_commit": "e4d3bb59026d3b219c9268ac53f87dccf58f3c28",
+  "source_reproducibility_gate_unchanged": true,
+  "removed_tracking": [
+    "实际业务问题.md"
+  ],
+  "runtime_sync_deviation": "Runtime collection was transiently copied to the Git working directory because the PowerShell stdin encoding corrupted a filename exclusion. It was untracked before commit and was never committed. The transient copy has been replaced with the original three-line repository placeholder; workspace runtime collection remains untouched.",
+  "manifest_label_correction": "removed_tracking filename in Phase 0A manifest/rollback report was encoded as question marks; git diff and UTF-8 drift_disposition preserve the exact name.",
+  "preventive_action": "Use UTF-8 script files or set PowerShell OutputEncoding before stdin; sync manifests reject runtime collection path explicitly."
+}

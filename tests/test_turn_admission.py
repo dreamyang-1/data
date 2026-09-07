@@ -377,8 +377,10 @@ def test_incomplete_unreferenced_turn_exposes_relation_clarification_state():
         "ambiguous-relation-state",
     )
 
-    assert decision.relation == TurnRelation.AMBIGUOUS_RELATION
-    assert decision.needs_clarification is True
+    # Phase 0B current business contract: execution incompleteness alone is
+    # never evidence of a relation ambiguity (stale decision ST-0B-01).
+    assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert decision.needs_clarification is False
     assert decision.inherit_business_context is False
     assert not any(
         item.operation == SlotOperationType.INHERIT

@@ -1,0 +1,2194 @@
+{
+  "baseline_commit": "e4d3bb59026d3b219c9268ac53f87dccf58f3c28",
+  "observation_count": 77,
+  "unique_failure_signatures": 42,
+  "deduplication": "Group by signature; PASS_AT_BASELINE are acceptance controls, not failures. Historical unknowns are not silently equated with proven bugs.",
+  "items": [
+    {
+      "failure_id": "pytest-01",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert {'allow_free_...ons': [], ...} == {'allow_free_...分析哪个指标？', ...}\nE         \nE         Omitting 6 identical items, use -vv to show\nE         Left contains 1 more item:\nE         {'option_details': []}\nE         Use -v to get more diff",
+      "affected_business_capability": "response",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RESULT_VALIDATION",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P2",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-01-run-1.json",
+        "docs/phase0b/independent_runs/failure-01-run-2.json",
+        "app/domain/models.py:ClarificationItem"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RESULT_VALIDATION|LEGACY|QUERY|response|additive_option_details",
+      "signature_id": "e0cdcf00ba447bfb"
+    },
+    {
+      "failure_id": "pytest-02",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert [] == ['time_range']\nE         \nE         Right contains one more item: 'time_range'\nE         Use -v to get more diff",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-02-run-1.json",
+        "docs/phase0b/independent_runs/failure-02-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-03",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert [] == ['time_range']\nE         \nE         Right contains one more item: 'time_range'\nE         Use -v to get more diff",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-03-run-1.json",
+        "docs/phase0b/independent_runs/failure-03-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-04",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert ['metric'] == ['metric', 'time_range']\nE         \nE         Right contains one more item: 'time_range'\nE         Use -v to get more diff",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-04-run-1.json",
+        "docs/phase0b/independent_runs/failure-04-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-05",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_clarification_quality.py::test_negated_dimension_is_replaced_by_explicit_new_dimension"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       assert '区域' not in '查询指标；指标：销售额...6年7月按区域拆分\"}]'\nE         \nE         '区域' is contained here:\nE           :\"2026年7月按区域拆分\"}]\nE         ?           ++",
+      "affected_business_capability": "filters",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-05-run-1.json",
+        "docs/phase0b/independent_runs/failure-05-run-2.json",
+        "tests/test_clarification_quality.py; app/intent/classifier.py"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|filters|structural_text_becomes_product_filter",
+      "signature_id": "1aa94cab9f22ad20"
+    },
+    {
+      "failure_id": "pytest-06",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_clarification_quality.py::test_model_cannot_invent_detail_fields_or_entity_not_in_user_text"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert '产品' is None\nE        +  where '产品' = CanonicalAnalysisRequest(schema_version='1.0', request_id=UUID('3bc41cee-ecf5-4927-aea4-29ce86f4f990'), conversation_i..._mode='AUTO', confirmed_memory_ids=[], confirmed_preferences=[], dependency_constraints=[], pending_state_version=None).entity",
+      "affected_business_capability": "entity",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-06-run-1.json",
+        "docs/phase0b/independent_runs/failure-06-run-2.json",
+        "tests/test_clarification_quality.py; app/intent/classifier.py"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|entity|structural_text_becomes_product_filter",
+      "signature_id": "3526a91dfd341bb4"
+    },
+    {
+      "failure_id": "pytest-07",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert ['forecast_horizon'] == ['forecast_ho...istory_range']\nE         \nE         Right contains one more item: 'forecast_history_range'\nE         Use -v to get more diff",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-07-run-1.json",
+        "docs/phase0b/independent_runs/failure-07-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-08",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert <SessionEventType.MEMORY_WRITE: 'MEMORY_WRITE'> in []\nE        +  where <SessionEventType.MEMORY_WRITE: 'MEMORY_WRITE'> = SessionEventType.MEMORY_WRITE",
+      "affected_business_capability": "events",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "SESSION_STATE",
+      "root_cause_class": "LEGACY_BEHAVIOR_DEBT",
+      "severity": "P2",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-08-run-1.json",
+        "docs/phase0b/independent_runs/failure-08-run-2.json",
+        "tests/test_memory_manager.py; app/services/orchestrator.py:_append_session_event"
+      ],
+      "status": "OPEN",
+      "failure_signature": "SESSION_STATE|LEGACY|QUERY|events|events_absent",
+      "signature_id": "939d0ab207a12b6a"
+    },
+    {
+      "failure_id": "pytest-09",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_openapi_contract.py::test_openapi_marks_always_required_trusted_identity_headers"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       KeyError: 'x-tenant-id'",
+      "affected_business_capability": "identity",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "SESSION_STATE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-09-run-1.json",
+        "docs/phase0b/independent_runs/failure-09-run-2.json",
+        "app/api.py:trusted_identity; user section 32: register separately, do not refactor"
+      ],
+      "status": "SECURITY_P0_OWNER_BLOCKER",
+      "failure_signature": "SESSION_STATE|LEGACY|QUERY|identity|fixed_trusted_identity",
+      "signature_id": "71d835e2026546bb"
+    },
+    {
+      "failure_id": "pytest-10",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_openapi_contract.py::test_openapi_marks_application_header_required_in_production"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       StopIteration",
+      "affected_business_capability": "identity",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "SESSION_STATE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-10-run-1.json",
+        "docs/phase0b/independent_runs/failure-10-run-2.json",
+        "app/api.py:trusted_identity; user section 32"
+      ],
+      "status": "SECURITY_P0_OWNER_BLOCKER",
+      "failure_signature": "SESSION_STATE|LEGACY|QUERY|identity|fixed_trusted_identity",
+      "signature_id": "71d835e2026546bb"
+    },
+    {
+      "failure_id": "pytest-11",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'COMPLETED' == 'NEEDS_CLARIFICATION'\nE         \nE         - NEEDS_CLARIFICATION\nE         + COMPLETED",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-11-run-1.json",
+        "docs/phase0b/independent_runs/failure-11-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-12",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'COMPLETED' == 'NEEDS_CLARIFICATION'\nE         \nE         - NEEDS_CLARIFICATION\nE         + COMPLETED",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-12-run-1.json",
+        "docs/phase0b/independent_runs/failure-12-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-13",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 2 == 1\nE        +  where 2 = len([CanonicalAnalysisRequest(schema_version='1.0', request_id=UUID('a6ae906f-70c6-47cf-8de1-a68abad0a3e2'), conversation_...mode='AUTO', confirmed_memory_ids=[], confirmed_preferences=[], dependency_constraints=[], pending_state_version=None)])\nE        +    where [CanonicalAnalysisRequest(schema_version='1.0', request_id=UUID('a6ae906f-70c6-47cf-8de1-a68abad0a3e2'), conversation_...mode='AUTO', confirmed_memory_ids=[], confirmed_preferences=[], dependency_constraints=[], pending_state_version=None)] = <test_pending_execution_transition.FailingRetrieval object at 0x0000020E101B30B0>.requests",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-13-run-1.json",
+        "docs/phase0b/independent_runs/failure-13-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-14",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'SAFE_FALLBACK' == 'NEEDS_CLARIFICATION'\nE         \nE         - NEEDS_CLARIFICATION\nE         + SAFE_FALLBACK",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-14-run-1.json",
+        "docs/phase0b/independent_runs/failure-14-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-15",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_pending_execution_transition.py::test_correction_after_completed_turn_replaces_old_dimension"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'NEEDS_CLARIFICATION' == 'COMPLETED'\nE         \nE         - COMPLETED\nE         + NEEDS_CLARIFICATION",
+      "affected_business_capability": "dimensions",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "TURN_ADMISSION",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-15-run-1.json",
+        "docs/phase0b/independent_runs/failure-15-run-2.json",
+        "tests/test_pending_execution_transition.py; current business slot mutation requirement"
+      ],
+      "status": "OPEN",
+      "failure_signature": "TURN_ADMISSION|LEGACY|QUERY|dimensions|correction_loses_context",
+      "signature_id": "a22159f2ae0d7a54"
+    },
+    {
+      "failure_id": "pytest-16",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert '| 订单号 | 商品 |' in '共查询到 2 条明细。\\n\\n| 订单号 | 商品名称 |\\n| --- | --- |\\n| A-1 | 甲 |\\n| A-1 | 甲 |'",
+      "affected_business_capability": "display",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RESULT_VALIDATION",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P2",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-16-run-1.json",
+        "docs/phase0b/independent_runs/failure-16-run-2.json",
+        "tests/test_runtime_regressions.py:test_query_answer_uses_business_markdown_table_and_hides_physical_prefix"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RESULT_VALIDATION|LEGACY|QUERY|display|governed_display_label",
+      "signature_id": "aa69a9bc326f0f7e"
+    },
+    {
+      "failure_id": "pytest-17",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'COMPLETED' == 'NEEDS_CLARIFICATION'\nE         \nE         - NEEDS_CLARIFICATION\nE         + COMPLETED",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-17-run-1.json",
+        "docs/phase0b/independent_runs/failure-17-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-18",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'COMPLETED' == 'NEEDS_CLARIFICATION'\nE         \nE         - NEEDS_CLARIFICATION\nE         + COMPLETED",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-18-run-1.json",
+        "docs/phase0b/independent_runs/failure-18-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-19",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'COMPLETED' == 'NEEDS_CLARIFICATION'\nE         \nE         - NEEDS_CLARIFICATION\nE         + COMPLETED",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-19-run-1.json",
+        "docs/phase0b/independent_runs/failure-19-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-20",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'COMPLETED' == 'NEEDS_CLARIFICATION'\nE         \nE         - NEEDS_CLARIFICATION\nE         + COMPLETED",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-20-run-1.json",
+        "docs/phase0b/independent_runs/failure-20-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-21",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'COMPLETED' == 'NEEDS_CLARIFICATION'\nE         \nE         - NEEDS_CLARIFICATION\nE         + COMPLETED",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-21-run-1.json",
+        "docs/phase0b/independent_runs/failure-21-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-22",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'COMPLETED' == 'NEEDS_CLARIFICATION'\nE         \nE         - NEEDS_CLARIFICATION\nE         + COMPLETED",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-22-run-1.json",
+        "docs/phase0b/independent_runs/failure-22-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-23",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'COMPLETED' == 'NEEDS_CLARIFICATION'\nE         \nE         - NEEDS_CLARIFICATION\nE         + COMPLETED",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-23-run-1.json",
+        "docs/phase0b/independent_runs/failure-23-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-24",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert [] == [<SessionEven...ACE_SUMMARY'>]\nE         \nE         Right contains 4 more items, first extra item: <SessionEventType.USER_QUERY: 'USER_QUERY'>\nE         Use -v to get more diff",
+      "affected_business_capability": "events",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "SESSION_STATE",
+      "root_cause_class": "LEGACY_BEHAVIOR_DEBT",
+      "severity": "P2",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-24-run-1.json",
+        "docs/phase0b/independent_runs/failure-24-run-2.json",
+        "tests/test_session_event_log.py"
+      ],
+      "status": "OPEN",
+      "failure_signature": "SESSION_STATE|LEGACY|QUERY|events|events_absent",
+      "signature_id": "939d0ab207a12b6a"
+    },
+    {
+      "failure_id": "pytest-25",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E           AssertionError: assert None is not None\nE            +  where None = CanonicalAnalysisRequest(schema_version='1.0', request_id=UUID('add3cf98-931f-40b5-afd4-9b43555b25f8'), conversation_i..._mode='AUTO', confirmed_memory_ids=[], confirmed_preferences=[], dependency_constraints=[], pending_state_version=None).time_range",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-25-run-1.json",
+        "docs/phase0b/independent_runs/failure-25-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-26",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       IndexError: list index out of range",
+      "affected_business_capability": "events",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "SESSION_STATE",
+      "root_cause_class": "LEGACY_BEHAVIOR_DEBT",
+      "severity": "P2",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-26-run-1.json",
+        "docs/phase0b/independent_runs/failure-26-run-2.json",
+        "tests/test_tracing_evaluation.py"
+      ],
+      "status": "OPEN",
+      "failure_signature": "SESSION_STATE|LEGACY|QUERY|events|events_absent",
+      "signature_id": "939d0ab207a12b6a"
+    },
+    {
+      "failure_id": "pytest-27",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_workflow.py::test_workflow_clarify_then_complete"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'COMPLETED' == 'NEEDS_CLARIFICATION'\nE         \nE         - NEEDS_CLARIFICATION\nE         + COMPLETED",
+      "affected_business_capability": "time_range",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "STALE_TEST",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-27-run-1.json",
+        "docs/phase0b/independent_runs/failure-27-run-2.json",
+        "Current requirement: safe deterministic defaults; tests/test_intent.py default-time/all-time stable regressions; app/intent/classifier.py:_apply_default_time_range"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|QUERY|time_range|obsolete_mandatory_period",
+      "signature_id": "d00f4c5dac701c0b"
+    },
+    {
+      "failure_id": "pytest-28",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'PARTIAL_SUCCESS' == 'SAFE_FALLBACK'\nE         \nE         - SAFE_FALLBACK\nE         + PARTIAL_SUCCESS",
+      "affected_business_capability": "status",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RESULT_VALIDATION",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-28-run-1.json",
+        "docs/phase0b/independent_runs/failure-28-run-2.json",
+        "Need analysis contract owner to confirm partial-result policy; do not change expectation"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RESULT_VALIDATION|LEGACY|QUERY|status|partial_success_vs_fallback",
+      "signature_id": "a7f2d43fad110b1b"
+    },
+    {
+      "failure_id": "pytest-29",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'PARTIAL_SUCCESS' == 'SAFE_FALLBACK'\nE         \nE         - SAFE_FALLBACK\nE         + PARTIAL_SUCCESS",
+      "affected_business_capability": "status",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RESULT_VALIDATION",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-29-run-1.json",
+        "docs/phase0b/independent_runs/failure-29-run-2.json",
+        "Need analysis contract owner to confirm partial-result policy; do not change expectation"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RESULT_VALIDATION|LEGACY|QUERY|status|partial_success_vs_fallback",
+      "signature_id": "a7f2d43fad110b1b"
+    },
+    {
+      "failure_id": "pytest-30",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'PARTIAL_SUCCESS' == 'SAFE_FALLBACK'\nE         \nE         - SAFE_FALLBACK\nE         + PARTIAL_SUCCESS",
+      "affected_business_capability": "status",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RESULT_VALIDATION",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-30-run-1.json",
+        "docs/phase0b/independent_runs/failure-30-run-2.json",
+        "Need analysis contract owner to confirm partial-result policy; do not change expectation"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RESULT_VALIDATION|LEGACY|QUERY|status|partial_success_vs_fallback",
+      "signature_id": "a7f2d43fad110b1b"
+    },
+    {
+      "failure_id": "pytest-31",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'PARTIAL_SUCCESS' == 'SAFE_FALLBACK'\nE         \nE         - SAFE_FALLBACK\nE         + PARTIAL_SUCCESS",
+      "affected_business_capability": "status",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RESULT_VALIDATION",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-31-run-1.json",
+        "docs/phase0b/independent_runs/failure-31-run-2.json",
+        "Need analysis contract owner to confirm partial-result policy; do not change expectation"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RESULT_VALIDATION|LEGACY|QUERY|status|partial_success_vs_fallback",
+      "signature_id": "a7f2d43fad110b1b"
+    },
+    {
+      "failure_id": "pytest-32",
+      "source": [
+        "CURRENT_PYTEST"
+      ],
+      "test_nodeids": [
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": null,
+      "current_utterance": null,
+      "expected_behavior": "Exact assertion and fixture in test_nodeids",
+      "actual_behavior": "E       AssertionError: assert 'PARTIAL_SUCCESS' == 'SAFE_FALLBACK'\nE         \nE         - SAFE_FALLBACK\nE         + PARTIAL_SUCCESS",
+      "affected_business_capability": "status",
+      "repeatability": "DETERMINISTIC",
+      "first_divergence_stage": "RESULT_VALIDATION",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/independent_runs/failure-32-run-1.json",
+        "docs/phase0b/independent_runs/failure-32-run-2.json",
+        "Need analysis contract owner to confirm partial-result policy; do not change expectation"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RESULT_VALIDATION|LEGACY|QUERY|status|partial_success_vs_fallback",
+      "signature_id": "a7f2d43fad110b1b"
+    },
+    {
+      "failure_id": "real-001",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-001"
+      ],
+      "conversation_history": "前一轮为国药公司含税销售总额及省市",
+      "current_utterance": "再加上订单笔数，其他条件不变。",
+      "expected_behavior": "满足评测断言：缺少业务字段:订单笔数",
+      "actual_behavior": "COMPLETED，但结果缺少订单笔数",
+      "affected_business_capability": "SLOT_MERGE_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-001",
+        "docs/phase2/failure_trace_replay.jsonl#real-001",
+        "Historical proposed stage (not proved): SLOT_MERGE",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|METRIC_QUERY|ADD|SLOT_MERGE_FAILURE|COMPLETED，但结果缺少订单笔数",
+      "signature_id": "d3aec3a774c79fb8"
+    },
+    {
+      "failure_id": "real-002",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-002"
+      ],
+      "conversation_history": "独立改写问题",
+      "current_utterance": "请列出每个国药公司（母公司）的含税销售总额，并显示公司名称和所在省市。",
+      "expected_behavior": "应完成而不是追问",
+      "actual_behavior": "NEEDS_CLARIFICATION：询问明细字段",
+      "affected_business_capability": "QUERY_SHAPE_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-002",
+        "docs/phase2/failure_trace_replay.jsonl#real-002",
+        "Historical proposed stage (not proved): STRUCTURED_INTENT",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|NEW_TASK|QUERY_SHAPE_FAILURE|NEEDS_CLARIFICATION",
+      "signature_id": "e59bb230184880aa"
+    },
+    {
+      "failure_id": "real-003",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-003"
+      ],
+      "conversation_history": "前一轮为经销商销售额、合作时长和合作次数排名",
+      "current_utterance": "改成前3名，其他条件不变。",
+      "expected_behavior": "保留原查询契约并只替换TopN",
+      "actual_behavior": "SAFE_FALLBACK：排名结果顺序不正确",
+      "affected_business_capability": "RESULT_CONTRACT_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-003",
+        "docs/phase2/failure_trace_replay.jsonl#real-003",
+        "Historical proposed stage (not proved): UNKNOWN_ASL_OR_RESULT",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|METRIC_QUERY|FOLLOW_UP|RESULT_CONTRACT_FAILURE|SAFE_FALLBACK",
+      "signature_id": "776c3b856d918a67"
+    },
+    {
+      "failure_id": "real-004",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-004"
+      ],
+      "conversation_history": "前一轮包含含税销售总额",
+      "current_utterance": "再加上订单笔数，其他条件不变。",
+      "expected_behavior": "结果同时保留原指标和新增指标",
+      "actual_behavior": "COMPLETED，但只返回订单笔数",
+      "affected_business_capability": "SLOT_MERGE_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-004",
+        "docs/phase2/failure_trace_replay.jsonl#real-004",
+        "Historical proposed stage (not proved): SLOT_MERGE",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|METRIC_QUERY|ADD|SLOT_MERGE_FAILURE|COMPLETED，但只返回订单笔数",
+      "signature_id": "d45f894e8eee4b7e"
+    },
+    {
+      "failure_id": "real-005",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-005"
+      ],
+      "conversation_history": "独立问题",
+      "current_utterance": "请列出上海市紫杉醇释放冠脉球囊导管的含税销售总额。",
+      "expected_behavior": "评测期望COMPLETED",
+      "actual_behavior": "NEEDS_CLARIFICATION",
+      "affected_business_capability": "QUERY_SHAPE_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-005",
+        "docs/phase2/failure_trace_replay.jsonl#real-005",
+        "Historical proposed stage (not proved): STRUCTURED_INTENT",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|NEW_TASK|QUERY_SHAPE_FAILURE|NEEDS_CLARIFICATION",
+      "signature_id": "e59bb230184880aa"
+    },
+    {
+      "failure_id": "real-006",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-006"
+      ],
+      "conversation_history": "独立问题",
+      "current_utterance": "按月统计上海市紫杉醇释放冠脉球囊导管的含税销售总额。",
+      "expected_behavior": "月粒度列必须返回",
+      "actual_behavior": "COMPLETED但结果契约缺月/交易日期",
+      "affected_business_capability": "ASL_CONTRACT_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-006",
+        "docs/phase2/failure_trace_replay.jsonl#real-006",
+        "Historical proposed stage (not proved): ASL",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|NEW_TASK|ASL_CONTRACT_FAILURE|COMPLETED但结果契约缺月/交易日期",
+      "signature_id": "6e20c59d5850f7c7"
+    },
+    {
+      "failure_id": "real-007",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-007"
+      ],
+      "conversation_history": "前一轮为月粒度趋势",
+      "current_utterance": "改成按季度，其他条件不变。",
+      "expected_behavior": "替换粒度并返回季度列",
+      "actual_behavior": "COMPLETED但粒度结果列不符",
+      "affected_business_capability": "ASL_CONTRACT_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-007",
+        "docs/phase2/failure_trace_replay.jsonl#real-007",
+        "Historical proposed stage (not proved): ASL",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|FOLLOW_UP|ASL_CONTRACT_FAILURE|COMPLETED但粒度结果列不符",
+      "signature_id": "0d315c37fbceb5c7"
+    },
+    {
+      "failure_id": "real-008",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-008"
+      ],
+      "conversation_history": "独立改写",
+      "current_utterance": "按月请计算上海市紫杉醇释放冠脉球囊导管的含税销售总额。",
+      "expected_behavior": "返回月字段",
+      "actual_behavior": "COMPLETED但投影不完整",
+      "affected_business_capability": "ASL_CONTRACT_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-008",
+        "docs/phase2/failure_trace_replay.jsonl#real-008",
+        "Historical proposed stage (not proved): ASL",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|NEW_TASK|ASL_CONTRACT_FAILURE|COMPLETED但投影不完整",
+      "signature_id": "b706d90541943cb0"
+    },
+    {
+      "failure_id": "real-009",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-009"
+      ],
+      "conversation_history": "独立实体变体",
+      "current_utterance": "按月统计上海市空心纤维血液透析器的含税销售总额。",
+      "expected_behavior": "返回月字段",
+      "actual_behavior": "COMPLETED但投影不完整",
+      "affected_business_capability": "ASL_CONTRACT_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-009",
+        "docs/phase2/failure_trace_replay.jsonl#real-009",
+        "Historical proposed stage (not proved): ASL",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|NEW_TASK|ASL_CONTRACT_FAILURE|COMPLETED但投影不完整",
+      "signature_id": "b706d90541943cb0"
+    },
+    {
+      "failure_id": "real-010",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-010"
+      ],
+      "conversation_history": "独立趋势问题",
+      "current_utterance": "分析上海市紫杉醇释放冠脉球囊导管的整体销售趋势。",
+      "expected_behavior": "包含销售额及趋势时间列",
+      "actual_behavior": "COMPLETED但评测断言失败",
+      "affected_business_capability": "NO_DATA_OR_SEMANTIC_UNCERTAIN",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-010",
+        "docs/phase2/failure_trace_replay.jsonl#real-010",
+        "Historical proposed stage (not proved): UNKNOWN",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|NEW_TASK|NO_DATA_OR_SEMANTIC_UNCERTAIN|COMPLETED但评测断言失败",
+      "signature_id": "70b58f1420a71e55"
+    },
+    {
+      "failure_id": "real-011",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-011"
+      ],
+      "conversation_history": "前一轮整体销售趋势",
+      "current_utterance": "改成按季度，其他条件不变。",
+      "expected_behavior": "重新规划为季度并完成",
+      "actual_behavior": "SAFE_FALLBACK：要求quarter，实际month",
+      "affected_business_capability": "ASL_CONTRACT_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-011",
+        "docs/phase2/failure_trace_replay.jsonl#real-011",
+        "Historical proposed stage (not proved): ASL",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|FOLLOW_UP|ASL_CONTRACT_FAILURE|SAFE_FALLBACK",
+      "signature_id": "98d4f6cc821662ea"
+    },
+    {
+      "failure_id": "real-012",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-012"
+      ],
+      "conversation_history": "独立改写",
+      "current_utterance": "请分析上海市紫杉醇释放冠脉球囊导管的整体销售趋势。",
+      "expected_behavior": "满足趋势结果字段契约",
+      "actual_behavior": "COMPLETED但结果契约断言失败",
+      "affected_business_capability": "NO_DATA_OR_SEMANTIC_UNCERTAIN",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-012",
+        "docs/phase2/failure_trace_replay.jsonl#real-012",
+        "Historical proposed stage (not proved): UNKNOWN",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|NEW_TASK|NO_DATA_OR_SEMANTIC_UNCERTAIN|COMPLETED但结果契约断言失败",
+      "signature_id": "275d8f39dcbfe8c4"
+    },
+    {
+      "failure_id": "real-013",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-013"
+      ],
+      "conversation_history": "独立实体变体",
+      "current_utterance": "分析上海市空心纤维血液透析器的整体销售趋势。",
+      "expected_behavior": "满足趋势结果字段契约",
+      "actual_behavior": "COMPLETED但结果契约断言失败",
+      "affected_business_capability": "NO_DATA_OR_SEMANTIC_UNCERTAIN",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-013",
+        "docs/phase2/failure_trace_replay.jsonl#real-013",
+        "Historical proposed stage (not proved): UNKNOWN",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|NEW_TASK|NO_DATA_OR_SEMANTIC_UNCERTAIN|COMPLETED但结果契约断言失败",
+      "signature_id": "275d8f39dcbfe8c4"
+    },
+    {
+      "failure_id": "real-014",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-014"
+      ],
+      "conversation_history": "前一轮为合作医院数",
+      "current_utterance": "再加上订单笔数，其他条件不变。",
+      "expected_behavior": "同时返回原指标和新增指标",
+      "actual_behavior": "COMPLETED但只返回新增指标",
+      "affected_business_capability": "SLOT_MERGE_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-014",
+        "docs/phase2/failure_trace_replay.jsonl#real-014",
+        "Historical proposed stage (not proved): SLOT_MERGE",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|METRIC_QUERY|ADD|SLOT_MERGE_FAILURE|COMPLETED但只返回新增指标",
+      "signature_id": "ef209bba9a124c78"
+    },
+    {
+      "failure_id": "real-015",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-015"
+      ],
+      "conversation_history": "前一轮为合作经销商数",
+      "current_utterance": "再加上订单笔数，其他条件不变。",
+      "expected_behavior": "同时返回原指标和新增指标",
+      "actual_behavior": "COMPLETED但只返回新增指标",
+      "affected_business_capability": "SLOT_MERGE_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-015",
+        "docs/phase2/failure_trace_replay.jsonl#real-015",
+        "Historical proposed stage (not proved): SLOT_MERGE",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|METRIC_QUERY|ADD|SLOT_MERGE_FAILURE|COMPLETED但只返回新增指标",
+      "signature_id": "ef209bba9a124c78"
+    },
+    {
+      "failure_id": "real-016",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-016"
+      ],
+      "conversation_history": "独立关系查询",
+      "current_utterance": "查询上海市紫杉醇释放冠脉球囊导管合作医院名单。",
+      "expected_behavior": "返回医院名称",
+      "actual_behavior": "SAFE_FALLBACK或结果列不完整",
+      "affected_business_capability": "RELATION_PROJECTION_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-016",
+        "docs/phase2/failure_trace_replay.jsonl#real-016",
+        "Historical proposed stage (not proved): ASL",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|NEW_TASK|RELATION_PROJECTION_FAILURE|SAFE_FALLBACK或结果列不完整",
+      "signature_id": "5dbc0dea2009d15a"
+    },
+    {
+      "failure_id": "real-017",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-017"
+      ],
+      "conversation_history": "前一轮合作医院名单",
+      "current_utterance": "只返回前5个，其他筛选条件不变。",
+      "expected_behavior": "保留医院列并限制5行",
+      "actual_behavior": "评测断言缺医院",
+      "affected_business_capability": "DATASET_OPERATION_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-017",
+        "docs/phase2/failure_trace_replay.jsonl#real-017",
+        "Historical proposed stage (not proved): DATASET_TRANSFORM",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|FOLLOW_UP|DATASET_OPERATION_FAILURE|评测断言缺医院",
+      "signature_id": "ce9745f3df6e66d4"
+    },
+    {
+      "failure_id": "real-018",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-018"
+      ],
+      "conversation_history": "独立改写",
+      "current_utterance": "请列出上海市紫杉醇释放冠脉球囊导管合作医院名单。",
+      "expected_behavior": "返回医院名称",
+      "actual_behavior": "结果契约不完整",
+      "affected_business_capability": "RELATION_PROJECTION_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-018",
+        "docs/phase2/failure_trace_replay.jsonl#real-018",
+        "Historical proposed stage (not proved): ASL",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|NEW_TASK|RELATION_PROJECTION_FAILURE|结果契约不完整",
+      "signature_id": "d471c959cf3b2062"
+    },
+    {
+      "failure_id": "real-019",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-019"
+      ],
+      "conversation_history": "独立实体变体",
+      "current_utterance": "查询上海市空心纤维血液透析器合作医院名单。",
+      "expected_behavior": "返回医院名称",
+      "actual_behavior": "结果契约不完整",
+      "affected_business_capability": "RELATION_PROJECTION_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-019",
+        "docs/phase2/failure_trace_replay.jsonl#real-019",
+        "Historical proposed stage (not proved): UNKNOWN_ASL_OR_RESULT",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|NEW_TASK|RELATION_PROJECTION_FAILURE|结果契约不完整",
+      "signature_id": "d471c959cf3b2062"
+    },
+    {
+      "failure_id": "real-020",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-020"
+      ],
+      "conversation_history": "前一轮为名单结果",
+      "current_utterance": "只返回前5个，其他筛选条件不变。",
+      "expected_behavior": "只返回5行",
+      "actual_behavior": "COMPLETED但返回超过5行",
+      "affected_business_capability": "DATASET_OPERATION_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-020",
+        "docs/phase2/failure_trace_replay.jsonl#real-020",
+        "Historical proposed stage (not proved): DATASET_TRANSFORM",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|FOLLOW_UP|DATASET_OPERATION_FAILURE|COMPLETED但返回超过5行",
+      "signature_id": "634c23b8bca13e08"
+    },
+    {
+      "failure_id": "real-021",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-021"
+      ],
+      "conversation_history": "前一轮包含含税销售总额和销售量",
+      "current_utterance": "再加上订单笔数，其他条件不变。",
+      "expected_behavior": "保留原指标并增加订单笔数",
+      "actual_behavior": "COMPLETED但只返回新增指标",
+      "affected_business_capability": "SLOT_MERGE_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-021",
+        "docs/phase2/failure_trace_replay.jsonl#real-021",
+        "Historical proposed stage (not proved): SLOT_MERGE",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|METRIC_QUERY|ADD|SLOT_MERGE_FAILURE|COMPLETED但只返回新增指标",
+      "signature_id": "ef209bba9a124c78"
+    },
+    {
+      "failure_id": "real-022",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-022"
+      ],
+      "conversation_history": "独立双指标请求",
+      "current_utterance": "请列出外周插管中心静脉导管的含税销售总额和销售总数量。",
+      "expected_behavior": "评测期望COMPLETED",
+      "actual_behavior": "NEEDS_CLARIFICATION",
+      "affected_business_capability": "QUERY_SHAPE_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-022",
+        "docs/phase2/failure_trace_replay.jsonl#real-022",
+        "Historical proposed stage (not proved): STRUCTURED_INTENT",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|NEW_TASK|QUERY_SHAPE_FAILURE|NEEDS_CLARIFICATION",
+      "signature_id": "e59bb230184880aa"
+    },
+    {
+      "failure_id": "real-023",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-023"
+      ],
+      "conversation_history": "独立趋势请求",
+      "current_utterance": "按月分析外周插管中心静脉导管的销售趋势。",
+      "expected_behavior": "返回时间粒度和趋势结果",
+      "actual_behavior": "COMPLETED但字段断言失败",
+      "affected_business_capability": "ASL_CONTRACT_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-023",
+        "docs/phase2/failure_trace_replay.jsonl#real-023",
+        "Historical proposed stage (not proved): ASL",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|NEW_TASK|ASL_CONTRACT_FAILURE|COMPLETED但字段断言失败",
+      "signature_id": "6e80b9c3e454f8bd"
+    },
+    {
+      "failure_id": "real-024",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-024"
+      ],
+      "conversation_history": "前一轮月粒度趋势",
+      "current_utterance": "改成按季度，其他条件不变。",
+      "expected_behavior": "返回季度粒度趋势",
+      "actual_behavior": "COMPLETED但字段断言失败",
+      "affected_business_capability": "ASL_CONTRACT_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-024",
+        "docs/phase2/failure_trace_replay.jsonl#real-024",
+        "Historical proposed stage (not proved): ASL",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|FOLLOW_UP|ASL_CONTRACT_FAILURE|COMPLETED但字段断言失败",
+      "signature_id": "2922fe53e5376e55"
+    },
+    {
+      "failure_id": "real-025",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-025"
+      ],
+      "conversation_history": "独立改写",
+      "current_utterance": "以月份为粒度分析外周插管中心静脉导管的销售趋势。",
+      "expected_behavior": "返回月份粒度结果",
+      "actual_behavior": "COMPLETED但字段断言失败",
+      "affected_business_capability": "ASL_CONTRACT_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-025",
+        "docs/phase2/failure_trace_replay.jsonl#real-025",
+        "Historical proposed stage (not proved): ASL",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|NEW_TASK|ASL_CONTRACT_FAILURE|COMPLETED但字段断言失败",
+      "signature_id": "6e80b9c3e454f8bd"
+    },
+    {
+      "failure_id": "real-026",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-026"
+      ],
+      "conversation_history": "独立实体变体",
+      "current_utterance": "按月分析空心纤维血液透析器的销售趋势。",
+      "expected_behavior": "返回月份粒度结果",
+      "actual_behavior": "COMPLETED但字段断言失败",
+      "affected_business_capability": "ASL_CONTRACT_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-026",
+        "docs/phase2/failure_trace_replay.jsonl#real-026",
+        "Historical proposed stage (not proved): ASL",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|TREND_ANALYSIS|NEW_TASK|ASL_CONTRACT_FAILURE|COMPLETED但字段断言失败",
+      "signature_id": "6e80b9c3e454f8bd"
+    },
+    {
+      "failure_id": "real-027",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-027"
+      ],
+      "conversation_history": "前一轮医院名单",
+      "current_utterance": "只返回前5个，其他筛选条件不变。",
+      "expected_behavior": "只返回5行",
+      "actual_behavior": "COMPLETED但返回43行",
+      "affected_business_capability": "DATASET_OPERATION_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-027",
+        "docs/phase2/failure_trace_replay.jsonl#real-027",
+        "Historical proposed stage (not proved): DATASET_TRANSFORM",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|FOLLOW_UP|DATASET_OPERATION_FAILURE|COMPLETED但返回43行",
+      "signature_id": "d1b84a61a78df393"
+    },
+    {
+      "failure_id": "real-028",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-028"
+      ],
+      "conversation_history": "独立关系查询",
+      "current_utterance": "查询空心纤维血液透析器合作的医院名单。",
+      "expected_behavior": "满足医院名单契约",
+      "actual_behavior": "COMPLETED但0行且缺医院字段",
+      "affected_business_capability": "RELATION_PROJECTION_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-028",
+        "docs/phase2/failure_trace_replay.jsonl#real-028",
+        "Historical proposed stage (not proved): UNKNOWN_ASL_OR_RESULT",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|NEW_TASK|RELATION_PROJECTION_FAILURE|COMPLETED但0行且缺医院字段",
+      "signature_id": "2a37c8be1bbc08b0"
+    },
+    {
+      "failure_id": "real-029",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-029"
+      ],
+      "conversation_history": "前一轮经销商名单",
+      "current_utterance": "只返回前5个，其他筛选条件不变。",
+      "expected_behavior": "只返回5行",
+      "actual_behavior": "COMPLETED但返回40行",
+      "affected_business_capability": "DATASET_OPERATION_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-029",
+        "docs/phase2/failure_trace_replay.jsonl#real-029",
+        "Historical proposed stage (not proved): DATASET_TRANSFORM",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|FOLLOW_UP|DATASET_OPERATION_FAILURE|COMPLETED但返回40行",
+      "signature_id": "3c778f11cf0ef9c0"
+    },
+    {
+      "failure_id": "real-030",
+      "source": [
+        "HISTORICAL_PARTIAL_TRACE"
+      ],
+      "test_nodeids": [],
+      "historical_case_ids": [
+        "real-030"
+      ],
+      "conversation_history": "前一轮商品-科室结果",
+      "current_utterance": "只返回前5个，其他筛选条件不变。",
+      "expected_behavior": "只返回5行",
+      "actual_behavior": "COMPLETED但返回7行",
+      "affected_business_capability": "DATASET_OPERATION_FAILURE",
+      "repeatability": "NOT_REPLAYABLE_WITH_AVAILABLE_STATE",
+      "first_divergence_stage": "UNKNOWN",
+      "root_cause_class": "UNKNOWN_NEEDS_EVIDENCE",
+      "severity": "P1",
+      "owning_service": "UNKNOWN",
+      "evidence": [
+        "docs/data_agent_failure_cases.jsonl#real-030",
+        "docs/phase2/failure_trace_replay.jsonl#real-030",
+        "Historical proposed stage (not proved): DATASET_TRANSFORM",
+        "Need original state, stage outputs, catalog and dataset snapshots"
+      ],
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "failure_signature": "UNKNOWN|DETAIL_QUERY|FOLLOW_UP|DATASET_OPERATION_FAILURE|COMPLETED但返回7行",
+      "signature_id": "889bafe3742c2747"
+    },
+    {
+      "failure_id": "critical-01",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c01_region_followup_preserves_metric_and_period"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "上海最近一年销售额",
+      "current_utterance": "那江苏呢？",
+      "expected_behavior": "FOLLOW_UP / REPLACE region; preserve metric/time",
+      "actual_behavior": "PASS",
+      "affected_business_capability": "region",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "TURN_ADMISSION",
+      "root_cause_class": "LEGACY_BEHAVIOR_DEBT",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c01_region_followup_preserves_metric_and_period",
+        "User Critical Multi-turn Scenario 1"
+      ],
+      "status": "PASS_AT_BASELINE",
+      "failure_signature": "TURN_ADMISSION|LEGACY|FOLLOW_UP|region|region_replacement",
+      "signature_id": "14eb688aba7484a1"
+    },
+    {
+      "failure_id": "critical-02",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c02_complete_new_hospital_task_does_not_inherit_sales"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "上海最近一年销售额",
+      "current_utterance": "江苏有哪些医院？",
+      "expected_behavior": "NEW TASK; no inherited sales or fabricated product filter",
+      "actual_behavior": "def test_c02_complete_new_hospital_task_does_not_inherit_sales():\n        after, decision = turn(parse('上海最近一年销售额'), '江苏有哪些医院？')\n        assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC\n        assert after.primary_intent == PrimaryIntent.DETAIL_QUERY\n        assert names(after) == []\n        assert regions(after) == ['江苏省']\n>       assert not any(f['field'] == '商品名称' for f in after.filters)\nE       assert not True\nE        +  where True = any(<generator object test_c02_complete_new_hospital_task_does_not_inherit_sales.<locals>.<genexpr> at 0x000001BB79D15560>)\n\ntests\\test_phase0b_critical.py:60: AssertionError",
+      "affected_business_capability": "filters",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c02_complete_new_hospital_task_does_not_inherit_sales",
+        "User Critical Multi-turn Scenario 2"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|NEW_TASK|filters|structural_text_becomes_product_filter",
+      "signature_id": "c19d3188adc16682"
+    },
+    {
+      "failure_id": "critical-03",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c03_add_preserves_both_previous_metrics"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "销售额和销售量",
+      "current_utterance": "再加订单笔数",
+      "expected_behavior": "Retain both old metrics and append order count",
+      "actual_behavior": "def test_c03_add_preserves_both_previous_metrics():\n        after, _ = turn(parse('销售额和销售量'), '再加订单笔数')\n>       assert names(after) == ['销售额', '销售量', '订单笔数']\nE       AssertionError: assert ['订单笔数'] == ['销售额', '销售量', '订单笔数']\nE         \nE         At index 0 diff: '订单笔数' != '销售额'\nE         Right contains 2 more items, first extra item: '销售量'\nE         Use -v to get more diff\n\ntests\\test_phase0b_critical.py:65: AssertionError",
+      "affected_business_capability": "metrics",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "SLOT_MERGE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c03_add_preserves_both_previous_metrics",
+        "User Critical Multi-turn Scenario 3"
+      ],
+      "status": "OPEN",
+      "failure_signature": "SLOT_MERGE|LEGACY|ADD|metrics|add_becomes_replace",
+      "signature_id": "7ae375172b551089"
+    },
+    {
+      "failure_id": "critical-04",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c04_replace_region_removes_previous_region"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "上海销售额",
+      "current_utterance": "换成江苏",
+      "expected_behavior": "Only Jiangsu region remains",
+      "actual_behavior": "PASS",
+      "affected_business_capability": "region",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "SLOT_MERGE",
+      "root_cause_class": "LEGACY_BEHAVIOR_DEBT",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c04_replace_region_removes_previous_region",
+        "User Critical Multi-turn Scenario 4"
+      ],
+      "status": "PASS_AT_BASELINE",
+      "failure_signature": "SLOT_MERGE|LEGACY|REPLACE|region|region_replacement",
+      "signature_id": "ce4abba1af246fb3"
+    },
+    {
+      "failure_id": "critical-05",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c05_remove_metric_does_not_remove_remaining_metric"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "销售额和订单笔数",
+      "current_utterance": "不要订单笔数",
+      "expected_behavior": "Retain sales amount only",
+      "actual_behavior": "def test_c05_remove_metric_does_not_remove_remaining_metric():\n        after, _ = turn(parse('销售额和订单笔数'), '不要订单笔数')\n>       assert names(after) == ['销售额']\nE       AssertionError: assert ['订单笔数'] == ['销售额']\nE         \nE         At index 0 diff: '订单笔数' != '销售额'\nE         Use -v to get more diff\n\ntests\\test_phase0b_critical.py:76: AssertionError",
+      "affected_business_capability": "metrics",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "SLOT_MERGE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c05_remove_metric_does_not_remove_remaining_metric",
+        "User Critical Multi-turn Scenario 5"
+      ],
+      "status": "OPEN",
+      "failure_signature": "SLOT_MERGE|LEGACY|REMOVE|metrics|removed_metric_restored",
+      "signature_id": "6594ea85bab05022"
+    },
+    {
+      "failure_id": "critical-06",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c06_clear_region_survives_next_grain_turn"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "上海销售额 → 不限地区",
+      "current_utterance": "按季度",
+      "expected_behavior": "Region remains empty after CLEAR",
+      "actual_behavior": "def test_c06_clear_region_survives_next_grain_turn():\n        cleared, _ = turn(parse('上海销售额'), '不限地区')\n        after, _ = turn(cleared, '按季度')\n        assert regions(cleared) == regions(after) == []\n>       assert names(after) == ['销售额']\nE       AssertionError: assert [] == ['销售额']\nE         \nE         Right contains one more item: '销售额'\nE         Use -v to get more diff\n\ntests\\test_phase0b_critical.py:83: AssertionError",
+      "affected_business_capability": "region",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "SLOT_MERGE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c06_clear_region_survives_next_grain_turn",
+        "User Critical Multi-turn Scenario 6"
+      ],
+      "status": "OPEN",
+      "failure_signature": "SLOT_MERGE|LEGACY|CLEAR|region|clear_loses_base_or_resurrects_filter",
+      "signature_id": "6f53e225c9109516"
+    },
+    {
+      "failure_id": "critical-07",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c07_pending_cannot_capture_complete_new_task_with_missing_execution_slot"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "Pending metric choice",
+      "current_utterance": "江苏有哪些医院？",
+      "expected_behavior": "NEW TASK even if default projection awaits governance",
+      "actual_behavior": "def test_c07_pending_cannot_capture_complete_new_task_with_missing_execution_slot():\n        previous = parse('上海销售额')\n        previous.missing_slots = ['semantic_ambiguity']\n        current = parse('江苏有哪些医院？')\n        current.fields = []\n        current.missing_slots = ['fields']\n        decision = TurnAdmissionGate().evaluate(question=current.original_question, current=current, previous=previous, message_id='m2', pending=True)\n>       assert decision.relation == TurnRelation.STANDALONE_NEW_TOPIC\nE       AssertionError: assert <TurnRelation...ION_RESPONSE'> == <TurnRelation...NE_NEW_TOPIC'>\nE         \nE         - STANDALONE_NEW_TOPIC\nE         + CLARIFICATION_RESPONSE\n\ntests\\test_phase0b_critical.py:93: AssertionError",
+      "affected_business_capability": "relation",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "PENDING_ADMISSION",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c07_pending_cannot_capture_complete_new_task_with_missing_execution_slot",
+        "User Critical Multi-turn Scenario 7"
+      ],
+      "status": "OPEN",
+      "failure_signature": "PENDING_ADMISSION|LEGACY|NEW_TASK|relation|pending_hijack",
+      "signature_id": "fc1411d4041047d8"
+    },
+    {
+      "failure_id": "critical-08",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c08_field_lineage_does_not_require_metric"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "",
+      "current_utterance": "医院名称字段来自哪个表？",
+      "expected_behavior": "Recognize field target; never request a metric",
+      "actual_behavior": "def test_c08_field_lineage_does_not_require_metric():\n        request = parse('医院名称字段来自哪个表？')\n        assert request.primary_intent == PrimaryIntent.DATA_LINEAGE\n>       assert 'metric' not in request.missing_slots\nE       AssertionError: assert 'metric' not in ['metric']\nE        +  where ['metric'] = CanonicalAnalysisRequest(schema_version='1.0', request_id=UUID('8bd6a869-bcad-4c26-9f7e-4959a84bd30a'), conversation_i..._mode='AUTO', confirmed_memory_ids=[], confirmed_preferences=[], dependency_constraints=[], pending_state_version=None).missing_slots\n\ntests\\test_phase0b_critical.py:100: AssertionError",
+      "affected_business_capability": "lineage_target",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c08_field_lineage_does_not_require_metric",
+        "User Critical Multi-turn Scenario 8"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|NEW_TASK|lineage_target|lineage_requires_metric",
+      "signature_id": "03e1c8c8361b576f"
+    },
+    {
+      "failure_id": "critical-09",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c09_governed_default_display_is_used_without_field_question"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "Catalog fixture with governed default display",
+      "current_utterance": "列出TDC-3合作医院",
+      "expected_behavior": "Use permitted governed projection; missing policy is a catalog gap",
+      "actual_behavior": "def test_c09_governed_default_display_is_used_without_field_question():\n        # A controlled catalog fixture, not a claim that the production catalog\n        # already publishes this policy. The missing-policy contrast stays blocked.\n>       from app.services import legacy_guards\nE       ImportError: cannot import name 'legacy_guards' from 'app.services' (E:\\YouoAgent\\DataAnalysis_Agent\\app\\services\\__init__.py)\n\ntests\\test_phase0b_critical.py:106: ImportError",
+      "affected_business_capability": "fields",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "SEMANTIC_GROUNDING",
+      "root_cause_class": "CATALOG_GOVERNANCE_GAP",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c09_governed_default_display_is_used_without_field_question",
+        "User Critical Multi-turn Scenario 9"
+      ],
+      "status": "OPEN",
+      "failure_signature": "SEMANTIC_GROUNDING|LEGACY|NEW_TASK|fields|catalog_default_display_gap",
+      "signature_id": "bb66d68ebecb957c"
+    },
+    {
+      "failure_id": "critical-10",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c10_display_limit_preserves_row_order"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "Existing dataset",
+      "current_utterance": "只看前5条",
+      "expected_behavior": "DISPLAY_LIMIT preserves order without replanning",
+      "actual_behavior": "def test_c10_display_limit_preserves_row_order():\n        rows = [{'销售额': 2}, {'销售额': 9}]\n>       assert plan_dataset_followup('只看前5条', ['销售额'], rows) == {'type': 'limit', 'count': 5}\nE       AssertionError: assert None == {'count': 5, 'type': 'limit'}\nE        +  where None = plan_dataset_followup('只看前5条', ['销售额'], [{'销售额': 2}, {'销售额': 9}])\n\ntests\\test_phase0b_critical.py:117: AssertionError",
+      "affected_business_capability": "limit",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "DATASET_FOLLOWUP",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c10_display_limit_preserves_row_order",
+        "User Critical Multi-turn Scenario 10"
+      ],
+      "status": "OPEN",
+      "failure_signature": "DATASET_FOLLOWUP|LEGACY|FOLLOW_UP|limit|display_limit_unrecognized",
+      "signature_id": "a9240d5ad7d840f8"
+    },
+    {
+      "failure_id": "critical-11",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c11_ranking_uses_requested_count_and_order"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "Existing complete dataset",
+      "current_utterance": "销售额最高5名",
+      "expected_behavior": "GLOBAL_RANKING descending count 5",
+      "actual_behavior": "def test_c11_ranking_uses_requested_count_and_order():\n        operation = plan_dataset_followup('销售额最高5名', ['销售额'], [{'销售额': 2}, {'销售额': 9}])\n>       assert operation == {'type': 'sort_limit', 'field': '销售额', 'descending': True, 'count': 5}\nE       AssertionError: assert {'count': 1, ... 'sort_limit'} == {'count': 5, ... 'sort_limit'}\nE         \nE         Omitting 3 identical items, use -vv to show\nE         Differing items:\nE         {'count': 1} != {'count': 5}\nE         Use -v to get more diff\n\ntests\\test_phase0b_critical.py:122: AssertionError",
+      "affected_business_capability": "ranking",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "DATASET_FOLLOWUP",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c11_ranking_uses_requested_count_and_order",
+        "User Critical Multi-turn Scenario 11"
+      ],
+      "status": "OPEN",
+      "failure_signature": "DATASET_FOLLOWUP|LEGACY|FOLLOW_UP|ranking|ranking_count_ignored",
+      "signature_id": "e50b96526de8bb35"
+    },
+    {
+      "failure_id": "critical-12",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c12_truncated_dataset_cannot_establish_global_top5"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "Existing truncated dataset",
+      "current_utterance": "销售额最高5名",
+      "expected_behavior": "Never establish global Top5 from incomplete rows",
+      "actual_behavior": "def test_c12_truncated_dataset_cannot_establish_global_top5():\n>       assert plan_dataset_followup('销售额最高5名', ['销售额'], [{'销售额': 2}], source_complete=False) is None\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: plan_dataset_followup() got an unexpected keyword argument 'source_complete'\n\ntests\\test_phase0b_critical.py:126: TypeError",
+      "affected_business_capability": "completeness",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "DATASET_FOLLOWUP",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c12_truncated_dataset_cannot_establish_global_top5",
+        "User Critical Multi-turn Scenario 12"
+      ],
+      "status": "OPEN",
+      "failure_signature": "DATASET_FOLLOWUP|LEGACY|FOLLOW_UP|completeness|explicit_completeness_guard_missing",
+      "signature_id": "34557a597b12af99"
+    },
+    {
+      "failure_id": "critical-13",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c13_quantity_surface_is_not_lost_as_attribute"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "",
+      "current_utterance": "销售数量",
+      "expected_behavior": "Quantity metric is retained; no repeated metric question",
+      "actual_behavior": "PASS",
+      "affected_business_capability": "metric",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "SEMANTIC_GROUNDING",
+      "root_cause_class": "LEGACY_BEHAVIOR_DEBT",
+      "severity": "P1",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c13_quantity_surface_is_not_lost_as_attribute",
+        "User Critical Multi-turn Scenario 13"
+      ],
+      "status": "PASS_AT_BASELINE",
+      "failure_signature": "SEMANTIC_GROUNDING|LEGACY|NEW_TASK|metric|metric_attribute_role_collision",
+      "signature_id": "cf506d7a4645bdb5"
+    },
+    {
+      "failure_id": "critical-14",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c14_product_name_role_depends_on_requested_operation"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "",
+      "current_utterance": "列出商品名称 / 按商品名称统计销售额",
+      "expected_behavior": "Attribute projection vs grouping determined by action",
+      "actual_behavior": "def test_c14_product_name_role_depends_on_requested_operation():\n        listing, grouping = parse('列出商品名称'), parse('按商品名称统计销售额')\n        assert listing.primary_intent == PrimaryIntent.DETAIL_QUERY\n>       assert '商品名称' in listing.fields\nE       AssertionError: assert '商品名称' in []\nE        +  where [] = CanonicalAnalysisRequest(schema_version='1.0', request_id=UUID('215b8227-8d9c-4c05-9e5a-47dacb04e6af'), conversation_i..._mode='AUTO', confirmed_memory_ids=[], confirmed_preferences=[], dependency_constraints=[], pending_state_version=None).fields\n\ntests\\test_phase0b_critical.py:138: AssertionError",
+      "affected_business_capability": "fields",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "RULE_PARSE",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c14_product_name_role_depends_on_requested_operation",
+        "User Critical Multi-turn Scenario 14"
+      ],
+      "status": "OPEN",
+      "failure_signature": "RULE_PARSE|LEGACY|NEW_TASK|fields|explicit_attribute_lost",
+      "signature_id": "d4efecf1a82f6db7"
+    },
+    {
+      "failure_id": "critical-15",
+      "source": [
+        "CRITICAL_SCENARIO_SUITE"
+      ],
+      "test_nodeids": [
+        "tests/test_phase0b_critical.py::test_c15_default_time_cannot_determine_turn_relation"
+      ],
+      "historical_case_ids": [],
+      "conversation_history": "上海销售额",
+      "current_utterance": "查询订单笔数",
+      "expected_behavior": "Default time/readiness cannot change turn relation",
+      "actual_behavior": "def test_c15_default_time_cannot_determine_turn_relation():\n        previous, current = parse('上海销售额'), parse('查询订单笔数')\n        gate = TurnAdmissionGate()\n        first = gate.evaluate(question=current.original_question, current=current, previous=previous, message_id='m2')\n        current.time_range = None\n        current.missing_slots = ['time_range']\n        second = gate.evaluate(question=current.original_question, current=current, previous=previous, message_id='m2')\n>       assert first.relation == second.relation == TurnRelation.STANDALONE_NEW_TOPIC\nE       AssertionError: assert <TurnRelation...NE_NEW_TOPIC'> == <TurnRelation...OUS_RELATION'>\nE         \nE         - AMBIGUOUS_RELATION\nE         + STANDALONE_NEW_TOPIC\n\ntests\\test_phase0b_critical.py:150: AssertionError",
+      "affected_business_capability": "time_range",
+      "repeatability": "OFFLINE_FIXED_CLOCK_FIXTURE",
+      "first_divergence_stage": "TURN_ADMISSION",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "evidence": [
+        "docs/phase0b/critical_before.json",
+        "tests/test_phase0b_critical.py::test_c15_default_time_cannot_determine_turn_relation",
+        "User Critical Multi-turn Scenario 15"
+      ],
+      "status": "OPEN",
+      "failure_signature": "TURN_ADMISSION|LEGACY|NEW_TASK|time_range|readiness_pollutes_relation",
+      "signature_id": "a5992e53c912b53b"
+    }
+  ]
+}
