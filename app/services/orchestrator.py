@@ -16,6 +16,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import unquote, urlparse
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 from app.adapters.base import AdapterBundle, AdapterError
 import httpx
@@ -110,6 +111,27 @@ _SALES_RECORD_TIME_ASSUMPTION = "TRANSACTION_TIME_SCOPE=SALES_RECORD"
 _INTERNAL_ASSUMPTIONS: ContextVar[tuple[str, ...]] = ContextVar(
     "data_agent_internal_assumptions", default=()
 )
+_BUSINESS_TIMEZONE = ZoneInfo("Asia/Shanghai")
+_QUALITY_STATUS_LABELS = {
+    "PASS": "通过",
+    "FAIL": "不通过",
+    "FAILED": "不通过",
+    "WARNING": "警告",
+    "WARN": "警告",
+    "DEGRADED": "降级",
+    "LIMITED": "受限",
+}
+
+
+def _business_datetime_text(value: datetime) -> str:
+    """Render user-visible timestamps consistently in business local time."""
+
+    localized = value.astimezone(_BUSINESS_TIMEZONE)
+    return localized.strftime("%Y-%m-%d %H:%M:%S（北京时间）")
+
+
+def _quality_status_text(value: str) -> str:
+    return _QUALITY_STATUS_LABELS.get(value.strip().upper(), "待确认")
 
 
 def _requires_deterministic_analysis(request: CanonicalAnalysisRequest) -> bool:
@@ -4204,12 +4226,13 @@ class DataAnalysisOrchestrator:
             "COMPLETED",
             (
                 "调度执行完成。\n"
-                f"数据集输出：columns={_compact_trace_value(query_result.dataset.columns, 800)}；"
-                f"row_count={query_result.dataset.row_count}；"
-                f"total_row_count={query_result.dataset.total_row_count}；"
-                f"quality_status={query_result.dataset.quality_status}；"
-                f"data_as_of={query_result.dataset.data_as_of.isoformat()}；"
-                f"rows_preview={_compact_trace_value(query_result.dataset.rows[:2], 1200)}。\n"
+                "数据集输出：\n"
+                f"查询字段：{_compact_trace_value(query_result.dataset.columns, 800)}；\n"
+                f"返回行数：{query_result.dataset.row_count}；\n"
+                f"结果总行数：{query_result.dataset.total_row_count}；\n"
+                f"数据质量：{_quality_status_text(query_result.dataset.quality_status)}；\n"
+                f"查询快照时间：{_business_datetime_text(query_result.dataset.data_as_of)}；\n"
+                f"数据预览：{_compact_trace_value(query_result.dataset.rows[:2], 1200)}。\n"
                 f"结果状态：{'结果已截断，完整数据通过结果文件提供。' if query_result.dataset.truncated else '当前结果未截断。'}"
             ),
             row_count=query_result.dataset.row_count,

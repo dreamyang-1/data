@@ -1,6 +1,6 @@
 import json
 import re
-from datetime import date
+from datetime import date, datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -18,6 +18,11 @@ from app.domain.models import (
     TurnRelation,
 )
 from app.main import create_app
+from app.services.orchestrator import (
+    DataAnalysisOrchestrator,
+    _business_datetime_text,
+    _quality_status_text,
+)
 from app.api import (
     _answer_chunk_delay,
     _answer_chunks,
@@ -26,7 +31,14 @@ from app.api import (
     _thinking_section,
     _thinking_title,
 )
-from app.services.orchestrator import DataAnalysisOrchestrator
+
+
+def test_user_visible_dataset_summary_uses_chinese_status_and_beijing_time():
+    assert _quality_status_text("PASS") == "通过"
+    assert _quality_status_text("FAIL") == "不通过"
+    assert _business_datetime_text(
+        datetime(2026, 9, 7, 5, 11, 7, tzinfo=timezone.utc)
+    ) == "2026-09-07 13:11:07（北京时间）"
 
 
 def build_test_app(**overrides):
@@ -946,6 +958,25 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
         event["meta"]["task_id"] for event in child_public_progress
         if event["meta"]["stage"] == "DATA_RETRIEVAL"
     } == {"task-1", "task-2"}
+    completed_retrieval_text = "".join(
+        event["content"] for event in child_public_progress
+        if event["meta"]["stage"] == "DATA_RETRIEVAL"
+        and event["meta"]["status"] == "COMPLETED"
+    )
+    assert "查询字段：" in completed_retrieval_text
+    assert "返回行数：" in completed_retrieval_text
+    assert "结果总行数：" in completed_retrieval_text
+    assert "数据质量：通过" in completed_retrieval_text
+    assert re.search(
+        r"查询快照时间：\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}（北京时间）",
+        completed_retrieval_text,
+    )
+    assert "数据预览：" in completed_retrieval_text
+    for internal_label in (
+        "columns=", "row_count=", "total_row_count=",
+        "quality_status=", "data_as_of=", "rows_preview=",
+    ):
+        assert internal_label not in completed_retrieval_text
 
 
 def test_all_seven_thinking_stages_have_normalized_unnumbered_headings():
