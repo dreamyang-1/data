@@ -10,3 +10,27 @@ dist/
 build/
 *.egg-info/
 
+# Local runtime, exports, credentials, backups, and temporary tooling.
+.env.*
+!.env.example
+*.log
+logs/
+_backups/
+*.bak
+.tmp*/
+实际业务问题.md
+
+# Local instruction inputs and uncurated evaluation output.
+/4(1).txt
+/9.1指令.md
+/思考输出格式(1).docx
+/测试问题
+/evals/results/business-*.json
+/evals/results/model81-q20-manufacturer-recall.json
+/evals/results/model81-strict-targets-20260901.json
+/evals/results/model81-user-*.json
+/docs/phase25_1/batch*_gate.json
+/docs/phase25_1/batch*files.json
+/docs/phase25_1/closure_test_gate.json
+/docs/phase25_1/contract_gate.json
+/docs/phase25_1/final_test_gate.json
