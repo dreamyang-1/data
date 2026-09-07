@@ -518,7 +518,7 @@ def test_legacy_modified_resubmit_is_distinct_from_pure_refresh():
     assert refresh.message_id != revise.message_id
 
 
-def test_regeneration_prefers_explicit_replacement_message_id():
+def test_regeneration_accepts_explicit_id_only_for_last_user_turn():
     payload = ChatRequest(
         application_id="app-refresh",
         conversation_id="conversation-original",
@@ -542,6 +542,68 @@ def test_regeneration_prefers_explicit_replacement_message_id():
     execution, _, _ = _prepare_regeneration(payload)
 
     assert [item.message_id for item in execution.history] == ["user-turn-1", None]
+
+
+def test_regeneration_rejects_replacing_an_earlier_user_turn():
+    payload = ChatRequest(
+        application_id="app-refresh",
+        conversation_id="conversation-original",
+        message_id="refresh-attempt",
+        replaces_message_id="user-turn-1",
+        original_question="查询 TDC-3 产品的主要适用科室",
+        question="查询 TDC-3 产品的所有适用科室",
+        history=[
+            {"role": "user", "message_id": "user-turn-1", "content": "查询销售额"},
+            {"role": "assistant", "content": "旧销售额答案"},
+            {
+                "role": "user",
+                "message_id": "user-turn-2",
+                "content": "查询 TDC-3 产品的主要适用科室",
+            },
+            {"role": "assistant", "content": "最后一问的旧答案"},
+        ],
+    )
+
+    with pytest.raises(Exception) as exc_info:
+        _prepare_regeneration(payload)
+
+    assert getattr(exc_info.value, "status_code", None) == 400
+    assert "最后一条用户消息" in str(getattr(exc_info.value, "detail", ""))
+
+
+def test_revise_last_question_does_not_require_history_or_replacement_id():
+    payload = ChatRequest(
+        application_id="app-refresh",
+        conversation_id="conversation-original",
+        message_id="refresh-attempt",
+        refresh_request_id="attempt-revise-1",
+        original_question="按月查询销售额",
+        question="按季度查询销售额",
+        regenerate=True,
+    )
+
+    execution, conversation_id, message_id = _prepare_regeneration(payload)
+
+    assert execution.history == []
+    assert execution._regeneration_mode == "REVISE"
+    assert conversation_id == "conversation-original"
+    assert message_id == "refresh-attempt"
+
+
+def test_legacy_replacement_id_without_history_is_accepted_for_last_turn_only():
+    payload = ChatRequest(
+        application_id="app-refresh",
+        conversation_id="conversation-original",
+        message_id="refresh-attempt",
+        question="查询销售额",
+        replaces_message_id="legacy-last-user-message",
+        regenerate=True,
+    )
+
+    execution, _, _ = _prepare_regeneration(payload)
+
+    assert execution.history == []
+    assert execution._regeneration_mode == "REFRESH"
 
 
 def test_regeneration_text_fallback_normalizes_unicode_dash():
@@ -608,6 +670,24 @@ def test_refresh_endpoint_is_idempotent_and_keeps_original_session_scope():
     assert next_click.json()["request_id"] != first.json()["request_id"]
     assert response_keys
     assert all(key[3] == "conversation-original" for key in response_keys)
+
+
+def test_revise_last_question_endpoint_does_not_require_history():
+    app = build_test_app()
+    payload = {
+        "application_id": "app-refresh",
+        "conversation_id": "conversation-original",
+        "message_id": "external-message",
+        "refresh_request_id": "revise-attempt-1",
+        "original_question": "按月查询销售额",
+        "question": "按季度查询销售额",
+    }
+
+    with TestClient(app) as client:
+        response = client.post("/agent_chat/refresh", json=payload)
+
+    assert response.status_code == 200
+    assert response.json()["conversation_id"] == "conversation-original"
 
 
 def test_regeneration_rejects_unknown_explicit_replacement_message_id():

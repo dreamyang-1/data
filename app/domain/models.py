@@ -518,16 +518,15 @@ class ChatRequest(StrictModel):
             "在原会话范围内替换当前轮并完整重算；跳过旧答案缓存，但保留刷新请求幂等。"
         ),
     )
-    # 修改问题重新提问（revise）场景专用：传被替换轮的原问题文本，
-    # 后端用它定位 history 末尾被替换的 user 轮并截断；纯刷新（问题不变）
-    # 可不传，此时用 question 本身匹配。
+    # 修改最后一个问题重新提问（revise）场景专用。刷新接口只操作最后一问，
+    # 因此调用方无需提交完整 history 或被替换轮 message_id。
     original_question: str | None = Field(
         default=None,
         max_length=4000,
         exclude=True,
         description=(
-            "修改问题重新提问时传原问题文本，用于在 history 中定位被替换的轮次；"
-            "纯刷新（问题未修改）可不传"
+            "修改最后一个问题重新提问时传修改前的问题，用于区分REVISE与REFRESH；"
+            "纯刷新不传。history不是刷新接口必填项"
         ),
     )
     refresh_request_id: str | None = Field(
@@ -544,7 +543,10 @@ class ChatRequest(StrictModel):
         min_length=1,
         max_length=128,
         exclude=True,
-        description="修改重提时被替换的 user 消息 ID，用于准确截断历史。",
+        description=(
+            "兼容旧调用方的可选字段；若同时传history，只允许指向其中最后一条"
+            "user消息。新调用方无需传此字段"
+        ),
     )
     tools: list[ToolConfig] = Field(default_factory=list, max_length=30)
     skills: list[SkillConfig] = Field(default_factory=list, max_length=30)

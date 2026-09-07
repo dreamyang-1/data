@@ -406,12 +406,12 @@ async def _collect_revised_business_question(
 def _prepare_regeneration(payload: ChatRequest) -> tuple[ChatRequest, str, str]:
     """Prepare an idempotent refresh inside the original conversation scope.
 
-    刷新（问题不变）与修改重提（question 已改写）共用本路径：
-    - 纯刷新：question 即原问题，直接用它匹配 history 末尾的 user 轮；
-    - 修改重提：前端把原问题放在 original_question，用它匹配末尾 user 轮，
-      截断后新 question 基于更早的上下文重新生成，旧答案不进入上下文。
-    只会替换当前轮，因此只在 history 末尾定位最后一条 user 消息，
-    不会误伤历史轮次中恰好文本相同的问题。
+    产品只允许操作当前会话的最后一个问题：
+    - 纯刷新：question 仍为最后一个问题；
+    - 修改重提：question 为修改后的问题，original_question 为修改前的问题。
+    history 不是刷新接口的必填项。调用方若携带 history，则仅在最后一条
+    user 消息确实是目标问题时截断该轮及旧答案；永远不向前搜索或替换更早轮次。
+    replaces_message_id 仅保留兼容，也只能指向最后一条 user 消息。
     """
     external_conversation_id = payload.conversation_id
     external_message_id = payload.message_id
@@ -444,32 +444,11 @@ def _prepare_regeneration(payload: ChatRequest) -> tuple[ChatRequest, str, str]:
     execution._is_regeneration_execution = True
     execution._regeneration_mode = mode
 
-    # 匹配目标：修改重提时用 original_question（原问题在 history 里），
-    # 纯刷新时 question 本身就是原问题。
+    # 修改重提时，history 中的目标仍是修改前的问题；纯刷新时目标就是 question。
     match_target = payload.original_question or payload.question
     normalized_target = _normalized_regeneration_text(match_target)
 
-    # Prefer the immutable message id.  This supports editing an earlier turn
-    # and avoids accidentally replacing another user message with similar text.
-    if payload.replaces_message_id:
-        target_index = next(
-            (
-                index
-                for index in range(len(execution.history) - 1, -1, -1)
-                if execution.history[index].role == "user"
-                and execution.history[index].message_id == payload.replaces_message_id
-            ),
-            None,
-        )
-        if target_index is None:
-            raise HTTPException(
-                status_code=400,
-                detail="replaces_message_id 未匹配到 history 中的 user 消息",
-            )
-        execution.history = execution.history[:target_index]
-        return execution, external_conversation_id, external_message_id
-
-    # 只定位 history 中最后一条 user 消息（被替换的当前轮）。
+    # 只定位 history 中最后一条 user 消息，绝不按 message_id 向前搜索旧轮次。
     last_user_index = next(
         (
             index
@@ -479,27 +458,36 @@ def _prepare_regeneration(payload: ChatRequest) -> tuple[ChatRequest, str, str]:
         None,
     )
     if last_user_index is None:
-        # history 为空或没有 user 轮：首轮刷新或前端不携带被替换轮，
-        # 无需截断，直接重新生成。
-        if payload.original_question:
+        # history 可省略；结构化短期状态仍由原 conversation_id 隔离并在执行前清理。
+        if payload.replaces_message_id:
             logger.warning(
-                "regeneration carries original_question but history has no "
-                "user turn to replace; proceeding without truncation"
+                "regeneration carries deprecated replaces_message_id but no "
+                "history; proceeding with last-turn-only semantics"
             )
     else:
         item = execution.history[last_user_index]
+        if (
+            payload.replaces_message_id
+            and item.message_id != payload.replaces_message_id
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "刷新接口只允许操作最后一条用户消息；"
+                    "replaces_message_id 与最后一条用户消息不一致"
+                ),
+            )
         normalized_content = _normalized_history_question(item.content)
         if normalized_content == normalized_target:
             # 截断被替换轮及其之后的所有消息（含旧答案），旧答案不得
             # 作为证据或追问结果参与重新生成。
             execution.history = execution.history[:last_user_index]
         else:
-            # Some clients send history *before* the replaced turn.  Without an
-            # explicit replaces_message_id, an exact miss is therefore not an
-            # error and must not be guessed with suffix/fuzzy matching.
+            # 客户端可能只携带目标轮之前的上下文。目标不一致时保留原 history，
+            # 不能把更早一轮误当作最后一问删除。
             logger.warning(
-                "regeneration target not found by exact normalized text; "
-                "history kept as-is; pass replaces_message_id for strict replacement"
+                "last history user turn is not the regeneration target; "
+                "history kept as-is"
             )
     return execution, external_conversation_id, external_message_id
 
@@ -538,7 +526,12 @@ async def chat(
     "/agent_chat/refresh",
     response_model=AgentResponse,
     responses=CHAT_ERROR_RESPONSES,
-    summary="完整重新生成数据分析回答",
+    summary="刷新或修改重提当前会话最后一个问题",
+    description=(
+        "仅操作当前会话最后一个问题。刷新原问题时 question 保持不变；"
+        "修改后重新提问时 question 传新问题、original_question 传修改前问题。"
+        "history 和 replaces_message_id 均非必填。refresh_request_id 是刷新尝试幂等键。"
+    ),
 )
 async def chat_refresh(
     payload: ChatRequest,
@@ -938,7 +931,12 @@ async def chat_stream(
 @router.post(
     "/agent_chat/refresh/stream",
     response_class=StreamingResponse,
-    summary="SSE 完整重新生成数据分析回答",
+    summary="SSE 刷新或修改重提当前会话最后一个问题",
+    description=(
+        "仅操作当前会话最后一个问题。刷新时 question 保持不变；修改重提时"
+        "question 传新问题、original_question 传修改前问题。history 和"
+        "replaces_message_id 均非必填，响应格式与 /agent_chat/stream 相同。"
+    ),
 )
 async def chat_refresh_stream(
     payload: ChatRequest,
