@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "TraceStage": {
+      "enum": [
+        "REQUEST_RECEIVED",
+        "STATE_LOADED",
+        "CURRENT_TURN_PARSED",
+        "DIALOGUE_CANDIDATES_CREATED",
+        "DIALOGUE_RESOLVED",
+        "INTENT_AXES_PARSED",
+        "MENTIONS_EXTRACTED",
+        "SEMANTIC_CANDIDATES_RETRIEVED",
+        "SEMANTIC_CANDIDATES_FILTERED",
+        "PLAN_CANDIDATES_CREATED",
+        "PLAN_SELECTED",
+        "SLOT_PATCH_APPLIED",
+        "PLAN_VALIDATED",
+        "CLARIFICATION_DECIDED",
+        "LEGACY_ADAPTER_EXECUTED",
+        "ASL_CONTRACT_VALIDATED",
+        "SQL_PLAN_VALIDATED",
+        "QUERY_EXECUTED",
+        "RESULT_CONTRACT_VALIDATED",
+        "STATE_COMMITTED",
+        "RESPONSE_FINALIZED",
+        "ERROR"
+      ],
+      "title": "TraceStage",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One bounded, sanitized phase event.",
+  "properties": {
+    "schema_version": {
+      "default": "2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "trace_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Trace Id",
+      "type": "string"
+    },
+    "span_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Span Id",
+      "type": "string"
+    },
+    "parent_span_id": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Span Id"
+    },
+    "conversation_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Conversation Id",
+      "type": "string"
+    },
+    "message_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Message Id",
+      "type": "string"
+    },
+    "topic_id": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Topic Id"
+    },
+    "task_id": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Task Id"
+    },
+    "task_version": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Task Version"
+    },
+    "stage": {
+      "$ref": "#/$defs/TraceStage"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "duration_ms": {
+      "minimum": 0,
+      "title": "Duration Ms",
+      "type": "number"
+    },
+    "input_digest": {
+      "maxLength": 64,
+      "minLength": 64,
+      "title": "Input Digest",
+      "type": "string"
+    },
+    "output_digest": {
+      "maxLength": 64,
+      "minLength": 64,
+      "title": "Output Digest",
+      "type": "string"
+    },
+    "model_name": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Name"
+    },
+    "model_snapshot": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Snapshot"
+    },
+    "prompt_version": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Prompt Version"
+    },
+    "catalog_version": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Catalog Version"
+    },
+    "semantic_model_version": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Semantic Model Version"
+    },
+    "policy_version": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Policy Version"
+    },
+    "candidate_summary": {
+      "additionalProperties": true,
+      "title": "Candidate Summary",
+      "type": "object"
+    },
+    "rejection_summary": {
+      "additionalProperties": true,
+      "title": "Rejection Summary",
+      "type": "object"
+    },
+    "error_type": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Type"
+    },
+    "sanitized_payload": {
+      "additionalProperties": true,
+      "title": "Sanitized Payload",
+      "type": "object"
+    }
+  },
+  "required": [
+    "trace_id",
+    "span_id",
+    "conversation_id",
+    "message_id",
+    "stage",
+    "timestamp",
+    "duration_ms",
+    "input_digest",
+    "output_digest"
+  ],
+  "title": "TraceV2",
+  "type": "object"
+}

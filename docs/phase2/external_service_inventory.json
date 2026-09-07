@@ -1,0 +1,61 @@
+[
+  {
+    "service": "DataAnalysis_Agent",
+    "repository": "E:\\YouoAgent\\DataAnalysis_Agent",
+    "runtime_endpoint": "http://127.0.0.1:8088",
+    "role": "conversation orchestration, intent, state, ASL/SQL client, result validation",
+    "source_obtained": true,
+    "observed_health": "READY",
+    "evidence": [
+      "app/config.py:66-94",
+      "app/adapters/http.py:1643-2183"
+    ]
+  },
+  {
+    "service": "Oagnet",
+    "repository": "E:\\YouoAgent\\Oagnet",
+    "runtime_endpoint": "http://127.0.0.1:8021",
+    "role": "semantic retrieval, normalization, ASL generation",
+    "source_obtained": true,
+    "observed_health": "Milvus healthy",
+    "evidence": [
+      "Oagnet/api.py:1149-1377",
+      "Oagnet/agent.py:6871-7163"
+    ]
+  },
+  {
+    "service": "sql-translator",
+    "repository": "E:\\YouoAgent\\sql-translator",
+    "runtime_endpoint": "http://127.0.0.1:48000",
+    "role": "ASL validation, SQL translation, read-only execution",
+    "source_obtained": true,
+    "observed_health": "ok; build 2.1.0",
+    "evidence": [
+      "sql-translator/api_server_prod.py:153-410",
+      "sql-translator/sql_translator_prod.py:2860-3186"
+    ]
+  },
+  {
+    "service": "MySQL semantic catalog",
+    "repository": null,
+    "runtime_endpoint": "REDACTED_PRIVATE_ENDPOINT",
+    "role": "authoritative semantic model definition",
+    "source_obtained": false,
+    "observed_health": "read path succeeded for model 81/domain 205",
+    "evidence": [
+      "Oagnet/mysql_tool.py:get_dsl_by_scope"
+    ]
+  },
+  {
+    "service": "Milvus semantic index",
+    "repository": null,
+    "runtime_endpoint": "REDACTED_PRIVATE_ENDPOINT",
+    "role": "semantic candidate and entity-value vector retrieval",
+    "source_obtained": false,
+    "observed_health": "healthy; dimension 1024",
+    "evidence": [
+      "Oagnet/config.py:44-125",
+      "Oagnet/api.py:/vector/health"
+    ]
+  }
+]

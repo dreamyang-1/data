@@ -1,0 +1,7 @@
+﻿surface,roles,risk,resolution
+城市,DIMENSION|ENTITY,HIGH,use requested semantic role and field ownership
+经销商,DIMENSION|ENTITY,HIGH,use query shape plus requested role
+商品,DIMENSION|ENTITY,HIGH,use requested semantic role
+商品名称,ATTRIBUTE|DIMENSION_ALIAS,MEDIUM,attribute for projection/filter; dimension for grouping
+数量,ATTRIBUTE|METRIC,HIGH,aggregate semantics must be explicit
+交易日期,ATTRIBUTE|DIMENSION,MEDIUM,time semantic role plus grain

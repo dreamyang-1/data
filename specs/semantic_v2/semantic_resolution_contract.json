@@ -1,0 +1,441 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CandidateRejectionReason": {
+      "enum": [
+        "SCOPE_MISMATCH",
+        "ROLE_MISMATCH",
+        "FIELD_OWNERSHIP_MISMATCH",
+        "RELATION_UNREACHABLE",
+        "METRIC_DIMENSION_INCOMPATIBLE",
+        "PERMISSION_DENIED",
+        "CATALOG_VERSION_MISMATCH",
+        "DUPLICATE_RELATION",
+        "LOW_SCORE",
+        "AMBIGUOUS_SCORE",
+        "INVALID_GRAIN",
+        "JOIN_CARDINALITY_UNSAFE",
+        "UNKNOWN_BUSINESS_RULE"
+      ],
+      "title": "CandidateRejectionReason",
+      "type": "string"
+    },
+    "CatalogType": {
+      "enum": [
+        "ENTITY",
+        "METRIC",
+        "DIMENSION",
+        "ATTRIBUTE",
+        "ENTITY_VALUE",
+        "RELATION",
+        "DATASET",
+        "REPORT",
+        "PHYSICAL_TABLE",
+        "PHYSICAL_COLUMN"
+      ],
+      "title": "CatalogType",
+      "type": "string"
+    },
+    "PlanCandidate": {
+      "additionalProperties": false,
+      "description": "One globally constrained plan candidate built only from catalog IDs.",
+      "properties": {
+        "plan_candidate_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Plan Candidate Id",
+          "type": "string"
+        },
+        "semantic_candidate_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 500,
+          "minItems": 1,
+          "title": "Semantic Candidate Ids",
+          "type": "array"
+        },
+        "score": {
+          "$ref": "#/$defs/PlanCandidateScore"
+        },
+        "executable": {
+          "title": "Executable",
+          "type": "boolean"
+        },
+        "rejection_reasons": {
+          "items": {
+            "$ref": "#/$defs/CandidateRejectionReason"
+          },
+          "title": "Rejection Reasons",
+          "type": "array"
+        },
+        "validation_errors": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Validation Errors",
+          "type": "array"
+        }
+      },
+      "required": [
+        "plan_candidate_id",
+        "semantic_candidate_ids",
+        "score",
+        "executable"
+      ],
+      "title": "PlanCandidate",
+      "type": "object"
+    },
+    "PlanCandidateScore": {
+      "additionalProperties": false,
+      "description": "Deterministic and retrieval components of a complete plan score.",
+      "properties": {
+        "retrieval_score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Retrieval Score",
+          "type": "number"
+        },
+        "constraint_score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Constraint Score",
+          "type": "number"
+        },
+        "permission_score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Permission Score",
+          "type": "number"
+        },
+        "executability_score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Executability Score",
+          "type": "number"
+        },
+        "total_score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Total Score",
+          "type": "number"
+        },
+        "model_self_reported_confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Self Reported Confidence"
+        },
+        "calibrated_probability": {
+          "default": null,
+          "title": "Calibrated Probability",
+          "type": "null"
+        }
+      },
+      "required": [
+        "retrieval_score",
+        "constraint_score",
+        "permission_score",
+        "executability_score",
+        "total_score"
+      ],
+      "title": "PlanCandidateScore",
+      "type": "object"
+    },
+    "ResolutionStatus": {
+      "enum": [
+        "ACCEPTED",
+        "REJECTED",
+        "AMBIGUOUS",
+        "UNRESOLVED"
+      ],
+      "title": "ResolutionStatus",
+      "type": "string"
+    },
+    "SemanticCandidate": {
+      "additionalProperties": false,
+      "description": "Auditable candidate retained before global plan selection.",
+      "properties": {
+        "candidate_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "mention_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Mention Id",
+          "type": "string"
+        },
+        "candidate_role": {
+          "$ref": "#/$defs/SemanticRole"
+        },
+        "catalog_type": {
+          "$ref": "#/$defs/CatalogType"
+        },
+        "canonical_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Canonical Id",
+          "type": "string"
+        },
+        "canonical_code": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Canonical Code",
+          "type": "string"
+        },
+        "display_name": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "retrieval_method": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Retrieval Method",
+          "type": "string"
+        },
+        "raw_score": {
+          "title": "Raw Score",
+          "type": "number"
+        },
+        "normalized_score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Normalized Score",
+          "type": "number"
+        },
+        "exact_match": {
+          "default": false,
+          "title": "Exact Match",
+          "type": "boolean"
+        },
+        "alias_match": {
+          "default": false,
+          "title": "Alias Match",
+          "type": "boolean"
+        },
+        "field_ownership_valid": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field Ownership Valid"
+        },
+        "relationship_reachable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relationship Reachable"
+        },
+        "metric_dimension_compatible": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metric Dimension Compatible"
+        },
+        "permission_allowed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Permission Allowed"
+        },
+        "catalog_version": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ResolutionStatus"
+        },
+        "rejection_reasons": {
+          "items": {
+            "$ref": "#/$defs/CandidateRejectionReason"
+          },
+          "title": "Rejection Reasons",
+          "type": "array"
+        },
+        "validation_errors": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Validation Errors",
+          "type": "array"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "mention_id",
+        "candidate_role",
+        "catalog_type",
+        "canonical_id",
+        "canonical_code",
+        "display_name",
+        "retrieval_method",
+        "raw_score",
+        "normalized_score",
+        "catalog_version",
+        "status"
+      ],
+      "title": "SemanticCandidate",
+      "type": "object"
+    },
+    "SemanticCandidateSet": {
+      "additionalProperties": false,
+      "description": "N-best candidates for one mention across role hypotheses.",
+      "properties": {
+        "mention_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Mention Id",
+          "type": "string"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/SemanticCandidate"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Candidates",
+          "type": "array"
+        },
+        "selected_candidate_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selected Candidate Id"
+        },
+        "status": {
+          "$ref": "#/$defs/ResolutionStatus"
+        }
+      },
+      "required": [
+        "mention_id",
+        "candidates",
+        "status"
+      ],
+      "title": "SemanticCandidateSet",
+      "type": "object"
+    },
+    "SemanticRole": {
+      "enum": [
+        "MEASURE",
+        "GROUP_BY",
+        "FILTER_FIELD",
+        "FILTER_VALUE",
+        "SOURCE_ENTITY",
+        "TARGET_ENTITY",
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD",
+        "RELATIONSHIP",
+        "RELATION_TARGET",
+        "TIME_FIELD",
+        "TIME_RANGE",
+        "TIME_GRAIN",
+        "COMPARISON_BASELINE",
+        "ORDER_BY",
+        "SORT_DIRECTION",
+        "LIMIT",
+        "DATASET_SOURCE",
+        "DELIVERY_TARGET"
+      ],
+      "title": "SemanticRole",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Complete N-best resolution result for one shadow planning request.",
+  "properties": {
+    "schema_version": {
+      "const": "2.0",
+      "default": "2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "candidate_sets": {
+      "items": {
+        "$ref": "#/$defs/SemanticCandidateSet"
+      },
+      "maxItems": 500,
+      "title": "Candidate Sets",
+      "type": "array"
+    },
+    "plan_candidates": {
+      "items": {
+        "$ref": "#/$defs/PlanCandidate"
+      },
+      "maxItems": 100,
+      "title": "Plan Candidates",
+      "type": "array"
+    },
+    "selected_plan_candidate_id": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Selected Plan Candidate Id"
+    },
+    "status": {
+      "$ref": "#/$defs/ResolutionStatus"
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "title": "SemanticResolutionContract",
+  "type": "object"
+}

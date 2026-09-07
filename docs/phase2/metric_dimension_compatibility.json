@@ -1,0 +1,148 @@
+[
+  {
+    "metric_code": "annual_total_sales",
+    "metric_name": "含税销售总额",
+    "bind_dimensions": [
+      "applicable_department",
+      "city",
+      "dealer",
+      "department",
+      "hospital",
+      "hospital_level",
+      "product",
+      "product_brand",
+      "product_category",
+      "province",
+      "salesperson",
+      "transaction_date"
+    ],
+    "source": "catalog_declared",
+    "status": "CURRENT_FACT"
+  },
+  {
+    "metric_code": "tax_free_sales_amount",
+    "metric_name": "不含税销售总额",
+    "bind_dimensions": [
+      "dealer",
+      "hospital",
+      "product",
+      "salesperson",
+      "transaction_date"
+    ],
+    "source": "catalog_declared",
+    "status": "CURRENT_FACT"
+  },
+  {
+    "metric_code": "sales_total_cost",
+    "metric_name": "销售总成本",
+    "bind_dimensions": [
+      "dealer",
+      "hospital",
+      "product",
+      "salesperson",
+      "transaction_date"
+    ],
+    "source": "catalog_declared",
+    "status": "CURRENT_FACT"
+  },
+  {
+    "metric_code": "sales_total_quantity",
+    "metric_name": "销售总数量",
+    "bind_dimensions": [
+      "city",
+      "dealer",
+      "hospital",
+      "hospital_level",
+      "product",
+      "province",
+      "salesperson",
+      "transaction_date"
+    ],
+    "source": "catalog_declared",
+    "status": "CURRENT_FACT"
+  },
+  {
+    "metric_code": "order_count",
+    "metric_name": "订单笔数",
+    "bind_dimensions": [
+      "city",
+      "dealer",
+      "hospital",
+      "hospital_level",
+      "product",
+      "salesperson",
+      "transaction_date"
+    ],
+    "source": "catalog_declared",
+    "status": "CURRENT_FACT"
+  },
+  {
+    "metric_code": "cooperating_dealer_count",
+    "metric_name": "已合作经销商数",
+    "bind_dimensions": [
+      "city",
+      "hospital_level",
+      "transaction_date"
+    ],
+    "source": "catalog_declared",
+    "status": "CURRENT_FACT"
+  },
+  {
+    "metric_code": "cooperating_hospital_count",
+    "metric_name": "已合作医院数",
+    "bind_dimensions": [
+      "city",
+      "hospital",
+      "product",
+      "province",
+      "transaction_date"
+    ],
+    "source": "catalog_declared",
+    "status": "CURRENT_FACT"
+  },
+  {
+    "metric_code": "total_hospital_count_by_region",
+    "metric_name": "区域全部医院总数",
+    "bind_dimensions": [
+      "city",
+      "product",
+      "province"
+    ],
+    "source": "catalog_declared",
+    "status": "CURRENT_FACT"
+  },
+  {
+    "metric_code": "dealer_cooperation_months",
+    "metric_name": "合作时长",
+    "bind_dimensions": [
+      "city",
+      "dealer",
+      "hospital_level",
+      "province"
+    ],
+    "source": "catalog_declared",
+    "status": "CURRENT_FACT"
+  },
+  {
+    "metric_code": "hospital_affiliated_department_count",
+    "metric_name": "医院下属科室数量",
+    "bind_dimensions": [
+      "department",
+      "hospital"
+    ],
+    "source": "catalog_declared",
+    "status": "CURRENT_FACT"
+  },
+  {
+    "metric_code": "screening_area_hospital_coverage",
+    "metric_name": "区域医院覆盖率",
+    "bind_dimensions": [
+      "city",
+      "hospital",
+      "product",
+      "province"
+    ],
+    "source": "catalog_declared",
+    "status": "CURRENT_FACT"
+  }
+]

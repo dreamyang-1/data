@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "captured_at": "2026-09-07T00:00:00+08:00",
+  "repositories": {
+    "DataAnalysis_Agent": "E:\\YouoAgent\\DataAnalysis_Agent",
+    "Oagnet": "E:\\YouoAgent\\Oagnet",
+    "sql-translator": "E:\\YouoAgent\\sql-translator",
+    "NL_Agent_reference_only": "E:\\YouoAgent\\NL_Agent"
+  },
+  "python_version": "3.12.8",
+  "git_status": {
+    "DataAnalysis_Agent": "NOT_A_GIT_WORKTREE",
+    "Oagnet": "DIRTY_PREEXISTING_USER_CHANGES",
+    "sql-translator": "NOT_A_GIT_WORKTREE",
+    "commit_performed": false
+  },
+  "configuration_mode": "LOCAL_INTEGRATION; secrets not read or recorded",
+  "service_health": {
+    "status": "NOT_RECHECKED_TO_AVOID_NETWORK_CALL",
+    "last_read_only_evidence": "docs/phase2/data_agent_phase2_semantic_execution_audit.md"
+  },
+  "baseline_tests": {
+    "phase2_recorded": {
+      "passed": 1253,
+      "failed": 25,
+      "collection_errors": 2
+    },
+    "phase25_initial_full_collection": {
+      "passed": 0,
+      "failed": 0,
+      "collection_errors": 5,
+      "reason": "missing compatibility symbols caused collection interruption"
+    }
+  },
+  "execution_safety": {
+    "mocks_used": true,
+    "real_model_calls": false,
+    "external_network_calls": false,
+    "database_writes": false,
+    "index_rebuilds": false,
+    "dependencies_changed": false
+  },
+  "file_hashes": {
+    "E:\\YouoAgent\\DataAnalysis_Agent\\app\\domain\\models.py": {
+      "sha256": "0ec7c3c9b3125ecd5ac11ceaa57abf8024add54a0a423c0ea814593e2b6fc9db",
+      "snapshot_source": "E:\\yy\\app\\domain\\models.py"
+    },
+    "E:\\YouoAgent\\DataAnalysis_Agent\\app\\services\\orchestrator.py": {
+      "sha256": "41b289c8d8d418f629811c6602e0988572f81e3b8dc6dd580d583a61df1845ce",
+      "snapshot_source": "E:\\yy\\app\\services\\orchestrator.py"
+    },
+    "E:\\YouoAgent\\Oagnet\\agent.py": {
+      "sha256": "5f0a61db620183ab3856cdfb0a986907d4bae21706b0ad598da8edd546dada80",
+      "snapshot_source": "E:\\YouoAgent\\Oagnet\\agent.py"
+    },
+    "E:\\YouoAgent\\sql-translator\\sql_translator_prod.py": {
+      "sha256": "7532823ce30a8a295d2d3ecc5ecab9d96b85ce0724d134fd5e807bc3109707d6",
+      "snapshot_source": "E:\\YouoAgent\\sql-translator\\sql_translator_prod.py"
+    }
+  }
+}

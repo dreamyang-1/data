@@ -1,0 +1,321 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:data-agent:typed-logical-plan:draft:v0",
+  "title": "TypedLogicalPlanDraft",
+  "type": "object",
+  "required": [
+    "version",
+    "dialogue_act",
+    "service_route",
+    "analysis_goals",
+    "query_shape",
+    "subject",
+    "projections",
+    "filters",
+    "time",
+    "result_contract",
+    "provenance"
+  ],
+  "properties": {
+    "version": {
+      "const": "0.1-draft"
+    },
+    "dialogue_act": {
+      "enum": [
+        "NEW_REQUEST",
+        "FOLLOW_UP",
+        "CLARIFICATION_ANSWER",
+        "CORRECTION",
+        "REFRESH",
+        "REVISE",
+        "CANCEL",
+        "CHAT"
+      ]
+    },
+    "service_route": {
+      "enum": [
+        "SEMANTIC_QUERY",
+        "DATASET_TRANSFORM",
+        "ANALYSIS",
+        "REPORT",
+        "CHAT"
+      ]
+    },
+    "analysis_goals": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "LOOKUP",
+          "AGGREGATE",
+          "TREND",
+          "RANK",
+          "COMPARE",
+          "COMPOSITION",
+          "CORRELATION",
+          "ANOMALY"
+        ]
+      }
+    },
+    "query_shape": {
+      "enum": [
+        "DETAIL",
+        "AGGREGATE",
+        "TIME_SERIES",
+        "TOP_N",
+        "COMPARISON",
+        "MULTI_TASK"
+      ]
+    },
+    "subject": {
+      "$ref": "#/$defs/semanticRef"
+    },
+    "projections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/typedProjection"
+      }
+    },
+    "groupings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/semanticRef"
+      }
+    },
+    "filters": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/filter"
+      }
+    },
+    "time": {
+      "$ref": "#/$defs/timeSemantics"
+    },
+    "sort": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ref",
+          "direction"
+        ],
+        "properties": {
+          "ref": {
+            "$ref": "#/$defs/semanticRef"
+          },
+          "direction": {
+            "enum": [
+              "ASC",
+              "DESC"
+            ]
+          }
+        }
+      }
+    },
+    "limit": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "comparison": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "result_contract": {
+      "type": "object",
+      "required": [
+        "grain",
+        "required_columns"
+      ],
+      "properties": {
+        "grain": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/semanticRef"
+          }
+        },
+        "required_columns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ordering": {
+          "type": "array"
+        },
+        "row_bounds": {
+          "type": "object"
+        }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "span",
+          "source",
+          "confidence"
+        ],
+        "properties": {
+          "span": {
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "USER",
+              "CONTEXT",
+              "CATALOG",
+              "SYSTEM_DEFAULT",
+              "MODEL"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "semanticRef": {
+      "type": "object",
+      "required": [
+        "role",
+        "canonical_id",
+        "canonical_code",
+        "display_name"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "ENTITY",
+            "METRIC",
+            "DIMENSION",
+            "ATTRIBUTE",
+            "ENTITY_VALUE",
+            "RELATION"
+          ]
+        },
+        "canonical_id": {
+          "type": "string"
+        },
+        "canonical_code": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "mention_span": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "typedProjection": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/semanticRef"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "aggregation": {
+              "enum": [
+                "NONE",
+                "SUM",
+                "COUNT",
+                "COUNT_DISTINCT",
+                "AVG",
+                "MIN",
+                "MAX",
+                "RATIO"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "filter": {
+      "type": "object",
+      "required": [
+        "field",
+        "operator",
+        "value"
+      ],
+      "properties": {
+        "field": {
+          "$ref": "#/$defs/semanticRef"
+        },
+        "operator": {
+          "enum": [
+            "EQ",
+            "NE",
+            "IN",
+            "NOT_IN",
+            "GT",
+            "GTE",
+            "LT",
+            "LTE",
+            "LIKE",
+            "BETWEEN"
+          ]
+        },
+        "value": {}
+      }
+    },
+    "timeSemantics": {
+      "type": "object",
+      "required": [
+        "anchor",
+        "range",
+        "grain",
+        "boundary"
+      ],
+      "properties": {
+        "anchor": {
+          "$ref": "#/$defs/semanticRef"
+        },
+        "range": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "grain": {
+          "enum": [
+            "NONE",
+            "DAY",
+            "WEEK",
+            "MONTH",
+            "QUARTER",
+            "YEAR"
+          ]
+        },
+        "boundary": {
+          "enum": [
+            "LEFT_CLOSED_RIGHT_OPEN",
+            "CLOSED"
+          ]
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "USER",
+            "CONTEXT",
+            "SYSTEM_DEFAULT"
+          ]
+        }
+      }
+    }
+  }
+}

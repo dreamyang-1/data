@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0",
+  "baseline": {
+    "passed": 1253,
+    "failed": 25,
+    "collection_errors": 2
+  },
+  "phase25_initial_collection_errors": 5,
+  "final_full_suite": {
+    "passed": 1452,
+    "failed": 32,
+    "collection_errors": 0
+  },
+  "legacy_assertion_failures_fixed_in_current_full_suite": 7,
+  "collection_error_modules_fixed": 5,
+  "fixed_items": [
+    {
+      "test": "collection:test_analysis_runtime",
+      "category": "SCHEMA_DRIFT",
+      "root_cause": "AnalysisStep removed while runtime still imports it",
+      "status": "FIXED"
+    },
+    {
+      "test": "collection:test_result_validator",
+      "category": "SCHEMA_DRIFT",
+      "root_cause": "ResultValidationReport removed while validator still imports it",
+      "status": "FIXED"
+    },
+    {
+      "test": "collection:test_semantic_context_contract",
+      "category": "SCHEMA_DRIFT",
+      "root_cause": "semantic evidence models removed while active service imports them",
+      "status": "FIXED"
+    },
+    {
+      "test": "collection:test_tool_runtime",
+      "category": "SCHEMA_DRIFT",
+      "root_cause": "AnalysisStep removal transitively broke runtime package",
+      "status": "FIXED"
+    },
+    {
+      "test": "collection:test_validated_query_recall",
+      "category": "SCHEMA_DRIFT",
+      "root_cause": "semantic SQL validation models and store contract were incomplete",
+      "status": "FIXED"
+    },
+    {
+      "test": "test_context_builder::*",
+      "category": "SCHEMA_DRIFT",
+      "root_cause": "ExtensionExecution omitted fields consumed by context and trace",
+      "status": "FIXED"
+    },
+    {
+      "test": "test_semantic_context_contract::test_composite_query_records_resolved_semantic_snapshot",
+      "category": "REAL_BEHAVIOR_BUG",
+      "root_cause": "resolved snapshot was not attached to the internal request field",
+      "status": "FIXED"
+    },
+    {
+      "test": "test_validated_query_recall::test_recall_is_scoped_and_contains_no_sql_asl_or_rows",
+      "category": "MISSING_FIXTURE",
+      "root_cause": "session stores lacked the declared SQL-free recall methods",
+      "status": "FIXED"
+    }
+  ],
+  "unresolved_clusters": [
+    {
+      "test": "clarification/pending/date/grounding cluster",
+      "category": "REAL_BEHAVIOR_BUG_OR_STALE_TEST",
+      "root_cause": "current default-time and pending admission behavior conflicts with older expectations",
+      "owner": "conversation-owner",
+      "blocking_level": "P0",
+      "reason_not_fixed": "needs per-test contract proof; broad production behavior changes are forbidden"
+    },
+    {
+      "test": "memory/session event cluster",
+      "category": "REAL_BEHAVIOR_BUG_OR_ENVIRONMENT_DEPENDENCY",
+      "root_cause": "event recording is disabled or not injected in current test construction",
+      "owner": "observability-owner",
+      "blocking_level": "P1",
+      "reason_not_fixed": "not required for V2 shadow and production event semantics need owner confirmation"
+    },
+    {
+      "test": "OpenAPI trusted header cluster",
+      "category": "STALE_TEST",
+      "root_cause": "tests require headers that the current API deliberately removed",
+      "owner": "api-owner",
+      "blocking_level": "P1",
+      "reason_not_fixed": "current API contract is authoritative"
+    },
+    {
+      "test": "workflow SAFE_FALLBACK vs PARTIAL_SUCCESS cluster",
+      "category": "STALE_TEST_OR_BUSINESS_RULE_UNKNOWN",
+      "root_cause": "status policy changed; old assertion may no longer be authoritative",
+      "owner": "analysis-owner",
+      "blocking_level": "P1",
+      "reason_not_fixed": "requires status contract decision"
+    },
+    {
+      "test": "runtime relation rendering cluster",
+      "category": "REAL_BEHAVIOR_BUG",
+      "root_cause": "projection label differs from expected relationship label",
+      "owner": "query-owner",
+      "blocking_level": "P1",
+      "reason_not_fixed": "requires catalog/result contract evidence"
+    }
+  ],
+  "assertions_weakened": false
+}

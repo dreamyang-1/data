@@ -1,0 +1,1248 @@
+{
+  "schema_version": "1.0",
+  "source_status": "CURRENT_FACT",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_id": 205
+  },
+  "summary": {
+    "finding_count": 160,
+    "by_code": {
+      "ATTRIBUTE_DATA_TYPE_MISSING": 76,
+      "ENTITY_PRIMARY_KEY_MISSING": 14,
+      "KEY_UNIQUENESS_UNDECLARED": 3,
+      "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN": 11,
+      "METRIC_FORMULA_LHS_MISMATCH": 1,
+      "METRIC_PERMISSION_EMPTY": 11,
+      "METRIC_TIME_ANCHOR_MISSING": 6,
+      "RELATION_CONSTRAINT_MISSING": 24,
+      "UPDATE_FREQUENCY_MISSING": 14
+    },
+    "highest_severity": "HIGH"
+  },
+  "findings": [
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "salesperson",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "salesperson",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "KEY_UNIQUENESS_UNDECLARED",
+      "severity": "HIGH",
+      "subject": "salesperson.id",
+      "evidence": {
+        "is_primary_key": true,
+        "is_unique": false
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "salesperson_responsible_sales_order",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "salesperson_belongs_to_sales_company",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "project",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "project",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "KEY_UNIQUENESS_UNDECLARED",
+      "severity": "HIGH",
+      "subject": "project.id",
+      "evidence": {
+        "is_primary_key": true,
+        "is_unique": false
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_item_association_sales_order",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_company",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "sales_company",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "KEY_UNIQUENESS_UNDECLARED",
+      "severity": "HIGH",
+      "subject": "sales_company.id",
+      "evidence": {
+        "is_primary_key": true,
+        "is_unique": false
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "china_national_pharmaceuticals_subsidiary_sales_representative",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "product_line",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "product_line",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_line.product_line_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_line.id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_line.line_level1",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_line.line_level2",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "sales_order",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.order_key",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.fiscal_year",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.fiscal_month",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.unit",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.tax_rate",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.quantity",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.price_without_tax",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.price_with_tax",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.amount_without_tax",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.amount_with_tax",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.cost",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.order_type",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.rn",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.salesperson_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.project_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.product_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.hospital_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.dealer_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.business_department",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.business_type_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.business_type_name",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order.created_date",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order_belongs_to_dealer",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order_belongs_to_product",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order_belongs_to_hospital",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order_belongs_to_salesperson",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order_belongs_to_project",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "sales_order_association_product",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "main_data_domain_ent_manufacturer",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "main_data_domain_ent_manufacturer",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "main_data_domain_ent_manufacturer.id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "main_data_domain_ent_manufacturer.manufacturer_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "main_data_domain_ent_manufacturer.manufacturer_name",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "main_data_domain_ent_manufacturer.standard_name",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "main_data_domain_ent_manufacturer.country",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "main_data_domain_ent_manufacturer.parent_brand",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "manufacturer_production_pharmaceutical_products",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "hospital",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital.id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital.hospital_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital.hospital_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital.hospital_name",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital.business_province",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital.business_city",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital.hospital_level",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital.province_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital.city_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital_purchase_generation_sales_order",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital_initiate_sales_item",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital_located_in_province",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital_located_in_city",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital_include_department",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "department",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "department",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "department.dept_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "department.dept_name",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "department_product_applicable_product_department_association",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "product_category",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "product_category",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_category.id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_category.category_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_category.product_type",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_category.product_subdirectory",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_category.category_level1",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_category.category_level2",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "dealer",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "dealer",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "dealer.first_order_date",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "dealer.id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "dealer.dealer_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "dealer.dealer_name",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "dealer.dealer_type",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "dealer.province_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "dealer.city_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "dealer_place_sales_order",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "dealer_located_in_city",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "city",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "city",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "city.city_name",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "city.province_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "city.city_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "province",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "province",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "province.province_name",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "province.short_name",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "province.province_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "province_includes_city",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "product",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "product",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product.product_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product.category_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product.guoyao_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product.id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product.product_name",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product.specification",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product.product_line_id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product.manufacturer_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product.material_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "pharmaceutical_products_affiliation_product_category",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "pharmaceutical_products_affiliation_product_line",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "product_belongs_to_manufacturer",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "RELATION_CONSTRAINT_MISSING",
+      "severity": "HIGH",
+      "subject": "product_has_applicable_department_product_department_association",
+      "evidence": "relation_constraint is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ENTITY_PRIMARY_KEY_MISSING",
+      "severity": "HIGH",
+      "subject": "product_dept_relation",
+      "evidence": "primary_key is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "UPDATE_FREQUENCY_MISSING",
+      "severity": "MEDIUM",
+      "subject": "product_dept_relation",
+      "evidence": "update_frequency is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_dept_relation.product_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_dept_relation.id",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_dept_relation.dept_code",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "ATTRIBUTE_DATA_TYPE_MISSING",
+      "severity": "HIGH",
+      "subject": "product_dept_relation.relation_type",
+      "evidence": "data_type is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_PERMISSION_EMPTY",
+      "severity": "HIGH",
+      "subject": "annual_total_sales",
+      "evidence": "view_roles and data_limit are empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN",
+      "severity": "HIGH",
+      "subject": "annual_total_sales",
+      "evidence": {
+        "declared_dimensions": [
+          "hospital_level",
+          "transaction_date",
+          "product",
+          "dealer",
+          "hospital",
+          "salesperson",
+          "province",
+          "city",
+          "product_brand",
+          "product_category",
+          "department",
+          "applicable_department"
+        ]
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_PERMISSION_EMPTY",
+      "severity": "HIGH",
+      "subject": "tax_free_sales_amount",
+      "evidence": "view_roles and data_limit are empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN",
+      "severity": "HIGH",
+      "subject": "tax_free_sales_amount",
+      "evidence": {
+        "declared_dimensions": [
+          "transaction_date",
+          "product",
+          "dealer",
+          "hospital",
+          "salesperson"
+        ]
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_PERMISSION_EMPTY",
+      "severity": "HIGH",
+      "subject": "sales_total_cost",
+      "evidence": "view_roles and data_limit are empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN",
+      "severity": "HIGH",
+      "subject": "sales_total_cost",
+      "evidence": {
+        "declared_dimensions": [
+          "transaction_date",
+          "product",
+          "dealer",
+          "hospital",
+          "salesperson"
+        ]
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_PERMISSION_EMPTY",
+      "severity": "HIGH",
+      "subject": "sales_total_quantity",
+      "evidence": "view_roles and data_limit are empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN",
+      "severity": "HIGH",
+      "subject": "sales_total_quantity",
+      "evidence": {
+        "declared_dimensions": [
+          "hospital_level",
+          "transaction_date",
+          "product",
+          "dealer",
+          "hospital",
+          "salesperson",
+          "province",
+          "city"
+        ]
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_PERMISSION_EMPTY",
+      "severity": "HIGH",
+      "subject": "order_count",
+      "evidence": "view_roles and data_limit are empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN",
+      "severity": "HIGH",
+      "subject": "order_count",
+      "evidence": {
+        "declared_dimensions": [
+          "hospital_level",
+          "transaction_date",
+          "product",
+          "dealer",
+          "hospital",
+          "salesperson",
+          "city"
+        ]
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_TIME_ANCHOR_MISSING",
+      "severity": "HIGH",
+      "subject": "cooperating_dealer_count",
+      "evidence": "time_anchor is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_PERMISSION_EMPTY",
+      "severity": "HIGH",
+      "subject": "cooperating_dealer_count",
+      "evidence": "view_roles and data_limit are empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN",
+      "severity": "HIGH",
+      "subject": "cooperating_dealer_count",
+      "evidence": {
+        "declared_dimensions": [
+          "hospital_level",
+          "transaction_date",
+          "city"
+        ]
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_TIME_ANCHOR_MISSING",
+      "severity": "HIGH",
+      "subject": "cooperating_hospital_count",
+      "evidence": "time_anchor is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_PERMISSION_EMPTY",
+      "severity": "HIGH",
+      "subject": "cooperating_hospital_count",
+      "evidence": "view_roles and data_limit are empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN",
+      "severity": "HIGH",
+      "subject": "cooperating_hospital_count",
+      "evidence": {
+        "declared_dimensions": [
+          "transaction_date",
+          "product",
+          "hospital",
+          "province",
+          "city"
+        ]
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_FORMULA_LHS_MISMATCH",
+      "severity": "HIGH",
+      "subject": "total_hospital_count_by_region",
+      "evidence": {
+        "formula_lhs": "target_city_hospital_count"
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_TIME_ANCHOR_MISSING",
+      "severity": "HIGH",
+      "subject": "total_hospital_count_by_region",
+      "evidence": "time_anchor is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_PERMISSION_EMPTY",
+      "severity": "HIGH",
+      "subject": "total_hospital_count_by_region",
+      "evidence": "view_roles and data_limit are empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN",
+      "severity": "HIGH",
+      "subject": "total_hospital_count_by_region",
+      "evidence": {
+        "declared_dimensions": [
+          "product",
+          "province",
+          "city"
+        ]
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_TIME_ANCHOR_MISSING",
+      "severity": "HIGH",
+      "subject": "dealer_cooperation_months",
+      "evidence": "time_anchor is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_PERMISSION_EMPTY",
+      "severity": "HIGH",
+      "subject": "dealer_cooperation_months",
+      "evidence": "view_roles and data_limit are empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN",
+      "severity": "HIGH",
+      "subject": "dealer_cooperation_months",
+      "evidence": {
+        "declared_dimensions": [
+          "hospital_level",
+          "dealer",
+          "province",
+          "city"
+        ]
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_TIME_ANCHOR_MISSING",
+      "severity": "HIGH",
+      "subject": "hospital_affiliated_department_count",
+      "evidence": "time_anchor is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_PERMISSION_EMPTY",
+      "severity": "HIGH",
+      "subject": "hospital_affiliated_department_count",
+      "evidence": "view_roles and data_limit are empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN",
+      "severity": "HIGH",
+      "subject": "hospital_affiliated_department_count",
+      "evidence": {
+        "declared_dimensions": [
+          "hospital",
+          "department"
+        ]
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_TIME_ANCHOR_MISSING",
+      "severity": "HIGH",
+      "subject": "screening_area_hospital_coverage",
+      "evidence": "time_anchor is empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_PERMISSION_EMPTY",
+      "severity": "HIGH",
+      "subject": "screening_area_hospital_coverage",
+      "evidence": "view_roles and data_limit are empty",
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    },
+    {
+      "code": "METRIC_DIMENSION_JOIN_SAFETY_UNPROVEN",
+      "severity": "HIGH",
+      "subject": "screening_area_hospital_coverage",
+      "evidence": {
+        "declared_dimensions": [
+          "product",
+          "hospital",
+          "province",
+          "city"
+        ]
+      },
+      "owner_review_status": "UNKNOWN_NEEDS_OWNER_REVIEW"
+    }
+  ],
+  "write_operations_performed": false
+}

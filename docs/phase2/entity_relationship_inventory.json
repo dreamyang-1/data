@@ -1,0 +1,370 @@
+[
+  {
+    "source_entity": "salesperson",
+    "source_name": "业务员",
+    "relations": [
+      {
+        "relation_code": "salesperson_responsible_sales_order",
+        "relation_name": "负责",
+        "target_entity": "sales_order",
+        "relation_semantic": "一名业务员可以跟进多条销售订单",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "salesperson_code",
+          "target_field": "salesperson_code"
+        },
+        "description": "一名业务员可以跟进多条销售订单"
+      },
+      {
+        "relation_code": "salesperson_belongs_to_sales_company",
+        "relation_name": "归属国药公司",
+        "target_entity": "sales_company",
+        "relation_semantic": "业务员按国药编码归属国药公司。",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "salesperson.guoyao_code",
+          "target_field": "guoyao_company.guoyao_code"
+        },
+        "description": "业务员按国药编码归属国药公司。"
+      }
+    ]
+  },
+  {
+    "source_entity": "project",
+    "source_name": "销售项目",
+    "relations": [
+      {
+        "relation_code": "sales_item_association_sales_order",
+        "relation_name": "关联",
+        "target_entity": "sales_order",
+        "relation_semantic": "一个销售项目可以生成多条销售订单",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "project_code",
+          "target_field": "project_code"
+        },
+        "description": "一个销售项目可以生成多条销售订单"
+      }
+    ]
+  },
+  {
+    "source_entity": "sales_company",
+    "source_name": "销售公司",
+    "relations": [
+      {
+        "relation_code": "china_national_pharmaceuticals_subsidiary_sales_representative",
+        "relation_name": "下辖",
+        "target_entity": "salesperson",
+        "relation_semantic": "一个国药分公司拥有多名业务员",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "guoyao_code",
+          "target_field": "guoyao_code"
+        },
+        "description": "一个国药分公司拥有多名业务员"
+      }
+    ]
+  },
+  {
+    "source_entity": "product_line",
+    "source_name": "产品线",
+    "relations": []
+  },
+  {
+    "source_entity": "sales_order",
+    "source_name": "销售订单",
+    "relations": [
+      {
+        "relation_code": "sales_order_belongs_to_dealer",
+        "relation_name": "归属经销商",
+        "target_entity": "dealer",
+        "relation_semantic": "销售订单按订单中的经销商编码归属实际成交经销商。",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "sales_order.dealer_code",
+          "target_field": "dealer.dealer_code"
+        },
+        "description": "销售订单按订单中的经销商编码归属实际成交经销商。"
+      },
+      {
+        "relation_code": "sales_order_belongs_to_product",
+        "relation_name": "归属商品",
+        "target_entity": "product",
+        "relation_semantic": "销售订单按订单中的商品编码归属实际成交商品。",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "sales_order.product_code",
+          "target_field": "product.product_code"
+        },
+        "description": "销售订单按订单中的商品编码归属实际成交商品。"
+      },
+      {
+        "relation_code": "sales_order_belongs_to_hospital",
+        "relation_name": "归属采购医院",
+        "target_entity": "hospital",
+        "relation_semantic": "销售订单按订单中的医院标识归属实际采购医院。",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "sales_order.hospital_id",
+          "target_field": "hospital.hospital_id"
+        },
+        "description": "销售订单按订单中的医院标识归属实际采购医院。"
+      },
+      {
+        "relation_code": "sales_order_belongs_to_salesperson",
+        "relation_name": "归属业务员",
+        "target_entity": "salesperson",
+        "relation_semantic": "销售订单按订单中的业务员编码归属负责业务员。",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "sales_order.salesperson_code",
+          "target_field": "salesperson.salesperson_code"
+        },
+        "description": "销售订单按订单中的业务员编码归属负责业务员。"
+      },
+      {
+        "relation_code": "sales_order_belongs_to_project",
+        "relation_name": "归属销售项目",
+        "target_entity": "project",
+        "relation_semantic": "销售订单按订单中的项目编码归属销售项目。",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "sales_order.project_code",
+          "target_field": "project.project_code"
+        },
+        "description": "销售订单按订单中的项目编码归属销售项目。"
+      },
+      {
+        "relation_code": "sales_order_association_product",
+        "relation_name": "关联",
+        "target_entity": "product",
+        "relation_semantic": "",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "sales_order.product_code",
+          "target_field": "product.product_code"
+        },
+        "description": ""
+      }
+    ]
+  },
+  {
+    "source_entity": "main_data_domain_ent_manufacturer",
+    "source_name": "生产厂家",
+    "relations": [
+      {
+        "relation_code": "manufacturer_production_pharmaceutical_products",
+        "relation_name": "生产",
+        "target_entity": "product",
+        "relation_semantic": "一个生产厂家可以生产多款医药产品",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "manufacturer_code",
+          "target_field": "manufacturer_code"
+        },
+        "description": "一个生产厂家可以生产多款医药产品"
+      }
+    ]
+  },
+  {
+    "source_entity": "hospital",
+    "source_name": "医院",
+    "relations": [
+      {
+        "relation_code": "hospital_purchase_generation_sales_order",
+        "relation_name": "产生",
+        "target_entity": "sales_order",
+        "relation_semantic": "一家医院可以产生多条采购销售订单",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "hospital.hospital_id",
+          "target_field": "sales_order.hospital_id"
+        },
+        "description": "一家医院可以产生多条采购销售订单"
+      },
+      {
+        "relation_code": "hospital_initiate_sales_item",
+        "relation_name": "发起",
+        "target_entity": "project",
+        "relation_semantic": "一家医院可立项多个销售项目",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "hospital_id",
+          "target_field": "hospital_id"
+        },
+        "description": "一家医院可立项多个销售项目"
+      },
+      {
+        "relation_code": "hospital_located_in_province",
+        "relation_name": "所在",
+        "target_entity": "province",
+        "relation_semantic": "",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "hospital.province_id",
+          "target_field": "dim_province.province_id"
+        },
+        "description": ""
+      },
+      {
+        "relation_code": "hospital_located_in_city",
+        "relation_name": "所在",
+        "target_entity": "city",
+        "relation_semantic": "",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "hospital.city_id",
+          "target_field": "dim_city.city_id"
+        },
+        "description": ""
+      },
+      {
+        "relation_code": "hospital_include_department",
+        "relation_name": "包含",
+        "target_entity": "department",
+        "relation_semantic": "",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "hospital.hospital_id",
+          "target_field": "hospital_dept_relation.hospital_id"
+        },
+        "description": ""
+      }
+    ]
+  },
+  {
+    "source_entity": "department",
+    "source_name": "科室",
+    "relations": [
+      {
+        "relation_code": "department_product_applicable_product_department_association",
+        "relation_name": "被商品适用",
+        "target_entity": "product_dept_relation",
+        "relation_semantic": "",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "department.dept_code",
+          "target_field": "product_dept_relation.dept_code"
+        },
+        "description": ""
+      }
+    ]
+  },
+  {
+    "source_entity": "product_category",
+    "source_name": "产品分类",
+    "relations": []
+  },
+  {
+    "source_entity": "dealer",
+    "source_name": "经销商",
+    "relations": [
+      {
+        "relation_code": "dealer_place_sales_order",
+        "relation_name": "下达",
+        "target_entity": "sales_order",
+        "relation_semantic": "一个经销商可以下达多条销售订单",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "dealer.dealer_code",
+          "target_field": "sales_order.dealer_code"
+        },
+        "description": "一个经销商可以下达多条销售订单"
+      },
+      {
+        "relation_code": "dealer_located_in_city",
+        "relation_name": "所在",
+        "target_entity": "city",
+        "relation_semantic": "",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "dealer.city_id",
+          "target_field": "dim_city.city_id"
+        },
+        "description": ""
+      }
+    ]
+  },
+  {
+    "source_entity": "city",
+    "source_name": "市",
+    "relations": []
+  },
+  {
+    "source_entity": "province",
+    "source_name": "省份",
+    "relations": [
+      {
+        "relation_code": "province_includes_city",
+        "relation_name": "包含",
+        "target_entity": "city",
+        "relation_semantic": "",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "dim_province.province_id",
+          "target_field": "dim_city.province_id"
+        },
+        "description": ""
+      }
+    ]
+  },
+  {
+    "source_entity": "product",
+    "source_name": "商品",
+    "relations": [
+      {
+        "relation_code": "pharmaceutical_products_affiliation_product_category",
+        "relation_name": "归属",
+        "target_entity": "product_category",
+        "relation_semantic": "多款医药产品归属同一个产品分类",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "product.category_id",
+          "target_field": "product_category.category_id"
+        },
+        "description": "多款医药产品归属同一个产品分类"
+      },
+      {
+        "relation_code": "pharmaceutical_products_affiliation_product_line",
+        "relation_name": "归属",
+        "target_entity": "product_line",
+        "relation_semantic": "多款医药产品归属同一条产品线",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "product_line_id",
+          "target_field": "product_line_id"
+        },
+        "description": "多款医药产品归属同一条产品线"
+      },
+      {
+        "relation_code": "product_belongs_to_manufacturer",
+        "relation_name": "归属生产厂家",
+        "target_entity": "main_data_domain_ent_manufacturer",
+        "relation_semantic": "商品按生产厂家编码归属生产厂家。",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "product.manufacturer_code",
+          "target_field": "manufacturer.manufacturer_code"
+        },
+        "description": "商品按生产厂家编码归属生产厂家。"
+      },
+      {
+        "relation_code": "product_has_applicable_department_product_department_association",
+        "relation_name": "拥有适用科室",
+        "target_entity": "product_dept_relation",
+        "relation_semantic": "",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "product.product_code",
+          "target_field": "product_dept_relation.product_code"
+        },
+        "description": ""
+      }
+    ]
+  },
+  {
+    "source_entity": "product_dept_relation",
+    "source_name": "商品科室关联",
+    "relations": []
+  }
+]

@@ -1,0 +1,872 @@
+[
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "hospital_level",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "transaction_date",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "product",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "dealer",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "hospital",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "salesperson",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "province",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "city",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "product_brand",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "product_category",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "department",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "annual_total_sales",
+    "dimension_code": "applicable_department",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "tax_free_sales_amount",
+    "dimension_code": "transaction_date",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "tax_free_sales_amount",
+    "dimension_code": "product",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "tax_free_sales_amount",
+    "dimension_code": "dealer",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "tax_free_sales_amount",
+    "dimension_code": "hospital",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "tax_free_sales_amount",
+    "dimension_code": "salesperson",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_cost",
+    "dimension_code": "transaction_date",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_cost",
+    "dimension_code": "product",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_cost",
+    "dimension_code": "dealer",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_cost",
+    "dimension_code": "hospital",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_cost",
+    "dimension_code": "salesperson",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_quantity",
+    "dimension_code": "hospital_level",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_quantity",
+    "dimension_code": "transaction_date",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_quantity",
+    "dimension_code": "product",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_quantity",
+    "dimension_code": "dealer",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_quantity",
+    "dimension_code": "hospital",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_quantity",
+    "dimension_code": "salesperson",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_quantity",
+    "dimension_code": "province",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "sales_total_quantity",
+    "dimension_code": "city",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "order_count",
+    "dimension_code": "hospital_level",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "order_count",
+    "dimension_code": "transaction_date",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "order_count",
+    "dimension_code": "product",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "order_count",
+    "dimension_code": "dealer",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "order_count",
+    "dimension_code": "hospital",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "order_count",
+    "dimension_code": "salesperson",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "order_count",
+    "dimension_code": "city",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "cooperating_dealer_count",
+    "dimension_code": "hospital_level",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "cooperating_dealer_count",
+    "dimension_code": "transaction_date",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "cooperating_dealer_count",
+    "dimension_code": "city",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "cooperating_hospital_count",
+    "dimension_code": "transaction_date",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "cooperating_hospital_count",
+    "dimension_code": "product",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "cooperating_hospital_count",
+    "dimension_code": "hospital",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "cooperating_hospital_count",
+    "dimension_code": "province",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "cooperating_hospital_count",
+    "dimension_code": "city",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "total_hospital_count_by_region",
+    "dimension_code": "product",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "total_hospital_count_by_region",
+    "dimension_code": "province",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "total_hospital_count_by_region",
+    "dimension_code": "city",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "dealer_cooperation_months",
+    "dimension_code": "hospital_level",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "dealer_cooperation_months",
+    "dimension_code": "dealer",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "dealer_cooperation_months",
+    "dimension_code": "province",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "dealer_cooperation_months",
+    "dimension_code": "city",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "hospital_affiliated_department_count",
+    "dimension_code": "hospital",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "hospital_affiliated_department_count",
+    "dimension_code": "department",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "screening_area_hospital_coverage",
+    "dimension_code": "product",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "screening_area_hospital_coverage",
+    "dimension_code": "hospital",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "screening_area_hospital_coverage",
+    "dimension_code": "province",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  },
+  {
+    "metric_code": "screening_area_hospital_coverage",
+    "dimension_code": "city",
+    "status": "UNKNOWN",
+    "allowed_roles": [
+      "GROUP_BY",
+      "FILTER_FIELD"
+    ],
+    "required_relation_path": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "join_cardinality": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "pre_aggregation_required": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "allowed_grains": "UNKNOWN_NEEDS_OWNER_REVIEW",
+    "reason": "Catalog binding exists but does not prove join-grain safety.",
+    "catalog_version": "2026-09-07T01:04:55.566039+00:00"
+  }
+]

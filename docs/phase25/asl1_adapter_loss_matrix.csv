@@ -1,0 +1,7 @@
+feature,ASL_1_0,status,execution_rule
+subject/metrics/dimensions/filters/time/sort/limit,first-class,LOSSLESS when validated,may shadow-execute
+comparison,not first-class,LOSSY_UNSAFE,block
+window/cursor/offset/explicit join,not first-class,UNSUPPORTED,block
+relation target,inferred path,LOSSY_COMPENSATED only with tested mapping,shadow only
+result contract,partial external checks,LOSSY_COMPENSATED,requires deterministic proof
+typed semantic roles,container-implied,LOSSY_COMPENSATED,retain provenance

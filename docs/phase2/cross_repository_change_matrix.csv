@@ -1,0 +1,6 @@
+﻿repository,current_role,proposed_change,dependency,risk,phase
+DataAnalysis_Agent,"conversation, intent, caller contract, result assembly","multi-axis parse, slot reducer, typed plan/result contract",Oagnet and sql-translator contract versioning,HIGH,1-3
+Oagnet,semantic retrieval and ASL generation,role-first N-best resolution with provenance and typed-plan adapter,catalog stable IDs,HIGH,1-3
+sql-translator,ASL validation/translation/execution,"typed plan adapter, grain safety, expanded result proof",ASL v2 compatibility,HIGH,2-4
+semantic catalog/MySQL,authoritative definitions,"additivity, grain, compatibility and relation governance",business sign-off,MEDIUM,0-2
+Milvus,candidate index,versioned role indexes and traceable candidate metadata,dual-read/reindex,MEDIUM,1-2

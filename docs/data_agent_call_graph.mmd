@@ -1,0 +1,50 @@
+flowchart TD
+    C[Client ChatRequest] --> API[FastAPI /agent_chat or /agent_chat/stream]
+    API --> PREP[refresh/revise preparation and file import]
+    PREP --> WF[LangGraph workflow.ainvoke]
+    WF --> MARKERS[compatibility marker nodes]
+    MARKERS --> DISPATCH[skill_dispatch]
+    DISPATCH --> H[DataAnalysisOrchestrator.handle]
+    H --> IDEM[response fingerprint and execution lock in SessionStore]
+    IDEM --> MQ{multi-question candidate}
+    MQ -->|yes| MP[MultiQuestionPlanner rules plus optional model]
+    MP --> DAG[execute up to five atomic tasks]
+    MQ -->|no| CORE[_handle]
+    DAG --> CORE
+    CORE --> STATE[load PendingState task frame last request recent frames datasets]
+    STATE --> RULES[rule classification and TurnAdmissionGate]
+    RULES --> REWRITE[QuestionRewriter]
+    REWRITE --> VEC1[Oagnet entity-attributes search]
+    REWRITE --> INTENT[HybridIntentClassifier]
+    INTENT --> LLM1[structured intent model optional]
+    INTENT --> MERGE[pending merge or slot protection and inheritance]
+    MERGE --> VEC2[ground filters and display slots via Oagnet]
+    VEC2 --> COMPLETE[intent-specific required_missing_slots]
+    COMPLETE -->|missing or ambiguity| PENDING[CAS write PendingState and clarification]
+    COMPLETE -->|complete| DS{safe local dataset operation}
+    DS -->|yes| MINIO[load immutable MinIO dataset and execute whitelist operation]
+    DS -->|no| ASL[HTTP adapter to Oagnet /agent/query for semantic plan and ASL]
+    ASL --> SQLGEN[HTTP adapter to SQL generation service]
+    SQLGEN --> SQLEXEC[HTTP adapter to read-only SQL execution service]
+    SQLEXEC --> DATASET[persist result rows or trusted export to MinIO and Redis reference]
+    MINIO --> ANALYSIS[deterministic analysis engine and result validation]
+    DATASET --> ANALYSIS
+    ANALYSIS --> SYNTH[optional evidence-grounded synthesis model]
+    SYNTH --> EXT[optional tool selection model and governed extension execution]
+    EXT --> SAVE[write task frame last request response cache]
+    SAVE --> RESP[AgentResponse]
+    RESP --> WF
+    WF --> API
+    API -->|stream endpoint| SSE[SSE progress plus answer chunks plus complete event]
+
+    REDIS[(Redis short-term state)] --- IDEM
+    REDIS --- STATE
+    REDIS --- PENDING
+    REDIS --- SAVE
+    EVENTS[(bounded Redis event list)] --- RULES
+    EVENTS --- MERGE
+    EVENTS --- DS
+    MILVUS[(Milvus knowledge_base collections)] --- VEC1
+    MILVUS --- VEC2
+    MYSQL[(MySQL semantic metadata and opt-in long-term preferences)] --- ASL
+    MYSQL --- MERGE

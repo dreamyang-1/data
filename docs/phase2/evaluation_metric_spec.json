@@ -1,0 +1,63 @@
+{
+  "status": "PROPOSAL",
+  "metrics": [
+    {
+      "name": "dialogue_act_macro_f1",
+      "unit": "case",
+      "requires": "multi-axis gold"
+    },
+    {
+      "name": "service_route_accuracy",
+      "unit": "case",
+      "requires": "route gold"
+    },
+    {
+      "name": "slot_role_f1",
+      "unit": "mention",
+      "requires": "mention spans and canonical role IDs"
+    },
+    {
+      "name": "canonical_resolution_top1_accuracy",
+      "unit": "mention",
+      "requires": "catalog snapshot"
+    },
+    {
+      "name": "candidate_recall_at_k",
+      "unit": "mention",
+      "requires": "pre-rerank candidates"
+    },
+    {
+      "name": "logical_plan_exact_match",
+      "unit": "case",
+      "requires": "typed plan gold"
+    },
+    {
+      "name": "execution_answer_accuracy",
+      "unit": "case",
+      "requires": "frozen data snapshot"
+    },
+    {
+      "name": "clarification_precision",
+      "unit": "turn",
+      "requires": "whether clarification was necessary"
+    },
+    {
+      "name": "first_divergence_accuracy",
+      "unit": "failure",
+      "requires": "complete trace"
+    },
+    {
+      "name": "state_isolation_violation_rate",
+      "unit": "conversation",
+      "requires": "multi-tenant concurrency suite"
+    }
+  ],
+  "gates": {
+    "no_regression": [
+      "service_route_accuracy",
+      "execution_answer_accuracy",
+      "state_isolation_violation_rate"
+    ],
+    "thresholds": "UNKNOWN_NEEDS_BASELINE"
+  }
+}

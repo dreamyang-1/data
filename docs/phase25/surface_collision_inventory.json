@@ -1,0 +1,391 @@
+{
+  "schema_version": "1.0",
+  "scan_scope": "local phase2 catalog snapshot",
+  "collision_count": 22,
+  "collisions": [
+    {
+      "surface": "业务员",
+      "candidates": [
+        {
+          "catalog_type": "DIMENSION",
+          "code": "salesperson"
+        },
+        {
+          "catalog_type": "ENTITY",
+          "code": "salesperson"
+        }
+      ],
+      "collision_types": [
+        "DIMENSION",
+        "ENTITY"
+      ]
+    },
+    {
+      "surface": "产品分类标识",
+      "candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "product_category.category_id"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "product.category_id"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE"
+      ]
+    },
+    {
+      "surface": "产品线分类标识",
+      "candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "product_line.product_line_id"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "product.product_line_id"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE"
+      ]
+    },
+    {
+      "surface": "医院",
+      "candidates": [
+        {
+          "catalog_type": "DIMENSION",
+          "code": "hospital"
+        },
+        {
+          "catalog_type": "ENTITY",
+          "code": "hospital"
+        }
+      ],
+      "collision_types": [
+        "DIMENSION",
+        "ENTITY"
+      ]
+    },
+    {
+      "surface": "医院标识",
+      "candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "project.hospital_id"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "sales_order.hospital_id"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "hospital.hospital_id"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE"
+      ]
+    },
+    {
+      "surface": "医院等级",
+      "candidates": [
+        {
+          "catalog_type": "DIMENSION",
+          "code": "hospital_level"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "hospital.hospital_level"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE",
+        "DIMENSION"
+      ]
+    },
+    {
+      "surface": "厂家编码",
+      "candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "main_data_domain_ent_manufacturer.manufacturer_code"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "product.manufacturer_code"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE"
+      ]
+    },
+    {
+      "surface": "商品",
+      "candidates": [
+        {
+          "catalog_type": "DIMENSION",
+          "code": "product"
+        },
+        {
+          "catalog_type": "ENTITY",
+          "code": "product"
+        }
+      ],
+      "collision_types": [
+        "DIMENSION",
+        "ENTITY"
+      ]
+    },
+    {
+      "surface": "商品名称",
+      "candidates": [
+        {
+          "catalog_type": "DIMENSION",
+          "code": "product"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "product.product_name"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE",
+        "DIMENSION"
+      ]
+    },
+    {
+      "surface": "商品编码",
+      "candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "sales_order.product_code"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "product.product_code"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "product_dept_relation.product_code"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE"
+      ]
+    },
+    {
+      "surface": "国药公司编码",
+      "candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "salesperson.guoyao_code"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "sales_company.guoyao_code"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "product.guoyao_code"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE"
+      ]
+    },
+    {
+      "surface": "市",
+      "candidates": [
+        {
+          "catalog_type": "DIMENSION",
+          "code": "city"
+        },
+        {
+          "catalog_type": "ENTITY",
+          "code": "city"
+        }
+      ],
+      "collision_types": [
+        "DIMENSION",
+        "ENTITY"
+      ]
+    },
+    {
+      "surface": "母厂牌",
+      "candidates": [
+        {
+          "catalog_type": "DIMENSION",
+          "code": "product_brand"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "main_data_domain_ent_manufacturer.parent_brand"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE",
+        "DIMENSION"
+      ]
+    },
+    {
+      "surface": "省份",
+      "candidates": [
+        {
+          "catalog_type": "DIMENSION",
+          "code": "province"
+        },
+        {
+          "catalog_type": "DIMENSION",
+          "code": "province"
+        },
+        {
+          "catalog_type": "ENTITY",
+          "code": "province"
+        }
+      ],
+      "collision_types": [
+        "DIMENSION",
+        "ENTITY"
+      ]
+    },
+    {
+      "surface": "科室",
+      "candidates": [
+        {
+          "catalog_type": "DIMENSION",
+          "code": "department"
+        },
+        {
+          "catalog_type": "ENTITY",
+          "code": "department"
+        }
+      ],
+      "collision_types": [
+        "DIMENSION",
+        "ENTITY"
+      ]
+    },
+    {
+      "surface": "科室编码",
+      "candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "department.dept_code"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "product_dept_relation.dept_code"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE"
+      ]
+    },
+    {
+      "surface": "经销商",
+      "candidates": [
+        {
+          "catalog_type": "DIMENSION",
+          "code": "dealer"
+        },
+        {
+          "catalog_type": "ENTITY",
+          "code": "dealer"
+        }
+      ],
+      "collision_types": [
+        "DIMENSION",
+        "ENTITY"
+      ]
+    },
+    {
+      "surface": "经销商编码",
+      "candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "sales_order.dealer_code"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "dealer.dealer_code"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE"
+      ]
+    },
+    {
+      "surface": "订单日期",
+      "candidates": [
+        {
+          "catalog_type": "DIMENSION",
+          "code": "transaction_date"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "sales_order.created_date"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE",
+        "DIMENSION"
+      ]
+    },
+    {
+      "surface": "销售员编码",
+      "candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "salesperson.salesperson_code"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "project.salesperson_code"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "sales_order.salesperson_code"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE"
+      ]
+    },
+    {
+      "surface": "销售数量",
+      "candidates": [
+        {
+          "catalog_type": "METRIC",
+          "code": "sales_total_quantity"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "sales_order.quantity"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE",
+        "METRIC"
+      ]
+    },
+    {
+      "surface": "项目编码",
+      "candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "project.project_code"
+        },
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "sales_order.project_code"
+        }
+      ],
+      "collision_types": [
+        "ATTRIBUTE"
+      ]
+    }
+  ]
+}

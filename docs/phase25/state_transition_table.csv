@@ -1,0 +1,19 @@
+event,from_states,to_state,preconditions,state_patch,dataset_behavior,version_requirement,rollback
+NEW_TOPIC,ANY,PROVISIONAL,new topic/task ids,create isolated topic/task; clear pending,none,CAS,reject
+SWITCH_TOPIC,ANY,RESTORED,target exists,activate target topic,none,CAS,reject
+RETURN_TOPIC,ANY,RESTORED,historical version exists,restore specified version,none,CAS,reject
+MODIFY_TASK,RESOLVED|EXECUTED,PROVISIONAL,valid patch,new task version,invalidate,CAS,retain old version
+ADD_SLOT,PROVISIONAL|RESOLVED,PROVISIONAL,typed ADD,retain old + add new,invalidate if semantic,CAS,reject patch
+REPLACE_SLOT,PROVISIONAL|RESOLVED,PROVISIONAL,typed REPLACE,remove same-slot old,invalidate,CAS,reject patch
+REMOVE_SLOT,PROVISIONAL|RESOLVED,PROVISIONAL,target item id,remove exact canonical id,invalidate,CAS,reject patch
+CLEAR_SLOT,ANY,PROVISIONAL,explicit clear,mark EXPLICITLY_CLEARED,invalidate,CAS,reject patch
+DRILL_DOWN,EXECUTED,PROVISIONAL,compatible dataset,create child task,conditional,CAS,fall back to query
+ANSWER_PENDING,PROVISIONAL,RESOLVED,pending id/version match,apply answer; clear pending,conditional,CAS,retain pending
+CANCEL_PENDING,ANY,UNCHANGED,pending exists,clear pending,none,CAS,idempotent
+REFRESH_TASK,EXECUTED|FAILED,UNCHANGED,task exists,semantic version unchanged,none,CAS,retain prior
+REVISE_TASK,ANY,PROVISIONAL,new question,new TaskVersion,invalidate,CAS,retain prior
+EXECUTION_STARTED,EXECUTABLE,EXECUTING,proofs ready,record execution,none,CAS,FAILED
+EXECUTION_SUCCEEDED,EXECUTING,EXECUTED,blocking proofs pass,set last executed,none,CAS,FAILED
+EXECUTION_FAILED,EXECUTING,FAILED,typed system error,record failure; no pending,none,CAS,FAILED
+DATASET_CREATED,EXECUTED,EXECUTED,result proof pass,set last dataset,replace prior reference,CAS,discard new ref
+DATASET_INVALIDATED,ANY,UNCHANGED,dataset exists,mark invalidated,invalidate,CAS,reject

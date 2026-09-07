@@ -1,0 +1,310 @@
+[
+  {
+    "proposal_id": "P001",
+    "proposal": "引入多轴意图",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "real-002"
+      },
+      {
+        "type": "evidence",
+        "ref": "real-017"
+      }
+    ],
+    "confidence": "HIGH",
+    "remaining_unknowns": [],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P002",
+    "proposal": "保存Mention Span",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "app/intent/structured.py:193-391"
+      }
+    ],
+    "confidence": "MEDIUM",
+    "remaining_unknowns": [
+      "business acceptance threshold"
+    ],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P003",
+    "proposal": "显式Semantic Role",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "semantic_role_confusion_matrix.csv"
+      }
+    ],
+    "confidence": "HIGH",
+    "remaining_unknowns": [],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P004",
+    "proposal": "N-best Plan",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "Oagnet/prompt_build.py:984-1149"
+      }
+    ],
+    "confidence": "MEDIUM",
+    "remaining_unknowns": [
+      "business acceptance threshold"
+    ],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P005",
+    "proposal": "Typed Logical Plan",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "asl_nl2sql_gap_matrix.csv"
+      }
+    ],
+    "confidence": "HIGH",
+    "remaining_unknowns": [],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P006",
+    "proposal": "ResultContract",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "real-003"
+      },
+      {
+        "type": "evidence",
+        "ref": "sql-translator/analysis_contract.py:19-160"
+      }
+    ],
+    "confidence": "HIGH",
+    "remaining_unknowns": [],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P007",
+    "proposal": "Slot Reducer",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "real-001"
+      },
+      {
+        "type": "evidence",
+        "ref": "real-004"
+      }
+    ],
+    "confidence": "HIGH",
+    "remaining_unknowns": [],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P008",
+    "proposal": "Topic Tree",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "real-021"
+      },
+      {
+        "type": "evidence",
+        "ref": "app/services/orchestrator.py"
+      }
+    ],
+    "confidence": "MEDIUM",
+    "remaining_unknowns": [
+      "business acceptance threshold"
+    ],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P009",
+    "proposal": "Task Version",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "real-017"
+      },
+      {
+        "type": "evidence",
+        "ref": "app/domain/models.py"
+      }
+    ],
+    "confidence": "MEDIUM",
+    "remaining_unknowns": [
+      "business acceptance threshold"
+    ],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P010",
+    "proposal": "Session Glossary",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "semantic_role_confusion_matrix.csv"
+      }
+    ],
+    "confidence": "LOW",
+    "remaining_unknowns": [
+      "business acceptance threshold"
+    ],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P011",
+    "proposal": "指标语义代数",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "catalog_quality_summary.csv"
+      }
+    ],
+    "confidence": "HIGH",
+    "remaining_unknowns": [],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P012",
+    "proposal": "时间语义",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "real-006"
+      },
+      {
+        "type": "evidence",
+        "ref": "Oagnet/prompt_build.py:10-180"
+      }
+    ],
+    "confidence": "HIGH",
+    "remaining_unknowns": [],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P013",
+    "proposal": "语义关系图",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "Oagnet/prompt_build.py:807-982"
+      }
+    ],
+    "confidence": "HIGH",
+    "remaining_unknowns": [],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P014",
+    "proposal": "内部修复循环",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "Oagnet/agent.py:7022-7163"
+      }
+    ],
+    "confidence": "MEDIUM",
+    "remaining_unknowns": [
+      "business acceptance threshold"
+    ],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P015",
+    "proposal": "完整Trace",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "failure_trace_replay.jsonl"
+      }
+    ],
+    "confidence": "HIGH",
+    "remaining_unknowns": [],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  },
+  {
+    "proposal_id": "P016",
+    "proposal": "新评测体系",
+    "supported_by": [
+      {
+        "type": "evidence",
+        "ref": "evaluation_metric_spec.json"
+      }
+    ],
+    "confidence": "HIGH",
+    "remaining_unknowns": [],
+    "affected_repositories": [
+      "DataAnalysis_Agent",
+      "Oagnet",
+      "sql-translator"
+    ]
+  }
+]

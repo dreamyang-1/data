@@ -1,0 +1,83 @@
+{
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_id": 205
+  },
+  "caller_contract": {
+    "location": "app/services/intent_asl_contract.py:62-202",
+    "fields": [
+      "intent",
+      "query_object",
+      "metric_required",
+      "required_metric_names",
+      "required_metric_codes",
+      "required_projections",
+      "required_groupings",
+      "projection_mode",
+      "relationship_anchor",
+      "required_filters",
+      "negative_constraints",
+      "semantic_mentions",
+      "sorting",
+      "time_dimension_required",
+      "time_policy",
+      "canonical_time_range"
+    ]
+  },
+  "oagnet_request": {
+    "location": "Oagnet/api.py:1149-1260",
+    "generation": "one chat-model invocation; one retry only for malformed JSON",
+    "location_generation": "Oagnet/agent.py:7022-7163"
+  },
+  "asl": {
+    "version": "1.0",
+    "location": "Oagnet/prompt_build.py:10-180",
+    "operations": [
+      "subject",
+      "metrics",
+      "dimensions",
+      "filters",
+      "time_context",
+      "sort",
+      "limit",
+      "having",
+      "projection_mode",
+      "ambiguity"
+    ],
+    "missing_first_class": [
+      "comparison",
+      "window",
+      "offset",
+      "cursor",
+      "subquery",
+      "explicit_join",
+      "result_contract",
+      "typed_semantic_roles"
+    ]
+  },
+  "translator": {
+    "location": "sql-translator/sql_translator_prod.py:2860-3186",
+    "accepts": [
+      "subject",
+      "metrics",
+      "dimensions",
+      "filters",
+      "time_context",
+      "sort",
+      "limit",
+      "having",
+      "projection_mode"
+    ],
+    "join_policy": "catalog relation path; rejects known 1:N aggregation risk rather than pre-aggregating"
+  },
+  "result_contract": {
+    "location": "sql-translator/analysis_contract.py:19-160",
+    "coverage": "six analysis operators; required columns and row bounds; price-volume normalization",
+    "missing": [
+      "generic sort proof",
+      "grain proof",
+      "requested projection completeness",
+      "comparison/window proof"
+    ]
+  }
+}

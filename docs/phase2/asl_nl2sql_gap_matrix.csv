@@ -1,0 +1,10 @@
+﻿capability,caller,asl,translator,result_validation,status
+subject,YES,YES,YES,PARTIAL,CURRENT_FACT
+multiple_metrics,YES,YES,YES,PARTIAL,CURRENT_FACT
+time_grain,BOOLEAN/POLICY,dimension.granularity,YES,NO,CURRENT_FACT
+order_limit,YES,YES,YES,PARTIAL,CURRENT_FACT
+relation_target,relationship_anchor,relation-completed dimensions/filters,inferred catalog path,NO,CURRENT_FACT
+comparison,analysis operator only,NO_FIRST_CLASS,NO_FIRST_CLASS,SPECIAL_CASE_ONLY,CURRENT_FACT
+window,NO,NO,NO,NO,CURRENT_FACT
+cursor_offset,canonical request only,NO,NO,NO,CURRENT_FACT
+one_to_many_safety,NO,NO,REJECT_ONLY,NO,CURRENT_FACT

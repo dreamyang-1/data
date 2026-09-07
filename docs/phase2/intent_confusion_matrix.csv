@@ -1,0 +1,4 @@
+﻿axis,from,to,observed_count,source,cause
+legacy_intent,DETAIL_QUERY,METRIC_QUERY,3,"real-002,real-005,real-022",query shape and analysis goal collapsed into one label
+turn_relation,FOLLOW_UP_ADD,standalone/replace,5,"real-001,004,014,015,021",slot merge semantics not first-class
+dataset_operation,LIMIT/SORT_FOLLOWUP,new semantic query,5,"real-017,020,027,029,030",service route not separated from query intent

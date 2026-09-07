@@ -1,0 +1,181 @@
+{
+  "schema_version": "2.0",
+  "threshold_status": "NEEDS_BASELINE_CALIBRATION",
+  "metrics": [
+    {
+      "name": "dialogue_act_macro_f1",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "target_topic_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "target_task_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "service_route_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "analysis_goal_multilabel_f1",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "query_shape_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "mention_span_precision",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "mention_span_recall",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "mention_span_f1",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "semantic_role_f1",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "metric_extraction_f1",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "dimension_extraction_f1",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "entity_role_f1",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "projection_field_f1",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "time_range_f1",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "time_grain_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "slot_operation_f1",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "canonical_resolution_top1_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "candidate_recall_at_k",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "wrong_auto_accept_rate",
+      "direction": "LOWER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "wrong_inheritance_rate",
+      "direction": "LOWER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "unnecessary_clarification_rate",
+      "direction": "LOWER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "required_clarification_recall",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "logical_plan_exact_match",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "legacy_adapter_lossless_rate",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "result_column_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "result_grain_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "result_order_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "result_limit_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "dataset_route_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "topic_return_accuracy",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "multi_turn_end_to_end_success",
+      "direction": "HIGHER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "state_isolation_violation_rate",
+      "direction": "LOWER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "p95_latency",
+      "direction": "LOWER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    },
+    {
+      "name": "cost_per_successful_task",
+      "direction": "LOWER_IS_BETTER",
+      "threshold": "NEEDS_BASELINE_CALIBRATION"
+    }
+  ]
+}

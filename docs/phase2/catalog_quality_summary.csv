@@ -1,0 +1,25 @@
+﻿object_type,code,name,has_definition,has_formula,has_bindings,has_time_anchor,has_explicit_additivity,finding
+metric,annual_total_sales,含税销售总额,True,True,True,True,False,aggregation can be inferred from formula but additivity is not explicit
+metric,tax_free_sales_amount,不含税销售总额,True,True,True,True,False,aggregation can be inferred from formula but additivity is not explicit
+metric,sales_total_cost,销售总成本,True,True,True,True,False,aggregation can be inferred from formula but additivity is not explicit
+metric,sales_total_quantity,销售总数量,True,True,True,True,False,aggregation can be inferred from formula but additivity is not explicit
+metric,order_count,订单笔数,True,True,True,True,False,aggregation can be inferred from formula but additivity is not explicit
+metric,cooperating_dealer_count,已合作经销商数,True,True,True,False,False,aggregation can be inferred from formula but additivity is not explicit
+metric,cooperating_hospital_count,已合作医院数,True,True,True,False,False,aggregation can be inferred from formula but additivity is not explicit
+metric,total_hospital_count_by_region,区域全部医院总数,True,True,True,False,False,aggregation can be inferred from formula but additivity is not explicit
+metric,dealer_cooperation_months,合作时长,True,True,True,False,False,aggregation can be inferred from formula but additivity is not explicit
+metric,hospital_affiliated_department_count,医院下属科室数量,True,True,True,False,False,aggregation can be inferred from formula but additivity is not explicit
+metric,screening_area_hospital_coverage,区域医院覆盖率,True,True,True,False,False,aggregation can be inferred from formula but additivity is not explicit
+dimension,hospital_level,医院等级,True,,True,,,no granularity expected or declared
+dimension,channel_format,渠道业态,True,,True,,,no granularity expected or declared
+dimension,transaction_date,交易日期,True,,True,,,granularity declared
+dimension,product,商品,True,,True,,,no granularity expected or declared
+dimension,dealer,经销商,True,,True,,,no granularity expected or declared
+dimension,hospital,医院,True,,True,,,no granularity expected or declared
+dimension,salesperson,业务员,True,,True,,,no granularity expected or declared
+dimension,province,省份,True,,True,,,no granularity expected or declared
+dimension,city,城市,True,,True,,,no granularity expected or declared
+dimension,product_brand,商品品牌,True,,True,,,no granularity expected or declared
+dimension,product_category,商品品类,True,,True,,,no granularity expected or declared
+dimension,department,科室,True,,True,,,no granularity expected or declared
+dimension,applicable_department,适用科室,True,,True,,,no granularity expected or declared

@@ -1,0 +1,139 @@
+{
+  "source_of_truth": "Static inspection of current Python/Pydantic models",
+  "schemas": {
+    "ChatRequest": {
+      "source": "app/domain/models.py:478-724",
+      "fields": ["conversation_id", "message_id", "question", "application_id", "semantic_model_id", "database_id", "business_domain_id", "business_domain_ids", "knowledge_base_names", "history", "use_longterm_memory", "regenerate", "original_question", "refresh_request_id", "replaces_message_id", "tools", "skills", "mcp", "web_search", "temp_file_paths", "department", "dataset_id", "dag_resume_token", "task_answers", "dependency_constraints"],
+      "limits": {"question_chars": 4000, "history_items": 100, "history_total_chars": 120000, "tools": 30, "skills": 30, "mcp": 10}
+    },
+    "HistoryMessage": {
+      "source": "app/domain/models.py:367-371",
+      "fields": ["role", "content", "message_id", "created_at"],
+      "role_values": ["user", "assistant"],
+      "content_max_chars": 8000
+    },
+    "CanonicalAnalysisRequest": {
+      "source": "app/domain/models.py:278-364",
+      "fields": ["schema_version", "request_id", "conversation_id", "application_id", "tenant_id", "user_id", "source_dataset_id", "analysis_thread_id", "turn_relation", "model_turn_relation", "model_turn_relation_confidence", "context_mode", "slot_provenance", "slot_operations", "turn_admission", "temporal_anchor", "resolved_periods", "resolved_comparison", "followup_type", "query_resolution_type", "execution_mode", "execution_contract_transform", "semantic_entity_mentions", "original_question", "rewritten_question", "rewrite_events", "rewrite_context_applied", "rewrite_degraded", "primary_intent", "secondary_intents", "conversation_control", "operators", "metrics", "asl_template", "entity", "fields", "dimensions", "filters", "semantic_filter_bindings", "time_range", "comparison_type", "ranking_limit", "forecast_horizon_periods", "forecast_granularity", "forecast_history_provided", "report_template_id", "missing_slots", "assumptions", "risk_level", "intent_source", "intent_confidence", "intent_candidates", "ambiguities", "semantic_ambiguities", "knowledge_base_names", "semantic_model_id", "semantic_model_version", "semantic_display_slots", "database_id", "business_domain_ids", "resolved_business_domain_ids", "business_domain_selection_mode", "confirmed_memory_ids", "confirmed_preferences", "dependency_constraints", "pending_state_version"],
+      "serialization_exclusions": ["semantic_display_slots", "pending_state_version"]
+    },
+    "CurrentTurnFacts": {
+      "source": "app/domain/models.py:139-149",
+      "fields": ["raw_query", "explicit_slots", "inferred_slots", "reference_signals", "followup_signals", "topic_shift_signals", "core_subjects", "omitted_slots", "temporal_references", "is_self_contained"]
+    },
+    "TurnAdmissionDecision": {
+      "source": "app/domain/models.py:152-175",
+      "fields": ["relation", "confidence", "context_mode", "current_turn_facts", "context_dependent", "core_subject_changed", "inherit_business_context", "create_new_analysis_thread", "historical_recall_required", "reason_codes", "protected_slots", "cleared_slots", "inheritance_slots", "previous_thread_id", "previous_episode_id", "selected_thread_id", "selected_episode_id", "context_before", "context_delta", "context_after", "context_conflicts", "slot_operations", "needs_clarification"]
+    },
+    "SlotProvenance": {
+      "source": "app/domain/models.py:117-123",
+      "fields": ["value", "source", "source_turn", "source_thread", "source_episode", "confidence"]
+    },
+    "SlotOperation": {
+      "source": "app/domain/models.py:126-136",
+      "fields": ["slot", "operation", "old_value", "new_value", "evidence_span", "source", "confidence", "reason_code"]
+    },
+    "StructuredIntentOutput": {
+      "source": "app/intent/structured.py:48-67",
+      "fields": ["primary_intent", "secondary_intents", "operators", "conversation_control", "turn_relation", "turn_relation_confidence", "slot_operations", "confidence", "evidence", "metrics", "dimensions", "entity", "fields", "current_entity_values", "comparison_type", "ambiguities", "completed_question"],
+      "extra_fields": "forbidden"
+    },
+    "StructuredSlotOperation": {
+      "source": "app/intent/structured.py:38-45",
+      "fields": ["slot", "operation", "value", "evidence_span", "confidence"]
+    },
+    "PendingState": {
+      "source": "app/domain/models.py:1113-1117",
+      "fields": ["request", "clarification_rounds", "state_version", "remaining_questions"],
+      "request_type": "CanonicalAnalysisRequest",
+      "versioned": true
+    },
+    "ContextEnvelope": {
+      "source": "app/services/context_builder.py:18-30",
+      "fields": ["schema_version", "system_prompt", "current_question", "task_state", "analysis_plan", "recent_history", "conversation_summary", "long_term_memories", "tool_result_summaries", "business_context", "estimated_characters", "omitted"],
+      "main_path": false
+    },
+    "ConversationSummary": {
+      "source": "app/services/context_compaction.py:12-24",
+      "fields": ["schema_version", "active_goal", "intent", "confirmed_metrics", "confirmed_dimensions", "confirmed_filters", "confirmed_time_range", "user_corrections", "key_conclusions", "unresolved_items", "source_message_count", "compacted_message_count"],
+      "main_path": false,
+      "persisted": false
+    },
+    "TaskFrame": {
+      "source": "app/stores/session.py:243-260,654-665",
+      "type": "CanonicalAnalysisRequest",
+      "transformation": "deep copy with asl_template forced to null",
+      "retained_fields": "all other CanonicalAnalysisRequest fields, including original_question, rewritten_question and source_dataset_id",
+      "not_stored": ["ASL template", "SQL", "result rows", "files", "AgentResponse status/error"]
+    },
+    "LastRequest": {
+      "source": "app/stores/session.py:228-232,624-640",
+      "type": "CanonicalAnalysisRequest",
+      "transformation": "none",
+      "retained_fields": "all serializable CanonicalAnalysisRequest fields, potentially including asl_template and source_dataset_id",
+      "not_stored": ["SQL", "result rows", "files", "AgentResponse status/error"]
+    },
+    "ResponseCache": {
+      "source": "app/stores/session.py:543-622",
+      "fields": ["request_fingerprint", "AgentResponse"],
+      "key_scope": ["tenant_id", "user_id", "application_id", "conversation_id", "message_id"],
+      "atomic": true
+    },
+    "DagCheckpoint": {
+      "source": "app/services/orchestrator.py:1276-1292",
+      "fields": ["schema_version", "plan_fingerprint", "completed", "conversations"],
+      "completed_value_type": "map task_id to AgentResponse JSON"
+    },
+    "DagPending": {
+      "source": "app/services/orchestrator.py:1656-1679",
+      "fields": ["schema_version", "state_version", "resume_token_hash", "scope_fingerprint", "root_message_id", "plan_fingerprint", "task_plan", "child_conversations", "awaiting_task_ids", "clarification_questions", "shared_clarification"],
+      "versioned": true
+    },
+    "DatasetScope": {
+      "source": "minio_followup_store.py:110-120",
+      "fields": ["tenant_id", "user_id", "application_id", "conversation_id"]
+    },
+    "DatasetReference": {
+      "source": "minio_followup_store.py:123-152",
+      "fields": ["dataset_id", "bucket", "object_name", "scope", "columns", "row_count", "byte_size", "snapshot_id", "data_as_of", "created_at", "expires_at", "source_type", "source_ref", "semantic_model_id", "business_domain_ids", "metric_ids", "parent_dataset_ids", "transformation_log", "storage_type", "format_version"],
+      "immutable_object": true
+    },
+    "QuerySpec": {
+      "source": "app/domain/models.py:733-744",
+      "fields": ["schema_version", "request_id", "metric_ids", "entity", "fields", "dimensions", "filters", "time_range", "limit", "cursor", "snapshot_requirement"],
+      "role": "validated query contract passed into the platform-owned data query adapter"
+    },
+    "Dataset": {
+      "source": "app/domain/models.py:747-809",
+      "fields": ["columns", "rows", "snapshot_id", "data_as_of", "source_data_as_of", "source_watermark_field", "quality_status", "row_count", "total_row_count", "truncated"]
+    },
+    "DataQueryResult": {
+      "source": "app/domain/models.py:812-830",
+      "fields": ["asl", "sql", "dataset", "data_source_id", "ambiguities", "execution_transforms", "result_file_url"],
+      "role": "validated output of the external NL-to-ASL-to-SQL chain"
+    },
+    "AgentResponse": {
+      "source": "app/domain/models.py:1038-1110",
+      "fields": ["request_id", "conversation_id", "status", "intent", "intent_source", "intent_confidence", "execution_shape", "task_intents", "answer", "clarification_questions", "clarification_items", "remaining_question_count", "missing_slots", "understood_slots", "clarification_round", "evidence", "reliability", "requirements", "analysis_process", "analysis_plan", "chart_specs", "files", "skills_used", "extension_executions", "task_plan", "task_results", "dag_resume_token", "awaiting_task_ids", "dataset_id", "dataset_ids", "result_file_url", "semantic_model_id", "database_id", "requested_business_domain_ids", "business_domain_selection_mode", "created_at"]
+    },
+    "SessionEvent": {
+      "source": "app/stores/events.py:42-52",
+      "fields": ["event_id", "session_id", "user_id", "tenant_id", "application_id", "message_id", "event_type", "timestamp", "trace_id", "payload"],
+      "runtime_emitted_types_observed": ["TURN_ADMISSION", "CONTEXT_MERGE", "QUERY_RESOLUTION"]
+    },
+    "LongTermMemory": {
+      "source": "app/stores/long_memory.py:111-134",
+      "fields": ["memory_id", "scope", "memory_type", "memory_key", "summary", "value", "status", "confidence", "source_session_id", "source_message_id", "created_by", "confirmed_by", "deleted_by", "valid_from", "expires_at", "superseded_by", "created_at", "updated_at", "confirmed_at", "deleted_at", "version"],
+      "scope_fields": ["tenant_id", "user_id", "application_id"]
+    }
+  },
+  "enums": {
+    "PrimaryIntent": ["METRIC_QUERY", "DETAIL_QUERY", "TREND_ANALYSIS", "COMPARISON_ANALYSIS", "COMPOSITION_ANALYSIS", "ANOMALY_ANALYSIS", "ROOT_CAUSE_ANALYSIS", "FORECAST_ANALYSIS", "REPORT_GENERATION", "METRIC_DEFINITION", "DATA_LINEAGE", "DATA_QUALITY", "CAPABILITY_HELP", "CHAT", "OUT_OF_SCOPE"],
+    "ConversationControl": ["NEW_REQUEST", "CLARIFICATION_RESPONSE", "FOLLOW_UP", "CORRECTION", "CANCEL", "FEEDBACK"],
+    "TurnRelation": ["STANDALONE_NEW_TOPIC", "CURRENT_TOPIC_FOLLOWUP", "CURRENT_TOPIC_MODIFICATION", "CURRENT_TOPIC_DRILLDOWN", "HISTORICAL_TOPIC_RETURN", "CLARIFICATION_RESPONSE", "CORRECTION", "AMBIGUOUS_RELATION"],
+    "ContextMode": ["NONE", "CURRENT_THREAD", "HISTORICAL_THREAD", "CLARIFICATION_RESUME"],
+    "SlotSource": ["CURRENT_EXPLICIT", "CURRENT_INFERRED", "CURRENT_REFERENCE_RESOLUTION", "ACTIVE_THREAD_STATE", "HISTORICAL_EPISODE", "RESULT_ARTIFACT"],
+    "SlotOperationType": ["KEEP", "INHERIT", "ADD", "REPLACE", "REMOVE", "CLEAR"],
+    "AnalysisOperator": ["FILTER", "GROUP_BY", "AGGREGATE", "COMPARE", "RATIO", "TOP_N", "BOTTOM_N", "SORT", "TIME_BUCKET", "DECOMPOSE", "ANOMALY_DETECT", "FORECAST", "EXPLAIN", "RENDER_TABLE", "RENDER_CHART"]
+  }
+}

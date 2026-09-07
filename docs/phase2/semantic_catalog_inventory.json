@@ -1,0 +1,2656 @@
+{
+  "status": "CURRENT_FACT",
+  "generated_at": "2026-09-07T01:04:55.566039+00:00",
+  "read_mode": "read-only Oagnet get_dsl_by_scope",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_id": 205
+  },
+  "error": null,
+  "counts": {
+    "entities": 14,
+    "metrics": 11,
+    "dimensions": 13,
+    "attributes": 93,
+    "relations": 24
+  },
+  "metrics": [
+    {
+      "metric_code": "annual_total_sales",
+      "metric_name": "含税销售总额",
+      "synonyms": "销售总额,销售额,年度总销售额,含税销售金额,订单销售额",
+      "business_domain": 205,
+      "metric_level": 1,
+      "unit": "元",
+      "format_rule": "#,##0.00",
+      "is_public": true,
+      "business_definition": {
+        "description": "指定时间范围内全部销售记录的含税金额净额合计；退货或冲销按源数据负值抵减",
+        "application_scenes": "销售趋势,经销商排名,商品销售分析,医院销售分析"
+      },
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": "sales_order.created_date",
+        "special_rule": null
+      },
+      "calculation_rule": {
+        "calc_formula": "annual_total_sales=SUM(sales_order.amount_with_tax)",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "hospital_level",
+        "transaction_date",
+        "product",
+        "dealer",
+        "hospital",
+        "salesperson",
+        "province",
+        "city",
+        "product_brand",
+        "product_category",
+        "department",
+        "applicable_department"
+      ],
+      "source_dependency": {
+        "bind_entity": [
+          "sales_order"
+        ]
+      },
+      "permission_config": {
+        "view_roles": [],
+        "data_limit": null
+      }
+    },
+    {
+      "metric_code": "tax_free_sales_amount",
+      "metric_name": "不含税销售总额",
+      "synonyms": "无税销售总金额,不含税销售额",
+      "business_domain": 205,
+      "metric_level": 1,
+      "unit": "元",
+      "format_rule": "#,##0.00",
+      "is_public": true,
+      "business_definition": {
+        "description": "指定时间范围内全部销售记录的不含税金额净额合计；退货或冲销按源数据负值抵减",
+        "application_scenes": "财务分析,毛利分析"
+      },
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": "sales_order.created_date",
+        "special_rule": null
+      },
+      "calculation_rule": {
+        "calc_formula": "tax_free_sales_amount=SUM(sales_order.amount_without_tax)",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "transaction_date",
+        "product",
+        "dealer",
+        "hospital",
+        "salesperson"
+      ],
+      "source_dependency": {
+        "bind_entity": [
+          "sales_order"
+        ]
+      },
+      "permission_config": {
+        "view_roles": [],
+        "data_limit": null
+      }
+    },
+    {
+      "metric_code": "sales_total_cost",
+      "metric_name": "销售总成本",
+      "synonyms": "总成本,发货成本",
+      "business_domain": 205,
+      "metric_level": 1,
+      "unit": "元",
+      "format_rule": "#,##0.00",
+      "is_public": true,
+      "business_definition": {
+        "description": "指定时间范围内全部销售记录的成本净额合计；退货或冲销按源数据负值抵减",
+        "application_scenes": "成本分析,利润分析"
+      },
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": "sales_order.created_date",
+        "special_rule": null
+      },
+      "calculation_rule": {
+        "calc_formula": "sales_total_cost=SUM(sales_order.cost)",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "transaction_date",
+        "product",
+        "dealer",
+        "hospital",
+        "salesperson"
+      ],
+      "source_dependency": {
+        "bind_entity": [
+          "sales_order"
+        ]
+      },
+      "permission_config": {
+        "view_roles": [],
+        "data_limit": null
+      }
+    },
+    {
+      "metric_code": "sales_total_quantity",
+      "metric_name": "销售总数量",
+      "synonyms": "销量,销售数量",
+      "business_domain": 205,
+      "metric_level": 1,
+      "unit": "件",
+      "format_rule": "#,##0.####",
+      "is_public": true,
+      "business_definition": {
+        "description": "指定时间范围内全部销售记录的商品数量净额合计；退货或冲销按源数据负值抵减",
+        "application_scenes": "销量趋势,商品动销分析"
+      },
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": "sales_order.created_date",
+        "special_rule": null
+      },
+      "calculation_rule": {
+        "calc_formula": "sales_total_quantity=SUM(sales_order.quantity)",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "hospital_level",
+        "transaction_date",
+        "product",
+        "dealer",
+        "hospital",
+        "salesperson",
+        "province",
+        "city"
+      ],
+      "source_dependency": {
+        "bind_entity": [
+          "sales_order"
+        ]
+      },
+      "permission_config": {
+        "view_roles": [],
+        "data_limit": null
+      }
+    },
+    {
+      "metric_code": "order_count",
+      "metric_name": "订单笔数",
+      "synonyms": "订单数,单据数量",
+      "business_domain": 205,
+      "metric_level": 1,
+      "unit": "笔",
+      "format_rule": "#,##0",
+      "is_public": true,
+      "business_definition": {
+        "description": "指定时间范围内全部销售记录按业务订单键去重后的订单数量",
+        "application_scenes": "订单分析,订单活跃度"
+      },
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": "sales_order.created_date",
+        "special_rule": null
+      },
+      "calculation_rule": {
+        "calc_formula": "order_count=COUNT(DISTINCT sales_order.order_key)",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "hospital_level",
+        "transaction_date",
+        "product",
+        "dealer",
+        "hospital",
+        "salesperson",
+        "city"
+      ],
+      "source_dependency": {
+        "bind_entity": [
+          "sales_order"
+        ]
+      },
+      "permission_config": {
+        "view_roles": [],
+        "data_limit": null
+      }
+    },
+    {
+      "metric_code": "cooperating_dealer_count",
+      "metric_name": "已合作经销商数",
+      "synonyms": "合作经销商数量,经销商覆盖",
+      "business_domain": 205,
+      "metric_level": 1,
+      "unit": "个",
+      "format_rule": "#,##0",
+      "is_public": true,
+      "business_definition": {
+        "description": "产生有效销售订单且可在经销商主数据中展示名称的去重经销商数量；与经销商名单使用同一口径",
+        "application_scenes": "渠道覆盖,销售报告"
+      },
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": null,
+        "special_rule": null
+      },
+      "calculation_rule": {
+        "calc_formula": "cooperating_dealer_count=COUNT(DISTINCT dealer.dealer_name)",
+        "global_filters": [
+          {
+            "filterType": "include",
+            "filterCondition": "sales_order.quantity > 0",
+            "filterExplanation": "排除退货和零数量记录",
+            "globalFiltersJson": ""
+          }
+        ]
+      },
+      "bind_dimensions": [
+        "hospital_level",
+        "transaction_date",
+        "city"
+      ],
+      "source_dependency": {
+        "bind_entity": [
+          "dealer"
+        ]
+      },
+      "permission_config": {
+        "view_roles": [],
+        "data_limit": null
+      }
+    },
+    {
+      "metric_code": "cooperating_hospital_count",
+      "metric_name": "已合作医院数",
+      "synonyms": "成交医院数量,医院覆盖数,医院覆盖",
+      "business_domain": 205,
+      "metric_level": 1,
+      "unit": "家",
+      "format_rule": "#,##0",
+      "is_public": true,
+      "business_definition": {
+        "description": "产生有效销售订单且可在医院主数据中展示名称的去重医院数量；与合作医院名单使用同一口径",
+        "application_scenes": "医院覆盖分析,销售报告"
+      },
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": null,
+        "special_rule": null
+      },
+      "calculation_rule": {
+        "calc_formula": "cooperating_hospital_count=COUNT(DISTINCT hospital.hospital_code)",
+        "global_filters": [
+          {
+            "filterType": "IN",
+            "filterCondition": "sales_order.quantity > 0",
+            "filterExplanation": "排除退货和零数量记录",
+            "globalFiltersJson": ""
+          }
+        ]
+      },
+      "bind_dimensions": [
+        "transaction_date",
+        "product",
+        "hospital",
+        "province",
+        "city"
+      ],
+      "source_dependency": {
+        "bind_entity": [
+          "hospital"
+        ]
+      },
+      "permission_config": {
+        "view_roles": [],
+        "data_limit": null
+      }
+    },
+    {
+      "metric_code": "total_hospital_count_by_region",
+      "metric_name": "区域全部医院总数",
+      "synonyms": "全区医院数量,区域医院档案总数,当地医院总数量,片区医院总量",
+      "business_domain": 205,
+      "metric_level": 1,
+      "unit": "家",
+      "format_rule": "#,##0",
+      "is_public": true,
+      "business_definition": {
+        "description": "筛选范围内所有医院档案总数，与医院是否产生销售订单无关",
+        "application_scenes": "计算区域医院覆盖率,省市维度医院资源总量统计对比,经销商负责片区医院家底盘点,区域医药大盘市场容量分析"
+      },
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": null,
+        "special_rule": null
+      },
+      "calculation_rule": {
+        "calc_formula": "target_city_hospital_count=COUNT(DISTINCT hospital.hospital_id)",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "product",
+        "province",
+        "city"
+      ],
+      "source_dependency": {
+        "bind_entity": [
+          "hospital"
+        ]
+      },
+      "permission_config": {
+        "view_roles": [],
+        "data_limit": null
+      }
+    },
+    {
+      "metric_code": "dealer_cooperation_months",
+      "metric_name": "合作时长",
+      "synonyms": "合作月数,合作时间,经销商合作时长,合作月份数,经销商合作月数,合作周期时长",
+      "business_domain": 205,
+      "metric_level": 1,
+      "unit": "月",
+      "format_rule": "#,##0.0",
+      "is_public": true,
+      "business_definition": {
+        "description": "经销商自首次成交日期起至当前日期",
+        "application_scenes": "经销商比较,用于经销商生命周期分析,经销商画像分析,业绩合作时长相关性对比分析,可按经销商维度分组统计"
+      },
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": null,
+        "special_rule": null
+      },
+      "calculation_rule": {
+        "calc_formula": "dealer_cooperation_months=TIMESTAMPDIFF(MONTH,  dealer.first_order_date , CURRENT_DATE )",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "hospital_level",
+        "dealer",
+        "province",
+        "city"
+      ],
+      "source_dependency": {
+        "bind_entity": [
+          "dealer"
+        ]
+      },
+      "permission_config": {
+        "view_roles": [],
+        "data_limit": null
+      }
+    },
+    {
+      "metric_code": "hospital_affiliated_department_count",
+      "metric_name": "医院下属科室数量",
+      "synonyms": "医院科室总数,医院下辖科室数,医院科室档案数量,单院科室数量,下属科室个数,科室总数量",
+      "business_domain": 205,
+      "metric_level": 1,
+      "unit": "个",
+      "format_rule": "#,##0.",
+      "is_public": true,
+      "business_definition": {
+        "description": "统计每家医院下辖的科室总数量；基于医院‑科室一对多隶属关系，科室编码去重统计；仅统计档案内已维护的科室，与是否产生销售订单无关。",
+        "application_scenes": "医院档案盘点,医院科室规模对比,科室统计"
+      },
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": null,
+        "special_rule": null
+      },
+      "calculation_rule": {
+        "calc_formula": "hospital_affiliated_department_count=COUNT( DISTINCT department.dept_code )",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "hospital",
+        "department"
+      ],
+      "source_dependency": {
+        "bind_entity": [
+          "department"
+        ]
+      },
+      "permission_config": {
+        "view_roles": [],
+        "data_limit": null
+      }
+    },
+    {
+      "metric_code": "screening_area_hospital_coverage",
+      "metric_name": "区域医院覆盖率",
+      "synonyms": "合作医院占比,目标医院开发覆盖率,已开发医院覆盖率,医院开发完成率,已合作医院占比,区域医院覆盖率,经销商医院覆盖率,目标医院覆盖率",
+      "business_domain": 205,
+      "metric_level": 3,
+      "unit": "%",
+      "format_rule": "0.00%",
+      "is_public": true,
+      "business_definition": {
+        "description": "统计指定范围内，已经产生业务合作的医院占目标开发医院池的比例；不含退货，仅统计存在合作关系的医院档案",
+        "application_scenes": "区域开发评估,多维度覆盖度分析"
+      },
+      "time_caliber": {
+        "stat_cycle": null,
+        "time_anchor": null,
+        "special_rule": null
+      },
+      "calculation_rule": {
+        "calc_formula": "screening_area_hospital_coverage=cooperating_hospital_count / total_hospital_count_by_region",
+        "global_filters": []
+      },
+      "bind_dimensions": [
+        "product",
+        "hospital",
+        "province",
+        "city"
+      ],
+      "source_dependency": {
+        "bind_entity": []
+      },
+      "permission_config": {
+        "view_roles": [],
+        "data_limit": null
+      }
+    }
+  ],
+  "dimensions": [
+    {
+      "dim_code": "hospital_level",
+      "dim_name": "医院等级",
+      "synonyms": [
+        "医院级别",
+        "医疗机构等级"
+      ],
+      "business_definition": {
+        "description": "医院资质等级划分，用于医院层级业绩分组统计，包含三级、二级、一级、未定级四个固定枚举值",
+        "application_scenes": []
+      },
+      "dim_type": "枚举维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [
+        {
+          "code": "三级",
+          "name": "三级医院"
+        },
+        {
+          "code": "二级",
+          "name": "二级医院"
+        },
+        {
+          "code": "一级",
+          "name": "一级医院"
+        },
+        {
+          "code": "未定级",
+          "name": "未定级医院"
+        }
+      ],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2092454820613484546",
+          "entity": "4c1e44b3-5aee-4b31-978e-ccfa216de38d",
+          "attrName": "医院等级",
+          "entityName": "医院",
+          "mappingTable": "hospital",
+          "mappingColumn": "hospital_level",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "sales_total_quantity",
+        "cooperating_dealer_count",
+        "annual_total_sales",
+        "dealer_cooperation_months",
+        "cooperating_dealer_count",
+        "order_count"
+      ]
+    },
+    {
+      "dim_code": "channel_format",
+      "dim_name": "渠道业态",
+      "synonyms": [
+        "业态类型",
+        "销售渠道类型"
+      ],
+      "business_definition": {
+        "description": "销售订单的渠道业态划分，区分直销、分销、集中配送、产品配送、物流平台、零售、其他等七种业务模式，用于分渠道业绩分析",
+        "application_scenes": []
+      },
+      "dim_type": "枚举维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [
+        {
+          "code": "1",
+          "name": "集中配送"
+        },
+        {
+          "code": "2",
+          "name": "产品配送"
+        },
+        {
+          "code": "3",
+          "name": "直销"
+        },
+        {
+          "code": "4",
+          "name": "物流平台"
+        },
+        {
+          "code": "5",
+          "name": "分销"
+        },
+        {
+          "code": "6",
+          "name": "零售"
+        },
+        {
+          "code": "8",
+          "name": "其他"
+        }
+      ],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2092803202141995009",
+          "entity": "0c06869d-6bdb-499e-bb86-7529c61f17b8",
+          "attrName": "业态编码",
+          "entityName": "销售订单",
+          "mappingTable": "sales_order",
+          "mappingColumn": "business_type_code",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": []
+    },
+    {
+      "dim_code": "transaction_date",
+      "dim_name": "交易日期",
+      "synonyms": [
+        "成交日期",
+        "订单日期",
+        "销售日期"
+      ],
+      "business_definition": {
+        "description": "销售订单真实发生时间",
+        "application_scenes": []
+      },
+      "dim_type": "时间维度",
+      "dim_hierarchy": [],
+      "granularity_support": [
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "year"
+      ],
+      "enum_list": [],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2094691218049478658",
+          "entity": "0c06869d-6bdb-499e-bb86-7529c61f17b8",
+          "attrName": "订单日期",
+          "entityName": "销售订单",
+          "mappingTable": "sales_order",
+          "mappingColumn": "created_date",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "annual_total_sales",
+        "tax_free_sales_amount",
+        "sales_total_cost",
+        "sales_total_quantity",
+        "order_count",
+        "cooperating_dealer_count",
+        "cooperating_hospital_count"
+      ]
+    },
+    {
+      "dim_code": "product",
+      "dim_name": "商品",
+      "synonyms": [
+        "产品",
+        "药品",
+        "货品",
+        "商品名称"
+      ],
+      "business_definition": {
+        "description": "按商品编码和商品名称进行销售指标分组、排名与筛选。",
+        "application_scenes": []
+      },
+      "dim_type": "文本维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2092484689015631874",
+          "entity": "55282414-738a-4249-a847-6f324402506e",
+          "attrName": "商品名称",
+          "entityName": "商品",
+          "mappingTable": "product",
+          "mappingColumn": "product_name",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "annual_total_sales",
+        "tax_free_sales_amount",
+        "sales_total_cost",
+        "sales_total_quantity",
+        "order_count",
+        "screening_area_hospital_coverage",
+        "total_hospital_count_by_region",
+        "cooperating_hospital_count"
+      ]
+    },
+    {
+      "dim_code": "dealer",
+      "dim_name": "经销商",
+      "synonyms": [
+        "代理商",
+        "渠道商",
+        "合作经销商",
+        "客户"
+      ],
+      "business_definition": {
+        "description": "按实际成交经销商进行销售指标分组、排名与筛选。",
+        "application_scenes": []
+      },
+      "dim_type": "文本维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2092486621708972033",
+          "entity": "87093284-bf08-4f3b-ba4f-f23f7c705b8f",
+          "attrName": "经销商名称",
+          "entityName": "经销商",
+          "mappingTable": "dealer",
+          "mappingColumn": "dealer_name",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "annual_total_sales",
+        "tax_free_sales_amount",
+        "sales_total_cost",
+        "sales_total_quantity",
+        "order_count",
+        "dealer_cooperation_months"
+      ]
+    },
+    {
+      "dim_code": "hospital",
+      "dim_name": "医院",
+      "synonyms": [
+        "医疗机构",
+        "合作医院",
+        "客户医院"
+      ],
+      "business_definition": {
+        "description": "按实际采购医院进行销售指标分组、排名与筛选。",
+        "application_scenes": []
+      },
+      "dim_type": "文本维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2092454820592513026",
+          "entity": "4c1e44b3-5aee-4b31-978e-ccfa216de38d",
+          "attrName": "医院名称",
+          "entityName": "医院",
+          "mappingTable": "hospital",
+          "mappingColumn": "hospital_name",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "annual_total_sales",
+        "tax_free_sales_amount",
+        "sales_total_cost",
+        "sales_total_quantity",
+        "order_count",
+        "cooperating_hospital_count",
+        "hospital_affiliated_department_count",
+        "screening_area_hospital_coverage"
+      ]
+    },
+    {
+      "dim_code": "salesperson",
+      "dim_name": "业务员",
+      "synonyms": [
+        "销售员",
+        "销售代表",
+        "客户经理",
+        "业务代表"
+      ],
+      "business_definition": {
+        "description": "按负责业务员进行销售指标分组、排名与筛选。",
+        "application_scenes": []
+      },
+      "dim_type": "文本维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2092486288979030017",
+          "entity": "f928e22f-f7dd-40f4-8e20-8ad507e9114a",
+          "attrName": "销售员姓名",
+          "entityName": "业务员",
+          "mappingTable": "salesperson",
+          "mappingColumn": "salesperson_name",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "annual_total_sales",
+        "tax_free_sales_amount",
+        "sales_total_cost",
+        "sales_total_quantity",
+        "order_count"
+      ]
+    },
+    {
+      "dim_code": "province",
+      "dim_name": "省份",
+      "synonyms": [
+        "省份",
+        "省",
+        "行政省",
+        "业务区域省级"
+      ],
+      "business_definition": {
+        "description": "经销商覆盖省份与医院所在省份共用的省级行政区划档案；用于区域业绩分组、经销商推荐限定省份",
+        "application_scenes": []
+      },
+      "dim_type": "文本维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2094306753653587970",
+          "entity": "443ac0ed-b8ad-4d52-8224-99d1fb23ca62",
+          "attrName": "省份名称",
+          "entityName": "省份",
+          "mappingTable": "dim_province",
+          "mappingColumn": "province_name",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "cooperating_hospital_count",
+        "annual_total_sales",
+        "sales_total_quantity",
+        "dealer_cooperation_months",
+        "screening_area_hospital_coverage",
+        "total_hospital_count_by_region"
+      ]
+    },
+    {
+      "dim_code": "city",
+      "dim_name": "城市",
+      "synonyms": [
+        "城市",
+        "地级市",
+        "市"
+      ],
+      "business_definition": {
+        "description": "地级市 / 城市行政区域档案，作为省份维度子级；用于城市维度业绩分析、目标城市医院池统计、经销商开发城市明细",
+        "application_scenes": []
+      },
+      "dim_type": "文本维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2094307294823661570",
+          "entity": "d02bbfd9-43ce-44bb-90b9-02f327526dd4",
+          "attrName": "城市名称",
+          "entityName": "市",
+          "mappingTable": "dim_city",
+          "mappingColumn": "city_name",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "screening_area_hospital_coverage",
+        "annual_total_sales",
+        "sales_total_quantity",
+        "cooperating_hospital_count",
+        "dealer_cooperation_months",
+        "order_count",
+        "cooperating_dealer_count",
+        "total_hospital_count_by_region"
+      ]
+    },
+    {
+      "dim_code": "product_brand",
+      "dim_name": "商品品牌",
+      "synonyms": [
+        "母厂牌"
+      ],
+      "business_definition": {
+        "description": "用于按厂家母厂牌对销售数据进行筛选、分组统计，品牌数据取自生产厂家实体 parent_brand 字段",
+        "application_scenes": []
+      },
+      "dim_type": "文本维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2092452508746674178",
+          "entity": "7fdae747-b859-42bd-9e92-340091ace995",
+          "attrName": "母厂牌",
+          "entityName": "生产厂家",
+          "mappingTable": "manufacturer",
+          "mappingColumn": "parent_brand",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "annual_total_sales"
+      ]
+    },
+    {
+      "dim_code": "product_category",
+      "dim_name": "商品品类",
+      "synonyms": [
+        "商品分类"
+      ],
+      "business_definition": {
+        "description": "用于耗材品类筛选统计，例如低值耗材、高值耗材等，取自商品分类实体 category_name 字段",
+        "application_scenes": []
+      },
+      "dim_type": "文本维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2092485173491298305",
+          "entity": "5997bdba-8aed-4b7e-b423-de79cba766f7",
+          "attrName": "产品类别",
+          "entityName": "产品分类",
+          "mappingTable": "product_category",
+          "mappingColumn": "product_type",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "annual_total_sales"
+      ]
+    },
+    {
+      "dim_code": "department",
+      "dim_name": "科室",
+      "synonyms": [
+        "院属科室",
+        "医院科室",
+        "临床科室"
+      ],
+      "business_definition": {
+        "description": "医院内部行政隶属科室维度，用于筛选、分组、下钻医院下辖科室的业务数据；来源于科室实体档案，一条科室归属唯一一家医院。",
+        "application_scenes": []
+      },
+      "dim_type": "文本维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2093646189935833090",
+          "entity": "49d037e7-826c-475e-a559-88c2d9f4a263",
+          "attrName": "科室名称",
+          "entityName": "科室",
+          "mappingTable": "department",
+          "mappingColumn": "dept_name",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "annual_total_sales",
+        "hospital_affiliated_department_count"
+      ]
+    },
+    {
+      "dim_code": "applicable_department",
+      "dim_name": "适用科室",
+      "synonyms": [
+        "产品适用科室",
+        "药品适应症科室"
+      ],
+      "business_definition": {
+        "description": "按产品适应症科室筛选、分组统计销售数据；区分主要适用科室、次要适用科室，开展科室方向销售分析。\n商品业务标签维度，代表产品适应症覆盖科室；区分主要适用科室、次要适用科室；该维度科室和医院下辖行政科室无归属关系。",
+        "application_scenes": []
+      },
+      "dim_type": "文本维度",
+      "dim_hierarchy": [],
+      "granularity_support": [],
+      "enum_list": [],
+      "special_rules": [],
+      "field_mapping": {},
+      "bind_entities": [
+        {
+          "attr": "2093646189935833090",
+          "entity": "49d037e7-826c-475e-a559-88c2d9f4a263",
+          "attrName": "科室名称",
+          "entityName": "科室",
+          "mappingTable": "department",
+          "mappingColumn": "dept_name",
+          "businessDomain": "205"
+        }
+      ],
+      "bind_metrics": [
+        "annual_total_sales"
+      ]
+    }
+  ],
+  "entities": [
+    {
+      "entity_code": "salesperson",
+      "entity_name": "业务员",
+      "entity_alias": "销售员、销售代表、客户经理、业务代表",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": "责销售业务的业务员人员主数据"
+      },
+      "attributes": [
+        {
+          "attr_code": "department_code",
+          "attr_name": "销售部门编码",
+          "data_type": "varchar",
+          "field_mapping": "salesperson.department_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "id",
+          "attr_name": "业务员 ID",
+          "data_type": "int",
+          "field_mapping": "salesperson.id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": true,
+          "is_unique": false,
+          "is_nullable": false,
+          "enum_values": []
+        },
+        {
+          "attr_code": "salesperson_code",
+          "attr_name": "销售员编码",
+          "data_type": "varchar",
+          "field_mapping": "salesperson.salesperson_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": false,
+          "enum_values": []
+        },
+        {
+          "attr_code": "salesperson_name",
+          "attr_name": "销售员姓名",
+          "data_type": "varchar",
+          "field_mapping": "salesperson.salesperson_name",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "department_name",
+          "attr_name": "销售部门名称",
+          "data_type": "varchar",
+          "field_mapping": "salesperson.department_name",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "guoyao_code",
+          "attr_name": "国药公司编码",
+          "data_type": "varchar",
+          "field_mapping": "salesperson.guoyao_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [
+        {
+          "relation_code": "salesperson_responsible_sales_order",
+          "relation_name": "负责",
+          "target_entity": "sales_order",
+          "relation_semantic": "一名业务员可以跟进多条销售订单",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "salesperson_code",
+            "target_field": "salesperson_code"
+          },
+          "description": "一名业务员可以跟进多条销售订单"
+        },
+        {
+          "relation_code": "salesperson_belongs_to_sales_company",
+          "relation_name": "归属国药公司",
+          "target_entity": "sales_company",
+          "relation_semantic": "业务员按国药编码归属国药公司。",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "salesperson.guoyao_code",
+            "target_field": "guoyao_company.guoyao_code"
+          },
+          "description": "业务员按国药编码归属国药公司。"
+        }
+      ],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "project",
+      "entity_name": "销售项目",
+      "entity_alias": "销售项目、医院项目、业务项目、立项",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": "专项销售立项项目信息"
+      },
+      "attributes": [
+        {
+          "attr_code": "salesperson_code",
+          "attr_name": "销售员编码",
+          "data_type": "varchar",
+          "field_mapping": "project.salesperson_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "id",
+          "attr_name": "项目 ID",
+          "data_type": "int",
+          "field_mapping": "project.id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": true,
+          "is_unique": false,
+          "is_nullable": false,
+          "enum_values": []
+        },
+        {
+          "attr_code": "project_code",
+          "attr_name": "项目编码",
+          "data_type": "varchar",
+          "field_mapping": "project.project_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": false,
+          "enum_values": []
+        },
+        {
+          "attr_code": "project_name",
+          "attr_name": "项目名称",
+          "data_type": "varchar",
+          "field_mapping": "project.project_name",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "hospital_id",
+          "attr_name": "医院标识",
+          "data_type": "varchar",
+          "field_mapping": "project.hospital_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [
+        {
+          "relation_code": "sales_item_association_sales_order",
+          "relation_name": "关联",
+          "target_entity": "sales_order",
+          "relation_semantic": "一个销售项目可以生成多条销售订单",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "project_code",
+            "target_field": "project_code"
+          },
+          "description": "一个销售项目可以生成多条销售订单"
+        }
+      ],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "sales_company",
+      "entity_name": "销售公司",
+      "entity_alias": "销售公司、国药公司、分公司、子公司、所属企业",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": "业务员所属国药下属公司主体"
+      },
+      "attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "公司 ID",
+          "data_type": "int",
+          "field_mapping": "guoyao_company.id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": true,
+          "is_unique": false,
+          "is_nullable": false,
+          "enum_values": []
+        },
+        {
+          "attr_code": "city",
+          "attr_name": "国药市",
+          "data_type": "varchar",
+          "field_mapping": "guoyao_company.city",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "guoyao_code",
+          "attr_name": "国药公司编码",
+          "data_type": "varchar",
+          "field_mapping": "guoyao_company.guoyao_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": false,
+          "enum_values": []
+        },
+        {
+          "attr_code": "guoyao_name",
+          "attr_name": "国药公司名称",
+          "data_type": "varchar",
+          "field_mapping": "guoyao_company.guoyao_name",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "guoyao_short_name",
+          "attr_name": "国药公司简称",
+          "data_type": "varchar",
+          "field_mapping": "guoyao_company.guoyao_short_name",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "province",
+          "attr_name": "国药省",
+          "data_type": "varchar",
+          "field_mapping": "guoyao_company.province",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [
+        {
+          "relation_code": "china_national_pharmaceuticals_subsidiary_sales_representative",
+          "relation_name": "下辖",
+          "target_entity": "salesperson",
+          "relation_semantic": "一个国药分公司拥有多名业务员",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "guoyao_code",
+            "target_field": "guoyao_code"
+          },
+          "description": "一个国药分公司拥有多名业务员"
+        }
+      ],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "product_line",
+      "entity_name": "产品线",
+      "entity_alias": "产品系列、产品组、业务产品线",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": "企业内部产品线分组管理"
+      },
+      "attributes": [
+        {
+          "attr_code": "product_line_id",
+          "attr_name": "产品线分类标识",
+          "data_type": null,
+          "field_mapping": "product_line.product_line_id",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "id",
+          "attr_name": "产品线 ID",
+          "data_type": null,
+          "field_mapping": "product_line.id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "line_level1",
+          "attr_name": "产品线一级分类",
+          "data_type": null,
+          "field_mapping": "product_line.line_level1",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "line_level2",
+          "attr_name": "产品线二级分类",
+          "data_type": null,
+          "field_mapping": "product_line.line_level2",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "sales_order",
+      "entity_name": "销售订单",
+      "entity_alias": "订单、销售单据、出货单",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": "医药销售业务交易订单明细数据"
+      },
+      "attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "订单 ID",
+          "data_type": null,
+          "field_mapping": "sales_order.id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "order_key",
+          "attr_name": "订单号",
+          "data_type": null,
+          "field_mapping": "sales_order.order_key",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "fiscal_year",
+          "attr_name": "总账年份",
+          "data_type": null,
+          "field_mapping": "sales_order.fiscal_year",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "fiscal_month",
+          "attr_name": "总账年月",
+          "data_type": null,
+          "field_mapping": "sales_order.fiscal_month",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "unit",
+          "attr_name": "计量单位",
+          "data_type": null,
+          "field_mapping": "sales_order.unit",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "tax_rate",
+          "attr_name": "税率",
+          "data_type": null,
+          "field_mapping": "sales_order.tax_rate",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "quantity",
+          "attr_name": "销售数量",
+          "data_type": null,
+          "field_mapping": "sales_order.quantity",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "price_without_tax",
+          "attr_name": "无税单价",
+          "data_type": null,
+          "field_mapping": "sales_order.price_without_tax",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "price_with_tax",
+          "attr_name": "含税单价",
+          "data_type": null,
+          "field_mapping": "sales_order.price_with_tax",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "amount_without_tax",
+          "attr_name": "无税金额",
+          "data_type": null,
+          "field_mapping": "sales_order.amount_without_tax",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "amount_with_tax",
+          "attr_name": "含税金额",
+          "data_type": null,
+          "field_mapping": "sales_order.amount_with_tax",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "cost",
+          "attr_name": "销售成本",
+          "data_type": null,
+          "field_mapping": "sales_order.cost",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "order_type",
+          "attr_name": "销售单类型",
+          "data_type": null,
+          "field_mapping": "sales_order.order_type",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "rn",
+          "attr_name": "行号",
+          "data_type": null,
+          "field_mapping": "sales_order.rn",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "salesperson_code",
+          "attr_name": "销售员编码",
+          "data_type": null,
+          "field_mapping": "sales_order.salesperson_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "project_code",
+          "attr_name": "项目编码",
+          "data_type": null,
+          "field_mapping": "sales_order.project_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "product_code",
+          "attr_name": "商品编码",
+          "data_type": null,
+          "field_mapping": "sales_order.product_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "hospital_id",
+          "attr_name": "医院标识",
+          "data_type": null,
+          "field_mapping": "sales_order.hospital_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "dealer_code",
+          "attr_name": "经销商编码",
+          "data_type": null,
+          "field_mapping": "sales_order.dealer_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "business_department",
+          "attr_name": "业务科室",
+          "data_type": null,
+          "field_mapping": "sales_order.business_department",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "business_type_code",
+          "attr_name": "业态编码",
+          "data_type": null,
+          "field_mapping": "sales_order.business_type_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "business_type_name",
+          "attr_name": "业态说明",
+          "data_type": null,
+          "field_mapping": "sales_order.business_type_name",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "created_date",
+          "attr_name": "订单日期",
+          "data_type": null,
+          "field_mapping": "sales_order.created_date",
+          "description": "创建日期、交易日期",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [
+        {
+          "relation_code": "sales_order_belongs_to_dealer",
+          "relation_name": "归属经销商",
+          "target_entity": "dealer",
+          "relation_semantic": "销售订单按订单中的经销商编码归属实际成交经销商。",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "sales_order.dealer_code",
+            "target_field": "dealer.dealer_code"
+          },
+          "description": "销售订单按订单中的经销商编码归属实际成交经销商。"
+        },
+        {
+          "relation_code": "sales_order_belongs_to_product",
+          "relation_name": "归属商品",
+          "target_entity": "product",
+          "relation_semantic": "销售订单按订单中的商品编码归属实际成交商品。",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "sales_order.product_code",
+            "target_field": "product.product_code"
+          },
+          "description": "销售订单按订单中的商品编码归属实际成交商品。"
+        },
+        {
+          "relation_code": "sales_order_belongs_to_hospital",
+          "relation_name": "归属采购医院",
+          "target_entity": "hospital",
+          "relation_semantic": "销售订单按订单中的医院标识归属实际采购医院。",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "sales_order.hospital_id",
+            "target_field": "hospital.hospital_id"
+          },
+          "description": "销售订单按订单中的医院标识归属实际采购医院。"
+        },
+        {
+          "relation_code": "sales_order_belongs_to_salesperson",
+          "relation_name": "归属业务员",
+          "target_entity": "salesperson",
+          "relation_semantic": "销售订单按订单中的业务员编码归属负责业务员。",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "sales_order.salesperson_code",
+            "target_field": "salesperson.salesperson_code"
+          },
+          "description": "销售订单按订单中的业务员编码归属负责业务员。"
+        },
+        {
+          "relation_code": "sales_order_belongs_to_project",
+          "relation_name": "归属销售项目",
+          "target_entity": "project",
+          "relation_semantic": "销售订单按订单中的项目编码归属销售项目。",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "sales_order.project_code",
+            "target_field": "project.project_code"
+          },
+          "description": "销售订单按订单中的项目编码归属销售项目。"
+        },
+        {
+          "relation_code": "sales_order_association_product",
+          "relation_name": "关联",
+          "target_entity": "product",
+          "relation_semantic": "",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "sales_order.product_code",
+            "target_field": "product.product_code"
+          },
+          "description": ""
+        }
+      ],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "main_data_domain_ent_manufacturer",
+      "entity_name": "生产厂家",
+      "entity_alias": "厂家、生产商、制造厂商、品牌、厂牌、母品牌",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": "医药产品生产厂家基础主数据信息"
+      },
+      "attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "厂家 ID",
+          "data_type": null,
+          "field_mapping": "manufacturer.id",
+          "description": "厂家主键编号",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "manufacturer_code",
+          "attr_name": "厂家编码",
+          "data_type": null,
+          "field_mapping": "manufacturer.manufacturer_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "manufacturer_name",
+          "attr_name": "厂家名称",
+          "data_type": null,
+          "field_mapping": "manufacturer.manufacturer_name",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "standard_name",
+          "attr_name": "标准厂家名称",
+          "data_type": null,
+          "field_mapping": "manufacturer.standard_name",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "country",
+          "attr_name": "厂家国家",
+          "data_type": null,
+          "field_mapping": "manufacturer.country",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "parent_brand",
+          "attr_name": "母厂牌",
+          "data_type": null,
+          "field_mapping": "manufacturer.parent_brand",
+          "description": "[brand_semantics:v1] 所属母品牌/集团品牌/厂牌；用于把用户给出的品牌简称作为独立条件筛选，不能拼入商品名称或生产厂家名称。",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [
+        {
+          "relation_code": "manufacturer_production_pharmaceutical_products",
+          "relation_name": "生产",
+          "target_entity": "product",
+          "relation_semantic": "一个生产厂家可以生产多款医药产品",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "manufacturer_code",
+            "target_field": "manufacturer_code"
+          },
+          "description": "一个生产厂家可以生产多款医药产品"
+        }
+      ],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "hospital",
+      "entity_name": "医院",
+      "entity_alias": "医疗机构、合作医院、客户医院",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": "下游合作医院客户主数据"
+      },
+      "attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "医院id",
+          "data_type": null,
+          "field_mapping": "hospital.id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "hospital_id",
+          "attr_name": "医院标识",
+          "data_type": null,
+          "field_mapping": "hospital.hospital_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "hospital_code",
+          "attr_name": "医院编码",
+          "data_type": null,
+          "field_mapping": "hospital.hospital_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "hospital_name",
+          "attr_name": "医院名称",
+          "data_type": null,
+          "field_mapping": "hospital.hospital_name",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "business_province",
+          "attr_name": "业务省",
+          "data_type": null,
+          "field_mapping": "hospital.business_province",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "business_city",
+          "attr_name": "业务市",
+          "data_type": null,
+          "field_mapping": "hospital.business_city",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "hospital_level",
+          "attr_name": "医院等级",
+          "data_type": null,
+          "field_mapping": "hospital.hospital_level",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "province_id",
+          "attr_name": "省份ID，关联dim_province.province_id",
+          "data_type": null,
+          "field_mapping": "hospital.province_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "city_id",
+          "attr_name": "城市ID，关联dim_city.city_id",
+          "data_type": null,
+          "field_mapping": "hospital.city_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [
+        {
+          "relation_code": "hospital_purchase_generation_sales_order",
+          "relation_name": "产生",
+          "target_entity": "sales_order",
+          "relation_semantic": "一家医院可以产生多条采购销售订单",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "hospital.hospital_id",
+            "target_field": "sales_order.hospital_id"
+          },
+          "description": "一家医院可以产生多条采购销售订单"
+        },
+        {
+          "relation_code": "hospital_initiate_sales_item",
+          "relation_name": "发起",
+          "target_entity": "project",
+          "relation_semantic": "一家医院可立项多个销售项目",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "hospital_id",
+            "target_field": "hospital_id"
+          },
+          "description": "一家医院可立项多个销售项目"
+        },
+        {
+          "relation_code": "hospital_located_in_province",
+          "relation_name": "所在",
+          "target_entity": "province",
+          "relation_semantic": "",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "hospital.province_id",
+            "target_field": "dim_province.province_id"
+          },
+          "description": ""
+        },
+        {
+          "relation_code": "hospital_located_in_city",
+          "relation_name": "所在",
+          "target_entity": "city",
+          "relation_semantic": "",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "hospital.city_id",
+            "target_field": "dim_city.city_id"
+          },
+          "description": ""
+        },
+        {
+          "relation_code": "hospital_include_department",
+          "relation_name": "包含",
+          "target_entity": "department",
+          "relation_semantic": "",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "hospital.hospital_id",
+            "target_field": "hospital_dept_relation.hospital_id"
+          },
+          "description": ""
+        }
+      ],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "department",
+      "entity_name": "科室",
+      "entity_alias": [],
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": ""
+      },
+      "attributes": [
+        {
+          "attr_code": "dept_code",
+          "attr_name": "科室编码",
+          "data_type": null,
+          "field_mapping": "department.dept_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "dept_name",
+          "attr_name": "科室名称",
+          "data_type": null,
+          "field_mapping": "department.dept_name",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [
+        {
+          "relation_code": "department_product_applicable_product_department_association",
+          "relation_name": "被商品适用",
+          "target_entity": "product_dept_relation",
+          "relation_semantic": "",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "department.dept_code",
+            "target_field": "product_dept_relation.dept_code"
+          },
+          "description": ""
+        }
+      ],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "product_category",
+      "entity_name": "产品分类",
+      "entity_alias": "商品分类、产品分类、品类、耗材分类",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": "医药产品层级分类信息"
+      },
+      "attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "分类 ID",
+          "data_type": null,
+          "field_mapping": "product_category.id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "category_id",
+          "attr_name": "产品分类标识",
+          "data_type": null,
+          "field_mapping": "product_category.category_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "product_type",
+          "attr_name": "产品类别",
+          "data_type": null,
+          "field_mapping": "product_category.product_type",
+          "description": "[catalog_semantics:v1] 目录中的产品类别、商品类型或耗材类型；用户给出的分类值应作为独立目录条件，不能拼入商品名称。",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "product_subdirectory",
+          "attr_name": "产品子目录",
+          "data_type": null,
+          "field_mapping": "product_category.product_subdirectory",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "category_level1",
+          "attr_name": "产品一级分类",
+          "data_type": null,
+          "field_mapping": "product_category.category_level1",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "category_level2",
+          "attr_name": "产品二级分类",
+          "data_type": null,
+          "field_mapping": "product_category.category_level2",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "dealer",
+      "entity_name": "经销商",
+      "entity_alias": "代理商、渠道商、合作经销商",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": "下游采购经销合作渠道客户"
+      },
+      "attributes": [
+        {
+          "attr_code": "first_order_date",
+          "attr_name": "经销商首笔有效成交订单日期",
+          "data_type": null,
+          "field_mapping": "dealer.first_order_date",
+          "description": "排除退货quantity<0",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "id",
+          "attr_name": "经销商 ID",
+          "data_type": null,
+          "field_mapping": "dealer.id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "dealer_code",
+          "attr_name": "经销商编码",
+          "data_type": null,
+          "field_mapping": "dealer.dealer_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "dealer_name",
+          "attr_name": "经销商名称",
+          "data_type": null,
+          "field_mapping": "dealer.dealer_name",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "dealer_type",
+          "attr_name": "经销商类别",
+          "data_type": null,
+          "field_mapping": "dealer.dealer_type",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "province_id",
+          "attr_name": "关联省份档案",
+          "data_type": null,
+          "field_mapping": "dealer.province_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "city_id",
+          "attr_name": "关联城市档案",
+          "data_type": null,
+          "field_mapping": "dealer.city_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [
+        {
+          "relation_code": "dealer_place_sales_order",
+          "relation_name": "下达",
+          "target_entity": "sales_order",
+          "relation_semantic": "一个经销商可以下达多条销售订单",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "dealer.dealer_code",
+            "target_field": "sales_order.dealer_code"
+          },
+          "description": "一个经销商可以下达多条销售订单"
+        },
+        {
+          "relation_code": "dealer_located_in_city",
+          "relation_name": "所在",
+          "target_entity": "city",
+          "relation_semantic": "",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "dealer.city_id",
+            "target_field": "dim_city.city_id"
+          },
+          "description": ""
+        }
+      ],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "city",
+      "entity_name": "市",
+      "entity_alias": "城市、地级市",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": ""
+      },
+      "attributes": [
+        {
+          "attr_code": "city_name",
+          "attr_name": "城市名称",
+          "data_type": null,
+          "field_mapping": "dim_city.city_name",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "province_id",
+          "attr_name": "所属省份ID，关联dim_province.province_id",
+          "data_type": null,
+          "field_mapping": "dim_city.province_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "city_id",
+          "attr_name": "城市ID（国家标准行政区划代码，6位数字）",
+          "data_type": null,
+          "field_mapping": "dim_city.city_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "province",
+      "entity_name": "省份",
+      "entity_alias": "省份、省、行政省、业务区域省级",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": ""
+      },
+      "attributes": [
+        {
+          "attr_code": "province_name",
+          "attr_name": "省份名称",
+          "data_type": null,
+          "field_mapping": "dim_province.province_name",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "short_name",
+          "attr_name": "省份简称",
+          "data_type": null,
+          "field_mapping": "dim_province.short_name",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "province_id",
+          "attr_name": "省份ID（国家标准行政区划代码，前2位+0000）",
+          "data_type": null,
+          "field_mapping": "dim_province.province_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [
+        {
+          "relation_code": "province_includes_city",
+          "relation_name": "包含",
+          "target_entity": "city",
+          "relation_semantic": "",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "dim_province.province_id",
+            "target_field": "dim_city.province_id"
+          },
+          "description": ""
+        }
+      ],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "product",
+      "entity_name": "商品",
+      "entity_alias": "药品、货品、商品",
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": "可销售医药产品基础信息"
+      },
+      "attributes": [
+        {
+          "attr_code": "product_code",
+          "attr_name": "商品编码",
+          "data_type": null,
+          "field_mapping": "product.product_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "category_id",
+          "attr_name": "产品分类标识",
+          "data_type": null,
+          "field_mapping": "product.category_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "guoyao_code",
+          "attr_name": "国药公司编码",
+          "data_type": null,
+          "field_mapping": "product.guoyao_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "id",
+          "attr_name": "产品 ID",
+          "data_type": null,
+          "field_mapping": "product.id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "product_name",
+          "attr_name": "商品名称",
+          "data_type": null,
+          "field_mapping": "product.product_name",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "specification",
+          "attr_name": "规格型号",
+          "data_type": null,
+          "field_mapping": "product.specification",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "product_line_id",
+          "attr_name": "产品线分类标识",
+          "data_type": null,
+          "field_mapping": "product.product_line_id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "manufacturer_code",
+          "attr_name": "厂家编码",
+          "data_type": null,
+          "field_mapping": "product.manufacturer_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "material_code",
+          "attr_name": "厂家物料编码",
+          "data_type": null,
+          "field_mapping": "product.material_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [
+        {
+          "relation_code": "pharmaceutical_products_affiliation_product_category",
+          "relation_name": "归属",
+          "target_entity": "product_category",
+          "relation_semantic": "多款医药产品归属同一个产品分类",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "product.category_id",
+            "target_field": "product_category.category_id"
+          },
+          "description": "多款医药产品归属同一个产品分类"
+        },
+        {
+          "relation_code": "pharmaceutical_products_affiliation_product_line",
+          "relation_name": "归属",
+          "target_entity": "product_line",
+          "relation_semantic": "多款医药产品归属同一条产品线",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "product_line_id",
+            "target_field": "product_line_id"
+          },
+          "description": "多款医药产品归属同一条产品线"
+        },
+        {
+          "relation_code": "product_belongs_to_manufacturer",
+          "relation_name": "归属生产厂家",
+          "target_entity": "main_data_domain_ent_manufacturer",
+          "relation_semantic": "商品按生产厂家编码归属生产厂家。",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "product.manufacturer_code",
+            "target_field": "manufacturer.manufacturer_code"
+          },
+          "description": "商品按生产厂家编码归属生产厂家。"
+        },
+        {
+          "relation_code": "product_has_applicable_department_product_department_association",
+          "relation_name": "拥有适用科室",
+          "target_entity": "product_dept_relation",
+          "relation_semantic": "",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "product.product_code",
+            "target_field": "product_dept_relation.product_code"
+          },
+          "description": ""
+        }
+      ],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    },
+    {
+      "entity_code": "product_dept_relation",
+      "entity_name": "商品科室关联",
+      "entity_alias": [],
+      "business_domain": 205,
+      "update_frequency": "",
+      "primary_key": null,
+      "business_definition": {
+        "description": "存储商品与适用科室的多对多关联关系，标记科室为主要或次要适用科室"
+      },
+      "attributes": [
+        {
+          "attr_code": "product_code",
+          "attr_name": "商品编码",
+          "data_type": null,
+          "field_mapping": "product_dept_relation.product_code",
+          "description": "",
+          "is_main_attribute": true,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "id",
+          "attr_name": "主键ID",
+          "data_type": null,
+          "field_mapping": "product_dept_relation.id",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "dept_code",
+          "attr_name": "科室编码",
+          "data_type": null,
+          "field_mapping": "product_dept_relation.dept_code",
+          "description": "",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        },
+        {
+          "attr_code": "relation_type",
+          "attr_name": "适用科室类型",
+          "data_type": null,
+          "field_mapping": "product_dept_relation.relation_type",
+          "description": "1=主要科室，2=次要科室",
+          "is_main_attribute": false,
+          "is_primary_key": false,
+          "is_unique": false,
+          "is_nullable": true,
+          "enum_values": []
+        }
+      ],
+      "relations": [],
+      "bind_assets": {
+        "bind_metrics": [],
+        "bind_dimensions": []
+      }
+    }
+  ]
+}

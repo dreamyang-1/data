@@ -1,0 +1,5 @@
+{"case_id":"syn-001","question":"再加上订单笔数，其他条件不变","purpose":"FOLLOW_UP_ADD metric reducer","synthetic_proposal":true,"ground_truth":false}
+{"case_id":"syn-002","question":"改为按月，并保留原来的指标","purpose":"REPLACE time grain while preserving slots","synthetic_proposal":true,"ground_truth":false}
+{"case_id":"syn-003","question":"只看前5条","purpose":"dataset operation route","synthetic_proposal":true,"ground_truth":false}
+{"case_id":"syn-004","question":"TDC‑3的主要适用科室和次要适用科室","purpose":"Unicode normalization and relation target","synthetic_proposal":true,"ground_truth":false}
+{"case_id":"syn-005","question":"上海市各经销商已合作医院数","purpose":"geo value and role disambiguation","synthetic_proposal":true,"ground_truth":false}

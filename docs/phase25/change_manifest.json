@@ -1,0 +1,277 @@
+{
+  "schema_version": "1.0",
+  "git_commit_performed": false,
+  "production_v2_routing_changed": false,
+  "files": [
+    {
+      "path": "app\\semantic_v2\\__init__.py",
+      "sha256": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "app\\semantic_v2\\clarification.py",
+      "sha256": "e47c444fd6705711ac776a8412fc03a133df3f781e53101416a02fe7f2767961",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "app\\semantic_v2\\enums.py",
+      "sha256": "02ed58d06086f34db43263e1fee4071c9e64209a32609366c9dad10ffbceccc7",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "app\\semantic_v2\\legacy_adapter.py",
+      "sha256": "a6511fce20f2e6ee15ed6c8054c8f111f1229b84d026894d25d0b30333fdb519",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "app\\semantic_v2\\models.py",
+      "sha256": "0ae495cd55ca0a1bc4b8906c3b435b22569e3276d9cadecdf85af0e05ef84a4a",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "app\\semantic_v2\\result_contract.py",
+      "sha256": "92ba9a6bd966008f5a44c31c650d09873342d1368d5d14a6d9caeb4aa77629df",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "app\\semantic_v2\\schema.py",
+      "sha256": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "app\\semantic_v2\\slot_reducer.py",
+      "sha256": "98c1f6daa032d175ac5b9fb1cec24df180cdb10c2aa3ff4d2afc00c7e69f2949",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "app\\semantic_v2\\state_machine.py",
+      "sha256": "32a5d66f5e0376f5453e3e42fc320b0121b1241fd53908b2c0cba6ccb31b9648",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "app\\semantic_v2\\trace_models.py",
+      "sha256": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "app\\semantic_v2\\validators.py",
+      "sha256": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "tools\\phase25\\catalog_lint.py",
+      "sha256": "c8ab07fad9f20832a1f9f3b6c5a46d46d1ca1a0da2e2870ba50df22de76d6326",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "tools\\phase25\\materialize_phase25.py",
+      "sha256": "207541825f7b45419490c0b66f16ea921b18bac2564a6e7fb2c1237cec58cbe1",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "tools\\phase25\\run_semantic_v2_shadow.py",
+      "sha256": "bc40fabe4b2e4c6d16be29bc27e3ce7ab702c82f0dd0fffe3f8d7b0123dc3415",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\asl1_adapter_loss_matrix.csv",
+      "sha256": "28d81d4683dbc2aaf38669b82ea0142c18e2cbe47381d1cd6a3cb4224e3b8337",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\baseline_manifest.json",
+      "sha256": "af40c31a422fb03c45af3e035a6b5bf474f4a1983e1d489f17662297cbc3274f",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\baseline_test_report.md",
+      "sha256": "c5643accad4afaa3cc7f4a9623352492ed7c5fd0bf91921a804da5fdd09354a4",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\catalog_governance_overlay.json",
+      "sha256": "1bc711f4b3c564d1e7147983a5f81aed9464fe949c6b6693748f0f265918a1d1",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\catalog_lint_report.json",
+      "sha256": "a4921ec2df2c5b0483cd596ecac36244b8b52179c05fe6a7e18b5aaa82ef4579",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\catalog_owner_review_checklist.md",
+      "sha256": "91396474455d341f7d9bfc66121e44dc790db24cfa23de60941477da3609f02f",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\clarification_contract.md",
+      "sha256": "2d18c147b3e5553144889465642b013af609846d950f3736a5aab43db8e6014f",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\conversation_state_machine.md",
+      "sha256": "1993caa36dab53e7a8a693399a8adaa266e38c5051f97c2387f77b919766721a",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\conversation_state_machine.mmd",
+      "sha256": "ab3eaf69f11e8a2d8c6811989fd08134cd8d9911790718fa29e05d44e9dece86",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\evaluation_annotation_guide.md",
+      "sha256": "f8b54fa8cf4c76e0bff866f5c0187f7380b36dfed591afc9b9f0510caad4614d",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\evaluation_metric_spec_v2.json",
+      "sha256": "990dd858f9942df8485dd8c8fcd382673918610b99fc9152d0a3b04211a6ad3d",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\gold_v2_seed.jsonl",
+      "sha256": "99896b354cdbb01334106924d758ce1c27ee8c9daa431ee79848b70f3e6c99ff",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\implementation_backlog.md",
+      "sha256": "154e4610cb78dbcf953b276139639beb5c0912b2f578b34e640bbf66b604d699",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\metric_dimension_compatibility_v2.json",
+      "sha256": "72e042de3eab43ee7c19e7a07fdd21bfdd793492549a4250fc443e859ce1a73c",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\open_business_metadata_items.md",
+      "sha256": "b83a4481e4a60c198da898b8480ed8f66047479c0d64a06598a4798b6e3a5924",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\phase25_closure_report.md",
+      "sha256": "4b8866b8f8046edc2a8c96d663f1b66d32897023d79eac35b2a8f640cf21f322",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\phase2_corrections_and_addendum.md",
+      "sha256": "db0c208d496c15e19e4a7c112684288fa201e9e937e1a651f6390db2c979ea55",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\relation_governance_overlay.json",
+      "sha256": "ad95ac460a550a7ec006145747b17d1cd62b85a46e23e872b79977235f61103b",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\result_contract_and_proof_chain.md",
+      "sha256": "62c96bb08320e12b8015c19974b2a4b9b58d5e530764e5d009549c68edf8f150",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\semantic_resolution_v2.md",
+      "sha256": "11c28fba448a8847da36b9324853c5c1a056ab7f67c7a29a62b0aa08fea58781",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\shadow_runner_usage.md",
+      "sha256": "d698d95bf840f100c2e87355d576222298f8ea9c924536b8962e3b00bc7c20c2",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\state_transition_table.csv",
+      "sha256": "f719dfe81034caaaed2b236153e5603eb1ac44f2b3b45a3464c57400b4859265",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\surface_collision_inventory.json",
+      "sha256": "b0e3ee970f2d71b3e229cc7cd6fd6165bfcfc4bfa6ca219ea605eafd5b2c41a1",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\surface_collision_summary.csv",
+      "sha256": "290f7e1db8f47d1e1de345a5e6695d3550ffc0b6458d115746c68b392c6aecfd",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\synthetic_test_proposals_v2.jsonl",
+      "sha256": "2112130461f3b3df6aeedf37e481ad057effca498b1fefb71f9b87bd97872680",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\test_failure_triage.json",
+      "sha256": "cf242a82f7b17071d2c473ff3fa918668efc87f53fb041ada61629d6fefcc43a",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\test_failure_triage.md",
+      "sha256": "513b52fe8dff11fc0b36a3560934149a27abbea5ae6f373b8d5ae8dfcbba06fa",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\trace_v2_contract.md",
+      "sha256": "48242f1be88bc7b41e7ae78a0ae367be3455824137e911b81266fddd23aecfa8",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\typed_logical_plan_v0_2.schema.json",
+      "sha256": "0e16dbcc13ddf68aca136969570773befcc40e2083a246e0fb47bf2dcee9186a",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "docs\\phase25\\typed_logical_plan_v0_2_examples.jsonl",
+      "sha256": "52852a8253665667f7042f1286b8f14919a7bfa85d5bab2a507a7da26a28429e",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "specs\\semantic_v2\\semantic_resolution_contract.json",
+      "sha256": "5b181ae303907dc00dc9a86cd88fbe645767cde618c46c0ffd347c8a0d5fa97c",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "specs\\semantic_v2\\trace_v2.schema.json",
+      "sha256": "af1a3c7b1dc96efd9be5356bcfb830d091cd644760c2c85cd6796d7a3ac3a882",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "specs\\semantic_v2\\typed_logical_plan_v0_2.schema.json",
+      "sha256": "0e16dbcc13ddf68aca136969570773befcc40e2083a246e0fb47bf2dcee9186a",
+      "reason": "Phase 2.5 shadow/spec artifact"
+    },
+    {
+      "path": "app/domain/models.py",
+      "sha256": "6d6f1c7341e77fd6be75285efa33f7ee1e49f9d1f1afd6f8b3f338356e8aaeac",
+      "reason": "repair active legacy schema drift"
+    },
+    {
+      "path": "app/adapters/semantic_query.py",
+      "sha256": "9ba7da8207ff565b1dae26baf8dee6d230bf90b6408a3da1baaf7afffcb44d3e",
+      "reason": "attach excluded internal semantic snapshot"
+    },
+    {
+      "path": "app/analysis/synthesis.py",
+      "sha256": "7b9d8bfb41f6c76abe1ab327f2d9f54f42f3d891cebd898e5239e0ddc930dae7",
+      "reason": "accept optional bounded ContextEnvelope without raw rows"
+    },
+    {
+      "path": "app/stores/session.py",
+      "sha256": "58c21533db69b115b67d876cf5b2bc01b7cf76526b4fcf1081f52e5e265aa2e0",
+      "reason": "complete scoped SQL-free recall store contract"
+    },
+    {
+      "path": "tests/test_semantic_v2_contracts.py",
+      "sha256": "51dabf8706252794401a7417ec056ab0d6301ad510fc09371e0181a4ff42f13d",
+      "reason": "strict positive/negative V2 regression tests"
+    },
+    {
+      "path": "tests/test_phase25_tools.py",
+      "sha256": "5305326a2e8b246d5fbc949c9a60e55b49fae0045968294cf96be31ece9b0b6e",
+      "reason": "offline lint and shadow tool regression tests"
+    },
+    {
+      "path": "docs/phase25/change_manifest.json",
+      "sha256": "SELF_REFERENTIAL_NOT_HASHED",
+      "reason": "file-level Phase 2.5 change inventory"
+    }
+  ]
+}
