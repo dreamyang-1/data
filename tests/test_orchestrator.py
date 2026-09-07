@@ -26,6 +26,7 @@ from app.domain.models import (
     TaskPlan,
     TimeRange,
     TrustedIdentity,
+    TurnRelation,
 )
 from app.intent import RuleBasedIntentClassifier
 from app.api import _prepare_regeneration
@@ -1827,6 +1828,80 @@ async def test_sort_only_followup_preserves_relationship_set_and_adds_grouping()
     assert AnalysisOperator.SORT in remembered.operators
     assert "SORT_DIRECTION=DESC" in remembered.assumptions
     assert "SET_RELATIONSHIP_PROJECTION" in remembered.assumptions
+
+
+@pytest.mark.asyncio
+async def test_coverage_metric_sort_followup_reuses_verified_semantic_frame():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    conversation_id = "coverage-sort-followup"
+    previous = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id=conversation_id,
+        tenant_id="t1",
+        user_id="u1",
+        semantic_model_id=81,
+        business_domain_ids=[205],
+        original_question="统计上海市各个经销商的区域医院覆盖率",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(
+            input="区域医院覆盖率",
+            canonical_name="区域医院覆盖率",
+            metric_id="81:screening_area_hospital_coverage",
+            version="current",
+        )],
+        entity="经销商",
+        dimensions=["dealer"],
+        filters=[{
+            "field": "dim_city.city_name",
+            "operator": "EQ",
+            "value": "上海市",
+        }],
+        assumptions=[
+            "TIME_SCOPE=ALL_TIME",
+            "TIME_SCOPE_SOURCE=LIVE_SEMANTIC_SNAPSHOT_METRIC",
+        ],
+        asl_template={"dimensions": [{"name": "dealer"}]},
+    )
+    await agent.sessions.put_task_frame(previous)
+    await agent.sessions.put_last_request(previous)
+
+    response = await agent.handle(
+        ChatRequest(
+            application_id="app1",
+            conversation_id=conversation_id,
+            message_id="m2",
+            question="区域医院覆盖率按从高到低排序",
+            semantic_model_id=81,
+            business_domain_ids=[205],
+        ),
+        identity,
+    )
+
+    assert response.status != "NEEDS_CLARIFICATION"
+    remembered = await agent.sessions.get_task_frame(
+        "t1", "u1", "app1", conversation_id
+    )
+    assert remembered is not None
+    assert remembered.turn_relation == TurnRelation.CURRENT_TOPIC_MODIFICATION
+    assert remembered.metrics[0].metric_id == "81:screening_area_hospital_coverage"
+    assert remembered.dimensions == ["dealer"]
+    assert remembered.filters == [{
+        "field": "dim_city.city_name",
+        "operator": "EQ",
+        "value": "上海市",
+    }]
+    assert remembered.time_range is None
+    assert remembered.missing_slots == []
+    assert AnalysisOperator.SORT in remembered.operators
+    assert "SORT_DIRECTION=DESC" in remembered.assumptions
+    assert "DETERMINISTIC_SORT_FOLLOWUP" in remembered.turn_admission.reason_codes
+    assert "query_object" not in (
+        remembered.turn_admission.current_turn_facts.explicit_slots
+    )
+    assert "dimensions" not in (
+        remembered.turn_admission.current_turn_facts.explicit_slots
+    )
 
 
 @pytest.mark.asyncio

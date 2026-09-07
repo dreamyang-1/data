@@ -19,6 +19,7 @@ from app.domain.models import (
     KnowledgeContext,
     MetricRef,
     PrimaryIntent,
+    SemanticAmbiguity,
     TimeRange,
     TrustedIdentity,
     TurnRelation,
@@ -166,6 +167,14 @@ async def test_live_metric_discovery_replaces_provisional_dimensions_atomically(
             end_exclusive=date(2026, 9, 8),
         ),
         assumptions=["DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"],
+        semantic_ambiguities=[SemanticAmbiguity(
+            type="entity_role",
+            phrase="上海市",
+            affected_slots=["filters"],
+            question="上海市是省还是市？",
+            candidates=["省", "市"],
+        )],
+        ambiguities=["上海市是省还是市？"],
     )
     chat = ChatRequest(
         application_id="app",
@@ -195,6 +204,8 @@ async def test_live_metric_discovery_replaces_provisional_dimensions_atomically(
     assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in request.assumptions
     assert "TIME_SCOPE=ALL_TIME" in request.assumptions
     assert "QUERY_FRAME_SOURCE=LIVE_SQL_VERIFIED_SEMANTIC_SNAPSHOT" in request.assumptions
+    assert request.semantic_ambiguities == []
+    assert request.ambiguities == []
 
 
 @pytest.mark.asyncio

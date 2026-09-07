@@ -2464,6 +2464,27 @@ class DataAnalysisOrchestrator:
         # them as additional unresolved entity values and reject an otherwise
         # complete canonical plan.
         request.semantic_entity_mentions = []
+        # The live discovery response is a SQL-verified semantic frame and
+        # replaces metric, grain and filters atomically. Earlier vector
+        # ambiguities about those same slots are now obsolete. Keeping them on
+        # an otherwise completed task frame caused later follow-ups to reopen a
+        # question that had already been resolved by the published model.
+        resolved_frame_slots = {
+            "metric", "metrics", "dimension", "dimensions",
+            "filter", "filters", "entity",
+        }
+        request.semantic_ambiguities = [
+            item for item in request.semantic_ambiguities
+            if (
+                not resolved_frame_slots.intersection(item.affected_slots)
+                and item.type not in {
+                    "metric", "dimension", "entity_role", "filter",
+                }
+            )
+        ]
+        request.ambiguities = [
+            item.question for item in request.semantic_ambiguities
+        ]
         request.rewritten_question = request.original_question
         if request.turn_admission is not None:
             explicit_slots = request.turn_admission.current_turn_facts.explicit_slots
@@ -2594,6 +2615,23 @@ class DataAnalysisOrchestrator:
                 identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id
             )
         )
+        # A pending clarification is a provisional frame. Keep the last
+        # successfully executed frame separately so an answer such as
+        # “补充上一轮” can restore authoritative metric IDs, grain, filters and
+        # time semantics instead of treating the provisional parse as history.
+        completed_before_pending = None
+        if pending is not None and not chat._is_regeneration_execution:
+            completed_before_pending = await self.sessions.get_last_request(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+            if (
+                completed_before_pending is not None
+                and not self._pending_scope_matches(completed_before_pending, chat)
+            ):
+                completed_before_pending = None
         if (
             not chat._is_regeneration_execution
             and pending is None
@@ -2819,6 +2857,7 @@ class DataAnalysisOrchestrator:
                     merged,
                     clarification_answer=clarification_answer,
                     incoming=incoming,
+                    completed_before_pending=completed_before_pending,
                 )
                 if semantic_choice is not None:
                     request = self._apply_semantic_clarification_choice(
@@ -3512,18 +3551,33 @@ class DataAnalysisOrchestrator:
             request.source_dataset_id = None
             if previous_for_rewrite.time_range is None:
                 request.assumptions.append("TIME_SCOPE=ALL_TIME")
+        sort_scope_context = previous_for_rewrite
+        compact_sort_question = re.sub(r"\s+", "", chat.question)
+        sort_wording_only = bool(re.fullmatch(
+            r"(?:按)?[^，,。；;！!？?]{0,100}?(?:按)?"
+            r"(?:从高到低|从低到高|升序|降序)(?:进行)?排序[。！!？?]?",
+            compact_sort_question,
+        ))
+        previous_metric_names = {
+            re.sub(r"\s+", "", metric.canonical_name or metric.input).casefold()
+            for metric in (sort_scope_context.metrics if sort_scope_context else [])
+            if metric.canonical_name or metric.input
+        }
+        repeats_previous_metric = any(
+            name and name in compact_sort_question.casefold()
+            for name in previous_metric_names
+        )
         sort_only_turn = bool(
-            raw_rule_request.metrics
+            sort_wording_only
             and not raw_rule_request.filters
             and not raw_rule_request.semantic_entity_mentions
-            and re.fullmatch(
-                r"按(?:整体业务规模|业务规模|含税销售总额|销售总额|销售额|"
-                r"订单金额|销售数量|订单笔数)"
-                r"(?:从高到低|从低到高|升序|降序)?(?:进行)?排序[。！!？?]?",
-                re.sub(r"\s+", "", chat.question),
+            and (
+                repeats_previous_metric
+                or raw_rule_request.metrics
+                or request.metrics
+                or sort_scope_context is not None
             )
         )
-        sort_scope_context = previous_for_rewrite
         if sort_only_turn and sort_scope_context is None:
             sort_scope_context = await self.sessions.get_last_request(
                 identity.tenant_id,
@@ -3546,21 +3600,25 @@ class DataAnalysisOrchestrator:
                 ),
                 None,
             )
-            grouping = (
+            grouping = [
+                value for value in sort_scope_context.dimensions
+                if value not in {"时间", "日期", "年", "季度", "月", "周", "日"}
+            ] or (
                 [sort_scope_context.entity]
                 if sort_scope_context.entity
                 else [counted_role]
-                if counted_role
-                else [
-                    value for value in sort_scope_context.dimensions
-                    if value not in {"时间", "日期", "年", "季度", "月", "周", "日"}
-                ]
+                if counted_role else []
             )
             request.primary_intent = PrimaryIntent.METRIC_QUERY
             request.secondary_intents = []
+            current_metrics = raw_rule_request.metrics or request.metrics
             request.metrics = [
                 metric.model_copy(deep=True)
-                for metric in raw_rule_request.metrics
+                for metric in (
+                    sort_scope_context.metrics
+                    if repeats_previous_metric or not current_metrics
+                    else current_metrics
+                )
             ]
             request.entity = sort_scope_context.entity or counted_role
             request.fields = []
@@ -3590,12 +3648,65 @@ class DataAnalysisOrchestrator:
                     *sort_scope_context.assumptions,
                     *request.assumptions,
                 ])
-                if not value.startswith("SORT_DIRECTION=")
+                if (
+                    not value.startswith("SORT_DIRECTION=")
+                    and not (
+                        sort_scope_context.time_range is None
+                        and value == "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"
+                    )
+                )
             ]
             request.assumptions.extend([
                 f"SORT_DIRECTION={direction}",
                 "SORT_ONLY_FOLLOWUP_SCOPE_INHERITED",
             ])
+            # Sorting is a deterministic result-shape modification of the
+            # active task. Keep the admission decision aligned so downstream
+            # logic does not ask the user to confirm an already-proven relation.
+            turn_decision.relation = TurnRelation.CURRENT_TOPIC_MODIFICATION
+            turn_decision.context_mode = ContextMode.CURRENT_THREAD
+            turn_decision.context_dependent = True
+            turn_decision.inherit_business_context = True
+            turn_decision.create_new_analysis_thread = False
+            turn_decision.needs_clarification = False
+            turn_decision.reason_codes = list(dict.fromkeys([
+                *turn_decision.reason_codes,
+                "DETERMINISTIC_SORT_FOLLOWUP",
+            ]))
+            # Generic parsing sees nouns inside a metric name (for example
+            # “区域”“医院” in “区域医院覆盖率”) and may expose them as an
+            # explicit query object or grouping. In a sort-only turn those are
+            # metric-name components, not user-requested slot replacements.
+            # Remove that stale provenance as well as overwriting the request,
+            # otherwise the Intent-ASL contract correctly rejects dealer grain
+            # against a falsely asserted hospital object.
+            for slot_name in (
+                "query_object", "entity", "dimensions", "filters", "time_range",
+            ):
+                turn_decision.current_turn_facts.explicit_slots.pop(
+                    slot_name, None
+                )
+                request.slot_provenance.pop(slot_name, None)
+            turn_decision.protected_slots = [
+                slot for slot in turn_decision.protected_slots
+                if slot not in {
+                    "query_object", "entity", "dimensions", "filters", "time_range",
+                }
+            ]
+            turn_decision.context_delta = self.turn_admission_gate._facts_delta(
+                turn_decision.current_turn_facts
+            )
+            turn_decision.inheritance_slots = list(dict.fromkeys([
+                *turn_decision.inheritance_slots,
+                "metrics",
+                "entity",
+                "dimensions",
+                "filters",
+                "time_range",
+            ]))
+            self.turn_admission_gate.refresh_slot_operations(turn_decision)
+            request.turn_relation = turn_decision.relation
+            request.context_mode = turn_decision.context_mode
         explicit_group_ranking_followup = bool(
             previous_for_rewrite is not None
             and raw_rule_request.primary_intent == PrimaryIntent.METRIC_QUERY
@@ -6989,6 +7100,7 @@ class DataAnalysisOrchestrator:
         *,
         clarification_answer: str = "",
         incoming: CanonicalAnalysisRequest | None = None,
+        completed_before_pending: CanonicalAnalysisRequest | None = None,
     ) -> CanonicalAnalysisRequest:
         """Treat a clarification as a slot patch, not a fresh execution plan.
 
@@ -7026,6 +7138,54 @@ class DataAnalysisOrchestrator:
                 item.question for item in relation_request.semantic_ambiguities
             ]
             if followup_selected:
+                raw_query = (
+                    relation_request.turn_admission.current_turn_facts.raw_query
+                    if relation_request.turn_admission is not None
+                    else relation_request.original_question
+                )
+                compact_raw_query = re.sub(r"\s+", "", raw_query)
+                deterministic_sort_followup = bool(re.fullmatch(
+                    r"(?:按)?[^，,。；;！!？?]{0,100}?(?:按)?"
+                    r"(?:从高到低|从低到高|升序|降序)(?:进行)?排序[。！!？?]?",
+                    compact_raw_query,
+                ))
+                if (
+                    completed_before_pending is not None
+                    and deterministic_sort_followup
+                ):
+                    # Restore the last executed contract first, then apply only
+                    # the explicit sorting delta. Starting from the pending
+                    # parse here used to preserve hallucinated dimensions and a
+                    # default one-year range while dropping the bound metric ID.
+                    current_request_id = relation_request.request_id
+                    current_original = relation_request.original_question
+                    current_admission = relation_request.turn_admission
+                    relation_request = completed_before_pending.model_copy(deep=True)
+                    relation_request.request_id = current_request_id
+                    relation_request.original_question = current_original
+                    relation_request.turn_admission = current_admission
+                    relation_request.asl_template = None
+                    relation_request.source_dataset_id = None
+                    relation_request.operators = list(dict.fromkeys([
+                        *relation_request.operators,
+                        AnalysisOperator.AGGREGATE,
+                        AnalysisOperator.SORT,
+                    ]))
+                    direction = (
+                        "ASC" if re.search(r"从低到高|升序", raw_query) else "DESC"
+                    )
+                    relation_request.assumptions = [
+                        value for value in relation_request.assumptions
+                        if not value.startswith("SORT_DIRECTION=")
+                    ]
+                    relation_request.assumptions.extend((
+                        f"SORT_DIRECTION={direction}",
+                        "SORT_ONLY_FOLLOWUP_SCOPE_INHERITED",
+                        "COMPLETED_FRAME_RESTORED_AFTER_RELATION_CONFIRMATION",
+                    ))
+                    if not relation_request.missing_slots:
+                        relation_request.semantic_ambiguities = []
+                        relation_request.ambiguities = []
                 before = (
                     relation_request.turn_admission.context_before
                     if relation_request.turn_admission is not None else {}
@@ -7059,11 +7219,6 @@ class DataAnalysisOrchestrator:
                 )
                 relation_request.ranking_limit = (
                     relation_request.ranking_limit or before.get("top_n")
-                )
-                raw_query = (
-                    relation_request.turn_admission.current_turn_facts.raw_query
-                    if relation_request.turn_admission is not None
-                    else relation_request.original_question
                 )
                 relation_types = applicable_department_relation_types(raw_query)
                 if relation_types:

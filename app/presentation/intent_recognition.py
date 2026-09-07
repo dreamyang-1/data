@@ -287,7 +287,99 @@ def _completed_question_for_display(
             else:
                 time_text = ""
             return f"查询{time_text}销售过{product_text}的{request.entity}名单"
-    return request.rewritten_question or request.original_question
+    candidate = request.rewritten_question or request.original_question
+    if not re.match(
+        r"^(?:查询指标|查询明细|分析趋势|执行比较分析|分析构成占比|"
+        r"检测异常|执行归因分析|执行预测|生成分析报告|查询指标口径|"
+        r"查询数据血缘|检查数据质量)[；;]",
+        candidate,
+    ):
+        return candidate
+
+    # The text above is an internal execution contract, not a completed user
+    # question. Render common analytical shapes as natural Chinese from the
+    # final slots. This projection remains presentation-only and never changes
+    # the ASL-facing ``rewritten_question``.
+    display = request.semantic_display_slots or {}
+    metric_names = _unique_text(display.get("metrics")) or list(dict.fromkeys(
+        metric.canonical_name or metric.input
+        for metric in request.metrics
+        if metric.canonical_name or metric.input
+    ))
+    dimension_names = _unique_text(display.get("dimensions")) or list(dict.fromkeys(
+        {
+            "dealer": "经销商",
+            "hospital": "医院",
+            "product": "产品",
+            "city": "城市",
+            "region": "区域",
+        }.get(str(value).casefold(), str(value))
+        for value in request.dimensions
+        if str(value).strip()
+    ))
+    scope_values: list[str] = []
+    for item in request.filters:
+        if not isinstance(item, dict) or str(item.get("operator") or "EQ").upper() != "EQ":
+            continue
+        raw_value = item.get("value")
+        if isinstance(raw_value, (str, int, float)) and str(raw_value).strip():
+            scope_values.append(str(raw_value).strip())
+    scope_text = "、".join(dict.fromkeys(scope_values))
+
+    time_text = ""
+    if request.time_range is not None:
+        if any(
+            value in {
+                "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR",
+                "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE",
+            }
+            for value in request.assumptions
+        ):
+            time_text = "最近一年"
+        else:
+            end_inclusive = request.time_range.end_exclusive - timedelta(days=1)
+            time_text = (
+                f"{request.time_range.start.isoformat()}至"
+                f"{end_inclusive.isoformat()}期间"
+            )
+
+    if request.primary_intent == PrimaryIntent.METRIC_QUERY and metric_names:
+        dimension_text = (
+            "各个" + "、".join(dimension_names)
+            if dimension_names else ""
+        )
+        subject = f"{scope_text}{dimension_text}"
+        completed = (
+            f"统计{time_text}{subject}的{'、'.join(metric_names)}"
+            if subject else f"统计{time_text}{'、'.join(metric_names)}"
+        )
+        if any(value.startswith("SORT_DIRECTION=") for value in request.assumptions):
+            direction = (
+                "从低到高"
+                if "SORT_DIRECTION=ASC" in request.assumptions else "从高到低"
+            )
+            completed += f"，按{'、'.join(metric_names)}{direction}排序"
+        if request.ranking_limit is not None:
+            completed += f"，返回前{request.ranking_limit}项"
+        return completed
+
+    if request.primary_intent == PrimaryIntent.DETAIL_QUERY:
+        entity = request.entity or "业务数据"
+        fields = _unique_text(display.get("fields")) or list(request.fields)
+        field_text = "、".join(fields)
+        return (
+            f"查询{time_text}{scope_text}{entity}的{field_text}明细"
+            if field_text else f"查询{time_text}{scope_text}{entity}明细"
+        )
+
+    # For less common analytical intents, retain the user's wording and make
+    # context completion explicit without leaking semicolon-delimited protocol
+    # syntax into the public trace.
+    original = _single_line(request.original_question)
+    return (
+        f"{original}（已结合上一轮业务条件补全）"
+        if request.context_mode != ContextMode.NONE else original
+    )
 
 
 def build_intent_recognition_display_v2(

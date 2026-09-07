@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from app.domain.models import (
+    AnalysisOperator,
     CanonicalAnalysisRequest,
     ContextMode,
     CurrentTurnFacts,
     PrimaryIntent,
+    MetricRef,
     TurnAdmissionDecision,
     TurnRelation,
 )
@@ -64,6 +66,54 @@ def test_relation_clarification_restores_only_confirmed_active_context():
         {"field": "商品品牌", "operator": "EQ", "value": "费森尤斯"}
     ]
     assert resolved.turn_admission.needs_clarification is False
+
+
+def test_sort_relation_confirmation_restores_last_completed_contract():
+    pending = _ambiguous_relation_request()
+    pending.original_question = "区域医院覆盖率按从高到低排序"
+    pending.metrics = [MetricRef(input="区域医院覆盖率")]
+    pending.dimensions = ["城市名称", "医院"]
+    pending.turn_admission.current_turn_facts.raw_query = pending.original_question
+    completed = CanonicalAnalysisRequest(
+        conversation_id=pending.conversation_id,
+        tenant_id=pending.tenant_id,
+        user_id=pending.user_id,
+        original_question="统计上海市各个经销商的区域医院覆盖率",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(
+            input="区域医院覆盖率",
+            canonical_name="区域医院覆盖率",
+            metric_id="81:screening_area_hospital_coverage",
+        )],
+        entity="经销商",
+        dimensions=["dealer"],
+        filters=[{
+            "field": "dim_city.city_name",
+            "operator": "EQ",
+            "value": "上海市",
+        }],
+        assumptions=["TIME_SCOPE=ALL_TIME"],
+    )
+
+    resolved = DataAnalysisOrchestrator._preserve_pending_execution_contract(
+        pending,
+        pending.model_copy(deep=True),
+        clarification_answer="补充上一轮",
+        completed_before_pending=completed,
+    )
+
+    assert resolved.turn_relation == TurnRelation.CURRENT_TOPIC_FOLLOWUP
+    assert resolved.metrics[0].metric_id == "81:screening_area_hospital_coverage"
+    assert resolved.dimensions == ["dealer"]
+    assert resolved.filters == [{
+        "field": "dim_city.city_name",
+        "operator": "EQ",
+        "value": "上海市",
+    }]
+    assert resolved.time_range is None
+    assert AnalysisOperator.SORT in resolved.operators
+    assert "SORT_DIRECTION=DESC" in resolved.assumptions
+    assert "COMPLETED_FRAME_RESTORED_AFTER_RELATION_CONFIRMATION" in resolved.assumptions
 
 
 def test_relation_clarification_can_keep_current_turn_standalone():

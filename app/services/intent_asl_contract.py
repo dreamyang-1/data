@@ -85,7 +85,19 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         operator in request.operators
         for operator in (AnalysisOperator.TOP_N, AnalysisOperator.BOTTOM_N, AnalysisOperator.SORT)
     ) or request.ranking_limit is not None
-    descending = AnalysisOperator.BOTTOM_N not in request.operators
+    explicit_sort_direction = next(
+        (
+            value.partition("=")[2].strip().upper()
+            for value in request.assumptions
+            if value.startswith("SORT_DIRECTION=")
+        ),
+        "",
+    )
+    descending = (
+        explicit_sort_direction == "DESC"
+        if explicit_sort_direction in {"ASC", "DESC"}
+        else AnalysisOperator.BOTTOM_N not in request.operators
+    )
     detail_like = request.primary_intent == PrimaryIntent.DETAIL_QUERY
     metric_required = request.primary_intent in {
         PrimaryIntent.METRIC_QUERY,

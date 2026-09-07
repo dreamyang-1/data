@@ -122,6 +122,25 @@ def test_intent_asl_contract_regression_matrix(
     assert validate_intent_asl_contract_definition(contract) == []
 
 
+def test_explicit_ascending_sort_direction_is_preserved_in_contract():
+    request = RuleBasedIntentClassifier().classify(
+        "按销售额从低到高排序", IDENTITY, "ascending-sort-contract"
+    )
+    request.assumptions = [
+        value for value in request.assumptions
+        if not value.startswith("SORT_DIRECTION=")
+    ]
+    request.assumptions.append("SORT_DIRECTION=ASC")
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["sorting"] == {
+        "required": True,
+        "direction": "ASC",
+        "limit": request.ranking_limit,
+    }
+
+
 def test_cross_attribute_subject_replacement_emits_forbidden_prior_filter():
     classifier = RuleBasedIntentClassifier()
     gate = TurnAdmissionGate()
