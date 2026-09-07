@@ -925,6 +925,27 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert {event["meta"]["task_id"] for event in child_execution} == {
         "task-1", "task-2",
     }
+    child_public_progress = [
+        event for event in events
+        if event["type"] == "message_chunk"
+        and event.get("meta", {}).get("is_child_task")
+        and event.get("meta", {}).get("stage") in {
+            "DATA_RETRIEVAL", "RELIABILITY_CHECK", "INSIGHT_ANALYSIS",
+        }
+    ]
+    stage_rank = {
+        "DATA_RETRIEVAL": 0,
+        "RELIABILITY_CHECK": 1,
+        "INSIGHT_ANALYSIS": 2,
+    }
+    ranks = [stage_rank[event["meta"]["stage"]] for event in child_public_progress]
+    assert ranks == sorted(ranks)
+    # Both child SQL/tool traces must finish inside 调度执行 before either
+    # result validation or insight analysis is rendered.
+    assert {
+        event["meta"]["task_id"] for event in child_public_progress
+        if event["meta"]["stage"] == "DATA_RETRIEVAL"
+    } == {"task-1", "task-2"}
 
 
 def test_all_seven_thinking_stages_have_normalized_unnumbered_headings():

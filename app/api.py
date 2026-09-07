@@ -638,6 +638,8 @@ async def chat_stream(
         planning_released = False
         presentation_scenario = "ANALYTIC"
         titled_think_sections: set[str] = set()
+        composite_mode = False
+        composite_child_progress: list[dict[str, Any]] = []
 
         def render_thinking(event: dict[str, Any]) -> str:
             stage = str(event.get("stage") or "processing").strip().upper()
@@ -659,8 +661,15 @@ async def chat_stream(
 
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
-            nonlocal planning_released, presentation_scenario
+            nonlocal planning_released, presentation_scenario, composite_mode
             stage = str(event.get("stage") or "").upper()
+            if bool(event.get("is_child_task")):
+                try:
+                    composite_mode = composite_mode or int(
+                        event.get("task_count") or 0
+                    ) > 1
+                except (TypeError, ValueError):
+                    pass
             if (
                 bool(event.get("is_child_task"))
                 and stage == "INTENT_RECOGNITION"
@@ -688,10 +697,27 @@ async def chat_stream(
                     event.get("presentation_scenario") or "ANALYTIC"
                 ).upper()
                 if bool(event.get("is_composite")):
+                    composite_mode = True
                     ordered = [event, *deferred_planning]
                     deferred_planning.clear()
                     planning_released = True
                     return ordered
+            if (
+                composite_mode
+                and bool(event.get("is_child_task"))
+                and _thinking_section(stage) in {
+                    "execution", "validation", "insight",
+                }
+            ):
+                # Composite children execute concurrently, so their raw event
+                # arrival order can be task-1 validation/insight followed by
+                # task-2 SQL execution.  Rendering that order places the second
+                # tool call under the already-open insight heading.  Buffer only
+                # the public child milestones and release them in document
+                # section order after the DAG finishes.  Execution remains
+                # parallel; this is a presentation boundary only.
+                composite_child_progress.append(dict(event))
+                return []
             if (
                 stage == "FILE_INSPECTION"
                 and event.get("status") == "COMPLETED"
@@ -779,6 +805,11 @@ async def chat_stream(
 
             response = await execution
             response.conversation_id = external_conversation_id
+            for event in _ordered_composite_child_progress_events(
+                composite_child_progress
+            ):
+                yield render_thinking(event)
+            composite_child_progress.clear()
             for event in deferred_planning:
                 yield render_thinking(event)
             deferred_planning.clear()
@@ -1002,6 +1033,27 @@ def _thinking_section(stage: str) -> str | None:
         "CLARIFICATION_RESULT": "clarification_result",
         "FINAL_OUTPUT": "final_output",
     }.get(stage)
+
+
+def _ordered_composite_child_progress_events(
+    events: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Keep concurrent child milestones inside their public UI sections."""
+
+    section_order = {"execution": 0, "validation": 1, "insight": 2}
+
+    def sort_key(indexed: tuple[int, dict[str, Any]]) -> tuple[int, int, int]:
+        sequence, event = indexed
+        section = _thinking_section(str(event.get("stage") or "").upper())
+        try:
+            task_index = max(0, int(event.get("task_index") or 0))
+        except (TypeError, ValueError):
+            task_index = 0
+        return section_order.get(section or "", 99), task_index, sequence
+
+    return [
+        event for _, event in sorted(enumerate(events), key=sort_key)
+    ]
 
 
 def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
