@@ -9,7 +9,7 @@ from copy import deepcopy
 import math
 
 from catalog_release import CatalogEvidenceError, digest, prepare_release, validate_snapshot
-from dimension_scope import project_dimension_to_domain
+from dimension_scope import normalize_governed_id, project_dimension_to_domain
 from vector_store import VectorRecord, build_records_from_dsl, build_records_from_tables
 
 GENERATION_CONTRACT = "catalog-generation-v1"
@@ -50,12 +50,14 @@ def _dsl_inventory(document):
 
     for entity in document["entities"]:
         code = _code(entity, "entity_code")
-        _positive(entity.get("entity_id"))
+        if normalize_governed_id(entity.get("entity_id")) is None:
+            raise CatalogEvidenceError("CATALOG_GOVERNED_ID_REQUIRED")
         if entity.get("business_domain") != domain:
             raise CatalogEvidenceError("CATALOG_ENTITY_OWNERSHIP_INVALID")
         add(f"{prefix}:entity:{code}")
         for attribute in entity.get("attributes") or []:
-            _positive(attribute.get("attribute_id"))
+            if normalize_governed_id(attribute.get("attribute_id")) is None:
+                raise CatalogEvidenceError("CATALOG_GOVERNED_ID_REQUIRED")
             add(f"{prefix}:attr:{code}.{_code(attribute, 'attr_code')}")
         for relation in entity.get("relations") or []:
             add(f"{prefix}:relation:{code}.{_code(relation, 'relation_code')}")

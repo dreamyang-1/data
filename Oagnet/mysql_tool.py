@@ -282,13 +282,9 @@ def _authorized_entity_field_rows(
 ) -> tuple[list[tuple[str, int, str, str]], list[dict]]:
     """Authorize candidate fields against active semantic and physical metadata.
 
-    The entity's business-domain ownership is the model authority.  Historical
-    attribute rows can retain a stale denormalized ``semantic_model_id`` after
-    a domain is reassigned or republished; filtering on that redundant column
-    would make an otherwise current entity attribute disappear from grounding.
-    Data source, table and field registrations are still checked against the
-    requested model below, so dropping that redundant predicate cannot cross
-    the model's physical-data boundary.
+    Entity IDs can be reused by model copies. Attribute model membership is
+    therefore part of the governed identity, even when both models reference
+    an identically named physical field. Never treat it as redundant metadata.
     """
     if (
         type(semantic_model_id) is not int
@@ -344,6 +340,7 @@ def _authorized_entity_field_rows(
               SELECT 1
               FROM semantic_model_attribute_config other
               WHERE other.entity_type_id = e.id
+                AND other.semantic_model_id = m.id
                 AND COALESCE(other.is_deleted, '0') = '0'
                 AND COALESCE(other.is_main_attribute, 0) = 1
                 AND other.mapping_table IS NOT NULL
@@ -381,6 +378,7 @@ def _authorized_entity_field_rows(
          AND e.status = 1
         JOIN semantic_model_attribute_config a
           ON a.entity_type_id = e.id
+         AND a.semantic_model_id = m.id
          AND COALESCE(a.is_deleted, '0') = '0'
         """
         + main_attribute_scope
@@ -596,10 +594,9 @@ def load_published_entity_attribute_candidates(
     boundary: a valid entity value may live on an attribute that did not enter
     top-k recall.  This metadata-only fallback enumerates active fields from the
     caller's semantic model/domain so value resolution can consult the current
-    published catalogue without hard-coded business dictionaries.  As in the
-    authorization path, model ownership comes from the attribute's entity and
-    business domain; a stale redundant model id on the attribute itself is not
-    allowed to hide a currently published field.
+    published catalogue without hard-coded business dictionaries. Attribute,
+    entity and business-domain model membership must agree; copied models can
+    reuse entity IDs while owning distinct attribute records.
     """
 
     if type(semantic_model_id) is not int or semantic_model_id <= 0:
@@ -633,6 +630,7 @@ def load_published_entity_attribute_candidates(
          AND e.status = 1
         JOIN semantic_model_attribute_config a
           ON a.entity_type_id = e.id
+         AND a.semantic_model_id = m.id
          AND COALESCE(a.is_deleted, '0') = '0'
          AND a.mapping_table IS NOT NULL
          AND a.mapping_column IS NOT NULL
@@ -894,6 +892,7 @@ def _entity_attribute_vector_definitions(
          AND COALESCE(b.is_deleted,0)=0
         JOIN semantic_model_attribute_config a
           ON a.entity_type_id=e.id AND COALESCE(a.is_deleted,'0')='0'
+         AND a.semantic_model_id=b.semantic_model_id
         JOIN semantic_model_data_source ds
           ON ds.id=e.data_source_id AND ds.semantic_model_id=%s
          AND COALESCE(ds.is_deleted,0)=0 AND ds.status=1
@@ -905,6 +904,7 @@ def _entity_attribute_vector_definitions(
          AND f.table_id=t.id AND f.name=a.mapping_column
          AND COALESCE(f.is_deleted,0)=0
         WHERE e.business_domain_id=%s
+          AND (e.semantic_model_id=b.semantic_model_id OR e.semantic_model_id IS NULL)
           AND COALESCE(e.is_deleted,0)=0 AND e.status=1
           AND e.code IS NOT NULL AND TRIM(e.code) <> ''
         ORDER BY e.code, a.code
@@ -1194,22 +1194,28 @@ def get_entity(business_domain_id: int):
         business_domain_id: 业务域 ID（semantic_model_business_domain.id）
     """
     sql_entity = """
-        SELECT id, code, name, description, business_domain_id,
-               alias, update_frequency, main_table_name,
-               update_time, create_time
-        FROM semantic_model_entity_type
-        WHERE is_deleted = 0 AND business_domain_id = %s
+        SELECT e.id, e.code, e.name, e.description, e.business_domain_id,
+               e.alias, e.update_frequency, e.main_table_name,
+               e.update_time, e.create_time
+        FROM semantic_model_entity_type e
+        JOIN semantic_model_business_domain b ON b.id=e.business_domain_id
+        WHERE e.is_deleted = 0 AND e.business_domain_id = %s AND b.is_deleted = 0
+          AND (e.semantic_model_id=b.semantic_model_id OR e.semantic_model_id IS NULL)
     """
     sql_attr = """
         SELECT id, entity_type_id, code, attr_name, description,
                mapping_table, mapping_column, data_type, is_main_attribute, is_primary_key,
                is_unique, is_required, prefix, suffix,
                update_time, create_time
-        FROM semantic_model_attribute_config
+        FROM semantic_model_attribute_config a
         WHERE (is_deleted IS NULL OR is_deleted = 0)
-          AND entity_type_id IN (
-              SELECT id FROM semantic_model_entity_type
-              WHERE is_deleted = 0 AND business_domain_id = %s
+          AND EXISTS (
+              SELECT 1 FROM semantic_model_entity_type e
+              JOIN semantic_model_business_domain b ON b.id=e.business_domain_id
+              WHERE e.is_deleted = 0 AND e.business_domain_id = %s
+                AND b.is_deleted = 0 AND a.entity_type_id=e.id
+                AND a.semantic_model_id=b.semantic_model_id
+                AND (e.semantic_model_id=b.semantic_model_id OR e.semantic_model_id IS NULL)
           )
     """
     sql_relation = """
@@ -1221,9 +1227,13 @@ def get_entity(business_domain_id: int):
                r.code, r.type, r.update_time, r.create_time
         FROM semantic_model_relation_config r
         WHERE r.is_deleted = 0
-          AND r.source_entity_type_id IN (
-              SELECT id FROM semantic_model_entity_type
-              WHERE is_deleted = 0 AND business_domain_id = %s
+          AND EXISTS (
+              SELECT 1 FROM semantic_model_entity_type e
+              JOIN semantic_model_business_domain b ON b.id=e.business_domain_id
+              WHERE e.is_deleted = 0 AND e.business_domain_id = %s
+                AND b.is_deleted = 0 AND r.source_entity_type_id=e.id
+                AND r.semantic_model_id=b.semantic_model_id
+                AND (e.semantic_model_id=b.semantic_model_id OR e.semantic_model_id IS NULL)
           )
     """
     sql_bind_metric = """
@@ -1237,6 +1247,7 @@ def get_entity(business_domain_id: int):
          AND bd.semantic_model_id = bi.semantic_model_id
         JOIN semantic_model_entity_type e
           ON e.business_domain_id = bd.id
+         AND (e.semantic_model_id=bd.semantic_model_id OR e.semantic_model_id IS NULL)
          AND COALESCE(e.is_deleted, 0) = 0
          AND e.status = 1
          AND (
@@ -1375,6 +1386,8 @@ def get_registered_entity_attributes(
     domain_ids = _normalized_domain_ids(business_domain_id)
     clauses = [
         "b.semantic_model_id=%s",
+        "(e.semantic_model_id=b.semantic_model_id OR e.semantic_model_id IS NULL)",
+        "a.semantic_model_id=b.semantic_model_id",
         "COALESCE(b.is_deleted,0)=0",
         "COALESCE(e.is_deleted,0)=0",
         "e.status=1",

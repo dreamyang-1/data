@@ -5,13 +5,28 @@ cannot prove ownership and need a controlled republish; there is no fallback to
 shared retrieval. Complex hierarchy/rule mappings require a separate contract.
 """
 from copy import deepcopy
+from uuid import UUID
 
 
-def _catalog_id(value):
-    # Catalog JSON stores BIGINT references as decimal strings. This is catalog
-    # identity normalization, not the stricter public request-ID parser.
+def normalize_governed_id(value):
+    """Recognize governed catalog keys without granting model/domain access.
+
+    Current entity/attribute PKs are VARCHAR: UUIDs (36/32 chars) and decimal
+    legacy IDs. Preserve UUID spelling/case exactly; matching different forms
+    would invent an alias not established by the captured owner rows.
+    """
     if type(value) is int and value > 0:
-        return str(value)
+        # Source VARCHAR keys are bounded; avoid unbounded integer conversion.
+        return str(value) if value < 10**128 else None
+    if isinstance(value, str) and len(value) > 128:
+        return None
+    if isinstance(value, str) and len(value) in (32, 36):
+        try:
+            identity = UUID(value)
+        except ValueError:
+            return None
+        exact_form = identity.hex if len(value) == 32 else str(identity)
+        return value if identity.int > 0 and value.lower() == exact_form else None
     if isinstance(value, str) and value.isascii() and value.isdecimal() and int(value) > 0:
         return str(int(value))
     return None
@@ -26,14 +41,14 @@ def project_dimension_to_domain(dimension, document):
         return None
     owners = {}
     for entity in document.get('entities') or []:
-        ident = _catalog_id(entity.get('entity_id'))
+        ident = normalize_governed_id(entity.get('entity_id'))
         if ident is None or entity.get('business_domain') != domain:
             continue
         if ident in owners:
             return None
         attributes = {}
         for attribute in entity.get('attributes') or []:
-            attr_id = _catalog_id(attribute.get('attribute_id'))
+            attr_id = normalize_governed_id(attribute.get('attribute_id'))
             if attr_id is None:
                 continue
             if attr_id in attributes:
@@ -47,11 +62,11 @@ def project_dimension_to_domain(dimension, document):
     for binding in bindings:
         if not isinstance(binding, dict):
             continue
-        entity, attribute = _catalog_id(binding.get('entity')), _catalog_id(binding.get('attr'))
+        entity, attribute = normalize_governed_id(binding.get('entity')), normalize_governed_id(binding.get('attr'))
         if entity not in owners or attribute not in owners[entity][1]:
             continue
         claimed_domain = binding.get('businessDomain')
-        if claimed_domain is not None and _catalog_id(claimed_domain) != str(domain):
+        if claimed_domain is not None and normalize_governed_id(claimed_domain) != str(domain):
             continue
         # Denormalized binding mappings can be stale. Rehydrate only from the
         # entity/attribute rows whose ownership was just proven.

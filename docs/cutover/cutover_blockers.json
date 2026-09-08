@@ -5,28 +5,25 @@
       "blocker_id": "C-01",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "SOURCE_GENERATION_VERIFIED_OFFLINE",
-      "summary": "Consistent captured DSL/physical metadata now feeds deterministic scoped generation, including model-owned metrics with no domain. Missing identities, collisions, physical ownership mismatch and silent builder omissions fail closed.",
+      "status": "ACTUAL_SCOPE_CAPTURE_GENERATION_VERIFIED",
+      "summary": "User-authorized 81/[205] read-only capture builds 290 records after UUID and model-copy isolation fixes; exact 13/13 dimension ownership is verified. Real embedding/index publication remains absent.",
       "evidence": [
+        "docs/cutover/catalog_identity/live_scope_evidence.json",
         "Oagnet/catalog_generation.py",
-        "Oagnet/catalog_release.py::capture_catalog",
-        "docs/cutover/catalog_publication/test_delta.json"
+        "Oagnet/mysql_tool.py"
       ],
-      "next_action": "Verify actual target capture-to-index coverage, including governed projections/defaults and external metadata dependencies; offline generation is not runtime cutover proof."
+      "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot."
     },
     {
       "blocker_id": "C-02",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "SOURCE_PUBLICATION_VERIFIED_OFFLINE",
-      "summary": "Dedicated generation collections, full strong read-back, Redis CAS activation and rollback are implemented and tested offline. No actual collection, marker or deployment was created.",
+      "status": "ACTUAL_TARGET_PUBLICATION_ABSENT",
+      "summary": "Current configured Milvus/Redis inspected read-only for 81/[205]: isolated semantic/physical catalog collections absent; active release marker absent; legacy 142 semantic records have zero release stamps.",
       "evidence": [
-        "Oagnet/catalog_store.py",
-        "Oagnet/catalog_registry.py",
-        "Oagnet/catalog_publication.py",
-        "Oagnet/scripts/manage_catalog_publication.py"
+        "docs/cutover/catalog_identity/live_scope_evidence.json"
       ],
-      "next_action": "Validate initialized target collections, durable shared Redis markers, native iteration and concurrent reader/publisher behavior through the controlled operator path."
+      "next_action": "After explicit operational authorization, initialize isolated collections and publish scoped generation; verify actual Redis durability/native inventory/concurrency. Do not rebuild or relabel V1 collections."
     },
     {
       "blocker_id": "C-03",
@@ -46,25 +43,24 @@
       "blocker_id": "C-04",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "OPEN",
-      "summary": "Historical local snapshot lacks owned projections/governed entity IDs. Current MySQL/Milvus ownership/default projection and opaque-rule coverage is not evidenced.",
+      "status": "ACTUAL_DIMENSION_OWNERSHIP_VERIFIED_PARTIAL_CAPABILITIES",
+      "summary": "Actual 81/[205] has governed VARCHAR UUID/decimal identities. After model isolation all 13 dimensions and 15 enums have owned projections. Broader default projection/value/routing capability evidence remains incomplete.",
       "evidence": [
-        "docs/phase0c_oagnet_closure/catalog_snapshot_aggregate.json",
-        "Oagnet/dimension_scope.py::project_dimension_to_domain"
+        "docs/cutover/catalog_identity/live_scope_evidence.json",
+        "docs/cutover/catalog_identity/source_review.json"
       ],
-      "next_action": "Capture the specified target catalog and runtime inventory; compare complete scoped record manifests and independently validate projection/ID/rule coverage. Historical counts cannot establish current deployment state."
+      "next_action": "Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts."
     },
     {
       "blocker_id": "X-01",
       "classification": "EXTERNAL_BLOCKER",
       "blocking_level": "P0",
-      "status": "OPEN",
-      "summary": "No target-bound deployed revision, trusted gateway receipt, authoritative database identity or Milvus publication export has been supplied/verified.",
+      "status": "TARGET_SCOPE_IDENTIFIED_READ_ONLY_VERIFIED",
+      "summary": "User selected current environment 81/[205]. Existing configured MySQL, Milvus and Redis were reachable read-only and their identities hashed. Deployed service revisions, gateway trust and durable release operation are still unverified.",
       "evidence": [
-        "docs/phase0c_oagnet_closure/catalog_publication_plan.md",
-        "docs/phase0c_conversation_trust/closure_report.md"
+        "docs/cutover/catalog_identity/live_scope_evidence.json"
       ],
-      "next_action": "Obtain named environment/model/domain and trusted read-only exports/service access. Deployment/index publication remains a separate controlled operation; do not infer authorization from source development."
+      "next_action": "Verify deployed revisions/caller boundary and controlled release operations for this exact target. Model/domain no longer require user clarification."
     },
     {
       "blocker_id": "V-01",
@@ -177,12 +173,36 @@
         "app/workflow.py"
       ],
       "next_action": "After offline and real shadow gates, prepare canary flag, automatic stop/rollback procedure and drill; obtain user approval before formal replacement."
+    },
+    {
+      "blocker_id": "B-02",
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "FIXED_SOURCE_WITH_READ_ONLY_TARGET_EVIDENCE",
+      "summary": "Governed UUID entity/attribute IDs were rejected as missing by catalog generation and projection; fixed with exact supported UUID identity plus legacy decimal handling.",
+      "evidence": [
+        "docs/cutover/catalog_identity/closure_report.md",
+        "docs/cutover/catalog_identity/test_delta.json"
+      ],
+      "next_action": "Retain safety regressions and deploy only through the controlled pinned-catalog path; no target release/traffic change performed."
+    },
+    {
+      "blocker_id": "B-03",
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "FIXED_SOURCE_WITH_READ_ONLY_TARGET_EVIDENCE",
+      "summary": "Copied models reuse entity IDs; catalog loading and attribute discovery joined foreign model attributes and relations. Fixed current-model SQL constraints, including uniqueness checks; actual 13/13 dimensions now resolve.",
+      "evidence": [
+        "docs/cutover/catalog_identity/closure_report.md",
+        "docs/cutover/catalog_identity/test_delta.json"
+      ],
+      "next_action": "Retain safety regressions and deploy only through the controlled pinned-catalog path; no target release/traffic change performed."
     }
   ],
   "counts": {
     "CATALOG_BLOCKER": 4,
     "EXTERNAL_BLOCKER": 1,
-    "CUTOVER_BLOCKER_P0": 3,
+    "CUTOVER_BLOCKER_P0": 5,
     "CUTOVER_BLOCKER_P1": 2,
     "SCHEMA_DRIFT": 1,
     "EVALUATION_GAP": 3
@@ -191,5 +211,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "3ab8b4336b290d3560756345c4328278ee1ca9b3"
+  "latest_source_delivery_baseline": "a1708a796c9eb103309bc189280a94fb51b0ebfd"
 }
