@@ -477,7 +477,8 @@ def test_capture_keeps_global_metrics_without_enlarging_explicit_scope(monkeypat
     monkeypatch.setattr(mysql,"_get_connection",lambda:conn)
     def query(sql,args=None):
         if "information_schema" in sql:return [{"table_name":n,"engine":"InnoDB"} for n in CATALOG_TABLES]
-        if "FROM semantic_model m" in sql:return []  # No dynamic source mappings in this fixture.
+        if "FROM semantic_model m" in sql or "FROM semantic_model_business_domain b" in sql or "FROM semantic_model_indicator" in sql:
+            return []  # SQL source and dynamic value mappings are outside this fixture.
         return [{"server_uuid":"fixture","database_name":"fixture"}]
     monkeypatch.setattr(mysql,"_query",query)
     monkeypatch.setattr(mysql,"get_business_domains",lambda model:[{"id":205}])

@@ -113,6 +113,8 @@ def test_capture_uses_one_metadata_transaction_and_does_not_connect_to_business(
             assert "semantic_model_data_source" in args
             return [{"table_name": t, "engine": "InnoDB"} for t in CATALOG_TABLES]
         if "@@server_uuid" in sql: return [{"server_uuid": "fixture", "database_name": "fixture"}]
+        if "FROM semantic_model_business_domain b" in sql or "FROM semantic_model_indicator" in sql:
+            return []  # The fixture tests dynamic value capture, not SQL planning facts.
         assert "ds.password" not in sql
         return [source()]
     monkeypatch.setattr(mysql, "_query", query)

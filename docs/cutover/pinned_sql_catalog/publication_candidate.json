@@ -1,0 +1,55 @@
+{
+  "candidate_version": "catalog-81-205-candidate-20260909-v3",
+  "status": "BLOCKED_REGISTRY_DURABILITY_AND_PENDING_OPERATIONAL_AUTHORIZATION",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "expected_catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "expected_source_identity_hash": "88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1",
+  "expected_target_identity_hash": "763d0302d6278371ea2cf3c5372103cf8d823ea40411d9d27f191a511a010ef5",
+  "expected_redis_target_hash": "6deaf2abed2af78a1eb0c9e8fc12e3c670d19d9cd3a98638e4ce783f86a21959",
+  "expected_embedding_contract": "0ed46eed21febebf0dd778a619add0f75c3e376e1eef9056f7867925bf205ed5",
+  "embedding_dimension": 1024,
+  "expected_records": 290,
+  "governed_source_mappings": 89,
+  "publication_id": "cutover-81-205-20260909-r3",
+  "producer_revision_reference": "git_commit_manifest.json:implementation_commit",
+  "code_preconditions": [
+    "Operator target hash required for initialize/publish/reactivate",
+    "Publish embedding contract checked before opening store",
+    "Reviewed catalog version checked against the exact publisher capture before embedding/reservation/writes"
+  ],
+  "operational_preconditions": [
+    "Explicit native publication authorization",
+    "Reviewed Redis persistence/deployment plan and durable recovery evidence",
+    "Current code/files match implementation commit",
+    "Current configured Redis target agrees with reviewed target hash",
+    "Recheck collection absence and active marker immediately before approved initial publication; unexpected native state requires review"
+  ],
+  "planned_writes": [
+    "Two isolated semantic/physical catalog collections",
+    "One scoped immutable generation with 290 embedded records",
+    "Redis publication reservation, manifest and scoped active marker"
+  ],
+  "excluded_actions": [
+    "Redis CONFIG SET/REWRITE or restart",
+    "V1 collection rewrite",
+    "Business SQL or entity-value rebuild",
+    "Permission changes",
+    "Default model change",
+    "V2 traffic takeover",
+    "Deletion"
+  ],
+  "native_publication_performed": false,
+  "source_reads_are_metadata_only": true,
+  "approval_artifact_is_not_an_authorization": true,
+  "metadata_evidence": "catalog_evidence.json",
+  "prior_native_observation": "docs/cutover/catalog_publication_candidate/live_scope_evidence.json",
+  "sql_source_entities": 14,
+  "sql_source_metrics": 11,
+  "governed_subtable_registrations": 2
+}

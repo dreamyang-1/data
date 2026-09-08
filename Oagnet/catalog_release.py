@@ -17,6 +17,7 @@ CATALOG_TABLES = (
     "semantic_model_entity_bind_indicator", "semantic_model_indicator",
     "semantic_model_dimension", "semantic_model_table", "semantic_model_field",
     "semantic_model_data_source",
+    "semantic_model_entity_sub_table_mapping",
 )
 STAMP_FIELDS = {"catalog_version", "catalog_publish_id", "catalog_scope_fingerprint", "catalog_record_hash"}
 
@@ -125,6 +126,8 @@ def capture_catalog(semantic_model_id: int, business_domain_ids=()) -> dict:
         # formats unchanged. Routes are opaque locator hashes, never secrets.
         from catalog_value_sources import capture_value_sources
         physical["entity_value_sources"] = capture_value_sources(scope)
+        from catalog_sql_sources import capture_sql_sources
+        physical["sql_translation_sources"] = capture_sql_sources(scope)
         return snapshot_from_documents(scope, identity[0], documents, physical)
 
 
