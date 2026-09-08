@@ -938,7 +938,7 @@ flowchart LR
 按 6 个 Unicode 字符拆成 `type=message_chunk`、`step=output` 的片段依次推送；
 最后一片可少于 6 个字符，随后发送 `answer` 和 `complete` 终态事件。
 
-Java 网关必须从登录态注入 `X-Tenant-Id`、`X-User-Id`、`X-Application-Id`，可选注入逗号分隔的 `X-Roles`；应用 Header 必须与 Body 一致。
+Java 网关通过现有服务 Bearer 凭证调用，并保证 `conversation_id` 全局唯一。`X-Tenant-Id`、`X-User-Id` 是可选兼容状态元数据：完整稳定身份沿用原状态键；缺失、不完整或默认身份使用当前应用和会话派生的隔离键，不启用跨会话个人长期记忆。`X-Application-Id` 在生产环境必传，且必须与 Body 一致；`X-Roles` 仍可选，不能扩大本轮 Semantic Scope。请求 Body、响应 JSON 和 data-only SSE 格式不变。
 
 ```json
 {

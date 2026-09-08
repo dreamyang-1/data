@@ -49,6 +49,7 @@ from app.stores.events import (
     SessionEventType,
 )
 from app.stores.long_memory import LongTermMemory, LongTermMemoryStore, MemoryScope, MemoryType
+from app.domain.state_identity import has_stable_user_principal
 from app.services.dataset_followup import (
     is_dataset_operation_followup,
     plan_dataset_followup,
@@ -4135,7 +4136,8 @@ class DataAnalysisOrchestrator:
             sheet_count=file_inspection.get("sheet_count"),
         )
 
-        if chat.use_longterm_memory and self.memories is not None:
+        if (chat.use_longterm_memory and self.memories is not None
+                and has_stable_user_principal(identity.tenant_id, identity.user_id)):
             await emit_progress(
                 "MEMORY_RETRIEVAL", "RUNNING", "正在加载用户确认过的长期记忆。"
             )

@@ -35,7 +35,7 @@ from app.services.file_ingestion import FileImportError
 from app.services.orchestrator import DataAnalysisOrchestrator
 from app.services.progress import _progress_callback, progress_scope
 from minio_followup_store import DatasetScope
-from app.security import trusted_backend, require_application_namespace
+from app.security import trusted_backend, require_application_namespace, resolve_conversation_identity
 
 
 router = APIRouter(tags=["data-analysis"], dependencies=[Depends(trusted_backend)])
@@ -60,7 +60,9 @@ class SpreadsheetImportRequest(StrictModel):
 
     @model_validator(mode='after')
     def validate_scope(self):
-        self._scope_chat()
+        chat = self._scope_chat()
+        self.application_id = chat.application_id
+        self.conversation_id = chat.conversation_id
         return self
 
 
@@ -85,7 +87,7 @@ async def import_spreadsheet(
     request: Request,
     x_roles: str | None = Header(default=None),
 ) -> SpreadsheetImportResponse:
-    identity = trusted_identity(request)
+    identity = trusted_identity(request, payload)
     require_application_namespace(request, payload.application_id)
     application_id = payload.application_id
     importer = request.app.state.container.file_importer
@@ -144,9 +146,9 @@ CHAT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
 }
 
 
-def trusted_identity(request: Request) -> TrustedIdentity:
+def trusted_identity(request: Request, payload: ChatRequest | SpreadsheetImportRequest) -> TrustedIdentity:
     """State isolation identity, verified by the backend service dependency."""
-    return request.state.trusted_identity
+    return resolve_conversation_identity(request, payload.application_id, payload.conversation_id)
 
 
 async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
@@ -528,7 +530,7 @@ async def chat(
     request: Request,
     x_roles: str | None = Header(default=None, description="可选；逗号分隔的角色"),
 ) -> AgentResponse:
-    identity = trusted_identity(request)
+    identity = trusted_identity(request, payload)
     require_application_namespace(request, payload.application_id)
     external_conversation_id = payload.conversation_id
     is_regeneration = payload.regenerate
@@ -605,7 +607,7 @@ async def chat_stream(
     request: Request,
     x_roles: str | None = Header(default=None, description="可选；逗号分隔的角色"),
 ) -> StreamingResponse:
-    identity = trusted_identity(request)
+    identity = trusted_identity(request, payload)
     require_application_namespace(request, payload.application_id)
     external_conversation_id = payload.conversation_id
     external_message_id = payload.message_id
