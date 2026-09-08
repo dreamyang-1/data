@@ -116,6 +116,12 @@ class PinnedCatalog:
     def snapshot(self):
         return deepcopy(self._snapshot)
 
+    @property
+    def identity(self):
+        """Read-time identity, not a completed acceptance receipt. Must finish."""
+        self._check_active()
+        return self._publication._receipt(self._manifest, self._marker)
+
     def _check_active(self):
         if self._finished:
             raise CatalogEvidenceError("CATALOG_PIN_ALREADY_FINISHED")
