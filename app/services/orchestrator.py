@@ -2929,9 +2929,24 @@ class DataAnalysisOrchestrator:
                         request,
                         semantic_choice,
                     )
+                    if "SEMANTIC_CHOICE_TARGET_UNRESOLVED" in request.assumptions:
+                        return self._fallback(
+                            request,
+                            "当前语义目录尚未明确该选项对应的原有查询项，原任务保持待确认状态。",
+                        )
                 preserve_merged_question = True
                 request.pending_state_version = pending.state_version
                 rounds = pending.clarification_rounds + 1
+                if semantic_choice is not None and any(
+                    item.blocking for item in request.semantic_ambiguities
+                ):
+                    # One answer consumes one catalog ambiguity. Slot-readiness
+                    # recalculation below cannot decide the remaining semantic
+                    # choices; advance Pending before any planning/retrieval.
+                    bind_authorized_scope(request, chat.authorized_semantic_scope)
+                    return await self._request_clarification(
+                        request, rounds, source_stage="SLOT_MERGE",
+                    )
             if deterministic_slot_reply:
                 request.assumptions.append("DETERMINISTIC_SLOT_FAST_PATH")
         else:
@@ -6744,6 +6759,23 @@ class DataAnalysisOrchestrator:
             "confirmation": confirmation,
         }
 
+    @staticmethod
+    def _semantic_choice_member_index(
+        members: list[set[str]], phrase: str | None,
+    ) -> int | None:
+        """Locate the affected member from catalog evidence, never list order.
+
+        Legacy ambiguities without a phrase are safe only for an empty or
+        singleton slot. A supplied phrase must identify exactly one member.
+        """
+        if not members:
+            return 0
+        surface = (phrase or "").strip()
+        if not surface:
+            return 0 if len(members) == 1 else None
+        matches = [index for index, aliases in enumerate(members) if surface in aliases]
+        return matches[0] if len(matches) == 1 else None
+
     @classmethod
     def _apply_semantic_clarification_choice(
         cls,
@@ -6755,6 +6787,22 @@ class DataAnalysisOrchestrator:
 
         ambiguity: SemanticAmbiguity = choice["ambiguity"]
         detail = choice["detail"]
+        member_index = None
+        if ambiguity.type in {"metric", "dimension"}:
+            members = (
+                [{value.strip() for value in (item.input, item.canonical_name, item.metric_id) if value}
+                 for item in pending.metrics]
+                if ambiguity.type == "metric"
+                else [{item.strip()} for item in pending.dimensions]
+            )
+            member_index = cls._semantic_choice_member_index(members, ambiguity.phrase)
+            if member_index is None:
+                # The selected candidate does not establish which old member
+                # it replaces. Keep Pending intact; the caller stops before
+                # planning instead of executing a guessed task or repeating it.
+                unresolved = pending.model_copy(deep=True)
+                unresolved.assumptions.append("SEMANTIC_CHOICE_TARGET_UNRESOLVED")
+                return unresolved
         # A semantic-choice turn changes only the ambiguous slot. Everything
         # else comes from the already admitted pending request.
         target.metrics = [item.model_copy(deep=True) for item in pending.metrics]
@@ -6801,15 +6849,16 @@ class DataAnalysisOrchestrator:
                     if ":" in canonical_code or ambiguity.semantic_model_id is None
                     else f"{ambiguity.semantic_model_id}:{canonical_code}"
                 )
-            target.metrics = [MetricRef(
+            selected_metric = MetricRef(
                 input=metric_name,
                 canonical_name=metric_name,
                 metric_id=metric_id,
                 version=str(detail.get("version") or "current"),
                 unit=(str(detail.get("unit")) if detail.get("unit") else None),
-            )]
-        elif ambiguity.type == "dimension" and canonical_name:
-            target.dimensions = [canonical_name]
+            )
+            target.metrics[member_index:member_index + 1] = [selected_metric]
+        elif ambiguity.type == "dimension":
+            target.dimensions[member_index:member_index + 1] = [canonical_name or choice["label"]]
         elif ambiguity.type in {"subject"} and canonical_name:
             target.entity = canonical_name
         elif canonical_name and canonical_code and canonical_value:
