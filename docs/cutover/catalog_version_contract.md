@@ -7,6 +7,9 @@ SQL caches and V2 production routing remain unchanged. Actual 81 / 205 read-only
 capture is recorded in `catalog_identity/closure_report.md`; no deployment or
 index publication occurred. The V2 plan compiler now uses current scope and
 pinned acceptance in `v2_scope_bridge/closure_report.md` (offline integration).
+The raw-input entry and its remaining semantic coverage are documented in
+`v2_recognition/closure_report.md`; recorded model responses are not native
+publication or model-quality evidence.
 
 ## Authority and identity
 
@@ -109,8 +112,10 @@ publish an index or certify the origin/freshness of a saved file.
    missing/changed identity in this V2 path; current
    public Agent request/response/SSE formats and V1 routing remain unchanged.
    Bind the current AuthorizedSemanticScope independently of catalog identity.
-   Autonomous raw-turn recognition, production state-store integration and the
-   current Oagnet HTTP API are not yet connected to this boundary. The plan
+   `RawTurnPlanner` now connects model surface extraction and scoped handle/slot
+   interpretation to this boundary for common payloads. Full Pending/semantic
+   coverage, production state-store integration and the current Oagnet HTTP API
+   remain open. The plan
    session combines the catalog pin with current request/identity/database/KB
    in its fingerprint; the pin does not replace those state-isolation checks.
 5. **Still open:** bind SQL metadata caches and auxiliary authoritative lookups to that same
@@ -142,7 +147,7 @@ the existing controlled release process; credentials stay private.
 | --- | --- | --- |
 | C-01 | Consistent authority capture plus complete deterministic scoped generation | Actual 81/[205] capture generates 290 records locally after UUID/model isolation fixes; real embedding/publication pending |
 | C-02 | Persisted active marker, verified full read-back, mixed-generation rejection and rollback | Actual target inspected: isolated collections and active marker absent; 142 legacy semantic rows unstamped |
-| C-03 | Same release on query, binding, caches and downstream metadata | V2 scoped plan compiler and pin acceptance integrated offline; autonomous recognition, production stores/Oagnet API/SQL integration pending |
+| C-03 | Same release on query, binding, caches and downstream metadata | V2 raw-input/common-payload path, scoped compiler and pin acceptance integrated offline; full semantics, production stores/Oagnet API/SQL integration pending |
 | C-04 | Current owned projections/IDs/defaults/rules and actual MySQL/Milvus coverage | Actual 13/13 dimensions have owned projections; external values/defaults/routing and runtime publication still pending |
 
 X-01 separately tracks the named runtime target and trusted operational evidence.
