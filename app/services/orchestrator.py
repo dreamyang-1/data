@@ -69,7 +69,7 @@ from app.services.clarification_policy import decide_clarification, restore_clar
 from app.services.authorized_scope import bind_authorized_scope, state_scope_matches
 from app.services.legacy_guards import pending_answer_admissibility, apply_snapshot_display_default, apply_region_clear_barrier
 from app.services.history_compaction import compact_history
-from app.services.working_memory import recalls_prior_task, select_recalled_task_frame
+from app.services.working_memory import recalls_prior_task, requires_prior_task_resolution, select_recalled_task_frame
 from app.services.extension_dispatcher import ExtensionDispatcher
 from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress, task_progress_scope
@@ -2686,7 +2686,8 @@ class DataAnalysisOrchestrator:
                 completed_before_pending = None
         if (
             not chat._is_regeneration_execution
-            and pending is None
+            and (pending is None or requires_prior_task_resolution(chat.question))
+            and not standalone_complete_business
             and recalls_prior_task(chat.question)
         ):
             recall = getattr(self.sessions, "get_recent_task_frames", None)
@@ -2702,8 +2703,24 @@ class DataAnalysisOrchestrator:
             )
             recalled = select_recalled_task_frame(chat.question, recalled_frames)
             if recalled is not None and self._pending_scope_matches(recalled, chat):
+                if pending is not None:
+                    cleared = await self.sessions.clear_pending(
+                        identity.tenant_id, identity.user_id, chat.application_id,
+                        chat.conversation_id, expected_version=pending.state_version,
+                    )
+                    if not cleared:
+                        return self._fallback(raw_rule_request, "待确认任务已更新，本轮历史恢复未执行。")
+                    pending = None
                 previous_for_rewrite = recalled
                 recalled_task_frame = True
+            elif requires_prior_task_resolution(chat.question):
+                # A missing, tied or out-of-scope historical target cannot
+                # silently become the active/latest task via a later fallback.
+                raw_rule_request.assumptions.append("HISTORICAL_TASK_REFERENCE_UNRESOLVED")
+                return self._fallback(
+                    raw_rule_request,
+                    "当前授权范围内尚未唯一定位所指的历史问题，本轮未执行查询。",
+                )
         if independent_chat:
             previous_for_rewrite = None
         if previous_for_rewrite is not None and not self._pending_scope_matches(
@@ -2724,6 +2741,7 @@ class DataAnalysisOrchestrator:
             not chat._is_regeneration_execution
             and pending is None
             and not independent_chat
+            and not recalled_task_frame
         ):
             # A task frame is provisional: it is written before ASL/SQL runs and
             # may contain an entity or slot interpretation that execution later

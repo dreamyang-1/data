@@ -22,6 +22,22 @@ def recalls_prior_task(question: str) -> bool:
     return bool(_RECALL_MARKER.search(re.sub(r"\s+", "", question)))
 
 
+def requires_prior_task_resolution(question: str) -> bool:
+    """Distinguish an explicit historical target from a generic continuation."""
+    return bool(_RECALL_MARKER.match(re.sub(r"\s+", "", question))) and any(
+        marker in question for marker in (
+            "回到", "刚才", "之前", "前面", "上次", "上一个", "上一条",
+        )
+    )
+
+
+def _reference_clause(question: str) -> str:
+    clause = re.sub(r"\s+", "", question)
+    for separator in ("，", ",", "；", ";", "。"):
+        clause = clause.split(separator, 1)[0]
+    return clause
+
+
 def select_recalled_task_frame(
     question: str,
     frames: list[CanonicalAnalysisRequest],
@@ -30,13 +46,20 @@ def select_recalled_task_frame(
 
     This is the data-agent equivalent of Letta recall memory: the active task stays
     small, while older task frames are retrieved only after an explicit recall cue.
-    A weak or tied match is rejected so unrelated filters are never inherited.
+    Weak matches and ties without an explicit recency cue are rejected.
     """
     if not frames or not recalls_prior_task(question):
         return None
-    compact = re.sub(r"\s+", "", question)
-    if _LATEST_MARKER.search(compact):
-        return frames[0].model_copy(deep=True)
+    compact = _reference_clause(question)
+    latest = bool(_LATEST_MARKER.search(compact))
+    # A bare recency reference can select the latest task. Named references
+    # must first match their business target; a following edit is not a target.
+    if latest:
+        residual = _LATEST_MARKER.sub("", _RECALL_MARKER.sub("", compact))
+        for filler in ("问题", "任务", "那个", "那条", "这个", "的"):
+            residual = residual.replace(filler, "")
+        if not residual.strip("？！?!"):
+            return frames[0].model_copy(deep=True)
 
     unique_frames: list[CanonicalAnalysisRequest] = []
     seen: set[tuple[Any, ...]] = set()
@@ -55,7 +78,7 @@ def select_recalled_task_frame(
     scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
     if not scored or scored[0][0] < 2:
         return None
-    if len(scored) > 1 and scored[0][0] == scored[1][0]:
+    if not latest and len(scored) > 1 and scored[0][0] == scored[1][0]:
         return None
     return scored[0][2].model_copy(deep=True)
 
