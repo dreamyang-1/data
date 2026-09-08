@@ -11,7 +11,8 @@
         "docs/cutover/catalog_identity/live_scope_evidence.json",
         "Oagnet/catalog_generation.py",
         "Oagnet/mysql_tool.py",
-        "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json"
+        "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
+        "docs/cutover/v2_relation_paths/catalog_path_evidence.json"
       ],
       "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot."
     },
@@ -44,11 +45,12 @@
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
       "status": "ACTUAL_DEFAULTS_AND_DECLARED_RELATIONSHIPS_VERIFIED",
-      "summary": "Actual 81/[205]: 14/14 entity defaults, 24/24 relation endpoints/joins/cardinalities; 14 detail + 48 directed relation typed plans pass locally with the captured catalog. External values, routing and actual published runtime capability remain open.",
+      "summary": "Actual 81/[205] defaults/24 relations verified; fresh unchanged catalog passes all 250 declared directed two-hop walks locally, including 76 repeated-entity walks. External values, routing, actual publication and model interpretation remain open.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
         "docs/cutover/catalog_identity/source_review.json",
-        "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json"
+        "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
+        "docs/cutover/v2_relation_paths/catalog_path_evidence.json"
       ],
       "next_action": "Verify external entity-value and physical routing coverage, then actual native pinned publication; local typed acceptance is not publication or real model quality."
     },
@@ -68,13 +70,13 @@
       "classification": "CUTOVER_BLOCKER_P0",
       "blocking_level": "P0",
       "status": "PARTIAL_AUTONOMOUS_SOURCE_PATH",
-      "summary": "Raw V2 now includes current-catalog default display and declared single-relationship plans alongside Pending and local slot edits. Multi-hop/alias relations, dependent comparisons, external entity values, remaining analytical/decision types and real model quality remain open.",
+      "summary": "Raw scoped V2 now supports declared ordered paths (1-8 hops), occurrence-specific attribute filters/projections and results, in addition to governed defaults, Pending and local slot edits. Dependent comparisons, external entity values, remaining analytical/decision types and real model quality remain open.",
       "evidence": [
         "app/semantic_v2/recognition.py",
-        "app/semantic_v2/catalog_plans.py",
-        "docs/cutover/v2_catalog_plans/closure_report.md"
+        "app/semantic_v2/catalog_paths.py",
+        "docs/cutover/v2_relation_paths/closure_report.md"
       ],
-      "next_action": "Complete scoped multi-hop/alias relationship contracts, dependent temporal comparisons, entity-value and remaining payload/decision coverage; real recognition evaluation follows catalog gates."
+      "next_action": "Complete dependent temporal comparisons, external entity-value and remaining payload/decision coverage. Validate path-to-ASL/SQL alias bindings with downstream contract work. Real recognition evaluation follows catalog gates."
     },
     {
       "blocker_id": "V-02",
@@ -213,5 +215,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "5583d8c48db49e22d236e2ee543b26dc89fa3264"
+  "latest_source_delivery_baseline": "b5037e7d15ecfd8e733551c853cbf9441be7c4bd"
 }
