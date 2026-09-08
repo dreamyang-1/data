@@ -354,6 +354,48 @@ def dataset_operation_family(operation: Mapping[str, Any] | None) -> str | None:
             'drilldown':'DRILLDOWN'}.get(str(operation.get('type')))
 
 
+def presentation_ancestors(
+    selected: Mapping[str, Any], references: Sequence[Mapping[str, Any]], *, allow_rank_slice: bool = False,
+) -> list[Mapping[str, Any]]:
+    """Walk only proven slice edges; filters, joins and changed snapshots are barriers.
+
+    Undoing a sort-limit is safe only when a new global operation will be planned
+    on the complete parent. Display expansion must preserve the existing order.
+    """
+    by_id = {item.get('dataset_id'): item for item in references}
+    result: list[Mapping[str, Any]] = []
+    visited = {selected.get('dataset_id')}
+    current = selected
+    while True:
+        parents = current.get('parent_dataset_ids') or []
+        if len(parents) != 1 or parents[0] in visited:
+            return result
+        parent = by_id.get(parents[0])
+        if parent is None or current.get('source_ref') != parents[0]:
+            return result
+        if any(current.get(key) != parent.get(key) for key in (
+            'scope', 'columns', 'snapshot_id', 'data_as_of', 'semantic_model_id', 'business_domain_ids',
+        )):
+            return result
+        current_log, parent_log = current.get('transformation_log') or [], parent.get('transformation_log') or []
+        if len(current_log) != len(parent_log) + 1 or current_log[:-1] != parent_log:
+            return result
+        operation = current_log[-1]
+        if not isinstance(operation, Mapping) or operation.get('type') not in (
+            {'limit', 'sort_limit'} if allow_rank_slice else {'limit'}
+        ):
+            return result
+        child_rows, parent_rows = current.get('row_count'), parent.get('row_count')
+        if type(child_rows) is not int or type(parent_rows) is not int or not 0 <= child_rows <= parent_rows:
+            return result
+        count = operation.get('count')
+        if type(count) is not int or count < 1 or child_rows != min(count, parent_rows):
+            return result
+        visited.add(parents[0])
+        result.append(parent)
+        current = parent
+
+
 def _ranking_count(value: str) -> int:
     if value.isdigit():
         return int(value)
