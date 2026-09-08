@@ -2383,8 +2383,10 @@ def _normalize_relation_name_filters(
                 item["operator"] = "!="
                 item["value"] = natural_values[0]
             else:
-                item["operator"] = "LIKE"
-                item["value"] = f"%{natural_values[0]}%"
+                # The authorized source lookup proved this exact literal.
+                # Adding wildcards would silently broaden the accepted binding.
+                item["operator"] = "="
+                item["value"] = natural_values[0]
             ambiguities[:] = [
                 ambiguity
                 for ambiguity in ambiguities

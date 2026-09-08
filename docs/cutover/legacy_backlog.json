@@ -1,0 +1,85 @@
+{
+  "items": [
+    {
+      "source": "docs/phase0c_dimension_mutation/failure_evidence.json",
+      "reference": "DM-A01",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "status": "BACKLOG_UNLESS_V2_EVIDENCE_PROVES_BLOCKING",
+      "observation": "Rule-only/mock journeys can preserve control words such as 再加/不要 as entity mentions after metric edits; require a separate governed-boundary proof",
+      "next_action": "Preserve as Gold candidate/contrast; no further Legacy keyword fixes without V2 cutover evidence."
+    },
+    {
+      "source": "docs/phase0c_dimension_mutation/failure_evidence.json",
+      "reference": "DM-A02",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "status": "BACKLOG_UNLESS_V2_EVIDENCE_PROVES_BLOCKING",
+      "observation": "Add/remove business-filter families and unmarked regrouping have remaining legacy admission/merge behavior; this stage covers explicit dimension edits only",
+      "next_action": "Preserve as Gold candidate/contrast; no further Legacy keyword fixes without V2 cutover evidence."
+    },
+    {
+      "source": "docs/phase0c_metric_edit_grounding/failure_evidence.json",
+      "reference": "DM-A02",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "status": "BACKLOG_UNLESS_V2_EVIDENCE_PROVES_BLOCKING",
+      "observation": "Other filter-family mutations and unmarked regrouping retain their previous evidence requirement",
+      "next_action": "Preserve as Gold candidate/contrast; no further Legacy keyword fixes without V2 cutover evidence."
+    },
+    {
+      "source": "docs/phase0c_metric_edit_grounding/failure_evidence.json",
+      "reference": "MG-A01",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "status": "BACKLOG_UNLESS_V2_EVIDENCE_PROVES_BLOCKING",
+      "observation": "Other discourse operations, compound commands and model-proposed typed filters need separate semantic/contract evidence; the new guard does not guess their roles",
+      "next_action": "Preserve as Gold candidate/contrast; no further Legacy keyword fixes without V2 cutover evidence."
+    },
+    {
+      "source": "docs/phase0c_product_clear/failure_evidence.json",
+      "reference": "PC-A01",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "status": "BACKLOG_UNLESS_V2_EVIDENCE_PROVES_BLOCKING",
+      "observation": "Region additions/removals and general multi-region list parsing need independent root-cause/semantic-boundary proofs; initial journeys showed ignored additions or positive retention of removed values",
+      "next_action": "Preserve as Gold candidate/contrast; no further Legacy keyword fixes without V2 cutover evidence."
+    },
+    {
+      "source": "docs/phase0c_product_clear/failure_evidence.json",
+      "reference": "PC-A02",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "status": "BACKLOG_UNLESS_V2_EVIDENCE_PROVES_BLOCKING",
+      "observation": "A product query grouped with the alternate 商品 label yielded both 产品 and 商品 in a mock journey; needs governed alias/grain evidence",
+      "next_action": "Preserve as Gold candidate/contrast; no further Legacy keyword fixes without V2 cutover evidence."
+    },
+    {
+      "source": "docs/phase0c_product_clear/failure_evidence.json",
+      "reference": "MG-A01",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "status": "BACKLOG_UNLESS_V2_EVIDENCE_PROVES_BLOCKING",
+      "observation": "Broader discourse/compound commands and model-proposed typed filters retain prior evidence requirements",
+      "next_action": "Preserve as Gold candidate/contrast; no further Legacy keyword fixes without V2 cutover evidence."
+    },
+    {
+      "source": "docs/phase0c_region_list/failure_evidence.json",
+      "reference": "RL-A01",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "status": "BACKLOG_UNLESS_V2_EVIDENCE_PROVES_BLOCKING",
+      "observation": "Region ADD/REMOVE, exclusions, mixed city/province OR and unknown place names remain outside this complete known-list gate. Existing fallback can retain a singleton; this stage does not certify unsupported phrase correctness.",
+      "next_action": "Preserve as Gold candidate/contrast; no further Legacy keyword fixes without V2 cutover evidence."
+    },
+    {
+      "source": "docs/phase0c_region_list/failure_evidence.json",
+      "reference": "PC-A02",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "status": "BACKLOG_UNLESS_V2_EVIDENCE_PROVES_BLOCKING",
+      "observation": "Alternate 产品/商品 grouping and governed alias/grain collision needs independent catalog evidence.",
+      "next_action": "Preserve as Gold candidate/contrast; no further Legacy keyword fixes without V2 cutover evidence."
+    },
+    {
+      "source": "docs/phase0c_region_list/failure_evidence.json",
+      "reference": "MG-A01",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "status": "BACKLOG_UNLESS_V2_EVIDENCE_PROVES_BLOCKING",
+      "observation": "Broader discourse, compound commands and model-proposed typed filter role conflicts retain earlier evidence requirements.",
+      "next_action": "Preserve as Gold candidate/contrast; no further Legacy keyword fixes without V2 cutover evidence."
+    }
+  ],
+  "do_not_clear_failures_for_counts": true
+}

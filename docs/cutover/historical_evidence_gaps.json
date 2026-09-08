@@ -1,0 +1,395 @@
+{
+  "items": [
+    {
+      "failure_id": "real-001",
+      "historical_case_ids": [
+        "real-001"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-002",
+      "historical_case_ids": [
+        "real-002"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-003",
+      "historical_case_ids": [
+        "real-003"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-004",
+      "historical_case_ids": [
+        "real-004"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-005",
+      "historical_case_ids": [
+        "real-005"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-006",
+      "historical_case_ids": [
+        "real-006"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-007",
+      "historical_case_ids": [
+        "real-007"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-008",
+      "historical_case_ids": [
+        "real-008"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-009",
+      "historical_case_ids": [
+        "real-009"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-010",
+      "historical_case_ids": [
+        "real-010"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-011",
+      "historical_case_ids": [
+        "real-011"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-012",
+      "historical_case_ids": [
+        "real-012"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-013",
+      "historical_case_ids": [
+        "real-013"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-014",
+      "historical_case_ids": [
+        "real-014"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-015",
+      "historical_case_ids": [
+        "real-015"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-016",
+      "historical_case_ids": [
+        "real-016"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-017",
+      "historical_case_ids": [
+        "real-017"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-018",
+      "historical_case_ids": [
+        "real-018"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-019",
+      "historical_case_ids": [
+        "real-019"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-020",
+      "historical_case_ids": [
+        "real-020"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-021",
+      "historical_case_ids": [
+        "real-021"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-022",
+      "historical_case_ids": [
+        "real-022"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-023",
+      "historical_case_ids": [
+        "real-023"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-024",
+      "historical_case_ids": [
+        "real-024"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-025",
+      "historical_case_ids": [
+        "real-025"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-026",
+      "historical_case_ids": [
+        "real-026"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-027",
+      "historical_case_ids": [
+        "real-027"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-028",
+      "historical_case_ids": [
+        "real-028"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-029",
+      "historical_case_ids": [
+        "real-029"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    },
+    {
+      "failure_id": "real-030",
+      "historical_case_ids": [
+        "real-030"
+      ],
+      "classification": "EVALUATION_GAP",
+      "status": "MISSING_REPLAY_INPUTS",
+      "evidence": [
+        "docs/phase0b/failure_universe.json",
+        "docs/phase2/failure_trace_replay.jsonl"
+      ],
+      "next_action": "Recover or explicitly relabel current policy/catalog/scope/state ground truth; do not treat partial historical traces as complete Gold."
+    }
+  ],
+  "policy": "Historical observations are evidence gaps, not thirty automatically independent production bugs."
+}

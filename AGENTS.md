@@ -28,3 +28,15 @@
 - 按明确清单逐文件同步并比较 SHA-256；禁止整目录覆盖、`git add .`、`git add -A`、`reset --hard`、`clean`、stash 用户改动和 force push。不得提交凭据、内部敏感地址、环境文件、生产结果、日志、缓存或备份。
 - 正式边界变更同步检查文档。核心证据以 closure report、test delta、change manifest、known blockers 为主，避免重复文档。
 - 只有当前目标的 P0 清零、Critical Suite 通过、无新增回归和收集错误、证据及 Review 完整、Git 干净时才宣布当前阶段完成。保留真实阻塞，不宣称生产就绪。
+
+## 当前唯一目标：V2 Production Replacement Readiness
+
+依据用户 2026-09-08 的新要求，从已完成的地区列表修复（PR #17）之后：
+
+- 停止无边界新建 Phase0C 子阶段修普通 Legacy 问题。每项问题先证明是否阻塞 V2 Cutover；非阻塞失败进入 Backlog，不为数字清零改代码或旧断言。
+- 使用 `docs/cutover/` 维护 Cutover Readiness Matrix、剩余失败分类、目录版本/发布证据和最短阻塞路径。UNKNOWN 必须调查；缺少权威标签或运行证据不能被当成 PASS。
+- 优先完成 MySQL → Catalog snapshot/release → Oagnet/Milvus → 查询/缓存/绑定版本身份和漂移检测。纯函数、离线导出比对、旧本地快照均不能替代真实发布证据。
+- Catalog/Scope/关键状态安全门禁通过并正式结束 Phase0C 后，进入 Phase0C-2：80～120 条高质量 Gold、确定性 V1/V2 分项评估，再旁路比较正式可用模型及 Thinking Mode。保持生产默认模型。
+- Evaluation 门禁通过后才开展 Phase1A plan-only shadow；V2 不执行真实 SQL、不写生产业务状态、不影响 V1 回答。真实 Shadow 通过后才准备不超过 5% 的受控 Canary、自动停流和 Rollback。
+- 每次阶段汇报必须包含 Current Stage、Cutover Blocker P0/P1、Catalog/Evaluation/Shadow Gap、V1 Replacement Readiness 和 Next shortest blocking path。
+- 只有全部替代条件满足时报告 `READY_FOR_USER_APPROVAL` 并停止自动推进，明确问“是否批准V2正式替代V1？”。在用户明确批准之前，不关闭 V1、不让 V2 全量接管、不删除 Legacy fallback。
