@@ -1,0 +1,76 @@
+{
+  "baseline_commit": "b9d6dc9ed46e819b2f34055256be00a95910d207",
+  "feature_branch": "phase0c-structural-scope-20260908-01",
+  "files": [
+    {
+      "repository_path": "app/intent/classifier.py",
+      "source_sha256": "c41e5709ede39812309f5f80898f206b88d0abeebd752448659e51833d0d3cb0",
+      "published_sha256": "c41e5709ede39812309f5f80898f206b88d0abeebd752448659e51833d0d3cb0",
+      "baseline_sha256": "62c3a159c50214f094013176b0d1e6750f3b56d258d6e0fc9876e8bc1916f432"
+    },
+    {
+      "repository_path": "tests/test_structural_scope_contract.py",
+      "source_sha256": "fc813442fa421f4a0ca99e7dad6f9e463107e8f2af3d9fbfb0d38755c22f58b3",
+      "published_sha256": "fc813442fa421f4a0ca99e7dad6f9e463107e8f2af3d9fbfb0d38755c22f58b3",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c/trust_semantic_scope_contract.md",
+      "source_sha256": "3936ace5949330ee315e2553f777c2588ac8766e46ec2fa74eb98df6e72622d8",
+      "published_sha256": "3936ace5949330ee315e2553f777c2588ac8766e46ec2fa74eb98df6e72622d8",
+      "baseline_sha256": "ad8b72fd9eb17a7d57b5e7510ebfc66fbc8f6a1a886753e7070021c1785d4ee9"
+    },
+    {
+      "repository_path": "docs/phase0c_structural_scope/audit_inventory.json",
+      "source_sha256": "b86fb33e48eec8a9d60e7346a8736a7aaff5a04b8812cbcddb0a0cfa461f63e5",
+      "published_sha256": "b86fb33e48eec8a9d60e7346a8736a7aaff5a04b8812cbcddb0a0cfa461f63e5",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_structural_scope/closure_report.md",
+      "source_sha256": "4c6996263659b7c28364a6c07d34aab8f32ef02558fe3ca5311c2b4e0fed4103",
+      "published_sha256": "4c6996263659b7c28364a6c07d34aab8f32ef02558fe3ca5311c2b4e0fed4103",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_structural_scope/failure_evidence.json",
+      "source_sha256": "a01e7cdfa33ad93cd95fc7a15f85f1addf16c134483178e3719c72c839ec1ecb",
+      "published_sha256": "a01e7cdfa33ad93cd95fc7a15f85f1addf16c134483178e3719c72c839ec1ecb",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_structural_scope/final_DataAnalysis_Agent.json",
+      "source_sha256": "5d7edb7be7feae3f11a007ce4eaa372b3aff70e4ad169b980da128c79688b9e3",
+      "published_sha256": "5d7edb7be7feae3f11a007ce4eaa372b3aff70e4ad169b980da128c79688b9e3",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_structural_scope/final_Oagnet.json",
+      "source_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "published_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_structural_scope/final_SQL_Translator.json",
+      "source_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "published_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_structural_scope/rollback_manifest.json",
+      "source_sha256": "b3b49457cba9399fd9bcfa322febe4d87d2e84657fb7c37df3c91ab8afb61140",
+      "published_sha256": "b3b49457cba9399fd9bcfa322febe4d87d2e84657fb7c37df3c91ab8afb61140",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_structural_scope/test_delta.json",
+      "source_sha256": "5074fd8b533b7477b6f0c020e18da91028fe0ac55cff9b48dd4f65527b0c443b",
+      "published_sha256": "5074fd8b533b7477b6f0c020e18da91028fe0ac55cff9b48dd4f65527b0c443b",
+      "baseline_sha256": null
+    }
+  ],
+  "secret_scan_findings": 0,
+  "publication_policy": "Explicit files only; no credentials, environments, logs, private diagnostic text, runtime data or snapshots",
+  "original_oagnet_index_preserved": true,
+  "manifest_self_hash": "Committed Git blob; no circular hash"
+}

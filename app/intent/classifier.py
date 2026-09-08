@@ -27,6 +27,20 @@ _WORD_RANGE_SEPARATOR = r"(?:到|至|~|～|—|–|－)"
 _NATIVE_DATE_CLASS = date
 _SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 
+_COMMON_REGIONS = {
+    "北京": "北京市", "上海": "上海市", "天津": "天津市", "重庆": "重庆市",
+    "江苏": "江苏省", "浙江": "浙江省", "安徽": "安徽省", "福建": "福建省",
+    "江西": "江西省", "山东": "山东省", "河南": "河南省", "湖北": "湖北省",
+    "湖南": "湖南省", "广东": "广东省", "海南": "海南省", "四川": "四川省",
+    "贵州": "贵州省", "云南": "云南省", "陕西": "陕西省", "甘肃": "甘肃省",
+    "青海": "青海省", "河北": "河北省", "山西": "山西省", "辽宁": "辽宁省",
+    "吉林": "吉林省", "黑龙江": "黑龙江省",
+    "广西": "广西壮族自治区", "内蒙古": "内蒙古自治区",
+    "西藏": "西藏自治区", "宁夏": "宁夏回族自治区",
+    "新疆": "新疆维吾尔自治区", "香港": "香港特别行政区",
+    "澳门": "澳门特别行政区", "国外": "国外",
+}
+
 
 _APPLICABLE_DEPARTMENT_RELATION_FIELDS = {
     "适用类型",
@@ -1915,7 +1929,10 @@ class RuleBasedIntentClassifier:
             # entity candidate. An explicit named filter keeps its role.
             parsed_time_subject = (
                 request.time_range is not None
-                and QuestionRewriter.is_deterministic_time_update(subject)
+                and (
+                    QuestionRewriter.is_deterministic_time_update(subject)
+                    or cls._is_structural_metric_subject(request, subject, allow_region=True)
+                )
                 and not any(item.get('value') == subject for item in request.filters if isinstance(item, dict))
             )
             if subject and not has_named_scope and not parsed_time_subject and subject not in {
@@ -2393,6 +2410,36 @@ class RuleBasedIntentClassifier:
         request.dimensions = list(dict.fromkeys(reconciled))
 
     @staticmethod
+    def _is_structural_metric_subject(
+        request: CanonicalAnalysisRequest, subject: str, *, allow_region: bool
+    ) -> bool:
+        """Recognize whole scope syntax without trimming an entity literal.
+
+        Only the unmarked subject fallback can combine a known region with
+        the existing temporal/grouping grammar. Explicit product markers and
+        device names keep their literal boundary. No partial residual is ever
+        returned as a new product name.
+        """
+        candidates = [subject]
+        if allow_region:
+            regions = set(_COMMON_REGIONS) | set(_COMMON_REGIONS.values())
+            regions |= {region + "地区" for region in regions}
+            for region in regions:
+                if subject.startswith(region):
+                    candidates.append(subject[len(region):].strip("的"))
+                if subject.endswith(region):
+                    candidates.append(subject[:-len(region)].strip("的"))
+        dimension_names = '|'.join(re.escape(d) for d in request.dimensions) or r'(?!)'
+        for candidate in candidates:
+            structural_scope = re.fullmatch(
+                rf'(?:(?:19|20)\d{{2}}年(?:\d{{1,2}}月(?:\d{{1,2}}(?:日|号))?)?|(?:本|上|下)(?:月|季度)|今年|去年)?'
+                rf'(?:按(?:{dimension_names})(?:拆分|分组|统计|汇总))?', candidate,
+            )
+            if structural_scope and RuleBasedIntentClassifier._time_range(candidate) is not None:
+                return True
+        return False
+
+    @staticmethod
     def _apply_metric_subject_scope(
         request: CanonicalAnalysisRequest, text: str
     ) -> None:
@@ -2432,6 +2479,7 @@ class RuleBasedIntentClassifier:
                 r"(?:含税销售总额|销售总额|销售额|订单量|订单笔数|销售量)",
                 text,
             )
+        unmarked_subject = False
         if match is None:
             match = re.search(
                 r"(?:查询|统计|分析|查看|看看)"
@@ -2440,17 +2488,15 @@ class RuleBasedIntentClassifier:
                 r"(?:含税销售总额|销售总额|销售额|订单量|订单笔数|销售量)",
                 text,
             )
+            unmarked_subject = True
         if match is None:
             return
         subject = match.group("subject").strip("的")
         # Strip already parsed temporal/grouping syntax before considering an
         # open-world product literal. It must not become a fabricated filter.
-        dimension_names = '|'.join(re.escape(d) for d in request.dimensions) or r'(?!)'
-        structural_scope = re.fullmatch(
-            rf'(?:(?:19|20)\d{{2}}年(?:\d{{1,2}}月(?:\d{{1,2}}(?:日|号))?)?|(?:本|上|下)(?:月|季度)|今年|去年)?'
-            rf'(?:按(?:{dimension_names})(?:拆分|分组|统计|汇总))?', subject,
-        )
-        if structural_scope and RuleBasedIntentClassifier._time_range(subject) is not None:
+        if RuleBasedIntentClassifier._is_structural_metric_subject(
+            request, subject, allow_region=unmarked_subject
+        ):
             return
         if RuleBasedIntentClassifier._is_structural_entity_mention(subject):
             return
@@ -2526,19 +2572,7 @@ class RuleBasedIntentClassifier:
         request: CanonicalAnalysisRequest, text: str
     ) -> None:
         """Ground common province/municipality shorthand as one replaceable filter."""
-        regions = {
-            "北京": "北京市", "上海": "上海市", "天津": "天津市", "重庆": "重庆市",
-            "江苏": "江苏省", "浙江": "浙江省", "安徽": "安徽省", "福建": "福建省",
-            "江西": "江西省", "山东": "山东省", "河南": "河南省", "湖北": "湖北省",
-            "湖南": "湖南省", "广东": "广东省", "海南": "海南省", "四川": "四川省",
-            "贵州": "贵州省", "云南": "云南省", "陕西": "陕西省", "甘肃": "甘肃省",
-            "青海": "青海省", "河北": "河北省", "山西": "山西省", "辽宁": "辽宁省",
-            "吉林": "吉林省", "黑龙江": "黑龙江省",
-            "广西": "广西壮族自治区", "内蒙古": "内蒙古自治区",
-            "西藏": "西藏自治区", "宁夏": "宁夏回族自治区",
-            "新疆": "新疆维吾尔自治区", "香港": "香港特别行政区",
-            "澳门": "澳门特别行政区", "国外": "国外",
-        }
+        regions = _COMMON_REGIONS
         region_fields = {
             "地区", "区域", "省份", "城市", "业务省份", "业务城市",
             "医院省份", "医院城市", "经销商省份", "经销商城市",
