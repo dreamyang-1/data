@@ -23,6 +23,7 @@ class ValidatedQueryExample(BaseModel):
     intent: str = Field(min_length=1, max_length=100)
     semantic_model_id: int = Field(gt=0)
     business_domain_ids: list[int] = Field(default_factory=list, max_length=50)
+    authorized_semantic_scope_fingerprint: str = ''
     entity: str | None = Field(default=None, max_length=200)
     metric_ids: list[str] = Field(default_factory=list, max_length=20)
     metric_names: list[str] = Field(default_factory=list, max_length=20)
@@ -93,6 +94,7 @@ class ValidatedQueryRecall:
             "intent": request.primary_intent.value,
             "semantic_model_id": semantic_model_id,
             "business_domain_ids": sorted(request.business_domain_ids),
+            "authorized_semantic_scope_fingerprint": request.authorized_semantic_scope.fingerprint() if request.authorized_semantic_scope else '',
             "entity": request.entity,
             "metric_ids": sorted(item.metric_id for item in request.metrics if item.metric_id),
             "metric_names": [item.canonical_name or item.input for item in request.metrics],
@@ -136,6 +138,9 @@ class ValidatedQueryRecall:
             try:
                 example = ValidatedQueryExample.model_validate(value)
             except Exception:
+                continue
+            expected_scope = request.authorized_semantic_scope.fingerprint() if request.authorized_semantic_scope else ''
+            if example.authorized_semantic_scope_fingerprint != expected_scope:
                 continue
             if example.fingerprint in seen_fingerprints:
                 continue

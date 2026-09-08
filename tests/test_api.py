@@ -4,7 +4,7 @@ from datetime import date, datetime, timezone
 from uuid import uuid4
 
 import pytest
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient as RawTestClient
 
 from app.config import Settings
 from app.domain.models import (
@@ -41,6 +41,13 @@ def test_user_visible_dataset_summary_uses_chinese_status_and_beijing_time():
     ) == "2026-09-07 13:11:07（北京时间）"
 
 
+def TestClient(app, **kwargs):
+    """Business fixtures now call as a trusted backend with explicit identity."""
+    headers = {'Authorization': 'Bearer phase0c-fixture-token', 'X-Tenant-Id': 't1', 'X-User-Id': 'u1'}
+    headers.update(kwargs.pop('headers', {}))
+    return RawTestClient(app, headers=headers, **kwargs)
+
+
 def build_test_app(**overrides):
     defaults = {
         "env": "test",
@@ -48,6 +55,7 @@ def build_test_app(**overrides):
         "intent_model_enabled": False,
         "allow_missing_trusted_identity_headers": False,
         "business_question_collection_enabled": False,
+        "trusted_backend_token": "phase0c-fixture-token",
     }
     defaults.update(overrides)
     return create_app(Settings(**defaults))
@@ -67,7 +75,7 @@ def test_chat_endpoint():
         response = client.post(
             "/agent_chat",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "conversation_id": "c1",
                 "application_id": "app1",
                 "message_id": "m1",
@@ -87,6 +95,7 @@ def test_chat_collects_sync_and_stream_questions_but_not_refresh(tmp_path):
         business_question_document_path=document_path,
     )
     base_payload = {
+        "semantic_model_id": 81,
         "conversation_id": "business-conversation",
         "application_id": "business-app",
     }
@@ -146,7 +155,7 @@ def test_question_collection_failure_does_not_break_chat(tmp_path):
     with TestClient(app) as client:
         response = client.post(
             "/agent_chat",
-            json={
+            json={"semantic_model_id": 81,
                 "conversation_id": "collector-failure-conversation",
                 "application_id": "collector-failure-app",
                 "message_id": "collector-failure-message",
@@ -433,13 +442,13 @@ def test_identity_headers_are_not_required():
     with TestClient(build_test_app()) as client:
         response = client.post(
             "/agent_chat",
-            json={"application_id": "app1", "conversation_id": "c1", "message_id": "m1", "question": "你好"},
+            json={"semantic_model_id": 81, "application_id": "app1", "conversation_id": "c1", "message_id": "m1", "question": "你好"},
         )
     assert response.status_code == 200
 
 
 def test_regeneration_keeps_conversation_and_removes_replaced_turn_from_history():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="message-original",
@@ -475,7 +484,7 @@ def test_regeneration_keeps_conversation_and_removes_replaced_turn_from_history(
 
 
 def test_regeneration_message_id_is_idempotent_per_refresh_attempt():
-    common = {
+    common = {"semantic_model_id": 81,
         "application_id": "app-refresh",
         "conversation_id": "conversation-original",
         "message_id": "message-original",
@@ -498,6 +507,7 @@ def test_regeneration_message_id_is_idempotent_per_refresh_attempt():
 
 def test_legacy_modified_resubmit_is_distinct_from_pure_refresh():
     common = {
+        "semantic_model_id": 81,
         "application_id": "app-refresh",
         "conversation_id": "conversation-original",
         "message_id": "original-message-id",
@@ -519,7 +529,7 @@ def test_legacy_modified_resubmit_is_distinct_from_pure_refresh():
 
 
 def test_regeneration_accepts_explicit_id_only_for_last_user_turn():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -545,7 +555,7 @@ def test_regeneration_accepts_explicit_id_only_for_last_user_turn():
 
 
 def test_regeneration_rejects_replacing_an_earlier_user_turn():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -572,7 +582,7 @@ def test_regeneration_rejects_replacing_an_earlier_user_turn():
 
 
 def test_revise_last_question_does_not_require_history_or_replacement_id():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -591,7 +601,7 @@ def test_revise_last_question_does_not_require_history_or_replacement_id():
 
 
 def test_legacy_replacement_id_without_history_is_accepted_for_last_turn_only():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -607,7 +617,7 @@ def test_legacy_replacement_id_without_history_is_accepted_for_last_turn_only():
 
 
 def test_regeneration_text_fallback_normalizes_unicode_dash():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -627,7 +637,7 @@ def test_regeneration_text_fallback_normalizes_unicode_dash():
 
 
 def test_regeneration_text_fallback_accepts_known_ui_question_prefix_only():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -647,7 +657,7 @@ def test_regeneration_text_fallback_accepts_known_ui_question_prefix_only():
 
 def test_refresh_endpoint_is_idempotent_and_keeps_original_session_scope():
     app = build_test_app()
-    payload = {
+    payload = {"semantic_model_id": 81,
         "application_id": "app-refresh",
         "conversation_id": "conversation-original",
         "message_id": "external-message",
@@ -674,7 +684,7 @@ def test_refresh_endpoint_is_idempotent_and_keeps_original_session_scope():
 
 def test_revise_last_question_endpoint_does_not_require_history():
     app = build_test_app()
-    payload = {
+    payload = {"semantic_model_id": 81,
         "application_id": "app-refresh",
         "conversation_id": "conversation-original",
         "message_id": "external-message",
@@ -691,7 +701,7 @@ def test_revise_last_question_endpoint_does_not_require_history():
 
 
 def test_regeneration_rejects_unknown_explicit_replacement_message_id():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -707,12 +717,13 @@ def test_regeneration_rejects_unknown_explicit_replacement_message_id():
 
 
 def test_development_can_temporarily_use_fallback_identity():
-    with TestClient(
-        build_test_app(allow_missing_trusted_identity_headers=True)
+    with RawTestClient(
+        build_test_app(allow_missing_trusted_identity_headers=True),
+        headers={'Authorization': 'Bearer phase0c-fixture-token'},
     ) as client:
         response = client.post(
             "/agent_chat",
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "anonymous-development",
                 "message_id": "m1",
@@ -720,7 +731,8 @@ def test_development_can_temporarily_use_fallback_identity():
             },
         )
 
-    assert response.status_code == 200
+    assert response.status_code == 401
+    assert response.json()['detail']['code'] == 'STATE_NAMESPACE_REQUIRED'
 
 
 def test_application_header_is_ignored_and_body_scope_is_used():
@@ -732,15 +744,15 @@ def test_application_header_is_ignored_and_body_scope_is_used():
                 "X-User-Id": "u1",
                 "X-Application-Id": "app-from-gateway",
             },
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "different-app",
                 "conversation_id": "c1",
                 "message_id": "m1",
                 "question": "你好",
             },
         )
-    assert response.status_code == 200
-    assert response.json()["conversation_id"] == "c1"
+    assert response.status_code == 403
+    assert response.json()['detail']['code'] == 'STATE_NAMESPACE_MISMATCH'
 
 
 def test_legacy_application_header_setting_no_longer_requires_header():
@@ -748,14 +760,15 @@ def test_legacy_application_header_setting_no_longer_requires_header():
         response = client.post(
             "/agent_chat",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "c1",
                 "message_id": "m1",
                 "question": "你好",
             },
         )
-    assert response.status_code == 200
+    assert response.status_code == 401
+    assert response.json()['detail']['code'] == 'STATE_APPLICATION_REQUIRED'
 
 
 def test_stream_returns_sanitized_error_event_after_accepting_unexpected_failure():
@@ -770,7 +783,7 @@ def test_stream_returns_sanitized_error_event_after_accepting_unexpected_failure
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "stream-error",
                 "message_id": "m1",
@@ -790,7 +803,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "real-stream",
                 "message_id": "m1",
@@ -903,7 +916,7 @@ def test_chat_stream_uses_document_chat_section_format():
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "document-chat-format",
                 "message_id": "m1",
@@ -934,7 +947,7 @@ def test_missing_parameter_stream_uses_document_clarification_section_format():
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "document-clarification-format",
                 "message_id": "m1",
@@ -1108,7 +1121,7 @@ def test_stream_tool_result_preserves_new_agent_application_error_status():
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "web-tool-error-stream",
                 "message_id": "m1",
@@ -1131,7 +1144,7 @@ def test_stream_uses_complete_label_with_cancelled_business_status():
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "stream-cancel",
                 "message_id": "m1",
@@ -1148,7 +1161,7 @@ def test_stream_uses_complete_label_with_cancelled_business_status():
 def test_stream_message_id_conflict_is_http_409_before_accepted_event():
     app = build_test_app()
     headers = {"X-Tenant-Id": "t1", "X-User-Id": "u1"}
-    original = {
+    original = {"semantic_model_id": 81,
         "application_id": "app1",
         "conversation_id": "stream-conflict",
         "message_id": "same-message",
@@ -1176,7 +1189,7 @@ def test_removed_management_routes_are_not_exposed():
 
 
 def test_chat_accepts_platform_skill_tool_and_mcp_contract():
-    payload = {
+    payload = {"semantic_model_id": 81,
         "application_id": "app1",
         "conversation_id": "extension-contract",
         "message_id": "m1",
@@ -1207,7 +1220,7 @@ def test_chat_rejects_ambiguous_multiple_spreadsheets():
         response = client.post(
             "/agent_chat",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1", "conversation_id": "files",
                 "message_id": "m1", "question": "分析这些文件",
                 "temp_file_paths": ["uploads/a.xlsx", "uploads/b.xlsx"],

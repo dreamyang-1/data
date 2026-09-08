@@ -83,7 +83,12 @@ class CompositeSemanticQueryTool:
         semantic_model_id: int | None,
         business_domain_id: int | None,
     ) -> DataQueryResult:
-        if request.metrics and not all(metric.metric_id for metric in request.metrics):
+        # Explicit scopes bind through Oagnet's strict domain-set query. The
+        # legacy sql-translator name resolver is model-wide and cannot be used
+        # as a preflight for these requests.
+        scoped_binding_in_query = bool(request.authorized_semantic_scope and request.business_domain_ids
+                                       and getattr(self.semantic, 'model_only_metric_resolution', False))
+        if request.metrics and not all(metric.metric_id for metric in request.metrics) and not scoped_binding_in_query:
             resolved = await self.semantic.resolve_metrics(request, semantic_model_id)
             if resolved:
                 requested_names = {metric.input for metric in request.metrics}

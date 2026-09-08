@@ -135,7 +135,7 @@ async def test_orchestrator_returns_structured_requirements_instead_of_predictio
         sessions=InMemorySessionStore(),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app",
             conversation_id="forecast-readiness",
             message_id="message-1",
@@ -161,7 +161,7 @@ async def test_orchestrator_returns_user_input_requirements_before_query() -> No
         sessions=InMemorySessionStore(),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app",
             conversation_id="forecast-question-readiness",
             message_id="message-1",

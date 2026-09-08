@@ -11,9 +11,9 @@ from collections.abc import AsyncIterator
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.domain.models import (
     AgentResponse,
@@ -35,9 +35,10 @@ from app.services.file_ingestion import FileImportError
 from app.services.orchestrator import DataAnalysisOrchestrator
 from app.services.progress import _progress_callback, progress_scope
 from minio_followup_store import DatasetScope
+from app.security import trusted_backend, require_application_namespace
 
 
-router = APIRouter(tags=["data-analysis"])
+router = APIRouter(tags=["data-analysis"], dependencies=[Depends(trusted_backend)])
 logger = logging.getLogger(__name__)
 
 
@@ -45,6 +46,22 @@ class SpreadsheetImportRequest(StrictModel):
     application_id: str = Field(min_length=1, max_length=100)
     conversation_id: str = Field(min_length=1, max_length=128)
     object_name: str = Field(min_length=1, max_length=1024)
+    semantic_model_id: int = Field(gt=0, strict=True)
+    business_domain_id: int | None = Field(default=None, gt=0, strict=True)
+    business_domain_ids: list[int] = Field(default_factory=list, max_length=50)
+    database_id: int | None = Field(default=None, gt=0, strict=True)
+    knowledge_base_names: list[str] = Field(default_factory=list, max_length=50)
+
+    def _scope_chat(self) -> ChatRequest:
+        keys = {'semantic_model_id','business_domain_id','business_domain_ids','database_id','knowledge_base_names'}
+        values = {k:getattr(self,k) for k in keys if k in self.model_fields_set}
+        return ChatRequest(application_id=self.application_id,conversation_id=self.conversation_id,
+                           message_id='spreadsheet-import',question='Register uploaded spreadsheet',**values)
+
+    @model_validator(mode='after')
+    def validate_scope(self):
+        self._scope_chat()
+        return self
 
 
 class SpreadsheetImportResponse(StrictModel):
@@ -68,7 +85,8 @@ async def import_spreadsheet(
     request: Request,
     x_roles: str | None = Header(default=None),
 ) -> SpreadsheetImportResponse:
-    identity = trusted_identity(x_roles)
+    identity = trusted_identity(request)
+    require_application_namespace(request, payload.application_id)
     application_id = payload.application_id
     importer = request.app.state.container.file_importer
     if importer is None:
@@ -81,7 +99,10 @@ async def import_spreadsheet(
                 user_id=identity.user_id,
                 application_id=application_id,
                 conversation_id=payload.conversation_id,
+                authorized_semantic_scope_fingerprint=payload._scope_chat().authorized_semantic_scope.fingerprint(),
             ),
+            semantic_model_id=payload.semantic_model_id,
+            business_domain_ids=payload._scope_chat().business_domain_ids,
         )
     except FileImportError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -123,16 +144,13 @@ CHAT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
 }
 
 
-def trusted_identity(roles: str | None) -> TrustedIdentity:
-    """Use an internal anonymous scope; caller identity headers are not required."""
-    return TrustedIdentity(
-        tenant_id="default-tenant",
-        user_id="default-user",
-        roles=[role.strip() for role in (roles or "").split(",") if role.strip()],
-    )
+def trusted_identity(request: Request) -> TrustedIdentity:
+    """State isolation identity, verified by the backend service dependency."""
+    return request.state.trusted_identity
 
 
 async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
+    require_application_namespace(request, chat.application_id)
     stage_tracker = StageSpanTracker()
     existing_progress = _progress_callback.get()
 
@@ -323,7 +341,10 @@ async def bind_chat_spreadsheet(
                 user_id=identity.user_id,
                 application_id=chat.application_id,
                 conversation_id=chat.conversation_id,
+                authorized_semantic_scope_fingerprint=chat.authorized_semantic_scope.fingerprint(),
             ),
+            semantic_model_id=chat.semantic_model_id,
+            business_domain_ids=chat.business_domain_ids,
         )
     except FileImportError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -507,7 +528,8 @@ async def chat(
     request: Request,
     x_roles: str | None = Header(default=None, description="可选；逗号分隔的角色"),
 ) -> AgentResponse:
-    identity = trusted_identity(x_roles)
+    identity = trusted_identity(request)
+    require_application_namespace(request, payload.application_id)
     external_conversation_id = payload.conversation_id
     is_regeneration = payload.regenerate
     if not is_regeneration:
@@ -583,7 +605,8 @@ async def chat_stream(
     request: Request,
     x_roles: str | None = Header(default=None, description="可选；逗号分隔的角色"),
 ) -> StreamingResponse:
-    identity = trusted_identity(x_roles)
+    identity = trusted_identity(request)
+    require_application_namespace(request, payload.application_id)
     external_conversation_id = payload.conversation_id
     external_message_id = payload.message_id
     is_regeneration = payload.regenerate

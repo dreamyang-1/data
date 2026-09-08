@@ -296,6 +296,8 @@ class PlatformHttpClient:
 
 
 class HttpSemanticAdapter:
+    model_only_metric_resolution = True
+
     def __init__(self, settings: Settings, client: PlatformHttpClient) -> None:
         self.settings = settings
         self.client = client
@@ -313,6 +315,11 @@ class HttpSemanticAdapter:
     async def resolve_metrics(
         self, request: CanonicalAnalysisRequest, semantic_model_id: int | None
     ) -> list[MetricRef]:
+        HttpDataRetrievalAdapter._enforce_bound_scope(request, semantic_model_id, None)
+        if request.authorized_semantic_scope and request.authorized_semantic_scope.business_domain_ids:
+            # sql-translator's metadata resolver accepts model + names only.
+            # Do not perform model-wide retrieval then filter its response.
+            raise AdapterError('EXPLICIT_DOMAIN_METADATA_NOT_SUPPORTED', 'Metadata retrieval needs a domain-scoped upstream contract')
         identity = TrustedIdentity(
             tenant_id=request.tenant_id, user_id=request.user_id, roles=[]
         )
@@ -403,6 +410,7 @@ class HttpKnowledgeAdapter:
         scope: list[str],
         identity: TrustedIdentity,
         application_id: str | None = None,
+        authorized_scope_fingerprint: str = '',
     ) -> Any:
         payload = {
             "query": queries,
@@ -424,6 +432,7 @@ class HttpKnowledgeAdapter:
             "cache_user_id": identity.user_id,
             "cache_roles": sorted(set(identity.roles)),
             "cache_application_id": application_id or "",
+            "cache_authorized_scope_fingerprint": authorized_scope_fingerprint,
         }
         if self.cache is not None:
             cached = await self.cache.get(payload)
@@ -496,6 +505,7 @@ class HttpKnowledgeAdapter:
         # Scope is supplied by the trusted application binding. Empty is an
         # explicit "no knowledge base" decision, not permission to use a global
         # default configured for another application.
+        HttpDataRetrievalAdapter._enforce_bound_scope(request, request.semantic_model_id, None)
         scope = list(request.knowledge_base_names)
         if not scope:
             raise AdapterError("KNOWLEDGE_SCOPE_MISSING", "analysis knowledge bases not configured")
@@ -516,6 +526,7 @@ class HttpKnowledgeAdapter:
             scope=scope,
             identity=identity,
             application_id=request.application_id,
+            authorized_scope_fingerprint=request.authorized_semantic_scope.fingerprint() if request.authorized_semantic_scope else '',
         )
         hits = normalize_and_deduplicate_hits(
             data,
@@ -672,6 +683,8 @@ class HttpDataRetrievalAdapter:
         """
         if semantic_model_id is None:
             return MetricDiscovery(metrics=[])
+        self._enforce_bound_scope(request, semantic_model_id, business_domain_id)
+        self._require_supported_retrieval_scope(request)
         query = request.rewritten_question or request.original_question
         discovery_request = request
         if (
@@ -727,6 +740,7 @@ class HttpDataRetrievalAdapter:
         )
         if generated.get("success") is not True:
             return MetricDiscovery(metrics=[])
+        self._confirm_generated_scope(request, generated, business_domain_id)
         raw_asl = generated.get("result")
         evidence = generated.get("semantic_evidence")
         if not isinstance(raw_asl, str) or not isinstance(evidence, dict):
@@ -835,6 +849,8 @@ class HttpDataRetrievalAdapter:
         """
         if semantic_model_id is None:
             return MetricDiscovery(metrics=[])
+        self._enforce_bound_scope(request, semantic_model_id, business_domain_id)
+        self._require_supported_retrieval_scope(request)
         query = request.rewritten_question or request.original_question
         generated = await self.client.post(
             self.settings.asl_generator_base_url,
@@ -860,6 +876,7 @@ class HttpDataRetrievalAdapter:
         )
         if generated.get("success") is not True:
             return MetricDiscovery(metrics=[])
+        self._confirm_generated_scope(request, generated, business_domain_id)
         raw_asl = generated.get("result")
         evidence = generated.get("semantic_evidence")
         if not isinstance(raw_asl, str) or not isinstance(evidence, dict):
@@ -1109,6 +1126,8 @@ class HttpDataRetrievalAdapter:
                 "semantic_model_id is required",
             )
 
+        self._enforce_bound_scope(request, semantic_model_id, business_domain_id)
+        self._require_supported_retrieval_scope(request)
         metric_definitions = await self._current_metric_definitions(request, identity)
         metric_definition_fingerprints = [
             hashlib.sha256(json.dumps(
@@ -1677,6 +1696,7 @@ class HttpDataRetrievalAdapter:
                     if metric.metric_id is not None
                 ],
                 "metric_definition_fingerprints": metric_definition_fingerprints,
+                "authorized_scope_fingerprint": request.authorized_semantic_scope.fingerprint() if request.authorized_semantic_scope else None,
                 "intent_asl_contract": intent_asl_contract,
             }, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
         intent_contract_confirmed = False
@@ -1739,6 +1759,7 @@ class HttpDataRetrievalAdapter:
             )
             if generated.get("success") is not True:
                 raise AdapterError("ASL_GENERATION_FAILED", "ASL generator rejected request")
+            self._confirm_generated_scope(request, generated, business_domain_id)
             contract_acknowledged = (
                 "asl_validation" in generated or "asl_contract" in generated
             )
@@ -1989,6 +2010,8 @@ class HttpDataRetrievalAdapter:
                 {
                     "asl": json.dumps(asl, ensure_ascii=False),
                     "modelId": str(semantic_model_id),
+                    "business_domain_ids": list(request.business_domain_ids),
+                    "authorized_semantic_scope": request.authorized_semantic_scope.model_dump(mode='json') if request.authorized_semantic_scope else None,
                     "analysis_contract": (
                         analysis_contract.model_dump(mode="json")
                         if analysis_contract is not None else None
@@ -2097,6 +2120,8 @@ class HttpDataRetrievalAdapter:
         execute_payload: dict[str, Any] = {
             "sql": sql,
             "modelId": str(semantic_model_id),
+            "business_domain_ids": list(request.business_domain_ids),
+            "authorized_semantic_scope": request.authorized_semantic_scope.model_dump(mode='json') if request.authorized_semantic_scope else None,
         }
         if analysis_contract is not None:
             execute_payload["analysis_contract"] = analysis_contract.model_dump(mode="json")
@@ -2253,9 +2278,12 @@ class HttpDataRetrievalAdapter:
     ) -> list[dict[str, Any]]:
         """Read the current published formula for every version-bound metric."""
         definitions: list[dict[str, Any]] = []
+        scope = request.authorized_semantic_scope
         for metric in request.metrics:
             if not metric.metric_id or not metric.version:
                 continue
+            if scope and not metric.metric_id.startswith(f'{scope.semantic_model_id}:'):
+                raise AdapterError('SEMANTIC_SCOPE_MISMATCH', 'Metric binding belongs to another model')
             path = self.settings.semantic_definition_path.format(
                 metric_id=metric.metric_id,
                 version=metric.version,
@@ -2271,6 +2299,9 @@ class HttpDataRetrievalAdapter:
                     "METRIC_DEFINITION_INVALID",
                     "semantic service returned an invalid metric definition",
                 )
+            scope = request.authorized_semantic_scope
+            if scope is not None and (payload.get('semantic_model_id') != scope.semantic_model_id or not scope.contains_domain(payload.get('business_domain_id'))):
+                raise AdapterError('SEMANTIC_SCOPE_MISMATCH', 'Metric definition is outside the authorized semantic scope')
             returned_id = str(payload.get("metric_id") or "")
             formula = str(
                 payload.get("calculation_formula") or payload.get("formula") or ""
@@ -2295,6 +2326,50 @@ class HttpDataRetrievalAdapter:
                 ),
             })
         return definitions
+
+    @staticmethod
+    def _require_supported_retrieval_scope(request):
+        # Verified against Oagnet prompt_build.py::_build_where: even its list
+        # API adds shared domain -1. Until that external contract is fixed,
+        # no current-backend explicit grant may enter that retrieval path.
+        scope = request.authorized_semantic_scope
+        if scope and scope.business_domain_ids:
+            code = ('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED' if len(scope.business_domain_ids) > 1
+                    else 'EXPLICIT_DOMAIN_NOT_SUPPORTED')
+            raise AdapterError(code, 'Oagnet includes a shared domain outside the explicit backend grant')
+
+    @staticmethod
+    def _enforce_bound_scope(request, semantic_model_id, business_domain_id):
+        scope = request.authorized_semantic_scope
+        if scope is None:
+            return  # Isolated adapter utilities; public orchestration always binds scope.
+        if (semantic_model_id != scope.semantic_model_id or request.semantic_model_id != scope.semantic_model_id
+                or tuple(request.business_domain_ids) != scope.business_domain_ids
+                or request.database_id != scope.database_id
+                or tuple(sorted(request.knowledge_base_names)) != scope.knowledge_base_names
+                or business_domain_id is not None and not scope.contains_domain(business_domain_id)):
+            raise AdapterError('REQUEST_SCOPE_INVALID', 'Execution scope differs from current backend authorization')
+
+    @staticmethod
+    def _confirm_generated_scope(request, generated, business_domain_id=None):
+        scope = request.authorized_semantic_scope
+        if scope is None:
+            return
+        # A model-wide grant can execute a narrower query. Confirm the actual
+        # requested restriction while keeping authorization unchanged.
+        queried_domains = list(scope.business_domain_ids) or ([business_domain_id] if business_domain_id else [])
+        if (generated.get('semantic_model_id') != scope.semantic_model_id
+                or generated.get('business_domain_ids') != queried_domains):
+            raise AdapterError('ASL_SCOPE_INVALID', 'Oagnet did not confirm the exact authorized scope')
+        evidence = generated.get('semantic_evidence')
+        if not isinstance(evidence, dict) or evidence.get('semantic_model_id') != scope.semantic_model_id or evidence.get('requested_business_domain_ids') != queried_domains:
+            raise AdapterError('ASL_SCOPE_INVALID', 'Oagnet scope evidence is missing or incompatible')
+        if not isinstance(evidence.get('resolved_business_domain_ids'), list) or not isinstance(evidence.get('selected_metrics'), list):
+            raise AdapterError('ASL_SCOPE_INVALID', 'Oagnet omitted domain and metric provenance')
+        if any(not scope.contains_domain(d) for d in evidence['resolved_business_domain_ids']):
+            raise AdapterError('ASL_SCOPE_INVALID', 'Resolved domains exceed backend authorization')
+        if any(not isinstance(m, dict) or m.get('semantic_model_id') != scope.semantic_model_id or not scope.contains_domain(m.get('business_domain_id')) for m in evidence['selected_metrics']):
+            raise AdapterError('ASL_SCOPE_INVALID', 'Selected metric exceeds backend authorization')
 
     @classmethod
     def _apply_current_metric_formulas(

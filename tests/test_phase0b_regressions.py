@@ -53,7 +53,7 @@ async def test_real_orchestrator_slot_operations(utterances, expected_metrics, e
         return await delegate(request, identity, **kw)
     agent.adapters.retrieval.query=capture
     for number,text in enumerate(utterances):
-        response=await agent.handle(ChatRequest(application_id='fixture-app', conversation_id='slot-flow', message_id=f'm{number}', question=text), IDENTITY)
+        response=await agent.handle(ChatRequest(semantic_model_id=81, application_id='fixture-app', conversation_id='slot-flow', message_id=f'm{number}', question=text), IDENTITY)
         assert response.status != 'NEEDS_CLARIFICATION', response.answer
     assert len(requests) >= 2
     assert names(requests[-1]) == expected_metrics
@@ -112,7 +112,7 @@ async def test_actual_pending_does_not_hijack_new_hospital_task():
     request.missing_slots=['semantic_ambiguity']
     request.semantic_ambiguities=[SemanticAmbiguity(type='metric',question='请选择销售额还是销售量',candidates=['销售额','销售量'])]
     await agent.sessions.put_pending(PendingState(request=request),expected_version=0)
-    response=await agent.handle(ChatRequest(application_id='fixture-app',conversation_id='pending',message_id='m2',question='江苏有哪些医院？'),IDENTITY)
+    response=await agent.handle(ChatRequest(semantic_model_id=81, application_id='fixture-app',conversation_id='pending',message_id='m2',question='江苏有哪些医院？'),IDENTITY)
     assert response.intent==PrimaryIntent.DETAIL_QUERY
     assert response.status!='NEEDS_CLARIFICATION'
     assert await agent.sessions.get_pending(IDENTITY.tenant_id,IDENTITY.user_id,'fixture-app','pending') is None
@@ -120,7 +120,7 @@ async def test_actual_pending_does_not_hijack_new_hospital_task():
 
 @pytest.mark.asyncio
 async def test_final_clarification_has_scoped_reason_without_raw_text():
-    response=await service().handle(ChatRequest(application_id='fixture-app',conversation_id='trace',message_id='m1',question='分析本月数据'),IDENTITY)
+    response=await service().handle(ChatRequest(semantic_model_id=81, application_id='fixture-app',conversation_id='trace',message_id='m1',question='分析本月数据'),IDENTITY)
     assert response.status=='NEEDS_CLARIFICATION'
     assert response.clarification_decision_traces
     trace=response.clarification_decision_traces[0]
@@ -199,7 +199,10 @@ async def test_dataset_truncation_reaches_real_orchestrator_guard(explicit):
     from app.services.orchestrator import ExplicitDatasetUnavailableError
     agent=service();agent.dataset_store=_ResultStore()
     request=parse('销售额最高5名');request.application_id='fixture-app'
-    reference=agent.dataset_store.save_dataset(scope=scope_for_request(request),columns=['销售额'],rows=[{'销售额':2}],snapshot_id='partial-snapshot',data_as_of=datetime(2026,9,7,tzinfo=timezone.utc),source_type='DATABASE_QUERY',source_ref='fixture',transformation_log=({'type':'query_provenance','source_truncated':True},))
+    from app.services.authorized_scope import bind_authorized_scope
+    bind_authorized_scope(request, ChatRequest(semantic_model_id=81, application_id=request.application_id,
+                          conversation_id=request.conversation_id, message_id='fixture', question=request.original_question).authorized_semantic_scope)
+    reference=agent.dataset_store.save_dataset(scope=scope_for_request(request),semantic_model_id=81,columns=['销售额'],rows=[{'销售额':2}],snapshot_id='partial-snapshot',data_as_of=datetime(2026,9,7,tzinfo=timezone.utc),source_type='DATABASE_QUERY',source_ref='fixture',transformation_log=({'type':'query_provenance','source_truncated':True},))
     await agent.sessions.put_dataset_reference(reference.to_dict(),recent_limit=5)
     request.source_dataset_id=reference.dataset_id
     if explicit:
@@ -231,11 +234,11 @@ def test_slot_audit_agrees_with_explicit_mutation(text,slot,operation):
 @pytest.mark.parametrize('answer',['查看名称列表','1'])
 async def test_bare_attribute_asks_operation_then_accepts_list_choice(answer):
     agent=service()
-    first=await agent.handle(ChatRequest(application_id='fixture-app',conversation_id='bare',message_id='m1',question='商品名称'),IDENTITY)
+    first=await agent.handle(ChatRequest(semantic_model_id=81, application_id='fixture-app',conversation_id='bare',message_id='m1',question='商品名称'),IDENTITY)
     assert first.status=='NEEDS_CLARIFICATION'
     assert first.missing_slots==['semantic_ambiguity']
     assert all('指标' not in q for q in first.clarification_questions)
-    second=await agent.handle(ChatRequest(application_id='fixture-app',conversation_id='bare',message_id='m2',question=answer),IDENTITY)
+    second=await agent.handle(ChatRequest(semantic_model_id=81, application_id='fixture-app',conversation_id='bare',message_id='m2',question=answer),IDENTITY)
     assert second.intent==PrimaryIntent.DETAIL_QUERY
     assert 'metric' not in second.missing_slots
 
@@ -253,7 +256,7 @@ def test_bare_attribute_grouping_choice_requires_measure_only_after_operation_se
 async def test_root_dag_pending_does_not_capture_complete_new_business_task():
     agent=service()
     await agent.sessions.put_dag_pending(IDENTITY.tenant_id,IDENTITY.user_id,'fixture-app','dag-new',{'state_version':1},expected_version=0)
-    result=await agent.handle(ChatRequest(application_id='fixture-app',conversation_id='dag-new',message_id='m2',question='江苏有哪些医院？'),IDENTITY)
+    result=await agent.handle(ChatRequest(semantic_model_id=81, application_id='fixture-app',conversation_id='dag-new',message_id='m2',question='江苏有哪些医院？'),IDENTITY)
     assert result.intent==PrimaryIntent.DETAIL_QUERY
     assert await agent.sessions.get_dag_pending(IDENTITY.tenant_id,IDENTITY.user_id,'fixture-app','dag-new') is None
 
@@ -269,7 +272,7 @@ async def test_root_dag_mapping_question_is_not_repeated():
     settings=Settings(env='test',adapter_mode='mock',multi_question_model_enabled=False)
     agent=Clarifying(settings=settings,classifier=_Classifier(),adapters=build_mock_adapters(),sessions=InMemorySessionStore(),task_planner=MultiQuestionPlanner(settings))
     async def send(mid,text):
-        return await agent.handle(ChatRequest(application_id='fixture-app',conversation_id='dag-repeat',message_id=mid,question=text),IDENTITY)
+        return await agent.handle(ChatRequest(semantic_model_id=81, application_id='fixture-app',conversation_id='dag-repeat',message_id=mid,question=text),IDENTITY)
     first=await send('m1','查询销售额；另外查询库存')
     assert len(first.awaiting_task_ids)==2
     mapping=await send('m2','本月和上周')

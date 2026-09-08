@@ -7,6 +7,7 @@ import math
 import re
 from typing import Any, Literal
 from uuid import UUID, uuid4
+from app.domain.semantic_scope import AuthorizedSemanticScope
 
 from pydantic import (
     AliasChoices,
@@ -389,6 +390,7 @@ class LegacyLineageTarget(StrictModel):
 
 
 class CanonicalAnalysisRequest(StrictModel):
+    authorized_semantic_scope: AuthorizedSemanticScope | None = None
     # Literal user targets and an explicit inheritance barrier, not V2 state.
     lineage_target: LegacyLineageTarget | None = None
     cleared_filter_families: list[Literal["region"]] = Field(default_factory=list)
@@ -475,9 +477,14 @@ class CanonicalAnalysisRequest(StrictModel):
     resolved_business_domain_ids: list[int] = Field(
         default_factory=list,
         max_length=50,
-        description="AUTO 模式下由当前语义向量命中确定的执行域，不代表调用方显式选择",
+        description="MODEL_WIDE 范围内由语义检索确定的查询域，不改变本轮后端授权范围",
     )
-    business_domain_selection_mode: Literal["AUTO", "EXPLICIT"] = "AUTO"
+    business_domain_selection_mode: Literal["MODEL_WIDE", "EXPLICIT_DOMAINS"] = "MODEL_WIDE"
+
+    @field_validator('business_domain_selection_mode', mode='before')
+    @classmethod
+    def restore_legacy_scope_mode(cls, value):
+        return {'AUTO': 'MODEL_WIDE', 'EXPLICIT': 'EXPLICIT_DOMAINS'}.get(value, value)
     confirmed_memory_ids: list[str] = Field(default_factory=list)
     confirmed_preferences: list[str] = Field(default_factory=list)
     dependency_constraints: list[DependencyConstraint] = Field(
@@ -613,7 +620,7 @@ class ChatRequest(StrictModel):
     message_id: str = Field(min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=4000)
     application_id: str = Field(min_length=1, max_length=100)
-    semantic_model_id: int | None = Field(default=None, gt=0, strict=True)
+    semantic_model_id: int = Field(gt=0, strict=True)
     database_id: int | None = Field(
         default=None,
         gt=0,
@@ -821,7 +828,7 @@ class ChatRequest(StrictModel):
         if self.task_answers and self.dag_resume_token is None:
             raise ValueError("task_answers requires dag_resume_token")
         if self.business_domain_id is not None:
-            if self.business_domain_ids and self.business_domain_ids != [self.business_domain_id]:
+            if 'business_domain_ids' in self.model_fields_set and self.business_domain_ids != [self.business_domain_id]:
                 raise ValueError(
                     "business_domain_id conflicts with business_domain_ids"
                 )
@@ -850,6 +857,18 @@ class ChatRequest(StrictModel):
         if sum(len(item.content) for item in self.history) > 120_000:
             raise ValueError("history content must contain at most 120000 characters")
         return self
+
+    @property
+    def authorized_semantic_scope(self) -> AuthorizedSemanticScope:
+        # Only current validated transport fields mint authorization. A model,
+        # rewritten question or restored request cannot supply this property.
+        return AuthorizedSemanticScope(
+            semantic_model_id=self.semantic_model_id,
+            business_domain_ids=tuple(self.business_domain_ids),
+            scope_mode='EXPLICIT_DOMAINS' if self.business_domain_ids else 'MODEL_WIDE',
+            database_id=self.database_id,
+            knowledge_base_names=tuple(self.knowledge_base_names),
+        )
 
 
 class TrustedIdentity(StrictModel):
@@ -1257,6 +1276,7 @@ class ClarificationDecisionTrace(StrictModel):
 
 
 class AgentResponse(StrictModel):
+    error_code: str | None = None
     clarification_decision_traces: list[ClarificationDecisionTrace] = Field(default_factory=list)
     request_id: UUID
     conversation_id: str

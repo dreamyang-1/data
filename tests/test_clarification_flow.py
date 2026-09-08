@@ -25,7 +25,7 @@ IDENTITY = TrustedIdentity(tenant_id="tenant-1", user_id="user-1")
 @pytest.mark.asyncio
 async def test_clarification_echoes_normalized_date_and_only_asks_for_metric():
     response = await service().handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="date-clarification",
             message_id="message-1",
@@ -58,7 +58,7 @@ async def test_clarification_echoes_normalized_date_and_only_asks_for_metric():
 async def test_natural_date_reply_completes_the_existing_metric_request():
     agent = service()
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="metric-then-date",
             message_id="message-1",
@@ -74,7 +74,7 @@ async def test_natural_date_reply_completes_the_existing_metric_request():
     ]
 
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="metric-then-date",
             message_id="message-2",
@@ -93,7 +93,7 @@ async def test_natural_date_reply_completes_the_existing_metric_request():
 async def test_explicit_new_chat_interrupts_an_unrelated_pending_request():
     agent = service()
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="interrupt-chat",
             message_id="message-1",
@@ -103,7 +103,7 @@ async def test_explicit_new_chat_interrupts_an_unrelated_pending_request():
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="interrupt-chat",
             message_id="message-2",
@@ -123,7 +123,7 @@ async def test_explicit_new_chat_interrupts_an_unrelated_pending_request():
 async def test_explicit_detail_task_replaces_an_unrelated_pending_metric_query():
     agent = service()
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="interrupt-detail",
             message_id="message-1",
@@ -133,7 +133,7 @@ async def test_explicit_detail_task_replaces_an_unrelated_pending_metric_query()
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="interrupt-detail",
             message_id="message-2",
@@ -150,7 +150,7 @@ async def test_explicit_detail_task_replaces_an_unrelated_pending_metric_query()
 async def test_short_slot_reply_does_not_replace_the_pending_request():
     agent = service()
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="slot-reply",
             message_id="message-1",
@@ -160,7 +160,7 @@ async def test_short_slot_reply_does_not_replace_the_pending_request():
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="slot-reply",
             message_id="message-2",
@@ -177,7 +177,7 @@ async def test_short_slot_reply_does_not_replace_the_pending_request():
 async def test_comparison_object_names_close_pending_comparison():
     agent = service()
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="comparison-objects",
             message_id="message-1",
@@ -191,7 +191,7 @@ async def test_comparison_object_names_close_pending_comparison():
     assert "具体经销商或供应商名称" in first.clarification_questions[0]
 
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="comparison-objects",
             message_id="message-2",
@@ -211,7 +211,7 @@ async def test_comparison_object_names_close_pending_comparison():
 async def test_explicit_new_task_wording_resets_a_pending_analysis():
     agent = service()
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="explicit-reset",
             message_id="message-1",
@@ -221,7 +221,7 @@ async def test_explicit_new_task_wording_resets_a_pending_analysis():
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="explicit-reset",
             message_id="message-2",
@@ -247,7 +247,7 @@ async def test_history_cold_recovery_does_not_swallow_new_task_or_cancel(
     question: str, expected_intent: PrimaryIntent, expected_status: str
 ):
     response = await service().handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id=f"history-{expected_intent.value}-{expected_status}",
             message_id="message-3",

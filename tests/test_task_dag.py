@@ -57,6 +57,7 @@ async def test_completed_dag_persists_branch_focus_in_root_conversation() -> Non
     responses = {}
     for task, relation_type in zip(tasks, (1, 2), strict=True):
         child = CanonicalAnalysisRequest(
+            semantic_model_id=81,
             conversation_id=conversations[task.task_id],
             tenant_id="tenant",
             user_id="user",
@@ -367,7 +368,7 @@ async def test_contextual_first_task_reuses_root_conversation() -> None:
         task_planner=MultiQuestionPlanner(settings),
     )
     await service.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             conversation_id="business-context", message_id="m1",
             question="再加订单量，算客单价谁高", application_id="app",
         ),
@@ -412,7 +413,7 @@ async def test_dependent_new_entity_does_not_reuse_predecessor_dataset() -> None
         ),
     ])
     await service._handle_task_plan(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             conversation_id="entity-transition", message_id="m1",
             question="ignored", application_id="app",
         ),
@@ -575,7 +576,7 @@ async def test_orchestrator_executes_and_aggregates_independent_tasks() -> None:
         task_planner=MultiQuestionPlanner(settings),
     )
     response = await service.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             conversation_id="multi",
             message_id="m1",
             question="查询本月销售额；另外解释退款率口径",
@@ -625,7 +626,7 @@ async def test_non_report_composite_response_keeps_every_dataset_id() -> None:
     )
 
     response = await service.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             conversation_id="multi-datasets",
             message_id="m1",
             question="查询 TDC-3 产品的主要适用科室、次要适用科室",
@@ -775,6 +776,7 @@ async def test_composite_report_keeps_all_dataset_evidence_and_exports_sections(
                     identity.user_id,
                     chat.application_id,
                     chat.conversation_id,
+                    chat.authorized_semantic_scope.fingerprint(),
                 ),
                 columns=("维度", "数值"),
                 row_count=1,
@@ -821,7 +823,7 @@ async def test_composite_report_keeps_all_dataset_evidence_and_exports_sections(
         report_exporter=exporter,
     )
     response = await service.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             conversation_id="composite-report",
             message_id="m1",
             question=(
@@ -877,7 +879,7 @@ async def test_dependency_failure_skips_downstream_but_preserves_sibling() -> No
             ),
         ],
     )
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         conversation_id="multi", message_id="m2",
         question="ignored", application_id="app",
     )
@@ -930,6 +932,7 @@ async def test_dependent_new_entity_query_inherits_bounded_upstream_dimension_va
                     scope=DatasetScope(
                         identity.tenant_id, identity.user_id,
                         child.application_id, child.conversation_id,
+                        child.authorized_semantic_scope.fingerprint(),
                     ),
                     columns=(
                         "product_name",
@@ -1041,6 +1044,7 @@ async def test_ambiguous_dependency_dimension_fails_closed_without_running_downs
                 scope=DatasetScope(
                     identity.tenant_id, identity.user_id,
                     child.application_id, child.conversation_id,
+                    child.authorized_semantic_scope.fingerprint(),
                 ),
                 columns=("region_name", "category_name"), row_count=1,
                 byte_size=30, snapshot_id="s", data_as_of=now.isoformat(),
@@ -1068,7 +1072,7 @@ async def test_ambiguous_dependency_dimension_fails_closed_without_running_downs
         dataset_store=store,
     )
     response = await service._handle_task_plan(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             conversation_id="dependency-ambiguous", message_id="m1",
             question="ignored", application_id="app",
         ),
@@ -1123,15 +1127,16 @@ async def test_completed_checkpoint_is_reused_after_service_restart() -> None:
         AtomicTask(task_id="task-1", question="查询销售额"),
         AtomicTask(task_id="task-2", question="查询库存"),
     ])
-    chat = ChatRequest(conversation_id="resume", message_id="resume-1", question="ignored", application_id="app")
+    chat = ChatRequest(semantic_model_id=81, conversation_id="resume", message_id="resume-1", question="ignored", application_id="app")
     identity = TrustedIdentity(tenant_id="t", user_id="u")
     fingerprint = __import__("hashlib").sha256(plan.model_dump_json().encode()).hexdigest()
     completed = await service._handle(
-        ChatRequest(conversation_id="old", message_id="old", question="查询销售额", application_id="app"),
+        ChatRequest(semantic_model_id=81, conversation_id="old", message_id="old", question="查询销售额", application_id="app"),
         identity,
     )
     calls.clear()
     await sessions.put_dag_checkpoint("t", "u", "app", "resume", "resume-1", {
+        'authorized_scope': chat.authorized_semantic_scope.fingerprint(),
         "schema_version": "1.0", "plan_fingerprint": fingerprint,
         "completed": {"task-1": completed.model_dump(mode="json")},
         "conversations": {"task-1": "old"},
@@ -1388,7 +1393,7 @@ async def test_dag_resume_fails_closed_when_semantic_scope_changes() -> None:
         dag_resume_token=first.dag_resume_token,
     ), identity)
     assert changed.status == "SAFE_FALLBACK"
-    assert "范围与原任务不一致" in changed.answer
+    assert "不适用于本次访问范围" in changed.answer
 
 
 @pytest.mark.asyncio

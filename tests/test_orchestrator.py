@@ -76,7 +76,7 @@ async def test_regeneration_replaces_stale_continuation_state_in_original_scope(
         {"state_version": 1, "stale": True},
         expected_version=0,
     )
-    execution, _, _ = _prepare_regeneration(ChatRequest(
+    execution, _, _ = _prepare_regeneration(ChatRequest(semantic_model_id=81,
         application_id="app1",
         conversation_id=conversation_id,
         message_id="refresh-message",
@@ -1060,7 +1060,7 @@ def test_asl_metric_binding_preserves_semantic_model_scope_for_followups():
 @pytest.mark.asyncio
 async def test_business_only_lineage_is_structured_and_not_claimed_high_reliability():
     response = await service().handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-lineage",
             conversation_id="lineage-conversation",
             message_id="lineage-message",
@@ -1111,7 +1111,7 @@ async def test_unqualified_sales_metric_uses_auditable_default_time_range():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="c1", message_id="m1", question="帮我查一下销售额"),
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="c1", message_id="m1", question="帮我查一下销售额"),
         identity,
     )
     assert first.status == "COMPLETED"
@@ -1156,6 +1156,7 @@ async def test_time_clarification_preserves_ranked_comparison_execution_contract
         identity, "ranked-time-clarification",
     )
     pending_request.application_id = "app1"
+    pending_request.semantic_model_id = 81
     pending_request.filters = RuleBasedIntentClassifier().classify(
         pending_request.original_question, identity, pending_request.conversation_id
     ).filters
@@ -1165,7 +1166,7 @@ async def test_time_clarification_preserves_ranked_comparison_execution_contract
     assert first.missing_slots == ["time_range"]
 
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="ranked-time-clarification",
             message_id="m2",
@@ -1315,7 +1316,7 @@ async def test_complete_new_query_discards_unanswered_pending_clarification():
 @pytest.mark.asyncio
 async def test_detail_query_runs_without_permission_module_for_now():
     response = await service().handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="c2",
             message_id="m1",
@@ -1329,7 +1330,7 @@ async def test_detail_query_runs_without_permission_module_for_now():
 @pytest.mark.asyncio
 async def test_forecast_fails_closed_when_history_is_insufficient():
     response = await service().handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="c3", message_id="m1", question="预测下个月销售额"
         ),
@@ -1344,12 +1345,12 @@ async def test_forecast_fails_closed_when_history_is_insufficient():
 async def test_duplicate_message_id_returns_cached_response_without_advancing_round():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    chat = ChatRequest(application_id="app1", conversation_id="idem", message_id="same", question="帮我查销售额")
+    chat = ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="idem", message_id="same", question="帮我查销售额")
     first = await agent.handle(chat, identity)
     duplicate = await agent.handle(chat, identity)
     assert duplicate == first
     completed = await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="idem", message_id="next", question="本月"), identity
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="idem", message_id="next", question="本月"), identity
     )
     assert completed.status == "COMPLETED"
 
@@ -1359,14 +1360,14 @@ async def test_repeated_self_contained_query_with_new_message_id_reuses_response
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="repeat-query",
             message_id="m1", question="查询最近一年销售额。",
         ),
         identity,
     )
     repeated = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="repeat-query",
             message_id="m2", question="查询最近一年销售额",
         ),
@@ -1381,7 +1382,7 @@ async def test_repeated_self_contained_query_with_new_message_id_reuses_response
 def test_elliptical_followups_are_not_repeat_cache_candidates():
     for question in ("展示20条结果", "其中最高的是哪个", "那再查询最近一个月"):
         assert not DataAnalysisOrchestrator._is_repeat_cache_candidate(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="app1", conversation_id="repeat-query",
                 message_id=question, question=question,
             )
@@ -1392,7 +1393,7 @@ def test_elliptical_followups_are_not_repeat_cache_candidates():
 async def test_explicit_dataset_unavailable_fails_closed_without_database_fallback():
     agent = service()
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="missing-dataset",
             message_id="m1",
@@ -1409,10 +1410,10 @@ async def test_explicit_dataset_unavailable_fails_closed_without_database_fallba
 async def test_cancel_clears_pending_clarification():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    await agent.handle(ChatRequest(application_id="app1", conversation_id="cancel", message_id="m1", question="查销售额"), identity)
-    cancelled = await agent.handle(ChatRequest(application_id="app1", conversation_id="cancel", message_id="m2", question="算了，不用了"), identity)
+    await agent.handle(ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="cancel", message_id="m1", question="查销售额"), identity)
+    cancelled = await agent.handle(ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="cancel", message_id="m2", question="算了，不用了"), identity)
     assert cancelled.status == "CANCELLED"
-    fresh = await agent.handle(ChatRequest(application_id="app1", conversation_id="cancel", message_id="m3", question="你好"), identity)
+    fresh = await agent.handle(ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="cancel", message_id="m3", question="你好"), identity)
     assert fresh.intent == PrimaryIntent.CHAT
 
 
@@ -1422,7 +1423,7 @@ async def test_cancel_command_stops_running_request_in_same_trusted_conversation
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     running = asyncio.create_task(
         agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="app1",
                 conversation_id="running-cancel",
                 message_id="m1",
@@ -1434,7 +1435,7 @@ async def test_cancel_command_stops_running_request_in_same_trusted_conversation
     await asyncio.wait_for(agent.started.wait(), timeout=1)
 
     command = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="running-cancel",
             message_id="m2",
@@ -1458,7 +1459,7 @@ async def test_cancel_command_cannot_stop_another_users_running_request():
     other = TrustedIdentity(tenant_id="t1", user_id="other")
     running = asyncio.create_task(
         agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="app1",
                 conversation_id="shared-id",
                 message_id="m1",
@@ -1470,7 +1471,7 @@ async def test_cancel_command_cannot_stop_another_users_running_request():
     await asyncio.wait_for(agent.started.wait(), timeout=1)
 
     unrelated = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="shared-id",
             message_id="m2",
@@ -1483,7 +1484,7 @@ async def test_cancel_command_cannot_stop_another_users_running_request():
     assert not running.done()
 
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="shared-id",
             message_id="m3",
@@ -1498,11 +1499,11 @@ async def test_cancel_command_cannot_stop_another_users_running_request():
 async def test_same_conversation_id_is_isolated_between_users():
     agent = service()
     await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="shared", message_id="m1", question="查销售额"),
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="shared", message_id="m1", question="查销售额"),
         TrustedIdentity(tenant_id="t1", user_id="u1"),
     )
     other = await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="shared", message_id="m1", question="你好"),
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="shared", message_id="m1", question="你好"),
         TrustedIdentity(tenant_id="t1", user_id="u2"),
     )
     assert other.intent == PrimaryIntent.CHAT
@@ -1513,11 +1514,11 @@ async def test_follow_up_inherits_last_completed_request():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="follow", message_id="m1", question="查询本月销售额"), identity
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="follow", message_id="m1", question="查询本月销售额"), identity
     )
     assert first.status == "COMPLETED"
     follow = await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="follow", message_id="m2", question="那华东呢"), identity
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="follow", message_id="m2", question="那华东呢"), identity
     )
     assert follow.status == "COMPLETED"
     remembered = await agent.sessions.get_last_request("t1", "u1", "app1", "follow")
@@ -1544,7 +1545,7 @@ async def test_failed_provisional_frame_cannot_replace_verified_product_scope():
         sessions=sessions,
     )
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    verified = CanonicalAnalysisRequest(
+    verified = CanonicalAnalysisRequest(semantic_model_id=81,
         conversation_id="verified-frame-wins",
         application_id="app1",
         tenant_id="t1",
@@ -1578,7 +1579,7 @@ async def test_failed_provisional_frame_cannot_replace_verified_product_scope():
     await sessions.put_task_frame(provisional)
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="verified-frame-wins",
             message_id="follow-up",
@@ -1598,7 +1599,7 @@ async def test_failed_provisional_frame_cannot_replace_verified_product_scope():
 async def test_recent_two_region_reference_builds_verified_set_aggregation():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    base = CanonicalAnalysisRequest(
+    base = CanonicalAnalysisRequest(semantic_model_id=81,
         conversation_id="two-region-set",
         application_id="app1",
         tenant_id="t1",
@@ -1639,7 +1640,7 @@ async def test_recent_two_region_reference_builds_verified_set_aggregation():
 
     await agent._apply_recent_region_set_reference(
         request,
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="two-region-set",
             message_id="m4",
@@ -1676,7 +1677,7 @@ async def test_relationship_count_followup_preserves_verified_subject_filter():
     )
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="relationship-count-followup",
             message_id="m1",
@@ -1686,7 +1687,7 @@ async def test_relationship_count_followup_preserves_verified_subject_filter():
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="relationship-count-followup",
             message_id="m2",
@@ -1723,12 +1724,13 @@ async def test_metric_only_followup_preserves_verified_region_filter():
         "metric-scope-followup",
     )
     previous.application_id = "app1"
+    previous.semantic_model_id = 81
     previous.asl_template = {"metrics": [{"name": "annual_total_sales"}]}
     await agent.sessions.put_task_frame(previous)
     await agent.sessions.put_last_request(previous)
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="metric-scope-followup",
             message_id="m2",
@@ -1761,12 +1763,13 @@ async def test_relationship_list_followup_preserves_verified_subject_filter():
         "relationship-list-followup",
     )
     previous.application_id = "app1"
+    previous.semantic_model_id = 81
     previous.asl_template = {"dimensions": [{"name": "product.product_name"}]}
     await agent.sessions.put_task_frame(previous)
     await agent.sessions.put_last_request(previous)
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="relationship-list-followup",
             message_id="m2",
@@ -1801,12 +1804,13 @@ async def test_sort_only_followup_preserves_relationship_set_and_adds_grouping()
         "sort-only-followup",
     )
     previous.application_id = "app1"
+    previous.semantic_model_id = 81
     previous.asl_template = {"dimensions": [{"name": "dealer.dealer_name"}]}
     await agent.sessions.put_task_frame(previous)
     await agent.sessions.put_last_request(previous)
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="sort-only-followup",
             message_id="m2",
@@ -1939,7 +1943,7 @@ async def test_sort_after_relationship_count_restores_counted_entity_grouping():
         1,
     ):
         response = await agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="app1",
                 conversation_id=conversation_id,
                 message_id=f"m{turn}",
@@ -1991,7 +1995,7 @@ async def test_explicit_group_ranking_replaces_prior_relationship_projection():
         1,
     ):
         response = await agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="app1",
                 conversation_id=conversation_id,
                 message_id=f"m{turn}",
@@ -2025,12 +2029,13 @@ async def test_top_n_only_followup_ranks_an_unordered_relationship_list():
         "top-only-followup",
     )
     previous.application_id = "app1"
+    previous.semantic_model_id = 81
     previous.asl_template = {"dimensions": [{"name": "dealer.dealer_name"}]}
     await agent.sessions.put_task_frame(previous)
     await agent.sessions.put_last_request(previous)
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="top-only-followup",
             message_id="m2",
@@ -2070,7 +2075,7 @@ async def test_follow_up_uses_task_frame_after_upstream_failure():
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
 
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="failed-follow",
             message_id="m1", question="查询2026年7月销售额",
         ), identity,
@@ -2082,7 +2087,7 @@ async def test_follow_up_uses_task_frame_after_upstream_failure():
     assert frame.asl_template is None
 
     follow = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="failed-follow",
             message_id="m2", question="按日统计",
         ), identity,
@@ -2098,7 +2103,7 @@ async def test_granularity_only_follow_up_inherits_metric_and_becomes_trend():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="daily-follow",
             message_id="m1", question="查询2026年7月销售额",
         ),
@@ -2107,7 +2112,7 @@ async def test_granularity_only_follow_up_inherits_metric_and_becomes_trend():
     assert first.status == "COMPLETED"
 
     follow = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="daily-follow",
             message_id="m2", question="按日统计",
         ),
@@ -2133,7 +2138,7 @@ async def test_natural_elliptical_follow_up_recovers_task_frame(follow_up):
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id=f"natural-{follow_up}",
             message_id="m1", question="查询2026年7月销售额",
         ), identity,
@@ -2141,7 +2146,7 @@ async def test_natural_elliptical_follow_up_recovers_task_frame(follow_up):
     assert first.status == "COMPLETED"
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id=f"natural-{follow_up}",
             message_id="m2", question=follow_up,
         ), identity,
@@ -2159,7 +2164,7 @@ async def test_history_recovers_clarification_after_short_memory_is_missing():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="cold-session",
             message_id="m3",
@@ -2212,7 +2217,7 @@ async def test_confirmed_long_term_preference_is_applied_and_auditable():
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="memory-use",
             message_id="m1",
@@ -2263,7 +2268,7 @@ async def test_confirmed_default_fills_only_a_missing_slot(monkeypatch):
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="memory-default",
             message_id="m1",
@@ -2283,7 +2288,7 @@ async def test_confirmed_default_fills_only_a_missing_slot(monkeypatch):
     assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in remembered.assumptions
 
     explicit = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="memory-explicit",
             message_id="m1", question="查询2026年7月销售额",
             use_longterm_memory=True,
@@ -2303,7 +2308,7 @@ async def test_contextual_follow_up_inherits_slots_but_switches_to_analysis_inte
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="analysis-follow-up",
             message_id="m1",
@@ -2314,7 +2319,7 @@ async def test_contextual_follow_up_inherits_slots_but_switches_to_analysis_inte
     assert first.status == "COMPLETED"
 
     follow_up = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="analysis-follow-up",
             message_id="m2",

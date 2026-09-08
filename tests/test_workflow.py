@@ -25,7 +25,7 @@ async def test_workflow_routes_chat_directly_to_compose():
     orchestrator = make_orchestrator()
     workflow = build_workflow(orchestrator)
     result = await workflow.ainvoke({
-        "chat": ChatRequest(application_id="test-app", conversation_id="c1", message_id="m1", question="你好"),
+        "chat": ChatRequest(semantic_model_id=81, application_id="test-app", conversation_id="c1", message_id="m1", question="你好"),
         "identity": TrustedIdentity(tenant_id="t1", user_id="u1"),
     })
     assert result["response"].status == "COMPLETED"
@@ -40,14 +40,14 @@ async def test_workflow_clarify_then_complete():
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
 
     first = await workflow.ainvoke({
-        "chat": ChatRequest(application_id="test-app", conversation_id="c2", message_id="m1", question="帮我查一下销售额"),
+        "chat": ChatRequest(semantic_model_id=81, application_id="test-app", conversation_id="c2", message_id="m1", question="帮我查一下销售额"),
         "identity": identity,
     })
     assert first["response"].status == "NEEDS_CLARIFICATION"
     assert "time_range" in first["response"].missing_slots
 
     second = await workflow.ainvoke({
-        "chat": ChatRequest(application_id="test-app", conversation_id="c2", message_id="m2", question="本月"),
+        "chat": ChatRequest(semantic_model_id=81, application_id="test-app", conversation_id="c2", message_id="m2", question="本月"),
         "identity": identity,
     })
     assert second["response"].status == "COMPLETED"
@@ -60,7 +60,7 @@ async def test_workflow_forecast_requires_history_before_execution():
     orchestrator = make_orchestrator()
     workflow = build_workflow(orchestrator)
     result = await workflow.ainvoke({
-        "chat": ChatRequest(application_id="test-app", conversation_id="c3", message_id="m1", question="预测下个月销售额"),
+        "chat": ChatRequest(semantic_model_id=81, application_id="test-app", conversation_id="c3", message_id="m1", question="预测下个月销售额"),
         "identity": TrustedIdentity(tenant_id="t1", user_id="u1"),
     })
     response = result["response"]
@@ -75,7 +75,7 @@ async def test_workflow_detail_runs_while_platform_permission_module_is_deferred
     orchestrator = make_orchestrator()
     workflow = build_workflow(orchestrator)
     result = await workflow.ainvoke({
-        "chat": ChatRequest(
+        "chat": ChatRequest(semantic_model_id=81,
             application_id="test-app",
             conversation_id="c4", message_id="m1",
             question="查询昨天订单明细，显示订单号和金额",
@@ -91,7 +91,7 @@ async def test_workflow_routes_metric_definition_skip_execute():
     orchestrator = make_orchestrator()
     workflow = build_workflow(orchestrator)
     result = await workflow.ainvoke({
-        "chat": ChatRequest(application_id="test-app", conversation_id="c5", message_id="m1", question="销售额的口径是什么"),
+        "chat": ChatRequest(semantic_model_id=81, application_id="test-app", conversation_id="c5", message_id="m1", question="销售额的口径是什么"),
         "identity": TrustedIdentity(tenant_id="t1", user_id="u1"),
     })
     assert result["response"].status == "COMPLETED"
@@ -123,7 +123,7 @@ async def test_workflow_advanced_intents_obey_data_and_input_gates(
     orchestrator = make_orchestrator()
     workflow = build_workflow(orchestrator)
     result = await workflow.ainvoke({
-        "chat": ChatRequest(application_id="test-app", conversation_id=f"c-{intent.value}", message_id="m1", question=question),
+        "chat": ChatRequest(semantic_model_id=81, application_id="test-app", conversation_id=f"c-{intent.value}", message_id="m1", question=question),
         "identity": TrustedIdentity(tenant_id="t1", user_id="u1"),
     })
     response = result["response"]

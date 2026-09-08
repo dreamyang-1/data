@@ -102,6 +102,9 @@ class Settings(BaseSettings):
     knowledge_base_search_path: str = "/knowledge_base/search_docs"
     knowledge_base_timeout_seconds: float = Field(default=30, gt=0, le=300)
     platform_api_key: SecretStr | None = None
+    # Matches the business backend's existing Authorization: Bearer authKey
+    # transport. It authenticates the service caller, never computes user ACLs.
+    trusted_backend_token: SecretStr | None = None
     http_max_retries: int = Field(default=2, ge=0, le=5)
     http_retry_backoff_seconds: float = Field(default=0.2, ge=0, le=5)
     semantic_resolve_path: str = "/v1/semantic/metrics/resolve"

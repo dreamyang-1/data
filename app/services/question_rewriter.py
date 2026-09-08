@@ -106,6 +106,10 @@ class HttpEntityAttributeSearcher:
             )
         response.raise_for_status()
         payload = response.json()
+        domains = sorted(set(business_domain_ids or ([business_domain_id] if business_domain_id else [])))
+        if (not isinstance(payload, dict) or payload.get('semantic_model_id') != semantic_model_id
+                or payload.get('business_domain_ids') != domains):
+            raise ValueError('SEMANTIC_SCOPE_MISMATCH: entity retrieval scope was not confirmed')
         matches = payload.get("matches", []) if isinstance(payload, dict) else []
         if not isinstance(matches, list):
             raise ValueError("entity attribute search returned invalid matches")
@@ -119,6 +123,9 @@ class HttpEntityAttributeSearcher:
         for item in matches:
             if not isinstance(item, dict):
                 continue
+            if (domains and item.get('business_domain_id') not in domains
+                    or item.get('semantic_model_id', semantic_model_id) != semantic_model_id):
+                raise ValueError('SEMANTIC_SCOPE_MISMATCH: entity candidate outside authorized scope')
             normalized = dict(item)
             if version is not None and "semantic_model_version" not in normalized:
                 normalized["semantic_model_version"] = str(version)
@@ -132,7 +139,9 @@ class HttpEntityAttributeSearcher:
         semantic_model_id: int,
         business_domain_ids: list[int] | None = None,
     ) -> list[dict[str, Any]]:
-        if not candidates:
+        # The current Oagnet display endpoint adds global domain -1 and omits
+        # candidate domain provenance. It cannot enforce an explicit grant.
+        if not candidates or business_domain_ids:
             return []
         async with httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout_seconds) as client:
             response = await client.post(
@@ -145,6 +154,8 @@ class HttpEntityAttributeSearcher:
             )
         response.raise_for_status()
         payload = response.json()
+        if not isinstance(payload, dict) or payload.get('semantic_model_id') != semantic_model_id:
+            raise ValueError('SEMANTIC_SCOPE_MISMATCH: display model was not confirmed')
         matches = payload.get("matches", []) if isinstance(payload, dict) else []
         if not isinstance(matches, list):
             raise ValueError("semantic display resolver returned invalid matches")
@@ -316,6 +327,8 @@ class QuestionRewriter:
             str(item.get("candidate_id") or ""): item
             for item in matches
             if isinstance(item, dict) and str(item.get("candidate_id") or "")
+            and item.get('semantic_model_id', request.semantic_model_id) == request.semantic_model_id
+            and (not request.business_domain_ids or item.get('business_domain_id') in request.business_domain_ids)
         }
         display: dict[str, Any] = {}
         metrics: list[str] = []
@@ -440,7 +453,9 @@ class QuestionRewriter:
                     type(result).__name__,
                 )
                 continue
-            current = [dict(item) for item in result if isinstance(item, dict)]
+            current = [dict(item) for item in result if isinstance(item, dict)
+                       and item.get('semantic_model_id', semantic_model_id) == semantic_model_id
+                       and (not business_domain_ids or item.get('business_domain_id') in business_domain_ids)]
             # A user-selected ambiguity option is stronger than another
             # equal-score vector search.  Limit this literal to the confirmed
             # semantic attribute so the same province/city (or similar)
@@ -508,6 +523,8 @@ class QuestionRewriter:
         business_domain_ids: list[int] | None = None,
         force_context: bool = False,
     ) -> RewriteResult:
+        if business_domain_ids is None:
+            business_domain_ids = [business_domain_id] if business_domain_id is not None else []
         original = question.strip()
         locally_normalized, local_events = self._normalize_local_metric_typos(original)
         locally_normalized, word_order_events = self._normalize_polite_word_order(
@@ -578,6 +595,9 @@ class QuestionRewriter:
                 context_applied=context_applied, degraded=True
             )
 
+        matches = [item for item in matches if isinstance(item, dict)
+                   and item.get('semantic_model_id', semantic_model_id) == semantic_model_id
+                   and (not business_domain_ids or item.get('business_domain_id') in business_domain_ids)]
         normalized, events = self._normalize(rewritten, locally_normalized, matches)
         semantic_version = self._semantic_model_version(matches)
         semantic_ambiguities = self._detect_semantic_ambiguities(
@@ -1262,15 +1282,11 @@ class QuestionRewriter:
     ) -> tuple[str, bool]:
         if previous is None:
             return question, False
-        if (
-            previous.semantic_model_id is not None
-            and semantic_model_id is not None
-            and previous.semantic_model_id != semantic_model_id
-        ):
+        if previous.semantic_model_id != semantic_model_id:
             return question, False
         current_domains = set(business_domain_ids or [])
         previous_domains = set(previous.business_domain_ids)
-        if current_domains and previous_domains and current_domains != previous_domains:
+        if current_domains != previous_domains:
             return question, False
         strong_reference = any(
             marker in question for marker in self._STRONG_CONTEXT_MARKERS
