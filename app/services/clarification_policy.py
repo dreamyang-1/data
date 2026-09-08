@@ -18,13 +18,55 @@ def clarification_key(slot, candidates):
     return hashlib.sha256(json.dumps([slot, sorted(candidates)], ensure_ascii=False).encode()).hexdigest()
 
 
+def semantic_question_identity(request: CanonicalAnalysisRequest, slot: str):
+    """Hash only the displayed choice, its target and stable catalog identity.
+
+    Scores, generated ambiguity IDs and question wording do not change the
+    business decision. Other, not-yet-displayed choices must not affect its key.
+    """
+    ambiguity = next((a for a in request.semantic_ambiguities if a.blocking), None)
+    if ambiguity is None:
+        return clarification_key(slot, []), []
+    identities = []
+    for index, label in enumerate(ambiguity.candidates):
+        detail = ambiguity.candidate_details[index] if index < len(ambiguity.candidate_details) else {}
+        catalog = {key: detail[key] for key in (
+            'metric_id', 'canonical_code', 'attribute_code', 'semantic_id',
+            'canonical_name', 'attribute_name', 'entity_name', 'value',
+            'business_domain_id', 'version', 'semantic_model_version',
+        ) if detail.get(key) is not None}
+        if not any(catalog.get(key) for key in ('metric_id', 'canonical_code', 'attribute_code', 'semantic_id')):
+            catalog.update({key: detail[key] for key in ('id', 'candidate_id', 'record_id') if detail.get(key) is not None})
+        encoded = json.dumps([label, catalog], ensure_ascii=False, sort_keys=True, default=str)
+        identities.append('option-' + hashlib.sha256(encoded.encode()).hexdigest()[:20])
+    context = [slot, ambiguity.type, ambiguity.phrase,
+               sorted(ambiguity.affected_slots), ambiguity.semantic_model_id,
+               ambiguity.semantic_model_version, sorted(identities)]
+    key = hashlib.sha256(json.dumps(context, ensure_ascii=False).encode()).hexdigest()
+    return key, identities
+
+
+def restore_clarification_keys(previous: CanonicalAnalysisRequest, asked_keys: set[str]) -> set[str]:
+    """Map an old union-of-labels key to the question actually shown in Pending.
+
+    Use the prior snapshot, not the newly answered request: two distinct targets
+    can have identical labels. No persisted schema or raw-text trace is added.
+    """
+    restored = set(asked_keys)
+    options = sorted({c for a in previous.semantic_ambiguities if a.blocking for c in a.candidates})
+    candidates = ['option-' + hashlib.sha256(c.encode()).hexdigest()[:20] for c in options]
+    for slot in ('semantic_ambiguity', 'turn_relation'):
+        if slot in previous.missing_slots and clarification_key(slot, candidates) in asked_keys:
+            restored.add(semantic_question_identity(previous, slot)[0])
+    return restored
+
+
 def decide_clarification(request: CanonicalAnalysisRequest, slot: str, *, source_stage: str, asked_keys: set[str]):
     ambiguities = [a for a in request.semantic_ambiguities if a.blocking]
-    options = sorted({c for a in ambiguities for c in a.candidates}) if slot in {'semantic_ambiguity','turn_relation'} else []
-    candidates = ['option-' + hashlib.sha256(c.encode()).hexdigest()[:20] for c in options]
-    key = clarification_key(slot, candidates)
-    already = key in asked_keys
     semantic = slot in {'semantic_ambiguity', 'turn_relation'}
+    options = ambiguities[0].candidates if semantic and ambiguities else []
+    key, candidates = semantic_question_identity(request, slot) if semantic else (clarification_key(slot, []), [])
+    already = key in asked_keys
     is_user = len(options) >= 2 if semantic else slot in USER_SLOTS
     reason = ('USER_REFERENCE_AMBIGUITY' if slot=='turn_relation' else 'USER_SEMANTIC_AMBIGUITY') if semantic else 'MISSING_USER_SLOT'
     if slot == 'task_answer_mapping':

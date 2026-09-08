@@ -65,7 +65,7 @@ from app.services.conversation_followup import (
     resolve_conversation_temporal_context,
 )
 from app.services.turn_admission import TurnAdmissionGate
-from app.services.clarification_policy import decide_clarification
+from app.services.clarification_policy import decide_clarification, restore_clarification_keys
 from app.services.authorized_scope import bind_authorized_scope, state_scope_matches
 from app.services.legacy_guards import pending_answer_admissibility, apply_snapshot_display_default, apply_region_clear_barrier
 from app.services.history_compaction import compact_history
@@ -6681,8 +6681,8 @@ class DataAnalysisOrchestrator:
             or not pending.semantic_ambiguities
         ):
             return None
-        ambiguity = pending.semantic_ambiguities[0]
-        if not ambiguity.candidates:
+        ambiguity = next((item for item in pending.semantic_ambiguities if item.blocking), None)
+        if ambiguity is None or not ambiguity.candidates:
             return None
         compact = re.sub(r"\s+", "", answer).strip("，,。.!！?？;；：:")
         chinese_numbers = {
@@ -7912,6 +7912,8 @@ class DataAnalysisOrchestrator:
     async def _request_clarification(self, request: CanonicalAnalysisRequest, rounds: int, *, source_stage: str = 'INTENT_ASL_CONTRACT') -> AgentResponse:
         previous = await self.sessions.get_pending(request.tenant_id, request.user_id, request.application_id, request.conversation_id)
         asked_keys = set(previous.asked_clarification_keys) if previous is not None and request.pending_state_version else set()
+        if previous is not None and asked_keys:
+            asked_keys = restore_clarification_keys(previous.request, asked_keys)
         decisions = [decide_clarification(request, slot, source_stage=source_stage, asked_keys=asked_keys) for slot in request.missing_slots]
         traces = [trace for _, trace in decisions]
         allowed_slots = {trace.blocking_slot for trace in traces if trace.decision == 'ASK'}
@@ -9171,10 +9173,12 @@ class DataAnalysisOrchestrator:
             if not question:
                 continue
             raw_candidates = value.get("candidates")
-            supplied_details = [
-                dict(item) for item in value.get("candidate_details") or []
-                if isinstance(item, dict)
-            ][:10]
+            raw_details = value.get("candidate_details") or []
+            if not isinstance(raw_details, list) or any(not isinstance(item, dict) for item in raw_details):
+                return []
+            if isinstance(raw_candidates, list) and len(raw_details) > len(raw_candidates):
+                return []
+            supplied_details = [dict(item) for item in raw_details[:10]]
             candidates: list[str] = []
             candidate_details: list[dict[str, Any]] = []
             if isinstance(raw_candidates, list):
@@ -9245,7 +9249,10 @@ class DataAnalysisOrchestrator:
                     ),
                 ))
             except ValueError:
-                continue
+                # Partial acceptance could discard a still-blocking choice.
+                # The existing semantic clarification gate treats an invalid
+                # candidate batch as a system failure, without asking the user.
+                return []
         return result
 
     @classmethod
@@ -9268,10 +9275,14 @@ class DataAnalysisOrchestrator:
                 prompt = "需要用哪段历史数据建模？请提供历史起止范围或窗口，例如：基于过去12个月。"
                 if prompt not in questions:
                     questions.append(prompt)
-            elif slot == "semantic_ambiguity" and request.ambiguities:
+            elif slot == "semantic_ambiguity" and (request.semantic_ambiguities or request.ambiguities):
+                semantic_questions = (
+                    [item.question for item in request.semantic_ambiguities if item.blocking]
+                    if request.semantic_ambiguities else request.ambiguities
+                )
                 questions.extend(
                     text
-                    for value in request.ambiguities
+                    for value in semantic_questions
                     if (
                         text := cls._sanitize_clarification_text(value)
                     ) not in questions
@@ -9319,7 +9330,7 @@ class DataAnalysisOrchestrator:
                     "option_details": ambiguity.candidate_details,
                     "multi_select": False,
                     "allow_free_text": True,
-                } for ambiguity in request.semantic_ambiguities)
+                } for ambiguity in request.semantic_ambiguities if ambiguity.blocking)
                 continue
             single_slot_request = request.model_copy(update={"missing_slots": [slot]})
             slot_questions = cls._clarification_questions(single_slot_request)
