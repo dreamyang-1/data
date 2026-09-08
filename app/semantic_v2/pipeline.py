@@ -14,6 +14,8 @@ from .models import (
 )
 from .registries import PayloadContractRegistry
 from .slot_reducer import TaskPatch
+from .authorized_contract import (AuthorizedScopeContext, AuthorizedVersionMetadata,
+    CatalogBindingEvidence, DatasetBindingEvidence, TaskBindingEvidence, validate_authorized_refs)
 
 
 class OperationMarker(StrictModel):
@@ -171,6 +173,9 @@ def collect_bound_refs(value) -> tuple[BoundSemanticRef, ...]:
 
 def validate_bound_ref_scope_and_permission(value, snapshot: SnapshotContext, permission: PermissionContext,
                                           authorizations: tuple[BoundRefAuthorization, ...]) -> None:
+    if isinstance(permission, AuthorizedScopeContext):
+        validate_authorized_refs(value, snapshot, permission, authorizations)
+        return
     refs = collect_bound_refs(value)
     if refs and not all((snapshot.catalog_publish_id, snapshot.vector_index_version, snapshot.semantic_model_id,
                          snapshot.database_id, snapshot.business_domain_ids, permission.authorization_decision_id,
@@ -178,7 +183,7 @@ def validate_bound_ref_scope_and_permission(value, snapshot: SnapshotContext, pe
                          permission.metric_scope_hash)):
         raise ValueError('PLAN_VALIDATION_FAILURE: missing snapshot or permission evidence')
     for ref in refs:
-        if (ref.catalog_version != snapshot.catalog_version or ref.semantic_model_id != snapshot.semantic_model_id or
+        if (not ref.business_domain_ids or ref.catalog_version != snapshot.catalog_version or ref.semantic_model_id != snapshot.semantic_model_id or
                 not set(ref.business_domain_ids) <= set(snapshot.business_domain_ids) or
                 not set(ref.business_domain_ids) <= set(permission.allowed_business_domain_ids)):
             raise ValueError('PLAN_VALIDATION_FAILURE: bound reference snapshot/scope mismatch')
@@ -193,7 +198,7 @@ def validate_bound_ref_scope_and_permission(value, snapshot: SnapshotContext, pe
 
 class LogicalPlan(StrictModel):
     model_config = ConfigDict(extra='forbid', frozen=True)
-    schema_version: Literal['0.2.1'] = '0.2.1'
+    schema_version: Literal['0.2.1', '0.2.2'] = '0.2.1'
     plan_id: Identifier
     topic_id: Identifier
     task_id: Identifier
@@ -202,14 +207,14 @@ class LogicalPlan(StrictModel):
     analysis_goals: list[AnalysisGoal]
     payload: PlanPayload
     delivery_spec: DeliverySpec
-    permission_requirement: PermissionContext
+    permission_requirement: PermissionContext | AuthorizedScopeContext
     snapshot_requirement: SnapshotContext
     policy_decisions: list[ScopePolicyDecision] = Field(default_factory=list)
-    version_metadata: VersionMetadata
+    version_metadata: VersionMetadata | AuthorizedVersionMetadata
     current_turn_ref: Identifier
     current_turn_digest: str = Field(pattern=r'^[0-9a-f]{64}$')
     sanitized_turn_text: str | None = None
-    permission_proofs: tuple[BoundRefAuthorization, ...] = ()
+    permission_proofs: tuple[BoundRefAuthorization | CatalogBindingEvidence | DatasetBindingEvidence | TaskBindingEvidence, ...] = ()
 
     @property
     def query_shape(self):
@@ -223,6 +228,13 @@ class LogicalPlan(StrictModel):
     @model_validator(mode='after')
     def final_plan_invariants(self):
         from .models import freeze_contract
+        authorized = isinstance(self.permission_requirement, AuthorizedScopeContext)
+        expected_version = '0.2.2' if authorized else '0.2.1'
+        expected_proof = (CatalogBindingEvidence, DatasetBindingEvidence, TaskBindingEvidence) if authorized else BoundRefAuthorization
+        if (self.schema_version != expected_version or self.version_metadata.schema_version != expected_version
+                or self.version_metadata.plan_schema_version != expected_version
+                or any(not isinstance(p, expected_proof) for p in self.permission_proofs)):
+            raise ValueError('PLAN_VALIDATION_FAILURE: incompatible scope contract version')
         PayloadContractRegistry.validate(self.payload, self.service_route, self.analysis_goals)
         validate_bound_ref_scope_and_permission(self.payload, self.snapshot_requirement,
                                               self.permission_requirement, self.permission_proofs)
@@ -236,6 +248,14 @@ class BackendContract(StrictModel):
     contract_version: Identifier
     semantic_fingerprint: Identifier
     mode: Literal['SHADOW_ONLY'] = 'SHADOW_ONLY'
+
+
+class AuthorizedLogicalPlan(LogicalPlan):
+    """Explicit schema export for the current upstream scope contract."""
+    schema_version: Literal['0.2.2'] = '0.2.2'
+    permission_requirement: AuthorizedScopeContext
+    version_metadata: AuthorizedVersionMetadata
+    permission_proofs: tuple[CatalogBindingEvidence | DatasetBindingEvidence | TaskBindingEvidence, ...] = ()
 
 
 class ExecutablePlan(StrictModel):
@@ -284,7 +304,14 @@ class LogicalPlanCompiler:
                            c.catalog_type == ref.catalog_type and c.catalog_version == ref.catalog_version and
                            c.candidate_role == ref.semantic_role and c.permission_allowed is True for c in accepted):
                     raise ValueError('SEMANTIC_RESOLUTION_FAILURE: plan reference not selected from candidates')
-        return LogicalPlan(plan_id='plan:' + parse.text_digest[:24] + ':' + str(task_version),
+        plan_type = AuthorizedLogicalPlan if isinstance(permission, AuthorizedScopeContext) else LogicalPlan
+        plan_id = 'plan:' + parse.text_digest[:24] + ':' + str(task_version)
+        if isinstance(permission, AuthorizedScopeContext):
+            from .authorized_contract import contract_digest
+            plan_id = 'plan:' + contract_digest({'context': permission.fingerprint(), 'turn': parse.text_digest,
+                'message': parse.text_ref, 'task': resolution.target_task_id, 'version': task_version})
+        return plan_type(plan_id=plan_id,
+                           schema_version='0.2.2' if isinstance(permission, AuthorizedScopeContext) else '0.2.1',
                            topic_id=resolution.target_topic_id, task_id=resolution.target_task_id,
                            task_version=task_version, service_route=service_route, analysis_goals=analysis_goals,
                            payload=payload, delivery_spec=delivery_spec or DeliverySpec(),
