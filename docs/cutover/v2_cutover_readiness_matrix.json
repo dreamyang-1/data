@@ -11,7 +11,7 @@
       "evidence": [
         "app/semantic_v2/pipeline.py::CurrentTurnParser/TurnResolver"
       ],
-      "next_action": "Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes."
+      "next_action": "Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy."
     },
     {
       "capability": "TaskPatch",
@@ -24,7 +24,7 @@
       "evidence": [
         "app/semantic_v2/slot_reducer.py; deterministic supplied-patch tests pass"
       ],
-      "next_action": "Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes. Build the minimal trusted-scope bridge with exact current-request authority and state reuse checks; never infer user grants or expand explicit domains."
+      "next_action": "Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence."
     },
     {
       "capability": "Pending",
@@ -38,7 +38,7 @@
       "evidence": [
         "app/semantic_v2/state_machine.py; scoped synthetic Pending tests; Legacy critical 160/160"
       ],
-      "next_action": "Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes. Build the minimal trusted-scope bridge with exact current-request authority and state reuse checks; never infer user grants or expand explicit domains. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "Historical Recall",
@@ -52,7 +52,7 @@
       "evidence": [
         "app/semantic_v2/pipeline.py::TurnResolver requires historical_task_id; tests/test_task_recall_contract.py covers Legacy"
       ],
-      "next_action": "Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes. Build the minimal trusted-scope bridge with exact current-request authority and state reuse checks; never infer user grants or expand explicit domains. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "ADD",
@@ -65,7 +65,7 @@
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured"
       ],
-      "next_action": "Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "REPLACE",
@@ -78,7 +78,7 @@
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured"
       ],
-      "next_action": "Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "REMOVE",
@@ -91,7 +91,7 @@
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured"
       ],
-      "next_action": "Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "CLEAR",
@@ -104,7 +104,7 @@
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured"
       ],
-      "next_action": "Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "Semantic Role",
@@ -118,7 +118,7 @@
       "evidence": [
         "app/semantic_v2/models.py::Mention/SemanticCandidate; no live role benchmark"
       ],
-      "next_action": "Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts. Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts. Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "Canonical Binding",
@@ -132,7 +132,7 @@
       "evidence": [
         "B-01 source fix; V2 bound refs still supplied by fixtures"
       ],
-      "next_action": "Connect the V2 plan-only grounding path to the pinned view and make release acceptance mandatory; version SQL metadata during its gated execution adapter integration without changing public legacy I/O. Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts. Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes."
+      "next_action": "Connect autonomous current-turn recognition to this boundary, then version downstream SQL metadata/cache reads during execution adapter integration; verify actual deployed acceptance without changing public legacy I/O. Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts. Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy."
     },
     {
       "capability": "Dataset Follow-up",
@@ -149,16 +149,18 @@
     },
     {
       "capability": "Semantic Scope",
-      "status": "FAIL",
+      "status": "BLOCKED",
       "blocking_level": "P0",
       "blocker_ids": [
         "V-02",
-        "X-01"
+        "X-01",
+        "C-03"
       ],
       "evidence": [
-        "Current request AuthorizedSemanticScope source gate passes; V2 MODEL_WIDE bridge absent"
+        "0.2.2 current-scope and pinned state/compiler contract verified offline; legacy 0.2.1 guard preserved. Actual runtime binding/deployed caller trust remains unverified.",
+        "docs/cutover/v2_scope_bridge/closure_report.md"
       ],
-      "next_action": "Verify deployed revisions/caller boundary and controlled release operations for this exact target. Model/domain no longer require user clarification. Build the minimal trusted-scope bridge with exact current-request authority and state reuse checks; never infer user grants or expand explicit domains."
+      "next_action": "Connect autonomous current-turn recognition to this boundary, then version downstream SQL metadata/cache reads during execution adapter integration; verify actual deployed acceptance without changing public legacy I/O. Verify deployed revisions/caller boundary and controlled release operations for this exact target. Model/domain no longer require user clarification. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence."
     },
     {
       "capability": "Catalog Version",
@@ -170,9 +172,10 @@
       ],
       "evidence": [
         "Current 81/[205] authoritative snapshot captured live; UUID/model isolation fixed; V2/SQL propagation still open",
-        "docs/cutover/catalog_identity/live_scope_evidence.json"
+        "docs/cutover/catalog_identity/live_scope_evidence.json",
+        "V2 scoped compiler now binds pin identity and requires full finish before output; no legacy HTTP/SQL cache integration yet"
       ],
-      "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot. Connect the V2 plan-only grounding path to the pinned view and make release acceptance mandatory; version SQL metadata during its gated execution adapter integration without changing public legacy I/O."
+      "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot. Connect autonomous current-turn recognition to this boundary, then version downstream SQL metadata/cache reads during execution adapter integration; verify actual deployed acceptance without changing public legacy I/O."
     },
     {
       "capability": "Catalog Publication",

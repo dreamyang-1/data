@@ -1,0 +1,14 @@
+{
+  "status": "PASS_PRECOMMIT_WORKSPACE_ALIGNMENT",
+  "baseline_commit": "aa6252f367b7da35774ccbabb17c85545975bd20",
+  "implementation_commits": [
+    "6268d18731f20b20100b4b3682f8ab631042e73d",
+    "468d44dd43528e7cd3af124c34379a6070a58b87"
+  ],
+  "feature_branch": "cutover-v2-scope-bridge-20260908-02",
+  "tracked_and_manifest_files": 917,
+  "unexpected_source_drift": 0,
+  "normalization": "Development CRLF normalized to published LF; exact hashes in change_manifest.json",
+  "final_commit": "Commit containing this report",
+  "final_commit_gate": "Post-commit verification checks every Git blob, development file, clean version tree and original Oagnet index"
+}

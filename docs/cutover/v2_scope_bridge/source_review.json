@@ -1,0 +1,64 @@
+{
+  "baseline_commit": "aa6252f367b7da35774ccbabb17c85545975bd20",
+  "files": [
+    {
+      "path": "app/semantic_v2/authorized_contract.py",
+      "sha256": "1784810fdabfa834001c459b627807603e71caa46b7ff69bcf96fc501eb413ac"
+    },
+    {
+      "path": "app/semantic_v2/catalog_bridge.py",
+      "sha256": "2a2e05b92ac741217f38a607a3f19e7d3b040281e69451b67340d1079e1f729c"
+    },
+    {
+      "path": "app/semantic_v2/models.py",
+      "sha256": "dff5df67b08b7ffa0daa328ed1e989947a892302c30b6943d2b749c764d01249"
+    },
+    {
+      "path": "app/semantic_v2/pipeline.py",
+      "sha256": "cd078d0ab90a49f4cf8f4d58a9838dbcc41231d76763ee27765f1a0f95144bc8"
+    },
+    {
+      "path": "tests/test_v2_authorized_catalog_bridge.py",
+      "sha256": "23b17e60d4efafd463b21bb95f497a7cdb43bef96ef43c0dcd87fa6c302c1831"
+    },
+    {
+      "path": "specs/semantic_v2/authorized_logical_plan_v0_2_2.schema.json",
+      "sha256": "4029508b82f0581637ec0f21a1b8227e2f7ceae00ed2c939fa694571ded1d998"
+    },
+    {
+      "path": "Oagnet/catalog_publication.py",
+      "sha256": "071d10b8d290869d816035a29f7da4a7f828930a14d791e305495ec40ff47051"
+    }
+  ],
+  "review": "Self-review; no separate agent. Examined current API scope/identity contract, frozen V2 validators/reducer/state/result compiler and actual Oagnet pin protocol.",
+  "verified_edges": [
+    "Current revalidated ChatRequest and TrustedIdentity to immutable scope/namespace context",
+    "Exact model/domain pinned catalog to type/role candidate handles and membership proofs",
+    "Scope-bound restore plus typed state/bindings to current-turn resolver and checked TaskPatch",
+    "Session-issued resolution plus pinned references and restored dataset/task versions to 0.2.2 compiler",
+    "Result contract plus full catalog finish to returned SHADOW_ONLY artifact",
+    "Exact scope/database/KB/namespace/activation in state compatibility, cache and plan identity"
+  ],
+  "findings_resolved": [
+    "Legacy MODEL_WIDE/optional-database context could not pass the frozen ACL-style validator",
+    "Global catalog records need empty owned-domain identity without inventing a shared-domain grant",
+    "Plan-only code must not mint executed dataset/result evidence",
+    "Serialized snapshot/context, nested state/bindings and task/dataset baselines need explicit compatibility checks",
+    "Current-turn resolution cannot be substituted from an unscoped caller; patch writes require pinned binding evidence"
+  ],
+  "retained_boundaries": [
+    "Structural JSON validation is not proof of trusted origin; only service-owned current request and persisted envelopes enter this boundary",
+    "Autonomous raw-turn parse/selection/patch generation remains V-01; fixtures supply stage outputs",
+    "Physical metadata with requested database ID fails closed until existing platform database-load mapping is connected; IDs are not guessed equivalent",
+    "Dataset execution/completeness safety and downstream ASL/SQL mapping remain V-03/S-01",
+    "DatasetState alone has no execution snapshot; SourceDatasetRef fails closed without exact trusted snapshot evidence. Structural receipt test is not runtime execution evidence.",
+    "Actual isolated catalog publication, deployed trust, full state-store wiring and real shadow/latency evidence remain open"
+  ],
+  "production_endpoint_files_unchanged": [
+    "app/api.py",
+    "app/workflow.py",
+    "Oagnet/api.py",
+    "Oagnet/agent.py",
+    "sql-translator/sql_translator_prod.py"
+  ]
+}

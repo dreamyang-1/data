@@ -29,15 +29,14 @@
       "blocker_id": "C-03",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "PARTIAL_PINNED_READ_CONTRACT",
-      "summary": "A pinned read view now binds model/domain/catalog/index/target/activation identity and cache fingerprint, validates query embedding identity, and rechecks full inventory plus authority at finish. Existing Oagnet API/SQL caches and the future V2 pipeline are not connected to it.",
+      "status": "V2_PLAN_COMPILER_PIN_ACCEPTANCE_INTEGRATED",
+      "summary": "The new V2 scoped session restores state, binds verified catalog handles, resolves the turn and compiles only with current scope; full pin.finish is mandatory before returning/caching output. Existing V1 API/SQL caches and production V2 routing remain separate/unintegrated.",
       "evidence": [
-        "Oagnet/catalog_publication.py::PinnedCatalog",
-        "Oagnet/catalog_generation.py::configured_embedding_contract",
-        "Oagnet/api.py::SemanticQueryEvidence",
-        "sql-translator/sql_translator_prod.py::get_entity"
+        "app/semantic_v2/catalog_bridge.py",
+        "Oagnet/catalog_publication.py::PinnedCatalog.identity",
+        "docs/cutover/v2_scope_bridge/test_delta.json"
       ],
-      "next_action": "Connect the V2 plan-only grounding path to the pinned view and make release acceptance mandatory; version SQL metadata during its gated execution adapter integration without changing public legacy I/O."
+      "next_action": "Connect autonomous current-turn recognition to this boundary, then version downstream SQL metadata/cache reads during execution adapter integration; verify actual deployed acceptance without changing public legacy I/O."
     },
     {
       "blocker_id": "C-04",
@@ -72,20 +71,20 @@
         "app/semantic_v2/pipeline.py::CurrentTurnParser",
         "app/semantic_v2/pipeline.py::TurnResolver"
       ],
-      "next_action": "Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes."
+      "next_action": "Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy."
     },
     {
       "blocker_id": "V-02",
       "classification": "CUTOVER_BLOCKER_P0",
       "blocking_level": "P0",
-      "status": "OPEN",
-      "summary": "Frozen V2 scope validators require nonempty snapshot domains and old permission-proof fields; they are not adapted to the current trusted MODEL_WIDE/explicit scope contract.",
+      "status": "FIXED_SOURCE_OFFLINE",
+      "summary": "Explicit logical-plan 0.2.2 scope bridge accepts current MODEL_WIDE/explicit scope with optional database, uses pinned catalog membership rather than invented ACLs, and checks state/cache/task/dataset context. Legacy 0.2.1 authorization branch remains enforced.",
       "evidence": [
-        "app/semantic_v2/pipeline.py::validate_bound_ref_scope_and_permission",
-        "app/semantic_v2/models.py::PermissionContext",
-        "app/services/authorized_scope.py"
+        "app/semantic_v2/authorized_contract.py",
+        "app/semantic_v2/catalog_bridge.py",
+        "docs/cutover/v2_scope_bridge/test_delta.json"
       ],
-      "next_action": "Build the minimal trusted-scope bridge with exact current-request authority and state reuse checks; never infer user grants or expand explicit domains."
+      "next_action": "Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence."
     },
     {
       "blocker_id": "V-03",
@@ -207,9 +206,9 @@
     "SCHEMA_DRIFT": 1,
     "EVALUATION_GAP": 3
   },
-  "open_p0": 9,
+  "open_p0": 8,
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "a1708a796c9eb103309bc189280a94fb51b0ebfd"
+  "latest_source_delivery_baseline": "aa6252f367b7da35774ccbabb17c85545975bd20"
 }

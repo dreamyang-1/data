@@ -3,9 +3,10 @@
 Status: **SOURCE_PUBLICATION_AND_PINNING_VERIFIED_OFFLINE; CATALOG_BLOCKER remains
 OPEN**. Capture/preparation now connects to an operator publication path and a
 pinned read view in isolated Catalog collections. The current V1 API/collections,
-SQL caches and V2 production routing remain unchanged. No deployment, index
-publication or real catalog read was performed. Current evidence is in
-`catalog_publication/closure_report.md`; the original audit delivery is historical.
+SQL caches and V2 production routing remain unchanged. Actual 81 / 205 read-only
+capture is recorded in `catalog_identity/closure_report.md`; no deployment or
+index publication occurred. The V2 plan compiler now uses current scope and
+pinned acceptance in `v2_scope_bridge/closure_report.md` (offline integration).
 
 ## Authority and identity
 
@@ -46,7 +47,8 @@ performs this model-wide metric read.
 Explicit capture uses only the requested domain, including the existing scoped
 physical table loader. The transaction rolls back and closes on success/failure.
 Ordinary loader calls retain their connection lifecycle outside this opt-in
-context. Actual MySQL server behavior has not yet been exercised here.
+context. Actual scoped capture was exercised in the 81 / 205 identity closure;
+native publication and deployed query acceptance remain unverified.
 
 Captured material is the semantic/physical metadata consumed by these loaders.
 It is not a claim to cover all source tables: global enums, entity-value source
@@ -100,14 +102,17 @@ publish an index or certify the origin/freshness of a saved file.
 4. **Partially implemented:** the pinned read view verifies model/domain/release,
    exact target, full inventory and query embedding identity. ANN and exact reads
    use strong consistency. `finish()` rechecks source, complete inventory and
-   activation before a caller may accept/cache a plan. Connect that verified identity through
-   retrieval, grounding, TaskPatch/LogicalPlan, cache keys and result provenance.
-   Recheck at acceptance. Reject missing/changed identity in the V2 path; current
+   activation before a caller may accept/cache a plan. `ScopedPlanSession` now
+   connects this identity through candidate bindings, restored state, checked
+   TaskPatch, turn resolution, LogicalPlan and cache keys. Its compile method
+   requires full `finish()` before returning a plan-only artifact. Reject
+   missing/changed identity in this V2 path; current
    public Agent request/response/SSE formats and V1 routing remain unchanged.
    Bind the current AuthorizedSemanticScope independently of catalog identity.
-   This view is not yet called by the V2 pipeline or current Oagnet API. Its cache
-   fingerprint supplements the caller's current request/identity/database/KB
-   fingerprint; it does not replace those state-isolation checks.
+   Autonomous raw-turn recognition, production state-store integration and the
+   current Oagnet HTTP API are not yet connected to this boundary. The plan
+   session combines the catalog pin with current request/identity/database/KB
+   in its fingerprint; the pin does not replace those state-isolation checks.
 5. **Still open:** bind SQL metadata caches and auxiliary authoritative lookups to that same
    release. Versioning only Milvus cannot detect SQL using newer MySQL formulas
    or older process-local metadata. Execution integration remains gated after
@@ -137,7 +142,7 @@ the existing controlled release process; credentials stay private.
 | --- | --- | --- |
 | C-01 | Consistent authority capture plus complete deterministic scoped generation | Actual 81/[205] capture generates 290 records locally after UUID/model isolation fixes; real embedding/publication pending |
 | C-02 | Persisted active marker, verified full read-back, mixed-generation rejection and rollback | Actual target inspected: isolated collections and active marker absent; 142 legacy semantic rows unstamped |
-| C-03 | Same release on query, binding, caches and downstream metadata | Pinned read/acceptance/fingerprint implemented; V2/Oagnet API/SQL integration pending |
+| C-03 | Same release on query, binding, caches and downstream metadata | V2 scoped plan compiler and pin acceptance integrated offline; autonomous recognition, production stores/Oagnet API/SQL integration pending |
 | C-04 | Current owned projections/IDs/defaults/rules and actual MySQL/Milvus coverage | Actual 13/13 dimensions have owned projections; external values/defaults/routing and runtime publication still pending |
 
 X-01 separately tracks the named runtime target and trusted operational evidence.
