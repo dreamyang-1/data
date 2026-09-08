@@ -3410,7 +3410,14 @@
           "$ref": "#/$defs/BoundSemanticRef"
         },
         "range": {
-          "$ref": "#/$defs/TimeRange"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "grain": {
           "$ref": "#/$defs/TimeGrain"

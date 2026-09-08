@@ -488,7 +488,7 @@ class TimeComparison(StrictModel):
 
 class TimeSpec(StrictModel):
     anchor: BoundSemanticRef
-    range: TimeRange
+    range: TimeRange | None
     grain: TimeGrain
     boundary: Literal["LEFT_CLOSED_RIGHT_OPEN"] = "LEFT_CLOSED_RIGHT_OPEN"
     timezone: str = Field(min_length=1, max_length=100)
@@ -506,6 +506,8 @@ class TimeSpec(StrictModel):
 
     @model_validator(mode='after')
     def validate_policies(self):
+        if (self.range is None) != (self.source == 'USER_EXPLICIT_UNBOUNDED'):
+            raise ValueError('unbounded time requires explicit cleared-range provenance')
         try:
             ZoneInfo(self.timezone)
         except (ZoneInfoNotFoundError, ValueError) as exc:
@@ -515,6 +517,21 @@ class TimeSpec(StrictModel):
         if self.source == 'SYSTEM_DEFAULT' and not (self.default_policy_id and self.default_policy_version):
             raise ValueError('system default time requires policy identity/version')
         return self
+
+
+def require_bounded_legacy_time(value):
+    """0.2.1 remains bounded; explicit unbounded time belongs to scoped 0.2.2."""
+    if isinstance(value, TimeSpec) and value.range is None:
+        raise ValueError('PLAN_VALIDATION_FAILURE: unbounded time requires scoped 0.2.2')
+    if isinstance(value, StrictModel):
+        for name in type(value).model_fields:
+            require_bounded_legacy_time(getattr(value, name))
+    elif isinstance(value, dict):
+        for item in value.values():
+            require_bounded_legacy_time(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            require_bounded_legacy_time(item)
 
 
 class RankingSpec(StrictModel):
@@ -1300,6 +1317,7 @@ class PlanEnvelope(StrictModel):
     def validate_mentions_and_scope(self) -> "PlanEnvelope":
         """Validate spans, mention references, and tenant-safe scope."""
 
+        require_bounded_legacy_time(self.payload)
         text = self.provenance.current_turn_text
         mention_ids = {item.mention_id for item in self.mentions}
         if len(mention_ids) != len(self.mentions):
