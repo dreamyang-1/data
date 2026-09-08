@@ -47,6 +47,181 @@
       "title": "AlgorithmRef",
       "type": "object"
     },
+    "AliasedPredicate": {
+      "additionalProperties": false,
+      "properties": {
+        "node_type": {
+          "const": "ALIASED_PREDICATE",
+          "default": "ALIASED_PREDICATE",
+          "title": "Node Type",
+          "type": "string"
+        },
+        "field_ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "operator": {
+          "$ref": "#/$defs/FilterOperator"
+        },
+        "value": {
+          "discriminator": {
+            "mapping": {
+              "BOOLEAN": "#/$defs/BooleanValue",
+              "DATE": "#/$defs/DateValue",
+              "DATETIME": "#/$defs/DateTimeValue",
+              "ENTITY_REF": "#/$defs/EntityValueRef",
+              "ENUM": "#/$defs/EnumValue",
+              "LIST": "#/$defs/ListValue",
+              "NULL": "#/$defs/NullValue",
+              "NUMBER": "#/$defs/NumberValue",
+              "RANGE": "#/$defs/RangeValue",
+              "STRING": "#/$defs/StringValue"
+            },
+            "propertyName": "value_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StringValue"
+            },
+            {
+              "$ref": "#/$defs/NumberValue"
+            },
+            {
+              "$ref": "#/$defs/BooleanValue"
+            },
+            {
+              "$ref": "#/$defs/DateValue"
+            },
+            {
+              "$ref": "#/$defs/DateTimeValue"
+            },
+            {
+              "$ref": "#/$defs/EnumValue"
+            },
+            {
+              "$ref": "#/$defs/EntityValueRef"
+            },
+            {
+              "$ref": "#/$defs/ListValue"
+            },
+            {
+              "$ref": "#/$defs/RangeValue"
+            },
+            {
+              "$ref": "#/$defs/NullValue"
+            }
+          ],
+          "title": "Value"
+        },
+        "source": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "mention_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Mention Ids",
+          "type": "array"
+        },
+        "scope": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Scope",
+          "type": "string"
+        },
+        "validation_status": {
+          "$ref": "#/$defs/ProofStatus",
+          "default": "UNKNOWN"
+        },
+        "entity_alias": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Entity Alias",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field_ref",
+        "operator",
+        "value",
+        "source",
+        "scope",
+        "entity_alias"
+      ],
+      "title": "AliasedPredicate",
+      "type": "object"
+    },
+    "AliasedProjectionItem": {
+      "additionalProperties": false,
+      "properties": {
+        "output_field_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Output Field Id",
+          "type": "string"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "$ref": "#/$defs/ComputedMeasureRef"
+            }
+          ],
+          "title": "Ref"
+        },
+        "role": {
+          "$ref": "#/$defs/SemanticRole"
+        },
+        "display_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Label"
+        },
+        "alias_policy": {
+          "default": "STABLE_ID",
+          "enum": [
+            "STABLE_ID",
+            "GOVERNED_ALIAS"
+          ],
+          "title": "Alias Policy",
+          "type": "string"
+        },
+        "position": {
+          "minimum": 0,
+          "title": "Position",
+          "type": "integer"
+        },
+        "entity_alias": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Entity Alias",
+          "type": "string"
+        }
+      },
+      "required": [
+        "output_field_id",
+        "ref",
+        "role",
+        "position",
+        "entity_alias"
+      ],
+      "title": "AliasedProjectionItem",
+      "type": "object"
+    },
     "AnalysisGoal": {
       "enum": [
         "LOOKUP",
@@ -74,6 +249,7 @@
             {
               "discriminator": {
                 "mapping": {
+                  "ALIASED_PREDICATE": "#/$defs/AliasedPredicate",
                   "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
                   "PREDICATE": "#/$defs/Predicate"
                 },
@@ -82,6 +258,9 @@
               "oneOf": [
                 {
                   "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/AliasedPredicate"
                 },
                 {
                   "$ref": "#/$defs/BooleanFilterGroup"
@@ -353,6 +532,9 @@
         "children": {
           "items": {
             "anyOf": [
+              {
+                "$ref": "#/$defs/AliasedPredicate"
+              },
               {
                 "$ref": "#/$defs/Predicate"
               },
@@ -685,6 +867,7 @@
             {
               "discriminator": {
                 "mapping": {
+                  "ALIASED_PREDICATE": "#/$defs/AliasedPredicate",
                   "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
                   "PREDICATE": "#/$defs/Predicate"
                 },
@@ -693,6 +876,9 @@
               "oneOf": [
                 {
                   "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/AliasedPredicate"
                 },
                 {
                   "$ref": "#/$defs/BooleanFilterGroup"
@@ -1148,6 +1334,7 @@
         "filter_expression": {
           "discriminator": {
             "mapping": {
+              "ALIASED_PREDICATE": "#/$defs/AliasedPredicate",
               "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
               "PREDICATE": "#/$defs/Predicate"
             },
@@ -1156,6 +1343,9 @@
           "oneOf": [
             {
               "$ref": "#/$defs/Predicate"
+            },
+            {
+              "$ref": "#/$defs/AliasedPredicate"
             },
             {
               "$ref": "#/$defs/BooleanFilterGroup"
@@ -1433,6 +1623,7 @@
             {
               "discriminator": {
                 "mapping": {
+                  "ALIASED_PREDICATE": "#/$defs/AliasedPredicate",
                   "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
                   "PREDICATE": "#/$defs/Predicate"
                 },
@@ -1441,6 +1632,9 @@
               "oneOf": [
                 {
                   "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/AliasedPredicate"
                 },
                 {
                   "$ref": "#/$defs/BooleanFilterGroup"
@@ -1615,6 +1809,7 @@
             {
               "discriminator": {
                 "mapping": {
+                  "ALIASED_PREDICATE": "#/$defs/AliasedPredicate",
                   "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
                   "PREDICATE": "#/$defs/Predicate"
                 },
@@ -1623,6 +1818,9 @@
               "oneOf": [
                 {
                   "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/AliasedPredicate"
                 },
                 {
                   "$ref": "#/$defs/BooleanFilterGroup"
@@ -1696,6 +1894,7 @@
             {
               "discriminator": {
                 "mapping": {
+                  "ALIASED_PREDICATE": "#/$defs/AliasedPredicate",
                   "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
                   "PREDICATE": "#/$defs/Predicate"
                 },
@@ -1704,6 +1903,9 @@
               "oneOf": [
                 {
                   "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/AliasedPredicate"
                 },
                 {
                   "$ref": "#/$defs/BooleanFilterGroup"
@@ -2289,7 +2491,14 @@
         },
         "items": {
           "items": {
-            "$ref": "#/$defs/ProjectionItem"
+            "anyOf": [
+              {
+                "$ref": "#/$defs/AliasedProjectionItem"
+              },
+              {
+                "$ref": "#/$defs/ProjectionItem"
+              }
+            ]
           },
           "maxItems": 100,
           "title": "Items",
@@ -2444,6 +2653,7 @@
             {
               "discriminator": {
                 "mapping": {
+                  "ALIASED_PREDICATE": "#/$defs/AliasedPredicate",
                   "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
                   "PREDICATE": "#/$defs/Predicate"
                 },
@@ -2452,6 +2662,9 @@
               "oneOf": [
                 {
                   "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/AliasedPredicate"
                 },
                 {
                   "$ref": "#/$defs/BooleanFilterGroup"
@@ -2583,6 +2796,7 @@
             {
               "discriminator": {
                 "mapping": {
+                  "ALIASED_PREDICATE": "#/$defs/AliasedPredicate",
                   "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
                   "PREDICATE": "#/$defs/Predicate"
                 },
@@ -2591,6 +2805,9 @@
               "oneOf": [
                 {
                   "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/AliasedPredicate"
                 },
                 {
                   "$ref": "#/$defs/BooleanFilterGroup"
@@ -2644,10 +2861,14 @@
               "$ref": "#/$defs/RelationshipSpec"
             },
             {
+              "$ref": "#/$defs/RelationshipPathSpec"
+            },
+            {
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "title": "Relationship Spec"
         },
         "limit": {
           "anyOf": [
@@ -2665,6 +2886,108 @@
         "source_entity"
       ],
       "title": "RelationListPayload",
+      "type": "object"
+    },
+    "RelationshipPathHop": {
+      "additionalProperties": false,
+      "properties": {
+        "relation_ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "source_alias": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source Alias",
+          "type": "string"
+        },
+        "target_alias": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Target Alias",
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "FORWARD",
+            "REVERSE"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "cardinality": {
+          "enum": [
+            "ONE_TO_ONE",
+            "ONE_TO_MANY",
+            "MANY_TO_ONE",
+            "MANY_TO_MANY"
+          ],
+          "title": "Cardinality",
+          "type": "string"
+        }
+      },
+      "required": [
+        "relation_ref",
+        "source_alias",
+        "target_alias",
+        "direction",
+        "cardinality"
+      ],
+      "title": "RelationshipPathHop",
+      "type": "object"
+    },
+    "RelationshipPathNode": {
+      "additionalProperties": false,
+      "properties": {
+        "entity_alias": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Entity Alias",
+          "type": "string"
+        },
+        "entity_ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        }
+      },
+      "required": [
+        "entity_alias",
+        "entity_ref"
+      ],
+      "title": "RelationshipPathNode",
+      "type": "object"
+    },
+    "RelationshipPathSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "path_type": {
+          "const": "DECLARED_PATH",
+          "default": "DECLARED_PATH",
+          "title": "Path Type",
+          "type": "string"
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/RelationshipPathNode"
+          },
+          "maxItems": 9,
+          "minItems": 2,
+          "title": "Nodes",
+          "type": "array"
+        },
+        "hops": {
+          "items": {
+            "$ref": "#/$defs/RelationshipPathHop"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Hops",
+          "type": "array"
+        }
+      },
+      "required": [
+        "nodes",
+        "hops"
+      ],
+      "title": "RelationshipPathSpec",
       "type": "object"
     },
     "RelationshipSpec": {
@@ -2765,6 +3088,7 @@
             {
               "discriminator": {
                 "mapping": {
+                  "ALIASED_PREDICATE": "#/$defs/AliasedPredicate",
                   "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
                   "PREDICATE": "#/$defs/Predicate"
                 },
@@ -2773,6 +3097,9 @@
               "oneOf": [
                 {
                   "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/AliasedPredicate"
                 },
                 {
                   "$ref": "#/$defs/BooleanFilterGroup"
@@ -2841,6 +3168,7 @@
             {
               "discriminator": {
                 "mapping": {
+                  "ALIASED_PREDICATE": "#/$defs/AliasedPredicate",
                   "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
                   "PREDICATE": "#/$defs/Predicate"
                 },
@@ -2849,6 +3177,9 @@
               "oneOf": [
                 {
                   "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/AliasedPredicate"
                 },
                 {
                   "$ref": "#/$defs/BooleanFilterGroup"
@@ -3345,6 +3676,7 @@
             {
               "discriminator": {
                 "mapping": {
+                  "ALIASED_PREDICATE": "#/$defs/AliasedPredicate",
                   "BOOLEAN_GROUP": "#/$defs/BooleanFilterGroup",
                   "PREDICATE": "#/$defs/Predicate"
                 },
@@ -3353,6 +3685,9 @@
               "oneOf": [
                 {
                   "$ref": "#/$defs/Predicate"
+                },
+                {
+                  "$ref": "#/$defs/AliasedPredicate"
                 },
                 {
                   "$ref": "#/$defs/BooleanFilterGroup"

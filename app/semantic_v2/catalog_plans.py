@@ -4,7 +4,7 @@ No live database reads, model-generated policies or inferred relationship keys.
 """
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from . import models as m
 from .authorized_contract import contract_digest
@@ -13,11 +13,23 @@ from .recognition_client import RecognitionFailure
 from .slot_reducer import TaskPatch, apply_task_patch, semantic_fingerprint
 
 
+class RelationshipHopDraft(m.StrictModel):
+    binding_handle: m.Identifier
+    direction: Literal['FORWARD', 'REVERSE'] = 'FORWARD'
+
+
 class RelationshipEditDraft(m.StrictModel):
     operation: Literal['SET', 'REPLACE', 'CLEAR']
     binding_handle: m.Identifier | None = None
     direction: Literal['FORWARD', 'REVERSE'] = 'FORWARD'
     evidence_mention_ids: list[m.Identifier] = Field(min_length=1, max_length=50)
+    hops: list[RelationshipHopDraft] = Field(default_factory=list, max_length=8)
+
+    @model_validator(mode='after')
+    def exclusive_path(self):
+        if self.hops and (self.binding_handle is not None or self.direction != 'FORWARD' or self.operation == 'CLEAR'):
+            raise ValueError('path hops cannot mix with a single edge or CLEAR')
+        return self
 
 
 def cardinality(value):
@@ -113,20 +125,29 @@ def default_projection(session, entity):
 
 def validate_catalog_payload(session, payload):
     """Compile-time receipt checks also cover restored/default policy claims."""
+    from .catalog_paths import validate_path, validate_occurrence_fields, path_projection
+    validate_occurrence_fields(session, payload)
     if payload.payload_type == 'RELATION_LIST':
         spec = payload.relationship_spec
         if spec is None:
             raise RecognitionFailure('CATALOG_RELATIONSHIP_REQUIRED')
-        variants = [relationship(session, spec.relation_ref, direction) for direction in ('FORWARD', 'REVERSE')]
-        if not any(semantic_fingerprint(spec) == semantic_fingerprint(v) for v in variants):
-            raise RecognitionFailure('CATALOG_RELATIONSHIP_MISMATCH')
+        if isinstance(spec, m.RelationshipPathSpec):
+            validate_path(session, spec)
+        else:
+            variants = [relationship(session, spec.relation_ref, direction) for direction in ('FORWARD', 'REVERSE')]
+            if same_entity(spec.source_ref, spec.target_ref):
+                raise RecognitionFailure('CATALOG_SELF_RELATION_REQUIRES_PATH')
+            if not any(semantic_fingerprint(spec) == semantic_fingerprint(v) for v in variants):
+                raise RecognitionFailure('CATALOG_RELATIONSHIP_MISMATCH')
         if (not same_entity(payload.source_entity, spec.source_ref) or not same_entity(payload.target_entity, spec.target_ref)
                 or payload.relation_target is not None):
             raise RecognitionFailure('CATALOG_RELATIONSHIP_ENDPOINT_MISMATCH')
     if payload.payload_type in {'DETAIL_ROWS', 'RELATION_LIST'}:
         from .pipeline import collect_bound_refs
         endpoints = [payload.source_entity]
-        if payload.payload_type == 'RELATION_LIST': endpoints.append(payload.target_entity)
+        if payload.payload_type == 'RELATION_LIST':
+            endpoints = ([n.entity_ref for n in payload.relationship_spec.nodes]
+                if isinstance(payload.relationship_spec, m.RelationshipPathSpec) else [*endpoints, payload.target_entity])
         owners = {(_row(session, e).get('entity_code'), _row(session, e)['business_domain_id']) for e in endpoints}
         for ref in collect_bound_refs([payload.filters, payload.projection_spec]):
             if ref.catalog_type == 'ATTRIBUTE':
@@ -137,6 +158,8 @@ def validate_catalog_payload(session, payload):
     if projection and projection.mode == 'SEMANTIC_DEFAULT':
         entity = payload.target_entity if payload.payload_type == 'RELATION_LIST' else getattr(payload, 'source_entity', None)
         expected = default_projection(session, entity)
+        if isinstance(getattr(payload, 'relationship_spec', None), m.RelationshipPathSpec):
+            expected = path_projection(expected, payload.relationship_spec)
         if semantic_fingerprint(projection) != semantic_fingerprint(expected):
             raise RecognitionFailure('CATALOG_DEFAULT_DISPLAY_POLICY_MISMATCH')
 
@@ -159,6 +182,9 @@ def complete_catalog_defaults(session, kind, prior, patch, barriers=()):
     if 'projection_spec' in reduced.clear_barriers:
         raise RecognitionFailure('V2_PROJECTION_EXPLICITLY_CLEARED')
     projection = default_projection(session, entity)
+    if kind == 'RELATION_LIST' and isinstance(state.relationship_spec, m.RelationshipPathSpec):
+        from .catalog_paths import path_projection
+        projection = path_projection(projection, state.relationship_spec)
     if semantic_fingerprint(projection) == semantic_fingerprint(state.projection_spec):
         return patch, reduced
     operations = [o for phase in ('clears', 'removes', 'replacements', 'sets', 'adds', 'inherit_requests') for o in getattr(patch, phase)]

@@ -8,7 +8,8 @@ from typing import Any
 
 from .enums import ProofStatus, SemanticRole, Severity
 from .models import (ContractProof, ResultContract, OutputFieldRequirement, OrderingRequirement,
-                     CardinalityExpectation, ProofRequirement, ProofCheck, RowBounds)
+                     CardinalityExpectation, ProofRequirement, ProofCheck, RowBounds,
+                     AliasedOutputFieldRequirement, RelationshipPathSpec)
 
 
 class ResultContractCompiler:
@@ -18,12 +19,23 @@ class ResultContractCompiler:
         outputs = []
         seen = set()
 
-        def output(ref, role, identifier=None):
-            identifier = identifier or f'{role.value.lower()}:{getattr(ref, "canonical_id", getattr(ref, "local_id", ""))}'
+        def output(ref, role, identifier=None, entity_alias=None):
+            if identifier is None:
+                identifier = f'{role.value.lower()}:{getattr(ref, "canonical_id", getattr(ref, "local_id", ""))}'
+                if entity_alias:
+                    identifier += ':' + entity_alias
             if identifier not in seen:
-                outputs.append(OutputFieldRequirement(output_field_id=identifier, semantic_ref=ref,
-                                                      logical_role=role, display_label=ref.display_name))
+                kind = AliasedOutputFieldRequirement if entity_alias else OutputFieldRequirement
+                outputs.append(kind(output_field_id=identifier, semantic_ref=ref,
+                    logical_role=role, display_label=ref.display_name, **({'entity_alias': entity_alias} if entity_alias else {})))
                 seen.add(identifier)
+            else:
+                existing = next(o for o in outputs if o.output_field_id == identifier)
+                if entity_alias or isinstance(existing, AliasedOutputFieldRequirement):
+                    from .slot_reducer import semantic_fingerprint
+                    if (getattr(existing, 'entity_alias', None) != entity_alias or existing.logical_role != role
+                            or semantic_fingerprint(existing.semantic_ref) != semantic_fingerprint(ref)):
+                        raise ValueError('RESULT_OUTPUT_OCCURRENCE_ID_COLLISION')
             return identifier
 
         projection = getattr(payload, 'projection_spec', None)
@@ -31,7 +43,7 @@ class ResultContractCompiler:
             projection = payload.operation.projection_spec
         if projection:
             for item in projection.items:
-                output(item.ref, item.role, item.output_field_id)
+                output(item.ref, item.role, item.output_field_id, getattr(item, 'entity_alias', None))
         for ref in getattr(payload, 'measures', []):
             output(ref, SemanticRole.MEASURE)
         for ref in getattr(payload, 'group_by', []):
@@ -55,7 +67,9 @@ class ResultContractCompiler:
                 ordering.append(OrderingRequirement(output_field_id=output(ref, SemanticRole.ORDER_BY), ref=ref, direction='ASC'))
             bounds = RowBounds(maximum=rank.limit if rank.ties_policy == 'EXCLUDE_TIES' else None)
         if payload.payload_type == 'RELATION_LIST':
-            output(payload.target_entity or payload.relation_target, SemanticRole.TARGET_ENTITY)
+            path = payload.relationship_spec
+            output(payload.target_entity or payload.relation_target, SemanticRole.TARGET_ENTITY,
+                entity_alias=path.nodes[-1].entity_alias if isinstance(path, RelationshipPathSpec) else None)
         limit = getattr(payload, 'limit', None)
         if payload.payload_type == 'DATASET_TRANSFORM' and payload.operation.operation_type == 'LIMIT':
             bounds = RowBounds(maximum=payload.operation.limit)

@@ -79,7 +79,8 @@ def _labels(value):
 def structured_labels(task):
     state = next(v.semantics for v in task.versions if v.version == task.active_version)
     return dict(filter_targets=[dict(target_handle=h, path=list(path), expression=_labels(node))
-        for h, (path, node) in filter_targets(task).items()], time=_labels(state.time_spec))
+        for h, (path, node) in filter_targets(task).items()], time=_labels(state.time_spec),
+        relationship_path=_labels(state.relationship_spec))
 
 
 def _replace_nodes(node, changes, path=()):
@@ -124,7 +125,7 @@ def filter_edits(prior, task, edits, hydrate):
         if edit.target_handle is None:
             if edit.operation != 'ADD' or edit.value is None:
                 raise RecognitionFailure('V2_FILTER_TARGET_REQUIRED')
-            predicate = m.Predicate.model_validate(hydrate(edit.value, edit.evidence_mention_ids))
+            predicate = TypeAdapter(m.AliasedPredicate | m.Predicate).validate_python(hydrate(edit.value, edit.evidence_mention_ids))
             if predicate.source != 'USER_EXPLICIT' or predicate.scope != 'CURRENT_TASK':
                 raise RecognitionFailure('V2_FILTER_CURRENT_EVIDENCE_REQUIRED')
             additions.append(predicate)
@@ -147,7 +148,7 @@ def filter_edits(prior, task, edits, hydrate):
             if operator in {'EQ', 'IN'}:
                 operator = 'IN' if isinstance(value, m.ListValue) else 'EQ'
             update = dict(value=value, operator=operator)
-        changes[path] = (m.Predicate.model_validate(dict(node.model_dump(), **update,
+        changes[path] = (type(node).model_validate(dict(node.model_dump(), **update,
             source='USER_EXPLICIT', mention_ids=edit.evidence_mention_ids, validation_status='UNKNOWN'))
             if update is not None else None)
     result = _replace_nodes(prior.filter_expression, changes)
