@@ -8,6 +8,7 @@ No Redis/MySQL metadata fallback or business execution is available here.
 from copy import deepcopy
 import hashlib
 import json
+import math
 
 from semantic_scope import RequestScope, ScopedTranslator, ScopeError
 from sql_translator_prod import RedisDSLLoader, SQLTranslatorProd, SemanticCatalog
@@ -270,11 +271,34 @@ class _SnapshotCatalog:
 
 
 class _PinnedTranslator(SQLTranslatorProd):
-    def __init__(self, scope, snapshot, ordering_contract=None):
+    def __init__(self, scope, snapshot, ordering_contract=None, filter_contract=None):
         self.scope = scope
         self.loader = _SnapshotLoader(scope, snapshot)
         self.catalog = _SnapshotCatalog(self.loader)
         self.ordering_contract = ordering_contract
+        self.filter_contract = filter_contract
+
+    def _build_filter_clause(self, filters, global_filters, table_alias):
+        if self.filter_contract is None:
+            return super()._build_filter_clause(filters, global_filters, table_alias)
+        # The flattened leaves exist only for registered-field/source/JOIN
+        # validation. They must never become an AND-only execution predicate.
+        expected = _filter_leaves(self.filter_contract['expression'])
+        _require(filters == expected, 'PINNED_FILTER_PLAN_CHANGED')
+        def render(node):
+            if 'children' in node:
+                children = [render(c) for c in node['children']]
+                if node['operator'] == 'NOT': return '(NOT ' + children[0] + ')'
+                return '(' + (' ' + node['operator'] + ' ').join(children) + ')'
+            clause = super(_PinnedTranslator, self)._build_filter_clause([node], [], table_alias)
+            _require(clause.startswith('WHERE '), 'PINNED_FILTER_RENDER_FAILED')
+            return '(' + clause[6:] + ')'
+        clause = 'WHERE ' + render(self.filter_contract['expression'])
+        governed = super()._build_filter_clause([], global_filters, table_alias)
+        if governed:
+            _require(governed.startswith('WHERE '), 'PINNED_FILTER_RENDER_FAILED')
+            clause += ' AND (' + governed[6:] + ')'
+        return clause
 
     def _build_order_by_clause(self, sort, metrics, dimensions, model_id=None):
         if self.ordering_contract is None:
@@ -399,7 +423,60 @@ def _ranking_contract(value, ast):
     return value
 
 
-def translate_pinned_catalog(pin, request_scope, asl, *, ordering_contract=None):
+def _filter_leaves(node):
+    if 'children' in node:
+        return [leaf for child in node['children'] for leaf in _filter_leaves(child)]
+    return [node]
+
+
+def _filter_contract(value, ast):
+    """Bounded Boolean tree, with every leaf later checked against the pin."""
+    _require(isinstance(value, dict) and set(value) == {'contract','semantic_fingerprint','expression'}
+             and value['contract'] == 'pinned-filter-tree-v1', 'PINNED_FILTER_CONTRACT_INVALID')
+    value = deepcopy(value)
+    fingerprint = value['semantic_fingerprint']
+    _require(isinstance(fingerprint, str) and len(fingerprint) == 64
+             and all(c in '0123456789abcdef' for c in fingerprint), 'PINNED_FILTER_CONTRACT_INVALID')
+    _require(ast.get('filters', []) == [], 'PINNED_FILTER_CONTRACT_CONFLICT')
+    count = 0
+    def literal(item):
+        _require(item is None or type(item) in (str,int,float,bool), 'PINNED_FILTER_LITERAL_INVALID')
+        if isinstance(item, float): _require(math.isfinite(item), 'PINNED_FILTER_LITERAL_INVALID')
+        # The legacy literal writer is not parameterized. A backslash depends
+        # on native SQL mode; do not claim it is lossless without that contract.
+        if isinstance(item, str):
+            _require('\\' not in item and '\x00' not in item, 'PINNED_FILTER_LITERAL_SQL_MODE_UNPROVEN')
+    def visit(node, depth=0):
+        nonlocal count
+        count += 1
+        _require(count <= 2048 and depth <= 20 and isinstance(node, dict), 'PINNED_FILTER_TREE_INVALID')
+        if 'children' in node:
+            _require(set(node) == {'operator','children'} and node['operator'] in ('AND','OR','NOT')
+                     and isinstance(node['children'], list) and 1 <= len(node['children']) <= 100,
+                     'PINNED_FILTER_GROUP_INVALID')
+            _require(node['operator'] != 'NOT' or len(node['children']) == 1, 'PINNED_FILTER_GROUP_INVALID')
+            for child in node['children']: visit(child, depth+1)
+            return
+        _require(set(node) == {'field','operator','value'} and isinstance(node['field'], str)
+                 and node['field'].count('.') == 1, 'PINNED_FILTER_LEAF_INVALID')
+        operator, operand = node['operator'], node['value']
+        _require(operator in ('=','!=','>','>=','<','<=','IN','NOT IN','LIKE','NOT LIKE','BETWEEN','IS NULL','IS NOT NULL'),
+                 'PINNED_FILTER_OPERATOR_INVALID')
+        if operator in ('IS NULL','IS NOT NULL'):
+            _require(operand is None, 'PINNED_FILTER_LITERAL_INVALID')
+        elif operator in ('IN','NOT IN','BETWEEN'):
+            _require(isinstance(operand,list) and 1 <= len(operand) <= 1000
+                     and (operator != 'BETWEEN' or len(operand) == 2), 'PINNED_FILTER_LITERAL_INVALID')
+            for item in operand: literal(item)
+        else:
+            _require(operand is not None and (operator not in ('LIKE','NOT LIKE') or isinstance(operand,str)),
+                     'PINNED_FILTER_LITERAL_INVALID')
+            literal(operand)
+    visit(value['expression'])
+    return value
+
+
+def translate_pinned_catalog(pin, request_scope, asl, *, ordering_contract=None, filter_contract=None):
     """Accept SQL only after the trusted live pin finishes successfully.
 
     Scope must be rebuilt from this request's trusted upstream grant. The
@@ -432,8 +509,16 @@ def translate_pinned_catalog(pin, request_scope, asl, *, ordering_contract=None)
                 _require(type(ast[key]) is int and ast[key] == scope.semantic_model_id, 'PINNED_CATALOG_SCOPE_MISMATCH')
         _require(not any(k in ast for k in ('business_domain_id', 'business_domain_ids',
                  'authorized_semantic_scope', 'database_id', 'knowledge_base_names')), 'PINNED_ASL_SCOPE_OVERRIDE')
+        _require(not any(k in ast for k in ('filter_contract','ordering_contract')), 'PINNED_ASL_POLICY_MUST_BE_SEPARATE')
+        filtering = _filter_contract(filter_contract, ast) if filter_contract is not None else None
+        if filtering:
+            # Agent artifacts are recursively frozen; build a private top-level
+            # planning copy rather than mutating the caller's ASL object.
+            ast = dict(ast, filters=_filter_leaves(filtering['expression']))
         ordering = _ranking_contract(ordering_contract, ast) if ordering_contract is not None else None
-        translator = _PinnedTranslator(scope, snapshot, ordering)
+        if ordering and filtering:
+            _require(ordering['semantic_fingerprint'] == filtering['semantic_fingerprint'], 'PINNED_POLICY_PLAN_MISMATCH')
+        translator = _PinnedTranslator(scope, snapshot, ordering, filtering)
         source = translator._plan_sources(ast, scope.semantic_model_id)
         # Existing database selection maps the platform database ID to its
         # data-source ID. Do not infer an alternative from a historical plan.
@@ -454,7 +539,8 @@ def translate_pinned_catalog(pin, request_scope, asl, *, ordering_contract=None)
         _require(receipt == identity, 'PINNED_PUBLICATION_CHANGED_DURING_TRANSLATION')
         return {**result, **scope.evidence(), 'catalog_pin': deepcopy(receipt),
                 'sql_projection_aliases': aliases,
-                **({'ordering_contract_hash': _digest(ordering)} if ordering else {})}
+                **({'ordering_contract_hash': _digest(ordering)} if ordering else {}),
+                **({'filter_contract_hash': _digest(filtering)} if filtering else {})}
     except Exception as exc:
         # Private metadata, SQL and business text never leak through a failed
         # pin/read. Typed local errors contain bounded codes only.
