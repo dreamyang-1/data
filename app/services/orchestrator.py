@@ -8263,7 +8263,11 @@ class DataAnalysisOrchestrator:
             resolved = await self.adapters.semantic.resolve_metrics(request, semantic_model_id)
             if len(resolved) != 1:
                 return self._fallback(request, "没有找到唯一、已发布的指标定义。")
-            item = await (self.adapters.semantic.definition(resolved[0]) if request.primary_intent == PrimaryIntent.METRIC_DEFINITION else self.adapters.semantic.lineage(resolved[0], identity))
+            scoped_metadata = getattr(self.adapters.semantic, 'scoped_metadata', None)
+            if callable(scoped_metadata):
+                item = await scoped_metadata(request, resolved[0], identity)
+            else:
+                item = await (self.adapters.semantic.definition(resolved[0]) if request.primary_intent == PrimaryIntent.METRIC_DEFINITION else self.adapters.semantic.lineage(resolved[0], identity))
         except AdapterError as exc:
             return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
         if request.primary_intent == PrimaryIntent.DATA_LINEAGE:
@@ -10136,6 +10140,7 @@ class DataAnalysisOrchestrator:
             'EXPLICIT_DOMAIN_NOT_SUPPORTED': '当前查询服务尚不能严格限定本次授权业务域，本次未执行查询。需由服务维护方完善范围过滤。',
             'EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED': '当前查询服务尚不能严格限定本次授权的业务域集合，本次未执行查询。需由服务维护方完善范围过滤。',
             'EXPLICIT_DOMAIN_METADATA_NOT_SUPPORTED': '当前元数据服务尚不支持本次授权业务域范围，本次未执行元数据查询。',
+            'SEMANTIC_SCOPE_UNCONFIRMED': '查询服务暂时无法确认本次查询的数据范围，系统已停止查询或拒绝使用结果。请联系系统维护人员处理。',
             "SEMANTIC_CONTEXT_MISSING": "缺少 semantic_model_id，暂时无法确定使用哪套语义模型。business_domain_id 可不传，由语义模型自动选择业务域。",
             "ASL_GENERATION_FAILED": "自然语言转 ASL 服务暂时不可用。",
             "ASL_ANALYSIS_SHAPE_INVALID": "语义查询没有返回分析所需的分组维度，本次未执行可能产生误导的单值分析。",

@@ -258,16 +258,16 @@ async def test_real_oagnet_adapter_transmits_and_confirms_exact_domain_set(domai
     client = Client(generated(domains))
     adapter = HttpDataRetrievalAdapter(Settings(env='test'), client)
     request = canonical(chat(business_domain_ids=domains))
-    if domains:
+    if len(domains)>1:
         with pytest.raises(AdapterError) as failure:
             await adapter.discover_metrics(request, IDENTITY, semantic_model_id=81,
                 business_domain_id=domains[0] if len(domains)==1 else None)
-        assert failure.value.code == ('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED' if len(domains)>1 else 'EXPLICIT_DOMAIN_NOT_SUPPORTED')
+        assert failure.value.code == 'EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED'
         assert client.calls == []
     else:
-        discovery = await adapter.discover_metrics(request, IDENTITY, semantic_model_id=81, business_domain_id=None)
+        discovery = await adapter.discover_metrics(request, IDENTITY, semantic_model_id=81, business_domain_id=domains[0] if domains else None)
         assert discovery.metrics[0].metric_id == '81:sales_amount'
-        assert client.calls[0][1]['business_domain_ids'] == []
+        assert client.calls[0][1]['business_domain_ids'] == domains
 
 
 @pytest.mark.parametrize('tamper', ['echo_model', 'echo_domains', 'resolved_domain', 'metric_model', 'metric_domain'])
@@ -291,8 +291,9 @@ async def test_unscoped_external_metadata_contract_fails_closed():
     adapter = HttpSemanticAdapter(Settings(env='test'), client)
     with pytest.raises(AdapterError) as failure:
         await adapter.resolve_metrics(canonical(chat(business_domain_ids=[205])), 81)
-    assert failure.value.code == 'EXPLICIT_DOMAIN_METADATA_NOT_SUPPORTED'
-    assert client.calls == []
+    assert failure.value.code == 'SEMANTIC_SCOPE_UNCONFIRMED'
+    assert len(client.calls) == 1
+    assert client.calls[0][1]['business_domain_ids'] == [205]
 
 
 @pytest.mark.asyncio
@@ -350,9 +351,9 @@ async def test_explicit_queries_fail_before_upstream_retrieval_with_reason_code(
         policy=base.policy, analysis=base.analysis, semantic_query=CompositeSemanticQueryTool(semantic,retrieval))
     response = await agent.handle(chat(question='查询本月销售额', business_domain_ids=domains), IDENTITY)
     assert response.status == 'SAFE_FALLBACK'
-    assert response.error_code == ('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED' if len(domains)>1 else 'EXPLICIT_DOMAIN_NOT_SUPPORTED')
+    assert response.error_code == ('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED' if len(domains)>1 else 'SEMANTIC_SCOPE_UNCONFIRMED')
     assert response.clarification_questions == []
-    assert client.calls == []
+    assert len(client.calls) == (0 if len(domains)>1 else 1)
 
 
 @pytest.mark.asyncio
@@ -470,6 +471,6 @@ async def test_metadata_fallback_preserves_scope_error_without_clarification():
     request = canonical(chat(business_domain_ids=[205]))
     request.primary_intent = PrimaryIntent.METRIC_DEFINITION
     response = await agent._metadata_answer(request,IDENTITY,81)
-    assert response.error_code == 'EXPLICIT_DOMAIN_METADATA_NOT_SUPPORTED'
+    assert response.error_code == 'SEMANTIC_SCOPE_UNCONFIRMED'
     assert not response.clarification_questions
-    assert client.calls == []
+    assert len(client.calls) == 1

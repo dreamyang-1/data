@@ -1910,7 +1910,15 @@ class RuleBasedIntentClassifier:
                 for item in request.filters
                 if isinstance(item, dict)
             )
-            if subject and not has_named_scope and subject not in {
+            from app.services.question_rewriter import QuestionRewriter
+            # Reuse the existing closed-form time grammar before creating an
+            # entity candidate. An explicit named filter keeps its role.
+            parsed_time_subject = (
+                request.time_range is not None
+                and QuestionRewriter.is_deterministic_time_update(subject)
+                and not any(item.get('value') == subject for item in request.filters if isinstance(item, dict))
+            )
+            if subject and not has_named_scope and not parsed_time_subject and subject not in {
                 "今年", "去年", "本年", "本月", "上月", "整体", "全部", "总",
             }:
                 request.semantic_entity_mentions = list(dict.fromkeys([
