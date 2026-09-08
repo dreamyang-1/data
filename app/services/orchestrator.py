@@ -53,6 +53,8 @@ from app.domain.state_identity import has_stable_user_principal
 from app.services.dataset_followup import (
     is_dataset_operation_followup,
     plan_dataset_followup,
+    dataset_operation_family,
+    presentation_ancestors,
     restore_reference,
     scope_for_request,
 )
@@ -85,6 +87,7 @@ from minio_followup_store import (
     DatasetScope,
     HybridMinioFollowupStore,
     MinioFollowupStore,
+    dataset_source_complete,
 )
 
 NO_DATA_INTENTS = {PrimaryIntent.CHAT, PrimaryIntent.CAPABILITY_HELP, PrimaryIntent.OUT_OF_SCOPE}
@@ -2043,8 +2046,11 @@ class DataAnalysisOrchestrator:
         ]
         minimum_match_rate = min(match_rates, default=1.0)
         snapshot_skew = float(join_audit.get("snapshot_skew_seconds", 0.0))
-        limited = minimum_match_rate < 0.8 or snapshot_skew > 86_400
+        incomplete_source = not dataset_source_complete(result.reference, result.reference.row_count)
+        limited = minimum_match_rate < 0.8 or snapshot_skew > 86_400 or incomplete_source
         warnings = []
+        if incomplete_source:
+            warnings.append("来源数据不完整，关联结果仅覆盖已有数据，不能用于全局排名或汇总。")
         if minimum_match_rate < 0.8:
             warnings.append("关联匹配率低于80%，请核对关联键和两侧数据范围。")
         if snapshot_skew > 86_400:
@@ -5864,29 +5870,17 @@ class DataAnalysisOrchestrator:
         selected: dict[str, Any],
         references: list[dict[str, Any]],
         target_count: int,
+        *,
+        for_global_operation: bool = False,
     ) -> dict[str, Any] | None:
-        """Find the nearest stored ancestor large enough for an expanded slice."""
-
-        by_id = {
-            str(item.get("dataset_id")): item
-            for item in references
-            if item.get("dataset_id")
-        }
-        queue = list(selected.get("parent_dataset_ids") or [])
-        visited: set[str] = set()
-        while queue:
-            dataset_id = str(queue.pop(0))
-            if dataset_id in visited:
-                continue
-            visited.add(dataset_id)
-            candidate = by_id.get(dataset_id)
-            if candidate is None:
-                continue
-            row_count = candidate.get("row_count")
-            if isinstance(row_count, int) and row_count >= target_count:
-                return candidate
-            queue.extend(candidate.get("parent_dataset_ids") or [])
-        return None
+        """Recover a presentation slice without undoing materialized semantics."""
+        ancestors = presentation_ancestors(selected, references, allow_rank_slice=for_global_operation)
+        if for_global_operation:
+            return next((dict(item) for item in ancestors if dataset_source_complete(item, item['row_count'])), None)
+        # A complete six-row source can satisfy "show ten" with all six rows.
+        # Do not silently stay on its two-row view just because ten is unavailable.
+        return next((dict(item) for item in ancestors if item['row_count'] >= target_count),
+                    dict(ancestors[-1]) if ancestors else None)
 
     async def _try_dataset_followup(
         self, request: CanonicalAnalysisRequest
@@ -5974,7 +5968,7 @@ class DataAnalysisOrchestrator:
                 source_reference,
                 current_scope=scope,
             )
-            source_complete = len(loaded.rows) == loaded.reference.row_count and not any(entry.get('truncated') or entry.get('source_truncated') for entry in loaded.reference.transformation_log)
+            source_complete = dataset_source_complete(loaded.reference, len(loaded.rows))
             operation_question = (
                 request.original_question.rsplit("补充：", 1)[-1].strip()
                 if "补充：" in request.original_question
@@ -5988,24 +5982,42 @@ class DataAnalysisOrchestrator:
                 source_complete=source_complete,
             )
             requested_limit = self._operation_limit(operation)
+            global_operation = None
+            if not source_complete and operation is None:
+                proposed = plan_dataset_followup(
+                    operation_question, loaded.reference.columns, loaded.rows,
+                    ordering_proof=self._dataset_ordering_proof(loaded.reference),
+                )
+                if dataset_operation_family(proposed) == 'GLOBAL_RANKING':
+                    global_operation = proposed
             if (
-                requested_limit is not None
-                and requested_limit > loaded.reference.row_count
+                (global_operation is not None or (
+                    requested_limit is not None and requested_limit > loaded.reference.row_count
+                ))
                 and loaded.reference.parent_dataset_ids
+                and 'EXPLICIT_SOURCE_DATASET_SELECTION' not in request.assumptions
             ):
                 expanded = self._expandable_dataset_reference(
-                    selected,
-                    references,
-                    requested_limit,
+                    loaded.reference.to_dict(),
+                    [item for item in references if self._dataset_reference_matches_scope(item, request)],
+                    requested_limit or 0,
+                    for_global_operation=global_operation is not None,
                 )
                 if expanded is not None:
                     source_reference = restore_reference(expanded)
-                    loaded = await asyncio.to_thread(
-                        self.dataset_store.load_dataset,
-                        source_reference,
-                        current_scope=scope,
-                    )
-                    source_complete = len(loaded.rows) == loaded.reference.row_count and not any(entry.get('truncated') or entry.get('source_truncated') for entry in loaded.reference.transformation_log)
+                    try:
+                        loaded = await asyncio.to_thread(
+                            self.dataset_store.load_dataset,
+                            source_reference,
+                            current_scope=scope,
+                        )
+                    except Exception:
+                        # Automatic recovery is optional; an expired/unreadable
+                        # ancestor cannot turn a partial view into global evidence.
+                        request.source_dataset_id = None
+                        request.execution_mode = 'QUERY_DATABASE'
+                        return None, None
+                    source_complete = dataset_source_complete(loaded.reference, len(loaded.rows))
                     operation = plan_dataset_followup(
                         operation_question,
                         loaded.reference.columns,
