@@ -38,13 +38,14 @@
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
       "status": "V2_ASL2_SQL_SHARED_PIN_VERIFIED_OFFLINE",
-      "summary": "Opt-in V2 common-query lowering and SQL share one catalog pin with scope and SELECT-binding acceptance. Native/deployed routing unproven. Actual typed metadata replay: 32 supported / 36; two metric definitions lack proven primary subject.",
+      "summary": "Common queries and EXCLUDE_TIES ranking share one full catalog pin with scope, output and required ranking-policy receipt. Offline metadata replay 41/47, including rank 9/11; native/deployed evidence still missing.",
       "evidence": [
         "app/semantic_v2/catalog_bridge.py",
         "Oagnet/catalog_publication.py::PinnedCatalog.identity",
         "docs/cutover/v2_scope_bridge/test_delta.json",
         "docs/cutover/pinned_sql_catalog/closure_report.md",
-        "docs/cutover/v2_asl2/closure_report.md"
+        "docs/cutover/v2_asl2/closure_report.md",
+        "docs/cutover/v2_ranking/closure_report.md"
       ],
       "next_action": "Verify native/deployed pin acceptance after C-02; connect the V2 typed plan through actual ASL 2.0 with ResultContract evidence. Resolve six unqualified catalog relationship declarations before accepting affected joins."
     },
@@ -110,11 +111,12 @@
       "classification": "CUTOVER_BLOCKER_P1",
       "blocking_level": "P1",
       "status": "OPEN",
-      "summary": "The V2 legacy adapter explicitly reports analytical payloads/dataset compensation unsupported or lossy; result proof is not connected to real execution.",
+      "summary": "Real output aliases bind to common and ranked ResultContract; synthetic SQLite execution verifies ordering/null/limit behavior. Actual source results, collation, snapshots, period pairing and analytical backends remain unproven.",
       "evidence": [
         "app/semantic_v2/legacy_adapter.py::assess_legacy_adapter",
         "app/semantic_v2/result_contract.py",
-        "docs/cutover/v2_temporal_comparisons/closure_report.md"
+        "docs/cutover/v2_temporal_comparisons/closure_report.md",
+        "docs/cutover/v2_ranking/closure_report.md"
       ],
       "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
     },
@@ -122,16 +124,17 @@
       "blocker_id": "S-01",
       "classification": "SCHEMA_DRIFT",
       "blocking_level": "P1",
-      "status": "V2_ASL2_PARTIAL_LOWERING_VERIFIED",
-      "summary": "Scalar/grouped/detail V2 TypedPlans now lower to actual ASL2/SQL offline with stable output bindings. Time, ranking, complex Boolean/relationship/comparison semantics and real result receipts remain unproven.",
+      "status": "V2_ASL2_PARTIAL_WITH_RANKING_VERIFIED",
+      "summary": "Scalar/grouped/detail and EXCLUDE_TIES ranked TypedPlans lower to ASL2 plus private SQL ordering policy. INCLUDE_TIES, time, Boolean/relationship/comparison and execution evidence remain open.",
       "evidence": [
         "app/semantic_v2/legacy_adapter.py",
         "Oagnet/prompt_build.py::SYSTEM_PROMPT",
         "Oagnet/agent.py::_validate_asl_output",
         "docs/cutover/pinned_sql_catalog/closure_report.md",
-        "docs/cutover/v2_asl2/closure_report.md"
+        "docs/cutover/v2_asl2/closure_report.md",
+        "docs/cutover/v2_ranking/closure_report.md"
       ],
-      "next_action": "Obtain governed source timezone and primary subject evidence; implement remaining loss-aware backend semantics and real result bindings. Preserve the frozen legacy adapter and existing public/shadow routes."
+      "next_action": "Resolve native catalog prerequisites and governed time/subject facts; complete remaining execution contracts including INCLUDE_TIES without weakening SQL guards. Keep public/shadow routing unchanged."
     },
     {
       "blocker_id": "B-01",
@@ -232,5 +235,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "abd6e82bfffb683d829e408581dda583633ec8d8"
+  "latest_source_delivery_baseline": "b6ca3db0d8602f9f7457a64092d60c449a1c725d"
 }

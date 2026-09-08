@@ -270,10 +270,30 @@ class _SnapshotCatalog:
 
 
 class _PinnedTranslator(SQLTranslatorProd):
-    def __init__(self, scope, snapshot):
+    def __init__(self, scope, snapshot, ordering_contract=None):
         self.scope = scope
         self.loader = _SnapshotLoader(scope, snapshot)
         self.catalog = _SnapshotCatalog(self.loader)
+        self.ordering_contract = ordering_contract
+
+    def _build_order_by_clause(self, sort, metrics, dimensions, model_id=None):
+        if self.ordering_contract is None:
+            return super()._build_order_by_clause(sort, metrics, dimensions, model_id)
+        clauses = []
+        for order in self.ordering_contract['order_by']:
+            alias = '`' + order['sql_alias'] + '`'
+            if order['nulls_policy'] != 'EXCLUDE':
+                null_direction = 'DESC' if order['nulls_policy'] == 'FIRST' else 'ASC'
+                clauses.append(f'({alias} IS NULL) {null_direction}')
+            clauses.append(alias + ' ' + order['direction'])
+        return 'ORDER BY ' + ', '.join(clauses)
+
+    def _build_having_clause(self, conditions):
+        if self.ordering_contract is None:
+            return super()._build_having_clause(conditions)
+        exclusions = ['`' + order['sql_alias'] + '` IS NOT NULL'
+                      for order in self.ordering_contract['order_by'] if order['nulls_policy'] == 'EXCLUDE']
+        return super()._build_having_clause([*conditions, *exclusions])
 
     def _get_entity(self, code, model_id=None):
         return self.loader.get_entity(code, model_id)
@@ -344,7 +364,42 @@ class _PinnedTranslator(SQLTranslatorProd):
     execute_sql_on_data_source = _deny_execution
 
 
-def translate_pinned_catalog(pin, request_scope, asl):
+def _ranking_contract(value, ast):
+    """Validate private alias-only ordering; it cannot introduce source fields."""
+    _require(isinstance(value, dict) and set(value) == {'contract', 'semantic_fingerprint',
+             'output_aliases', 'order_by', 'ties_policy', 'limit'}, 'PINNED_RANKING_CONTRACT_INVALID')
+    value = deepcopy(value)
+    _require(value['contract'] == 'pinned-ranking-v1' and value['ties_policy'] == 'EXCLUDE_TIES',
+             'PINNED_RANKING_POLICY_UNSUPPORTED')
+    _require(isinstance(value['semantic_fingerprint'], str) and len(value['semantic_fingerprint']) == 64
+             and all(c in '0123456789abcdef' for c in value['semantic_fingerprint']), 'PINNED_RANKING_CONTRACT_INVALID')
+    aliases = value['output_aliases']
+    _require(isinstance(aliases, list) and 1 <= len(aliases) <= 200, 'PINNED_RANKING_CONTRACT_INVALID')
+    _require(all(isinstance(a, str) and a.startswith('v2_') and len(a) == 43
+             and all(c in '0123456789abcdef' for c in a[3:]) for a in aliases)
+             and len(aliases) == len(set(aliases)), 'PINNED_RANKING_ALIAS_INVALID')
+    orders = value['order_by']
+    _require(isinstance(orders, list) and 1 <= len(orders) <= 21, 'PINNED_RANKING_CONTRACT_INVALID')
+    for order in orders:
+        _require(isinstance(order, dict) and set(order) == {'sql_alias', 'direction', 'nulls_policy'}
+                 and order['sql_alias'] in aliases and order['direction'] in ('ASC', 'DESC')
+                 and order['nulls_policy'] in ('FIRST', 'LAST', 'EXCLUDE'), 'PINNED_RANKING_ORDER_INVALID')
+    _require(type(value['limit']) is int and 1 <= value['limit'] <= 10000
+             and type(ast.get('limit')) is int and ast['limit'] == value['limit'], 'PINNED_RANKING_LIMIT_MISMATCH')
+    _require(bool(ast.get('metrics')) and bool(ast.get('dimensions')) and not ast.get('having'),
+             'PINNED_RANKING_ASL_SHAPE_MISMATCH')
+    projected = [item.get('alias') for family in ('dimensions', 'metrics') for item in ast[family]]
+    _require(projected == aliases, 'PINNED_RANKING_PROJECTION_MISMATCH')
+    sort = ast.get('sort') or {}
+    primary = [item for family in ('metrics', 'dimensions') for item in ast[family]
+               if item.get('alias') == orders[0]['sql_alias']
+               and sort.get('field_type') == ('metric' if family == 'metrics' else 'dimension')
+               and sort.get('field') == item.get('name')]
+    _require(len(primary) == 1 and sort.get('direction') == orders[0]['direction'], 'PINNED_RANKING_PRIMARY_MISMATCH')
+    return value
+
+
+def translate_pinned_catalog(pin, request_scope, asl, *, ordering_contract=None):
     """Accept SQL only after the trusted live pin finishes successfully.
 
     Scope must be rebuilt from this request's trusted upstream grant. The
@@ -377,7 +432,8 @@ def translate_pinned_catalog(pin, request_scope, asl):
                 _require(type(ast[key]) is int and ast[key] == scope.semantic_model_id, 'PINNED_CATALOG_SCOPE_MISMATCH')
         _require(not any(k in ast for k in ('business_domain_id', 'business_domain_ids',
                  'authorized_semantic_scope', 'database_id', 'knowledge_base_names')), 'PINNED_ASL_SCOPE_OVERRIDE')
-        translator = _PinnedTranslator(scope, snapshot)
+        ordering = _ranking_contract(ordering_contract, ast) if ordering_contract is not None else None
+        translator = _PinnedTranslator(scope, snapshot, ordering)
         source = translator._plan_sources(ast, scope.semantic_model_id)
         # Existing database selection maps the platform database ID to its
         # data-source ID. Do not infer an alternative from a historical plan.
@@ -391,10 +447,14 @@ def translate_pinned_catalog(pin, request_scope, asl):
                  'PINNED_SQL_REQUIRED_JOIN_MISSING')
         _require(all(str(translator.loader.tables[t]['data_source_id']) == source for t in tables)
                  and str(result.get('data_source_id')) == source, 'DATA_SOURCE_SCOPE_MISMATCH')
+        aliases = sql_projection_aliases(result['sql'])
+        if ordering:
+            _require(aliases == ordering['output_aliases'], 'PINNED_RANKING_PROJECTION_MISMATCH')
         receipt = pin.finish()
         _require(receipt == identity, 'PINNED_PUBLICATION_CHANGED_DURING_TRANSLATION')
         return {**result, **scope.evidence(), 'catalog_pin': deepcopy(receipt),
-                'sql_projection_aliases': sql_projection_aliases(result['sql'])}
+                'sql_projection_aliases': aliases,
+                **({'ordering_contract_hash': _digest(ordering)} if ordering else {})}
     except Exception as exc:
         # Private metadata, SQL and business text never leak through a failed
         # pin/read. Typed local errors contain bounded codes only.

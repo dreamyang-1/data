@@ -35,9 +35,10 @@ class ASL2Lowering:
     can_execute_safely: bool = False
     mode: str = 'SHADOW_ONLY'
     display_labels: tuple[tuple[str, str | None], ...] = ()
+    ordering_contract: dict | None = None
 
     def __post_init__(self):
-        for name in ('asl', 'result_contract', 'output_bindings'):
+        for name in ('asl', 'result_contract', 'output_bindings', 'ordering_contract'):
             object.__setattr__(self, name, m.freeze_contract(getattr(self, name)))
 
 
@@ -48,8 +49,9 @@ class _Compiler:
         if payload.payload_type == 'DETAIL_ROWS':
             self.subject = _row(session, payload.source_entity)
         else:
-            owners = [set(_row(session, ref).get('source_dependency', {}).get('bind_entity', []))
-                      for ref in payload.measures]
+            owners = [set(_row(session, o.semantic_ref).get('source_dependency', {}).get('bind_entity', []))
+                      for o in contract.required_outputs if isinstance(o.semantic_ref, m.BoundSemanticRef)
+                      and o.semantic_ref.catalog_type == 'METRIC']
             common = set.intersection(*owners) if owners else set()
             candidates = session.candidates(CatalogType.ENTITY)
             found = [session._rows[c['candidate_id']].metadata for c in candidates if c['canonical_code'] in common]
@@ -134,7 +136,7 @@ class _Compiler:
             _require(not isinstance(output, (m.AliasedOutputFieldRequirement, m.TemporalOutputFieldRequirement)),
                      'ASL2_OUTPUT_OCCURRENCE_UNSUPPORTED')
             alias = 'v2_' + contract_digest([self.plan.semantic_fingerprint, output.output_field_id])[:40]
-            if ref.catalog_type == 'METRIC' and output.logical_role == 'MEASURE':
+            if ref.catalog_type == 'METRIC' and output.logical_role in {'MEASURE', 'ORDER_BY'}:
                 item = dict(name=ref.canonical_code, alias=alias, time_anchor=None)
                 asl['metrics'].append(item); family = 'metrics'
             elif ref.catalog_type in {'ATTRIBUTE', 'PHYSICAL_COLUMN', 'DIMENSION'}:
@@ -166,11 +168,37 @@ class _Compiler:
         cap = None
         if self.contract.expected_cardinality.kind == 'SCALAR':
             asl['limit'] = 1
+        elif payload.payload_type == 'RANKING':
+            asl['limit'] = payload.ranking.limit
         elif limit:
             asl['limit'] = limit.limit
         else:
             cap = asl['limit'] = 10000
         return asl, bindings, cap
+
+    def ranking(self, asl, bindings):
+        """Private SQL policy; ASL's single sort cannot encode this contract."""
+        if self.plan.payload.payload_type != 'RANKING':
+            return None
+        rank = self.plan.payload.ranking
+        _require(rank.ties_policy == 'EXCLUDE_TIES', 'ASL2_RANK_TIES_CONTRACT_UNSUPPORTED')
+        # An extra grouping field would change the population being ranked.
+        group_ids = {r.canonical_id for r in self.plan.payload.group_by}
+        _require(self.plan.payload.ranking_target.canonical_id in group_ids,
+                 'ASL2_RANK_TARGET_GRAIN_UNPROVEN')
+        for output in self.contract.required_outputs:
+            if output.semantic_ref.catalog_type != 'METRIC':
+                _require(output.semantic_ref.canonical_id in group_ids, 'ASL2_RANK_ORDER_GRAIN_UNPROVEN')
+        by_id = {b.output_field_id:b.sql_alias for b in bindings}
+        orders = [dict(sql_alias=by_id[o.output_field_id], direction=o.direction, nulls_policy=o.nulls_policy)
+                  for o in self.contract.required_ordering]
+        primary = next((family, item) for family in ('metrics', 'dimensions') for item in asl[family]
+                       if item['alias'] == orders[0]['sql_alias'])
+        asl['sort'] = dict(field=primary[1]['name'], field_type='metric' if primary[0] == 'metrics' else 'dimension',
+                           direction=rank.direction)
+        return dict(contract='pinned-ranking-v1', semantic_fingerprint=self.plan.semantic_fingerprint,
+                    output_aliases=[b.sql_alias for b in bindings], order_by=orders,
+                    ties_policy=rank.ties_policy, limit=rank.limit)
 
 
 def lower_asl2(session, plan):
@@ -186,7 +214,7 @@ def lower_asl2(session, plan):
     contract = ResultContractCompiler.compile(plan)
     blockers = []
     kind = plan.payload.payload_type
-    if kind not in {'SCALAR_AGGREGATE','GROUPED_AGGREGATE','DETAIL_ROWS'}:
+    if kind not in {'SCALAR_AGGREGATE','GROUPED_AGGREGATE','DETAIL_ROWS','RANKING'}:
         blockers.append('ASL2_PAYLOAD_' + kind + '_UNSUPPORTED')
     time = getattr(plan.payload, 'time', None)
     if time and time.range is not None:
@@ -194,16 +222,18 @@ def lower_asl2(session, plan):
     if time and (time.grain != 'NONE' or time.comparison is not None
                  or time.missing_period_policy != 'LEAVE_MISSING' or time.include_incomplete_period):
         blockers.append('ASL2_TIME_POLICY_UNREPRESENTABLE')
-    if contract.required_ordering:
+    if contract.required_ordering and kind != 'RANKING':
         blockers.append('ASL2_ORDERING_POLICY_UNREPRESENTABLE')
     if blockers:
         return ASL2Lowering('UNSUPPORTED',plan.semantic_fingerprint,None,contract,blockers=tuple(blockers))
     try:
-        asl, bindings, cap = _Compiler(session,plan,contract).build()
+        compiler = _Compiler(session,plan,contract)
+        asl, bindings, cap = compiler.build()
+        ordering = compiler.ranking(asl, bindings)
         labels = {o.output_field_id:o.display_label for o in contract.required_outputs}
         labels.update({p.output_field_id:p.display_label for p in plan.payload.projection_spec.items if p.display_label is not None})
         return ASL2Lowering('SUPPORTED_PLAN_ONLY',plan.semantic_fingerprint,asl,contract,bindings,
-            implicit_row_cap=cap,display_labels=tuple(labels.items()))
+            implicit_row_cap=cap,display_labels=tuple(labels.items()),ordering_contract=ordering)
     except ASL2Unsupported as exc:
         return ASL2Lowering('UNSUPPORTED',plan.semantic_fingerprint,None,contract,blockers=(str(exc),))
 
