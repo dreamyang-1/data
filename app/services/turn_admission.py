@@ -9,7 +9,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from app.services.legacy_guards import pending_answer_admissibility, apply_region_clear_barrier
+from app.services.legacy_guards import (
+    pending_answer_admissibility, apply_region_clear_barrier,
+    product_filter_clear_requested, update_product_clear_barrier,
+)
 
 from app.domain.models import (
     AnalysisOperator,
@@ -511,6 +514,8 @@ class TurnAdmissionGate:
             followup_signals.append('EXPLICIT_SLOT_CORRECTION')
         if compact.rstrip('。？！?!') in {'不限地区', '不限制地区', '不限区域', '不限制区域'}:
             followup_signals.append('CLEAR_REGION_SCOPE')
+        if product_filter_clear_requested(question):
+            followup_signals.append('CLEAR_PRODUCT_FILTER')
         topic_shift_signals = self._signals(question, _TOPIC_SHIFT_PATTERNS)
         temporal_references = self._temporal_references(compact)
         action_explicit = bool(_ACTION_PATTERN.search(compact))
@@ -1150,6 +1155,11 @@ class TurnAdmissionGate:
             request.cleared_filter_families = ['region']
         elif any(TurnAdmissionGate._semantic_field_family(str(f.get('field') or '')) == 'region' for f in current.filters):
             request.cleared_filter_families = []
+        explicit_filter_slot = facts.explicit_slots.get('filters')
+        update_product_clear_barrier(
+            request, current, facts.raw_query,
+            explicit_filters=(explicit_filter_slot.value if explicit_filter_slot is not None else []),
+        )
         apply_region_clear_barrier(request)
         return request
 
@@ -1455,6 +1465,15 @@ class TurnAdmissionGate:
                 slot='region', operation=SlotOperationType.CLEAR,
                 source=SlotSource.CURRENT_EXPLICIT, confidence=decision.confidence,
                 reason_code='REGION_INHERITANCE_BARRIER',
+            ))
+
+        if 'CLEAR_PRODUCT_FILTER' in decision.current_turn_facts.followup_signals:
+            operations.append(SlotOperation(
+                slot='product', operation=SlotOperationType.CLEAR,
+                old_value=[item for item in before.get('filters', [])
+                           if cls._semantic_field_family(str(item.get('field') or '')) == 'product'],
+                new_value=[], source=SlotSource.CURRENT_EXPLICIT,
+                confidence=decision.confidence, reason_code='PRODUCT_INHERITANCE_BARRIER',
             ))
 
         current_names = set(current_slots)

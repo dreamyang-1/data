@@ -3968,6 +3968,19 @@ class RuleBasedIntentClassifier:
     def merge_clarification(
         self, pending: CanonicalAnalysisRequest, answer: str
     ) -> CanonicalAnalysisRequest:
+        from app.services.legacy_guards import (
+            product_filter_clear_requested, update_product_clear_barrier,
+            apply_region_clear_barrier,
+        )
+        if product_filter_clear_requested(answer):
+            # A complete filter-clear command cannot replace the product grain
+            # or projection merely because the role word is also a dimension.
+            pending.original_question += f"\n补充：{answer}"
+            pending.conversation_control = ConversationControl.CLARIFICATION_RESPONSE
+            update_product_clear_barrier(pending, pending, answer)
+            apply_region_clear_barrier(pending)
+            pending.rewritten_question = render_execution_question(pending)
+            return pending
         prior_missing = set(pending.missing_slots)
         parsed = self.classify(
             answer,
@@ -4252,13 +4265,14 @@ class RuleBasedIntentClassifier:
         pending.rewritten_question = render_execution_question(
             pending, confirmation=confirmation
         )
-        from app.services.legacy_guards import apply_region_clear_barrier
+        from app.services.legacy_guards import apply_region_clear_barrier, update_product_clear_barrier
         if answer.strip().rstrip('。？！?!') in {'不限地区', '不限制地区', '不限区域', '不限制区域'}:
             pending.cleared_filter_families = ['region']
         else:
             from app.services.turn_admission import TurnAdmissionGate
             if any(TurnAdmissionGate._semantic_field_family(str(f.get('field') or '')) == 'region' for f in parsed.filters):
                 pending.cleared_filter_families = []
+        update_product_clear_barrier(pending, parsed, answer)
         apply_region_clear_barrier(pending)
         pending.rewritten_question = render_execution_question(pending, confirmation=confirmation)
         return pending
