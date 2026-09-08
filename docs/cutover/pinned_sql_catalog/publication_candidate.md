@@ -1,15 +1,13 @@
-> Superseded by [the SQL-source versioned candidate](../pinned_sql_catalog/publication_candidate.md). Historical observations below retain their original timestamps.
-
 # Current reviewed publication candidate — not executed
 
 Scope: **semantic_model_id 81 / business_domain_ids [205]**.
 Status: **BLOCKED_REGISTRY_DURABILITY_AND_PENDING_OPERATIONAL_AUTHORIZATION**.
-This replaces the historical PR #20 candidate. The source/target/embedding
+This supersedes the PR #30 candidate after SQL source metadata was added to the private catalog version. The source/target/embedding
 identities and planned write inventory are in `publication_candidate.json`.
 
-Fresh metadata/native reads at 2026-09-08 16:43–16:45 UTC confirm:
+Metadata was recaptured at 2026-09-08 17:24 UTC. Target/embedding/Redis observations below retain their prior 16:43–16:45 UTC timestamp; they require fresh verification before an authorized operation:
 
-- Catalog version `b3106dea38f62738f5f2551e4667ceee6a0d3ba96f5e88ddd90e7ef746b88506`.
+- Catalog version `3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21`.
 - Source identity `88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1`.
 - Target identity `763d0302d6278371ea2cf3c5372103cf8d823ea40411d9d27f191a511a010ef5`.
 - Configured embedding contract `0ed46eed21febebf0dd778a619add0f75c3e376e1eef9056f7867925bf205ed5`, dimension **1024**.
@@ -52,8 +50,8 @@ or a record of execution. The source commit in the referenced manifest contains
 the actual tested operator guards; it is not a caller-supplied model identity.
 
 ```powershell
-$catalogCandidate = Get-Content -LiteralPath 'E:/YouoAgent/DataAnalysis_Agent/docs/cutover/catalog_publication_candidate/publication_candidate.json' -Raw | ConvertFrom-Json
-$catalogRevision = (Get-Content -LiteralPath 'E:/YouoAgent/DataAnalysis_Agent/docs/cutover/catalog_publication_candidate/git_commit_manifest.json' -Raw | ConvertFrom-Json).implementation_commit
+$catalogCandidate = Get-Content -LiteralPath 'E:/YouoAgent/DataAnalysis_Agent/docs/cutover/pinned_sql_catalog/publication_candidate.json' -Raw | ConvertFrom-Json
+$catalogRevision = (Get-Content -LiteralPath 'E:/YouoAgent/DataAnalysis_Agent/docs/cutover/pinned_sql_catalog/git_commit_manifest.json' -Raw | ConvertFrom-Json).implementation_commit
 python -X utf8 scripts/manage_catalog_publication.py initialize --semantic-model-id 81 --business-domain-id 205 --expected-target-identity-hash $catalogCandidate.expected_target_identity_hash
 if ($LASTEXITCODE -ne 0) { throw 'Catalog initialization refused; inspect before continuing.' }
 python -X utf8 scripts/manage_catalog_publication.py publish --semantic-model-id 81 --business-domain-id 205 --publication-id $catalogCandidate.publication_id --producer-revision $catalogRevision --expected-target-identity-hash $catalogCandidate.expected_target_identity_hash --expected-catalog-version $catalogCandidate.expected_catalog_version --expected-embedding-contract $catalogCandidate.expected_embedding_contract
@@ -75,7 +73,7 @@ Approved execution would initialize the two configured semantic/physical names
 with `_catalog` appended, embed 290 records using the existing configured
 transport, write a new immutable generation, and write Redis reservation,
 manifest and scoped activation keys. The current publication ID is
-`cutover-81-205-20260909-r2`; never retry a reserved ID after a partial operation.
+`cutover-81-205-20260909-r3`; never retry a reserved ID after a partial operation.
 
 After row writes, the existing publisher verifies full strongly consistent
 inventory and vectors against fresh MySQL authority, then performs scoped Redis

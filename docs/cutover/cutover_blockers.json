@@ -6,7 +6,7 @@
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
       "status": "ACTUAL_SCOPE_CAPTURE_GENERATION_VERIFIED",
-      "summary": "Latest actual 81/[205] metadata-only capture produces 290 static records and verifies 89 active entity/attribute/physical source mappings. Route configuration and governed search policy now affect catalog identity. Native publication is absent.",
+      "summary": "Current 81/[205] metadata capture versions SQL base tables, data sources, governed sub-tables and metric dependencies together with existing semantic/value facts. 290 static records, 89 source mappings and 25 offline SQL plans verified; native publication unproven.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
         "Oagnet/catalog_generation.py",
@@ -14,7 +14,8 @@
         "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
         "docs/cutover/v2_relation_paths/catalog_path_evidence.json",
         "docs/cutover/v2_entity_value_sources/catalog_source_evidence.json",
-        "docs/cutover/catalog_publication_candidate/live_scope_evidence.json"
+        "docs/cutover/catalog_publication_candidate/live_scope_evidence.json",
+        "docs/cutover/pinned_sql_catalog/closure_report.md"
       ],
       "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot."
     },
@@ -26,7 +27,8 @@
       "summary": "Fresh 81/[205] read confirms both isolated collections and active marker absent. Redis AOF is disabled and automatic RDB schedule empty; no durable release-marker recovery is proven. Updated reviewed candidate and guarded operator commands are prepared, not executed.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
-        "docs/cutover/catalog_publication_candidate/closure_report.md"
+        "docs/cutover/catalog_publication_candidate/closure_report.md",
+        "docs/cutover/pinned_sql_catalog/closure_report.md"
       ],
       "next_action": "Locate Redis deployment/persistent storage ownership and prepare an approved durability/recovery plan. After durability evidence and native publication authorization, execute the current target/source/embedding-bound candidate and verify full read-back/activation. No shared Redis configuration or V1 index change is authorized by source commits."
     },
@@ -34,14 +36,15 @@
       "blocker_id": "C-03",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "V2_PLAN_COMPILER_PIN_ACCEPTANCE_INTEGRATED",
-      "summary": "The new V2 scoped session restores state, binds verified catalog handles, resolves the turn and compiles only with current scope; full pin.finish is mandatory before returning/caching output. Existing V1 API/SQL caches and production V2 routing remain separate/unintegrated.",
+      "status": "PINNED_SQL_CATALOG_CONSUMER_VERIFIED_OFFLINE",
+      "summary": "Internal SQL planning consumes the same versioned pin, rejects independent catalog fallback and missing joins, and requires finish before SQL acceptance. Real metadata replay 25/25. Public/deployed V2 path and native publication remain unintegrated.",
       "evidence": [
         "app/semantic_v2/catalog_bridge.py",
         "Oagnet/catalog_publication.py::PinnedCatalog.identity",
-        "docs/cutover/v2_scope_bridge/test_delta.json"
+        "docs/cutover/v2_scope_bridge/test_delta.json",
+        "docs/cutover/pinned_sql_catalog/closure_report.md"
       ],
-      "next_action": "Connect the raw-input entry to deployment/state-store boundaries after its remaining semantic coverage gates; version downstream SQL metadata/cache reads. Verify actual deployed acceptance with unchanged public I/O."
+      "next_action": "Verify native/deployed pin acceptance after C-02; connect the V2 typed plan through actual ASL 2.0 with ResultContract evidence. Resolve six unqualified catalog relationship declarations before accepting affected joins."
     },
     {
       "blocker_id": "C-04",
@@ -64,10 +67,11 @@
       "classification": "EXTERNAL_BLOCKER",
       "blocking_level": "P0",
       "status": "TARGET_SCOPE_IDENTIFIED_READ_ONLY_VERIFIED",
-      "summary": "User selected current environment 81/[205]. Existing configured MySQL, Milvus and Redis were reachable read-only and their identities hashed. Deployed service revisions, gateway trust and durable release operation are still unverified.",
+      "summary": "Scope 81/[205] was selected and catalog services verified read-only. Current Redis target is not a local interface; local Docker cannot establish its deployment/volume ownership. Deployed revisions, trusted gateway and durable recovery remain unverified.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
-        "docs/cutover/catalog_publication_candidate/live_scope_evidence.json"
+        "docs/cutover/catalog_publication_candidate/live_scope_evidence.json",
+        "docs/cutover/pinned_sql_catalog/closure_report.md"
       ],
       "next_action": "Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]."
     },
@@ -116,12 +120,13 @@
       "blocker_id": "S-01",
       "classification": "SCHEMA_DRIFT",
       "blocking_level": "P1",
-      "status": "OPEN",
-      "summary": "V2 adapter describes an ASL 1.0 target, while current Oagnet prompt/validator uses version 2.0. There is no executable compatibility proof.",
+      "status": "ASL2_PINNED_SQL_SEAM_VERIFIED_TYPED_LOWERING_OPEN",
+      "summary": "Actual ASL 2.0 can plan against a pinned catalog offline. The frozen V2 adapter still targets ASL 1.0; TypedPlan-to-ASL2 loss-aware lowering and result binding are not proven.",
       "evidence": [
         "app/semantic_v2/legacy_adapter.py",
         "Oagnet/prompt_build.py::SYSTEM_PROMPT",
-        "Oagnet/agent.py::_validate_asl_output"
+        "Oagnet/agent.py::_validate_asl_output",
+        "docs/cutover/pinned_sql_catalog/closure_report.md"
       ],
       "next_action": "Pin the actual downstream schema in the V2 compiler contract and prove public legacy I/O compatibility; do not merely rename a version string."
     },
@@ -224,5 +229,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "df09b52ea4ab76254f5005619aefa8e4cb87ac5f"
+  "latest_source_delivery_baseline": "b0c2d9da2a836b9e16b9986c90d1e3b2065026f0"
 }
