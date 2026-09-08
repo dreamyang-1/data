@@ -6,13 +6,14 @@
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
       "status": "ACTUAL_SCOPE_CAPTURE_GENERATION_VERIFIED",
-      "summary": "Latest actual 81/[205] read-only capture generates 290 records with retained declared relation types; 14 entities have owned main display attributes and 24 relations have known endpoints/joins/cardinalities. Native publication is absent.",
+      "summary": "Latest actual 81/[205] metadata-only capture produces 290 static records and verifies 89 active entity/attribute/physical source mappings. Route configuration and governed search policy now affect catalog identity. Native publication is absent.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
         "Oagnet/catalog_generation.py",
         "Oagnet/mysql_tool.py",
         "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
-        "docs/cutover/v2_relation_paths/catalog_path_evidence.json"
+        "docs/cutover/v2_relation_paths/catalog_path_evidence.json",
+        "docs/cutover/v2_entity_value_sources/catalog_source_evidence.json"
       ],
       "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot."
     },
@@ -25,7 +26,7 @@
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json"
       ],
-      "next_action": "After existing operational authorization, regenerate the isolated publication candidate from the latest capture (relation_type changed its identity), publish, then verify native full read-back and durable activation. No V1 collection rebuild."
+      "next_action": "After operational authorization, regenerate the isolated publication candidate from the latest capture (relation types and entity-value source facts changed its identity), publish, then verify native full read-back and durable activation. No V1 collection rebuild."
     },
     {
       "blocker_id": "C-03",
@@ -44,15 +45,16 @@
       "blocker_id": "C-04",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "ACTUAL_DEFAULTS_AND_DECLARED_RELATIONSHIPS_VERIFIED",
-      "summary": "Actual 81/[205] defaults/24 relations verified; fresh unchanged catalog passes all 250 declared directed two-hop walks locally, including 76 repeated-entity walks. External values, routing, actual publication and model interpretation remain open.",
+      "status": "ACTUAL_DEFAULTS_RELATIONSHIPS_AND_VALUE_MAPPINGS_VERIFIED",
+      "summary": "Actual 81/[205] defaults/relations and all 89 attribute source mappings are verified. Oagnet pinned exact value lookup/reobservation passes offline. Agent dynamic-value integration, real values, physical runtime identity and native publication remain open.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
         "docs/cutover/catalog_identity/source_review.json",
         "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
-        "docs/cutover/v2_relation_paths/catalog_path_evidence.json"
+        "docs/cutover/v2_relation_paths/catalog_path_evidence.json",
+        "docs/cutover/v2_entity_value_sources/closure_report.md"
       ],
-      "next_action": "Verify external entity-value and physical routing coverage, then actual native pinned publication; local typed acceptance is not publication or real model quality."
+      "next_action": "Integrate source observations into Raw V2 field/value binding and pending/task restore, preserving current scope and database-load mapping. Then prove actual entity-value retrieval and isolated native pinned publication under authorized operations."
     },
     {
       "blocker_id": "X-01",
