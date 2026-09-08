@@ -40,7 +40,12 @@ resolve the external Oagnet semantic scope issue recorded in the Phase 0C closur
 
 ## Verification
 
-From the repository root:
+This is the frozen import evidence for commit `813073ff3d34a5935e98c5433207ab38d55ccf6b`.
+The verifier checks that original snapshot and is expected to report drift after
+later source changes. Current scope changes and their verification are documented
+in [the scope root-cause report](../phase0c_root_cause/closure_report.md).
+
+From the repository root at the original import commit:
 
 ```powershell
 python docs/oagnet_import/verify_snapshot.py

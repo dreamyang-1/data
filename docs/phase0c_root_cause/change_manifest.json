@@ -1,0 +1,733 @@
+{
+  "baseline_commit": "813073ff3d34a5935e98c5433207ab38d55ccf6b",
+  "feature_branch": "phase0c-scope-root-cause-20260908-01",
+  "authority": "User engineering and single-domain semantic scope contract, 2026-09-08",
+  "files": [
+    {
+      "repository_path": "Oagnet/agent.py",
+      "source_path": "E:\\YouoAgent\\Oagnet\\agent.py",
+      "source_sha256": "aef873af7dee705069b39bd53eef9dbdea992cc61c1ec83886813570f39a1ee5",
+      "published_sha256": "aef873af7dee705069b39bd53eef9dbdea992cc61c1ec83886813570f39a1ee5",
+      "before_repository_sha256": "ad02d0c81175a716b84b7661c40bc2653089b084ccadcb7afdbd720c18a9ca41",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "Oagnet/api.py",
+      "source_path": "E:\\YouoAgent\\Oagnet\\api.py",
+      "source_sha256": "bfaad1ac7faf3d82ddfae40281680ff73b4d97e0b12bed4b6cf49f52b89ecb12",
+      "published_sha256": "bfaad1ac7faf3d82ddfae40281680ff73b4d97e0b12bed4b6cf49f52b89ecb12",
+      "before_repository_sha256": "7e27af170e0ec5acda406d12abecced27a2b63f4232e02b7c8d59b9827ff76d3",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "Oagnet/mysql_tool.py",
+      "source_path": "E:\\YouoAgent\\Oagnet\\mysql_tool.py",
+      "source_sha256": "78f181a6696f8346a2e6dfd4d1982e999b99e84b8889dc3275a9085007b1e0d7",
+      "published_sha256": "78f181a6696f8346a2e6dfd4d1982e999b99e84b8889dc3275a9085007b1e0d7",
+      "before_repository_sha256": "866bed094ae46fb1370638b952c6ca5b53f5caa8328b3b2cc4f9f47359eb848f",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "Oagnet/prompt_build.py",
+      "source_path": "E:\\YouoAgent\\Oagnet\\prompt_build.py",
+      "source_sha256": "5fdcf431cbf6aa9e5d546b97d33bfd70debd73965a5d9187d54436a9ad1d0e20",
+      "published_sha256": "5fdcf431cbf6aa9e5d546b97d33bfd70debd73965a5d9187d54436a9ad1d0e20",
+      "before_repository_sha256": "8cd4fc41bbbc89f5e3f738b5e2488523bb545710faef4a80dec79f8ea79f1d26",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "Oagnet/vector_store.py",
+      "source_path": "E:\\YouoAgent\\Oagnet\\vector_store.py",
+      "source_sha256": "6e0402df97374d55c28b2547983483442c7d90bdf9857828787afe3d8f0cb63c",
+      "published_sha256": "6e0402df97374d55c28b2547983483442c7d90bdf9857828787afe3d8f0cb63c",
+      "before_repository_sha256": "383bf31cdb64c6be32b2568746815c2e948b5ed100e9e9ef7fe66232b5b515b4",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "Oagnet/scope_contract.py",
+      "source_path": "E:\\YouoAgent\\Oagnet\\scope_contract.py",
+      "source_sha256": "3cde89d5341d13fae5855babac8b6f736fd6f0bf4d7a47b86b25beef50c57894",
+      "published_sha256": "3cde89d5341d13fae5855babac8b6f736fd6f0bf4d7a47b86b25beef50c57894",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "Oagnet/scripts/run_offline_tests.py",
+      "source_path": "E:\\YouoAgent\\Oagnet\\scripts\\run_offline_tests.py",
+      "source_sha256": "b787cd3442850df82d56f820e29f7d8df4e98ea934155821f88a5962cb2b334d",
+      "published_sha256": "b787cd3442850df82d56f820e29f7d8df4e98ea934155821f88a5962cb2b334d",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "Oagnet/tests/test_scope_contract.py",
+      "source_path": "E:\\YouoAgent\\Oagnet\\tests\\test_scope_contract.py",
+      "source_sha256": "13b2b179b7d2a5e1229c20aaa95f6993aadaf5f85cdaf87bb3b28d8601591059",
+      "published_sha256": "13b2b179b7d2a5e1229c20aaa95f6993aadaf5f85cdaf87bb3b28d8601591059",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "Oagnet/tests/test_semantic_evidence.py",
+      "source_path": "E:\\YouoAgent\\Oagnet\\tests\\test_semantic_evidence.py",
+      "source_sha256": "23216851c2e5ad7ed572f8ee3bc7f53b122211f7b31e77b43d66899e4767d51f",
+      "published_sha256": "23216851c2e5ad7ed572f8ee3bc7f53b122211f7b31e77b43d66899e4767d51f",
+      "before_repository_sha256": "417c2425971d1ef1660e05db2a6452d00e4f9b5df6cab8b1d5b75565d7b717c7",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "Oagnet/tests/test_cross_domain_hardening.py",
+      "source_path": "E:\\YouoAgent\\Oagnet\\tests\\test_cross_domain_hardening.py",
+      "source_sha256": "96e16faef7d463427f03305ea7e9c8a634579ae5458c98a692accd07746e3be2",
+      "published_sha256": "96e16faef7d463427f03305ea7e9c8a634579ae5458c98a692accd07746e3be2",
+      "before_repository_sha256": "477bed8a178701489f2f51db0cedf7a8fc10df46bed6f243b38f76b78cc76cbd",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "Oagnet/tests/test_semantic_display_resolve.py",
+      "source_path": "E:\\YouoAgent\\Oagnet\\tests\\test_semantic_display_resolve.py",
+      "source_sha256": "e9aacc70779cef524ea77e3c8098afcef8bd0918c94f0046be8aa128e424fb4c",
+      "published_sha256": "e9aacc70779cef524ea77e3c8098afcef8bd0918c94f0046be8aa128e424fb4c",
+      "before_repository_sha256": "7d8279bf29a36467f5f036b407d44b294b6c173bf0c12e96fe427e5a6ca5ff6c",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "Oagnet/AGENT_QUERY_SEMANTIC_EVIDENCE_CONTRACT.md",
+      "source_path": "E:\\YouoAgent\\Oagnet\\AGENT_QUERY_SEMANTIC_EVIDENCE_CONTRACT.md",
+      "source_sha256": "57948df2c6cce5c1dba7c9164a4ed757940f75ce45a89aa81a1cbb270dea95f3",
+      "published_sha256": "57948df2c6cce5c1dba7c9164a4ed757940f75ce45a89aa81a1cbb270dea95f3",
+      "before_repository_sha256": "43e2a04d91f202ce50b799aa2e4114ae3a84d794fa16c9563843b26afe9df1e5",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/analysis_contract.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\analysis_contract.py",
+      "source_sha256": "3399e01e36917fb3d05e15ac0a4592bfb0d791f10deefaa658f82df8ea16edab",
+      "published_sha256": "3399e01e36917fb3d05e15ac0a4592bfb0d791f10deefaa658f82df8ea16edab",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/api_server_prod.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\api_server_prod.py",
+      "source_sha256": "e9603440432701855e04c60f2088a4d27e8a4e788955f88b1e4fbddb3e23f46d",
+      "published_sha256": "e9603440432701855e04c60f2088a4d27e8a4e788955f88b1e4fbddb3e23f46d",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": "d73b4fb1f6a0675501e6bd118b3f0594692bed29f26bfcd80ff9ed060b9f5aa8",
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/data_exporter.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\data_exporter.py",
+      "source_sha256": "97853d653cf23e5b515bd541d16262209591d3c7d735cddbae3b94a51077a835",
+      "published_sha256": "97853d653cf23e5b515bd541d16262209591d3c7d735cddbae3b94a51077a835",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/runtime_config.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\runtime_config.py",
+      "source_sha256": "9c573c8e51f7fbb7ce64425dc777a69d60dda092f55fe1d0932efe6ab28d3da5",
+      "published_sha256": "9c573c8e51f7fbb7ce64425dc777a69d60dda092f55fe1d0932efe6ab28d3da5",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/sql_translator_prod.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\sql_translator_prod.py",
+      "source_sha256": "c2ec86cb44443737369b2833b0032bd53d56e83640904be7d5259e160c55afe7",
+      "published_sha256": "c2ec86cb44443737369b2833b0032bd53d56e83640904be7d5259e160c55afe7",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": "9edbac3bab950caf7df32a89727c113df74b7e4021b85717a27bf7c1ad0f48f6",
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/test_analysis_contract.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\test_analysis_contract.py",
+      "source_sha256": "f3f976060a7fc09bde4a4c91413b65225462301574a0606fcd3278c20a923f96",
+      "published_sha256": "f3f976060a7fc09bde4a4c91413b65225462301574a0606fcd3278c20a923f96",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/test_api_contract.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\test_api_contract.py",
+      "source_sha256": "41eddcc83c112f3cb6cdb42f53ce7947268f0a8f77132c8db8af20907cab21a4",
+      "published_sha256": "41eddcc83c112f3cb6cdb42f53ce7947268f0a8f77132c8db8af20907cab21a4",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/test_execution_evidence.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\test_execution_evidence.py",
+      "source_sha256": "e68f73208bc2d0d1c7193f9517a148e125009ba96db79e5240aff2349cd6be4c",
+      "published_sha256": "e68f73208bc2d0d1c7193f9517a148e125009ba96db79e5240aff2349cd6be4c",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/test_semantic_catalog.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\test_semantic_catalog.py",
+      "source_sha256": "680a7fdec5c05501a7392492b4a8bb1470c80a8d3f3b573381314fd3813a28b1",
+      "published_sha256": "680a7fdec5c05501a7392492b4a8bb1470c80a8d3f3b573381314fd3813a28b1",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/test_semantic_scope_contract.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\test_semantic_scope_contract.py",
+      "source_sha256": "f1eba6cc946fd3164671bc505ae7f6bf8b1c392d80c4ff92084a4760e9416270",
+      "published_sha256": "f1eba6cc946fd3164671bc505ae7f6bf8b1c392d80c4ff92084a4760e9416270",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/test_source_watermark.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\test_source_watermark.py",
+      "source_sha256": "cb20ddcdbf6dc1a6dbf25e2b4288f3fd10c52faad29c23e7ea6c54488be115d3",
+      "published_sha256": "cb20ddcdbf6dc1a6dbf25e2b4288f3fd10c52faad29c23e7ea6c54488be115d3",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/test_split_api_contract.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\test_split_api_contract.py",
+      "source_sha256": "f656161831ab4f8e3b5ab79a841d45ab8dbfe6665d2d6917f3e3fa5b22c75e55",
+      "published_sha256": "f656161831ab4f8e3b5ab79a841d45ab8dbfe6665d2d6917f3e3fa5b22c75e55",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/test_sql_translator_hardening.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\test_sql_translator_hardening.py",
+      "source_sha256": "c2e1364fac069bc67fdcdfb298403b1a3f9be35d8deb234db0e97bfdd7561862",
+      "published_sha256": "c2e1364fac069bc67fdcdfb298403b1a3f9be35d8deb234db0e97bfdd7561862",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/test_time_dimension_mapping.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\test_time_dimension_mapping.py",
+      "source_sha256": "df806827294ffb941b0985c3be8c4c78937d6e36b852286c504ef3ee5ea95203",
+      "published_sha256": "df806827294ffb941b0985c3be8c4c78937d6e36b852286c504ef3ee5ea95203",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/README.md",
+      "source_path": "E:\\YouoAgent\\sql-translator\\README.md",
+      "source_sha256": "f4a1f58171748b51ba46371e7db357ad169886bdbcd7875515efa8c7529edee4",
+      "published_sha256": "f4a1f58171748b51ba46371e7db357ad169886bdbcd7875515efa8c7529edee4",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/requirements.txt",
+      "source_path": "E:\\YouoAgent\\sql-translator\\requirements.txt",
+      "source_sha256": "d81860bf44b9d1b76cff6f14148b234fc3188f19ba1d3725a9fc27c2570ae17a",
+      "published_sha256": "d81860bf44b9d1b76cff6f14148b234fc3188f19ba1d3725a9fc27c2570ae17a",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "sql-translator/scripts/run_offline_tests.py",
+      "source_path": "E:\\YouoAgent\\sql-translator\\scripts\\run_offline_tests.py",
+      "source_sha256": "797f4a5a212e24657c5653a21ff3da1b7e7b555661dc088755a3a66e7f0b4f70",
+      "published_sha256": "797f4a5a212e24657c5653a21ff3da1b7e7b555661dc088755a3a66e7f0b4f70",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "AGENTS.md",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\AGENTS.md",
+      "source_sha256": "6daa11256f66622dc849ac54088291643fdf1b1de9cf34e09668ce9ac268a7db",
+      "published_sha256": "6daa11256f66622dc849ac54088291643fdf1b1de9cf34e09668ce9ac268a7db",
+      "before_repository_sha256": "0e655d69c6a08700468a48319bded509d4665c66bd4b791cd3863d671f0cd816",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "README.md",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\README.md",
+      "source_sha256": "c422b1cbfbad96828d9fdae25099a0f7f235c08a4a2e8cf962bcbfc2b12a4f0a",
+      "published_sha256": "c422b1cbfbad96828d9fdae25099a0f7f235c08a4a2e8cf962bcbfc2b12a4f0a",
+      "before_repository_sha256": "019b7c1223a97e023d55d06292a5db71d12b447de27f30e4fbaa6e676f79f9d1",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "app/adapters/http.py",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\app\\adapters\\http.py",
+      "source_sha256": "50faf94f19cdfffea706b7d960fc8fe8e00495a0f1f753738d4432f55f2e7e12",
+      "published_sha256": "50faf94f19cdfffea706b7d960fc8fe8e00495a0f1f753738d4432f55f2e7e12",
+      "before_repository_sha256": "ce6b169d73730ea4161d464c57c1d0a284db547b60bc422a78bb322a1c956366",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c/trust_semantic_scope_contract.md",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c\\trust_semantic_scope_contract.md",
+      "source_sha256": "c0b5bc5d53b4db356ffb9182acd2f8d134cb2b71226f6b1ccb8edfbe930640b9",
+      "published_sha256": "c0b5bc5d53b4db356ffb9182acd2f8d134cb2b71226f6b1ccb8edfbe930640b9",
+      "before_repository_sha256": "d0e0b3c515a72776fa80b241bef762f0e261920825a423b81fba6ac089cb5a2f",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/oagnet_import/README.md",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\oagnet_import\\README.md",
+      "source_sha256": "7eb35c64401a0d2f79d36438dc9599b6da9033a3587c21e15b6d139d73032c4e",
+      "published_sha256": "7eb35c64401a0d2f79d36438dc9599b6da9033a3587c21e15b6d139d73032c4e",
+      "before_repository_sha256": "fc0ef585e754d2151b760ccdd2420a12351180a36beedcc690f02e0b9071d09c",
+      "before_sql_source_sha256": null,
+      "action": "MODIFIED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/closure_report.md",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\closure_report.md",
+      "source_sha256": "851722a4811d1168e25b0e933ad76afdb53a53caa5b7895608665873978e669d",
+      "published_sha256": "851722a4811d1168e25b0e933ad76afdb53a53caa5b7895608665873978e669d",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/test_delta.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\test_delta.json",
+      "source_sha256": "01da9549d6146462057426231fc97eaa5f4206c550c6fa2711ab98e209fe0bb3",
+      "published_sha256": "01da9549d6146462057426231fc97eaa5f4206c550c6fa2711ab98e209fe0bb3",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/remaining_oagnet_failures.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\remaining_oagnet_failures.json",
+      "source_sha256": "9e419f5426dc798e580af2d55e073704f4f9faf492328f236b698eceaf142d4f",
+      "published_sha256": "9e419f5426dc798e580af2d55e073704f4f9faf492328f236b698eceaf142d4f",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_oagnet_verified.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_oagnet_verified.json",
+      "source_sha256": "265386e40afd402bd24748b17c2d1a01fdfd5dd556014a96aabb6adc3ce7a341",
+      "published_sha256": "265386e40afd402bd24748b17c2d1a01fdfd5dd556014a96aabb6adc3ce7a341",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_oagnet.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_oagnet.json",
+      "source_sha256": "f9cf6234e8ba52d7d076453cd408853dac957cf4019f1d5a133184e62607cc7a",
+      "published_sha256": "f9cf6234e8ba52d7d076453cd408853dac957cf4019f1d5a133184e62607cc7a",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_sql_translator.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_sql_translator.json",
+      "source_sha256": "7e7eed350967e233fb1aaa694096b8bf84706c3c3667c3108445e0f0547bbc81",
+      "published_sha256": "7e7eed350967e233fb1aaa694096b8bf84706c3c3667c3108445e0f0547bbc81",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_sql_translator_v2.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_sql_translator_v2.json",
+      "source_sha256": "caaee2284708a2610f772860f55f9ca575e304b4311e6376405eac90fe2cdcff",
+      "published_sha256": "caaee2284708a2610f772860f55f9ca575e304b4311e6376405eac90fe2cdcff",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/aggregate.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\aggregate.json",
+      "source_sha256": "845478b749a64c26107aada4468b44037a9caa17ce0b9d60aae19d857e058df5",
+      "published_sha256": "845478b749a64c26107aada4468b44037a9caa17ce0b9d60aae19d857e058df5",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_001.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_001.json",
+      "source_sha256": "ff2d8fa28585715d2a478a5b19bd680e31fe18ce80a0f74ee5a52a884e8f0ec3",
+      "published_sha256": "ff2d8fa28585715d2a478a5b19bd680e31fe18ce80a0f74ee5a52a884e8f0ec3",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_002.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_002.json",
+      "source_sha256": "8505606eb1d46ec79c59cc5c51ce73836084c00ef25cf17bea7fd4a2089df9bd",
+      "published_sha256": "8505606eb1d46ec79c59cc5c51ce73836084c00ef25cf17bea7fd4a2089df9bd",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_003.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_003.json",
+      "source_sha256": "0a63b9cd6d570efe445430a47403177896f2325cb6f24fdb893428bd43fe9306",
+      "published_sha256": "0a63b9cd6d570efe445430a47403177896f2325cb6f24fdb893428bd43fe9306",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_004.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_004.json",
+      "source_sha256": "bf27695bf1ef629adb577a291b52e3978e1ae7509322e8a9e611925c8630dc9b",
+      "published_sha256": "bf27695bf1ef629adb577a291b52e3978e1ae7509322e8a9e611925c8630dc9b",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_005.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_005.json",
+      "source_sha256": "500b165854490f7bcfca11d7e9b40cddb7164d43cdea7974b73808b6656fd350",
+      "published_sha256": "500b165854490f7bcfca11d7e9b40cddb7164d43cdea7974b73808b6656fd350",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_006.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_006.json",
+      "source_sha256": "b0ba976ea7f60c667488a27f11446a030b02f576b243dbb48a1060d51ecede1c",
+      "published_sha256": "b0ba976ea7f60c667488a27f11446a030b02f576b243dbb48a1060d51ecede1c",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_007.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_007.json",
+      "source_sha256": "cf5b41864876ee9aa60ab88ea71920cbf33501def32ba7386e590b6ab55063d6",
+      "published_sha256": "cf5b41864876ee9aa60ab88ea71920cbf33501def32ba7386e590b6ab55063d6",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_008.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_008.json",
+      "source_sha256": "1642c92b932a1e36bb2241eca18afe297826654abb2eb9cd86e5118c10ddb853",
+      "published_sha256": "1642c92b932a1e36bb2241eca18afe297826654abb2eb9cd86e5118c10ddb853",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_009.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_009.json",
+      "source_sha256": "90909276668567bf1c7c14bd91fa2060145b3a9e68642f4fdb3b17ec4eb90918",
+      "published_sha256": "90909276668567bf1c7c14bd91fa2060145b3a9e68642f4fdb3b17ec4eb90918",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_010.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_010.json",
+      "source_sha256": "985b0e81c676f5cacd5bc9740aa6caf6f370a632261a04b445e9047235e7fc14",
+      "published_sha256": "985b0e81c676f5cacd5bc9740aa6caf6f370a632261a04b445e9047235e7fc14",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_011.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_011.json",
+      "source_sha256": "fcfd4862ab2b550e83e4db9acec386e34942e13e843f68e2c70158f30daeb5c3",
+      "published_sha256": "fcfd4862ab2b550e83e4db9acec386e34942e13e843f68e2c70158f30daeb5c3",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_012.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_012.json",
+      "source_sha256": "31688de3e7e95f01762b5e2b0f0ca7e76187d0e02a8291bd4b9d6e6c1de4fbc2",
+      "published_sha256": "31688de3e7e95f01762b5e2b0f0ca7e76187d0e02a8291bd4b9d6e6c1de4fbc2",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_013.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_013.json",
+      "source_sha256": "f864c1d76af2d4dd7a3f71f617b6703cc1c0b5b07d5d469890acfd0c7493c291",
+      "published_sha256": "f864c1d76af2d4dd7a3f71f617b6703cc1c0b5b07d5d469890acfd0c7493c291",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/baseline_dataanalysis/batch_014.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\baseline_dataanalysis\\batch_014.json",
+      "source_sha256": "300513360dec63ef7956dacd8610ecde55616e7464a1db506c769e452fd75b79",
+      "published_sha256": "300513360dec63ef7956dacd8610ecde55616e7464a1db506c769e452fd75b79",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/aggregate.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\aggregate.json",
+      "source_sha256": "f33ba26be06f49108735d875844dd50c2ed4ed207c0ec7e4a64f5dc738703a2e",
+      "published_sha256": "f33ba26be06f49108735d875844dd50c2ed4ed207c0ec7e4a64f5dc738703a2e",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_001.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_001.json",
+      "source_sha256": "ff2d8fa28585715d2a478a5b19bd680e31fe18ce80a0f74ee5a52a884e8f0ec3",
+      "published_sha256": "ff2d8fa28585715d2a478a5b19bd680e31fe18ce80a0f74ee5a52a884e8f0ec3",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_002.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_002.json",
+      "source_sha256": "8505606eb1d46ec79c59cc5c51ce73836084c00ef25cf17bea7fd4a2089df9bd",
+      "published_sha256": "8505606eb1d46ec79c59cc5c51ce73836084c00ef25cf17bea7fd4a2089df9bd",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_003.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_003.json",
+      "source_sha256": "0a63b9cd6d570efe445430a47403177896f2325cb6f24fdb893428bd43fe9306",
+      "published_sha256": "0a63b9cd6d570efe445430a47403177896f2325cb6f24fdb893428bd43fe9306",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_004.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_004.json",
+      "source_sha256": "bf27695bf1ef629adb577a291b52e3978e1ae7509322e8a9e611925c8630dc9b",
+      "published_sha256": "bf27695bf1ef629adb577a291b52e3978e1ae7509322e8a9e611925c8630dc9b",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_005.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_005.json",
+      "source_sha256": "500b165854490f7bcfca11d7e9b40cddb7164d43cdea7974b73808b6656fd350",
+      "published_sha256": "500b165854490f7bcfca11d7e9b40cddb7164d43cdea7974b73808b6656fd350",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_006.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_006.json",
+      "source_sha256": "b0ba976ea7f60c667488a27f11446a030b02f576b243dbb48a1060d51ecede1c",
+      "published_sha256": "b0ba976ea7f60c667488a27f11446a030b02f576b243dbb48a1060d51ecede1c",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_007.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_007.json",
+      "source_sha256": "cf5b41864876ee9aa60ab88ea71920cbf33501def32ba7386e590b6ab55063d6",
+      "published_sha256": "cf5b41864876ee9aa60ab88ea71920cbf33501def32ba7386e590b6ab55063d6",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_008.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_008.json",
+      "source_sha256": "1642c92b932a1e36bb2241eca18afe297826654abb2eb9cd86e5118c10ddb853",
+      "published_sha256": "1642c92b932a1e36bb2241eca18afe297826654abb2eb9cd86e5118c10ddb853",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_009.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_009.json",
+      "source_sha256": "d19694186a46fa43be0f7ef0f4ca27867dacf703d3a285743a22b19013b1f9fa",
+      "published_sha256": "d19694186a46fa43be0f7ef0f4ca27867dacf703d3a285743a22b19013b1f9fa",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_010.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_010.json",
+      "source_sha256": "985b0e81c676f5cacd5bc9740aa6caf6f370a632261a04b445e9047235e7fc14",
+      "published_sha256": "985b0e81c676f5cacd5bc9740aa6caf6f370a632261a04b445e9047235e7fc14",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_011.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_011.json",
+      "source_sha256": "fcfd4862ab2b550e83e4db9acec386e34942e13e843f68e2c70158f30daeb5c3",
+      "published_sha256": "fcfd4862ab2b550e83e4db9acec386e34942e13e843f68e2c70158f30daeb5c3",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_012.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_012.json",
+      "source_sha256": "31688de3e7e95f01762b5e2b0f0ca7e76187d0e02a8291bd4b9d6e6c1de4fbc2",
+      "published_sha256": "31688de3e7e95f01762b5e2b0f0ca7e76187d0e02a8291bd4b9d6e6c1de4fbc2",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_013.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_013.json",
+      "source_sha256": "f864c1d76af2d4dd7a3f71f617b6703cc1c0b5b07d5d469890acfd0c7493c291",
+      "published_sha256": "f864c1d76af2d4dd7a3f71f617b6703cc1c0b5b07d5d469890acfd0c7493c291",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    },
+    {
+      "repository_path": "docs/phase0c_root_cause/final_dataanalysis/batch_014.json",
+      "source_path": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\phase0c_root_cause\\final_dataanalysis\\batch_014.json",
+      "source_sha256": "300513360dec63ef7956dacd8610ecde55616e7464a1db506c769e452fd75b79",
+      "published_sha256": "300513360dec63ef7956dacd8610ecde55616e7464a1db506c769e452fd75b79",
+      "before_repository_sha256": null,
+      "before_sql_source_sha256": null,
+      "action": "ADDED",
+      "normalization": "NONE"
+    }
+  ],
+  "manifest_self_hash": "Excluded to avoid circular self-reference; verify using Git blob ID",
+  "source_index_policy": "Original Oagnet index is not modified; all release commits are made in E:/yy",
+  "local_instruction_pointer": {
+    "path": "E:\\YouoAgent\\AGENTS.md",
+    "sha256": "85f35bcb6616aa603905b6562af3a09c730545c0e4ce55ff1c0f4f0cd82a2029",
+    "purpose": "Points all three development workspaces to the versioned DataAnalysis AGENTS.md contract"
+  },
+  "excluded": [
+    ".env and credentials",
+    "runtime logs/results",
+    "caches",
+    "backups",
+    "existing SQL production maintenance scripts"
+  ],
+  "secret_pattern_findings": 0,
+  "syntax_check": "All selected Python files compiled without executing application code"
+}
