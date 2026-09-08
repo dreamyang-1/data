@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "3ab8b4336b290d3560756345c4328278ee1ca9b3",
+  "feature_branch": "cutover-catalog-publication-20260908-01",
+  "source_rollback": "Review revert of the implementation commit, explicitly synchronize changed paths, rerun scoped/full Oagnet regressions",
+  "actual_deployment_rollback_needed": false,
+  "actual_index_writes": 0,
+  "index_reactivation_contract": "Prior generation retained; fresh current authority and full vector inventory must match; CAS and fresh activation ID; obsolete-source rollback refused",
+  "production_traffic_rollback_proven": false,
+  "auto_merge": false
+}

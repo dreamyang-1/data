@@ -1,9 +1,11 @@
 # Catalog version and publication contract — cutover preflight
 
-Status: **PARTIAL_SOURCE_CONTRACT; CATALOG_BLOCKER remains OPEN**. This contract
-defines the minimum required identity and implements capture/preparation/supplied
-evidence verification. It is not connected to the current publisher or query
-path. No deployment, index rebuild or real catalog read was performed.
+Status: **SOURCE_PUBLICATION_AND_PINNING_VERIFIED_OFFLINE; CATALOG_BLOCKER remains
+OPEN**. Capture/preparation now connects to an operator publication path and a
+pinned read view in isolated Catalog collections. The current V1 API/collections,
+SQL caches and V2 production routing remain unchanged. No deployment, index
+publication or real catalog read was performed. Current evidence is in
+`catalog_publication/closure_report.md`; the original audit delivery is historical.
 
 ## Authority and identity
 
@@ -23,17 +25,24 @@ index records are not permission to add a domain to the request.
 | Publication ID | Nonempty identifier supplied by the trusted publisher, never by a model or historical task |
 | Record hash | Entire record ID, text and metadata, excluding only the four release stamps |
 | Vector index version | SHA-256 of scope/catalog/source identity, publication ID, producer revision, embedding contract and sorted record hash inventory |
+| Generation/target | Isolated physical record IDs, scope key, generation token, exact Milvus target hash, embedding dimension and source coverage are included in the manifest digest |
+| Activation | Redis PUBLISHED marker with a fresh activation ID; same-release reactivation invalidates old readers and cache fingerprints |
 
 Canonical JSON sorts dictionary keys and domain documents, preserves ordered
 semantic arrays, and rejects unsupported values. It does not silently sort
 semantic arrays or equate reordered rules. Input snapshots/records are copied.
-Embeddings themselves are not hashed; this contract does not certify vector
-quality, embedding model execution or numerical equivalence.
+The standalone supplied-evidence checker does not read embeddings. The integrated
+generation path additionally hashes float32 vectors and verifies them during
+full Milvus read-back. This proves storage equality, not vector quality or model
+recognition accuracy. ANN reads require the matching embedding transport contract.
 
 `capture_catalog()` uses the existing MySQL loaders within one read-only
 REPEATABLE READ transaction. It checks that all ten tables read by those loaders
 exist and use InnoDB. Model-wide capture enumerates each model-owned domain;
 calling the existing `get_dsl_by_scope(model, None)` alone would omit entities.
+It also captures model-owned metrics with no business domain in a separate
+model-wide document; orphan domain IDs are rejected. Explicit capture never
+performs this model-wide metric read.
 Explicit capture uses only the requested domain, including the existing scoped
 physical table loader. The transaction rolls back and closes on success/failure.
 Ordinary loader calls retain their connection lifecycle outside this opt-in
@@ -68,35 +77,53 @@ The report contains only bounded reason codes/identities/counts. Exit 0 means
 mean CATALOG_GATE PASS. It does not instantiate a vector client, call embedding,
 publish an index or certify the origin/freshness of a saved file.
 
-## Minimum integration still required
+## Source integration and remaining runtime gates
 
-1. Build records from the captured snapshot with deterministic IDs and a
+1. **Implemented offline:** build records from the captured snapshot with deterministic IDs and a
    source-to-record coverage manifest. Account separately for owned projections,
    shared definitions, registered attributes, physical metadata, enum/rule
-   dependencies and entity-value policy. Missing governed IDs or unsupported
-   opaque rules are blockers, not inferred defaults.
-2. Stage one immutable release through the existing publication mechanism.
-   Current upsert-then-delete is not atomic activation: readers can see mixed
-   generations. Scope releases need isolated record identity or a generation
-   filter; no query may combine unstamped legacy rows with a verified generation.
-3. Persist the active PUBLISHED marker through a trusted, atomic activation
-   boundary only after a complete read-back agrees with the prepared manifest.
-   Keep the previous generation for rollback. Concurrent activation and a
-   changed marker during verification must abort acceptance. A JSON marker
-   supplied to a pure test is not a persisted publication record.
-4. Pin the verified identity at query admission and propagate it through
+   dependencies and entity-value policy. The new generator checks coverage for
+   captured DSL and physical source records. Shared originals are excluded from
+   explicit releases, while missing owned projection/default/rule coverage and
+   external entity-value dependencies remain C-04. Missing stable/governed IDs,
+   inconsistent shared definitions and silently omitted records fail closed.
+2. **Implemented offline:** stage immutable generations in dedicated semantic
+   and physical collections. Neither their names nor normalized names may
+   overlap V1 collections. Generation IDs and filters isolate versions; old rows
+   remain available for rollback. The original V1 rebuild is unchanged.
+3. **Implemented offline:** persist the active PUBLISHED marker through a trusted, atomic activation
+   boundary (existing Redis WATCH/MULTI, no TTL) after complete strong read-back
+   and current authority checks. Reserve publication IDs before writes, reject
+   competing activation, retain old generations and detect ABA with activation
+   IDs. Lost activation acknowledgement is explicitly outcome-unknown; read back
+   before retrying. Native Redis persistence and deployment are not yet verified.
+4. **Partially implemented:** the pinned read view verifies model/domain/release,
+   exact target, full inventory and query embedding identity. ANN and exact reads
+   use strong consistency. `finish()` rechecks source, complete inventory and
+   activation before a caller may accept/cache a plan. Connect that verified identity through
    retrieval, grounding, TaskPatch/LogicalPlan, cache keys and result provenance.
    Recheck at acceptance. Reject missing/changed identity in the V2 path; current
    public Agent request/response/SSE formats and V1 routing remain unchanged.
    Bind the current AuthorizedSemanticScope independently of catalog identity.
-5. Bind SQL metadata caches and auxiliary authoritative lookups to that same
+   This view is not yet called by the V2 pipeline or current Oagnet API. Its cache
+   fingerprint supplements the caller's current request/identity/database/KB
+   fingerprint; it does not replace those state-isolation checks.
+5. **Still open:** bind SQL metadata caches and auxiliary authoritative lookups to that same
    release. Versioning only Milvus cannot detect SQL using newer MySQL formulas
    or older process-local metadata. Execution integration remains gated after
    plan-only evidence; no V2 production SQL is added by this contract.
-6. Obtain target-bound deployed revisions, trusted caller-boundary evidence,
+6. **Still open:** obtain target-bound deployed revisions, trusted caller-boundary evidence,
    fresh MySQL identity/capture, a complete Milvus export and a stable active
    marker. Compare MySQL → expected records → actual records, then run model-wide,
    explicit-domain and scope-change acceptance against that exact release.
+
+`Oagnet/scripts/manage_catalog_publication.py` exposes operator-only `verify`,
+`initialize`, `publish` and `reactivate` actions, requiring a model and optional
+single explicit domain. Invalid/multiple scope is rejected before opening clients.
+`verify` creates/loads/writes no collection. The other actions require the named
+approved operational target; none was executed here. Reader opening checks schema;
+initialization is a separate explicit operation. Record private runtime receipts
+with exact target, model/domain, deployed revision and durable registry evidence.
 
 The prior `phase0c_oagnet_closure/catalog_publication_plan.md` is historical.
 Its existing `/vector/rebuild` step alone cannot close the newly identified
@@ -108,9 +135,9 @@ the existing controlled release process; credentials stay private.
 
 | Blocker | Required evidence | Present now |
 | --- | --- | --- |
-| C-01 | Consistent authority capture plus complete deterministic scoped generation | Capture/preparation unit coverage; generator integration absent |
-| C-02 | Persisted active marker, verified full read-back, mixed-generation rejection and rollback | Supplied marker/inventory validation only |
-| C-03 | Same release on query, binding, caches and downstream metadata | Existing selected-metric hashes only; no release propagation |
+| C-01 | Consistent authority capture plus complete deterministic scoped generation | Integrated source generation verified offline; actual catalog coverage pending |
+| C-02 | Persisted active marker, verified full read-back, mixed-generation rejection and rollback | Operator Redis/Milvus path and failure/rollback scenarios tested offline; deployment/durability pending |
+| C-03 | Same release on query, binding, caches and downstream metadata | Pinned read/acceptance/fingerprint implemented; V2/Oagnet API/SQL integration pending |
 | C-04 | Current owned projections/IDs/defaults/rules and actual MySQL/Milvus coverage | Source projector tests and historical local snapshot only |
 
 X-01 separately tracks the named runtime target and trusted operational evidence.

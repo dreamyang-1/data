@@ -5,41 +5,42 @@
       "blocker_id": "C-01",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "PARTIAL_SOURCE_CONTRACT",
-      "summary": "Publisher DSL reads previously used independent autocommit connections; semantic records use legacy snapshot_version and lack a catalog release identity.",
+      "status": "SOURCE_GENERATION_VERIFIED_OFFLINE",
+      "summary": "Consistent captured DSL/physical metadata now feeds deterministic scoped generation, including model-owned metrics with no domain. Missing identities, collisions, physical ownership mismatch and silent builder omissions fail closed.",
       "evidence": [
-        "Oagnet/mysql_tool.py::consistent_catalog_read",
-        "Oagnet/catalog_release.py",
-        "Oagnet/vector_store.py::build_records_from_dsl",
-        "Oagnet/vector_store.py::MilvusVectorStore._to_row"
+        "Oagnet/catalog_generation.py",
+        "Oagnet/catalog_release.py::capture_catalog",
+        "docs/cutover/catalog_publication/test_delta.json"
       ],
-      "next_action": "Wire the new consistent capture/manifest preparation into a versioned publisher; prove snapshot-to-record coverage without changing production routing."
+      "next_action": "Verify actual target capture-to-index coverage, including governed projections/defaults and external metadata dependencies; offline generation is not runtime cutover proof."
     },
     {
       "blocker_id": "C-02",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "OPEN",
-      "summary": "No committed PUBLISHED marker lifecycle or atomic/verified publication boundary; upsert followed by stale deletion can expose a mixed generation.",
+      "status": "SOURCE_PUBLICATION_VERIFIED_OFFLINE",
+      "summary": "Dedicated generation collections, full strong read-back, Redis CAS activation and rollback are implemented and tested offline. No actual collection, marker or deployment was created.",
       "evidence": [
-        "Oagnet/vector_store.py::rebuild_index_by_scope",
-        "Oagnet/catalog_release.py::verify_release"
+        "Oagnet/catalog_store.py",
+        "Oagnet/catalog_registry.py",
+        "Oagnet/catalog_publication.py",
+        "Oagnet/scripts/manage_catalog_publication.py"
       ],
-      "next_action": "Persist a trusted active release marker only after complete inventory verification; readers pin and recheck it. Retain the previous release for rollback."
+      "next_action": "Validate initialized target collections, durable shared Redis markers, native iteration and concurrent reader/publisher behavior through the controlled operator path."
     },
     {
       "blocker_id": "C-03",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "OPEN",
-      "summary": "Current Oagnet query evidence has model/domain and selected metric hashes but no catalog_publish_id/catalog_version/vector_index_version; SQL metadata caches also omit release identity.",
+      "status": "PARTIAL_PINNED_READ_CONTRACT",
+      "summary": "A pinned read view now binds model/domain/catalog/index/target/activation identity and cache fingerprint, validates query embedding identity, and rechecks full inventory plus authority at finish. Existing Oagnet API/SQL caches and the future V2 pipeline are not connected to it.",
       "evidence": [
+        "Oagnet/catalog_publication.py::PinnedCatalog",
+        "Oagnet/catalog_generation.py::configured_embedding_contract",
         "Oagnet/api.py::SemanticQueryEvidence",
-        "Oagnet/agent.py::_build_semantic_evidence",
-        "sql-translator/sql_translator_prod.py::get_entity",
-        "DataAnalysis_Agent/app/semantic_v2/models.py::SnapshotContext"
+        "sql-translator/sql_translator_prod.py::get_entity"
       ],
-      "next_action": "Propagate a verified release through the plan-only binding/catalog boundary and caches; reject missing/mismatched releases before V2 accepts a plan."
+      "next_action": "Connect the V2 plan-only grounding path to the pinned view and make release acceptance mandatory; version SQL metadata during its gated execution adapter integration without changing public legacy I/O."
     },
     {
       "blocker_id": "C-04",
@@ -189,5 +190,6 @@
   "open_p0": 9,
   "open_p1": 4,
   "readiness": "NOT_READY",
-  "catalog_cutover_blocker_closed": false
+  "catalog_cutover_blocker_closed": false,
+  "latest_source_delivery_baseline": "3ab8b4336b290d3560756345c4328278ee1ca9b3"
 }
