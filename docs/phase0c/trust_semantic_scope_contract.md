@@ -36,6 +36,13 @@ Loading every row of a persisted display slice does not prove coverage of the or
 
 ## External capability and fail-closed behavior
 
+Complete product-condition clears such as `不限产品` and `去掉产品条件`
+remove product-name predicates and their entity/binding evidence, while keeping
+other roles, metrics, period, grouping and projection. The existing restore
+boundaries enforce an internal clear marker; an admitted explicit product can
+reopen the condition. Clearing a business filter never changes the current
+AuthorizedSemanticScope. See the [product clear closure](../phase0c_product_clear/closure_report.md).
+
 Complete metric-only ADD/REMOVE commands cannot contribute operation fragments
 as entity constraints, including schema-valid model role mistakes. The guard
 uses whole-command recognition and keeps typed filter literals and admitted

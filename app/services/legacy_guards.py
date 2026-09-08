@@ -6,6 +6,91 @@ from typing import Mapping
 from app.domain.models import CanonicalAnalysisRequest, ConversationControl, PrimaryIntent
 
 
+PRODUCT_CLEAR_BARRIER = "FILTER_INHERITANCE_BARRIER=product"
+
+
+def product_filter_clear_requested(question: str) -> bool:
+    """Recognize a complete condition-clear command, never a noun substring."""
+    compact = "".join(question.split()).rstrip("。？！?!")
+    return compact in {
+        prefix + role
+        for prefix in ("不限", "不限制") for role in ("产品", "商品")
+    } | {
+        prefix + role + suffix
+        for prefix in ("去掉", "移除", "取消", "删除")
+        for role in ("产品", "商品")
+        for suffix in ("条件", "筛选", "过滤", "筛选条件", "过滤条件")
+    }
+
+
+def update_product_clear_barrier(
+    request: CanonicalAnalysisRequest,
+    current: CanonicalAnalysisRequest,
+    question: str,
+    *,
+    explicit_filters: list[dict] | None = None,
+) -> None:
+    """Only the current explicit product edit can change the barrier."""
+    from app.services.turn_admission import TurnAdmissionGate
+
+    if product_filter_clear_requested(question):
+        if PRODUCT_CLEAR_BARRIER not in request.assumptions:
+            request.assumptions.append(PRODUCT_CLEAR_BARRIER)
+        request.asl_template = None
+        request.source_dataset_id = None
+    elif any(
+        TurnAdmissionGate._semantic_field_family(str(item.get("field") or "")) == "product"
+        for item in (explicit_filters if explicit_filters is not None else current.filters)
+    ):
+        request.assumptions = [a for a in request.assumptions if a != PRODUCT_CLEAR_BARRIER]
+
+
+def apply_product_clear_barrier(request: CanonicalAnalysisRequest) -> None:
+    """Remove a cleared product predicate and its evidence after state restores.
+
+    Brand/category/manufacturer conditions and grouping/projection are separate
+    roles. Existing semantic bindings can identify a product-name attribute by
+    its governed canonical label; no physical table or column is guessed here.
+    """
+    if PRODUCT_CLEAR_BARRIER not in request.assumptions:
+        return
+    from app.services.turn_admission import TurnAdmissionGate
+
+    def product_field(field):
+        return TurnAdmissionGate._semantic_field_family(str(field or "")) == "product"
+
+    product_codes = {binding.attribute_code for binding in request.semantic_filter_bindings
+                     if product_field(binding.canonical_name)}
+    def is_product(item):
+        return product_field(item.get("field")) or item.get("field") in product_codes
+
+    def values(items):
+        return {str(value) for item in items
+                for value in (item.get("value") if isinstance(item.get("value"), list) else [item.get("value")])
+                if value is not None}
+
+    removed = [item for item in request.filters if is_product(item)]
+    old_values = values(removed)
+    if request.turn_admission is not None:
+        old_values |= values([item for item in request.turn_admission.context_before.get("filters", []) if is_product(item)])
+    index_map = {index: new_index for new_index, index in enumerate(
+        index for index, item in enumerate(request.filters) if not is_product(item))}
+    bindings = []
+    for binding in request.semantic_filter_bindings:
+        if product_field(binding.canonical_name) or binding.filter_index not in index_map:
+            old_values.update((binding.input_value, binding.canonical_value))
+        else:
+            bindings.append(binding.model_copy(update={"filter_index": index_map[binding.filter_index]}))
+    request.filters = [item for item in request.filters if not is_product(item)]
+    request.semantic_filter_bindings = bindings
+    retained_values = values(request.filters)
+    request.semantic_entity_mentions = [value for value in request.semantic_entity_mentions
+                                        if value not in old_values or value in retained_values]
+    if removed:
+        request.asl_template = None
+        request.source_dataset_id = None
+
+
 def lineage_target_present(request: CanonicalAnalysisRequest) -> bool:
     return bool(request.metrics or request.fields or request.entity or request.source_dataset_id or request.lineage_target)
 
@@ -81,6 +166,9 @@ def apply_snapshot_display_default(request: CanonicalAnalysisRequest) -> bool:
 
 
 def apply_region_clear_barrier(request: CanonicalAnalysisRequest) -> None:
+    # Existing restore boundaries also enforce the product clear marker. Keep
+    # the region field/schema and legacy entry point compatible.
+    apply_product_clear_barrier(request)
     if 'region' in request.cleared_filter_families:
         from app.services.turn_admission import TurnAdmissionGate
         request.filters = [f for f in request.filters if TurnAdmissionGate._semantic_field_family(str(f.get('field') or '')) != 'region']
