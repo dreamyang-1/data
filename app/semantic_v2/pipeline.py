@@ -176,6 +176,8 @@ def validate_bound_ref_scope_and_permission(value, snapshot: SnapshotContext, pe
     if isinstance(permission, AuthorizedScopeContext):
         validate_authorized_refs(value, snapshot, permission, authorizations)
         return
+    from .models import require_bounded_legacy_time
+    require_bounded_legacy_time(value)
     refs = collect_bound_refs(value)
     if refs and not all((snapshot.catalog_publish_id, snapshot.vector_index_version, snapshot.semantic_model_id,
                          snapshot.database_id, snapshot.business_domain_ids, permission.authorization_decision_id,
