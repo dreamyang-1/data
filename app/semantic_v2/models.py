@@ -180,7 +180,9 @@ class BoundSemanticRef(StrictModel):
     display_name: str = Field(min_length=1, max_length=500)
     catalog_version: Identifier
     semantic_model_id: Identifier
-    business_domain_ids: tuple[Identifier, ...] = Field(min_length=1, max_length=50)
+    # v0.2.2 can represent a verified model-owned global catalog record. The
+    # v0.2.1 plan boundary still rejects an empty owned-domain set.
+    business_domain_ids: tuple[Identifier, ...] = Field(max_length=50)
     source_mention_ids: tuple[Identifier, ...] = ()
     resolution_source: Identifier
 
