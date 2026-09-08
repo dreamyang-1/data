@@ -1909,6 +1909,11 @@ class RuleBasedIntentClassifier:
                 "",
                 subject,
             ).strip("的")
+            # Check the complete subject before the single-region prefix
+            # fallback can turn 上海和北京 into a fabricated 和北京 literal.
+            structural_subject = cls._is_structural_metric_subject(
+                request, subject, allow_region=True
+            )
             subject = re.sub(
                 r"^(?:(?:北京|上海|天津|重庆)(?:市|地区)?|"
                 r"(?:香港|澳门)特别行政区|"
@@ -1935,9 +1940,12 @@ class RuleBasedIntentClassifier:
                 )
                 and not any(item.get('value') == subject for item in request.filters if isinstance(item, dict))
             )
-            if subject and not has_named_scope and not parsed_time_subject and subject not in {
-                "今年", "去年", "本年", "本月", "上月", "整体", "全部", "总",
-            }:
+            if (
+                subject and not has_named_scope and not parsed_time_subject
+                and not structural_subject and subject not in {
+                    "今年", "去年", "本年", "本月", "上月", "整体", "全部", "总",
+                }
+            ):
                 request.semantic_entity_mentions = list(dict.fromkeys([
                     *request.semantic_entity_mentions,
                     subject,
@@ -2410,18 +2418,66 @@ class RuleBasedIntentClassifier:
         request.dimensions = list(dict.fromkeys(reconciled))
 
     @staticmethod
+    def _coordinated_region_values(text: str) -> list[str]:
+        """Consume a complete, same-level list using the existing region map.
+
+        This recognizes positive coordination only. Corrections, exclusions,
+        mixed geographic levels and open-world entity names are not lists.
+        No physical field or new geographic alias is invented here.
+        """
+        aliases = {**_COMMON_REGIONS, **{v: v for v in _COMMON_REGIONS.values()}}
+        names = sorted(aliases, key=lambda value: (-len(value), value))
+        remaining = text
+        values: list[str] = []
+        while remaining:
+            name = next((name for name in names if remaining.startswith(name)), None)
+            if name is None:
+                return []
+            values.append(aliases[name])
+            remaining = remaining[len(name):]
+            if remaining.startswith("地区"):
+                remaining = remaining[2:]
+            if not remaining:
+                break
+            connector = next(
+                (word for word in ("以及", "和", "与", "及", "、") if remaining.startswith(word)),
+                None,
+            )
+            if connector is None:
+                return []
+            remaining = remaining[len(connector):]
+            if not remaining:
+                return []
+        levels = {
+            value == "国外" or value.endswith(("省", "自治区", "特别行政区"))
+            for value in values
+        }
+        if len(values) < 2 or len(levels) != 1:
+            return []
+        return list(dict.fromkeys(values))
+
+    @staticmethod
     def _is_structural_metric_subject(
         request: CanonicalAnalysisRequest, subject: str, *, allow_region: bool
     ) -> bool:
         """Recognize whole scope syntax without trimming an entity literal.
 
-        Only the unmarked subject fallback can combine a known region with
-        the existing temporal/grouping grammar. Explicit product markers and
-        device names keep their literal boundary. No partial residual is ever
-        returned as a new product name.
+        Only the unmarked subject fallback can recognize a coordinated region
+        list or combine known regions with the existing temporal/grouping
+        grammar. Explicit product markers and device names keep their literal
+        boundary. No partial residual is returned as a new product name.
         """
         candidates = [subject]
         if allow_region:
+            if RuleBasedIntentClassifier._coordinated_region_values(subject):
+                return True
+            # Compose whole region lists with the same validated temporal
+            # grammar used for a single region, without trimming a noun.
+            for split in range(1, len(subject)):
+                if RuleBasedIntentClassifier._coordinated_region_values(subject[split:]):
+                    candidates.append(subject[:split].strip("的"))
+                if RuleBasedIntentClassifier._coordinated_region_values(subject[:split]):
+                    candidates.append(subject[split:].strip("的"))
             regions = set(_COMMON_REGIONS) | set(_COMMON_REGIONS.values())
             regions |= {region + "地区" for region in regions}
             for region in regions:
@@ -2592,7 +2648,7 @@ class RuleBasedIntentClassifier:
                     for match in re.finditer(re.escape(value), text)
                 )
 
-        matches: list[tuple[int, str]] = []
+        matches: list[tuple[int, int, str]] = []
         for surface, canonical in regions.items():
             for match in re.finditer(re.escape(surface), text):
                 if any(
@@ -2606,12 +2662,29 @@ class RuleBasedIntentClassifier:
                     suffix,
                 ):
                     continue
-                matches.append((match.start(), canonical))
+                end = (
+                    match.start() + len(canonical)
+                    if text.startswith(canonical, match.start()) else match.end()
+                )
+                if text.startswith("地区", end):
+                    end += 2
+                matches.append((match.start(), end, canonical))
         if not matches:
             return
         ordered_regions = list(dict.fromkeys(
-            region for _, region in sorted(matches, key=lambda item: item[0])
+            region for _, _, region in sorted(matches, key=lambda item: item[0])
         ))
+        span_start = min(start for start, _, _ in matches)
+        span_end = max(end for _, end, _ in matches)
+        coordinated_regions = RuleBasedIntentClassifier._coordinated_region_values(text[span_start:span_end])
+        connectors = ("以及", "和", "与", "及", "、")
+        incomplete_list = text[:span_start].endswith(connectors) or text[span_end:].startswith(connectors)
+        if incomplete_list or any(
+            RuleBasedIntentClassifier._slot_is_negated(text, text[start:end])
+            or text[:start].endswith("排除")
+            for start, end, _ in matches
+        ):
+            coordinated_regions = []
         # A bare administrative area qualifies the transaction's governed
         # business geography.  It does not mean that a returned dealer or
         # hospital is physically registered there ("四川省的经销商" can include
@@ -2654,6 +2727,10 @@ class RuleBasedIntentClassifier:
             }
             if region_role not in request.dimensions:
                 request.dimensions.append(region_role)
+        elif len(coordinated_regions) >= 2:
+            replacement = {
+                "field": region_role, "operator": "IN", "value": coordinated_regions,
+            }
         else:
             region = ordered_regions[-1]
             replacement = {"field": region_role, "operator": "EQ", "value": region}
@@ -4455,12 +4532,41 @@ class RuleBasedIntentClassifier:
                 ):
                     current_filter_mentions.append(value)
 
+        superseded_region_mentions: set[str] = set()
+        admission = request.turn_admission
+        if admission is not None and admission.inherit_business_context:
+            from app.services.turn_admission import TurnAdmissionGate
+
+            explicit = admission.current_turn_facts.explicit_slots.get("filters")
+            region_edited = "CLEAR_REGION_SCOPE" in admission.current_turn_facts.followup_signals or (
+                explicit is not None and isinstance(explicit.value, list) and any(
+                    TurnAdmissionGate._semantic_field_family(str(item.get("field") or "")) == "region"
+                    for item in explicit.value if isinstance(item, dict)
+                )
+            )
+            if region_edited:
+                # A list-valued replacement need not change the task's core
+                # subject. It still supersedes the previous region evidence.
+                # Keep a shared literal if another retained filter owns it.
+                for item in admission.context_before.get("filters", []):
+                    if (
+                        not isinstance(item, dict)
+                        or TurnAdmissionGate._semantic_field_family(str(item.get("field") or "")) != "region"
+                    ):
+                        continue
+                    values = item.get("value")
+                    for value in values if isinstance(values, list) else [values]:
+                        if value is not None:
+                            superseded_region_mentions.add(str(value).strip())
+                superseded_region_mentions.difference_update(current_filter_mentions)
+
         cleaned: list[str] = []
         for candidate in request.semantic_entity_mentions:
             value = str(candidate or "").strip()
             compact = cls._normalize_catalog_punctuation(re.sub(r"\s+", "", value))
             if (
                 not value
+                or value in superseded_region_mentions
                 or (
                     compact not in raw_compact
                     and value not in current_filter_mentions

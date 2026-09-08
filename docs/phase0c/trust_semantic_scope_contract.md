@@ -36,6 +36,15 @@ Loading every row of a persisted display slice does not prove coverage of the or
 
 ## External capability and fail-closed behavior
 
+Complete lists of existing known regions preserve one same-field IN predicate
+without implying comparison grouping. Replacement/CLEAR also removes
+superseded region entity evidence, while keeping literals owned by retained
+filters. Typed entity names, negatives, mixed geographic fields and incomplete
+unknown lists are outside this deterministic positive-list grammar. These are
+business filters inside the current AuthorizedSemanticScope; they cannot
+expand business-domain authorization. See the
+[region list closure](../phase0c_region_list/closure_report.md).
+
 Complete product-condition clears such as `不限产品` and `去掉产品条件`
 remove product-name predicates and their entity/binding evidence, while keeping
 other roles, metrics, period, grouping and projection. The existing restore
