@@ -12,7 +12,7 @@
         "app/semantic_v2/pipeline.py::CurrentTurnParser/TurnResolver",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven"
       ],
-      "next_action": "Complete field-level/partial temporal edits, governed defaults/relationships, remaining payload and decision types through the same raw-input entry; evaluate actual recognition only after catalog gates close."
+      "next_action": "Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close."
     },
     {
       "capability": "TaskPatch",
@@ -24,9 +24,10 @@
       ],
       "evidence": [
         "app/semantic_v2/slot_reducer.py; deterministic supplied-patch tests pass",
-        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven"
+        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
+        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md"
       ],
-      "next_action": "Complete field-level/partial temporal edits, governed defaults/relationships, remaining payload and decision types through the same raw-input entry; evaluate actual recognition only after catalog gates close. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence."
+      "next_action": "Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence."
     },
     {
       "capability": "Pending",
@@ -42,7 +43,7 @@
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Governed canonical-option raw V2 clarification/resume and previous-state first-ask trace pass offline: docs/cutover/v2_pending/closure_report.md; real-model/full decision coverage not yet accepted"
       ],
-      "next_action": "Complete field-level/partial temporal edits, governed defaults/relationships, remaining payload and decision types through the same raw-input entry; evaluate actual recognition only after catalog gates close. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "Historical Recall",
@@ -55,9 +56,10 @@
       ],
       "evidence": [
         "app/semantic_v2/pipeline.py::TurnResolver requires historical_task_id; tests/test_task_recall_contract.py covers Legacy",
-        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven"
+        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
+        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md"
       ],
-      "next_action": "Complete field-level/partial temporal edits, governed defaults/relationships, remaining payload and decision types through the same raw-input entry; evaluate actual recognition only after catalog gates close. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "ADD",
@@ -69,9 +71,10 @@
       ],
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
-        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven"
+        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
+        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md"
       ],
-      "next_action": "Complete field-level/partial temporal edits, governed defaults/relationships, remaining payload and decision types through the same raw-input entry; evaluate actual recognition only after catalog gates close. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "REPLACE",
@@ -83,9 +86,10 @@
       ],
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
-        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven"
+        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
+        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md"
       ],
-      "next_action": "Complete field-level/partial temporal edits, governed defaults/relationships, remaining payload and decision types through the same raw-input entry; evaluate actual recognition only after catalog gates close. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "REMOVE",
@@ -97,9 +101,10 @@
       ],
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
-        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven"
+        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
+        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md"
       ],
-      "next_action": "Complete field-level/partial temporal edits, governed defaults/relationships, remaining payload and decision types through the same raw-input entry; evaluate actual recognition only after catalog gates close. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "CLEAR",
@@ -111,9 +116,10 @@
       ],
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
-        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven"
+        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
+        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md"
       ],
-      "next_action": "Complete field-level/partial temporal edits, governed defaults/relationships, remaining payload and decision types through the same raw-input entry; evaluate actual recognition only after catalog gates close. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "Semantic Role",
@@ -128,7 +134,7 @@
         "app/semantic_v2/models.py::Mention/SemanticCandidate; no live role benchmark",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven"
       ],
-      "next_action": "Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts. Complete field-level/partial temporal edits, governed defaults/relationships, remaining payload and decision types through the same raw-input entry; evaluate actual recognition only after catalog gates close. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts. Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "Canonical Binding",
@@ -143,7 +149,7 @@
         "B-01 source fix; V2 bound refs still supplied by fixtures",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven"
       ],
-      "next_action": "Connect the raw-input entry to deployment/state-store boundaries after its remaining semantic coverage gates; version downstream SQL metadata/cache reads. Verify actual deployed acceptance with unchanged public I/O. Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts. Complete field-level/partial temporal edits, governed defaults/relationships, remaining payload and decision types through the same raw-input entry; evaluate actual recognition only after catalog gates close."
+      "next_action": "Connect the raw-input entry to deployment/state-store boundaries after its remaining semantic coverage gates; version downstream SQL metadata/cache reads. Verify actual deployed acceptance with unchanged public I/O. Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts. Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close."
     },
     {
       "capability": "Dataset Follow-up",

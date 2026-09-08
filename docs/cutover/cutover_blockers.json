@@ -66,13 +66,14 @@
       "classification": "CUTOVER_BLOCKER_P0",
       "blocking_level": "P0",
       "status": "PARTIAL_AUTONOMOUS_SOURCE_PATH",
-      "summary": "RawTurnPlanner now covers configured model extraction, scoped handles/edits, common plans and governed canonical-option clarification/resume with trace and full catalog acceptance. Field-level/partial-time/default/relationship/analytical coverage and actual model quality remain open.",
+      "summary": "Raw V2 now supports scoped canonical Pending, exact predicate/subtree and positive membership edits, partial temporal edits and explicit unbounded time. Governed defaults/relationships, comparison dependencies, remaining analytical/decision types and actual model quality remain open.",
       "evidence": [
         "app/semantic_v2/recognition.py",
-        "app/semantic_v2/pending_recognition.py",
-        "docs/cutover/v2_pending/closure_report.md"
+        "app/semantic_v2/structured_edits.py",
+        "docs/cutover/v2_pending/closure_report.md",
+        "docs/cutover/v2_slot_edits/closure_report.md"
       ],
-      "next_action": "Complete field-level/partial temporal edits, governed defaults/relationships, remaining payload and decision types through the same raw-input entry; evaluate actual recognition only after catalog gates close."
+      "next_action": "Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close."
     },
     {
       "blocker_id": "V-02",
@@ -211,5 +212,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "d798dc6f7a9342f3090ed418439d2fa0672a6c54"
+  "latest_source_delivery_baseline": "fc7c5fc2fe63c9dd4284a88d6c268a10b6b72c52"
 }

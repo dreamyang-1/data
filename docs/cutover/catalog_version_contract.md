@@ -161,3 +161,12 @@ current configured target model 81 / domain 205. Read-only MySQL/Milvus/Redis
 inspection is complete; this is not authorization for index writes. Entity and
 attribute VARCHAR keys may be UUIDs. Model copies reuse entity IDs, so all
 attribute/relation identity joins require model membership before deduplication.
+
+## Scoped structured-edit source acceptance
+
+`v2_slot_edits/closure_report.md` extends the same current-scope raw planner with
+exact task-version filter handles and partial temporal edits. Restored state is
+validated before transient labels/values reach the model. Unchanged references
+come from that restored task; new references use current pinned binding handles.
+Full catalog acceptance still precedes returned plan/state artifacts. This is
+offline source evidence and does not close native catalog publication or trust.
