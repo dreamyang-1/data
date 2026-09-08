@@ -20,6 +20,7 @@
 - 业务后端保证 `conversation_id` 全局唯一，它是可信会话主隔离键。tenant/user 是兼容状态元数据，不是数据权限。没有稳定 user principal 时，不得以 `default-user` 提供跨 conversation 的个人长期记忆。
 - 已通过 Critical Suite 的 V1 多轮行为冻结，除非有可稳定复现的新 P0。Turn Referential Completeness 与 Execution Readiness 分开；Pending 不劫持新任务；状态操作由确定性 Reducer 执行。
 - V2 保持既有 Shadow 边界。没有评测证据和相应授权，不做生产切流。
+- 后续输入输出格式以现有代码为准，不自行设计新的请求字段、响应结构或 SSE 格式。达到能够替代 V1 的验收条件后，先与用户确认，再切换。
 - 根因属于 Oagnet 或 SQL Translator 时修改对应服务；不能在 DataAnalysis 加错误补偿。每个服务分别记录文件、根因、测试及提交。未知或不支持的 Scope/计划继续 Fail Closed。
 - 优先修 Contract、Schema、State、Reducer 和 Grounding。Prompt 或 Regex 变更必须有根因、正反例和回归证据，不能通过猜测语义减少追问。
 - 失败先分类；仅凭正式合同才能修改旧断言，并记录 `STALE_TEST`。记录 baseline/final、collection errors、old-pass → new-fail、old-fail → new-pass 和新增测试。

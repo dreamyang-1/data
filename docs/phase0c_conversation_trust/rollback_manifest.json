@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "5acfa99140f5dfede8f7c10ab3e0fd09db9c59f3",
+  "feature_branch": "phase0c-conversation-trust-20260908-01",
+  "strategy": "Revert the stage commit on a new branch after checking current user changes; explicitly sync only reverted paths to the development workspace and rerun affected tests.",
+  "forbidden": ["reset --hard", "git clean", "force push", "whole-directory overwrite"],
+  "data_migrations": false,
+  "external_service_changes": false,
+  "state_note": "Conversation-derived state is a distinct namespace. A code revert will stop selecting it; no automatic deletion, migration, or joining to old default-user state is performed."
+}

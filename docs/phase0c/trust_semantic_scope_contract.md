@@ -12,11 +12,11 @@ The deprecated `business_domain_id` input normalizes to `business_domain_ids`. W
 
 All agent API routes verify the existing service-to-service `Authorization: Bearer <authKey>` convention against `DATA_AGENT_TRUSTED_BACKEND_TOKEN`, using constant-time comparison. Missing configuration returns 503 `UPSTREAM_SCOPE_TRUST_UNCONFIGURED`; missing/invalid credentials return 401 `UPSTREAM_SCOPE_TRUST_INVALID`. Health endpoints remain separate.
 
-After service authentication, `X-Tenant-Id` and `X-User-Id` are mandatory state namespace identifiers. Missing values return `STATE_NAMESPACE_REQUIRED`, even if the old development fallback flag is enabled. They do not determine data authorization. `X-Application-Id`, when supplied, must agree with body `application_id`; it is required in production or when the existing require-header setting is enabled. Roles never add semantic domains.
+After service authentication, `X-Tenant-Id` and `X-User-Id` are optional compatibility metadata, not data authorization. Complete stable principals retain existing state keys. Absent/partial or default identities use an application/conversation-derived namespace; explicitly blank or overlong supplied values still return `STATE_NAMESPACE_REQUIRED`. `X-Application-Id`, when supplied, must agree with body `application_id`; it is required in production or when the existing require-header setting is enabled. Roles never add semantic domains.
 
-The subsequent 2026-09-08 business contract guarantees globally unique `conversation_id` and treats tenant/user as compatibility metadata. The existing mandatory-header implementation above is a known integration constraint, not a new data-authorization requirement. Adapting that boundary must preserve conversation isolation and disable personal cross-conversation memory without a stable user principal; no identity-system reconstruction is required.
+The 2026-09-08 business contract guarantees globally unique `conversation_id`. Conversation namespaces are deterministic across retries, refreshes and file imports; both internal tenant and user components vary by conversation, also isolating tenant-scoped example recall. They never use history, models or semantic scope as identity sources. Without a stable principal, personal memory recall is skipped and `MemoryScope` rejects personal read/write construction. Changing between conversation-only and complete legacy principal metadata starts a separate state namespace; there is no automatic state migration or merging. The legacy allow-missing setting remains accepted configuration and cannot bypass service authentication.
 
-The backend already sends a Bearer authKey in its Java calling utility. Deployment must provision the matching service secret and forward stable tenant/user identifiers. No real secret was added to Git or to a local .env, and no gateway/identity system was rewritten. A caller with the service secret is trusted to have completed authorization; the secret must remain server-side.
+The backend already sends a Bearer authKey in its Java calling utility. Deployment must provision the matching service secret and supply globally unique conversation IDs; stable tenant/user identifiers are needed only for personal cross-conversation memory. No real secret was added to Git or to a local .env, and no gateway/identity system was rewritten. A caller with the service secret is trusted to have completed authorization; the secret must remain server-side.
 
 ## State compatibility
 
@@ -34,14 +34,14 @@ MODEL_WIDE queries remain within the required model and may use a narrower query
 
 Entity-value retrieval remains scoped. DataAnalysis's existing explicit-domain display-discovery opt-out is unchanged. Metric resolution, definition and lineage now carry the current scope through their SQL catalog requests. Dimensions are model-owned and derive domain eligibility from their governed entity bindings, not an invented business-domain column. Only owned bindings can enter scoped planning. SQL Translator retains the model-qualified Redis boundary and uses separate single-domain caches/indexes. See [single-domain closure](../phase0c_single_domain/closure_report.md); prior closure reports remain historical evidence.
 
-The single-domain source and offline integration gate passes; deployed gateway/service versions and the conversation namespace compatibility boundary still require closure before overall Phase 0C acceptance. V2 routing and Phase 2.5.1 contracts are unchanged. A scoped raw-SQL request without its ASL, an unsupported plan shape, or a catalog binding that cannot prove ownership remains fail closed.
+The single-domain source and offline integration gate passes. Conversation compatibility is covered by the [conversation trust closure](../phase0c_conversation_trust/closure_report.md); deployed gateway/service versions and catalog publication still require evidence before overall Phase 0C acceptance. V2 routing and Phase 2.5.1 contracts are unchanged. A scoped raw-SQL request without its ASL, an unsupported plan shape, or a catalog binding that cannot prove ownership remains fail closed.
 
 ## Request example
 
-The backend sends the following body with its existing service Bearer token and trusted namespace headers. The token is intentionally absent from this example.
+The backend sends the following unchanged body with its existing service Bearer token and, in production, the matching application header. The token is intentionally absent from this example.
 
 ```json
 {"application_id":"business-app","conversation_id":"conversation-123","message_id":"turn-1","semantic_model_id":81,"business_domain_ids":[],"question":"查询本月销售额"}
 ```
 
-`conversation_id` identifies one conversation within tenant/user/application state. It is not a user identity, a model ID or a data permission.
+`conversation_id` is the backend's globally unique conversation identifier. It is not a user identity, a model ID or a data permission. All existing public request/response schemas and data-only SSE framing are retained.

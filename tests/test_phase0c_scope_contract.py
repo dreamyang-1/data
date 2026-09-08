@@ -102,7 +102,7 @@ def test_invalid_domain_scope_rejected(domains):
     ({'trusted_backend_token': None}, HEADERS, 'UPSTREAM_SCOPE_TRUST_UNCONFIGURED'),
     ({}, {}, 'UPSTREAM_SCOPE_TRUST_INVALID'),
     ({}, {**HEADERS, 'Authorization':'Bearer wrong-token'}, 'UPSTREAM_SCOPE_TRUST_INVALID'),
-    ({'allow_missing_trusted_identity_headers': True}, {'Authorization':HEADERS['Authorization']}, 'STATE_NAMESPACE_REQUIRED'),
+    ({'allow_missing_trusted_identity_headers': True}, {'Authorization':HEADERS['Authorization'], 'X-Tenant-Id':''}, 'STATE_NAMESPACE_REQUIRED'),
 ])
 def test_backend_trust_and_namespace_fail_closed(settings, headers, code):
     with TestClient(app(**settings), headers=headers) as client:

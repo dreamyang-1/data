@@ -731,8 +731,9 @@ def test_development_can_temporarily_use_fallback_identity():
             },
         )
 
-    assert response.status_code == 401
-    assert response.json()['detail']['code'] == 'STATE_NAMESPACE_REQUIRED'
+    # Current backend contract guarantees a globally unique conversation ID.
+    assert response.status_code == 200
+    assert response.json()['status'] == 'COMPLETED'
 
 
 def test_application_header_is_ignored_and_body_scope_is_used():
@@ -1196,12 +1197,12 @@ def test_chat_accepts_platform_skill_tool_and_mcp_contract():
         "question": "你好",
         "use_longterm_memory": False,
         "tools": [{
-            "name": "inventory_lookup", "url": "http://192.168.1.20/tool",
+            "name": "inventory_lookup", "url": "http://tool.example.invalid/tool",
             "http_method": "post", "inputSchema": {"type": "object"},
         }],
         "skills": [{"code": "analysis", "slug": "metric_query"}],
         "mcp": [{
-            "mcp_server_url": "http://192.168.1.21/mcp",
+            "mcp_server_url": "http://mcp.example.invalid/mcp",
             "connect_type": "streamable_http",
         }],
         "temp_file_paths": [],
