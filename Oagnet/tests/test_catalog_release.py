@@ -187,6 +187,7 @@ def test_capture_covers_model_wide_domains_or_the_exact_explicit_domain(monkeypa
         return [{"server_uuid": "fixture-db", "database_name": "fixture"}]
     monkeypatch.setattr(mysql, "_query", query)
     monkeypatch.setattr(mysql, "get_business_domains", lambda model: [{"id": 205}, {"id": 206}])
+    monkeypatch.setattr(mysql, "get_metric", lambda model: [])
     def dsl(model, domain):
         calls.append((model,domain)); return {"semantic_model": {"id": model}, "business_domain": {"id": domain}, "entities": [], "metrics": [], "dimensions": []}
     monkeypatch.setattr(mysql, "get_dsl_by_scope", dsl)

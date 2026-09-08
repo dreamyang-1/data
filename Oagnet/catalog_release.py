@@ -108,6 +108,17 @@ def capture_catalog(semantic_model_id: int, business_domain_ids=()) -> dict:
             raise CatalogEvidenceError("CATALOG_SOURCE_IDENTITY_MISSING")
         domains = scope["business_domain_ids"] or [r["id"] for r in mysql.get_business_domains(semantic_model_id)]
         documents = [mysql.get_dsl_by_scope(semantic_model_id, domain) for domain in domains or [None]]
+        if not scope["business_domain_ids"] and domains:
+            # Per-domain DSL reads omit model-owned metrics without a domain.
+            # Capture them explicitly in the same transaction; never attach them
+            # to an explicit-domain release or silently drop orphan domain IDs.
+            all_metrics = mysql.get_metric(semantic_model_id)
+            if any(m.get("business_domain") not in [None, -1, *domains] for m in all_metrics):
+                raise CatalogEvidenceError("CATALOG_ORPHAN_METRIC_DOMAIN")
+            shared_metrics = [m for m in all_metrics if m.get("business_domain") in (None, -1)]
+            if shared_metrics:
+                documents.append({"semantic_model": documents[0]["semantic_model"], "business_domain": None,
+                                  "entities": [], "metrics": shared_metrics, "dimensions": []})
         physical = mysql.get_table_field_by_scope(semantic_model_id, business_domain_id=scope["business_domain_ids"][0] if scope["business_domain_ids"] else None)
         return snapshot_from_documents(scope, identity[0], documents, physical)
 
@@ -159,12 +170,8 @@ def prepare_release(snapshot: dict, records: Iterable[dict], *, publication_id: 
     return manifest, stamped
 
 
-def verify_release(current_snapshot: dict, manifest: dict, records: Iterable[dict], *, published_marker: dict | None) -> dict:
-    """Check trusted complete inventory and marker against a current authority read.
-
-    Caller must supply a complete export and stable before/after publication
-    marker. A retrieval top-k or this pure function alone is not live readiness.
-    """
+def verify_prepared_inventory(current_snapshot: dict, manifest: dict, records: Iterable[dict]) -> dict:
+    """Check a complete generation before activation; no PUBLISHED claim or marker."""
     validate_snapshot(current_snapshot)
     material = {k: v for k, v in manifest.items() if k != "vector_index_version"}
     version = digest(material)
@@ -174,8 +181,6 @@ def verify_release(current_snapshot: dict, manifest: dict, records: Iterable[dic
         raise CatalogEvidenceError("CATALOG_SCOPE_MISMATCH")
     if manifest.get("catalog_version") != current_snapshot["catalog_version"] or manifest.get("source_identity_hash") != current_snapshot["source_identity_hash"]:
         raise CatalogEvidenceError("CATALOG_AUTHORITY_DRIFT")
-    if published_marker != {"state": "PUBLISHED", "vector_index_version": version}:
-        raise CatalogEvidenceError("CATALOG_PUBLICATION_NOT_PROVEN")
     actual = {}
     for record in records:
         content = record_hash(record)
@@ -190,7 +195,24 @@ def verify_release(current_snapshot: dict, manifest: dict, records: Iterable[dic
         actual[record["id"]] = content
     if not actual or actual != manifest.get("record_hashes"):
         raise CatalogEvidenceError("CATALOG_INDEX_INVENTORY_DRIFT")
-    return {"status": "VERIFIED_SUPPLIED_EVIDENCE", "scope": manifest["scope"],
+    return {"status": "VERIFIED_PREPARED_INVENTORY", "scope": manifest["scope"],
             "catalog_version": manifest["catalog_version"], "catalog_publish_id": manifest["catalog_publish_id"],
             "vector_index_version": version, "records_verified": len(actual),
             "live_runtime_verified": False}
+
+
+def verify_release(current_snapshot: dict, manifest: dict, records: Iterable[dict], *, published_marker: dict | None) -> dict:
+    """Check supplied complete inventory and an independently obtained marker.
+
+    Caller must prove export completeness and stable before/after publication.
+    This pure checker alone is never evidence of a live runtime deployment.
+    """
+    receipt = verify_prepared_inventory(current_snapshot, manifest, records)
+    marker = dict(published_marker) if isinstance(published_marker, dict) else None
+    if marker is not None and "activation_id" in marker:
+        activation = marker.pop("activation_id")
+        if not isinstance(activation, str) or len(activation) != 32 or any(c not in "0123456789abcdef" for c in activation):
+            raise CatalogEvidenceError("CATALOG_PUBLICATION_NOT_PROVEN")
+    if marker != {"state": "PUBLISHED", "vector_index_version": manifest["vector_index_version"]}:
+        raise CatalogEvidenceError("CATALOG_PUBLICATION_NOT_PROVEN")
+    return {**receipt, "status": "VERIFIED_SUPPLIED_EVIDENCE"}

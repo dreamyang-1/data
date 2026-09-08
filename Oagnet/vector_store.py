@@ -535,18 +535,22 @@ class MilvusVectorStore:
                 output_fields=output_fields,
                 search_params={"metric_type": "COSINE", "params": {}},
                 timeout=self.timeout,
+                **({"consistency_level": "Strong"} if getattr(self, "_catalog_strong_reads", False) else {}),
             )
             combined.extend(self._from_hit(hit) for hit in (result[0] if result else []))
         combined.sort(key=lambda item: item.score, reverse=True)
         return combined[:top_k]
 
-    def _query_rows(self, where: dict | None, output_fields: list[str]) -> list[dict]:
+    def _query_rows(self, where: dict | None, output_fields: list[str], *, require_complete: bool = False) -> list[dict]:
         expression = self._compile_filter(where)
         rows: list[dict] = []
         for family in self._candidate_families(where):
             collection = self._collections[family]
             query_iterator = getattr(self._client, "query_iterator", None)
             if not callable(query_iterator):
+                if require_complete or getattr(self, "_catalog_strong_reads", False):
+                    from catalog_release import CatalogEvidenceError
+                    raise CatalogEvidenceError("CATALOG_FULL_INVENTORY_REQUIRED")
                 # Compatibility path for older clients and lightweight test
                 # doubles. Production Milvus clients use the iterator below so
                 # stale-id discovery is never silently capped at 16,384 rows.
@@ -563,6 +567,8 @@ class MilvusVectorStore:
                 filter=expression,
                 output_fields=output_fields,
                 batch_size=500,
+                **({"consistency_level": "Strong", "timeout": self.timeout}
+                   if require_complete or getattr(self, "_catalog_strong_reads", False) else {}),
             )
             try:
                 while True:
@@ -573,6 +579,18 @@ class MilvusVectorStore:
             finally:
                 iterator.close()
         return rows
+
+    def get_catalog_inventory(self, where: dict) -> list[VectorRecord]:
+        """Complete strongly consistent generation read-back, including vectors.
+
+        This read-only method never creates/loads/changes a collection. Callers
+        must supply an already established store through the operator boundary.
+        The legacy capped compatibility path is not publication evidence.
+        """
+        return [VectorRecord(
+            id=str(row.get("record_id") or ""), text=str(row.get("text") or ""),
+            vector=list(row.get("embedding", [])), metadata=dict(row.get("metadata") or {}),
+        ) for row in self._query_rows(where, ["record_id", "text", "metadata", "embedding"], require_complete=True)]
 
     def get_ids_by_where(self, where: dict) -> list[str]:
         return [str(row["record_id"]) for row in self._query_rows(where, ["record_id"])]
