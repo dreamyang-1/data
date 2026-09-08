@@ -1,0 +1,271 @@
+{
+  "failures": [
+    {
+      "failure_id": "DM-01",
+      "confidence": "PROVEN",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "first_divergence_stage": "TURN_ADMISSION",
+      "failure_signature": "TURN_ADMISSION|METRIC_QUERY|REMOVE|dimensions|Missing removal fact became INHERIT; removed dimension restored from verified frame",
+      "actual_before": "Missing removal fact became INHERIT; removed dimension restored from verified frame",
+      "status": "FIXED",
+      "repeatability": "DETERMINISTIC",
+      "owning_service": "DataAnalysis_Agent",
+      "independent_reproductions": [
+        {
+          "failure_id": "DM-01",
+          "attempt": 1,
+          "results": {
+            "tests/test_dimension_mutation_contract.py::test_remove_dimension_reaches_execution_without_restoring_it": "failed"
+          }
+        },
+        {
+          "failure_id": "DM-01",
+          "attempt": 2,
+          "results": {
+            "tests/test_dimension_mutation_contract.py::test_remove_dimension_reaches_execution_without_restoring_it": "failed"
+          }
+        }
+      ]
+    },
+    {
+      "failure_id": "DM-02",
+      "confidence": "PROVEN",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "first_divergence_stage": "TURN_ADMISSION",
+      "failure_signature": "TURN_ADMISSION|METRIC_QUERY|CLEAR|dimensions|Empty grouping operation omitted and became INHERIT, so verified dimensions survived",
+      "actual_before": "Empty grouping operation omitted and became INHERIT, so verified dimensions survived",
+      "status": "FIXED",
+      "repeatability": "DETERMINISTIC",
+      "owning_service": "DataAnalysis_Agent",
+      "independent_reproductions": [
+        {
+          "failure_id": "DM-02",
+          "attempt": 1,
+          "results": {
+            "tests/test_dimension_mutation_contract.py::test_clear_dimensions_reaches_execution_as_empty_grain": "failed"
+          }
+        },
+        {
+          "failure_id": "DM-02",
+          "attempt": 2,
+          "results": {
+            "tests/test_dimension_mutation_contract.py::test_clear_dimensions_reaches_execution_as_empty_grain": "failed"
+          }
+        }
+      ]
+    },
+    {
+      "failure_id": "DM-03",
+      "confidence": "PROVEN",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "first_divergence_stage": "TURN_ADMISSION",
+      "failure_signature": "TURN_ADMISSION|METRIC_QUERY|ADD|dimensions|Dimension addition treated as an incomplete new task; metric clarification sent",
+      "actual_before": "Dimension addition treated as an incomplete new task; metric clarification sent",
+      "status": "FIXED",
+      "repeatability": "DETERMINISTIC",
+      "owning_service": "DataAnalysis_Agent",
+      "independent_reproductions": [
+        {
+          "failure_id": "DM-03",
+          "attempt": 1,
+          "results": {
+            "tests/test_dimension_mutation_contract.py::test_add_dimension_preserves_task_instead_of_asking_for_metric": "failed"
+          }
+        },
+        {
+          "failure_id": "DM-03",
+          "attempt": 2,
+          "results": {
+            "tests/test_dimension_mutation_contract.py::test_add_dimension_preserves_task_instead_of_asking_for_metric": "failed"
+          }
+        }
+      ]
+    }
+  ],
+  "provenance_comparison": {
+    "baseline": [
+      {
+        "question": "不要渠道",
+        "current_dimensions": [
+          "渠道"
+        ],
+        "explicit_dimensions": null,
+        "relation": "CURRENT_TOPIC_FOLLOWUP",
+        "legacy_merge_dimensions": [
+          "商品"
+        ],
+        "dimension_operations": [
+          {
+            "slot": "dimensions",
+            "operation": "INHERIT",
+            "old_value": [
+              "商品",
+              "渠道"
+            ],
+            "new_value": [
+              "商品",
+              "渠道"
+            ],
+            "evidence_span": null,
+            "source": "ACTIVE_THREAD_STATE",
+            "confidence": 0.93,
+            "reason_code": "UNIQUE_COMPATIBLE_CONTEXT_INHERITANCE"
+          }
+        ]
+      },
+      {
+        "question": "去掉所有维度",
+        "current_dimensions": [],
+        "explicit_dimensions": null,
+        "relation": "CURRENT_TOPIC_FOLLOWUP",
+        "legacy_merge_dimensions": [],
+        "dimension_operations": [
+          {
+            "slot": "dimensions",
+            "operation": "INHERIT",
+            "old_value": [
+              "商品",
+              "渠道"
+            ],
+            "new_value": [
+              "商品",
+              "渠道"
+            ],
+            "evidence_span": null,
+            "source": "ACTIVE_THREAD_STATE",
+            "confidence": 0.93,
+            "reason_code": "UNIQUE_COMPATIBLE_CONTEXT_INHERITANCE"
+          }
+        ]
+      },
+      {
+        "question": "再加医院维度",
+        "current_dimensions": [
+          "医院"
+        ],
+        "explicit_dimensions": null,
+        "relation": "STANDALONE_NEW_TOPIC",
+        "legacy_merge_dimensions": [
+          "医院"
+        ],
+        "dimension_operations": [
+          {
+            "slot": "dimensions",
+            "operation": "CLEAR",
+            "old_value": null,
+            "new_value": null,
+            "evidence_span": null,
+            "source": "CURRENT_EXPLICIT",
+            "confidence": 0.92,
+            "reason_code": "STANDALONE_FRAME_CLEAR"
+          }
+        ]
+      }
+    ],
+    "final": [
+      {
+        "question": "不要渠道",
+        "current_dimensions": [
+          "渠道"
+        ],
+        "explicit_dimensions": [
+          "渠道"
+        ],
+        "relation": "CURRENT_TOPIC_FOLLOWUP",
+        "legacy_merge_dimensions": [
+          "商品"
+        ],
+        "dimension_operations": [
+          {
+            "slot": "dimensions",
+            "operation": "REMOVE",
+            "old_value": [
+              "商品",
+              "渠道"
+            ],
+            "new_value": [
+              "渠道"
+            ],
+            "evidence_span": "不要渠道",
+            "source": "CURRENT_EXPLICIT",
+            "confidence": 1.0,
+            "reason_code": "CURRENT_EXPLICIT_REMOVE"
+          }
+        ]
+      },
+      {
+        "question": "去掉所有维度",
+        "current_dimensions": [],
+        "explicit_dimensions": [],
+        "relation": "CURRENT_TOPIC_FOLLOWUP",
+        "legacy_merge_dimensions": [],
+        "dimension_operations": [
+          {
+            "slot": "dimensions",
+            "operation": "CLEAR",
+            "old_value": [
+              "商品",
+              "渠道"
+            ],
+            "new_value": [],
+            "evidence_span": "去掉所有维度",
+            "source": "CURRENT_EXPLICIT",
+            "confidence": 1.0,
+            "reason_code": "CURRENT_EXPLICIT_CLEAR"
+          }
+        ]
+      },
+      {
+        "question": "再加医院维度",
+        "current_dimensions": [
+          "医院"
+        ],
+        "explicit_dimensions": [
+          "医院"
+        ],
+        "relation": "CURRENT_TOPIC_FOLLOWUP",
+        "legacy_merge_dimensions": [
+          "医院"
+        ],
+        "dimension_operations": [
+          {
+            "slot": "dimensions",
+            "operation": "ADD",
+            "old_value": [
+              "商品",
+              "渠道"
+            ],
+            "new_value": [
+              "医院"
+            ],
+            "evidence_span": "再加医院维度",
+            "source": "CURRENT_EXPLICIT",
+            "confidence": 1.0,
+            "reason_code": "CURRENT_VALUE_ADDED"
+          }
+        ]
+      }
+    ]
+  },
+  "validation_boundary": "Real classifier/admission/orchestrator through captured query requests; real HTTP adapter through offline ASL transport; no deployed result/candidate claims",
+  "review_resolutions": [
+    "Use verified before-frame for ADD and REMOVE, even if the intermediate merger already lost members",
+    "Consume complete negative command; reject compounds from the new operation guard",
+    "Match longest complete dimension labels and prevent semantic rebinding from increasing target count"
+  ],
+  "unresolved_observations": [
+    {
+      "id": "DM-A01",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "observation": "Rule-only/mock journeys can preserve control words such as 再加/不要 as entity mentions after metric edits; require a separate governed-boundary proof"
+    },
+    {
+      "id": "DM-A02",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "observation": "Add/remove business-filter families and unmarked regrouping have remaining legacy admission/merge behavior; this stage covers explicit dimension edits only"
+    }
+  ]
+}
