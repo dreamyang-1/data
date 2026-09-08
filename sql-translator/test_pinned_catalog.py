@@ -219,3 +219,17 @@ def test_structured_declared_relationship_is_used_without_inventing_endpoints(fa
         # An unusable relationship cannot authorize a join, but does not block
         # an unrelated plan that reads only its own entity.
         assert translate(Pin(seal(s)), asl())['success']
+
+
+@pytest.mark.parametrize('query,expected', [
+    ('SELECT SUM(t.x) AS `amount`, t.y AS `label` FROM t', ['amount','label']),
+    ("SELECT CONCAT('FROM, AS `fake`', t.x) AS `real` FROM t WHERE t.x=' AS `other`'", ['real']),
+    ("SELECT DISTINCT CASE WHEN t.x=1 THEN 'a,b' ELSE 'FROM' END AS `label` FROM t", ['label']),
+    ("SELECT CAST(t.x AS DECIMAL(10,2)) AS `number` FROM t", ['number']),
+    ("SELECT 'a'' FROM ''b' AS `label` FROM t", ['label']),
+    ('SELECT t.x FROM t', None), ('SELECT 1 AS `x`', None),
+    ('SELECT (t.x AS `x` FROM t', None), ('DELETE FROM t', None),
+    ('SELECT t.x /* AS `fake` FROM t */ AS `real` FROM t', None)])
+def test_projection_alias_evidence_comes_from_select_columns(query,expected):
+    from pinned_catalog import sql_projection_aliases
+    assert sql_projection_aliases(query)==expected
