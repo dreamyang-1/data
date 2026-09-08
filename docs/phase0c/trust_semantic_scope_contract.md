@@ -36,6 +36,13 @@ Loading every row of a persisted display slice does not prove coverage of the or
 
 ## External capability and fail-closed behavior
 
+The Legacy subject guard recognizes a complete supported time expression beside
+one existing known region before guessing a product filter or entity mention.
+It preserves explicit named literals and leaves their physical binding to the
+governed catalog. This does not change AuthorizedSemanticScope or public I/O.
+See the [compact structural-scope closure](../phase0c_structural_scope/closure_report.md)
+for the bounded grammar, contrast evidence and remaining unknowns.
+
 The cross-service root-cause patch removes Oagnet's implicit shared domain `-1`, constrains evidence and physical metadata repair, and adds candidate provenance. The subsequent single-domain stage adds request-local scoped SQL catalog/planning and execution-time ASL/SQL/source verification. DataAnalysis now permits a single domain only when metadata, translation and execution responses confirm `single-domain-v1`, the exact model/domain and the current authorization fingerprint. Multiple domains still return `EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED`; an old or incompatible service returns a safe system failure, without asking the user to restate a metric.
 
 MODEL_WIDE queries remain within the required model and may use a narrower query restriction inside that grant; this never changes authorization. Oagnet responses must confirm the queried model/domain restriction and their semantic evidence cannot exceed the grant.
