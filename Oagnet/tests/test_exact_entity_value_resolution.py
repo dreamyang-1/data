@@ -220,7 +220,9 @@ def test_exact_entity_attribute_value_resolution_allows_non_main_business_field(
     assert fields == ["manufacturer.parent_brand"]
     metadata_sql, metadata_args = metadata_calls[0]
     assert "semantic_model_attribute_config" in metadata_sql
-    assert "a.semantic_model_id = m.id" not in metadata_sql
+    # Model-copy evidence shows entity IDs are reused across semantic models.
+    # Non-main attributes remain allowed, within the current model only.
+    assert "a.semantic_model_id = m.id" in metadata_sql
     assert "COALESCE(a.is_main_attribute, 0) = 1" not in metadata_sql
     assert metadata_args == (
         81,
