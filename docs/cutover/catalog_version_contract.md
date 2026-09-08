@@ -135,10 +135,16 @@ the existing controlled release process; credentials stay private.
 
 | Blocker | Required evidence | Present now |
 | --- | --- | --- |
-| C-01 | Consistent authority capture plus complete deterministic scoped generation | Integrated source generation verified offline; actual catalog coverage pending |
-| C-02 | Persisted active marker, verified full read-back, mixed-generation rejection and rollback | Operator Redis/Milvus path and failure/rollback scenarios tested offline; deployment/durability pending |
+| C-01 | Consistent authority capture plus complete deterministic scoped generation | Actual 81/[205] capture generates 290 records locally after UUID/model isolation fixes; real embedding/publication pending |
+| C-02 | Persisted active marker, verified full read-back, mixed-generation rejection and rollback | Actual target inspected: isolated collections and active marker absent; 142 legacy semantic rows unstamped |
 | C-03 | Same release on query, binding, caches and downstream metadata | Pinned read/acceptance/fingerprint implemented; V2/Oagnet API/SQL integration pending |
-| C-04 | Current owned projections/IDs/defaults/rules and actual MySQL/Milvus coverage | Source projector tests and historical local snapshot only |
+| C-04 | Current owned projections/IDs/defaults/rules and actual MySQL/Milvus coverage | Actual 13/13 dimensions have owned projections; external values/defaults/routing and runtime publication still pending |
 
 X-01 separately tracks the named runtime target and trusted operational evidence.
 Old local Chroma counts do not describe the current Milvus deployment.
+
+Current evidence: `catalog_identity/closure_report.md`. The user selected the
+current configured target model 81 / domain 205. Read-only MySQL/Milvus/Redis
+inspection is complete; this is not authorization for index writes. Entity and
+attribute VARCHAR keys may be UUIDs. Model copies reuse entity IDs, so all
+attribute/relation identity joins require model membership before deduplication.

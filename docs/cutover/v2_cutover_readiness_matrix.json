@@ -118,7 +118,7 @@
       "evidence": [
         "app/semantic_v2/models.py::Mention/SemanticCandidate; no live role benchmark"
       ],
-      "next_action": "Capture the specified target catalog and runtime inventory; compare complete scoped record manifests and independently validate projection/ID/rule coverage. Historical counts cannot establish current deployment state. Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts. Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "Canonical Binding",
@@ -132,7 +132,7 @@
       "evidence": [
         "B-01 source fix; V2 bound refs still supplied by fixtures"
       ],
-      "next_action": "Connect the V2 plan-only grounding path to the pinned view and make release acceptance mandatory; version SQL metadata during its gated execution adapter integration without changing public legacy I/O. Capture the specified target catalog and runtime inventory; compare complete scoped record manifests and independently validate projection/ID/rule coverage. Historical counts cannot establish current deployment state. Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes."
+      "next_action": "Connect the V2 plan-only grounding path to the pinned view and make release acceptance mandatory; version SQL metadata during its gated execution adapter integration without changing public legacy I/O. Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts. Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes."
     },
     {
       "capability": "Dataset Follow-up",
@@ -158,7 +158,7 @@
       "evidence": [
         "Current request AuthorizedSemanticScope source gate passes; V2 MODEL_WIDE bridge absent"
       ],
-      "next_action": "Obtain named environment/model/domain and trusted read-only exports/service access. Deployment/index publication remains a separate controlled operation; do not infer authorization from source development. Build the minimal trusted-scope bridge with exact current-request authority and state reuse checks; never infer user grants or expand explicit domains."
+      "next_action": "Verify deployed revisions/caller boundary and controlled release operations for this exact target. Model/domain no longer require user clarification. Build the minimal trusted-scope bridge with exact current-request authority and state reuse checks; never infer user grants or expand explicit domains."
     },
     {
       "capability": "Catalog Version",
@@ -169,9 +169,10 @@
         "C-03"
       ],
       "evidence": [
-        "Captured source -> deterministic generation -> pinned read/acceptance identity is tested offline; V2/Oagnet API/SQL propagation still absent"
+        "Current 81/[205] authoritative snapshot captured live; UUID/model isolation fixed; V2/SQL propagation still open",
+        "docs/cutover/catalog_identity/live_scope_evidence.json"
       ],
-      "next_action": "Verify actual target capture-to-index coverage, including governed projections/defaults and external metadata dependencies; offline generation is not runtime cutover proof. Connect the V2 plan-only grounding path to the pinned view and make release acceptance mandatory; version SQL metadata during its gated execution adapter integration without changing public legacy I/O."
+      "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot. Connect the V2 plan-only grounding path to the pinned view and make release acceptance mandatory; version SQL metadata during its gated execution adapter integration without changing public legacy I/O."
     },
     {
       "capability": "Catalog Publication",
@@ -183,9 +184,9 @@
         "X-01"
       ],
       "evidence": [
-        "Isolated Milvus generation collections + Redis CAS + full strong read-back implemented; no actual target operation executed"
+        "Actual isolated collections and Redis marker absent; legacy 142 rows unstamped. 290 records generated locally from current capture with placeholder vectors only."
       ],
-      "next_action": "Validate initialized target collections, durable shared Redis markers, native iteration and concurrent reader/publisher behavior through the controlled operator path. Capture the specified target catalog and runtime inventory; compare complete scoped record manifests and independently validate projection/ID/rule coverage. Historical counts cannot establish current deployment state. Obtain named environment/model/domain and trusted read-only exports/service access. Deployment/index publication remains a separate controlled operation; do not infer authorization from source development."
+      "next_action": "After explicit operational authorization, initialize isolated collections and publish scoped generation; verify actual Redis durability/native inventory/concurrency. Do not rebuild or relabel V1 collections. Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts. Verify deployed revisions/caller boundary and controlled release operations for this exact target. Model/domain no longer require user clarification."
     },
     {
       "capability": "Oagnet Scope",
@@ -195,9 +196,10 @@
         "X-01"
       ],
       "evidence": [
-        "Oagnet/tests/test_scope_closure.py and tests/test_scope_contract.py pass; deployed revision not verified"
+        "Oagnet/tests/test_scope_closure.py and tests/test_scope_contract.py pass; deployed revision not verified",
+        "Copied-model metadata joins now tested with real SQL execution on synthetic fixtures; actual 81/[205] capture has 13/13 owned dimensions; runtime publication unverified"
       ],
-      "next_action": "Obtain named environment/model/domain and trusted read-only exports/service access. Deployment/index publication remains a separate controlled operation; do not infer authorization from source development."
+      "next_action": "Verify deployed revisions/caller boundary and controlled release operations for this exact target. Model/domain no longer require user clarification."
     },
     {
       "capability": "ASL Contract",
