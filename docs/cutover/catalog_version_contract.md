@@ -10,6 +10,9 @@ pinned acceptance in `v2_scope_bridge/closure_report.md` (offline integration).
 The raw-input entry and its remaining semantic coverage are documented in
 `v2_recognition/closure_report.md`; recorded model responses are not native
 publication or model-quality evidence.
+Grounded clarification/resume acceptance also uses the pin's full finish;
+see `v2_pending/closure_report.md`. Questions are not exempt from catalog drift
+checks, and this does not create executed-result evidence.
 
 ## Authority and identity
 

@@ -207,7 +207,7 @@ class ScopedPlanSession:
         self._check()
         return contract_digest({'context':self.context.fingerprint(), 'semantics':semantic_fingerprint})
 
-    def resolve_turn(self, *, parsed, task_patch, semantic_resolution, state=None, historical_task_id=None):
+    def resolve_turn(self, *, parsed, task_patch, semantic_resolution, state=None, historical_task_id=None, pending_option_id=None):
         """All state reaching this new resolver path must pass current scope."""
         from .state_machine import ConversationState
         self._check()
@@ -238,8 +238,33 @@ class ScopedPlanSession:
                     raise ValueError('SCOPED_TASK_RESTORE_REQUIRED')
                 validate_authorized_refs(typed,self._snapshot,self.context,
                     tuple([*self._bindings.values(),*self._datasets.values(),*self._tasks.values()]))
-        resolution = TurnResolver.resolve(parse, state=current, task_patch=task_patch,
-            semantic_resolution=semantic_resolution, historical_task_id=historical_task_id)
+        if pending_option_id is not None:
+            from .pending_recognition import selected_option
+            from .pipeline import TurnResolutionResult, TurnReferentialCompleteness
+            from .models import ProceedDecision
+            from .slot_reducer import apply_task_patch, semantic_fingerprint
+            pending = current.pending
+            option = selected_option(pending, self._request.question)
+            if parse.topic_shift_signals or option is None or option.option_id != pending_option_id:
+                raise ValueError('V2_PENDING_ANSWER_NOT_ADMISSIBLE')
+            task = current.tasks[pending.task_id]
+            active = next(v for v in task.versions if v.version == task.active_version)
+            if task_patch.base_task_version != task.active_version:
+                raise ValueError('V2_PENDING_TASK_VERSION_MISMATCH')
+            reduced = apply_task_patch(active.semantics, task_patch, clear_barriers=task.clear_barriers)
+            blocker = next(b for b in pending.blockers if b.blocker_id == pending.active_blocker_id)
+            actual = getattr(reduced.semantics, blocker.plan_path)
+            values = actual if isinstance(actual,(list,tuple)) else [actual]
+            expected = option.canonical_ref or option.typed_value
+            if not any(semantic_fingerprint(v)==semantic_fingerprint(expected) for v in values):
+                raise ValueError('V2_PENDING_OPTION_NOT_APPLIED')
+            resolution = TurnResolutionResult(dialogue_act='ANSWER_CLARIFICATION',
+                target_task_id=task.task_id,target_topic_id=task.topic_id,task_patch=task_patch,
+                semantic_resolution=semantic_resolution,decision=ProceedDecision(),
+                referential_completeness=TurnReferentialCompleteness(relation='CURRENT_TASK',depends_on_history=True))
+        else:
+            resolution = TurnResolver.resolve(parse, state=current, task_patch=task_patch,
+                semantic_resolution=semantic_resolution, historical_task_id=historical_task_id)
         self._resolutions.add(contract_digest({'parse':parse.model_dump(mode='json'),
                                                'resolution':resolution.model_dump(mode='json')}))
         return resolution
@@ -270,8 +295,14 @@ class ScopedPlanSession:
         executable = compile_executable_plan(plan)
         # No plan/state can leave this session until full source + inventory +
         # activation acceptance succeeds. Errors are system failures, not asks.
+        self.accept_catalog()
+        return executable
+
+    def accept_catalog(self):
+        """Accept plan or clarification artifacts only after full pinned read-back."""
+        self._check()
         receipt = self._pin.finish()
         if any(receipt.get(k) != getattr(self.context.catalog_pin, k) for k in CatalogPinIdentity.model_fields):
             raise ValueError('CATALOG_ACCEPTANCE_IDENTITY_MISMATCH')
         self._finished = True
-        return executable
+        return receipt
