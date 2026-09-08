@@ -36,7 +36,7 @@
         "Oagnet/catalog_publication.py::PinnedCatalog.identity",
         "docs/cutover/v2_scope_bridge/test_delta.json"
       ],
-      "next_action": "Connect autonomous current-turn recognition to this boundary, then version downstream SQL metadata/cache reads during execution adapter integration; verify actual deployed acceptance without changing public legacy I/O."
+      "next_action": "Connect the raw-input entry to deployment/state-store boundaries after its remaining semantic coverage gates; version downstream SQL metadata/cache reads. Verify actual deployed acceptance with unchanged public I/O."
     },
     {
       "blocker_id": "C-04",
@@ -65,13 +65,14 @@
       "blocker_id": "V-01",
       "classification": "CUTOVER_BLOCKER_P0",
       "blocking_level": "P0",
-      "status": "OPEN",
-      "summary": "V2 has no autonomous raw-turn parser/binding/TaskPatch construction path: CurrentTurnParser validates supplied parse and TurnResolver accepts supplied patch/resolution.",
+      "status": "PARTIAL_AUTONOMOUS_SOURCE_PATH",
+      "summary": "RawTurnPlanner now calls the configured model transport for surface parse and scoped handle/slot interpretation, then deterministically reduces and compiles common payloads with scoped next-state artifacts. No caller-supplied parse/patch is required. Pending answers, full slot/payload coverage and actual recognition evidence remain open.",
       "evidence": [
-        "app/semantic_v2/pipeline.py::CurrentTurnParser",
-        "app/semantic_v2/pipeline.py::TurnResolver"
+        "app/semantic_v2/recognition.py",
+        "app/semantic_v2/recognition_client.py",
+        "docs/cutover/v2_recognition/closure_report.md"
       ],
-      "next_action": "Build actual raw-turn recognition, catalog candidate selection and deterministic patch construction through ScopedPlanSession. Supplied parse/patch fixtures do not establish V1/V2 accuracy."
+      "next_action": "Complete typed Pending/clarification flow, field-level and partial-time edits, governed catalog defaults/relations and remaining payload mapping through this raw-input entry; then evaluate actual recognition after catalog gates close."
     },
     {
       "blocker_id": "V-02",
@@ -210,5 +211,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "aa6252f367b7da35774ccbabb17c85545975bd20"
+  "latest_source_delivery_baseline": "47608b0a8db4a20b54973d717bf4176e621d1b2a"
 }
