@@ -1,0 +1,161 @@
+{
+  "baseline_commit": "cdb2a8cfb059c841fbd8de51eb3c3a59cb0cf981",
+  "services": {
+    "Oagnet": {
+      "baseline_counts": {
+        "passed": 289,
+        "failed": 10
+      },
+      "final_counts": {
+        "passed": 343,
+        "failed": 10
+      },
+      "old_pass_to_new_fail": [],
+      "missing_nodeids": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": [
+        "tests/test_scope_closure.py::test_catalog_preserves_governed_ids_for_scope_proof",
+        "tests/test_scope_closure.py::test_dimension_display_uses_exact_domain_projection",
+        "tests/test_scope_closure.py::test_entity_value_exact_and_vector_paths_preserve_valid_scope[approximate-domains0]",
+        "tests/test_scope_closure.py::test_entity_value_exact_and_vector_paths_preserve_valid_scope[approximate-domains1]",
+        "tests/test_scope_closure.py::test_entity_value_exact_and_vector_paths_preserve_valid_scope[exact-domains0]",
+        "tests/test_scope_closure.py::test_entity_value_exact_and_vector_paths_preserve_valid_scope[exact-domains1]",
+        "tests/test_scope_closure.py::test_entity_value_response_cannot_borrow_request_scope[900--1-approximate]",
+        "tests/test_scope_closure.py::test_entity_value_response_cannot_borrow_request_scope[900--1-exact]",
+        "tests/test_scope_closure.py::test_entity_value_response_cannot_borrow_request_scope[900-902-approximate]",
+        "tests/test_scope_closure.py::test_entity_value_response_cannot_borrow_request_scope[900-902-exact]",
+        "tests/test_scope_closure.py::test_entity_value_response_cannot_borrow_request_scope[900-None-approximate]",
+        "tests/test_scope_closure.py::test_entity_value_response_cannot_borrow_request_scope[900-None-exact]",
+        "tests/test_scope_closure.py::test_entity_value_response_cannot_borrow_request_scope[999-901-approximate]",
+        "tests/test_scope_closure.py::test_entity_value_response_cannot_borrow_request_scope[999-901-exact]",
+        "tests/test_scope_closure.py::test_entity_value_response_cannot_borrow_request_scope[None-901-approximate]",
+        "tests/test_scope_closure.py::test_entity_value_response_cannot_borrow_request_scope[None-901-exact]",
+        "tests/test_scope_closure.py::test_local_snapshot_audit_is_read_only_and_exports_no_record_text",
+        "tests/test_scope_closure.py::test_old_snapshot_without_owned_projection_remains_unavailable",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[fallback-attribute]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[fallback-dimension]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[fallback-entity]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[fallback-entity_attribute_value]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[fallback-metric]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[fallback-relation]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[lookup-attribute]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[lookup-dimension]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[lookup-entity]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[lookup-entity_attribute_value]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[lookup-metric]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[lookup-relation]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[search-attribute]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[search-dimension]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[search-entity]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[search-entity_attribute_value]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[search-metric]",
+        "tests/test_scope_closure.py::test_prompt_rejects_foreign_payload_before_model_rendering[search-relation]",
+        "tests/test_scope_closure.py::test_publisher_keeps_shared_original_and_adds_owned_projection",
+        "tests/test_scope_closure.py::test_real_asl_route_admits_only_the_published_dimension_binding[12]",
+        "tests/test_scope_closure.py::test_real_asl_route_admits_only_the_published_dimension_binding[22]",
+        "tests/test_scope_closure.py::test_real_publication_to_prompt_dimension_retrieval[domains0]",
+        "tests/test_scope_closure.py::test_real_publication_to_prompt_dimension_retrieval[domains1]",
+        "tests/test_scope_closure.py::test_real_publication_to_prompt_dimension_retrieval[domains2]",
+        "tests/test_scope_closure.py::test_scope_republish_removes_stale_projection_without_deleting_other_domains",
+        "tests/test_scope_closure.py::test_unproven_projection_fails_closed_but_preserves_shared_catalog[ambiguous_owner]",
+        "tests/test_scope_closure.py::test_unproven_projection_fails_closed_but_preserves_shared_catalog[boolean_id]",
+        "tests/test_scope_closure.py::test_unproven_projection_fails_closed_but_preserves_shared_catalog[claimed_other_domain]",
+        "tests/test_scope_closure.py::test_unproven_projection_fails_closed_but_preserves_shared_catalog[foreign_attribute]",
+        "tests/test_scope_closure.py::test_unproven_projection_fails_closed_but_preserves_shared_catalog[foreign_entity]",
+        "tests/test_scope_closure.py::test_unproven_projection_fails_closed_but_preserves_shared_catalog[foreign_owner]",
+        "tests/test_scope_closure.py::test_unproven_projection_fails_closed_but_preserves_shared_catalog[missing_attribute_id]",
+        "tests/test_scope_closure.py::test_unproven_projection_fails_closed_but_preserves_shared_catalog[missing_entity_id]",
+        "tests/test_scope_closure.py::test_unproven_projection_fails_closed_but_preserves_shared_catalog[opaque_hierarchy]",
+        "tests/test_scope_closure.py::test_unproven_projection_fails_closed_but_preserves_shared_catalog[opaque_mapping]",
+        "tests/test_scope_closure.py::test_unproven_projection_fails_closed_but_preserves_shared_catalog[opaque_rules]"
+      ],
+      "remaining_failures": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+        "tests/test_relational_semantic_scope.py::test_relationship_code_filter_with_name_value_uses_unique_authorized_name_field",
+        "tests/test_relational_semantic_scope.py::test_relationship_name_filter_resolves_one_field_among_multiple_endpoint_names"
+      ],
+      "collection_errors": 0
+    },
+    "DataAnalysis_Agent": {
+      "baseline_counts": {
+        "passed": 1876,
+        "failed": 27
+      },
+      "final_counts": {
+        "passed": 1876,
+        "failed": 27
+      },
+      "old_pass_to_new_fail": [],
+      "missing_nodeids": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": [],
+      "remaining_failures": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete"
+      ],
+      "collection_errors": 0
+    },
+    "SQL_Translator": {
+      "baseline_counts": {
+        "passed": 200
+      },
+      "final_counts": {
+        "passed": 200
+      },
+      "old_pass_to_new_fail": [],
+      "missing_nodeids": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": [],
+      "remaining_failures": [],
+      "collection_errors": 0
+    }
+  },
+  "critical_passed": 160,
+  "critical_total": 160,
+  "new_tests": 54,
+  "real_model_calls": 0,
+  "production_external_writes": 0,
+  "index_publications": 0,
+  "system_prompt_unchanged": true,
+  "old_business_assertions_unchanged_in": [
+    "tests/test_cross_domain_hardening.py",
+    "tests/test_entity_attribute_integration.py",
+    "tests/test_live_semantic_regressions.py",
+    "tests/test_relational_semantic_scope.py",
+    "tests/test_temporal_metric_invariants.py"
+  ],
+  "baseline_adoption": "Unchanged Agent/SQL baseline is committed preceding final; Oagnet baseline freshly rerun",
+  "full_suite_mode": "Oagnet and SQL isolated full suites; Agent 14 established serial module batches"
+}
