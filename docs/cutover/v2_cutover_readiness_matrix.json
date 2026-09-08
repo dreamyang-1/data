@@ -10,7 +10,8 @@
       ],
       "evidence": [
         "app/semantic_v2/pipeline.py::CurrentTurnParser/TurnResolver",
-        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven"
+        "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
       "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
     },
@@ -28,7 +29,8 @@
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
         "Actual 81/[205] display/declared relationship facts and local typed plan acceptance: docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
         "Ordered path/occurrence source acceptance and 250 actual-catalog typed walks: docs/cutover/v2_relation_paths/closure_report.md",
-        "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md"
+        "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md",
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
       "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence."
     },
@@ -46,7 +48,8 @@
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Governed canonical-option raw V2 clarification/resume and previous-state first-ask trace pass offline: docs/cutover/v2_pending/closure_report.md; real-model/full decision coverage not yet accepted",
         "Actual 81/[205] display/declared relationship facts and local typed plan acceptance: docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
-        "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md"
+        "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md",
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
       "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
@@ -62,7 +65,8 @@
       "evidence": [
         "app/semantic_v2/pipeline.py::TurnResolver requires historical_task_id; tests/test_task_recall_contract.py covers Legacy",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
-        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md"
+        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
       "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
@@ -77,7 +81,8 @@
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
-        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md"
+        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
       "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
@@ -92,7 +97,8 @@
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
-        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md"
+        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
       "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
@@ -107,7 +113,8 @@
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
-        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md"
+        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
       "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
@@ -122,7 +129,8 @@
       "evidence": [
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
-        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md"
+        "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
       "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
@@ -138,9 +146,10 @@
       "evidence": [
         "app/semantic_v2/models.py::Mention/SemanticCandidate; no live role benchmark",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
-        "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md"
+        "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
-      "next_action": "Integrate source observations into Raw V2 field/value binding and pending/task restore, preserving current scope and database-load mapping. Then prove actual entity-value retrieval and isolated native pinned publication under authorized operations. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "After operational authorization, regenerate and verify the latest isolated publication candidate and native read-back. Prove actual source lookup under authorized operations; evaluate field-hypothesis and fuzzy value selection only after catalog gates close. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "Canonical Binding",
@@ -156,9 +165,10 @@
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Actual 81/[205] display/declared relationship facts and local typed plan acceptance: docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
         "Ordered path/occurrence source acceptance and 250 actual-catalog typed walks: docs/cutover/v2_relation_paths/closure_report.md",
-        "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md"
+        "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
-      "next_action": "Connect the raw-input entry to deployment/state-store boundaries after its remaining semantic coverage gates; version downstream SQL metadata/cache reads. Verify actual deployed acceptance with unchanged public I/O. Integrate source observations into Raw V2 field/value binding and pending/task restore, preserving current scope and database-load mapping. Then prove actual entity-value retrieval and isolated native pinned publication under authorized operations. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
+      "next_action": "Connect the raw-input entry to deployment/state-store boundaries after its remaining semantic coverage gates; version downstream SQL metadata/cache reads. Verify actual deployed acceptance with unchanged public I/O. After operational authorization, regenerate and verify the latest isolated publication candidate and native read-back. Prove actual source lookup under authorized operations; evaluate field-hypothesis and fuzzy value selection only after catalog gates close. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
     },
     {
       "capability": "Dataset Follow-up",
@@ -216,9 +226,10 @@
       ],
       "evidence": [
         "Actual isolated collections and Redis marker absent; legacy 142 rows unstamped. 290 records generated locally from current capture with placeholder vectors only.",
-        "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md"
+        "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
-      "next_action": "After operational authorization, regenerate the isolated publication candidate from the latest capture (relation types and entity-value source facts changed its identity), publish, then verify native full read-back and durable activation. No V1 collection rebuild. Integrate source observations into Raw V2 field/value binding and pending/task restore, preserving current scope and database-load mapping. Then prove actual entity-value retrieval and isolated native pinned publication under authorized operations. Verify deployed revisions/caller boundary and controlled release operations for this exact target. Model/domain no longer require user clarification."
+      "next_action": "After operational authorization, regenerate the isolated publication candidate from the latest capture (relation types and entity-value source facts changed its identity), publish, then verify native full read-back and durable activation. No V1 collection rebuild. After operational authorization, regenerate and verify the latest isolated publication candidate and native read-back. Prove actual source lookup under authorized operations; evaluate field-hypothesis and fuzzy value selection only after catalog gates close. Verify deployed revisions/caller boundary and controlled release operations for this exact target. Model/domain no longer require user clarification."
     },
     {
       "capability": "Oagnet Scope",
