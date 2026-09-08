@@ -65,8 +65,13 @@ def selected_option(pending, text):
 
 
 def pending_identity(task_id,payload_type,operations,blockers):
+    def option_material(option):
+        value = option.model_dump(mode='json')
+        if value.get('filter_choice') is None:
+            value.pop('filter_choice', None)
+        return value
     immutable=[dict(blocker_id=b.blocker_id,slot=b.plan_path,
-        options=[o.model_dump(mode='json') for o in b.options]) for b in blockers]
+        options=[option_material(o) for o in b.options]) for b in blockers]
     return 'pending:'+contract_digest([task_id,payload_type,operations,immutable])[:32]
 
 
@@ -138,12 +143,15 @@ def clarification_result(session,state,pending,resume,request,*,initial,previous
         source_stage='SEMANTIC_GROUNDING',reason_type='USER_SEMANTIC_AMBIGUITY',blocking_slot=blocker.plan_path,
         expected_answer_type='OPTION_ID',candidate_ids=blocker.candidate_ids,already_asked=already_asked,
         base_task_reference=pending.task_id+':'+str(pending.task_version),pending_reference=pending.pending_id,
-        evidence_codes=['PINNED_GOVERNED_SYNONYM_COLLISION','NO_UNIQUE_CATALOG_MATCH','FIRST_ASK_FOR_BLOCKER'],
+        evidence_codes=(['VERIFIED_SOURCE_VALUE_COLLISION','NO_UNIQUE_SOURCE_VALUE','FIRST_ASK_FOR_BLOCKER']
+            if any(o.filter_choice is not None for o in blocker.options) else
+            ['PINNED_GOVERNED_SYNONYM_COLLISION','NO_UNIQUE_CATALOG_MATCH','FIRST_ASK_FOR_BLOCKER']),
         is_user_ambiguity=True,system_repair_possible=False,safe_default_available=False,decision='ASK')
     decision=m.ClarificationDecision(blocking=True,options=blocker.options,affected_plan_paths=[blocker.plan_path],
         candidate_answers=[o.display_label for o in blocker.options],
         information_gain=blocker.information_gain,base_task_version=pending.task_version,state_version=state.state_version,
         create_pending=initial,already_asked=already_asked)
+    session._require_refs(session._decoded_refs([o.model_dump(mode='json') for o in blocker.options]))
     session.accept_catalog()
     return RecognizedClarification(decision=decision,trace=trace,question=question,
         next_state=session.seal(kind='CONVERSATION',payload=state),pending_state=session.seal(kind='PENDING',payload=resume))

@@ -11,7 +11,7 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import Annotated, Any, Literal, Union
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator, model_serializer
 
 from .enums import (Calculation, ComparisonType, ControlAction, DeliveryMode,
                     ExecutionBackend, ExecutionStatus, QualityCheckType, Severity)
@@ -939,18 +939,43 @@ class ReadinessBlocker(StrictModel):
         return self
 
 
+class FilterChoice(StrictModel):
+    """A complete filter alternative lowered by code from verified value choices."""
+    expression: FilterExpression | None
+
+
 class ClarificationOption(StrictModel):
     option_id: Identifier
     display_label: str = Field(min_length=1)
     canonical_ref: BoundSemanticRef | None = None
     typed_value: TypedFilterValue | None = None
+    filter_choice: FilterChoice | None = None
     evidence: list[Identifier] = Field(min_length=1)
+
+    @model_serializer(mode='wrap')
+    def preserve_legacy_wire_value(self, handler):
+        data = handler(self)
+        # Old persisted mutation digests include the complete option wire value.
+        # An absent extension must not change replay or idempotency identity.
+        if self.filter_choice is None:
+            data.pop('filter_choice', None)
+        return data
 
     @model_validator(mode='after')
     def option_value(self):
-        if (self.canonical_ref is None) == (self.typed_value is None):
-            raise ValueError('clarification option requires exactly one canonical or typed value')
+        if sum(v is not None for v in (self.canonical_ref, self.typed_value, self.filter_choice)) != 1:
+            raise ValueError('clarification option requires exactly one canonical, typed or filter value')
         return self
+
+
+def clarification_option_value(option):
+    if isinstance(option, dict):
+        if option.get('filter_choice') is not None:
+            return option['filter_choice']['expression']
+        return option.get('canonical_ref') or option.get('typed_value')
+    if option.filter_choice is not None:
+        return option.filter_choice.expression
+    return option.canonical_ref or option.typed_value
 
 
 class ProceedDecision(StrictModel):

@@ -412,3 +412,39 @@ def test_source_mapping_coverage_is_distinct_from_dynamic_value_or_server_proof(
     assert "external_entity_values" in coverage["excluded_dependencies"]
     assert "data_source_runtime_identity" in coverage["excluded_dependencies"]
     assert coverage["capability_coverage_verified"] is False
+
+
+def test_display_main_does_not_enable_implicit_source_lookup(catalog, business):
+    service, *_ = catalog
+    pin = service.pin(81, [205])
+    assert pin.entity_value_lookup_fields() == []
+    with pytest.raises(CatalogEvidenceError, match='IMPLICIT_SEARCH_NOT_GOVERNED'):
+        lookup(pin, '甲城', require_implicit_policy=True)
+    assert not business[1]
+    assert lookup(pin, '甲城')['values'] == ['甲城']
+
+
+@pytest.mark.parametrize('flag',[1,True,'1'])
+def test_governed_enabled_source_field_can_be_used_for_implicit_lookup(catalog,business,flag):
+    service, rows, _, overrides, *_ = catalog
+    rows[0]['vectorization']=flag
+    snapshot=deepcopy(overrides[(81,(205,))])
+    snapshot['physical_catalog']['entity_value_sources']=values.capture_value_sources(SCOPE)
+    overrides[(81,(205,))]=reseal(snapshot)
+    publish(service,publication_id='enabled-lookup')
+    pin=service.pin(81,[205])
+    assert pin.entity_value_lookup_fields()==[attribute_id(pin)]
+    assert lookup(pin,'甲城',require_implicit_policy=True)['values']==['甲城']
+    pin.finish()
+
+
+@pytest.mark.parametrize('flag',[2,'not-a-policy',[],{}])
+def test_unknown_search_policy_cannot_become_enabled_by_truthiness(catalog,flag):
+    service, rows, _, overrides, *_ = catalog
+    rows[0]['vectorization']=flag
+    snapshot=deepcopy(overrides[(81,(205,))])
+    snapshot['physical_catalog']['entity_value_sources']=values.capture_value_sources(SCOPE)
+    overrides[(81,(205,))]=reseal(snapshot)
+    publish(service,publication_id='invalid-lookup-policy')
+    with pytest.raises(CatalogEvidenceError,match='SEARCH_POLICY_INVALID'):
+        service.pin(81,[205]).entity_value_lookup_fields()

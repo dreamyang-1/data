@@ -5,7 +5,7 @@ import hashlib
 import json
 from typing import Literal
 
-from pydantic import ConfigDict, Field, JsonValue, model_validator
+from pydantic import AwareDatetime, ConfigDict, Field, JsonValue, model_validator
 
 from app.domain.semantic_scope import AuthorizedSemanticScope
 from .models import BoundSemanticRef, Identifier, SnapshotContext, StrictModel, VersionMetadata
@@ -48,6 +48,39 @@ class CatalogBindingEvidence(StrictModel):
     context_fingerprint: Identifier
 
 
+def source_value_id(field_ref, mapping_hash, value, data_source_id):
+    return 'source-value:' + contract_digest([field_ref.semantic_model_id,
+        field_ref.business_domain_ids, field_ref.canonical_id, mapping_hash, data_source_id, value])
+
+
+class SourceValueBindingEvidence(StrictModel):
+    """A transient current-source observation, not static catalog membership."""
+    model_config = ConfigDict(extra='forbid', frozen=True)
+    source: Literal['VERIFIED_SOURCE_EXACT_LOOKUP'] = 'VERIFIED_SOURCE_EXACT_LOOKUP'
+    ref: BoundSemanticRef
+    field_ref: BoundSemanticRef
+    attribute_record_id: Identifier
+    canonical_value: str = Field(min_length=1, max_length=500)
+    mapping_hash: Identifier
+    data_source_id: int = Field(strict=True, gt=0)
+    observation_hash: Identifier
+    observed_at: AwareDatetime
+    context_fingerprint: Identifier
+
+    @model_validator(mode='after')
+    def source_identity(self):
+        if (self.field_ref.catalog_type != 'ATTRIBUTE' or self.field_ref.semantic_role != 'FILTER_FIELD'
+                or self.ref.catalog_type != 'ENTITY_VALUE' or self.ref.semantic_role != 'FILTER_VALUE'
+                or self.ref.resolution_source != self.source
+                or self.ref.canonical_id != source_value_id(self.field_ref, self.mapping_hash, self.canonical_value, self.data_source_id)
+                or self.ref.canonical_code != self.ref.canonical_id
+                or self.ref.display_name != self.canonical_value
+                or any(getattr(self.ref, name) != getattr(self.field_ref, name)
+                       for name in ('semantic_model_id', 'business_domain_ids', 'catalog_version'))):
+            raise ValueError('SOURCE_VALUE_BINDING_IDENTITY_MISMATCH')
+        return self
+
+
 class DatasetBindingEvidence(StrictModel):
     model_config = ConfigDict(extra='forbid', frozen=True)
     source: Literal['SCOPED_DATASET_STATE'] = 'SCOPED_DATASET_STATE'
@@ -81,14 +114,23 @@ class ScopedArtifact(StrictModel):
     context: AuthorizedScopeContext
     payload: JsonValue
     payload_digest: Identifier
+    source_value_bindings: tuple[SourceValueBindingEvidence, ...] = ()
 
     @model_validator(mode='after')
     def check_integrity(self):
         from .models import freeze_contract
-        if contract_digest(self.payload) != self.payload_digest:
+        material = scoped_artifact_material(self.payload, self.source_value_bindings)
+        if contract_digest(material) != self.payload_digest:
             raise ValueError('SCOPED_ARTIFACT_CORRUPT')
         object.__setattr__(self, 'payload', freeze_contract(self.payload))
         return self
+
+
+def scoped_artifact_material(payload, source_values=()):
+    # Preserve the existing digest for artifacts without dynamic values.
+    if not source_values:
+        return payload
+    return {'payload': payload, 'source_value_bindings': [p.model_dump(mode='json') for p in source_values]}
 
 
 class AuthorizedVersionMetadata(VersionMetadata):
@@ -98,7 +140,7 @@ class AuthorizedVersionMetadata(VersionMetadata):
 
 
 def validate_authorized_refs(value, snapshot: SnapshotContext, context: AuthorizedScopeContext,
-                             evidence: tuple[CatalogBindingEvidence | DatasetBindingEvidence | TaskBindingEvidence, ...]):
+                             evidence: tuple[CatalogBindingEvidence | SourceValueBindingEvidence | DatasetBindingEvidence | TaskBindingEvidence, ...]):
     from .pipeline import collect_bound_refs
     scope = context.authorized_scope
     pin = context.catalog_pin
@@ -113,7 +155,7 @@ def validate_authorized_refs(value, snapshot: SnapshotContext, context: Authoriz
             or snapshot.catalog_publish_id != pin.catalog_publish_id
             or snapshot.vector_index_version != pin.vector_index_version):
         raise ValueError('PLAN_VALIDATION_FAILURE: current authorized scope/pin mismatch')
-    if any(not isinstance(item, (CatalogBindingEvidence, DatasetBindingEvidence, TaskBindingEvidence)) or item.context_fingerprint != context.fingerprint()
+    if any(not isinstance(item, (CatalogBindingEvidence, SourceValueBindingEvidence, DatasetBindingEvidence, TaskBindingEvidence)) or item.context_fingerprint != context.fingerprint()
            for item in evidence):
         raise ValueError('PLAN_VALIDATION_FAILURE: foreign binding evidence')
     for ref in collect_bound_refs(value):
@@ -124,8 +166,9 @@ def validate_authorized_refs(value, snapshot: SnapshotContext, context: Authoriz
                 or (scope.business_domain_ids and (not ref.business_domain_ids
                     or not set(ref.business_domain_ids) <= set(snapshot.business_domain_ids)))):
             raise ValueError('PLAN_VALIDATION_FAILURE: bound reference outside current scope')
-        if not any(isinstance(item, CatalogBindingEvidence) and item.ref == ref for item in evidence):
+        if not any(isinstance(item, (CatalogBindingEvidence, SourceValueBindingEvidence)) and item.ref == ref for item in evidence):
             raise ValueError('PLAN_VALIDATION_FAILURE: pinned catalog membership required')
+    validate_source_value_fields(value, evidence)
     for dataset_id in referenced_datasets(value):
         if not any(isinstance(item, DatasetBindingEvidence) and item.dataset_id == dataset_id for item in evidence):
             raise ValueError('PLAN_VALIDATION_FAILURE: scoped dataset membership required')
@@ -143,6 +186,27 @@ def validate_authorized_refs(value, snapshot: SnapshotContext, context: Authoriz
     for task_id, task_version in referenced_tasks(value):
         if not any(isinstance(item, TaskBindingEvidence) and (item.task_id, item.task_version)==(task_id, task_version) for item in evidence):
             raise ValueError('PLAN_VALIDATION_FAILURE: scoped task membership required')
+
+
+def same_field(left, right):
+    return left.model_copy(update={'source_mention_ids': ()}) == right.model_copy(update={'source_mention_ids': ()})
+
+
+def validate_source_value_fields(value, evidence):
+    from .models import EntityValueRef, Predicate
+    source_proofs = [p for p in evidence if isinstance(p, SourceValueBindingEvidence)]
+    for proof in source_proofs:
+        if not any(isinstance(p, CatalogBindingEvidence) and p.record_id == proof.attribute_record_id
+                   and same_field(p.ref, proof.field_ref) for p in evidence):
+            raise ValueError('SOURCE_VALUE_FIELD_CATALOG_EVIDENCE_REQUIRED')
+    for predicate in contract_objects(value):
+        if not isinstance(predicate, Predicate):
+            continue
+        for item in contract_objects(predicate.value):
+            if isinstance(item, EntityValueRef):
+                proof = next((p for p in source_proofs if p.ref == item.ref), None)
+                if proof is not None and not same_field(predicate.field_ref, proof.field_ref):
+                    raise ValueError('SOURCE_VALUE_FILTER_FIELD_MISMATCH')
 
 
 def referenced_datasets(value):
