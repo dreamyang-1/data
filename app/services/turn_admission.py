@@ -156,6 +156,57 @@ class StaleContextConflictError(ValueError):
 class TurnAdmissionGate:
     """Classify the raw turn before allowing any business-context inheritance."""
 
+    @staticmethod
+    def _dimension_edit(
+        question: str, current: CanonicalAnalysisRequest
+    ) -> tuple[SlotOperationType, list[str]] | None:
+        """Keep explicit grain edits separate from a replacement grain.
+
+        Additions require a complete command and a dimension/grouping suffix;
+        a product value or a complete new metric query cannot match it.
+        Removal and clear reuse the classifier's existing negative-slot grammar.
+        """
+        from app.intent.classifier import RuleBasedIntentClassifier
+
+        if current.metrics:
+            return None
+        compact = re.sub(r"\s+", "", question).rstrip("。！!？?")
+        negative_target = compact
+        for prefix in ("不看", "不查", "不要", "别看", "去掉", "移除", "删掉", "删除", "取消", "不按"):
+            if negative_target.startswith(prefix):
+                negative_target = negative_target[len(prefix):]
+                break
+        for prefix in ("原来", "之前", "上次", "旧的"):
+            if negative_target.startswith(prefix):
+                negative_target = negative_target[len(prefix):]
+                break
+        negative_target = negative_target.removeprefix("的")
+        for suffix in ("维度", "分组"):
+            if negative_target.endswith(suffix):
+                negative_target = negative_target[:-len(suffix)]
+                break
+        if (
+            RuleBasedIntentClassifier._clear_all_dimensions(question)
+            and negative_target in {"", "所有", "全部"}
+        ):
+            return SlotOperationType.CLEAR, []
+        removed = [value for value in current.dimensions
+                   if RuleBasedIntentClassifier._slot_is_negated(question, value, dimension=True)]
+        if negative_target in removed:
+            return SlotOperationType.REMOVE, [negative_target]
+        names = [value for value in current.dimensions if value and value in compact]
+        if not names:
+            return None
+        alternatives = "|".join(re.escape(value) for value in sorted(names, key=len, reverse=True))
+        addition = re.fullmatch(
+            rf"(?:再|同时|并)?(?:加上?|增加|新增|补充|带上)"
+            rf"(?P<names>(?:{alternatives})(?:(?:和|与|及|、)(?:{alternatives}))*)"
+            rf"(?:维度|分组)", compact,
+        )
+        if addition is not None:
+            return SlotOperationType.ADD, list(dict.fromkeys(re.findall(alternatives, addition.group("names"))))
+        return None
+
     def evaluate(
         self,
         *,
@@ -451,6 +502,9 @@ class TurnAdmissionGate:
 
         reference_signals = self._signals(question, _REFERENCE_PATTERNS)
         followup_signals = self._signals(question, _FOLLOWUP_PATTERNS)
+        dimension_edit = self._dimension_edit(question, current)
+        if dimension_edit is not None and not current.metrics:
+            followup_signals.append("DIMENSION_" + dimension_edit[0].value)
         if AnalysisOperator.SORT in current.operators and not _ACTION_PATTERN.search(compact):
             followup_signals.append('EXPLICIT_RESULT_SORT')
         if current.conversation_control.value == 'CORRECTION':
@@ -574,7 +628,9 @@ class TurnAdmissionGate:
                 )
             )
         ]
-        if explicit_dimensions:
+        if dimension_edit is not None:
+            explicit_dimensions = dimension_edit[1]
+        if explicit_dimensions or dimension_edit is not None:
             put(
                 explicit,
                 "dimensions",
@@ -887,7 +943,17 @@ class TurnAdmissionGate:
             request.fields = list(current.fields)
         if apply_current_slots and "dimensions" in facts.explicit_slots:
             explicit_dimensions = facts.explicit_slots["dimensions"].value
-            if isinstance(explicit_dimensions, list):
+            base_dimensions = (
+                decision.context_before.get("dimensions", [])
+                if decision.inherit_business_context else request.dimensions
+            )
+            if "DIMENSION_CLEAR" in facts.followup_signals:
+                request.dimensions = []
+            elif "DIMENSION_REMOVE" in facts.followup_signals:
+                request.dimensions = [value for value in base_dimensions if value not in explicit_dimensions]
+            elif "DIMENSION_ADD" in facts.followup_signals:
+                request.dimensions = list(dict.fromkeys([*base_dimensions, *explicit_dimensions]))
+            elif isinstance(explicit_dimensions, list):
                 request.dimensions = (
                     list(dict.fromkeys([
                         *request.dimensions,
@@ -1266,10 +1332,22 @@ class TurnAdmissionGate:
                 source_turn=(prior.source_turn if prior is not None else source_turn),
                 confidence=(prior.confidence if prior is not None else 1.0),
             )
-        if current.dimensions:
+        if current.dimensions and "DIMENSION_CLEAR" not in facts.followup_signals:
             prior = facts.explicit_slots.get("dimensions")
+            dimensions = list(current.dimensions)
+            if (
+                prior is not None
+                and any("DIMENSION_" + op.value in facts.followup_signals
+                        for op in (SlotOperationType.ADD, SlotOperationType.REMOVE))
+                and len(dimensions) != len(prior.value)
+            ):
+                # A nested label can also be parsed as its parent (hospital
+                # level -> hospital). Grounding cannot add operation targets.
+                # Without a one-to-one label mapping, retain the explicit
+                # targets for the downstream catalog to resolve or reject.
+                dimensions = list(prior.value)
             facts.explicit_slots["dimensions"] = SlotProvenance(
-                value=list(current.dimensions),
+                value=dimensions,
                 source=(prior.source if prior is not None else SlotSource.CURRENT_EXPLICIT),
                 source_turn=(prior.source_turn if prior is not None else source_turn),
                 confidence=(prior.confidence if prior is not None else 1.0),
@@ -1347,6 +1425,11 @@ class TurnAdmissionGate:
                     RuleBasedIntentClassifier._slot_is_negated(raw, str(value)) for value in new_value
                 ):
                     operation = SlotOperationType.REMOVE
+            if slot == 'dimensions':
+                for dimension_operation in (SlotOperationType.CLEAR, SlotOperationType.REMOVE, SlotOperationType.ADD):
+                    if "DIMENSION_" + dimension_operation.value in decision.current_turn_facts.followup_signals:
+                        operation = dimension_operation
+                        break
             operations.append(SlotOperation(
                 slot=slot,
                 operation=operation,
@@ -1360,7 +1443,8 @@ class TurnAdmissionGate:
                 source=provenance.source,
                 confidence=provenance.confidence,
                 reason_code=(
-                    'CURRENT_EXPLICIT_REMOVE' if operation == SlotOperationType.REMOVE
+                    'CURRENT_EXPLICIT_CLEAR' if operation == SlotOperationType.CLEAR
+                    else 'CURRENT_EXPLICIT_REMOVE' if operation == SlotOperationType.REMOVE
                     else 'CURRENT_VALUE_REPLACES_ACTIVE_SLOT' if operation == SlotOperationType.REPLACE
                     else 'CURRENT_VALUE_ADDED'
                 ),

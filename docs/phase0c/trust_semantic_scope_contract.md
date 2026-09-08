@@ -36,6 +36,14 @@ Loading every row of a persisted display slice does not prove coverage of the or
 
 ## External capability and fail-closed behavior
 
+Explicit dimension-only additions, removals and clears preserve their operation
+through admission, scoped semantic label rebinding and verified-frame merging.
+An empty CLEAR cannot become inheritance; ADD/REMOVE apply to the admitted
+before-frame, and a changed grouping invalidates the old ASL/result reference.
+Later edits remain subject to the current request scope. See the
+[dimension mutation closure](../phase0c_dimension_mutation/closure_report.md)
+for complete-command boundaries, contrasts and unchanged public I/O.
+
 The Legacy subject guard recognizes a complete supported time expression beside
 one existing known region before guessing a product filter or entity mention.
 It preserves explicit named literals and leaves their physical binding to the
