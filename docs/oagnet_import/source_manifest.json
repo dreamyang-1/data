@@ -1,0 +1,477 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-08T02:56:01.607324+00:00",
+  "source_workspace": "E:\\YouoAgent\\Oagnet",
+  "source_git_branch": "main",
+  "source_git_head": "656637304eb1c7dbdf8ddb8714ea3b8df6b0990c",
+  "source_staged_diff_sha256": "ce14d88f7b52b4adf4f0f54114f15635dafdbba672c256fd05f06a2b564fba0b",
+  "source_unstaged_diff_sha256": "35fc295404c96d117105c0df78761a8339ec5ce1c715501ef396fca8124c8880",
+  "authoritative_version": "Current working tree, including staged, unstaged and untracked source files",
+  "target_repository": "https://github.com/dreamyang-1/data",
+  "target_base_commit": "e406029c83692d6e785b0880815d2a64773157c7",
+  "target_branch": "oagnet-source-import-20260908-01",
+  "file_count": 49,
+  "python_file_count": 41,
+  "line_endings": "LF as required by the target repository .gitattributes; source files are unchanged",
+  "excluded_categories": [
+    "Git metadata",
+    "environment files and credentials",
+    "runtime logs",
+    "Python and pytest caches",
+    "backups",
+    "local vector database contents",
+    "virtual environments"
+  ],
+  "secret_scan": {
+    "findings": 0,
+    "checks": [
+      "credential token patterns",
+      "private key markers",
+      "authenticated URLs",
+      "nonempty Python credential literals"
+    ]
+  },
+  "files": [
+    {
+      "source_path": ".gitignore",
+      "repository_path": "Oagnet/.gitignore",
+      "source_sha256": "cfe419681dbc801332807876abf8c551783a2644fdfff226b5f525440e24cb08",
+      "published_sha256": "a8221015784a1780d30492dd45380ccf2dbbad60949eb8ee3c157baeb052d17c",
+      "source_bytes": 51,
+      "published_bytes": 48,
+      "normalization": "CRLF_TO_LF"
+    },
+    {
+      "source_path": "AGENT_QUERY_SEMANTIC_EVIDENCE_CONTRACT.md",
+      "repository_path": "Oagnet/AGENT_QUERY_SEMANTIC_EVIDENCE_CONTRACT.md",
+      "source_sha256": "43e2a04d91f202ce50b799aa2e4114ae3a84d794fa16c9563843b26afe9df1e5",
+      "published_sha256": "43e2a04d91f202ce50b799aa2e4114ae3a84d794fa16c9563843b26afe9df1e5",
+      "source_bytes": 3987,
+      "published_bytes": 3987,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "agent.py",
+      "repository_path": "Oagnet/agent.py",
+      "source_sha256": "4aaa48fc512f4e9c96d6eaa970cac790075cfcc9852eb06a74da446f182effb0",
+      "published_sha256": "ad02d0c81175a716b84b7661c40bc2653089b084ccadcb7afdbd720c18a9ca41",
+      "source_bytes": 294681,
+      "published_bytes": 294644,
+      "normalization": "CRLF_TO_LF"
+    },
+    {
+      "source_path": "api.py",
+      "repository_path": "Oagnet/api.py",
+      "source_sha256": "b76aab81e9a6cbbb0a95801f4d1978bc333d7b7914ac10e254d4adb08118334e",
+      "published_sha256": "7e27af170e0ec5acda406d12abecced27a2b63f4232e02b7c8d59b9827ff76d3",
+      "source_bytes": 60614,
+      "published_bytes": 60575,
+      "normalization": "CRLF_TO_LF"
+    },
+    {
+      "source_path": "asl_contract.py",
+      "repository_path": "Oagnet/asl_contract.py",
+      "source_sha256": "5f829713cefa6d0493d8e937e701b778516f68eddf0bb863a9293b7f973a5b1b",
+      "published_sha256": "5f829713cefa6d0493d8e937e701b778516f68eddf0bb863a9293b7f973a5b1b",
+      "source_bytes": 4493,
+      "published_bytes": 4493,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "capacity_control.py",
+      "repository_path": "Oagnet/capacity_control.py",
+      "source_sha256": "38dcbf690e5a766533256093213ed476f10b37191091b45b22224134701aaeb8",
+      "published_sha256": "38dcbf690e5a766533256093213ed476f10b37191091b45b22224134701aaeb8",
+      "source_bytes": 11249,
+      "published_bytes": 11249,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "config.py",
+      "repository_path": "Oagnet/config.py",
+      "source_sha256": "3befd720fa5bd7878d7a4c20f0cb95bf2120a3170e99505a78e68c1d4010ae28",
+      "published_sha256": "3befd720fa5bd7878d7a4c20f0cb95bf2120a3170e99505a78e68c1d4010ae28",
+      "source_bytes": 5241,
+      "published_bytes": 5241,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "daily_job_store.py",
+      "repository_path": "Oagnet/daily_job_store.py",
+      "source_sha256": "359397bd63b3b7b70b5070984e634de417653cb72c57ed3feeaf0394862f4a83",
+      "published_sha256": "359397bd63b3b7b70b5070984e634de417653cb72c57ed3feeaf0394862f4a83",
+      "source_bytes": 4879,
+      "published_bytes": 4879,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "embedding.py",
+      "repository_path": "Oagnet/embedding.py",
+      "source_sha256": "97b8719fe3f457c62a7ac8461798d16be4a54db3587532dad6f18a961703960e",
+      "published_sha256": "97b8719fe3f457c62a7ac8461798d16be4a54db3587532dad6f18a961703960e",
+      "source_bytes": 2679,
+      "published_bytes": 2679,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "logger.py",
+      "repository_path": "Oagnet/logger.py",
+      "source_sha256": "26a13543ed6266ad0e8a8aab6259ac919f21e374c4e5dec3b6acf227b9a882e6",
+      "published_sha256": "ea7408d8b906c1d9fcd40c3cb5f18625ff9df78bfadbba0ed5433f625f87eda9",
+      "source_bytes": 1983,
+      "published_bytes": 1913,
+      "normalization": "CRLF_TO_LF"
+    },
+    {
+      "source_path": "mysql_tool.py",
+      "repository_path": "Oagnet/mysql_tool.py",
+      "source_sha256": "866bed094ae46fb1370638b952c6ca5b53f5caa8328b3b2cc4f9f47359eb848f",
+      "published_sha256": "866bed094ae46fb1370638b952c6ca5b53f5caa8328b3b2cc4f9f47359eb848f",
+      "source_bytes": 80958,
+      "published_bytes": 80958,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "prompt_build.py",
+      "repository_path": "Oagnet/prompt_build.py",
+      "source_sha256": "e61442cd526f3cb551c2008f68d049ca93717e12003251dfdee06b88d4147a4f",
+      "published_sha256": "8cd4fc41bbbc89f5e3f738b5e2488523bb545710faef4a80dec79f8ea79f1d26",
+      "source_bytes": 67732,
+      "published_bytes": 67034,
+      "normalization": "CRLF_TO_LF"
+    },
+    {
+      "source_path": "requirements.txt",
+      "repository_path": "Oagnet/requirements.txt",
+      "source_sha256": "cf72044e1f35fa052dd9436665fe41128d4ad39762d1e1d7c8bde605923f7a86",
+      "published_sha256": "7fb82dfe5f3f9431bc73d3be7948f387b8f86cf9481db11358c1728d9cfa7501",
+      "source_bytes": 421,
+      "published_bytes": 401,
+      "normalization": "CRLF_TO_LF"
+    },
+    {
+      "source_path": "scripts/apply_model81_brand_semantics.py",
+      "repository_path": "Oagnet/scripts/apply_model81_brand_semantics.py",
+      "source_sha256": "8b098683c37a7254e5e88cd85fc19d335a09ac6f6cee617f683047250dbb4e2b",
+      "published_sha256": "8b098683c37a7254e5e88cd85fc19d335a09ac6f6cee617f683047250dbb4e2b",
+      "source_bytes": 6451,
+      "published_bytes": 6451,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "scripts/apply_model81_catalog_semantics.py",
+      "repository_path": "Oagnet/scripts/apply_model81_catalog_semantics.py",
+      "source_sha256": "44f15337db49f4a8a5e78700a65030b4233620488188fabf1f156d8e1caffbc2",
+      "published_sha256": "44f15337db49f4a8a5e78700a65030b4233620488188fabf1f156d8e1caffbc2",
+      "source_bytes": 5336,
+      "published_bytes": 5336,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "scripts/apply_model81_entity_value_vector_policy.py",
+      "repository_path": "Oagnet/scripts/apply_model81_entity_value_vector_policy.py",
+      "source_sha256": "f6f513c060da0e9b26a5df8c0c5c8b2754446922ff906197b83174dad66aea22",
+      "published_sha256": "f6f513c060da0e9b26a5df8c0c5c8b2754446922ff906197b83174dad66aea22",
+      "source_bytes": 4636,
+      "published_bytes": 4636,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "scripts/apply_model81_shared_region_hospital_coverage.py",
+      "repository_path": "Oagnet/scripts/apply_model81_shared_region_hospital_coverage.py",
+      "source_sha256": "465f736392383dc1151ed5355ee3b7ede10ccf2d5572c6fbed0db2bdb11aeb29",
+      "published_sha256": "465f736392383dc1151ed5355ee3b7ede10ccf2d5572c6fbed0db2bdb11aeb29",
+      "source_bytes": 9922,
+      "published_bytes": 9922,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "scripts/migrate_vectors_to_milvus.py",
+      "repository_path": "Oagnet/scripts/migrate_vectors_to_milvus.py",
+      "source_sha256": "831e0a0f0d2a85ee7195cca748c0c5e7570abe1583d894ddcf7b9c718b98e62a",
+      "published_sha256": "831e0a0f0d2a85ee7195cca748c0c5e7570abe1583d894ddcf7b9c718b98e62a",
+      "source_bytes": 2738,
+      "published_bytes": 2738,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "scripts/open_firewall_8021.ps1",
+      "repository_path": "Oagnet/scripts/open_firewall_8021.ps1",
+      "source_sha256": "d6c953b454f64bf34628d0531c6e355b4edcd6df49b36284cd5efc12f981485c",
+      "published_sha256": "d6c953b454f64bf34628d0531c6e355b4edcd6df49b36284cd5efc12f981485c",
+      "source_bytes": 1006,
+      "published_bytes": 1006,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "scripts/start_lan.ps1",
+      "repository_path": "Oagnet/scripts/start_lan.ps1",
+      "source_sha256": "852c5a38feca4b869a6a556adccd0cce997ea8e6efe467baf15dd7ec2445891f",
+      "published_sha256": "852c5a38feca4b869a6a556adccd0cce997ea8e6efe467baf15dd7ec2445891f",
+      "source_bytes": 574,
+      "published_bytes": 574,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_agent_semantic_normalization.py",
+      "repository_path": "Oagnet/tests/test_agent_semantic_normalization.py",
+      "source_sha256": "9e7390107f25faf1bebf5fd51ac48005f2127873dc906ed1298481ed8ab60d26",
+      "published_sha256": "9e7390107f25faf1bebf5fd51ac48005f2127873dc906ed1298481ed8ab60d26",
+      "source_bytes": 5080,
+      "published_bytes": 5080,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_analysis_contract_request.py",
+      "repository_path": "Oagnet/tests/test_analysis_contract_request.py",
+      "source_sha256": "60686c9531e20e78a155136599cfb142c1799c798fcccb78e1c754dc9d6ede82",
+      "published_sha256": "60686c9531e20e78a155136599cfb142c1799c798fcccb78e1c754dc9d6ede82",
+      "source_bytes": 12950,
+      "published_bytes": 12950,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_api_error_codes.py",
+      "repository_path": "Oagnet/tests/test_api_error_codes.py",
+      "source_sha256": "9b7ba4abdf783b9fdbd6d08da169e3ec71ecdfcbba49a72ec8ec8cd53ba97238",
+      "published_sha256": "9b7ba4abdf783b9fdbd6d08da169e3ec71ecdfcbba49a72ec8ec8cd53ba97238",
+      "source_bytes": 4601,
+      "published_bytes": 4601,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_capacity_control.py",
+      "repository_path": "Oagnet/tests/test_capacity_control.py",
+      "source_sha256": "e12d4b0823818722cbe120b2932047dc4fbe835fe5e7372378f8269cec5339dd",
+      "published_sha256": "e12d4b0823818722cbe120b2932047dc4fbe835fe5e7372378f8269cec5339dd",
+      "source_bytes": 6954,
+      "published_bytes": 6954,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_cross_domain_hardening.py",
+      "repository_path": "Oagnet/tests/test_cross_domain_hardening.py",
+      "source_sha256": "477bed8a178701489f2f51db0cedf7a8fc10df46bed6f243b38f76b78cc76cbd",
+      "published_sha256": "477bed8a178701489f2f51db0cedf7a8fc10df46bed6f243b38f76b78cc76cbd",
+      "source_bytes": 18434,
+      "published_bytes": 18434,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_daily_job_store.py",
+      "repository_path": "Oagnet/tests/test_daily_job_store.py",
+      "source_sha256": "9f40fe0e74b3066184ca355098f52fb607e3ec90c0e40fa63f8068ae992f56b1",
+      "published_sha256": "9f40fe0e74b3066184ca355098f52fb607e3ec90c0e40fa63f8068ae992f56b1",
+      "source_bytes": 1897,
+      "published_bytes": 1897,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_daily_sync_api.py",
+      "repository_path": "Oagnet/tests/test_daily_sync_api.py",
+      "source_sha256": "a36fe4e437f0838bd0a1e2d174f974705676f19679b74e907a9a6c33c7676ca2",
+      "published_sha256": "a36fe4e437f0838bd0a1e2d174f974705676f19679b74e907a9a6c33c7676ca2",
+      "source_bytes": 5164,
+      "published_bytes": 5164,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_daily_vector_sync.py",
+      "repository_path": "Oagnet/tests/test_daily_vector_sync.py",
+      "source_sha256": "76b50e4f193fa6d6b55f4d0b77a5009a144148b7879400eae4982b86d8f21bcc",
+      "published_sha256": "76b50e4f193fa6d6b55f4d0b77a5009a144148b7879400eae4982b86d8f21bcc",
+      "source_bytes": 5005,
+      "published_bytes": 5005,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_entity_attribute_integration.py",
+      "repository_path": "Oagnet/tests/test_entity_attribute_integration.py",
+      "source_sha256": "f04f0b26a919deb236bdfb4006ac1429125310155ebe0075f76b39ac279f323e",
+      "published_sha256": "f04f0b26a919deb236bdfb4006ac1429125310155ebe0075f76b39ac279f323e",
+      "source_bytes": 9263,
+      "published_bytes": 9263,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_entity_attribute_search_api.py",
+      "repository_path": "Oagnet/tests/test_entity_attribute_search_api.py",
+      "source_sha256": "90aa4826079aa3708e2a60f7f6fa7eb208f059fa301cdd1ec786425bbe6a3bf3",
+      "published_sha256": "90aa4826079aa3708e2a60f7f6fa7eb208f059fa301cdd1ec786425bbe6a3bf3",
+      "source_bytes": 2074,
+      "published_bytes": 2074,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_entity_attribute_vector.py",
+      "repository_path": "Oagnet/tests/test_entity_attribute_vector.py",
+      "source_sha256": "f1a4c18fea7c5fe173851657d0d22718fff0886fc884013c26fdf1012b00a191",
+      "published_sha256": "f1a4c18fea7c5fe173851657d0d22718fff0886fc884013c26fdf1012b00a191",
+      "source_bytes": 4534,
+      "published_bytes": 4534,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_exact_entity_value_resolution.py",
+      "repository_path": "Oagnet/tests/test_exact_entity_value_resolution.py",
+      "source_sha256": "5a7414ba0b826dc5494f353fbe6f6e341e89626434e22d45a84fd8654940d92e",
+      "published_sha256": "5a7414ba0b826dc5494f353fbe6f6e341e89626434e22d45a84fd8654940d92e",
+      "source_bytes": 10946,
+      "published_bytes": 10946,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_hardening.py",
+      "repository_path": "Oagnet/tests/test_hardening.py",
+      "source_sha256": "5836a6f51d42c8d45bc74d4d151b8668cd1bd02336c9ae2e97a05552e9cd68d0",
+      "published_sha256": "5836a6f51d42c8d45bc74d4d151b8668cd1bd02336c9ae2e97a05552e9cd68d0",
+      "source_bytes": 10484,
+      "published_bytes": 10484,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_intent_asl_contract.py",
+      "repository_path": "Oagnet/tests/test_intent_asl_contract.py",
+      "source_sha256": "80738abf25604e6b2972ae35270da5e13291127d5e70f6e5d4ef55b6cc174bd9",
+      "published_sha256": "80738abf25604e6b2972ae35270da5e13291127d5e70f6e5d4ef55b6cc174bd9",
+      "source_bytes": 47787,
+      "published_bytes": 47787,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_live_semantic_regressions.py",
+      "repository_path": "Oagnet/tests/test_live_semantic_regressions.py",
+      "source_sha256": "cab0e019821e8ecb05e74d433d562da18fc4b8a084c5394817624325b61da542",
+      "published_sha256": "cab0e019821e8ecb05e74d433d562da18fc4b8a084c5394817624325b61da542",
+      "source_bytes": 17734,
+      "published_bytes": 17734,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_milvus_vector_store.py",
+      "repository_path": "Oagnet/tests/test_milvus_vector_store.py",
+      "source_sha256": "4f56075e27378949ab2860a4d65b9bfa0b5481c37add72a137d3ce30c023c9d5",
+      "published_sha256": "4f56075e27378949ab2860a4d65b9bfa0b5481c37add72a137d3ce30c023c9d5",
+      "source_bytes": 4916,
+      "published_bytes": 4916,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_partner_relation_completion.py",
+      "repository_path": "Oagnet/tests/test_partner_relation_completion.py",
+      "source_sha256": "4dc030ba80b064f1d93a149c8aad55c1111e868fc31d8922cab892bf4fe80667",
+      "published_sha256": "4dc030ba80b064f1d93a149c8aad55c1111e868fc31d8922cab892bf4fe80667",
+      "source_bytes": 6206,
+      "published_bytes": 6206,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_relation_name_resolution_depth.py",
+      "repository_path": "Oagnet/tests/test_relation_name_resolution_depth.py",
+      "source_sha256": "f13d28f8857e357c1f314bd7a0c6c1c7e295d95ba303decf826e33a752d1603f",
+      "published_sha256": "f13d28f8857e357c1f314bd7a0c6c1c7e295d95ba303decf826e33a752d1603f",
+      "source_bytes": 12869,
+      "published_bytes": 12869,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_relational_semantic_scope.py",
+      "repository_path": "Oagnet/tests/test_relational_semantic_scope.py",
+      "source_sha256": "35845b1a633a6ec53ab0c1ef2483132271cb58875d72c28ec3640f69f4bc41e9",
+      "published_sha256": "35845b1a633a6ec53ab0c1ef2483132271cb58875d72c28ec3640f69f4bc41e9",
+      "source_bytes": 43484,
+      "published_bytes": 43484,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_semantic_audit_fail_closed.py",
+      "repository_path": "Oagnet/tests/test_semantic_audit_fail_closed.py",
+      "source_sha256": "43096f9cda2dda15d47891b892e59740869f4aedbaf04c9eefeafb4bb59faf16",
+      "published_sha256": "43096f9cda2dda15d47891b892e59740869f4aedbaf04c9eefeafb4bb59faf16",
+      "source_bytes": 11253,
+      "published_bytes": 11253,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_semantic_display_resolve.py",
+      "repository_path": "Oagnet/tests/test_semantic_display_resolve.py",
+      "source_sha256": "7d8279bf29a36467f5f036b407d44b294b6c173bf0c12e96fe427e5a6ca5ff6c",
+      "published_sha256": "7d8279bf29a36467f5f036b407d44b294b6c173bf0c12e96fe427e5a6ca5ff6c",
+      "source_bytes": 8654,
+      "published_bytes": 8654,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_semantic_evidence.py",
+      "repository_path": "Oagnet/tests/test_semantic_evidence.py",
+      "source_sha256": "417c2425971d1ef1660e05db2a6452d00e4f9b5df6cab8b1d5b75565d7b717c7",
+      "published_sha256": "417c2425971d1ef1660e05db2a6452d00e4f9b5df6cab8b1d5b75565d7b717c7",
+      "source_bytes": 9955,
+      "published_bytes": 9955,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_temporal_metric_invariants.py",
+      "repository_path": "Oagnet/tests/test_temporal_metric_invariants.py",
+      "source_sha256": "5dafe4626365c0c9645110611ad0616e5ccacbf24956b56402800396bfeb201b",
+      "published_sha256": "5dafe4626365c0c9645110611ad0616e5ccacbf24956b56402800396bfeb201b",
+      "source_bytes": 24504,
+      "published_bytes": 24504,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_vector_semantic_ambiguity.py",
+      "repository_path": "Oagnet/tests/test_vector_semantic_ambiguity.py",
+      "source_sha256": "d94ce5adf3794bee213656292f0b2d17715a95102e26bf4391be904f13e3f680",
+      "published_sha256": "d94ce5adf3794bee213656292f0b2d17715a95102e26bf4391be904f13e3f680",
+      "source_bytes": 6054,
+      "published_bytes": 6054,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "tests/test_vector_store_search.py",
+      "repository_path": "Oagnet/tests/test_vector_store_search.py",
+      "source_sha256": "05fde6da904530a909f348ec6f95fcd8bc4fdfb1c23aa144084e19dedf73d76e",
+      "published_sha256": "05fde6da904530a909f348ec6f95fcd8bc4fdfb1c23aa144084e19dedf73d76e",
+      "source_bytes": 894,
+      "published_bytes": 894,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "vector_store.py",
+      "repository_path": "Oagnet/vector_store.py",
+      "source_sha256": "383bf31cdb64c6be32b2568746815c2e948b5ed100e9e9ef7fe66232b5b515b4",
+      "published_sha256": "383bf31cdb64c6be32b2568746815c2e948b5ed100e9e9ef7fe66232b5b515b4",
+      "source_bytes": 65557,
+      "published_bytes": 65557,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "向量化说明.md",
+      "repository_path": "Oagnet/向量化说明.md",
+      "source_sha256": "e2ec0f7ee6ee87c39de90107fd04bc0cb5c18e53e510b5fb404b38c9adf7cbbb",
+      "published_sha256": "cae9d82e483b3a9397ac86e33ecc52793a257378d4086dac75097a068458c215",
+      "source_bytes": 6319,
+      "published_bytes": 6277,
+      "normalization": "CRLF_TO_LF"
+    },
+    {
+      "source_path": "实体属性值表与向量化接口审查意见.md",
+      "repository_path": "Oagnet/实体属性值表与向量化接口审查意见.md",
+      "source_sha256": "2a404a6549f748f4c450a3dfc4fbefb174bcfe4fd6f2f04a6bd8e285c52d86af",
+      "published_sha256": "2a404a6549f748f4c450a3dfc4fbefb174bcfe4fd6f2f04a6bd8e285c52d86af",
+      "source_bytes": 12259,
+      "published_bytes": 12259,
+      "normalization": "NONE"
+    },
+    {
+      "source_path": "新旧数据对比.md",
+      "repository_path": "Oagnet/新旧数据对比.md",
+      "source_sha256": "6d8accd095eecf0d0c1bdab257b6a345dbc7a2b3a8bce0f62778286b6950d686",
+      "published_sha256": "6d8accd095eecf0d0c1bdab257b6a345dbc7a2b3a8bce0f62778286b6950d686",
+      "source_bytes": 17115,
+      "published_bytes": 17115,
+      "normalization": "NONE"
+    }
+  ]
+}
