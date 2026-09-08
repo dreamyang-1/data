@@ -4358,6 +4358,40 @@ class RuleBasedIntentClassifier:
             request.assumptions.append("CATALOG_IDENTIFIER_GROUNDING_REQUIRED")
 
     @classmethod
+    def _metric_edit_scaffolding(cls, request: CanonicalAnalysisRequest) -> set[str]:
+        """Return non-entity spans only for a fully consumed metric edit.
+
+        Operation words are not globally banned entity names. Explicit product
+        names, unrecognized targets and compound business requests must still
+        reach governed grounding with their complete literals.
+        """
+        current = (request.original_question or "").rsplit("\n补充：", 1)[-1]
+        current = current.split("\n已确认的上一轮上下文", 1)[0]
+        compact = re.sub(r"\s+", "", current).rstrip("。！!？?")
+        names = set(cls._known_metrics)
+        names.update(metric.input for metric in request.metrics if metric.input)
+        alternatives = "|".join(
+            re.escape(name) for name in sorted(names, key=lambda name: (-len(name), name))
+        )
+        # Reuse the existing Legacy addition and negative-slot vocabulary,
+        # bounded here to a whole command containing only metric labels.
+        edit = re.fullmatch(
+            r"(?P<operation>(?:再|同时|并)?(?:加上?|增加|新增|补充|带上|显示|返回)"
+            r"|(?:不看|不查|不要|别看|去掉|移除|删掉|删除|取消)(?:原来|之前|上次|旧的)?(?:的)?)"
+            rf"(?P<metrics>(?:{alternatives})(?:[和与及、](?:{alternatives}))*)(?:指标)?",
+            compact,
+        )
+        if edit is None:
+            return set()
+        spans = {compact, edit.group("operation")}
+        # The implicit subject parser can capture "再加销售额和" before the
+        # final metric. Retain only complete prefixes ending at metric starts;
+        # never trim a prefix from an open-world business literal.
+        for metric in re.finditer(alternatives, edit.group("metrics")):
+            spans.add(compact[:edit.start("metrics") + metric.start()].rstrip("的"))
+        return spans
+
+    @classmethod
     def sanitize_semantic_entity_mentions(
         cls, request: CanonicalAnalysisRequest
     ) -> None:
@@ -4366,6 +4400,7 @@ class RuleBasedIntentClassifier:
         raw_compact = cls._normalize_catalog_punctuation(
             re.sub(r"\s+", "", request.original_question or "")
         )
+        metric_edit_scaffolding = cls._metric_edit_scaffolding(request)
         inherited_mentions = set()
         if (
             request.turn_admission is not None
@@ -4418,6 +4453,11 @@ class RuleBasedIntentClassifier:
                     and value not in inherited_mentions
                 )
                 or cls._is_structural_entity_mention(value)
+                or (
+                    compact in metric_edit_scaffolding
+                    and value not in current_filter_mentions
+                    and value not in inherited_mentions
+                )
                 or any(
                     cls._normalize_catalog_punctuation(
                         re.sub(r"\s+", "", mention)
