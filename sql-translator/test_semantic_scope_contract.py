@@ -11,7 +11,7 @@ from sql_translator_prod import RedisDSLLoader
 @pytest.mark.parametrize('domains', [[], [205], [205, 206]])
 def test_translator_declares_actual_scope_capability(domains):
     error = api._scope_contract_error({'modelId': '81', 'business_domain_ids': domains})
-    if not domains:
+    if len(domains)<=1:
         assert error is None
     else:
         assert error[0] == 400
@@ -33,7 +33,17 @@ def test_translator_declares_actual_scope_capability(domains):
 def test_all_request_handlers_reject_explicit_scope_before_access(payload, method, arguments, monkeypatch):
     monkeypatch.setattr(api, 'get_translator', lambda: pytest.fail('no catalog, Redis, SQL or export access allowed'))
     monkeypatch.setattr(api, 'log', lambda _: None)
-    content = json.dumps({'modelId': '81', 'asl': '{}', 'sql': 'SELECT 1', **payload}).encode()
+    # The former single-domain capability blocker is closed. Keep each alias
+    # contrast: valid single-domain admission, then unsupported multi-domain
+    # rejection at the same public handler before any service access.
+    assert api._scope_contract_error({'modelId': '81', **payload}) is None
+    blocked = json.loads(json.dumps(payload))
+    if 'authorized_semantic_scope' in blocked:
+        blocked['authorized_semantic_scope']['business_domain_ids'] = [205, 206]
+    else:
+        blocked.pop('business_domain_id', None)
+        blocked['business_domain_ids'] = [205, 206]
+    content = json.dumps({'modelId': '81', 'asl': '{}', 'sql': 'SELECT 1', **blocked}).encode()
     handler = object.__new__(api.APIHandler)
     handler.path = '/offline-contract-test'
     handler.headers = {'Content-Length': str(len(content))}
@@ -43,7 +53,7 @@ def test_all_request_handlers_reject_explicit_scope_before_access(payload, metho
     getattr(handler, method)(*arguments)
     assert len(responses) == 1
     assert responses[0][0] == 400
-    assert responses[0][1]['code'] == 'EXPLICIT_DOMAIN_NOT_SUPPORTED'
+    assert responses[0][1]['code'] == 'EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED'
 
 
 @pytest.mark.parametrize('payload', [

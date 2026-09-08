@@ -2,11 +2,15 @@
 
 ## 当前 Semantic Scope 边界
 
-业务后端决定授权，服务只执行传入的模型范围。当前目录与 Redis 规划只支持 `MODEL_WIDE`，带显式单域的请求返回 `EXPLICIT_DOMAIN_NOT_SUPPORTED`，多个显式域返回 `EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED`；不会忽略业务域后继续查询。请求字段与 `authorized_semantic_scope` 不一致时返回 `REQUEST_SCOPE_INVALID`。
+业务后端决定授权，服务执行当前请求的范围。空业务域使用原有 `MODEL_WIDE` 路径；单一显式域使用独立的目录、缓存和规划实例；多个显式域返回 `EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED`。请求字段与 `authorized_semantic_scope` 不一致时返回 `REQUEST_SCOPE_INVALID`。
 
 模型内的实体、指标和维度查找只使用 `semantic_model:{model_id}:...` 键。指定模型后，缺失记录不能回退到无模型的旧键；记录中声明的模型若与键的命名空间冲突，也不会进入缓存。
 
-这关闭了静默扩权路径，但还没有提供显式单域 SQL 规划能力。需要先补全受域约束的目录、缓存和规划合同，再解除上游保护。未执行生产索引重建或缓存刷新。
+单域目录读取在存储查询前限制模型、域及实体归属。维度没有独立的业务域列，必须通过目录中的实体绑定证明归属，只保留本域绑定。实体和指标的 Redis 记录必须有相符的域信息；当前 MySQL 发布事实覆盖旧映射。单域请求不复用全模型缓存，不回退到其他数据源。
+
+显式域 `/api/execute` 必须同时提交生成 SQL 的 `asl`。服务在当前范围内重新规划，严格核对 SQL 和数据源后才执行；修改 SQL、遗漏 ASL 或目录变更导致计划不同，均拒绝执行。响应返回 `scope_contract_version=single-domain-v1`、模型、业务域和 `authorized_scope_fingerprint`。旧服务未返回该证明时，Agent 拒绝使用响应。
+
+定义 GET 支持 `scope=<URL 编码的 AuthorizedSemanticScope JSON>`，兼容单一 `business_domain_id`；名称解析和血缘 POST 使用同一范围对象。单域缓存刷新只确认请求级缓存模式，不清除其他请求的全模型缓存。未执行生产索引重建、发布或缓存刷新。
 
 离线回归：`python scripts/run_offline_tests.py --output <新的结果文件.json>`。该入口禁用工作区 `.env` 加载，只允许本次测试创建的临时本机 HTTP 服务；不连接已有数据库、Redis 或 MinIO。
 

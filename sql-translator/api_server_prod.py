@@ -19,7 +19,7 @@ import os
 import sys
 import re
 import uuid
-from urllib.parse import urlsplit, unquote
+from urllib.parse import urlsplit, unquote, parse_qs
 from datetime import datetime
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
@@ -29,6 +29,7 @@ if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
 from sql_translator_prod import SQLTranslatorProd, _positive_int
+from semantic_scope import RequestScope, ScopedTranslator, ScopeError
 from analysis_contract import normalize_contract, normalize_result, validate_result
 
 # 日志目录与文件
@@ -49,6 +50,8 @@ BUILD_INFO = {
     'version': '2.1.0',
     'api_server_sha256': _source_digest('api_server_prod.py'),
     'translator_sha256': _source_digest('sql_translator_prod.py'),
+    'scope_sha256': _source_digest('semantic_scope.py'),
+    'scope_contract_version': 'single-domain-v1',
 }
 
 
@@ -105,55 +108,29 @@ def _read_request_body(handler) -> tuple:
 
 
 def _scope_contract_error(wrapper):
-    """Reject unsupported explicit grants before model-wide catalog/cache access.
-
-    This translator currently has model-scoped catalog and Redis keys only.
-    Accepting a domain claim while ignoring it would widen caller authorization.
-    """
-    def domains(source):
-        values = source.get('business_domain_ids', [])
-        if not isinstance(values, list) or any(type(v) is not int or v <= 0 for v in values):
-            raise ValueError('business_domain_ids must contain strict positive integers')
-        values = sorted(set(values))
-        legacy = source.get('business_domain_id')
-        if legacy is not None:
-            if type(legacy) is not int or legacy <= 0:
-                raise ValueError('business_domain_id must be a strict positive integer')
-            if 'business_domain_ids' in source and values != [legacy]:
-                raise ValueError('business domain fields conflict')
-            values = [legacy]
-        return values
-
+    # Preserve model-wide legacy request validation at its existing endpoint.
+    if isinstance(wrapper, dict) and not any(k in wrapper for k in (
+            'business_domain_id', 'business_domain_ids', 'authorized_semantic_scope')):
+        return None
     try:
-        if not isinstance(wrapper, dict):
-            raise ValueError('request body must be an object')
-        requested = domains(wrapper)
-        authorized = wrapper.get('authorized_semantic_scope')
-        if authorized is not None:
-            if not isinstance(authorized, dict):
-                raise ValueError('authorized_semantic_scope must be an object')
-            model = authorized.get('semantic_model_id')
-            if type(model) is not int or model <= 0:
-                raise ValueError('authorized model must be a strict positive integer')
-            for name in ('semantic_model_id', 'modelId', 'model_id'):
-                if name in wrapper and _positive_int(wrapper[name]) != model:
-                    raise ValueError('request and authorized model disagree')
-            granted = domains(authorized)
-            expected_mode = 'EXPLICIT_DOMAINS' if granted else 'MODEL_WIDE'
-            if authorized.get('scope_mode') != expected_mode:
-                raise ValueError('authorized scope mode disagrees with domains')
-            if any(name in wrapper for name in ('business_domain_id', 'business_domain_ids')) and requested != granted:
-                raise ValueError('request and authorized domains disagree')
-            requested = granted
-        if requested:
-            code = ('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED' if len(requested) > 1
-                    else 'EXPLICIT_DOMAIN_NOT_SUPPORTED')
-            return 400, {'success': False, 'code': code, 'retryable': False,
-                         'error': 'Translator catalog and cache cannot enforce an explicit business domain yet'}
-    except (TypeError, ValueError):
-        return 400, {'success': False, 'code': 'REQUEST_SCOPE_INVALID', 'retryable': False,
-                     'error': 'Semantic scope is invalid or inconsistent'}
+        RequestScope.from_request(wrapper)
+    except ScopeError as exc:
+        return 400, {'success': False, 'code': exc.code, 'error': str(exc), 'retryable': False}
     return None
+
+
+def _request_translator(wrapper):
+    if not any(k in wrapper for k in ('business_domain_id', 'business_domain_ids', 'authorized_semantic_scope')):
+        return get_translator()
+    scope = RequestScope.from_request(wrapper)
+    base = get_translator()
+    return ScopedTranslator(scope, base) if scope.business_domain_ids else base
+
+
+def _scope_result(translator, result):
+    if isinstance(translator, ScopedTranslator):
+        result.update(translator.scope.evidence())
+    return result
 
 
 def _extract_asl_and_model_id(wrapper: dict, body: str) -> tuple:
@@ -275,11 +252,15 @@ class APIHandler(BaseHTTPRequestHandler):
             self._send_response(*err)
             return
         try:
-            result = get_translator().catalog.resolve_metrics(
+            translator = _request_translator(wrapper)
+            result = translator.catalog.resolve_metrics(
                 wrapper.get('semantic_model_id'), wrapper.get('metric_names')
             )
+            _scope_result(translator, result)
             result['request_id'] = self._request_id()
             self._send_response(200, result)
+        except ScopeError as exc:
+            self._send_response(400, {'success': False, 'code': exc.code, 'error': str(exc), 'retryable': False})
         except ValueError as exc:
             self._send_response(400, {'success': False, 'code': 'INVALID_REQUEST', 'error': str(exc), 'retryable': False})
         except Exception:
@@ -291,13 +272,17 @@ class APIHandler(BaseHTTPRequestHandler):
             self._send_response(*err)
             return
         try:
-            result = get_translator().loader.resolve_relationship_paths(
+            translator = _request_translator(wrapper)
+            result = translator.loader.resolve_relationship_paths(
                 wrapper.get('semantic_model_id'),
                 str(wrapper.get('source_entity') or '').strip(),
                 wrapper.get('target_entities') or [],
             )
+            _scope_result(translator, result)
             result['request_id'] = self._request_id()
             self._send_response(200, result)
+        except ScopeError as exc:
+            self._send_response(400, {'success': False, 'code': exc.code, 'error': str(exc), 'retryable': False})
         except (TypeError, ValueError) as exc:
             self._send_response(400, {'success': False, 'code': 'INVALID_RELATIONSHIP_REQUEST', 'error': str(exc), 'retryable': False})
         except Exception:
@@ -305,9 +290,30 @@ class APIHandler(BaseHTTPRequestHandler):
 
     def _handle_metric_definition(self, metric_id, version):
         try:
-            result = get_translator().catalog.definition(metric_id, version)
+            query = parse_qs(urlsplit(self.path).query)
+            wrapper = {'semantic_model_id': int(metric_id.split(':', 1)[0])}
+            for model_alias in ('semantic_model_id', 'modelId', 'model_id'):
+                if model_alias in query and (len(query[model_alias]) != 1 or _positive_int(query[model_alias][0]) != wrapper['semantic_model_id']):
+                    raise ScopeError('REQUEST_SCOPE_INVALID', 'Metric path and request model disagree')
+            if 'business_domain_ids' in query:
+                if len(query['business_domain_ids']) != 1:
+                    raise ScopeError('REQUEST_SCOPE_INVALID', 'Duplicate domain list')
+                wrapper['business_domain_ids'] = json.loads(query['business_domain_ids'][0])
+            if 'business_domain_id' in query:
+                if len(query['business_domain_id']) != 1:
+                    raise ScopeError('REQUEST_SCOPE_INVALID', 'Duplicate domain parameter')
+                wrapper['business_domain_id'] = int(query['business_domain_id'][0])
+            if 'scope' in query:
+                if len(query['scope']) != 1:
+                    raise ScopeError('REQUEST_SCOPE_INVALID', 'Duplicate scope parameter')
+                wrapper['authorized_semantic_scope'] = json.loads(query['scope'][0])
+            translator = _request_translator(wrapper)
+            result = translator.catalog.definition(metric_id, version)
+            _scope_result(translator, result)
             result['request_id'] = self._request_id()
             self._send_response(200, result)
+        except ScopeError as exc:
+            self._send_response(400, {'success': False, 'code': exc.code, 'error': str(exc), 'retryable': False})
         except ValueError as exc:
             self._send_response(404, {'success': False, 'code': 'METRIC_NOT_FOUND', 'error': str(exc), 'retryable': False})
         except Exception:
@@ -319,9 +325,18 @@ class APIHandler(BaseHTTPRequestHandler):
             self._send_response(*err)
             return
         try:
-            result = get_translator().catalog.lineage(metric_id, wrapper.get('version') or 'current')
+            for model_alias in ('semantic_model_id', 'modelId', 'model_id'):
+                if model_alias in wrapper and _positive_int(wrapper[model_alias]) != _positive_int(metric_id.split(':', 1)[0]):
+                    raise ScopeError('REQUEST_SCOPE_INVALID', 'Metric path and request model disagree')
+            translator = _request_translator(wrapper)
+            if isinstance(translator, ScopedTranslator):
+                translator.scope.check_model(metric_id.split(':', 1)[0])
+            result = translator.catalog.lineage(metric_id, wrapper.get('version') or 'current')
+            _scope_result(translator, result)
             result['request_id'] = self._request_id()
             self._send_response(200, result)
+        except ScopeError as exc:
+            self._send_response(400, {'success': False, 'code': exc.code, 'error': str(exc), 'retryable': False})
         except ValueError as exc:
             self._send_response(404, {'success': False, 'code': 'METRIC_NOT_FOUND', 'error': str(exc), 'retryable': False})
         except Exception:
@@ -382,12 +397,12 @@ class APIHandler(BaseHTTPRequestHandler):
                 return
 
             # 调用翻译器仅翻译
-            translator = get_translator()
+            translator = _request_translator(wrapper)
             result = translator.translate_only(asl_str, model_id)
 
             if result['success']:
                 log(f"[TRANSLATE] 成功: sql={result.get('sql')}")
-                self._send_response(200, {
+                self._send_response(200, _scope_result(translator, {
                     'success': True,
                     'sql': result['sql'],
                     'modelId': result.get('model_id'),
@@ -395,13 +410,15 @@ class APIHandler(BaseHTTPRequestHandler):
                     'analysis_contract': analysis_contract,
                     'contract_accepted': analysis_contract is not None,
                     'semantic_validation_report': result.get('semantic_validation_report'),
-                })
+                }))
             else:
                 log(f"[TRANSLATE] 失败: error={result.get('error')}")
                 # The request body is valid; return a stable business failure
                 # instead of disguising it as service unavailability.
                 self._send_response(200, result)
 
+        except ScopeError as exc:
+            self._send_response(400, {'success': False, 'code': exc.code, 'error': str(exc), 'retryable': False})
         except Exception as e:
             import traceback
             log(f"[ERROR] 翻译接口异常: {str(e)}\n{traceback.format_exc()}")
@@ -462,8 +479,9 @@ class APIHandler(BaseHTTPRequestHandler):
             log(f"[EXECUTE] 执行SQL: {sql[:200]}...")
 
             # 调用执行器
-            translator = get_translator()
-            result = translator.execute_sql_only(sql, model_id, data_source_id)
+            translator = _request_translator(wrapper)
+            result = (translator.execute_scoped(wrapper.get('asl'), sql, model_id, data_source_id)
+                      if isinstance(translator, ScopedTranslator) else translator.execute_sql_only(sql, model_id, data_source_id))
 
             if result['success']:
                 if analysis_contract is not None:
@@ -500,6 +518,8 @@ class APIHandler(BaseHTTPRequestHandler):
                 log(f"[EXECUTE] 失败: error={result.get('error')}")
                 self._send_response(200, result)
 
+        except ScopeError as exc:
+            self._send_response(400, {'success': False, 'code': exc.code, 'error': str(exc), 'retryable': False})
         except Exception as e:
             import traceback
             log(f"[ERROR] 执行接口异常: {str(e)}\n{traceback.format_exc()}")
@@ -511,6 +531,15 @@ class APIHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8') if content_length else '{}'
             payload = json.loads(body or '{}')
+            scope_error = _scope_contract_error(payload)
+            if scope_error:
+                self._send_response(*scope_error)
+                return
+            if any(k in payload for k in ('business_domain_id', 'business_domain_ids', 'authorized_semantic_scope')):
+                scope = RequestScope.from_request(payload)
+                if scope.business_domain_ids:
+                    self._send_response(200, dict(success=True, removed={}, cache_mode='REQUEST_LOCAL', **scope.evidence()))
+                    return
             model_id = payload.get('modelId')
             translator = get_translator()
             removed = translator.loader.clear_cache(model_id)
@@ -568,7 +597,7 @@ class APIHandler(BaseHTTPRequestHandler):
                 return
 
             # 调用翻译器执行查询（翻译 + 数据源关联 + 执行）
-            translator = get_translator()
+            translator = _request_translator(wrapper)
             result = translator.execute_query(asl_str, model_id)
 
             # 将结果对象序列化为字符串，包装在 result 字段中返回
@@ -592,6 +621,8 @@ class APIHandler(BaseHTTPRequestHandler):
                     log(f"[RESPONSE] 失败: error={result.get('error')} | 入参: {body}")
                     self._send_response(500, wrapper_resp)
 
+        except ScopeError as exc:
+            self._send_response(400, {'success': False, 'code': exc.code, 'error': str(exc), 'retryable': False})
         except Exception as e:
             import traceback
             log(f"[ERROR] 服务器内部错误: {str(e)}\n{traceback.format_exc()}")

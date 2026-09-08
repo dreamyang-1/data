@@ -2,7 +2,7 @@
 
 > 当前业务边界（2026-09-08）：认证、用户权限及角色授权由业务后端决定，Agent 仅执行本轮必传的严格正整数 `semantic_model_id` 和可选业务域。空域为 `MODEL_WIDE`；显式多域当前必须拒绝。`conversation_id` 由后端保证全局唯一；没有稳定用户身份时不启用跨会话个人长期记忆。
 >
-> 当前实现与未闭合项见 [Scope 根因审计](docs/phase0c_root_cause/closure_report.md)，后续开发遵守 [工程合同](AGENTS.md)。下方早期设计中要求 Agent/Oagnet 推导用户数据权限、通过角色扩大业务域或支持显式多域的提议已废止。
+> 当前实现与验收结果见 [单域执行闭合报告](docs/phase0c_single_domain/closure_report.md)，后续开发遵守 [工程合同](AGENTS.md)。下方早期设计中要求 Agent/Oagnet 推导用户数据权限、通过角色扩大业务域或支持显式多域的提议已废止。
 
 > 文档状态：架构设计稿 1.82（发布前收敛实施版）  
 > 项目位置：`DataAnalysis_Agent`（独立部署，复用 `New_Agent` 平台基础设施模式并通过 API 集成现有服务）  
@@ -954,7 +954,7 @@ Java 网关必须从登录态注入 `X-Tenant-Id`、`X-User-Id`、`X-Application
 }
 ```
 
-`semantic_model_id` 必传且为严格正整数，不能从历史或默认配置继承。不传业务域或传空数组表示后端授权本轮模型内的 `MODEL_WIDE`；单域输入归一化成单元素数组，两个字段同时显式传入必须一致。显式多域当前 Fail Closed。Oagnet 已严格过滤单域，但 SQL Translator 的目录和规划尚不支持单域授权，因此 DataAnalysis 仍拒绝显式域完整查询；这属于明确的服务能力缺口，不会通过追问指标解决。
+`semantic_model_id` 必传且为严格正整数，不能从历史或默认配置继承。不传业务域或传空数组表示后端授权本轮模型内的 `MODEL_WIDE`；单域输入归一化成单元素数组，两个字段同时显式传入必须一致。显式多域当前 Fail Closed。单域查询现使用受范围限制的 SQL 目录与规划，并在执行前重新核对 ASL、SQL 和数据源。Agent 必须核验服务返回的 `single-domain-v1` 范围证明；旧服务、缺失证明或范围不一致时安全终止，不追问用户指标。
 
 响应会回显`semantic_model_id`、`requested_business_domain_ids`和`business_domain_selection_mode`（`AUTO`或`EXPLICIT`），便于后端和日志确认本轮采用的是自动路由还是显式范围。
 

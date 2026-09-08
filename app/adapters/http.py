@@ -296,7 +296,7 @@ class PlatformHttpClient:
 
 
 class HttpSemanticAdapter:
-    model_only_metric_resolution = True
+    model_only_metric_resolution = False
 
     def __init__(self, settings: Settings, client: PlatformHttpClient) -> None:
         self.settings = settings
@@ -316,10 +316,7 @@ class HttpSemanticAdapter:
         self, request: CanonicalAnalysisRequest, semantic_model_id: int | None
     ) -> list[MetricRef]:
         HttpDataRetrievalAdapter._enforce_bound_scope(request, semantic_model_id, None)
-        if request.authorized_semantic_scope and request.authorized_semantic_scope.business_domain_ids:
-            # sql-translator's metadata resolver accepts model + names only.
-            # Do not perform model-wide retrieval then filter its response.
-            raise AdapterError('EXPLICIT_DOMAIN_METADATA_NOT_SUPPORTED', 'Metadata retrieval needs a domain-scoped upstream contract')
+        HttpDataRetrievalAdapter._require_supported_retrieval_scope(request)
         identity = TrustedIdentity(
             tenant_id=request.tenant_id, user_id=request.user_id, roles=[]
         )
@@ -331,10 +328,13 @@ class HttpSemanticAdapter:
                 "tenant_id": request.tenant_id,
                 "semantic_model_id": semantic_model_id,
                 "metric_names": [metric.input for metric in request.metrics],
+                "business_domain_ids": list(request.business_domain_ids),
+                "authorized_semantic_scope": request.authorized_semantic_scope.model_dump(mode='json') if request.authorized_semantic_scope else None,
             },
             identity=identity,
             application_id=request.application_id,
         )
+        HttpDataRetrievalAdapter._confirm_translator_scope(request, data)
         resolution_status = data.get("status")
         if resolution_status in {"NOT_FOUND", "AMBIGUOUS"}:
             return []
@@ -357,6 +357,29 @@ class HttpSemanticAdapter:
                 "semantic service returned an unscoped metric binding",
             )
         return metrics
+
+    async def scoped_metadata(self, request, metric, identity):
+        """Keep the current request grant through definition/lineage retrieval."""
+        from urllib.parse import urlencode
+        scope = request.authorized_semantic_scope
+        if scope is None or not scope.business_domain_ids:
+            return await (self.definition(metric) if request.primary_intent == PrimaryIntent.METRIC_DEFINITION else self.lineage(metric, identity))
+        if not metric.metric_id or not metric.metric_id.startswith(f'{scope.semantic_model_id}:'):
+            raise AdapterError('SEMANTIC_SCOPE_MISMATCH', 'Metric belongs to another model')
+        payload = scope.model_dump(mode='json')
+        if request.primary_intent == PrimaryIntent.METRIC_DEFINITION:
+            path = self.settings.semantic_definition_path.format(metric_id=metric.metric_id, version=metric.version)
+            path += '?' + urlencode({'scope': json.dumps(payload, separators=(',', ':'))})
+            data = await self.client.get(self.settings.semantic_base_url, path, identity=identity, application_id=request.application_id)
+            kind = 'METRIC_DEFINITION'
+        else:
+            path = self.settings.semantic_lineage_path.format(metric_id=metric.metric_id)
+            data = await self.client.post(self.settings.semantic_base_url, path,
+                {'version': metric.version, 'semantic_model_id': scope.semantic_model_id,
+                 'authorized_semantic_scope': payload}, identity=identity, application_id=request.application_id)
+            kind = 'DATA_LINEAGE'
+        HttpDataRetrievalAdapter._confirm_translator_scope(request, data)
+        return EvidenceItem(evidence_id=f'{kind}:{metric.metric_id}:{metric.version}', kind=kind, source_ref=path, payload=data)
 
     async def definition(self, metric: MetricRef) -> EvidenceItem:
         path = self.settings.semantic_definition_path.format(
@@ -2068,6 +2091,7 @@ class HttpDataRetrievalAdapter:
                 upstream_code=upstream_code,
             )
 
+        self._confirm_translator_scope(request, translated)
         sql = translated.get("sql")
         if not isinstance(sql, str) or not sql.strip():
             raise AdapterError(
@@ -2123,6 +2147,8 @@ class HttpDataRetrievalAdapter:
             "business_domain_ids": list(request.business_domain_ids),
             "authorized_semantic_scope": request.authorized_semantic_scope.model_dump(mode='json') if request.authorized_semantic_scope else None,
         }
+        if request.authorized_semantic_scope and request.business_domain_ids:
+            execute_payload['asl'] = json.dumps(asl, ensure_ascii=False)
         if analysis_contract is not None:
             execute_payload["analysis_contract"] = analysis_contract.model_dump(mode="json")
         translated_data_source_id = (
@@ -2186,6 +2212,7 @@ class HttpDataRetrievalAdapter:
                 ) from exc
             raise
         raw = self._unwrap_sql_response(executed)
+        self._confirm_translator_scope(request, raw)
         if raw.get("success") is not True:
             raise AdapterError(
                 "SQL_EXECUTION_FAILED",
@@ -2288,6 +2315,9 @@ class HttpDataRetrievalAdapter:
                 metric_id=metric.metric_id,
                 version=metric.version,
             )
+            if scope and scope.business_domain_ids:
+                from urllib.parse import urlencode
+                path += '?' + urlencode({'scope': json.dumps(scope.model_dump(mode='json'), separators=(',', ':'))})
             payload = await self.client.get(
                 self.settings.semantic_base_url,
                 path,
@@ -2299,6 +2329,7 @@ class HttpDataRetrievalAdapter:
                     "METRIC_DEFINITION_INVALID",
                     "semantic service returned an invalid metric definition",
                 )
+            self._confirm_translator_scope(request, payload)
             scope = request.authorized_semantic_scope
             if scope is not None and (payload.get('semantic_model_id') != scope.semantic_model_id or not scope.contains_domain(payload.get('business_domain_id'))):
                 raise AdapterError('SEMANTIC_SCOPE_MISMATCH', 'Metric definition is outside the authorized semantic scope')
@@ -2329,14 +2360,20 @@ class HttpDataRetrievalAdapter:
 
     @staticmethod
     def _require_supported_retrieval_scope(request):
-        # Oagnet now filters explicit domains exactly, but the SQL translator
-        # still resolves catalog/cache entries by model only. Keep the complete
-        # execution path closed until that service supports scoped planning.
         scope = request.authorized_semantic_scope
-        if scope and scope.business_domain_ids:
-            code = ('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED' if len(scope.business_domain_ids) > 1
-                    else 'EXPLICIT_DOMAIN_NOT_SUPPORTED')
-            raise AdapterError(code, 'The SQL translator cannot yet enforce explicit domains during catalog resolution and planning')
+        if scope and len(scope.business_domain_ids) > 1:
+            raise AdapterError('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED', 'Multiple explicit domains are unsupported')
+
+    @staticmethod
+    def _confirm_translator_scope(request, payload):
+        scope = request.authorized_semantic_scope
+        if scope is None or not scope.business_domain_ids:
+            return
+        if (not isinstance(payload, dict) or payload.get('scope_contract_version') != 'single-domain-v1'
+                or payload.get('authorized_scope_fingerprint') != scope.fingerprint()
+                or payload.get('semantic_model_id') != scope.semantic_model_id
+                or payload.get('business_domain_ids') != list(scope.business_domain_ids)):
+            raise AdapterError('SEMANTIC_SCOPE_UNCONFIRMED', 'SQL service did not confirm the current single-domain contract')
 
     @staticmethod
     def _enforce_bound_scope(request, semantic_model_id, business_domain_id):
