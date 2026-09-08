@@ -1,0 +1,15 @@
+{
+  "status": "PASS_PRECOMMIT_WORKSPACE_ALIGNMENT",
+  "baseline_commit": "c4c00d131f53848d279cd7353cd22dc4ea4be4e0",
+  "feature_branch": "cutover-readiness-catalog-20260908-01",
+  "implementation_commits": [
+    "ce198cae4f1343d92d1cfa4d40b08b8bd1cf5903",
+    "fc044a5ddc7f7f0f5da987340d8c3b87061cb18a"
+  ],
+  "tracked_and_manifest_files": 877,
+  "unexpected_source_drift": 0,
+  "normalization": "Development CRLF normalized to LF in version repository; source and published SHA-256 in change_manifest.json",
+  "final_commit": "Commit containing this report",
+  "final_commit_gate": "release.py verify must compare every tracked source with the committed Git blob, require a clean tree and preserve original Oagnet HEAD/index; exact final receipt reported after commit",
+  "scope": "Full tracked-file and explicit-manifest alignment; excludes untracked credentials/runtime files from publication"
+}

@@ -1,0 +1,29 @@
+{
+  "baseline_commit": "c4c00d131f53848d279cd7353cd22dc4ea4be4e0",
+  "feature_branch": "cutover-readiness-catalog-20260908-01",
+  "base_branch": "phase0c-region-list-20260908-01",
+  "implementation_commits": [
+    {
+      "commit": "ce198cae4f1343d92d1cfa4d40b08b8bd1cf5903",
+      "title": "cutover: add catalog snapshot and release evidence contract",
+      "files": [
+        "Oagnet/catalog_release.py",
+        "Oagnet/mysql_tool.py",
+        "Oagnet/scripts/check_catalog_release.py",
+        "Oagnet/tests/test_catalog_release.py"
+      ]
+    },
+    {
+      "commit": "fc044a5ddc7f7f0f5da987340d8c3b87061cb18a",
+      "title": "cutover: preserve source-verified exact entity bindings",
+      "files": [
+        "Oagnet/agent.py",
+        "Oagnet/tests/test_cutover_binding_safety.py"
+      ]
+    }
+  ],
+  "final_evidence_commit": "Commit containing this manifest; resolves via git log -- docs/cutover/git_commit_manifest.json",
+  "draft_pr_required": true,
+  "auto_merge": false,
+  "production_deployment": false
+}

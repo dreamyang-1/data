@@ -1,0 +1,193 @@
+{
+  "baseline_commit": "c4c00d131f53848d279cd7353cd22dc4ea4be4e0",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline": {
+        "passed": 2258,
+        "failed": 27
+      },
+      "final": {
+        "passed": 2258,
+        "failed": 27
+      },
+      "old_pass_to_new_fail": [],
+      "missing_nodeids": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": [],
+      "remaining_failed_nodes": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]"
+      ]
+    },
+    "Oagnet": {
+      "baseline": {
+        "passed": 343,
+        "failed": 10
+      },
+      "final": {
+        "passed": 401,
+        "failed": 8
+      },
+      "old_pass_to_new_fail": [],
+      "missing_nodeids": [],
+      "old_fail_to_new_pass": [
+        "tests/test_relational_semantic_scope.py::test_relationship_code_filter_with_name_value_uses_unique_authorized_name_field",
+        "tests/test_relational_semantic_scope.py::test_relationship_name_filter_resolves_one_field_among_multiple_endpoint_names"
+      ],
+      "new_tests": [
+        "tests/test_catalog_release.py::test_authority_or_scope_drift_invalidates_an_existing_release[formula]",
+        "tests/test_catalog_release.py::test_authority_or_scope_drift_invalidates_an_existing_release[physical]",
+        "tests/test_catalog_release.py::test_authority_or_scope_drift_invalidates_an_existing_release[scope]",
+        "tests/test_catalog_release.py::test_authority_or_scope_drift_invalidates_an_existing_release[source]",
+        "tests/test_catalog_release.py::test_capture_covers_model_wide_domains_or_the_exact_explicit_domain[domains0]",
+        "tests/test_catalog_release.py::test_capture_covers_model_wide_domains_or_the_exact_explicit_domain[domains1]",
+        "tests/test_catalog_release.py::test_capture_failure_releases_transaction_and_context[begin]",
+        "tests/test_catalog_release.py::test_capture_failure_releases_transaction_and_context[body]",
+        "tests/test_catalog_release.py::test_complete_inventory_is_required_instead_of_top_k_or_row_count[duplicate]",
+        "tests/test_catalog_release.py::test_complete_inventory_is_required_instead_of_top_k_or_row_count[extra]",
+        "tests/test_catalog_release.py::test_complete_inventory_is_required_instead_of_top_k_or_row_count[missing]",
+        "tests/test_catalog_release.py::test_existing_catalog_loaders_share_one_read_only_transaction",
+        "tests/test_catalog_release.py::test_explicit_release_rejects_shared_foreign_and_invalid_records[-1]",
+        "tests/test_catalog_release.py::test_explicit_release_rejects_shared_foreign_and_invalid_records[206]",
+        "tests/test_catalog_release.py::test_explicit_release_rejects_shared_foreign_and_invalid_records[None]",
+        "tests/test_catalog_release.py::test_explicit_release_rejects_shared_foreign_and_invalid_records[True]",
+        "tests/test_catalog_release.py::test_index_metadata_and_stamps_cannot_silently_drift[domain]",
+        "tests/test_catalog_release.py::test_index_metadata_and_stamps_cannot_silently_drift[formula]",
+        "tests/test_catalog_release.py::test_index_metadata_and_stamps_cannot_silently_drift[hash]",
+        "tests/test_catalog_release.py::test_index_metadata_and_stamps_cannot_silently_drift[legacy]",
+        "tests/test_catalog_release.py::test_index_metadata_and_stamps_cannot_silently_drift[model]",
+        "tests/test_catalog_release.py::test_index_metadata_and_stamps_cannot_silently_drift[release]",
+        "tests/test_catalog_release.py::test_index_metadata_and_stamps_cannot_silently_drift[text]",
+        "tests/test_catalog_release.py::test_index_metadata_and_stamps_cannot_silently_drift[version]",
+        "tests/test_catalog_release.py::test_invalid_explicit_scope_is_not_model_wide[None]",
+        "tests/test_catalog_release.py::test_invalid_explicit_scope_is_not_model_wide[domains0]",
+        "tests/test_catalog_release.py::test_invalid_explicit_scope_is_not_model_wide[domains1]",
+        "tests/test_catalog_release.py::test_invalid_explicit_scope_is_not_model_wide[domains2]",
+        "tests/test_catalog_release.py::test_invalid_explicit_scope_is_not_model_wide[domains3]",
+        "tests/test_catalog_release.py::test_missing_or_nontransactional_catalog_cannot_claim_snapshot_consistency[engines0]",
+        "tests/test_catalog_release.py::test_missing_or_nontransactional_catalog_cannot_claim_snapshot_consistency[engines1]",
+        "tests/test_catalog_release.py::test_missing_or_staging_publication_is_never_accepted[None]",
+        "tests/test_catalog_release.py::test_missing_or_staging_publication_is_never_accepted[marker1]",
+        "tests/test_catalog_release.py::test_missing_or_staging_publication_is_never_accepted[marker2]",
+        "tests/test_catalog_release.py::test_missing_or_staging_publication_is_never_accepted[marker3]",
+        "tests/test_catalog_release.py::test_model_identity_is_required_strict_positive[-1]",
+        "tests/test_catalog_release.py::test_model_identity_is_required_strict_positive[0]",
+        "tests/test_catalog_release.py::test_model_identity_is_required_strict_positive[81.0]",
+        "tests/test_catalog_release.py::test_model_identity_is_required_strict_positive[81]",
+        "tests/test_catalog_release.py::test_model_identity_is_required_strict_positive[None]",
+        "tests/test_catalog_release.py::test_model_identity_is_required_strict_positive[True]",
+        "tests/test_catalog_release.py::test_model_wide_manifest_remains_bound_to_the_models_captured_domains",
+        "tests/test_catalog_release.py::test_multiple_domains_fail_closed_and_single_alias_duplicates_normalize",
+        "tests/test_catalog_release.py::test_operator_receipt_is_bounded_and_fails_closed[None]",
+        "tests/test_catalog_release.py::test_operator_receipt_is_bounded_and_fails_closed[incomplete]",
+        "tests/test_catalog_release.py::test_operator_receipt_is_bounded_and_fails_closed[legacy]",
+        "tests/test_catalog_release.py::test_operator_receipt_is_bounded_and_fails_closed[marker_changed]",
+        "tests/test_catalog_release.py::test_operator_tool_does_not_overwrite_its_private_input",
+        "tests/test_catalog_release.py::test_snapshot_input_order_and_mutation_are_controlled",
+        "tests/test_catalog_release.py::test_supplied_matching_evidence_is_not_claimed_as_live_runtime_proof",
+        "tests/test_cutover_binding_safety.py::test_source_exact_proof_preserves_literal_and_negative_set_semantics[!=-\\u793a\\u4f8b\\u533b\\u7597\\u4ea7\\u54c1-!=]",
+        "tests/test_cutover_binding_safety.py::test_source_exact_proof_preserves_literal_and_negative_set_semantics[=-\\u793a\\u4f8b\\u533b\\u7597\\u4ea7\\u54c1-=]",
+        "tests/test_cutover_binding_safety.py::test_source_exact_proof_preserves_literal_and_negative_set_semantics[IN-value3-IN]",
+        "tests/test_cutover_binding_safety.py::test_source_exact_proof_preserves_literal_and_negative_set_semantics[LIKE-%\\u793a\\u4f8b\\u533b\\u7597\\u4ea7\\u54c1%-=]",
+        "tests/test_cutover_binding_safety.py::test_source_exact_proof_preserves_literal_and_negative_set_semantics[NOT IN-value4-NOT IN]",
+        "tests/test_cutover_binding_safety.py::test_without_source_exact_proof_a_relationship_name_is_not_silently_accepted"
+      ],
+      "remaining_failed_nodes": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+      ]
+    },
+    "SQL_Translator": {
+      "baseline": {
+        "passed": 200
+      },
+      "final": {
+        "passed": 200
+      },
+      "old_pass_to_new_fail": [],
+      "missing_nodeids": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": [],
+      "remaining_failed_nodes": []
+    }
+  },
+  "critical_passed": 160,
+  "critical_total": 160,
+  "oagnet_focused_passed": 175,
+  "new_tests": 56,
+  "collection_errors": 0,
+  "binding_unique_failure_signatures": 1,
+  "binding_replays": [
+    {
+      "nodeid": "tests/test_relational_semantic_scope.py::test_relationship_code_filter_with_name_value_uses_unique_authorized_name_field",
+      "attempt": 1,
+      "before": "failed",
+      "final": "passed"
+    },
+    {
+      "nodeid": "tests/test_relational_semantic_scope.py::test_relationship_code_filter_with_name_value_uses_unique_authorized_name_field",
+      "attempt": 2,
+      "before": "failed",
+      "final": "passed"
+    },
+    {
+      "nodeid": "tests/test_relational_semantic_scope.py::test_relationship_name_filter_resolves_one_field_among_multiple_endpoint_names",
+      "attempt": 1,
+      "before": "failed",
+      "final": "passed"
+    },
+    {
+      "nodeid": "tests/test_relational_semantic_scope.py::test_relationship_name_filter_resolves_one_field_among_multiple_endpoint_names",
+      "attempt": 2,
+      "before": "failed",
+      "final": "passed"
+    }
+  ],
+  "first_divergence_stage": "OAGNET_ASL_GENERATION",
+  "binding_root_cause": "Unique exact source name is widened to LIKE after the correct field is resolved",
+  "agent_modules": 94,
+  "clarification_coverage": {
+    "public_clarification_responses": 89,
+    "with_reason_trace": 89
+  },
+  "unchanged_agent_python_files": 193,
+  "public_io_source_unchanged": true,
+  "production_v2_routing_changed": false,
+  "prompt_changes": 0,
+  "production_regex_changes": 0,
+  "real_model_calls": 0,
+  "production_external_writes": 0,
+  "index_publications": 0,
+  "temporary_probe_policy": "Fixture completeness probes do not change original assertions or official final test counts; the temporary inspect.py name collision was corrected before the successful probe."
+}

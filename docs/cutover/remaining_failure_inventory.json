@@ -1,0 +1,518 @@
+{
+  "baseline_commit": "c4c00d131f53848d279cd7353cd22dc4ea4be4e0",
+  "baseline_failed_nodes": 37,
+  "items": [
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+      "prior_failure_id": "pytest-01",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md#pytest-01",
+        "Committed ClarificationItem.option_details is additive; the old assertion compares an exact dictionary without this field"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+      "prior_failure_id": "pytest-02",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+      "prior_failure_id": "pytest-03",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+      "prior_failure_id": "pytest-04",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+      "prior_failure_id": "pytest-07",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "Forecast history requirement: fixture expects target plus history; current preflight has a different required-slot policy",
+        "app/semantic_v2/models.py::SnapshotContext/ResultContract; docs/phase0b/failure_universe.json",
+        "No acceptance label inferred; this is a known policy-evidence gap, not proof the current behavior is correct"
+      ],
+      "next_action": "Resolve declared forecast/history/report/partial-result policy during grounded Gold labeling; retain failing expectation and block relevant acceptance until the label is authoritative."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+      "prior_failure_id": "pytest-08",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "blocking_level": "NONE",
+      "status": "BACKLOG",
+      "evidence": [
+        "Legacy memory/event-log wrapper assertions; V2 comparison needs its own stage trace, tracked by H-01"
+      ],
+      "next_action": "Keep in backlog; do not rebuild Legacy memory/event collection for numeric cleanup."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+      "prior_failure_id": "pytest-11",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+      "prior_failure_id": "pytest-12",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+      "prior_failure_id": "pytest-13",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification",
+        "docs/cutover/closure_report.md: Newly resolved stale Pending fixtures; no assertion is changed"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+      "prior_failure_id": "pytest-14",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification",
+        "docs/cutover/closure_report.md: Newly resolved stale Pending fixtures; no assertion is changed"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+      "prior_failure_id": "pytest-16",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md#pytest-16",
+        "Governed business label is 商品名称; both duplicate order rows remain present; only the old header assertion differs"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+      "prior_failure_id": "pytest-17",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+      "prior_failure_id": "pytest-18",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+      "prior_failure_id": "pytest-19",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+      "prior_failure_id": "pytest-20",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+      "prior_failure_id": "pytest-21",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+      "prior_failure_id": "pytest-22",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+      "prior_failure_id": "pytest-23",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+      "prior_failure_id": "pytest-24",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "blocking_level": "NONE",
+      "status": "BACKLOG",
+      "evidence": [
+        "Legacy memory/event-log wrapper assertions; V2 comparison needs its own stage trace, tracked by H-01"
+      ],
+      "next_action": "Keep in backlog; do not rebuild Legacy memory/event collection for numeric cleanup."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+      "prior_failure_id": "pytest-25",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "Report facet period: test assumes time Pending then one period for every facet; current default-time path invalidates that setup and no V2 facet-period label is approved",
+        "app/semantic_v2/models.py::SnapshotContext/ResultContract; docs/phase0b/failure_universe.json",
+        "No acceptance label inferred; this is a known policy-evidence gap, not proof the current behavior is correct"
+      ],
+      "next_action": "Resolve declared forecast/history/report/partial-result policy during grounded Gold labeling; retain failing expectation and block relevant acceptance until the label is authoritative."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+      "prior_failure_id": "pytest-26",
+      "classification": "NON_BLOCKING_LEGACY_FAILURE",
+      "blocking_level": "NONE",
+      "status": "BACKLOG",
+      "evidence": [
+        "Legacy memory/event-log wrapper assertions; V2 comparison needs its own stage trace, tracked by H-01"
+      ],
+      "next_action": "Keep in backlog; do not rebuild Legacy memory/event collection for numeric cleanup."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_workflow.py::test_workflow_clarify_then_complete",
+      "prior_failure_id": "pytest-27",
+      "classification": "STALE_TEST",
+      "blocking_level": "NONE",
+      "status": "EXPECTATION_RETAINED",
+      "evidence": [
+        "docs/phase0b/stale_test_decisions.md",
+        "tests/test_orchestrator.py::test_unqualified_sales_metric_uses_auditable_default_time_range",
+        "Default-time policy makes an unqualified metric request execute immediately; the old Pending fixture assumes a mandatory time clarification"
+      ],
+      "next_action": "Do not alter runtime or old assertions for the failure count; migrate fixture only when needed by evaluator."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+      "prior_failure_id": "pytest-28",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "Advanced analysis result-status policy: current PARTIAL_SUCCESS versus old SAFE_FALLBACK assertion requires an authoritative result contract, not changing an expected string",
+        "app/semantic_v2/models.py::SnapshotContext/ResultContract; docs/phase0b/failure_universe.json",
+        "No acceptance label inferred; this is a known policy-evidence gap, not proof the current behavior is correct"
+      ],
+      "next_action": "Resolve declared forecast/history/report/partial-result policy during grounded Gold labeling; retain failing expectation and block relevant acceptance until the label is authoritative."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+      "prior_failure_id": "pytest-29",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "Advanced analysis result-status policy: current PARTIAL_SUCCESS versus old SAFE_FALLBACK assertion requires an authoritative result contract, not changing an expected string",
+        "app/semantic_v2/models.py::SnapshotContext/ResultContract; docs/phase0b/failure_universe.json",
+        "No acceptance label inferred; this is a known policy-evidence gap, not proof the current behavior is correct"
+      ],
+      "next_action": "Resolve declared forecast/history/report/partial-result policy during grounded Gold labeling; retain failing expectation and block relevant acceptance until the label is authoritative."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+      "prior_failure_id": "pytest-30",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "Advanced analysis result-status policy: current PARTIAL_SUCCESS versus old SAFE_FALLBACK assertion requires an authoritative result contract, not changing an expected string",
+        "app/semantic_v2/models.py::SnapshotContext/ResultContract; docs/phase0b/failure_universe.json",
+        "No acceptance label inferred; this is a known policy-evidence gap, not proof the current behavior is correct"
+      ],
+      "next_action": "Resolve declared forecast/history/report/partial-result policy during grounded Gold labeling; retain failing expectation and block relevant acceptance until the label is authoritative."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+      "prior_failure_id": "pytest-31",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "Advanced analysis result-status policy: current PARTIAL_SUCCESS versus old SAFE_FALLBACK assertion requires an authoritative result contract, not changing an expected string",
+        "app/semantic_v2/models.py::SnapshotContext/ResultContract; docs/phase0b/failure_universe.json",
+        "No acceptance label inferred; this is a known policy-evidence gap, not proof the current behavior is correct"
+      ],
+      "next_action": "Resolve declared forecast/history/report/partial-result policy during grounded Gold labeling; retain failing expectation and block relevant acceptance until the label is authoritative."
+    },
+    {
+      "service": "DataAnalysis_Agent",
+      "nodeid": "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+      "prior_failure_id": "pytest-32",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "Advanced analysis result-status policy: current PARTIAL_SUCCESS versus old SAFE_FALLBACK assertion requires an authoritative result contract, not changing an expected string",
+        "app/semantic_v2/models.py::SnapshotContext/ResultContract; docs/phase0b/failure_universe.json",
+        "No acceptance label inferred; this is a known policy-evidence gap, not proof the current behavior is correct"
+      ],
+      "next_action": "Resolve declared forecast/history/report/partial-result policy during grounded Gold labeling; retain failing expectation and block relevant acceptance until the label is authoritative."
+    },
+    {
+      "service": "Oagnet",
+      "nodeid": "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+      "prior_failure_id": null,
+      "classification": "ENVIRONMENT_DEPENDENCY",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "docs/phase0c_root_cause/remaining_oagnet_failures.json",
+        "Original two assertions pass when only the missing find_exact test double is supplied; current-turn exact-fixture-probe-valid.json"
+      ],
+      "next_action": "Provide deterministic complete catalog doubles in evaluator/integration fixtures; never load production credentials merely to make pytest green."
+    },
+    {
+      "service": "Oagnet",
+      "nodeid": "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+      "prior_failure_id": null,
+      "classification": "ENVIRONMENT_DEPENDENCY",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "docs/phase0c_root_cause/remaining_oagnet_failures.json",
+        "Original two assertions pass when only the missing find_exact test double is supplied; current-turn exact-fixture-probe-valid.json"
+      ],
+      "next_action": "Provide deterministic complete catalog doubles in evaluator/integration fixtures; never load production credentials merely to make pytest green."
+    },
+    {
+      "service": "Oagnet",
+      "nodeid": "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+      "prior_failure_id": null,
+      "classification": "ENVIRONMENT_DEPENDENCY",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "docs/phase0c_root_cause/remaining_oagnet_failures.json",
+        "Existing offline traceback: required catalog MySQL host unavailable at an unmocked exact/registered-attribute lookup"
+      ],
+      "next_action": "Provide deterministic complete catalog doubles in evaluator/integration fixtures; never load production credentials merely to make pytest green."
+    },
+    {
+      "service": "Oagnet",
+      "nodeid": "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+      "prior_failure_id": null,
+      "classification": "ENVIRONMENT_DEPENDENCY",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "docs/phase0c_root_cause/remaining_oagnet_failures.json",
+        "Existing offline traceback: required catalog MySQL host unavailable at an unmocked exact/registered-attribute lookup"
+      ],
+      "next_action": "Provide deterministic complete catalog doubles in evaluator/integration fixtures; never load production credentials merely to make pytest green."
+    },
+    {
+      "service": "Oagnet",
+      "nodeid": "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+      "prior_failure_id": null,
+      "classification": "ENVIRONMENT_DEPENDENCY",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "docs/phase0c_root_cause/remaining_oagnet_failures.json",
+        "Existing offline traceback: required catalog MySQL host unavailable at an unmocked exact/registered-attribute lookup"
+      ],
+      "next_action": "Provide deterministic complete catalog doubles in evaluator/integration fixtures; never load production credentials merely to make pytest green."
+    },
+    {
+      "service": "Oagnet",
+      "nodeid": "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+      "prior_failure_id": null,
+      "classification": "ENVIRONMENT_DEPENDENCY",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "docs/phase0c_root_cause/remaining_oagnet_failures.json",
+        "Existing offline traceback: required catalog MySQL host unavailable at an unmocked exact/registered-attribute lookup"
+      ],
+      "next_action": "Provide deterministic complete catalog doubles in evaluator/integration fixtures; never load production credentials merely to make pytest green."
+    },
+    {
+      "service": "Oagnet",
+      "nodeid": "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+      "prior_failure_id": null,
+      "classification": "ENVIRONMENT_DEPENDENCY",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "docs/phase0c_root_cause/remaining_oagnet_failures.json",
+        "Existing offline traceback: required catalog MySQL host unavailable at an unmocked exact/registered-attribute lookup"
+      ],
+      "next_action": "Provide deterministic complete catalog doubles in evaluator/integration fixtures; never load production credentials merely to make pytest green."
+    },
+    {
+      "service": "Oagnet",
+      "nodeid": "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique",
+      "prior_failure_id": null,
+      "classification": "ENVIRONMENT_DEPENDENCY",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "evidence": [
+        "docs/phase0c_root_cause/remaining_oagnet_failures.json",
+        "Existing offline traceback: required catalog MySQL host unavailable at an unmocked exact/registered-attribute lookup"
+      ],
+      "next_action": "Provide deterministic complete catalog doubles in evaluator/integration fixtures; never load production credentials merely to make pytest green."
+    },
+    {
+      "service": "Oagnet",
+      "nodeid": "tests/test_relational_semantic_scope.py::test_relationship_code_filter_with_name_value_uses_unique_authorized_name_field",
+      "prior_failure_id": null,
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "FIXED_SOURCE_OFFLINE",
+      "evidence": [
+        "B-01",
+        "Two independent pre-fix runs per node",
+        "Oagnet/agent.py::_normalize_relation_name_filters"
+      ],
+      "next_action": "Include in zero-tolerance canonical-binding acceptance; verify deployed revision later."
+    },
+    {
+      "service": "Oagnet",
+      "nodeid": "tests/test_relational_semantic_scope.py::test_relationship_name_filter_resolves_one_field_among_multiple_endpoint_names",
+      "prior_failure_id": null,
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "FIXED_SOURCE_OFFLINE",
+      "evidence": [
+        "B-01",
+        "Two independent pre-fix runs per node",
+        "Oagnet/agent.py::_normalize_relation_name_filters"
+      ],
+      "next_action": "Include in zero-tolerance canonical-binding acceptance; verify deployed revision later."
+    }
+  ],
+  "classification_counts": {
+    "STALE_TEST": 17,
+    "EVALUATION_GAP": 7,
+    "NON_BLOCKING_LEGACY_FAILURE": 3,
+    "ENVIRONMENT_DEPENDENCY": 8,
+    "CUTOVER_BLOCKER_P0": 2
+  },
+  "unknown_policy": "No missing ground truth is silently accepted: known missing policy/replay labels are EVALUATION_GAP and block that acceptance. Historical classifications remain unchanged."
+}

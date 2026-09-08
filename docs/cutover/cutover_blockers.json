@@ -1,0 +1,193 @@
+{
+  "baseline_commit": "c4c00d131f53848d279cd7353cd22dc4ea4be4e0",
+  "items": [
+    {
+      "blocker_id": "C-01",
+      "classification": "CATALOG_BLOCKER",
+      "blocking_level": "P0",
+      "status": "PARTIAL_SOURCE_CONTRACT",
+      "summary": "Publisher DSL reads previously used independent autocommit connections; semantic records use legacy snapshot_version and lack a catalog release identity.",
+      "evidence": [
+        "Oagnet/mysql_tool.py::consistent_catalog_read",
+        "Oagnet/catalog_release.py",
+        "Oagnet/vector_store.py::build_records_from_dsl",
+        "Oagnet/vector_store.py::MilvusVectorStore._to_row"
+      ],
+      "next_action": "Wire the new consistent capture/manifest preparation into a versioned publisher; prove snapshot-to-record coverage without changing production routing."
+    },
+    {
+      "blocker_id": "C-02",
+      "classification": "CATALOG_BLOCKER",
+      "blocking_level": "P0",
+      "status": "OPEN",
+      "summary": "No committed PUBLISHED marker lifecycle or atomic/verified publication boundary; upsert followed by stale deletion can expose a mixed generation.",
+      "evidence": [
+        "Oagnet/vector_store.py::rebuild_index_by_scope",
+        "Oagnet/catalog_release.py::verify_release"
+      ],
+      "next_action": "Persist a trusted active release marker only after complete inventory verification; readers pin and recheck it. Retain the previous release for rollback."
+    },
+    {
+      "blocker_id": "C-03",
+      "classification": "CATALOG_BLOCKER",
+      "blocking_level": "P0",
+      "status": "OPEN",
+      "summary": "Current Oagnet query evidence has model/domain and selected metric hashes but no catalog_publish_id/catalog_version/vector_index_version; SQL metadata caches also omit release identity.",
+      "evidence": [
+        "Oagnet/api.py::SemanticQueryEvidence",
+        "Oagnet/agent.py::_build_semantic_evidence",
+        "sql-translator/sql_translator_prod.py::get_entity",
+        "DataAnalysis_Agent/app/semantic_v2/models.py::SnapshotContext"
+      ],
+      "next_action": "Propagate a verified release through the plan-only binding/catalog boundary and caches; reject missing/mismatched releases before V2 accepts a plan."
+    },
+    {
+      "blocker_id": "C-04",
+      "classification": "CATALOG_BLOCKER",
+      "blocking_level": "P0",
+      "status": "OPEN",
+      "summary": "Historical local snapshot lacks owned projections/governed entity IDs. Current MySQL/Milvus ownership/default projection and opaque-rule coverage is not evidenced.",
+      "evidence": [
+        "docs/phase0c_oagnet_closure/catalog_snapshot_aggregate.json",
+        "Oagnet/dimension_scope.py::project_dimension_to_domain"
+      ],
+      "next_action": "Capture the specified target catalog and runtime inventory; compare complete scoped record manifests and independently validate projection/ID/rule coverage. Historical counts cannot establish current deployment state."
+    },
+    {
+      "blocker_id": "X-01",
+      "classification": "EXTERNAL_BLOCKER",
+      "blocking_level": "P0",
+      "status": "OPEN",
+      "summary": "No target-bound deployed revision, trusted gateway receipt, authoritative database identity or Milvus publication export has been supplied/verified.",
+      "evidence": [
+        "docs/phase0c_oagnet_closure/catalog_publication_plan.md",
+        "docs/phase0c_conversation_trust/closure_report.md"
+      ],
+      "next_action": "Obtain named environment/model/domain and trusted read-only exports/service access. Deployment/index publication remains a separate controlled operation; do not infer authorization from source development."
+    },
+    {
+      "blocker_id": "V-01",
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "OPEN",
+      "summary": "V2 has no autonomous raw-turn parser/binding/TaskPatch construction path: CurrentTurnParser validates supplied parse and TurnResolver accepts supplied patch/resolution.",
+      "evidence": [
+        "app/semantic_v2/pipeline.py::CurrentTurnParser",
+        "app/semantic_v2/pipeline.py::TurnResolver"
+      ],
+      "next_action": "Implement a plan-only recognition/grounding/patch path against a pinned catalog; keep it outside production routing until evaluation passes."
+    },
+    {
+      "blocker_id": "V-02",
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "OPEN",
+      "summary": "Frozen V2 scope validators require nonempty snapshot domains and old permission-proof fields; they are not adapted to the current trusted MODEL_WIDE/explicit scope contract.",
+      "evidence": [
+        "app/semantic_v2/pipeline.py::validate_bound_ref_scope_and_permission",
+        "app/semantic_v2/models.py::PermissionContext",
+        "app/services/authorized_scope.py"
+      ],
+      "next_action": "Build the minimal trusted-scope bridge with exact current-request authority and state reuse checks; never infer user grants or expand explicit domains."
+    },
+    {
+      "blocker_id": "V-03",
+      "classification": "CUTOVER_BLOCKER_P1",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "summary": "The V2 legacy adapter explicitly reports analytical payloads/dataset compensation unsupported or lossy; result proof is not connected to real execution.",
+      "evidence": [
+        "app/semantic_v2/legacy_adapter.py::assess_legacy_adapter",
+        "app/semantic_v2/result_contract.py"
+      ],
+      "next_action": "After plan evidence is established, implement capability-checked execution/result mapping for the actual downstream contract; retain fail-closed unsupported paths."
+    },
+    {
+      "blocker_id": "S-01",
+      "classification": "SCHEMA_DRIFT",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "summary": "V2 adapter describes an ASL 1.0 target, while current Oagnet prompt/validator uses version 2.0. There is no executable compatibility proof.",
+      "evidence": [
+        "app/semantic_v2/legacy_adapter.py",
+        "Oagnet/prompt_build.py::SYSTEM_PROMPT",
+        "Oagnet/agent.py::_validate_asl_output"
+      ],
+      "next_action": "Pin the actual downstream schema in the V2 compiler contract and prove public legacy I/O compatibility; do not merely rename a version string."
+    },
+    {
+      "blocker_id": "B-01",
+      "classification": "CUTOVER_BLOCKER_P0",
+      "blocking_level": "P0",
+      "status": "FIXED_SOURCE_OFFLINE",
+      "summary": "A source-confirmed unique entity name was broadened to a LIKE wildcard predicate; two old Oagnet failures share this root.",
+      "evidence": [
+        "Oagnet/agent.py::_normalize_relation_name_filters",
+        "Oagnet/tests/test_cutover_binding_safety.py"
+      ],
+      "next_action": "Keep the regression in cutover safety acceptance and verify the deployed service revision before canary."
+    },
+    {
+      "blocker_id": "E-01",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P0",
+      "status": "OPEN",
+      "summary": "No 80-120 business Gold/evaluator comparison exists; existing 200 partial intent rows and synthetic V2 contract fixtures cannot prove V1/V2 accuracy.",
+      "evidence": [
+        "docs/phase2/gold_cases_seed.jsonl",
+        "docs/phase25/gold_v2_seed.jsonl",
+        "docs/phase25_1/gold_v0_2_1.jsonl",
+        "docs/phase0b/gold_candidate_inventory.jsonl"
+      ],
+      "next_action": "After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+    },
+    {
+      "blocker_id": "E-02",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "summary": "No controlled real-model comparison exists for the requested current production baseline and candidate models.",
+      "evidence": [
+        "docs/phase0c_region_list/closure_report.md",
+        "app/semantic_v2/pipeline.py::CurrentTurnParser"
+      ],
+      "next_action": "After stable Gold, verify official model availability then benchmark identical prompt/schema/catalog/scope/temperature/retries with model/thinking mode as the only variations. Keep runtime defaults."
+    },
+    {
+      "blocker_id": "H-01",
+      "classification": "EVALUATION_GAP",
+      "blocking_level": "P0",
+      "status": "OPEN",
+      "summary": "No real plan-only V1/V2 shadow difference dataset or first-divergence metric exists; current shadow evidence is synthetic/offline.",
+      "evidence": [
+        "tools/phase25/run_semantic_v2_shadow.py",
+        "docs/phase25_1/phase25_1_closure_report.md"
+      ],
+      "next_action": "Only after evaluation gate, instrument plan-only shadow with no V2 SQL/state writes or response takeover, then measure all safety metrics."
+    },
+    {
+      "blocker_id": "R-01",
+      "classification": "CUTOVER_BLOCKER_P1",
+      "blocking_level": "P1",
+      "status": "OPEN",
+      "summary": "Git revert is available; deployment rollback, automatic stop conditions and <=5% canary evidence are not implemented/proven.",
+      "evidence": [
+        "docs/phase0c_region_list/rollback_manifest.json",
+        "app/workflow.py"
+      ],
+      "next_action": "After offline and real shadow gates, prepare canary flag, automatic stop/rollback procedure and drill; obtain user approval before formal replacement."
+    }
+  ],
+  "counts": {
+    "CATALOG_BLOCKER": 4,
+    "EXTERNAL_BLOCKER": 1,
+    "CUTOVER_BLOCKER_P0": 3,
+    "CUTOVER_BLOCKER_P1": 2,
+    "SCHEMA_DRIFT": 1,
+    "EVALUATION_GAP": 3
+  },
+  "open_p0": 9,
+  "open_p1": 4,
+  "readiness": "NOT_READY",
+  "catalog_cutover_blocker_closed": false
+}
