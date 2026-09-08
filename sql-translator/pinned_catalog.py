@@ -37,6 +37,60 @@ def _index(rows, key):
     return result
 
 
+def sql_projection_aliases(sql):
+    """Read aliases from this generator's SELECT projection, not WHERE text.
+
+    A small lexical scan handles commas/FROM inside functions and quoted
+    literals. Unrecognized projection syntax has no binding evidence.
+    """
+    if not isinstance(sql, str) or not sql.lstrip().upper().startswith('SELECT '):
+        return None
+    text = sql.lstrip()[7:]
+    parts, start, index, depth, quote = [], 0, 0, 0, None
+    while index < len(text):
+        char = text[index]
+        if quote:
+            if char == '\\':
+                index += 2
+                continue
+            if char == quote:
+                if index + 1 < len(text) and text[index + 1] == quote:
+                    index += 2
+                    continue
+                quote = None
+        elif char in ("'", '"', '`'):
+            quote = char
+        elif (char == '#' or text[index:index+2] in ('--','/*')):
+            return None  # Comments are not binding evidence in this generated surface.
+        elif char == '(':
+            depth += 1
+        elif char == ')':
+            depth -= 1
+            if depth < 0:
+                return None
+        elif depth == 0 and char == ',':
+            parts.append(text[start:index]); start = index + 1
+        elif (depth == 0 and text[index:index+4].upper() == 'FROM'
+              and index > 0 and text[index-1].isspace()
+              and index+4 < len(text) and text[index+4].isspace()):
+            parts.append(text[start:index])
+            break
+        index += 1
+    else:
+        return None
+    aliases = []
+    for part in parts:
+        part = part.strip()
+        at = part.upper().rfind(' AS ')
+        if at < 0:
+            return None
+        alias = part[at+4:].strip()
+        if len(alias) < 3 or alias[0] != '`' or alias[-1] != '`' or '`' in alias[1:-1]:
+            return None
+        aliases.append(alias[1:-1])
+    return aliases
+
+
 class _SnapshotLoader(RedisDSLLoader):
     def __init__(self, scope, snapshot):
         # Do not initialize the network-backed parent or its process caches.
@@ -339,7 +393,8 @@ def translate_pinned_catalog(pin, request_scope, asl):
                  and str(result.get('data_source_id')) == source, 'DATA_SOURCE_SCOPE_MISMATCH')
         receipt = pin.finish()
         _require(receipt == identity, 'PINNED_PUBLICATION_CHANGED_DURING_TRANSLATION')
-        return {**result, **scope.evidence(), 'catalog_pin': deepcopy(receipt)}
+        return {**result, **scope.evidence(), 'catalog_pin': deepcopy(receipt),
+                'sql_projection_aliases': sql_projection_aliases(result['sql'])}
     except Exception as exc:
         # Private metadata, SQL and business text never leak through a failed
         # pin/read. Typed local errors contain bounded codes only.

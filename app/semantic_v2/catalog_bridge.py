@@ -315,6 +315,42 @@ class ScopedPlanSession:
 
     def compile(self, *, parsed, resolution, payload, service_route, analysis_goals,
                 task_version, versions: AuthorizedVersionMetadata, delivery_spec=None):
+        executable = self._compile_logical(parsed=parsed, resolution=resolution, payload=payload,
+            service_route=service_route, analysis_goals=analysis_goals, task_version=task_version,
+            versions=versions, delivery_spec=delivery_spec)
+        self.accept_catalog()
+        return executable
+
+    def compile_asl2(self, *, sql_planner, **kwargs):
+        """Internal opt-in seam; existing raw/public routes still use compile.
+
+        The trusted callback adapts AuthorizedSemanticScope to SQL Translator's
+        RequestScope and invokes translate_pinned_catalog. It consumes this
+        same pin and finishes it before any SQL can leave.
+        """
+        from .asl2 import lower_asl2
+        executable = self._compile_logical(**kwargs)
+        lowering = lower_asl2(self, executable.logical_plan)
+        if lowering.asl is None:
+            self.accept_catalog()
+            return lowering, None
+        result = sql_planner(self._pin, self._request.authorized_semantic_scope, lowering.asl)
+        if (not isinstance(result, dict) or result.get('success') is not True
+                or not isinstance(result.get('sql'), str) or not result['sql'].strip()
+                or result.get('authorized_scope_fingerprint') != self._request.authorized_semantic_scope.fingerprint()):
+            raise ValueError('ASL2_PINNED_SQL_PLANNING_REJECTED')
+        receipt = result.get('catalog_pin', {})
+        if any(receipt.get(k) != getattr(self.context.catalog_pin, k) for k in CatalogPinIdentity.model_fields):
+            raise ValueError('ASL2_SQL_ACCEPTANCE_IDENTITY_MISMATCH')
+        if result.get('sql_projection_aliases') != [b.sql_alias for b in lowering.output_bindings]:
+            raise ValueError('ASL2_SQL_PROJECTION_BINDING_MISMATCH')
+        # A successful trusted SQL planner already called the original pin's
+        # full finish; do not create a second, disconnected acceptance window.
+        self._finished = True
+        return lowering, result
+
+    def _compile_logical(self, *, parsed, resolution, payload, service_route, analysis_goals,
+                         task_version, versions: AuthorizedVersionMetadata, delivery_spec=None):
         self._check()
         parse = CurrentTurnParser.parse(text=self._request.question, turn_id=self._request.message_id,
             text_ref=self._request.message_id, parsed=parsed)
@@ -339,9 +375,6 @@ class ScopedPlanSession:
             permission=self.context, snapshot=self._snapshot, authorizations=tuple(proofs),
             version_metadata=versions, delivery_spec=delivery_spec)
         executable = compile_executable_plan(plan)
-        # No plan/state can leave this session until full source + inventory +
-        # activation acceptance succeeds. Errors are system failures, not asks.
-        self.accept_catalog()
         return executable
 
     def accept_catalog(self):

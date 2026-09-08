@@ -15,7 +15,8 @@
         "docs/cutover/v2_relation_paths/catalog_path_evidence.json",
         "docs/cutover/v2_entity_value_sources/catalog_source_evidence.json",
         "docs/cutover/catalog_publication_candidate/live_scope_evidence.json",
-        "docs/cutover/pinned_sql_catalog/closure_report.md"
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/v2_asl2/closure_report.md"
       ],
       "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot."
     },
@@ -36,13 +37,14 @@
       "blocker_id": "C-03",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "PINNED_SQL_CATALOG_CONSUMER_VERIFIED_OFFLINE",
-      "summary": "Internal SQL planning consumes the same versioned pin, rejects independent catalog fallback and missing joins, and requires finish before SQL acceptance. Real metadata replay 25/25. Public/deployed V2 path and native publication remain unintegrated.",
+      "status": "V2_ASL2_SQL_SHARED_PIN_VERIFIED_OFFLINE",
+      "summary": "Opt-in V2 common-query lowering and SQL share one catalog pin with scope and SELECT-binding acceptance. Native/deployed routing unproven. Actual typed metadata replay: 32 supported / 36; two metric definitions lack proven primary subject.",
       "evidence": [
         "app/semantic_v2/catalog_bridge.py",
         "Oagnet/catalog_publication.py::PinnedCatalog.identity",
         "docs/cutover/v2_scope_bridge/test_delta.json",
-        "docs/cutover/pinned_sql_catalog/closure_report.md"
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/v2_asl2/closure_report.md"
       ],
       "next_action": "Verify native/deployed pin acceptance after C-02; connect the V2 typed plan through actual ASL 2.0 with ResultContract evidence. Resolve six unqualified catalog relationship declarations before accepting affected joins."
     },
@@ -120,15 +122,16 @@
       "blocker_id": "S-01",
       "classification": "SCHEMA_DRIFT",
       "blocking_level": "P1",
-      "status": "ASL2_PINNED_SQL_SEAM_VERIFIED_TYPED_LOWERING_OPEN",
-      "summary": "Actual ASL 2.0 can plan against a pinned catalog offline. The frozen V2 adapter still targets ASL 1.0; TypedPlan-to-ASL2 loss-aware lowering and result binding are not proven.",
+      "status": "V2_ASL2_PARTIAL_LOWERING_VERIFIED",
+      "summary": "Scalar/grouped/detail V2 TypedPlans now lower to actual ASL2/SQL offline with stable output bindings. Time, ranking, complex Boolean/relationship/comparison semantics and real result receipts remain unproven.",
       "evidence": [
         "app/semantic_v2/legacy_adapter.py",
         "Oagnet/prompt_build.py::SYSTEM_PROMPT",
         "Oagnet/agent.py::_validate_asl_output",
-        "docs/cutover/pinned_sql_catalog/closure_report.md"
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/v2_asl2/closure_report.md"
       ],
-      "next_action": "Pin the actual downstream schema in the V2 compiler contract and prove public legacy I/O compatibility; do not merely rename a version string."
+      "next_action": "Obtain governed source timezone and primary subject evidence; implement remaining loss-aware backend semantics and real result bindings. Preserve the frozen legacy adapter and existing public/shadow routes."
     },
     {
       "blocker_id": "B-01",
@@ -229,5 +232,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "b0c2d9da2a836b9e16b9986c90d1e3b2065026f0"
+  "latest_source_delivery_baseline": "abd6e82bfffb683d829e408581dda583633ec8d8"
 }

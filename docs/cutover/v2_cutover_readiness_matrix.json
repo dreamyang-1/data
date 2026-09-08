@@ -167,7 +167,8 @@
         "Ordered path/occurrence source acceptance and 250 actual-catalog typed walks: docs/cutover/v2_relation_paths/closure_report.md",
         "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
-        "docs/cutover/pinned_sql_catalog/closure_report.md"
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/v2_asl2/closure_report.md"
       ],
       "next_action": "Verify native/deployed pin acceptance after C-02; connect the V2 typed plan through actual ASL 2.0 with ResultContract evidence. Resolve six unqualified catalog relationship declarations before accepting affected joins. Close C-02 native publication/durable registry gates, then prove actual source lookup under authorized operations. Evaluate field-hypothesis/fuzzy selection after catalog gates. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
     },
@@ -197,7 +198,8 @@
         "0.2.2 current-scope and pinned state/compiler contract verified offline; legacy 0.2.1 guard preserved. Actual runtime binding/deployed caller trust remains unverified.",
         "docs/cutover/v2_scope_bridge/closure_report.md",
         "Fresh target/persistence evidence and guarded candidate: docs/cutover/catalog_publication_candidate/closure_report.md",
-        "docs/cutover/pinned_sql_catalog/closure_report.md"
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/v2_asl2/closure_report.md"
       ],
       "next_action": "Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]. Verify native/deployed pin acceptance after C-02; connect the V2 typed plan through actual ASL 2.0 with ResultContract evidence. Resolve six unqualified catalog relationship declarations before accepting affected joins."
     },
@@ -216,7 +218,8 @@
         "Actual 81/[205] display/declared relationship facts and local typed plan acceptance: docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
         "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
         "Fresh target/persistence evidence and guarded candidate: docs/cutover/catalog_publication_candidate/closure_report.md",
-        "docs/cutover/pinned_sql_catalog/closure_report.md"
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/v2_asl2/closure_report.md"
       ],
       "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot. Verify native/deployed pin acceptance after C-02; connect the V2 typed plan through actual ASL 2.0 with ResultContract evidence. Resolve six unqualified catalog relationship declarations before accepting affected joins."
     },
@@ -264,9 +267,10 @@
       ],
       "evidence": [
         "V2 analytical compiler absent; downstream current ASL version 2.0",
-        "docs/cutover/pinned_sql_catalog/closure_report.md"
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/v2_asl2/closure_report.md"
       ],
-      "next_action": "Pin the actual downstream schema in the V2 compiler contract and prove public legacy I/O compatibility; do not merely rename a version string. Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
+      "next_action": "Obtain governed source timezone and primary subject evidence; implement remaining loss-aware backend semantics and real result bindings. Preserve the frozen legacy adapter and existing public/shadow routes. Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
     },
     {
       "capability": "ResultContract",
