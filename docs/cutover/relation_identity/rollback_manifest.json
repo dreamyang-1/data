@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "011a7193f5eafda1101255209129b4d4e2ad4f94",
+  "feature_branch": "cutover-relation-identity-evidence-20260909-01",
+  "source_rollback": "Review/revert this audit/evidence commit and explicitly resync its files; no runtime rollback is needed.",
+  "runtime_source_changed": false,
+  "native_publication_performed": false,
+  "production_writes": 0
+}

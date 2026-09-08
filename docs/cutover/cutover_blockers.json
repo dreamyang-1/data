@@ -38,7 +38,7 @@
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
       "status": "V2_ASL2_SQL_SHARED_PIN_VERIFIED_OFFLINE",
-      "summary": "Current 81/[205] scope/catalog/policy receipts and 55/61 typed plans verified offline. Five unqualified relationship declarations now resolve within explicit physical owners; two declarations remain unavailable (ambiguous field and source-owned bridge as target). Native/deployed evidence missing.",
+      "summary": "Current scoped pin and partial typed-plan receipts verified offline. Fresh 81/[205] audit finds all 14 entities lack governed target-identity keys; two relationship declarations and two metric subjects remain unresolved. Native/deployed evidence missing.",
       "evidence": [
         "app/semantic_v2/catalog_bridge.py",
         "Oagnet/catalog_publication.py::PinnedCatalog.identity",
@@ -48,9 +48,10 @@
         "docs/cutover/v2_ranking/closure_report.md",
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
-        "docs/cutover/pinned_relation_endpoints/closure_report.md"
+        "docs/cutover/pinned_relation_endpoints/closure_report.md",
+        "docs/cutover/relation_identity/closure_report.md"
       ],
-      "next_action": "Verify native/deployed pin acceptance after C-02. Obtain governed endpoint evidence for the two unresolved declarations and primary subjects for two metrics; complete dependent V2 relation lowering with ResultContract evidence."
+      "next_action": "Obtain governed entity identity rules before relation-list lowering; resolve two endpoint declarations and two metric subjects. Verify native/deployed pin acceptance after C-02. Do not infer distinct target identity from names, row keys or model guesses."
     },
     {
       "blocker_id": "C-04",
@@ -140,9 +141,10 @@
         "docs/cutover/v2_ranking/closure_report.md",
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
-        "docs/cutover/pinned_relation_endpoints/closure_report.md"
+        "docs/cutover/pinned_relation_endpoints/closure_report.md",
+        "docs/cutover/relation_identity/closure_report.md"
       ],
-      "next_action": "Close native catalog prerequisites and governed time/subject facts; complete remaining loss-aware backend semantics and native result evidence. Preserve public I/O and V1/shadow boundaries."
+      "next_action": "Close native catalog prerequisites and governed identity/time/subject facts. Implement remaining loss-aware path, comparison and time semantics with actual result evidence; preserve existing public I/O and V1/shadow boundaries."
     },
     {
       "blocker_id": "B-01",
@@ -243,5 +245,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "2881cd7e52a7d8ca21bbb66e808746bd4566e137"
+  "latest_source_delivery_baseline": "011a7193f5eafda1101255209129b4d4e2ad4f94"
 }
