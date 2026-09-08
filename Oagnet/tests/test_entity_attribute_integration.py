@@ -40,7 +40,7 @@ class FakeSearchStore:
             id="placeholder",
             score=0.5,
             text="placeholder",
-            metadata={"type": "entity", "entity_name": "占位实体"},
+            metadata={"type": "entity", "entity_name": "占位实体", "semantic_model_id": 5, "business_domain_id": 9},
         )] if "entity" in serialized else []
 
 

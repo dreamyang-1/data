@@ -6,7 +6,7 @@ import json
 import re
 
 from vector_store import ChromaVectorStore, SearchResult
-from scope_contract import normalize_domains, require_model_id, scope_filter
+from scope_contract import normalize_domains, require_model_id, scope_filter, require_candidate_scope
 
 SYSTEM_PROMPT = """
 【角色】
@@ -645,8 +645,15 @@ class PromptBuilder:
         """Load records only for deterministic completion of recalled anchors."""
         loader = getattr(self.store, "get_by_where", None)
         if not callable(loader):
+            self._validate_record_scope(fallback)
             return self._dedupe_results(fallback)
-        return self._dedupe_results(list(loader(self._build_where(type_name))))
+        records = list(loader(self._build_where(type_name)))
+        self._validate_record_scope(records)
+        return self._dedupe_results(records)
+
+    def _validate_record_scope(self, records):
+        for record in records:
+            require_candidate_scope(record.metadata, self.semantic_model_id, self.business_domain_ids)
 
     @staticmethod
     def _relation_endpoints(result: SearchResult) -> tuple[str, str] | None:
@@ -982,6 +989,7 @@ class PromptBuilder:
                 top_k=candidate_k,
                 where=self._build_where(type_name),
             )
+            self._validate_record_scope(candidates)
             candidate_pools[type_name] = list(candidates)
             if type_name == "metric" and self.preferred_metric_codes:
                 allowed = set(self.preferred_metric_codes)

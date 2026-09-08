@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, StrictInt, field_validator, model_validator
 
 from asl_contract import ASLValidationError, IntentASLContract
-from scope_contract import CONTRACT_VERSION, normalize_domains, require_candidate_scope
+from scope_contract import CONTRACT_VERSION, normalize_domains, require_candidate_scope, semantic_record_types
 
 from capacity_control import (
     AslCapacityController,
@@ -438,7 +438,7 @@ def semantic_display_elements_resolve(
         record_type, name_key, code_key, term_keys = _SEMANTIC_DISPLAY_SPECS[candidate.slot]
         clauses: list[dict[str, Any]] = [
             {"semantic_model_id": req.semantic_model_id},
-            {"type": record_type},
+            {"type": semantic_record_types(record_type, domain_ids)},
         ]
         if req.business_domain_ids:
             clauses.append({"business_domain_id": {"$in": domain_ids}})
@@ -668,6 +668,10 @@ def entity_attribute_vector_search(req: EntityAttributeSearchRequest):
         approximate = _store.search(
             embed_query(normalized_query), top_k=max(req.top_k, 20), where=where
         )
+        # Milvus filters scalar columns but returns a separate metadata JSON.
+        # Validate both result paths before merging/ranking or echoing scope.
+        for item in [*exact, *approximate]:
+            require_candidate_scope(item.metadata, req.semantic_model_id, req.business_domain_ids)
         by_id = {item.id: item for item in approximate}
         for item in exact:
             item.score = 1.0
@@ -701,6 +705,15 @@ def entity_attribute_vector_search(req: EntityAttributeSearchRequest):
             query=req.query,
             matches=matches,
         )
+    except ValueError as exc:
+        if str(exc).startswith('SEMANTIC_SCOPE_MISMATCH'):
+            raise HTTPException(status_code=502, detail={
+                'code': 'SEMANTIC_SCOPE_MISMATCH',
+                'message': 'Entity attribute candidate scope could not be verified',
+            }) from exc
+        raise HTTPException(status_code=503, detail={
+            'code': 'ENTITY_ATTRIBUTE_SEARCH_FAILED', 'message': 'Entity attribute search unavailable',
+        }) from exc
     except Exception as exc:
         logger.exception(
             "实体属性值检索失败: sm=%s, bds=%s",
