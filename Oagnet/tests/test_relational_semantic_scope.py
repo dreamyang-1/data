@@ -53,7 +53,8 @@ def _relation(
 def _where_type(where: dict) -> str:
     for clause in where.get("$and", [where]):
         if "type" in clause:
-            return str(clause["type"])
+            value = clause["type"]
+            return str(value['$in'][0] if isinstance(value, dict) else value)
     raise AssertionError(f"missing type constraint: {where}")
 
 

@@ -34,13 +34,22 @@ def scope_filter(semantic_model_id: int, business_domain_id=None, business_domai
     domains = normalize_domains(business_domain_id, business_domain_ids)
     clauses = [{'semantic_model_id': model}]
     if record_type is not None:
-        clauses.insert(0, {'type': record_type})
+        clauses.insert(0, {'type': semantic_record_types(record_type, domains)})
     if domains:
         clauses.append({'business_domain_id': {'$in': domains}})
     return clauses[0] if len(clauses) == 1 else {'$and': clauses}
 
 
+def semantic_record_types(record_type, domains):
+    # Separate kinds keep projected copies from displacing model-wide vectors.
+    if domains and record_type in {'dimension', 'enum'}:
+        return {'$in': [record_type, 'scoped_' + record_type]}
+    return record_type
+
+
 def require_candidate_scope(metadata: dict, semantic_model_id: int, domains: list[int]) -> None:
+    if not isinstance(metadata, dict):
+        raise ValueError('SEMANTIC_SCOPE_MISMATCH: candidate metadata is missing')
     if type(metadata.get('semantic_model_id')) is not int or metadata['semantic_model_id'] != semantic_model_id:
         raise ValueError('SEMANTIC_SCOPE_MISMATCH: candidate model is unproven or incompatible')
     if domains and (type(metadata.get('business_domain_id')) is not int

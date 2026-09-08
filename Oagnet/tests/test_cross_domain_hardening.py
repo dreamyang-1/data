@@ -40,7 +40,7 @@ def _search_result(kind: str, *, score: float, **metadata) -> SearchResult:
         id=f"{kind}:{metadata.get('metric_code') or metadata.get('entity_name') or 'x'}",
         score=score,
         text="candidate",
-        metadata={"type": kind, **metadata},
+        metadata={"type": kind, "semantic_model_id": 6, "business_domain_id": 7, **metadata},
     )
 
 

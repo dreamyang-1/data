@@ -14,7 +14,7 @@ def _result(record_id: str, kind: str, **metadata) -> SearchResult:
         id=record_id,
         score=float(metadata.pop("score", 0.5)),
         text=record_id,
-        metadata={"type": kind, **metadata},
+        metadata={"type": kind, "semantic_model_id": 81, "business_domain_id": 205, **metadata},
     )
 
 

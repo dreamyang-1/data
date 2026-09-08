@@ -25,6 +25,7 @@ from typing import Any, Sequence
 
 import chromadb
 from chromadb.config import Settings
+from dimension_scope import project_dimension_to_domain
 
 # 默认持久化目录
 DEFAULT_PERSIST_DIR = Path(__file__).parent / "vector_store" / "chroma"
@@ -32,6 +33,7 @@ DEFAULT_COLLECTION = "dsl_knowledge"
 ENTITY_ATTRIBUTE_VALUE_TYPE = "entity_attribute_value"
 SEMANTIC_RECORD_TYPES = {
     "entity", "attribute", "relation", "dimension", "enum", "metric",
+    "scoped_dimension", "scoped_enum",
 }
 PHYSICAL_RECORD_TYPES = {"table", "field"}
 DAILY_TABLE_VECTOR_TYPE = "daily_table_row"
@@ -824,6 +826,19 @@ def build_records_from_dsl(doc: dict, embed_fn) -> list[VectorRecord]:
                 "dim_code": dim.get("dim_code"),
                 "dim_name": dim.get("dim_name"),
             }))
+        # Publish only ownership-proven projections. Explicit retrieval never
+        # adds shared domain -1; the shared original remains model-wide only.
+        scoped_dim = project_dimension_to_domain(dim, doc)
+        if scoped_dim is not None:
+            pending.append((_build_dim_text(scoped_dim), {
+                "kind": "dimension", "obj": scoped_dim, "domain_projection": True,
+            }))
+            for enum in scoped_dim.get("enum_list") or []:
+                pending.append((_build_enum_text(enum), {
+                    "kind": "enum", "obj": enum, "domain_projection": True,
+                    "dim_code": scoped_dim.get("dim_code"),
+                    "dim_name": scoped_dim.get("dim_name"),
+                }))
 
     for metric in doc["metrics"]:
         pending.append((_build_metric_text(metric), {"kind": "metric", "obj": metric}))
@@ -901,6 +916,12 @@ def build_records_from_dsl(doc: dict, embed_fn) -> list[VectorRecord]:
         else:
             continue
 
+        if ctx.get("domain_projection"):
+            rid = rid.replace(sm_only_prefix + ":", bd_scope_prefix + ":", 1)
+            scope_bd_id, scope_bd_name = bd_id, bd_name
+            meta["scope_projection_version"] = "dimension-domain-v1"
+            meta["type"] = "scoped_" + kind
+
         # 注入作用域元数据（检索时用于 where 过滤）
         meta["semantic_model_id"] = sm_id
         meta["semantic_model_name"] = sm_name
@@ -950,6 +971,8 @@ def rebuild_index(store: ChromaVectorStore, embed_fn) -> dict:
             "semantic_model": doc["semantic_model"]["name"],
             "business_domain": doc["business_domain"]["name"] if doc["business_domain"] else None,
             "records": len(records),
+            "dimension_projection_candidates": len(doc["dimensions"]),
+            "dimension_projections_published": sum(r.metadata.get("type") == "scoped_dimension" for r in records),
         })
         for r in records:
             if r.id not in deduped:
@@ -1048,6 +1071,8 @@ def rebuild_index_by_scope(
                 doc["business_domain"]["name"] if doc.get("business_domain") else None
             ),
             "records": len(scope_records),
+            "dimension_projection_candidates": len(doc["dimensions"]),
+            "dimension_projections_published": sum(r.metadata.get("type") == "scoped_dimension" for r in scope_records),
         })
         for record in scope_records:
             deduped.setdefault(record.id, record)

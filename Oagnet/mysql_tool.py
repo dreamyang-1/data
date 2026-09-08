@@ -1050,6 +1050,7 @@ def get_business_domains(semantic_model_id: int):
 def _row_to_entity_dict(row):
     """将单行 semantic_model_entity_type 记录转换为目标 JSON 结构。"""
     return {
+        "entity_id": row.get("id"),
         "entity_code": row.get("code"),
         "entity_name": row.get("name"),
         "entity_alias": _parse_json(row.get("alias")) or [],
@@ -1081,6 +1082,7 @@ def _row_to_attr_dict(row):
         field_mapping = None
 
     return {
+        "attribute_id": row.get("id"),
         "attr_code": row.get("code"),
         "attr_name": row.get("attr_name"),
         "data_type": row.get("data_type"),

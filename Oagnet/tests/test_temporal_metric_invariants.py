@@ -25,7 +25,7 @@ def _result(kind: str, code: str, **metadata) -> SearchResult:
         id=f"{kind}:{code}",
         score=float(metadata.pop("score", 0.9)),
         text=code,
-        metadata={"type": kind, key: code, **metadata},
+        metadata={"type": kind, "semantic_model_id": 81, "business_domain_id": 205, key: code, **metadata},
     )
 
 
