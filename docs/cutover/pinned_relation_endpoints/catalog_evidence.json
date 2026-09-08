@@ -1,0 +1,1248 @@
+{
+  "capture": {
+    "observed_at": "2026-09-08T19:23:26.131579+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "source_identity_hash": "88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1",
+    "status": "ACTUAL_METADATA_ONLY_CAPTURE_LOCAL_SOURCE_BINDING_CHECK",
+    "governed_value_fields": 89,
+    "distinct_source_routes": 1,
+    "declared_vectorization_counts": {
+      "None": 11,
+      "0": 52,
+      "1": 26
+    },
+    "attribute_mapping_outcomes": {
+      "VERIFIED_SOURCE_MAPPING": 89
+    },
+    "records_generated": 290,
+    "private_snapshot_committed": false,
+    "business_source_reads": 0,
+    "real_model_calls": 0,
+    "embedding_calls": 0,
+    "production_external_writes": 0,
+    "native_publication": false,
+    "live_entity_values_verified": false,
+    "configured_route_is_not_server_identity": true
+  },
+  "endpoint_resolution": {
+    "observed_at": "2026-09-08T19:24:26.604553+00:00",
+    "baseline_commit": "2881cd7e52a7d8ca21bbb66e808746bd4566e137",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "declarations": 24,
+    "before_unresolved": 6,
+    "after_unresolved": 2,
+    "outcomes": {
+      "PRESERVED_RESOLVED": 17,
+      "NEWLY_RESOLVED": 5,
+      "REMAINS_UNRESOLVED": 1,
+      "REJECTED_OWNER_MISMATCH": 1
+    },
+    "cases": [
+      {
+        "relation_hash": "d27ca4e6c05d58321df4853a00b3c7411ccb5b6502673c52d9c6b3c61103fbc2",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "ad79e48a06d002457200e0ab66341d6dc45805dc85f6aec19301f15c98c1c658",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "19f0822476fb977fd7549efb7818130cc625f9587532f7d7a99d97c52d92445a",
+        "status": "NEWLY_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": false,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": false,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "86448142cae65927b5dc60be8dddfb06e62635e40759984dd6af28460fe0478b",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "4104153488030bd7ab609c82c2bedc03dbd89212a89c3f36832a4d98fd309f31",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "b14181c62934edfa4ec65f1027dc5b35e102bf7b99989f5b4abc21c3e852e233",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "79c445b45d3f91653aea383d97ee08fa8dffa42484e2f7983ccff9a3f24a9a43",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "66d0e41fd7c2cbce31fdb501adefbbb384b641313c0b1028aa7c9704ef5afe15",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "e6e62ec15a76371731073398a7e70365725586a39d8e3afe49f124e4a466a62d",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "91c2d96eddd6f0bcc2aa8d19b6c0c69ad64a2e44e020a230249929bfcbc78d09",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "1c3ffb799c3bbeb354d37b8e3aefee112fc36cc4f7daef283552294e36dcdd04",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "b6ab9ac9e7465c364e6ecba09754241d308e8c7fbbdb208bbee070756207851e",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "21bc776a1682915fd59441b0b14f2d13bde8cafa94eb91d05e3079522c71bed5",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "01d69f38901d60e57b881dd525f18b858488dc18ac41f2259a891dd7d45ba6db",
+        "status": "NEWLY_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": false,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": false,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "defd611235a822f4d2ce6adde35ad5fa3c79b99ab7c0b8257858edf7a5984d73",
+        "status": "NEWLY_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": false,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": false,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "0fa204372b10da187fbfce0a4d6fbf13aa7dbad4239ef686e54d5a4189391788",
+        "status": "NEWLY_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": false,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": false,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "c3e961ab0d669ebc240410c58fc01e384e15baddbe7813ac1fe3528cd7ec883f",
+        "status": "NEWLY_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": false,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": false,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "c6cd8aba2f4a93c92c7da8bb840717b417d81a326a3ca5141fd8fbd5330cfe70",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "b780a634d06f8c35a582b3ac4adb078b22fe19dd6e9b07a0501a32f0e4aa3ca1",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "51b5212a8afd2235456fe567be2a92c48b78a24ea63de717454c056694245b28",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "952950dac0c320d2214e126e764057bbbb02d86aed9a2a31cde7893d7823f243",
+        "status": "REMAINS_UNRESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": false,
+            "owned_physical_matches": 2
+          },
+          {
+            "side": "target_field",
+            "qualified": false,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "cbf6f9e593f017cff50cc471d6b9f16d07645063879857d7a98c13f70fd5e58b",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "9f5630d9626424df40c3ea35065a340ea7699bc395c25da67c297f1a8ab01163",
+        "status": "PRESERVED_RESOLVED",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          }
+        ]
+      },
+      {
+        "relation_hash": "33cb485af3efa82aab7a4b8ec220d0252df1075a33b3b781aa56bb2ba495b216",
+        "status": "REJECTED_OWNER_MISMATCH",
+        "endpoints": [
+          {
+            "side": "source_field",
+            "qualified": true,
+            "owned_physical_matches": 1
+          },
+          {
+            "side": "target_field",
+            "qualified": true,
+            "owned_physical_matches": 0
+          }
+        ]
+      }
+    ],
+    "evidence_kind": "CURRENT_METADATA_OFFLINE_ENDPOINT_RESOLUTION",
+    "native_publication_verified": false,
+    "business_source_reads": 0,
+    "external_sql_executions": 0,
+    "real_model_calls": 0,
+    "embedding_service_calls": 0,
+    "production_writes": 0
+  },
+  "typed_plan_replay": {
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "outcomes": {
+      "SUPPORTED_PLAN_ONLY": 55,
+      "UNSUPPORTED": 6
+    },
+    "cases": [
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "f936a6892c88e9e95dad612caf9282768ed377875d693df6da2a5ab116cdd4b5",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "9e381c2a2c8c1d634aca9480873d93ba10398a407ee9d0863ba4f6d24b7380a6",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "f936a6892c88e9e95dad612caf9282768ed377875d693df6da2a5ab116cdd4b5",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "a697cf6d9a9188f38f7d1faf187f18e2f0d33d97669708bacc8d45439eab179d",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "06c4c8c0f19c3725543b53f0ed2642c368ccd171c40bc0a713b558ba586fc77b",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "4382a5df8842c4e05ecf7422e8a73d6438eb2140a8d7cf5d7a915ca9ac504dd3",
+          "statement_fingerprint": "4eb0b09f71602278f1c8199d615aeddd848c56031b1c914ed54e26c7a67dbd15",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "2c59308f6826a9963ff333b044a8db2b889f01cc27caecbf9cb900a345d9cfcc",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "4bebecab5e332f50442c9b69f22460d8f5c1b7287d63f70b4250dc41d26435be",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "2c59308f6826a9963ff333b044a8db2b889f01cc27caecbf9cb900a345d9cfcc",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "0ad4ebc971cde774318f6ebc66844fa6ba05b56779b02a90dd736068c5209a8a",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "d6755b4685e86948fda6452c943733ce1f02e8c788bc3641c29efb25ecfbd029",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "967f5367e0884894d8eafd62f67a53fdcf90e33e30b746f4095e1164733007bb",
+          "statement_fingerprint": "d22ee37e33beb4cf8b337387a07861b8c2b146011e9ae27d0818776c7d89bccf",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "be5e797649a8d99a3bac0397d3721d4e1e2e04398cf9efdd3e26e5a1438aad68",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "d51b9046c4acabbc4e0ddb9a7274a03123019e27df0b6ff38d6c980959297604",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "be5e797649a8d99a3bac0397d3721d4e1e2e04398cf9efdd3e26e5a1438aad68",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "7c628001a26c3ff3b7464dfb3dbdd4ca63e8cc50b79286d8e916f51a5ddf1c1b",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "88abb88ddf9a7cfa9193a6426d2ba7029c0c82614d8c9237ea76f9054bc68e4e",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "ef628d80335c59ecef99ae9abcfc96da6831251c9f83072302cca68965b5bfb0",
+          "statement_fingerprint": "869a09757cbc51bafd7a6eafadf03cfc8d69a4c2c7411b9465c0fc3d0c968520",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "46cb4ce8b7c9ceb9e78a2059323bc51eeafae7958e5c8083dd71998d5d406839",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "bee7c3b0b332f54f34993b1344a8e613660933a8431c89462f03b83c03efb8f6",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "46cb4ce8b7c9ceb9e78a2059323bc51eeafae7958e5c8083dd71998d5d406839",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "7231c87e93d3cd56924a46156eb86550228689856c0b2c6c78a8e4448d109514",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "dad37e8426bb05b645a8423195d0f2f687185ba14a8f35c20983477ec63bd755",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "c7ae49f7bc85a9ddc77be55f59ce8fff516491ffeca69d867b6c33d6ffe32d05",
+          "statement_fingerprint": "691c2db355acbd2f934f83e14a5ed08de4e8517c6fcf973c78bf096e61d8bb67",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "5b6ae7660e108aaaabc921bea19d6d8ce9c792b746b7ac9dfa76008cd9c9a65b",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "bbabdd94bcf84ce5c13fa95d5a800721f970b9ee6ecd6159bbd7564e62600355",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "5b6ae7660e108aaaabc921bea19d6d8ce9c792b746b7ac9dfa76008cd9c9a65b",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "ef8145d0ecc95be0ab19d2e6c795c8f98b5e7596836aad167a21c84b4692624b",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "ae86e3cb55b47330752795108f16894dbf5f2a5a8d8d4749c937dadfa7c6879a",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "42f3253248233dea4b201a8759b8752f7f0d64372498220bf6eb27a51bd8579a",
+          "statement_fingerprint": "0ff53a292f543c3db884c488caf0a942a32bef80be7d3057b8b77e9690dda7dc",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "320d920877fb5f47b3e82a1e28de879f5b64d060793c1350a728d4802382e971",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "74299d2f450e345f25a90ba8f08e366f802bf257d2c1f07547e11761fd4a1c8f",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "320d920877fb5f47b3e82a1e28de879f5b64d060793c1350a728d4802382e971",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "d2bc01e5eb7133b1b1312ce73d283b25232db69a83ec207511160a13e4a3a7ec",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "25d1f2604de6c72416e204b6069c05b61de040776625117cf1862375321be23b",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "0722a7e0a34c8fed4c381d72ab59b1660e0fe4ca98c5d977ade105baa4c16f52",
+          "statement_fingerprint": "b7bdde4d26d378bbb90fc8b6f7cd5fa464a763c5fba2c2eebe9dd0e58b585833",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "eaf23c9c8d084cd7192173a35c4471e6a9feb120165d0cd43ec08ebb05c18630",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "00d8702f2a074fe62d5071335c1bf147646fd0a740a6e121697b694f70b20240",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "eaf23c9c8d084cd7192173a35c4471e6a9feb120165d0cd43ec08ebb05c18630",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "563ad2b0d8d9541ac461951a19c34b0fffb0c25aadf85717272c88306fa15138",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "eca67bea776d13703d2c660f9cfa9d81b765f38d77ad2d59ed27db9b544069e7",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "7d010dfd59ee1223d147cdf85d651556ceae7499f10ea2cf0069fdf0bd982118",
+          "statement_fingerprint": "54faf42aade22736a6218f28d02fe2bd2a02f6a9ca235ac31a75376dd82f7ddb",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "3fde1790bd293acc8f2e4cdd9aeb67ef85ae0000bfe0b239d68dd4a099478667",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "cdc7c89786566fd5cabb362278f199c8a93aeaba1c3ca6f0dd6c2f78b05688c8",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "3fde1790bd293acc8f2e4cdd9aeb67ef85ae0000bfe0b239d68dd4a099478667",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "147a4c8f3a946fe37239e747eaf10ed392ac5440e064b5c76e2092bbbf1be0da",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "c22574e4703dec0e7f0f6b230f7f090afb5d4c6867b348ef86f438ec167f585d",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "becb9422d7092eb8a2998d20fd320c6b1ac63d5814eecb8a604250f562b75711",
+          "statement_fingerprint": "71741a5a737a1fb05e06cf9c7056b378355b66a528f193416291de743ee9904d",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "4137d45256d769a48837de750d0427d4efb7842da2b1e16a6a6f43b04532bb4f",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "93db33acd44d846fe99fcb91c8e1821feb0d774c132164d5abf78aded1608d98",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "4137d45256d769a48837de750d0427d4efb7842da2b1e16a6a6f43b04532bb4f",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "7ff7f469a77663f902fe38dba44d00a5ce16b5e4bba536e7f0dfef95aaecbab7",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "94ba8ed4da1063f968f3fa651b847cfb2c7bc6db12c05030b6fbde3ec9a4ff36",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "06936e2ce5d6f0af27e378e4894d571361564789fa33ece53a443bcdc442051d",
+          "statement_fingerprint": "387db25e0b0ba713fcc21a53c313be3f9975c320df540cf6017f6491348e8857",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "7ad344aa22dc5a8717bde186ea7386a167326cc3eb8140fb9d589c2dde6a464d",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "a6668d0b8d5e2c39efd1ff1c22da9957fa6f0c59e9d469448c8f7af5b8e0b5fe",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "7ad344aa22dc5a8717bde186ea7386a167326cc3eb8140fb9d589c2dde6a464d",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "437b1f343e12872e6ec4d6e0d0b07454d768e967d9463ad5d32d117951f739ff",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "a64dab1e354a736413bf739b843323b5ab543a65788eead118ea3952ff29f2ef",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "9c473c2eefdc60658a2049549084e4688a08b95e0e8c49b7a8ed786e90daf911",
+          "statement_fingerprint": "5c751a110420c243055662c331c9cd281331b252588f581c92572d3c725a80bd",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "d04743a4ea0c9e06115e7fc9e15f9e97ead6bbbe87a3b0415ab6fc6b7309ee47",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "305add475356dfc6530a34f7987d856a350deeb0d2048ab22ea163935a053796",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "d04743a4ea0c9e06115e7fc9e15f9e97ead6bbbe87a3b0415ab6fc6b7309ee47",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "bd252c3e151e57f24912cb63cb0b340fa4126b5ba60a63fcd597c30250f8f5dd",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "f1094de6f283ff867d392781b2d21d1b960d8037ebb6fc70d1b6d8d37d2bd7d0",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "af91d9832c37080f8a383a15c63b3891b1ec0fd8b2d25a7bd916fcc912f15ec6",
+          "statement_fingerprint": "7534dbe6b225800a889f8e1fc2a9e42f00ed482331ce562c5f78c4b2c04c29a6",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "55ac657a7d3d8709c93e57e184b2fc376c8c557b53d03cff22b2470d3949bc3b",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "799e2e052727b8f3ed0471a3adf598146051c983d0e8a3d680ad297f8d458462",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "55ac657a7d3d8709c93e57e184b2fc376c8c557b53d03cff22b2470d3949bc3b",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "b0a0f281abb8e04f3b57a6f6b16b391fd21dd87217268ac4bd92ee2027fbf447",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "7a1fd31ce8e2c75e8bfb47a5af8ed1f4290e7b5060cfb248b0e2c96104b737a5",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "85fce6ed4d62157b86b84fcb42f916dc1c3333a9136c7fe957b28eff2e552f86",
+          "statement_fingerprint": "f256e6ffb5ffa3fac98b6cb0048c9f5804798fcc7dca95d08eb08bfc9ebd2187",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "cee1634698cf5a058b4a1b9798c053dd14eacf3aab277ba89b4c12ae9456d357",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "1aeb35f898fac7868d9bf078e2517b145a1229cf72a0709ce1b5b1dd0df02f1c",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "cee1634698cf5a058b4a1b9798c053dd14eacf3aab277ba89b4c12ae9456d357",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "d4655214a3b243d99e1941d648e406e0ce2b973791138ea6236bb7206be82a06",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "446f21c9caf141aafdf846377fcd24013c294128c17d1b45a89808502bf9b4c8",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "1365dc21d0225443b5c6bde97d53da928a9ab33c7830edafd7dcd749f441d53c",
+          "statement_fingerprint": "5fda62894d16c186e553fee3635a33506b4a498346a862d0c722eddc691dde47",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "DETAIL_ROWS",
+        "case_hash": "d2c051a555a67bd5ef0bb004c8360f145e21311d49100dfe7fd9d70ff95fcc60",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "e09a2c62fdeaa7fc15fd1062a1d1a0152af38100b667459a78cab31242806922",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "DETAIL_FILTER_TREE",
+        "case_hash": "d2c051a555a67bd5ef0bb004c8360f145e21311d49100dfe7fd9d70ff95fcc60",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "7d9d3d2750a61d0b3d83c22a5b366397bc02d92d0037f96075d32996df679e72",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": "531aaad2ad1b5c1ce602c233b1810bea5c5e25da9760062467224846f8c35d51",
+        "sql_parameter_contract": {
+          "style": "PYMYSQL_PYFORMAT_V1",
+          "asl_fingerprint": "f71641035d292834cc2be13098c8aafefcf8b96cbf8afb9e9249b77db0fcd6d3",
+          "statement_fingerprint": "cbe0ae8d606ee0981ffbbf9dfd098ecf3d19cbafad1099c7b8d4a151f366fce6",
+          "parameter_count": 0
+        }
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "4984c4a85f5a63904b0271c2cfed05868c57076bd87f9317a057f081eb617dbe",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "57d8fb10fa41bd2b96560f3f08ecd6bbb16501782668eb90e9fe78b7e841b9fc",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "4984c4a85f5a63904b0271c2cfed05868c57076bd87f9317a057f081eb617dbe",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "2fe221100eae5e5e8709b668972787c28b9c64e326fa89cb3a3c102aa99d4653",
+        "projection_columns": 2,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "RANKING",
+        "case_hash": "4984c4a85f5a63904b0271c2cfed05868c57076bd87f9317a057f081eb617dbe",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "6675b57884c71a6c904232df79a40834194de3eb91eb4117af99425a2f245053",
+        "projection_columns": 3,
+        "ordering_contract_hash": "024f1cc3697ad4ab41cb39dd710ee42cd1d9ee9980d904b30f8d9d71dc44fa2e",
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "84aea10641d99ba37081e746b8db8d82c605dddd685e0e5c9f988692376febb7",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "8fe087f0c6bf9940b1ac928822ef89ef49995513f5b341bf2877f0d8aa0787f4",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "84aea10641d99ba37081e746b8db8d82c605dddd685e0e5c9f988692376febb7",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "43fdfef31ff8b697e546b2151f8131b40ee3190395e40d734984a72a07dee263",
+        "projection_columns": 2,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "RANKING",
+        "case_hash": "84aea10641d99ba37081e746b8db8d82c605dddd685e0e5c9f988692376febb7",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "7b9d744edbf7cbfe36245b53ff99c5a719ae6226d779a3faa3f524b240d34300",
+        "projection_columns": 3,
+        "ordering_contract_hash": "5c86a3a30630d722090b3cf3fbf5a24dc6c1ad3eb4282761a704b2e53cc0cc98",
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "bfb0bb12a32bc96ad218625ae8140290f13ebcefbc3c7dd23f2ba743f352e872",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "7b213670da0bb9a7cfff158bdebce81e90c8fffd6c82ad4ce43ac7577d33794e",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "bfb0bb12a32bc96ad218625ae8140290f13ebcefbc3c7dd23f2ba743f352e872",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "78b49bca0900f7f4f1d91250f36fd032db56e6fe6bbd706bbd0fdf33d08ba06b",
+        "projection_columns": 2,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "RANKING",
+        "case_hash": "bfb0bb12a32bc96ad218625ae8140290f13ebcefbc3c7dd23f2ba743f352e872",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "a7c23c92e83289c8b734c61291790a62f14db809bc5130f96f4333f97beb9632",
+        "projection_columns": 3,
+        "ordering_contract_hash": "3ed31f31a4ce38737b5fc74d7ad28c9022b54351cdfecfc1d56ddfca635dc088",
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "195c047b2a52ecef167cbc46d449c0693a990182ecfd70a3abb7f2f77ab05ee4",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "7491c5d1683ba51e3db50072e6a0b5ae9b5f8f80a0ba22549ab8e3340aff9ac3",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "195c047b2a52ecef167cbc46d449c0693a990182ecfd70a3abb7f2f77ab05ee4",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "633e461382bbba038905e6ef81f8f59307dcf6e4ff646eaa5fb4e6eac585af4f",
+        "projection_columns": 2,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "RANKING",
+        "case_hash": "195c047b2a52ecef167cbc46d449c0693a990182ecfd70a3abb7f2f77ab05ee4",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "0ade6055d2e87cb4678e0f0fedfe416cc4997e69f84c595cf9e3c9c4de970ab7",
+        "projection_columns": 3,
+        "ordering_contract_hash": "4f98d0354d8cb0cbb8f59e2ca8e7a5690d73ffa08af1486164982489dd10c3d0",
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "ae62f84e0cd9737ff5671b144fe730adadf455c3f87ce042397c6920e647cb09",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "2832bfde995e1f62e67583c21ae14b02629fd2b83e501aee128d70067b21b2ef",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "ae62f84e0cd9737ff5671b144fe730adadf455c3f87ce042397c6920e647cb09",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "0a47539e90b1b03ee3679365dafc33fb7f5240922ffad00e9878d2522602febd",
+        "projection_columns": 2,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "RANKING",
+        "case_hash": "ae62f84e0cd9737ff5671b144fe730adadf455c3f87ce042397c6920e647cb09",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "2380f6722f7bc0bd1efb7b1e26cda920c87441e85af077c77b016a2d64a9ec67",
+        "projection_columns": 3,
+        "ordering_contract_hash": "1214a366269d6c8ba199b9526738c45adc072b010713198f08fb5e3ec5cf5892",
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "5af23b69d57eb3c4592ec9edb8d49ae48b9ba0126a3ade8ca1d8d8fefbe4cddd",
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_SUBJECT_OWNERSHIP_UNRESOLVED"
+        ],
+        "sql_hash": null,
+        "projection_columns": 0,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "5af23b69d57eb3c4592ec9edb8d49ae48b9ba0126a3ade8ca1d8d8fefbe4cddd",
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_SUBJECT_OWNERSHIP_UNRESOLVED"
+        ],
+        "sql_hash": null,
+        "projection_columns": 0,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "RANKING",
+        "case_hash": "5af23b69d57eb3c4592ec9edb8d49ae48b9ba0126a3ade8ca1d8d8fefbe4cddd",
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_SUBJECT_OWNERSHIP_UNRESOLVED"
+        ],
+        "sql_hash": null,
+        "projection_columns": 0,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "f35cc75cb0afff74a46d08624fab064a231a7e89d0b87acbea36c976a8361f73",
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_SUBJECT_OWNERSHIP_UNRESOLVED"
+        ],
+        "sql_hash": null,
+        "projection_columns": 0,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "f35cc75cb0afff74a46d08624fab064a231a7e89d0b87acbea36c976a8361f73",
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_SUBJECT_OWNERSHIP_UNRESOLVED"
+        ],
+        "sql_hash": null,
+        "projection_columns": 0,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "RANKING",
+        "case_hash": "f35cc75cb0afff74a46d08624fab064a231a7e89d0b87acbea36c976a8361f73",
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_SUBJECT_OWNERSHIP_UNRESOLVED"
+        ],
+        "sql_hash": null,
+        "projection_columns": 0,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "e90021416b1e40a9abfcde57a62bca0ff4fa5bf38b2fedcdd3680ba41e7a2232",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "6c2b0de05524f027230a0e381a0f8655b04e3f9d7885d75b9210f17a4a54f62c",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "e90021416b1e40a9abfcde57a62bca0ff4fa5bf38b2fedcdd3680ba41e7a2232",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "69dee13fc53724f03ba6e154d6323c9e0296b5709fe0c6c556da1bc194be115a",
+        "projection_columns": 2,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "RANKING",
+        "case_hash": "e90021416b1e40a9abfcde57a62bca0ff4fa5bf38b2fedcdd3680ba41e7a2232",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "9e5d3dd815f41bbabf342d4f9af56f7250311aaa5a95d21e5b55dcd37245ac2c",
+        "projection_columns": 3,
+        "ordering_contract_hash": "a0cb7d7179c2306e72c2794ddda20b8859f6986ce6184317014082efb6eadbac",
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "8e54bad9655bf481448defbcfc9eefe3579670602fe3300bfb47359ed3e3ccef",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "31760d4471e92e10c2ff3e633be805f04892a84e6235ace6284236af810d8da6",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "8e54bad9655bf481448defbcfc9eefe3579670602fe3300bfb47359ed3e3ccef",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "ef8528196cbc599cfe3dc6bdc57f3f611b3fd0dc7b8e5ba1cdffad7b0c51d112",
+        "projection_columns": 2,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "RANKING",
+        "case_hash": "8e54bad9655bf481448defbcfc9eefe3579670602fe3300bfb47359ed3e3ccef",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "8d0aa4a73b0805e274d7c40759bf47962eaf8807d976e53c27393a9e5f9576b8",
+        "projection_columns": 3,
+        "ordering_contract_hash": "40e3003ab27b6ee1588b7e7226e244ba1700e1b3ebbec057d6b973242533b2e5",
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "c5e840d404a3a7930f52cfc8dd189445afa7eb81827ea6fd6d5a7bb7d54375b8",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "acabac38394fe36574ce0cac549ded52c9a3277a561d0ee208b1e21941f57b33",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "c5e840d404a3a7930f52cfc8dd189445afa7eb81827ea6fd6d5a7bb7d54375b8",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "aee6d0987f3cfa771ababd6a75598dd5ddc6e3bd7ef437f716f06b8e961178c7",
+        "projection_columns": 2,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "RANKING",
+        "case_hash": "c5e840d404a3a7930f52cfc8dd189445afa7eb81827ea6fd6d5a7bb7d54375b8",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "5b396f35a966a5822588cb635e0ae4330c4d843cadc05040e94e17715f0a751a",
+        "projection_columns": 3,
+        "ordering_contract_hash": "0d24f20b69cd7bf11fc1574a4473228bc1c33d551823b6d8d560940e474b49ee",
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "SCALAR_AGGREGATE",
+        "case_hash": "075b9cd2ca46668ec85d246dff5647d2ad0ece19bef3f35bf1f703b215179f03",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "ceade23baad1bbc5e05bdec128dcbe0000a770f1ffa224d4663d2e5c277a0f38",
+        "projection_columns": 1,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "GROUPED_AGGREGATE",
+        "case_hash": "075b9cd2ca46668ec85d246dff5647d2ad0ece19bef3f35bf1f703b215179f03",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "0be768a5d3578f44eaa0609d9d81cf3c474d92221f56fe501390f1774076b390",
+        "projection_columns": 2,
+        "ordering_contract_hash": null,
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      },
+      {
+        "kind": "RANKING",
+        "case_hash": "075b9cd2ca46668ec85d246dff5647d2ad0ece19bef3f35bf1f703b215179f03",
+        "status": "SUPPORTED_PLAN_ONLY",
+        "blockers": [],
+        "sql_hash": "be81473c91257fc140170df8604ad37ec9914cf0efe9bc43bd31a792f8985895",
+        "projection_columns": 3,
+        "ordering_contract_hash": "49be6985b5b1b1eba7769f7fb30e46b09e53fd3cde50bef0125e2b79b231de93",
+        "filter_contract_hash": null,
+        "sql_parameter_contract": null
+      }
+    ],
+    "evidence_type": "ACTUAL_METADATA_OFFLINE_TYPED_PLAN_ASL_SQL",
+    "native_persistence": "NOT_USED",
+    "real_model_calls": 0,
+    "embedding_service_calls": 0,
+    "business_source_reads": 0,
+    "sql_executions": 0,
+    "production_writes": 0,
+    "actual_result_validation": false,
+    "natural_language_accuracy_measured": false
+  },
+  "primary_subject_gap": {
+    "metric_definition_hashes": [
+      "5af23b69d57eb3c4592ec9edb8d49ae48b9ba0126a3ade8ca1d8d8fefbe4cddd",
+      "f35cc75cb0afff74a46d08624fab064a231a7e89d0b87acbea36c976a8361f73"
+    ],
+    "distinct_metrics": 2,
+    "affected_plans": 6,
+    "classification": "CATALOG_GOVERNANCE_GAP",
+    "evidence": "Each metric binds two different entity base tables within one source; no primary query subject is proven by this typed plan.",
+    "decision": "Keep unsupported; do not pick by catalog list order or model inference."
+  },
+  "source_timezone": {
+    "status": "UNKNOWN_NEEDS_OWNER_EVIDENCE",
+    "question_pending": true,
+    "evidence": "No source/database timezone contract found in current Agent, Oagnet or SQL Translator source. TimeSpec timezone alone does not prove DATETIME storage semantics."
+  },
+  "new_native_observation": false,
+  "native_publication_verified": false,
+  "raw_metadata_or_sql_committed": false,
+  "publication_candidate": "docs/cutover/pinned_sql_catalog/publication_candidate.json",
+  "publication_candidate_unchanged": "Authoritative snapshot content/version is unchanged; no producer or target configuration changed.",
+  "limitation": "Fresh authoritative metadata capture, offline endpoint resolution and synthetic SQL execution do not prove deployed routing, native publication, source results or natural-language accuracy."
+}

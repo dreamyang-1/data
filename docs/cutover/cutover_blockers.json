@@ -38,7 +38,7 @@
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
       "status": "V2_ASL2_SQL_SHARED_PIN_VERIFIED_OFFLINE",
-      "summary": "Common/ranked queries and Boolean filters share current scope/catalog, output and required policy receipts. Reused metadata replay 55/61; native/deployed evidence missing.",
+      "summary": "Current 81/[205] scope/catalog/policy receipts and 55/61 typed plans verified offline. Five unqualified relationship declarations now resolve within explicit physical owners; two declarations remain unavailable (ambiguous field and source-owned bridge as target). Native/deployed evidence missing.",
       "evidence": [
         "app/semantic_v2/catalog_bridge.py",
         "Oagnet/catalog_publication.py::PinnedCatalog.identity",
@@ -47,9 +47,10 @@
         "docs/cutover/v2_asl2/closure_report.md",
         "docs/cutover/v2_ranking/closure_report.md",
         "docs/cutover/v2_filters/closure_report.md",
-        "docs/cutover/v2_bound_sql/closure_report.md"
+        "docs/cutover/v2_bound_sql/closure_report.md",
+        "docs/cutover/pinned_relation_endpoints/closure_report.md"
       ],
-      "next_action": "Verify native/deployed pin acceptance after C-02; connect the V2 typed plan through actual ASL 2.0 with ResultContract evidence. Resolve six unqualified catalog relationship declarations before accepting affected joins."
+      "next_action": "Verify native/deployed pin acceptance after C-02. Obtain governed endpoint evidence for the two unresolved declarations and primary subjects for two metrics; complete dependent V2 relation lowering with ResultContract evidence."
     },
     {
       "blocker_id": "C-04",
@@ -138,7 +139,8 @@
         "docs/cutover/v2_asl2/closure_report.md",
         "docs/cutover/v2_ranking/closure_report.md",
         "docs/cutover/v2_filters/closure_report.md",
-        "docs/cutover/v2_bound_sql/closure_report.md"
+        "docs/cutover/v2_bound_sql/closure_report.md",
+        "docs/cutover/pinned_relation_endpoints/closure_report.md"
       ],
       "next_action": "Close native catalog prerequisites and governed time/subject facts; complete remaining loss-aware backend semantics and native result evidence. Preserve public I/O and V1/shadow boundaries."
     },
@@ -241,5 +243,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "e80132164b4335d38edd7081fd8d884551baa7fe"
+  "latest_source_delivery_baseline": "2881cd7e52a7d8ca21bbb66e808746bd4566e137"
 }
