@@ -1,0 +1,41 @@
+{
+  "files": [
+    {
+      "path": "docs/phase0c/draft_pr.md",
+      "workspace_hash": "22ae105e66500347da8c80bc593906c1a45d0830d2ab0eeba5cef10fc0600134",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/github_publication.json",
+      "workspace_hash": "56a6eae248d0a52eb4b521ffbe481f58c1f956f7e7e381ae752bdbd008d2d756",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/workspace_git_hash_verification.json",
+      "workspace_hash": "8e324b8838306b901794bb4fa4b4ad52cb6140e5579a824b6a67cc0869ec8caa",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/git_commit_manifest.json",
+      "workspace_hash": "118460c89d796af66e64d7cae8f449c96e6d3928fbf0728292b827eb117a23cb",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/rollback_manifest.json",
+      "workspace_hash": "97a59f7f0227df10649a7dee1628cacc7311256424334ba61dfa9049bb8df9a4",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/enterprise_security_blockers.md",
+      "workspace_hash": "40601db0d0c65204ac70dd3d7dbf174f6cb52132bfa938477aa6d9fd4d632862",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/phase0c_closure_report.md",
+      "workspace_hash": "d5847887ebf161a08899915aff8cee8098c7e2883388a7eb2dbee08a937d49dc",
+      "previous_git_hash": null
+    }
+  ],
+  "credential_scan": "PASS",
+  "synchronization": "EXPLICIT_PATHS_ONLY"
+}
