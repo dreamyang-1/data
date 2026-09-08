@@ -4,7 +4,7 @@ Opening a reader validates existing schema without mutating it. Explicit
 initialize=True is an operator publication operation and is never used by a
 query or at module import.
 """
-from catalog_release import CatalogEvidenceError
+from catalog_release import CatalogEvidenceError, digest
 from vector_store import MilvusVectorStore
 
 
@@ -45,7 +45,7 @@ class MilvusCatalogStore(MilvusVectorStore):
         return families
 
 
-def open_catalog_store(*, initialize=False):
+def open_catalog_store(*, initialize=False, expected_target_identity_hash=None):
     """Use configured service access; never use model/request-supplied endpoints."""
     from pymilvus import MilvusClient
     import config
@@ -54,9 +54,14 @@ def open_catalog_store(*, initialize=False):
               "entity_value": config.MILVUS_ENTITY_VALUE_COLLECTION, "daily": config.MILVUS_DAILY_COLLECTION}
     collections = {family: name + "_catalog" for family, name in legacy.items() if family in {"semantic", "physical"}}
     uri = f"http://{config.MILVUS_HOST}:{config.MILVUS_PORT}"
+    source_identity = {"uri": uri, "database": config.MILVUS_DATABASE}
+    target_identity = {"backend": "milvus", "source": source_identity, "collections": collections}
+    # Check the reviewed target before a client can initialize any collection.
+    if expected_target_identity_hash is not None and digest(target_identity) != expected_target_identity_hash:
+        raise CatalogEvidenceError("CATALOG_OPERATION_TARGET_CHANGED")
     options = {"uri": uri, "db_name": config.MILVUS_DATABASE}
     if config.MILVUS_USER:
         options.update(user=config.MILVUS_USER, password=config.MILVUS_PASSWORD)
-    return MilvusCatalogStore(MilvusClient(**options), source_identity={"uri": uri, "database": config.MILVUS_DATABASE},
+    return MilvusCatalogStore(MilvusClient(**options), source_identity=source_identity,
         collections=collections, legacy_collections=set(legacy.values()), embedding_dim=config.EMBEDDING_DIM,
         timeout=config.MILVUS_TIMEOUT_SECONDS, initialize=initialize)
