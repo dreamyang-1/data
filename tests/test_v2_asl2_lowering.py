@@ -104,8 +104,14 @@ def test_boolean_relation_is_not_flattened_into_different_logic(provider,operato
     expression=m.BooleanFilterGroup(operator=operator,children=[predicate])
     p=payload(session,filters=expression)
     lowering,result=session.compile_asl2(sql_planner=sql,**args(session,p))
-    assert (lowering.asl is not None)==supported
-    if not supported:assert result is None and 'ASL2_BOOLEAN_GROUP_UNSUPPORTED' in lowering.blockers
+    assert lowering.asl is not None and result['success']
+    # The old AND-only ASL list is sufficient only for AND. OR/NOT require
+    # the new private policy and cannot silently reuse that old representation.
+    assert (lowering.filter_contract is None)==supported
+    if not supported:
+        assert lowering.asl['filters']==[]
+        assert lowering.filter_contract['expression']['operator']==operator
+        assert result['filter_contract_hash']
 
 
 @pytest.mark.parametrize('value',[m.NumberValue(value='0.123456789012345678901'),m.DateTimeValue(value='2026-01-01T00:00:00+08:00')])

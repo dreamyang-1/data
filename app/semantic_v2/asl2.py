@@ -36,9 +36,10 @@ class ASL2Lowering:
     mode: str = 'SHADOW_ONLY'
     display_labels: tuple[tuple[str, str | None], ...] = ()
     ordering_contract: dict | None = None
+    filter_contract: dict | None = None
 
     def __post_init__(self):
-        for name in ('asl', 'result_contract', 'output_bindings', 'ordering_contract'):
+        for name in ('asl', 'result_contract', 'output_bindings', 'ordering_contract', 'filter_contract'):
             object.__setattr__(self, name, m.freeze_contract(getattr(self, name)))
 
 
@@ -109,20 +110,41 @@ class _Compiler:
             return value.value.isoformat()
         if isinstance(value, (m.StringValue, m.BooleanValue, m.EnumValue)):
             return value.value
+        if isinstance(value, m.NullValue):
+            return None
         raise ASL2Unsupported('ASL2_NULL_VALUE_UNSUPPORTED')
 
-    def filters(self, expression):
+    def filter_tree(self, expression):
         if expression is None:
-            return []
+            return None
         if isinstance(expression, m.BooleanFilterGroup):
-            _require(expression.operator == 'AND', 'ASL2_BOOLEAN_GROUP_UNSUPPORTED')
-            return [p for child in expression.children for p in self.filters(child)]
+            return dict(operator=expression.operator, children=[self.filter_tree(child) for child in expression.children])
         _require(not isinstance(expression, m.AliasedPredicate), 'ASL2_ENTITY_OCCURRENCE_UNSUPPORTED')
         operators = {'EQ':'=', 'NE':'!=', 'GT':'>', 'GTE':'>=', 'LT':'<', 'LTE':'<=',
-                     'IN':'IN', 'NOT_IN':'NOT IN', 'LIKE':'LIKE', 'BETWEEN':'BETWEEN'}
+                     'IN':'IN', 'NOT_IN':'NOT IN', 'LIKE':'LIKE', 'BETWEEN':'BETWEEN',
+                     'NOT_LIKE':'NOT LIKE', 'IS_NULL':'IS NULL', 'IS_NOT_NULL':'IS NOT NULL'}
         _require(expression.operator in operators, 'ASL2_FILTER_OPERATOR_UNSUPPORTED')
-        return [dict(field=self.field(expression.field_ref), operator=operators[expression.operator],
-                     value=self.value(expression.value, expression.field_ref))]
+        return dict(field=self.field(expression.field_ref), operator=operators[expression.operator],
+                    value=self.value(expression.value, expression.field_ref))
+
+    def filters(self, expression):
+        tree = self.filter_tree(expression)
+        def mode_dependent(value):
+            if isinstance(value, list): return any(mode_dependent(v) for v in value)
+            return isinstance(value, str) and ('\\' in value or '\x00' in value)
+        def legacy(node):
+            if node is None: return []
+            if 'children' in node:
+                if node['operator'] != 'AND': return None
+                branches = [legacy(child) for child in node['children']]
+                return None if any(b is None for b in branches) else [leaf for b in branches for leaf in b]
+            return None if node['operator'] in {'NOT LIKE', 'IS NULL', 'IS NOT NULL'} or mode_dependent(node['value']) else [node]
+        leaves = legacy(tree)
+        # Keep ASL's existing shape; a private contract is mandatory when the
+        # public AND-only list cannot represent the expression.
+        self.filter_contract = None if leaves is not None else dict(contract='pinned-filter-tree-v1',
+            semantic_fingerprint=self.plan.semantic_fingerprint, expression=tree)
+        return leaves if leaves is not None else []
 
     def build(self):
         payload = self.plan.payload
@@ -233,7 +255,8 @@ def lower_asl2(session, plan):
         labels = {o.output_field_id:o.display_label for o in contract.required_outputs}
         labels.update({p.output_field_id:p.display_label for p in plan.payload.projection_spec.items if p.display_label is not None})
         return ASL2Lowering('SUPPORTED_PLAN_ONLY',plan.semantic_fingerprint,asl,contract,bindings,
-            implicit_row_cap=cap,display_labels=tuple(labels.items()),ordering_contract=ordering)
+            implicit_row_cap=cap,display_labels=tuple(labels.items()),ordering_contract=ordering,
+            filter_contract=compiler.filter_contract)
     except ASL2Unsupported as exc:
         return ASL2Lowering('UNSUPPORTED',plan.semantic_fingerprint,None,contract,blockers=(str(exc),))
 
