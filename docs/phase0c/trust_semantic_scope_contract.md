@@ -36,6 +36,12 @@ Loading every row of a persisted display slice does not prove coverage of the or
 
 ## External capability and fail-closed behavior
 
+Complete metric-only ADD/REMOVE commands cannot contribute operation fragments
+as entity constraints, including schema-valid model role mistakes. The guard
+uses whole-command recognition and keeps typed filter literals and admitted
+inherited entities. It does not infer catalog roles for unknown targets or
+compound requests. See the [metric edit grounding closure](../phase0c_metric_edit_grounding/closure_report.md).
+
 Explicit dimension-only additions, removals and clears preserve their operation
 through admission, scoped semantic label rebinding and verified-frame merging.
 An empty CLEAR cannot become inheritance; ADD/REMOVE apply to the admitted
