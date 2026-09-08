@@ -449,10 +449,15 @@ class Predicate(StrictModel):
         return self
 
 
+class AliasedPredicate(Predicate):
+    node_type: Literal['ALIASED_PREDICATE'] = 'ALIASED_PREDICATE'
+    entity_alias: Identifier
+
+
 class BooleanFilterGroup(StrictModel):
     node_type: Literal["BOOLEAN_GROUP"] = "BOOLEAN_GROUP"
     operator: Literal["AND", "OR", "NOT"]
-    children: list[Union[Predicate, "BooleanFilterGroup"]] = Field(min_length=1, max_length=100)
+    children: list[Union[AliasedPredicate, Predicate, "BooleanFilterGroup"]] = Field(min_length=1, max_length=100)
 
     @model_validator(mode="after")
     def validate_not_arity(self) -> "BooleanFilterGroup":
@@ -463,7 +468,7 @@ class BooleanFilterGroup(StrictModel):
         return self
 
 
-FilterExpression = Annotated[Union[Predicate, BooleanFilterGroup], Field(discriminator="node_type")]
+FilterExpression = Annotated[Union[Predicate, AliasedPredicate, BooleanFilterGroup], Field(discriminator="node_type")]
 
 
 class TimeRange(StrictModel):
@@ -520,9 +525,11 @@ class TimeSpec(StrictModel):
 
 
 def require_bounded_legacy_time(value):
-    """0.2.1 remains bounded; explicit unbounded time belongs to scoped 0.2.2."""
+    """Keep scoped extensions out of the frozen 0.2.1 final plan boundary."""
     if isinstance(value, TimeSpec) and value.range is None:
         raise ValueError('PLAN_VALIDATION_FAILURE: unbounded time requires scoped 0.2.2')
+    if isinstance(value, (RelationshipPathSpec, AliasedPredicate, AliasedProjectionItem, AliasedOutputFieldRequirement)):
+        raise ValueError('PLAN_VALIDATION_FAILURE: relationship occurrences require scoped 0.2.2')
     if isinstance(value, StrictModel):
         for name in type(value).model_fields:
             require_bounded_legacy_time(getattr(value, name))
@@ -644,9 +651,13 @@ class ProjectionItem(StrictModel):
     position: int = Field(ge=0)
 
 
+class AliasedProjectionItem(ProjectionItem):
+    entity_alias: Identifier
+
+
 class ProjectionSpec(StrictModel):
     mode: Literal['EXPLICIT', 'SEMANTIC_DEFAULT'] = 'EXPLICIT'
-    items: list[ProjectionItem] = Field(default_factory=list, max_length=100)
+    items: list[AliasedProjectionItem | ProjectionItem] = Field(default_factory=list, max_length=100)
     default_display_policy_id: Identifier | None = None
 
     @model_validator(mode='after')
@@ -667,6 +678,47 @@ class RelationshipSpec(StrictModel):
     cardinality: Literal['ONE_TO_ONE', 'ONE_TO_MANY', 'MANY_TO_ONE', 'MANY_TO_MANY']
 
 
+class RelationshipPathNode(StrictModel):
+    entity_alias: Identifier
+    entity_ref: BoundSemanticRef
+
+
+class RelationshipPathHop(StrictModel):
+    relation_ref: BoundSemanticRef
+    source_alias: Identifier
+    target_alias: Identifier
+    direction: Literal['FORWARD', 'REVERSE']
+    cardinality: Literal['ONE_TO_ONE', 'ONE_TO_MANY', 'MANY_TO_ONE', 'MANY_TO_MANY']
+
+
+class RelationshipPathSpec(StrictModel):
+    path_type: Literal['DECLARED_PATH'] = 'DECLARED_PATH'
+    nodes: list[RelationshipPathNode] = Field(min_length=2, max_length=9)
+    hops: list[RelationshipPathHop] = Field(min_length=1, max_length=8)
+
+    @model_validator(mode='after')
+    def connected_occurrences(self):
+        if len(self.nodes) != len(self.hops) + 1 or len({n.entity_alias for n in self.nodes}) != len(self.nodes):
+            raise ValueError('relationship path requires one distinct occurrence per ordered node')
+        for index, hop in enumerate(self.hops):
+            if (hop.source_alias, hop.target_alias) != (self.nodes[index].entity_alias, self.nodes[index + 1].entity_alias):
+                raise ValueError('relationship path hops must connect consecutive occurrences')
+            if hop.relation_ref.semantic_role != 'RELATIONSHIP':
+                raise ValueError('relationship path requires RELATIONSHIP refs')
+        if any(n.entity_ref.catalog_type != 'ENTITY' or n.entity_ref.semantic_role != (
+                'SOURCE_ENTITY' if i == 0 else 'TARGET_ENTITY') for i, n in enumerate(self.nodes)):
+            raise ValueError('relationship path entity role mismatch')
+        return self
+
+    @property
+    def source_ref(self):
+        return self.nodes[0].entity_ref
+
+    @property
+    def target_ref(self):
+        return self.nodes[-1].entity_ref
+
+
 class ScopePolicyDecision(StrictModel):
     policy_id: Identifier
     policy_version: Identifier
@@ -681,6 +733,10 @@ class OutputFieldRequirement(StrictModel):
     expected_data_type: Literal['STRING', 'DECIMAL', 'BOOLEAN', 'DATE', 'DATETIME'] | None = None
     display_label: str | None = None
     required: bool = True
+
+
+class AliasedOutputFieldRequirement(OutputFieldRequirement):
+    entity_alias: Identifier
 
 
 class OrderingRequirement(StrictModel):
@@ -747,7 +803,7 @@ class NumericConstraint(StrictModel):
 
 class ResultContract(StrictModel):
     semantic_fingerprint: Identifier | None = None
-    required_outputs: list[OutputFieldRequirement] = Field(default_factory=list)
+    required_outputs: list[AliasedOutputFieldRequirement | OutputFieldRequirement] = Field(default_factory=list)
     required_metric_refs: list[BoundSemanticRef] = Field(default_factory=list, max_length=100)
     required_dimension_refs: list[BoundSemanticRef] = Field(default_factory=list, max_length=100)
     required_entity_refs: list[BoundSemanticRef] = Field(default_factory=list, max_length=100)
@@ -1045,7 +1101,7 @@ class RelationListPayload(BasePayload):
     source_entity: BoundSemanticRef
     target_entity: BoundSemanticRef | None = None
     relation_target: BoundSemanticRef | None = None
-    relationship_spec: RelationshipSpec | None = None
+    relationship_spec: RelationshipSpec | RelationshipPathSpec | None = None
     limit: LimitSpec | None = None
 
     @model_validator(mode="after")
@@ -1424,7 +1480,7 @@ class TaskSemanticState(StrictModel):
     time_spec: TimeSpec | None = None
     ranking_spec: RankingSpec | None = None
     comparison_spec: ComparisonSpec | None = None
-    relationship_spec: RelationshipSpec | None = None
+    relationship_spec: RelationshipSpec | RelationshipPathSpec | None = None
     source_dataset_ref: SourceDatasetRef | None = None
     delivery_spec: DeliverySpec = Field(default_factory=DeliverySpec)
     analysis_goals: list[AnalysisGoal] = Field(default_factory=list)
