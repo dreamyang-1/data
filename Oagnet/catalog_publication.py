@@ -111,6 +111,7 @@ class PinnedCatalog:
         self._snapshot, self._manifest, self._marker = deepcopy((snapshot, manifest, marker))
         self._finished = False
         self._query_embedding_contract = query_embedding_contract
+        self._value_observations = []
 
     @property
     def snapshot(self):
@@ -167,9 +168,40 @@ class PinnedCatalog:
         return digest({"request": request_fingerprint, "scope": self._manifest["scope"],
             "target": self._manifest["target_identity_hash"], "release": self._marker})
 
+    def entity_value_source(self, attribute_record_id, *, data_source_id=None):
+        """Prove a current catalog attribute's source without reading values."""
+        from catalog_value_sources import bound_field
+        self._check_active()
+        rows = [r for r in self.get_by_where({"type": "attribute"}) if r.id == attribute_record_id]
+        if len(rows) != 1:
+            raise CatalogEvidenceError("CATALOG_VALUE_ATTRIBUTE_NOT_PINNED")
+        return bound_field(self._snapshot, rows[0], data_source_id=data_source_id)
+
+    def lookup_entity_values(self, attribute_record_id, value, *, data_source_id=None, limit=8):
+        """Internal opt-in source read; values are not published catalog members.
+
+        Call finish before using an observation. A restored observation must be
+        looked up again on its current request's pin; its digest is not authority.
+        Approximate legacy vector hits never bypass this exact source boundary.
+        """
+        from catalog_value_sources import observe
+        field = self.entity_value_source(attribute_record_id, data_source_id=data_source_id)
+        if len(self._value_observations) >= 32:
+            raise CatalogEvidenceError("CATALOG_VALUE_QUERY_BUDGET_EXCEEDED")
+        observation = observe(self._manifest["scope"], field, value, limit)
+        self._check_active()
+        self._value_observations.append((deepcopy(field), value, limit, observation["observation_hash"]))
+        return {**deepcopy(observation), "catalog_pin": self.identity,
+                "attribute_record_id": attribute_record_id}
+
     def finish(self):
         self._check_active()
         scope = self._manifest["scope"]
+        if self._value_observations:
+            from catalog_value_sources import observe
+            for field, value, limit, expected in self._value_observations:
+                if observe(scope, field, value, limit)["observation_hash"] != expected:
+                    raise CatalogEvidenceError("CATALOG_ENTITY_VALUES_CHANGED_DURING_READ")
         current = self._publication.capture(scope["semantic_model_id"], scope["business_domain_ids"])
         if current["scope"] != scope or current["catalog_version"] != self._manifest["catalog_version"]:
             raise CatalogEvidenceError("CATALOG_AUTHORITY_DRIFT")

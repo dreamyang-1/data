@@ -184,6 +184,7 @@ def test_capture_covers_model_wide_domains_or_the_exact_explicit_domain(monkeypa
     def query(sql, args=None):
         assert mysql._catalog_snapshot_connection.get() is conn
         if "information_schema" in sql: return [{"table_name": name, "engine": "InnoDB"} for name in CATALOG_TABLES]
+        if "FROM semantic_model m" in sql: return []  # This fixture declares no entities.
         return [{"server_uuid": "fixture-db", "database_name": "fixture"}]
     monkeypatch.setattr(mysql, "_query", query)
     monkeypatch.setattr(mysql, "get_business_domains", lambda model: [{"id": 205}, {"id": 206}])

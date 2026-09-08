@@ -159,6 +159,9 @@ def build_catalog_records(snapshot, embed_fn):
         "records_generated": len(selected), "explicit_exclusions": dict(exclusions),
         "capability_coverage_verified": False,
         "excluded_dependencies": ["external_entity_values", "data_source_routing", "SQL_independent_catalog_reads"]}
+    if "entity_value_sources" in snapshot["physical_catalog"]:
+        coverage["captured_dependencies"] = ["entity_value_source_mappings", "data_source_route_configuration"]
+        coverage["excluded_dependencies"] = ["external_entity_values", "data_source_runtime_identity", "SQL_independent_catalog_reads"]
     return sorted(selected, key=lambda r: r.id), coverage
 
 
