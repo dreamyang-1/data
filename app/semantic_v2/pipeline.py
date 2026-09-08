@@ -15,7 +15,7 @@ from .models import (
 from .registries import PayloadContractRegistry
 from .slot_reducer import TaskPatch
 from .authorized_contract import (AuthorizedScopeContext, AuthorizedVersionMetadata,
-    CatalogBindingEvidence, DatasetBindingEvidence, TaskBindingEvidence, validate_authorized_refs)
+    CatalogBindingEvidence, SourceValueBindingEvidence, DatasetBindingEvidence, TaskBindingEvidence, validate_authorized_refs)
 
 
 class OperationMarker(StrictModel):
@@ -216,7 +216,7 @@ class LogicalPlan(StrictModel):
     current_turn_ref: Identifier
     current_turn_digest: str = Field(pattern=r'^[0-9a-f]{64}$')
     sanitized_turn_text: str | None = None
-    permission_proofs: tuple[BoundRefAuthorization | CatalogBindingEvidence | DatasetBindingEvidence | TaskBindingEvidence, ...] = ()
+    permission_proofs: tuple[BoundRefAuthorization | CatalogBindingEvidence | SourceValueBindingEvidence | DatasetBindingEvidence | TaskBindingEvidence, ...] = ()
 
     @property
     def query_shape(self):
@@ -232,7 +232,7 @@ class LogicalPlan(StrictModel):
         from .models import freeze_contract
         authorized = isinstance(self.permission_requirement, AuthorizedScopeContext)
         expected_version = '0.2.2' if authorized else '0.2.1'
-        expected_proof = (CatalogBindingEvidence, DatasetBindingEvidence, TaskBindingEvidence) if authorized else BoundRefAuthorization
+        expected_proof = (CatalogBindingEvidence, SourceValueBindingEvidence, DatasetBindingEvidence, TaskBindingEvidence) if authorized else BoundRefAuthorization
         if (self.schema_version != expected_version or self.version_metadata.schema_version != expected_version
                 or self.version_metadata.plan_schema_version != expected_version
                 or any(not isinstance(p, expected_proof) for p in self.permission_proofs)):
@@ -260,7 +260,7 @@ class AuthorizedLogicalPlan(LogicalPlan):
     schema_version: Literal['0.2.2'] = '0.2.2'
     permission_requirement: AuthorizedScopeContext
     version_metadata: AuthorizedVersionMetadata
-    permission_proofs: tuple[CatalogBindingEvidence | DatasetBindingEvidence | TaskBindingEvidence, ...] = ()
+    permission_proofs: tuple[CatalogBindingEvidence | SourceValueBindingEvidence | DatasetBindingEvidence | TaskBindingEvidence, ...] = ()
 
 
 class ExecutablePlan(StrictModel):

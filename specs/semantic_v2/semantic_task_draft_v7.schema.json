@@ -1,0 +1,577 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "AmbiguityDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "mention_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Mention Id",
+          "type": "string"
+        },
+        "slot_path": {
+          "enum": [
+            "metrics",
+            "dimensions",
+            "subject"
+          ],
+          "title": "Slot Path",
+          "type": "string"
+        },
+        "operation": {
+          "enum": [
+            "SET",
+            "ADD",
+            "REPLACE"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "candidate_handles": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 2,
+          "title": "Candidate Handles",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mention_id",
+        "slot_path",
+        "operation",
+        "candidate_handles"
+      ],
+      "title": "AmbiguityDraft",
+      "type": "object"
+    },
+    "ComparisonEditDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "enum": [
+            "SET",
+            "REPLACE",
+            "CLEAR"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "period_rule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ComparisonPeriodRule"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "calculation": {
+          "anyOf": [
+            {
+              "enum": [
+                "ABS_DIFF",
+                "GROWTH_RATE"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calculation"
+        },
+        "evidence_mention_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Evidence Mention Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "operation",
+        "evidence_mention_ids"
+      ],
+      "title": "ComparisonEditDraft",
+      "type": "object"
+    },
+    "ComparisonPeriodRule": {
+      "additionalProperties": false,
+      "properties": {
+        "rule_type": {
+          "enum": [
+            "PREVIOUS_YEAR",
+            "PREVIOUS_PERIOD",
+            "EXPLICIT"
+          ],
+          "title": "Rule Type",
+          "type": "string"
+        },
+        "period_unit": {
+          "anyOf": [
+            {
+              "enum": [
+                "QUERY_GRAIN",
+                "CURRENT_WINDOW",
+                "DAY",
+                "WEEK",
+                "MONTH",
+                "QUARTER",
+                "YEAR"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Period Unit"
+        },
+        "baseline_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "rule_type"
+      ],
+      "title": "ComparisonPeriodRule",
+      "type": "object"
+    },
+    "FilterEditDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "enum": [
+            "ADD",
+            "REPLACE",
+            "REMOVE",
+            "CLEAR"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "target_handle": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Handle"
+        },
+        "evidence_mention_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Evidence Mention Ids",
+          "type": "array"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null
+        }
+      },
+      "required": [
+        "operation",
+        "evidence_mention_ids"
+      ],
+      "title": "FilterEditDraft",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "RelationshipEditDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "enum": [
+            "SET",
+            "REPLACE",
+            "CLEAR"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "binding_handle": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Binding Handle"
+        },
+        "direction": {
+          "default": "FORWARD",
+          "enum": [
+            "FORWARD",
+            "REVERSE"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "evidence_mention_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Evidence Mention Ids",
+          "type": "array"
+        },
+        "hops": {
+          "items": {
+            "$ref": "#/$defs/RelationshipHopDraft"
+          },
+          "maxItems": 8,
+          "title": "Hops",
+          "type": "array"
+        }
+      },
+      "required": [
+        "operation",
+        "evidence_mention_ids"
+      ],
+      "title": "RelationshipEditDraft",
+      "type": "object"
+    },
+    "RelationshipHopDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "binding_handle": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Binding Handle",
+          "type": "string"
+        },
+        "direction": {
+          "default": "FORWARD",
+          "enum": [
+            "FORWARD",
+            "REVERSE"
+          ],
+          "title": "Direction",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binding_handle"
+      ],
+      "title": "RelationshipHopDraft",
+      "type": "object"
+    },
+    "SlotEditDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "slot_path": {
+          "enum": [
+            "subject",
+            "metrics",
+            "dimensions",
+            "projection_spec",
+            "filter_expression",
+            "time_spec",
+            "ranking_spec",
+            "delivery_spec"
+          ],
+          "title": "Slot Path",
+          "type": "string"
+        },
+        "operation": {
+          "enum": [
+            "SET",
+            "ADD",
+            "REPLACE",
+            "REMOVE",
+            "CLEAR"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "evidence_mention_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Evidence Mention Ids",
+          "type": "array"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null
+        }
+      },
+      "required": [
+        "slot_path",
+        "operation",
+        "evidence_mention_ids"
+      ],
+      "title": "SlotEditDraft",
+      "type": "object"
+    },
+    "SourceValueRequestDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "mention_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Mention Id",
+          "type": "string"
+        },
+        "field_binding_handles": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Field Binding Handles",
+          "type": "array"
+        },
+        "target_filter_handle": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Filter Handle"
+        }
+      },
+      "required": [
+        "request_id",
+        "mention_id"
+      ],
+      "title": "SourceValueRequestDraft",
+      "type": "object"
+    },
+    "TemporalEditDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "enum": [
+            "RANGE",
+            "GRAIN",
+            "ANCHOR"
+          ],
+          "title": "Component",
+          "type": "string"
+        },
+        "operation": {
+          "enum": [
+            "SET",
+            "REPLACE",
+            "CLEAR"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "evidence_mention_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Evidence Mention Ids",
+          "type": "array"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null
+        }
+      },
+      "required": [
+        "component",
+        "operation",
+        "evidence_mention_ids"
+      ],
+      "title": "TemporalEditDraft",
+      "type": "object"
+    },
+    "TimeRange": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "format": "date-time",
+          "title": "Start",
+          "type": "string"
+        },
+        "end_exclusive": {
+          "format": "date-time",
+          "title": "End Exclusive",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end_exclusive"
+      ],
+      "title": "TimeRange",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "edits": {
+      "items": {
+        "$ref": "#/$defs/SlotEditDraft"
+      },
+      "maxItems": 50,
+      "title": "Edits",
+      "type": "array"
+    },
+    "filter_edits": {
+      "items": {
+        "$ref": "#/$defs/FilterEditDraft"
+      },
+      "maxItems": 50,
+      "title": "Filter Edits",
+      "type": "array"
+    },
+    "temporal_edits": {
+      "items": {
+        "$ref": "#/$defs/TemporalEditDraft"
+      },
+      "maxItems": 3,
+      "title": "Temporal Edits",
+      "type": "array"
+    },
+    "relationship_edits": {
+      "items": {
+        "$ref": "#/$defs/RelationshipEditDraft"
+      },
+      "maxItems": 1,
+      "title": "Relationship Edits",
+      "type": "array"
+    },
+    "comparison_edits": {
+      "items": {
+        "$ref": "#/$defs/ComparisonEditDraft"
+      },
+      "maxItems": 1,
+      "title": "Comparison Edits",
+      "type": "array"
+    },
+    "source_value_requests": {
+      "items": {
+        "$ref": "#/$defs/SourceValueRequestDraft"
+      },
+      "maxItems": 20,
+      "title": "Source Value Requests",
+      "type": "array"
+    },
+    "payload_type": {
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Payload Type",
+      "type": "string"
+    },
+    "historical_task_handle": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Historical Task Handle"
+    },
+    "dataset_handle": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dataset Handle"
+    },
+    "dataset_operation": {
+      "$ref": "#/$defs/JsonValue",
+      "default": null
+    },
+    "unresolved_mention_ids": {
+      "items": {
+        "maxLength": 256,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 100,
+      "title": "Unresolved Mention Ids",
+      "type": "array"
+    },
+    "ambiguities": {
+      "items": {
+        "$ref": "#/$defs/AmbiguityDraft"
+      },
+      "maxItems": 10,
+      "title": "Ambiguities",
+      "type": "array"
+    }
+  },
+  "required": [
+    "payload_type"
+  ],
+  "title": "SemanticTaskDraft",
+  "type": "object"
+}

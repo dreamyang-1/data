@@ -14,6 +14,7 @@ from app.domain.models import ChatRequest, TrustedIdentity
 from app.domain.state_identity import conversation_namespace
 from .authorized_contract import (AuthorizedScopeContext, AuthorizedVersionMetadata,
     CatalogBindingEvidence, CatalogPinIdentity, DatasetBindingEvidence, ScopedArtifact, TaskBindingEvidence,
+    SourceValueBindingEvidence, scoped_artifact_material,
     contract_digest, referenced_datasets, referenced_tasks, validate_authorized_refs)
 from .enums import CatalogType, SemanticRole
 from .models import BoundSemanticRef, SnapshotContext
@@ -25,6 +26,9 @@ class PinnedCatalogProtocol(Protocol):
     @property
     def identity(self) -> dict: ...
     def get_by_where(self, where: dict) -> list: ...
+    def entity_value_lookup_fields(self) -> list[str]: ...
+    def entity_value_source(self, attribute_record_id: str, **kwargs) -> dict: ...
+    def lookup_entity_values(self, attribute_record_id: str, value: str, **kwargs) -> dict: ...
     def finish(self) -> dict: ...
 
 
@@ -74,6 +78,9 @@ class ScopedPlanSession:
             catalog_publish_id=receipt['catalog_publish_id'], vector_index_version=receipt['vector_index_version'])
         self._rows = {}
         self._bindings = {}
+        self._value_candidates = {}
+        self._source_observations = {}
+        self._archived_source_bindings = {}
         self._datasets = {}
         self._tasks = {}
         self._finished = False
@@ -113,6 +120,9 @@ class ScopedPlanSession:
 
     def bind(self, candidate_id: str, role: SemanticRole, source_mention_ids=()):
         self._check()
+        if candidate_id in self._value_candidates:
+            from .source_value_binding import bind_value
+            return bind_value(self, candidate_id, role, source_mention_ids)
         row = self._rows.get(candidate_id)
         if row is None:
             raise ValueError('SEMANTIC_RESOLUTION_FAILURE: unknown pinned candidate')
@@ -136,16 +146,31 @@ class ScopedPlanSession:
         self._bindings[contract_digest(ref.model_dump(mode='json'))] = proof
         return ref
 
-    def restore(self, artifact: ScopedArtifact, *, kind):
+    def lookup_source_values(self, attribute_id, value, *, implicit=False):
+        from .source_value_binding import lookup_values
+        return lookup_values(self, attribute_id, value, implicit=implicit)
+
+    def restore(self, artifact: ScopedArtifact, *, kind, defer_source_values=False):
         self._check()
         artifact = ScopedArtifact.model_validate(artifact.model_dump(mode='json'))
         if artifact.kind != kind or artifact.context != self.context:
             raise ValueError('SCOPED_STATE_REUSE_REJECTED')
+        from .source_value_binding import restore_values
+        if defer_source_values and kind not in {'CONVERSATION', 'TASK_FRAME', 'LAST_REQUEST'}:
+            raise ValueError('V2_SOURCE_VALUE_DEFER_NOT_ALLOWED')
+        restore_values(self, artifact.source_value_bindings, defer=defer_source_values)
         if kind == 'CONVERSATION':
             value=artifact.payload
             if not isinstance(value,dict) or any(value.get(k)!=v for k,v in self._state_identity().items()):
                 raise ValueError('SCOPED_STATE_REUSE_REJECTED')
         for ref in self._decoded_refs(artifact.payload):
+            if ref.resolution_source == 'VERIFIED_SOURCE_EXACT_LOOKUP':
+                proof = self._bindings.get(contract_digest(ref.model_dump(mode='json')))
+                if proof is None and defer_source_values:
+                    proof = self._archived_source_bindings.get(contract_digest(ref.model_dump(mode='json')))
+                if not isinstance(proof, SourceValueBindingEvidence):
+                    raise ValueError('V2_SOURCE_VALUE_RESTORE_EVIDENCE_REQUIRED')
+                continue
             candidates = self.candidates(ref.catalog_type)
             candidate = next((c for c in candidates if self._rows[c['candidate_id']].metadata['catalog_logical_id']==ref.canonical_id),None)
             if candidate is None or self.bind(candidate['candidate_id'],ref.semantic_role,ref.source_mention_ids)!=ref:
@@ -181,8 +206,12 @@ class ScopedPlanSession:
         value = payload.model_dump(mode='json') if isinstance(payload, BaseModel) else deepcopy(payload)
         if kind=='CONVERSATION' and (not isinstance(value,dict) or any(value.get(k)!=v for k,v in self._state_identity().items())):
             raise ValueError('SCOPED_STATE_REUSE_REJECTED')
-        self._require_refs(self._decoded_refs(value))
-        return ScopedArtifact(kind=kind, context=self.context, payload=value, payload_digest=contract_digest(value))
+        refs = self._decoded_refs(value)
+        self._require_refs(refs, allow_archive=kind in {'CONVERSATION','TASK_FRAME'})
+        from .source_value_binding import source_proofs_for
+        source_values = source_proofs_for(self, refs)
+        return ScopedArtifact(kind=kind, context=self.context, payload=value, source_value_bindings=source_values,
+            payload_digest=contract_digest(scoped_artifact_material(value, source_values)))
 
     @staticmethod
     def _decoded_refs(value):
@@ -194,13 +223,25 @@ class ScopedPlanSession:
             return tuple(r for item in value for r in ScopedPlanSession._decoded_refs(item))
         return ()
 
-    def _require_refs(self, refs):
+    def _require_refs(self, refs, *, allow_archive=False):
         proofs = []
         for ref in refs:
             proof = self._bindings.get(contract_digest(ref.model_dump(mode='json')))
+            key = contract_digest(ref.model_dump(mode='json'))
+            if proof is None and key in self._archived_source_bindings:
+                proof = self._archived_source_bindings[key]
+                if not allow_archive:
+                    from .source_value_binding import restore_values
+                    restore_values(self, (proof,))
+                    proof = self._bindings.get(key)
             if proof is None:
                 raise ValueError('PINNED_CATALOG_BINDING_REQUIRED')
             proofs.append(proof)
+            if isinstance(proof, SourceValueBindingEvidence):
+                field = self._bindings.get(contract_digest(proof.field_ref.model_dump(mode='json')))
+                if not isinstance(field, CatalogBindingEvidence):
+                    raise ValueError('SOURCE_VALUE_FIELD_CATALOG_EVIDENCE_REQUIRED')
+                proofs.append(field)
         return proofs
 
     def cache_key(self, semantic_fingerprint):
@@ -218,7 +259,7 @@ class ScopedPlanSession:
                 application_id=self._request.application_id,tenant_id=self._identity.tenant_id,
                 user_id=self._identity.user_id,state_version=0)
         else:
-            current = ConversationState.model_validate(self.restore(state, kind='CONVERSATION'))
+            current = ConversationState.model_validate(self.restore(state, kind='CONVERSATION', defer_source_values=True))
             if (current.conversation_id != self._request.conversation_id or current.application_id != self._request.application_id
                     or current.tenant_id != self._identity.tenant_id or current.user_id != self._identity.user_id):
                 raise ValueError('SCOPED_STATE_REUSE_REJECTED')
@@ -255,7 +296,10 @@ class ScopedPlanSession:
             blocker = next(b for b in pending.blockers if b.blocker_id == pending.active_blocker_id)
             actual = getattr(reduced.semantics, blocker.plan_path)
             values = actual if isinstance(actual,(list,tuple)) else [actual]
-            expected = option.canonical_ref or option.typed_value
+            from .models import clarification_option_value
+            if option.filter_choice is not None and blocker.plan_path != 'filter_expression':
+                raise ValueError('V2_PENDING_FILTER_CHOICE_SLOT_MISMATCH')
+            expected = clarification_option_value(option)
             if not any(semantic_fingerprint(v)==semantic_fingerprint(expected) for v in values):
                 raise ValueError('V2_PENDING_OPTION_NOT_APPLIED')
             resolution = TurnResolutionResult(dialogue_act='ANSWER_CLARIFICATION',

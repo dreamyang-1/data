@@ -432,7 +432,10 @@ def apply_state_mutation(state: ConversationState, mutation: StateMutation) -> C
                 from .registries import SlotDefinitionRegistry
                 SlotDefinitionRegistry.get(slot)
                 actual = getattr(reduced.semantics, slot)
-                expected = chosen['canonical_ref'] or chosen['typed_value']
+                from .models import clarification_option_value
+                if chosen.get('filter_choice') is not None and slot != 'filter_expression':
+                    raise StateTransitionError('filter choice cannot answer another slot')
+                expected = clarification_option_value(chosen)
                 values = actual if isinstance(actual, (list, tuple)) else [actual]
                 if not any(semantic_fingerprint({'value': v}) == semantic_fingerprint({'value': expected}) for v in values):
                     raise StateTransitionError('task patch does not apply the selected option value')
@@ -446,7 +449,7 @@ def apply_state_mutation(state: ConversationState, mutation: StateMutation) -> C
                     SlotDefinitionRegistry.get(slot)
                     actual = getattr(reduced.semantics, slot)
                     values = actual if isinstance(actual, (list, tuple)) else [actual]
-                    choices = [o['canonical_ref'] or o['typed_value'] for o in blocker['options']]
+                    choices = [clarification_option_value(o) for o in blocker['options']]
                     if not choices or not any(semantic_fingerprint({'value': v}) == semantic_fingerprint({'value': expected}) for v in values for expected in choices):
                         remaining_ids.add(blocker['blocker_id'])
                 remaining_ids |= {b.blocker_id for b in patch.remaining_blockers if b.blocker_type.value == 'USER_AMBIGUITY' and b.user_action_required}

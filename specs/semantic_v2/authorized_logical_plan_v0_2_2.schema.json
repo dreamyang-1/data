@@ -3528,6 +3528,77 @@
       "title": "SnapshotContext",
       "type": "object"
     },
+    "SourceValueBindingEvidence": {
+      "additionalProperties": false,
+      "description": "A transient current-source observation, not static catalog membership.",
+      "properties": {
+        "source": {
+          "const": "VERIFIED_SOURCE_EXACT_LOOKUP",
+          "default": "VERIFIED_SOURCE_EXACT_LOOKUP",
+          "title": "Source",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "field_ref": {
+          "$ref": "#/$defs/BoundSemanticRef"
+        },
+        "attribute_record_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Attribute Record Id",
+          "type": "string"
+        },
+        "canonical_value": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Canonical Value",
+          "type": "string"
+        },
+        "mapping_hash": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Mapping Hash",
+          "type": "string"
+        },
+        "data_source_id": {
+          "exclusiveMinimum": 0,
+          "title": "Data Source Id",
+          "type": "integer"
+        },
+        "observation_hash": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Observation Hash",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "context_fingerprint": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Context Fingerprint",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref",
+        "field_ref",
+        "attribute_record_id",
+        "canonical_value",
+        "mapping_hash",
+        "data_source_id",
+        "observation_hash",
+        "observed_at",
+        "context_fingerprint"
+      ],
+      "title": "SourceValueBindingEvidence",
+      "type": "object"
+    },
     "StringValue": {
       "additionalProperties": false,
       "properties": {
@@ -4209,6 +4280,9 @@
         "anyOf": [
           {
             "$ref": "#/$defs/CatalogBindingEvidence"
+          },
+          {
+            "$ref": "#/$defs/SourceValueBindingEvidence"
           },
           {
             "$ref": "#/$defs/DatasetBindingEvidence"
