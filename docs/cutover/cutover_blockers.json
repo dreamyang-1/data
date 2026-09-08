@@ -70,13 +70,14 @@
       "classification": "CUTOVER_BLOCKER_P0",
       "blocking_level": "P0",
       "status": "PARTIAL_AUTONOMOUS_SOURCE_PATH",
-      "summary": "Raw scoped V2 now supports declared ordered paths (1-8 hops), occurrence-specific attribute filters/projections and results, in addition to governed defaults, Pending and local slot edits. Dependent comparisons, external entity values, remaining analytical/decision types and real model quality remain open.",
+      "summary": "Raw scoped V2 now has explicit temporal comparison rules, atomic period/metric recomputation, Pending completion and period-specific result requirements. Unsupported calendar policies, external entity values, remaining analytical/decision types and real recognition quality remain open.",
       "evidence": [
         "app/semantic_v2/recognition.py",
-        "app/semantic_v2/catalog_paths.py",
-        "docs/cutover/v2_relation_paths/closure_report.md"
+        "app/semantic_v2/temporal_comparisons.py",
+        "docs/cutover/v2_temporal_comparisons/closure_report.md",
+        "docs/cutover/v2_temporal_comparisons/temporal_policy_gaps.json"
       ],
-      "next_action": "Complete dependent temporal comparisons, external entity-value and remaining payload/decision coverage. Validate path-to-ASL/SQL alias bindings with downstream contract work. Real recognition evaluation follows catalog gates."
+      "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
     },
     {
       "blocker_id": "V-02",
@@ -99,9 +100,10 @@
       "summary": "The V2 legacy adapter explicitly reports analytical payloads/dataset compensation unsupported or lossy; result proof is not connected to real execution.",
       "evidence": [
         "app/semantic_v2/legacy_adapter.py::assess_legacy_adapter",
-        "app/semantic_v2/result_contract.py"
+        "app/semantic_v2/result_contract.py",
+        "docs/cutover/v2_temporal_comparisons/closure_report.md"
       ],
-      "next_action": "After plan evidence is established, implement capability-checked execution/result mapping for the actual downstream contract; retain fail-closed unsupported paths."
+      "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
     },
     {
       "blocker_id": "S-01",
@@ -215,5 +217,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "b5037e7d15ecfd8e733551c853cbf9441be7c4bd"
+  "latest_source_delivery_baseline": "2e5b5a6fb82d896eacc859af99a1b5eece067f11"
 }

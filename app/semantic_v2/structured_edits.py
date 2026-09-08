@@ -80,7 +80,7 @@ def structured_labels(task):
     state = next(v.semantics for v in task.versions if v.version == task.active_version)
     return dict(filter_targets=[dict(target_handle=h, path=list(path), expression=_labels(node))
         for h, (path, node) in filter_targets(task).items()], time=_labels(state.time_spec),
-        relationship_path=_labels(state.relationship_spec))
+        relationship_path=_labels(state.relationship_spec), comparison=_labels(state.comparison_spec))
 
 
 def _replace_nodes(node, changes, path=()):
@@ -157,7 +157,7 @@ def filter_edits(prior, task, edits, hydrate):
     return result
 
 
-def temporal_edits(prior, edits, hydrate, now):
+def temporal_edits(prior, edits, hydrate, now, *, comparison_edit=False):
     if prior.time_spec is None:
         raise RecognitionFailure('V2_TEMPORAL_BASE_REQUIRED')
     data = prior.time_spec.model_dump()
@@ -166,7 +166,8 @@ def temporal_edits(prior, edits, hydrate, now):
         if edit.component in components:
             raise RecognitionFailure('V2_TEMPORAL_OVERLAPPING_EDITS')
         components.add(edit.component)
-        if edit.component in {'RANGE', 'ANCHOR'} and (data['comparison'] is not None or prior.comparison_spec is not None):
+        if edit.component in {'RANGE', 'ANCHOR'} and (data['comparison'] is not None or (
+                prior.comparison_spec is not None and not isinstance(prior.comparison_spec, m.TemporalComparisonSpec) and not comparison_edit)):
             raise RecognitionFailure('V2_TEMPORAL_COMPARISON_DEPENDENCY')
         if edit.operation == 'CLEAR':
             if edit.value is not None or edit.component == 'ANCHOR':
@@ -183,11 +184,11 @@ def temporal_edits(prior, edits, hydrate, now):
     return m.TimeSpec.model_validate(data)
 
 
-def lower_edits(prior, task, filter_drafts, time_drafts, hydrate, base, now):
+def lower_edits(prior, task, filter_drafts, time_drafts, hydrate, base, now, *, comparison_edit=False):
     operations, traces = [], []
     for slot, edits, build in [('filter_expression', filter_drafts,
             lambda: filter_edits(prior, task, filter_drafts, hydrate)),
-            ('time_spec', time_drafts, lambda: temporal_edits(prior, time_drafts, hydrate, now))]:
+            ('time_spec', time_drafts, lambda: temporal_edits(prior, time_drafts, hydrate, now, comparison_edit=comparison_edit))]:
         if not edits:
             continue
         value = build()

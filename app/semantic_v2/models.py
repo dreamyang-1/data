@@ -530,6 +530,8 @@ def require_bounded_legacy_time(value):
         raise ValueError('PLAN_VALIDATION_FAILURE: unbounded time requires scoped 0.2.2')
     if isinstance(value, (RelationshipPathSpec, AliasedPredicate, AliasedProjectionItem, AliasedOutputFieldRequirement)):
         raise ValueError('PLAN_VALIDATION_FAILURE: relationship occurrences require scoped 0.2.2')
+    if isinstance(value, (TemporalComparisonSpec, TemporalOutputFieldRequirement)):
+        raise ValueError('PLAN_VALIDATION_FAILURE: temporal comparison rules require scoped 0.2.2')
     if isinstance(value, StrictModel):
         for name in type(value).model_fields:
             require_bounded_legacy_time(getattr(value, name))
@@ -621,6 +623,27 @@ class ComparisonSpec(StrictModel):
             if value.get('calculation') == 'RATE':
                 value['calculation'] = Calculation.GROWTH_RATE
         return value
+
+
+class ComparisonPeriodRule(StrictModel):
+    rule_type: Literal['PREVIOUS_YEAR', 'PREVIOUS_PERIOD', 'EXPLICIT']
+    period_unit: Literal['QUERY_GRAIN', 'CURRENT_WINDOW', 'DAY', 'WEEK', 'MONTH', 'QUARTER', 'YEAR'] | None = None
+    baseline_range: TimeRange | None = None
+
+    @model_validator(mode='after')
+    def one_period_source(self):
+        if (self.period_unit is not None) != (self.rule_type == 'PREVIOUS_PERIOD'):
+            raise ValueError('previous period requires its own period unit')
+        if (self.baseline_range is not None) != (self.rule_type == 'EXPLICIT'):
+            raise ValueError('explicit comparison requires exactly its stated baseline range')
+        return self
+
+
+class TemporalComparisonSpec(ComparisonSpec):
+    period_rule: ComparisonPeriodRule
+    policy_version: Literal['exact-calendar-comparison-v1'] = 'exact-calendar-comparison-v1'
+    # An unresolved metric may be held in Pending. Final payload/compiler require measures.
+    output_metrics: list[BoundSemanticRef] = Field(default_factory=list, max_length=100)
 
 
 class ChartPreferences(StrictModel):
@@ -739,6 +762,11 @@ class AliasedOutputFieldRequirement(OutputFieldRequirement):
     entity_alias: Identifier
 
 
+class TemporalOutputFieldRequirement(OutputFieldRequirement):
+    comparison_role: Literal['CURRENT', 'BASELINE', 'DERIVED']
+    calculation: Literal['ABS_DIFF', 'GROWTH_RATE']
+
+
 class OrderingRequirement(StrictModel):
     output_field_id: Identifier
     ref: BoundSemanticRef | None = None
@@ -803,7 +831,7 @@ class NumericConstraint(StrictModel):
 
 class ResultContract(StrictModel):
     semantic_fingerprint: Identifier | None = None
-    required_outputs: list[AliasedOutputFieldRequirement | OutputFieldRequirement] = Field(default_factory=list)
+    required_outputs: list[AliasedOutputFieldRequirement | TemporalOutputFieldRequirement | OutputFieldRequirement] = Field(default_factory=list)
     required_metric_refs: list[BoundSemanticRef] = Field(default_factory=list, max_length=100)
     required_dimension_refs: list[BoundSemanticRef] = Field(default_factory=list, max_length=100)
     required_entity_refs: list[BoundSemanticRef] = Field(default_factory=list, max_length=100)
@@ -1093,7 +1121,7 @@ class RankingPayload(GroupedAggregatePayload):
 
 class ComparisonPayload(MetricQueryPayloadBase):
     payload_type: Literal["COMPARISON"] = "COMPARISON"
-    comparison: ComparisonSpec
+    comparison: TemporalComparisonSpec | ComparisonSpec
 
 
 class RelationListPayload(BasePayload):
@@ -1479,7 +1507,7 @@ class TaskSemanticState(StrictModel):
     filter_expression: FilterExpression | None = None
     time_spec: TimeSpec | None = None
     ranking_spec: RankingSpec | None = None
-    comparison_spec: ComparisonSpec | None = None
+    comparison_spec: TemporalComparisonSpec | ComparisonSpec | None = None
     relationship_spec: RelationshipSpec | RelationshipPathSpec | None = None
     source_dataset_ref: SourceDatasetRef | None = None
     delivery_spec: DeliverySpec = Field(default_factory=DeliverySpec)

@@ -238,6 +238,9 @@ class LogicalPlan(StrictModel):
                 or any(not isinstance(p, expected_proof) for p in self.permission_proofs)):
             raise ValueError('PLAN_VALIDATION_FAILURE: incompatible scope contract version')
         PayloadContractRegistry.validate(self.payload, self.service_route, self.analysis_goals)
+        if authorized:
+            from .temporal_comparisons import validate_temporal_payload
+            validate_temporal_payload(self.payload)
         validate_bound_ref_scope_and_permission(self.payload, self.snapshot_requirement,
                                               self.permission_requirement, self.permission_proofs)
         for name in type(self).model_fields:
