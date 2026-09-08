@@ -3504,15 +3504,27 @@ class SQLTranslatorProd:
         sql: str,
         ds_config: Dict,
         source_watermark_field: Optional[str] = None,
+        *,
+        parameters: Optional[Dict] = None,
+        parameter_fingerprint: Optional[str] = None,
     ) -> Dict:
         """
         在指定数据源上执行 SQL
 
         :param sql: SQL 语句
         :param ds_config: 数据源配置（host/port/user/password/database）
+        :param parameters: 内部参数化计划的标量值；公共调用保持 None
+        :param parameter_fingerprint: SQL 模板与参数共同指纹，参数化执行必传
         :return: 执行结果字典
         """
         try:
+            if parameters is not None or parameter_fingerprint is not None:
+                from bound_sql import validate_bound_sql, statement_fingerprint
+                if isinstance(parameters, dict):
+                    parameters = dict(parameters)
+                validate_bound_sql(sql, parameters)
+                if parameter_fingerprint != statement_fingerprint(sql, parameters):
+                    raise ValueError('SQL_PARAMETER_CONTRACT_MISMATCH')
             sql = SQLTranslatorProd.validate_read_only_sql(sql)
         except ValueError:
             return {
@@ -3555,7 +3567,11 @@ class SQLTranslatorProd:
                     snapshot_verified = isinstance(snapshot_time, datetime)
                 except Exception:
                     connection.rollback()
-                cursor.execute(sql)
+                if parameters is None:
+                    cursor.execute(sql)
+                else:
+                    # PyMySQL binds against this connection's actual SQL mode.
+                    cursor.execute(sql, parameters)
                 result_data = cursor.fetchall()
                 columns = [desc[0] for desc in cursor.description] if cursor.description else []
                 source_watermark = None
@@ -3605,6 +3621,7 @@ class SQLTranslatorProd:
                         {
                             'source': source_identity,
                             'sql': sql,
+                            **({'sql_parameters': parameters} if parameters is not None else {}),
                             'columns': columns,
                             'rows': result_data,
                             'data_as_of': data_as_of.isoformat(),
@@ -3637,6 +3654,9 @@ class SQLTranslatorProd:
                         })
                 return result
         except Exception as e:
+            if parameters is not None:
+                return {'success': False, 'error': 'Bound SQL execution failed',
+                        'error_code': 'SQL_PARAMETER_EXECUTION_FAILED', 'retryable': False}
             return {'success': False, 'error': f"数据库执行错误: {str(e)}"}
         finally:
             if connection:

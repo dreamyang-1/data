@@ -12,6 +12,7 @@ import math
 
 from semantic_scope import RequestScope, ScopedTranslator, ScopeError
 from sql_translator_prod import RedisDSLLoader, SQLTranslatorProd, SemanticCatalog
+from bound_sql import parameterize_sql, statement_fingerprint
 
 
 class PinnedCatalogError(ValueError):
@@ -271,29 +272,49 @@ class _SnapshotCatalog:
 
 
 class _PinnedTranslator(SQLTranslatorProd):
-    def __init__(self, scope, snapshot, ordering_contract=None, filter_contract=None):
+    def __init__(self, scope, snapshot, ordering_contract=None, filter_contract=None, *, parameterized=False):
         self.scope = scope
         self.loader = _SnapshotLoader(scope, snapshot)
         self.catalog = _SnapshotCatalog(self.loader)
         self.ordering_contract = ordering_contract
         self.filter_contract = filter_contract
+        self.parameterized = parameterized
+        self.parameters = {}
+
+    def _bound_filter_leaf(self, node):
+        def bind(value):
+            index = len(self.parameters)
+            self.parameters['v2_p'+str(index)] = value
+            return '__v2_bind_'+str(index)+'__'
+        field, op, value = node['field'], node['operator'], node['value']
+        if op in ('IS NULL','IS NOT NULL'): return field+' '+op
+        if op in ('IN','NOT IN'): return field+' '+op+' ('+', '.join(bind(v) for v in value)+')'
+        if op == 'BETWEEN': return field+' BETWEEN '+bind(value[0])+' AND '+bind(value[1])
+        return field+' '+op+' '+bind(value)
 
     def _build_filter_clause(self, filters, global_filters, table_alias):
-        if self.filter_contract is None:
+        if self.filter_contract is None and not self.parameterized:
             return super()._build_filter_clause(filters, global_filters, table_alias)
+        if not filters:
+            return super()._build_filter_clause([], global_filters, table_alias)
+        tree = (self.filter_contract['expression'] if self.filter_contract is not None
+                else {'operator':'AND', 'children':filters})
+        _validate_filter_tree(tree, allow_mode_dependent=self.parameterized)
         # The flattened leaves exist only for registered-field/source/JOIN
         # validation. They must never become an AND-only execution predicate.
-        expected = _filter_leaves(self.filter_contract['expression'])
+        expected = _filter_leaves(tree)
         _require(filters == expected, 'PINNED_FILTER_PLAN_CHANGED')
         def render(node):
             if 'children' in node:
                 children = [render(c) for c in node['children']]
                 if node['operator'] == 'NOT': return '(NOT ' + children[0] + ')'
                 return '(' + (' ' + node['operator'] + ' ').join(children) + ')'
+            if self.parameterized:
+                return '(' + self._bound_filter_leaf(node) + ')'
             clause = super(_PinnedTranslator, self)._build_filter_clause([node], [], table_alias)
             _require(clause.startswith('WHERE '), 'PINNED_FILTER_RENDER_FAILED')
             return '(' + clause[6:] + ')'
-        clause = 'WHERE ' + render(self.filter_contract['expression'])
+        clause = 'WHERE ' + render(tree)
         governed = super()._build_filter_clause([], global_filters, table_alias)
         if governed:
             _require(governed.startswith('WHERE '), 'PINNED_FILTER_RENDER_FAILED')
@@ -429,7 +450,7 @@ def _filter_leaves(node):
     return [node]
 
 
-def _filter_contract(value, ast):
+def _filter_contract(value, ast, *, allow_mode_dependent=False):
     """Bounded Boolean tree, with every leaf later checked against the pin."""
     _require(isinstance(value, dict) and set(value) == {'contract','semantic_fingerprint','expression'}
              and value['contract'] == 'pinned-filter-tree-v1', 'PINNED_FILTER_CONTRACT_INVALID')
@@ -438,13 +459,18 @@ def _filter_contract(value, ast):
     _require(isinstance(fingerprint, str) and len(fingerprint) == 64
              and all(c in '0123456789abcdef' for c in fingerprint), 'PINNED_FILTER_CONTRACT_INVALID')
     _require(ast.get('filters', []) == [], 'PINNED_FILTER_CONTRACT_CONFLICT')
+    _validate_filter_tree(value['expression'], allow_mode_dependent=allow_mode_dependent)
+    return value
+
+
+def _validate_filter_tree(expression, *, allow_mode_dependent=False):
     count = 0
     def literal(item):
         _require(item is None or type(item) in (str,int,float,bool), 'PINNED_FILTER_LITERAL_INVALID')
         if isinstance(item, float): _require(math.isfinite(item), 'PINNED_FILTER_LITERAL_INVALID')
         # The legacy literal writer is not parameterized. A backslash depends
         # on native SQL mode; do not claim it is lossless without that contract.
-        if isinstance(item, str):
+        if isinstance(item, str) and not allow_mode_dependent:
             _require('\\' not in item and '\x00' not in item, 'PINNED_FILTER_LITERAL_SQL_MODE_UNPROVEN')
     def visit(node, depth=0):
         nonlocal count
@@ -472,18 +498,20 @@ def _filter_contract(value, ast):
             _require(operand is not None and (operator not in ('LIKE','NOT LIKE') or isinstance(operand,str)),
                      'PINNED_FILTER_LITERAL_INVALID')
             literal(operand)
-    visit(value['expression'])
-    return value
+    visit(expression)
 
 
-def translate_pinned_catalog(pin, request_scope, asl, *, ordering_contract=None, filter_contract=None):
+def translate_pinned_catalog(pin, request_scope, asl, *, ordering_contract=None, filter_contract=None, parameterized=False):
     """Accept SQL only after the trusted live pin finishes successfully.
 
     Scope must be rebuilt from this request's trusted upstream grant. The
     internal result preserves the translator result fields and adds receipts;
     no public request/response contract or runtime route calls this function.
+    Parameterized plans carry a PyMySQL template and separate scalar values;
+    they cannot be executed by dropping their parameter receipt.
     """
     try:
+        _require(type(parameterized) is bool, 'PINNED_PARAMETER_MODE_INVALID')
         _require(isinstance(request_scope, RequestScope), 'REQUEST_SCOPE_INVALID')
         scope = RequestScope.from_request(request_scope.payload())
         # Revalidate a manually constructed dataclass too (legacy model aliases
@@ -503,6 +531,7 @@ def translate_pinned_catalog(pin, request_scope, asl, *, ordering_contract=None,
         ast = json.loads(asl) if isinstance(asl, str) else deepcopy(asl)
         _require(isinstance(ast, dict) and ast.get('version') == '2.0' and ast.get('intent') == 'query',
                  'PINNED_ASL_VERSION_UNSUPPORTED')
+        input_asl_fingerprint = _digest(ast)
         # ASL is plan data. It cannot carry a second authorization grant.
         for key in ('model_id', 'semantic_model_id'):
             if key in ast:
@@ -510,7 +539,7 @@ def translate_pinned_catalog(pin, request_scope, asl, *, ordering_contract=None,
         _require(not any(k in ast for k in ('business_domain_id', 'business_domain_ids',
                  'authorized_semantic_scope', 'database_id', 'knowledge_base_names')), 'PINNED_ASL_SCOPE_OVERRIDE')
         _require(not any(k in ast for k in ('filter_contract','ordering_contract')), 'PINNED_ASL_POLICY_MUST_BE_SEPARATE')
-        filtering = _filter_contract(filter_contract, ast) if filter_contract is not None else None
+        filtering = _filter_contract(filter_contract, ast, allow_mode_dependent=parameterized) if filter_contract is not None else None
         if filtering:
             # Agent artifacts are recursively frozen; build a private top-level
             # planning copy rather than mutating the caller's ASL object.
@@ -518,13 +547,18 @@ def translate_pinned_catalog(pin, request_scope, asl, *, ordering_contract=None,
         ordering = _ranking_contract(ordering_contract, ast) if ordering_contract is not None else None
         if ordering and filtering:
             _require(ordering['semantic_fingerprint'] == filtering['semantic_fingerprint'], 'PINNED_POLICY_PLAN_MISMATCH')
-        translator = _PinnedTranslator(scope, snapshot, ordering, filtering)
+        translator = _PinnedTranslator(scope, snapshot, ordering, filtering, parameterized=parameterized)
         source = translator._plan_sources(ast, scope.semantic_model_id)
         # Existing database selection maps the platform database ID to its
         # data-source ID. Do not infer an alternative from a historical plan.
         _require(scope.database_id is None or str(scope.database_id) == source, 'DATA_SOURCE_SCOPE_MISMATCH')
         result = translator.translate_only(json.dumps(ast), scope.semantic_model_id)
         _require(result.get('success'), result.get('error_code', 'PINNED_ASL_TRANSLATION_FAILED'))
+        parameter_receipt = {}
+        if parameterized:
+            result['sql'] = parameterize_sql(result['sql'], translator.parameters)
+            parameter_receipt = dict(style='PYMYSQL_PYFORMAT_V1', asl_fingerprint=input_asl_fingerprint,
+                statement_fingerprint=statement_fingerprint(result['sql'], translator.parameters), parameter_count=len(translator.parameters))
         translator.validate_read_only_sql(result['sql'])
         tables = translator._sql_involved_tables(result['sql'])
         _require(bool(tables) and tables.issubset(translator.loader.tables), 'PINNED_SQL_TABLE_SCOPE_MISMATCH')
@@ -540,7 +574,9 @@ def translate_pinned_catalog(pin, request_scope, asl, *, ordering_contract=None,
         return {**result, **scope.evidence(), 'catalog_pin': deepcopy(receipt),
                 'sql_projection_aliases': aliases,
                 **({'ordering_contract_hash': _digest(ordering)} if ordering else {}),
-                **({'filter_contract_hash': _digest(filtering)} if filtering else {})}
+                **({'filter_contract_hash': _digest(filtering)} if filtering else {}),
+                **({'sql_parameters': deepcopy(translator.parameters), 'sql_parameter_contract': parameter_receipt}
+                   if parameterized else {})}
     except Exception as exc:
         # Private metadata, SQL and business text never leak through a failed
         # pin/read. Typed local errors contain bounded codes only.
