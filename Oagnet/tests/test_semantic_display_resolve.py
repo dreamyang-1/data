@@ -10,6 +10,7 @@ def test_semantic_display_resolver_returns_only_exact_vector_catalog_matches(mon
                 id="metric-1",
                 score=0.91,
                 metadata={
+                    "semantic_model_id": 81, "business_domain_id": 1,
                     "type": "metric",
                     "metric_code": "annual_total_sales",
                     "metric_name": "含税销售总额",
@@ -22,6 +23,7 @@ def test_semantic_display_resolver_returns_only_exact_vector_catalog_matches(mon
                 id="entity-1",
                 score=0.94,
                 metadata={
+                    "semantic_model_id": 81, "business_domain_id": 1,
                     "type": "entity",
                     "entity_code": "dealer",
                     "entity_name": "经销商",
@@ -33,6 +35,7 @@ def test_semantic_display_resolver_returns_only_exact_vector_catalog_matches(mon
                 id="value-1",
                 score=0.96,
                 metadata={
+                    "semantic_model_id": 81, "business_domain_id": 1,
                     "type": "entity_attribute_value",
                     "attr_code": "product_brand",
                     "attr_name": "商品品牌",
@@ -46,6 +49,7 @@ def test_semantic_display_resolver_returns_only_exact_vector_catalog_matches(mon
                 id="near-but-not-exact",
                 score=0.99,
                 metadata={
+                    "semantic_model_id": 81, "business_domain_id": 1,
                     "type": "entity_attribute_value",
                     "attr_code": "product_name",
                     "attr_name": "商品名称",
@@ -56,6 +60,7 @@ def test_semantic_display_resolver_returns_only_exact_vector_catalog_matches(mon
         ],
     }
     monkeypatch.setattr(api, "embed_query", lambda value: value)
+    monkeypatch.setattr(api._store, "find_exact", lambda _where: [])
     monkeypatch.setattr(
         api._store,
         "search",
@@ -92,6 +97,7 @@ def test_metric_context_resolves_registered_long_name_without_accepting_generic_
         id="metric-coverage",
         score=0.93,
         metadata={
+            "semantic_model_id": 81, "business_domain_id": 205,
             "type": "metric",
             "metric_code": "screening_area_hospital_coverage",
             "metric_name": "区域医院覆盖率",
@@ -102,6 +108,7 @@ def test_metric_context_resolves_registered_long_name_without_accepting_generic_
         id="metric-covered-hospitals",
         score=0.96,
         metadata={
+            "semantic_model_id": 81, "business_domain_id": 205,
             "type": "metric",
             "metric_code": "cooperating_hospital_count",
             "metric_name": "已合作医院数",
@@ -147,6 +154,7 @@ def test_semantic_display_resolver_returns_exact_canonical_filter_value(monkeypa
                 id="value-1",
                 score=0.96,
                 metadata={
+                    "semantic_model_id": 81, "business_domain_id": 1,
                     "type": "entity_attribute_value",
                     "attr_code": "product_brand",
                     "attr_name": "商品品牌",
@@ -181,6 +189,7 @@ def test_semantic_display_filter_value_is_scoped_to_its_source_field(monkeypatch
                 id="specification-1",
                 score=0.99,
                 metadata={
+                    "semantic_model_id": 81, "business_domain_id": 1,
                     "type": "entity_attribute_value",
                     "attr_code": "specification",
                     "attr_name": "规格型号",
@@ -192,6 +201,7 @@ def test_semantic_display_filter_value_is_scoped_to_its_source_field(monkeypatch
                 id="relation-type-1",
                 score=0.90,
                 metadata={
+                    "semantic_model_id": 81, "business_domain_id": 1,
                     "type": "entity_attribute_value",
                     "attr_code": "relation_type",
                     "attr_name": "适用科室类型",
@@ -229,6 +239,7 @@ def test_semantic_display_filter_field_mismatch_fails_closed(monkeypatch):
                 id="specification-1",
                 score=1.0,
                 metadata={
+                    "semantic_model_id": 81, "business_domain_id": 1,
                     "type": "entity_attribute_value",
                     "attr_code": "specification",
                     "attr_name": "规格型号",

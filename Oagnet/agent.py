@@ -13,6 +13,7 @@ from pymysql.err import InterfaceError as MySQLInterfaceError
 from pymysql.err import OperationalError as MySQLOperationalError
 
 from asl_contract import ASLValidationError
+from scope_contract import normalize_domains, require_candidate_scope
 
 from config import (
     API_KEY,
@@ -444,7 +445,7 @@ def _build_semantic_evidence(
         for metric in ast.get("metrics", [])
         if isinstance(metric, dict) and metric.get("name")
     ]
-    requested_domains = list(dict.fromkeys(requested_business_domain_ids or []))
+    requested_domains = normalize_domains(business_domain_ids=requested_business_domain_ids)
 
     sql_rows: list[dict] = []
     sql_available = True
@@ -486,14 +487,13 @@ def _build_semantic_evidence(
             vector_meta.get("business_domain_id")
             or vector_meta.get("business_domain")
         )
+        require_candidate_scope(vector_meta, semantic_model_id, requested_domains)
 
         if sql_available:
             row = _choose_sql_metric_row(metric_code, sql_rows, vector_domain_id)
+            require_candidate_scope(row, semantic_model_id, requested_domains)
             canonical_name = str(row.get("indicator_name") or "").strip()
-            domain_id = (
-                _positive_domain_id(row.get("business_domain_id"))
-                or vector_domain_id
-            )
+            domain_id = _positive_domain_id(row.get("business_domain_id"))
             formula = _normalize_formula(row.get("calculation_formula"))
             formula_source = "calculation_formula"
             if formula is None:
@@ -530,7 +530,6 @@ def _build_semantic_evidence(
             )
         if (
             requested_domains
-            and domain_id is not None
             and domain_id not in requested_domains
         ):
             raise ValueError(
@@ -4090,6 +4089,8 @@ def _registered_subject_time_anchor(
     knowledge: dict,
     semantic_model_id: int | None,
     table_field_loader=None,
+    *,
+    domain_scope=None,
 ) -> str | None:
     """Resolve one event-time field from the subject's registered source table.
 
@@ -4123,7 +4124,8 @@ def _registered_subject_time_anchor(
     table_name = next(iter(tables))
     loader = table_field_loader or get_table_field_by_scope
     try:
-        catalog = loader(semantic_model_id, None)
+        catalog = (loader(semantic_model_id, None, business_domain_id=domain_scope)
+                   if domain_scope is not None else loader(semantic_model_id, None))
     except (
         ConnectionError,
         TimeoutError,
@@ -5422,7 +5424,10 @@ def _contract_filter_candidates(
         registered = get_registered_entity_attributes(
             semantic_model_id, domain_scope
         )
-        physical = get_table_field_by_scope(semantic_model_id=semantic_model_id)
+        physical = (get_table_field_by_scope(semantic_model_id=semantic_model_id,
+                                            business_domain_id=domain_scope)
+                    if domain_scope is not None
+                    else get_table_field_by_scope(semantic_model_id=semantic_model_id))
         active_fields = {
             f"{str(table.get('table_name') or '')}.{str(field.get('field_name') or '')}"
             for table in physical.get("tables", [])
@@ -6252,7 +6257,7 @@ def _apply_intent_asl_contract(
         anchor_source = "RECALLED_SEMANTIC_METADATA"
         if not anchor:
             anchor = _registered_subject_time_anchor(
-                ast, knowledge, semantic_model_id
+                ast, knowledge, semantic_model_id, domain_scope=domain_scope
             )
             if anchor:
                 anchor_source = "MYSQL_SEMANTIC_FIELD_REGISTRY"
@@ -6709,27 +6714,8 @@ def _normalize_business_domain_scope(
     business_domain_id: int | None,
     business_domain_ids: list[int] | tuple[int, ...] | None,
 ) -> list[int]:
-    """Normalize legacy single-domain and explicit multi-domain inputs.
-
-    An empty result means AUTO mode across the semantic model. Explicit lists
-    are never silently widened to the entire model.
-    """
-    if business_domain_ids is None:
-        normalized: list[int] = []
-    elif isinstance(business_domain_ids, (list, tuple)):
-        normalized = list(business_domain_ids)
-    else:
-        raise ValueError("business_domain_ids must be a list or tuple")
-    if any(type(item) is not int or item <= 0 for item in normalized):
-        raise ValueError("business_domain_ids must contain positive integers")
-    normalized = list(dict.fromkeys(normalized))
-    if business_domain_id is not None:
-        if type(business_domain_id) is not int or business_domain_id <= 0:
-            raise ValueError("business_domain_id must be a positive integer")
-        if normalized and normalized != [business_domain_id]:
-            raise ValueError("business_domain_id conflicts with business_domain_ids")
-        normalized = [business_domain_id]
-    return normalized
+    """An empty set is MODEL_WIDE; explicit multi-domain fails closed."""
+    return normalize_domains(business_domain_id, business_domain_ids)
 
 
 def _vector_semantic_ambiguities(
@@ -6944,7 +6930,7 @@ def main(
         store: 向量存储实例，为 None 时使用模块级默认 store
         semantic_model_id: 语义建模 ID（必填，限定检索作用域）
         business_domain_id: 兼容旧版的单业务域 ID（可选）
-        business_domain_ids: 显式业务域列表（可选）；空列表表示 AUTO 模式
+        business_domain_ids: 当前仅支持一个不同显式域；空列表表示 MODEL_WIDE
     """
     if type(semantic_model_id) is not int or semantic_model_id <= 0:
         raise ValueError("semantic_model_id must be a positive integer")

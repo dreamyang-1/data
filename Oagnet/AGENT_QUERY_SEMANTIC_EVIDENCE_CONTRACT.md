@@ -7,10 +7,12 @@
 请求字段保持兼容：
 
 - `query`：必填，自然语言问题。
-- `semantic_model_id`：必填，正整数。
+- `semantic_model_id`：必填，严格正整数；缺失或非法返回 `REQUEST_SCOPE_INVALID`。
 - `business_domain_id`：可选，兼容旧版单业务域调用。
-- `business_domain_ids`：可选，显式多业务域列表；留空表示在语义模型内自动检索。
+- `business_domain_ids`：兼容数组入口；空数组表示当前模型内的 `MODEL_WIDE`，单元素表示严格显式域。多个不同业务域返回 `EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED`，不会转为 model-wide。
 - 同时传单数和复数字段时，两者必须严格等价，否则返回 `422`。
+- 显式域不隐含共享域 `-1` 或未分配域 `NULL`。向量检索、指标 SQL 证据和物理字段补全均保留当前模型及单域。展示解析返回候选模型和域的来源信息。
+- `AUTO` / `EXPLICIT` 仅保留为旧响应字段的展示别名，不决定或扩大授权。
 
 ## 新增响应字段
 
@@ -24,8 +26,8 @@
     "evidence_version": "1.0",
     "producer": "OAGNET",
     "semantic_model_id": 6,
-    "requested_business_domain_ids": [7, 10],
-    "resolved_business_domain_ids": [7, 10],
+    "requested_business_domain_ids": [7],
+    "resolved_business_domain_ids": [7],
     "selected_metrics": [
       {
         "canonical_code": "actual_payment_amount",
@@ -51,7 +53,7 @@
 
 字段含义：
 
-- `requested_business_domain_ids`：调用方显式限定的业务域；AUTO 模式为空。
+- `requested_business_domain_ids`：调用方显式限定的业务域；MODEL_WIDE 模式为空。
 - `resolved_business_domain_ids`：本次 ASL 实际选中指标所属的业务域，不等于简单回显请求值。
 - `canonical_code` / `canonical_name`：SQL 语义层中的规范指标编码和名称。
 - `calculation_formula`：SQL 语义层中的计算公式；公式为空时才读取 SQL 中的指标逻辑。
