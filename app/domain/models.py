@@ -232,10 +232,22 @@ class SemanticAmbiguity(StrictModel):
 
     @model_validator(mode="after")
     def normalize_candidates(self) -> "SemanticAmbiguity":
-        normalized = list(dict.fromkeys(value.strip() for value in self.candidates))
-        if any(not value or len(value) > 200 for value in normalized):
+        labels = [value.strip() for value in self.candidates]
+        if any(not value or len(value) > 200 for value in labels):
             raise ValueError("semantic ambiguity candidates must be non-empty and bounded")
-        self.candidates = normalized
+        if len(self.candidate_details) > len(labels):
+            raise ValueError("semantic ambiguity option details are not aligned")
+        # Names and catalog identities form positional pairs. Deduplicating
+        # names alone changes which semantic object a visible ordinal selects.
+        normalized: dict[str, dict[str, Any]] = {}
+        for index, label in enumerate(labels):
+            detail = self.candidate_details[index] if index < len(self.candidate_details) else {}
+            if label in normalized and normalized[label] != detail:
+                raise ValueError("duplicate semantic labels have conflicting details")
+            normalized.setdefault(label, dict(detail))
+        self.candidates = list(normalized)
+        if self.candidate_details:
+            self.candidate_details = list(normalized.values())
         return self
 
 
