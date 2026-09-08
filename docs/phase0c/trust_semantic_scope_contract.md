@@ -22,6 +22,8 @@ The backend already sends a Bearer authKey in its Java calling utility. Deployme
 
 Pending, task frames and last requests compare model, normalized domains, database and knowledge bases exactly. Compatible legacy flat state may retain business context only when all these fields match; it never supplies a missing request model or creates authorization. Mismatches cannot re-enter through the last-request fallback or historical task selection. DAG branch promotion checks the same contract.
 
+A semantic candidate confirmation replaces only the metric or grouping member identified by the catalog's phrase. Other members and their order/metadata remain intact. A missing target is compatible only with an empty or singleton slot; ambiguous or mismatched targets preserve Pending and stop safely. When independent semantic choices remain, they advance through the existing clarification response before retrieval. See the [semantic choice closure](../phase0c_semantic_choice/closure_report.md).
+
 DAG pending fingerprints and completed checkpoints include current scope. Response/repeat cache fingerprints carry `phase0c-v1` and scope fingerprint, invalidating old cache entries. Old message IDs may consequently produce an idempotency conflict; send a new message ID rather than reusing an old cached answer.
 
 Datasets and report artifacts include the complete scope fingerprint in their namespace/provenance. Automatic selection, explicit dataset IDs, imports, derived datasets, joins, DAG presentation and report export cannot bypass it. Old datasets lacking that fingerprint fail closed. ASL and knowledge caches and validated semantic recall include scope, including database/knowledge-base differences. Semantic filter bindings outside the current grant are discarded.

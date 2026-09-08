@@ -1,0 +1,11 @@
+{
+  "baseline_commit": "89643b95a10a782dd096b388bd28db9cf383c0eb",
+  "feature_branch": "phase0c-semantic-choice-20260908-01",
+  "runtime_files": ["app/services/orchestrator.py"],
+  "rollback": "Create a new branch at the desired reviewed revision or revert this stage's commit in a fresh rollback commit. Preserve unrelated edits and rerun affected/critical regressions before explicit per-file development sync.",
+  "public_schema_migration": false,
+  "persisted_state_schema_migration": false,
+  "external_data_rollback_required": false,
+  "production_v2_routing_changed": false,
+  "forbidden": ["reset --hard", "clean", "force push", "whole-directory overwrite", "automatic merge"]
+}
