@@ -1,0 +1,17 @@
+{
+  "baseline_commit": "ed35bc37c8c9685e1b1fec265c183862bf418488",
+  "feature_branch": "cutover-v2-filter-tree-20260909-01",
+  "base_branch": "cutover-v2-ranking-contract-20260909-01",
+  "implementation_commit": "8d066fd436794a352142f6fcc4e3934e7acd71ec",
+  "service_commits": {
+    "SQL_Translator": "f7f486fc1f07c4092cf27d50d9cf61b777e2cb2c",
+    "DataAnalysis_Agent": "8d066fd436794a352142f6fcc4e3934e7acd71ec"
+  },
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

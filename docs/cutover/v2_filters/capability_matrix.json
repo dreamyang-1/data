@@ -1,0 +1,36 @@
+{
+  "contract": "internal-asl2-pinned-ranking-and-filter-tree-v1",
+  "mode": "SHADOW_ONLY",
+  "can_execute_safely": false,
+  "supported": [
+    "SCALAR_AGGREGATE with one proven subject",
+    "GROUPED_AGGREGATE with unique subject/dimension binding",
+    "DETAIL_ROWS with explicit/governed projection",
+    "AND predicates with supported typed literals",
+    "Explicit display limit",
+    "Explicitly cleared unbounded time with no grain or comparison",
+    "Stable SQL output identities and separate display labels",
+    "Structural result proof with exact actual column order and completeness gate",
+    "RANKING EXCLUDE_TIES, ASC/DESC, FIRST/LAST/EXCLUDE null policy, ordered existing-group/metric tiebreakers via required private SQL contract",
+    "Nested AND/OR/unary NOT trees with SQL three-valued null logic",
+    "IS NULL / IS NOT NULL / NOT LIKE through a separate private filter contract",
+    "Combined filtering and ranking with exact semantic-plan fingerprint and both required receipts"
+  ],
+  "unsupported": [
+    "Bounded time / DATETIME literals until storage-timezone contract is proven",
+    "Time-series/comparison period and calendar policies",
+    "Repeated entity occurrences/relationship-list lowering",
+    "Multi-subject metric with no proven query subject",
+    "Decimal transport precision loss",
+    "Governed SQL alias policy or unrepresentable projection order",
+    "Dataset-local/metadata/analytics/report backends are not silently routed to query ASL",
+    "INCLUDE_TIES requires an explicit ASL/SQL execution contract; current public SQL guard rejects general subqueries",
+    "Ranking target or nonmetric ordering output outside declared group grain",
+    "Backslash/NUL literal transport until SQL-mode-safe or parameterized execution is proven; tree depth >20, >2048 nodes, >100 children per group, >1000 list values"
+  ],
+  "remaining_result_gates": [
+    "Actual execution receipt and source snapshot",
+    "Real result columns/rows and business correctness",
+    "Ordering/cardinality/calendar requirements for currently unsupported payloads"
+  ]
+}
