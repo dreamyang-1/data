@@ -172,9 +172,10 @@
         "docs/cutover/v2_ranking/closure_report.md",
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
-        "docs/cutover/pinned_relation_endpoints/closure_report.md"
+        "docs/cutover/pinned_relation_endpoints/closure_report.md",
+        "docs/cutover/relation_identity/closure_report.md"
       ],
-      "next_action": "Verify native/deployed pin acceptance after C-02. Obtain governed endpoint evidence for the two unresolved declarations and primary subjects for two metrics; complete dependent V2 relation lowering with ResultContract evidence. Close C-02 native publication/durable registry gates, then prove actual source lookup under authorized operations. Evaluate field-hypothesis/fuzzy selection after catalog gates. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
+      "next_action": "Obtain governed entity identity rules before relation-list lowering; resolve two endpoint declarations and two metric subjects. Verify native/deployed pin acceptance after C-02. Do not infer distinct target identity from names, row keys or model guesses. Close C-02 native publication/durable registry gates, then prove actual source lookup under authorized operations. Evaluate field-hypothesis/fuzzy selection after catalog gates. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
     },
     {
       "capability": "Dataset Follow-up",
@@ -210,9 +211,10 @@
         "docs/cutover/v2_ranking/closure_report.md",
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
-        "docs/cutover/pinned_relation_endpoints/closure_report.md"
+        "docs/cutover/pinned_relation_endpoints/closure_report.md",
+        "docs/cutover/relation_identity/closure_report.md"
       ],
-      "next_action": "Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]. Verify native/deployed pin acceptance after C-02. Obtain governed endpoint evidence for the two unresolved declarations and primary subjects for two metrics; complete dependent V2 relation lowering with ResultContract evidence."
+      "next_action": "Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]. Obtain governed entity identity rules before relation-list lowering; resolve two endpoint declarations and two metric subjects. Verify native/deployed pin acceptance after C-02. Do not infer distinct target identity from names, row keys or model guesses."
     },
     {
       "capability": "Catalog Version",
@@ -234,9 +236,10 @@
         "docs/cutover/v2_ranking/closure_report.md",
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
-        "docs/cutover/pinned_relation_endpoints/closure_report.md"
+        "docs/cutover/pinned_relation_endpoints/closure_report.md",
+        "docs/cutover/relation_identity/closure_report.md"
       ],
-      "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot. Verify native/deployed pin acceptance after C-02. Obtain governed endpoint evidence for the two unresolved declarations and primary subjects for two metrics; complete dependent V2 relation lowering with ResultContract evidence."
+      "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot. Obtain governed entity identity rules before relation-list lowering; resolve two endpoint declarations and two metric subjects. Verify native/deployed pin acceptance after C-02. Do not infer distinct target identity from names, row keys or model guesses."
     },
     {
       "capability": "Catalog Publication",
@@ -287,9 +290,10 @@
         "docs/cutover/v2_ranking/closure_report.md",
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
-        "docs/cutover/pinned_relation_endpoints/closure_report.md"
+        "docs/cutover/pinned_relation_endpoints/closure_report.md",
+        "docs/cutover/relation_identity/closure_report.md"
       ],
-      "next_action": "Close native catalog prerequisites and governed time/subject facts; complete remaining loss-aware backend semantics and native result evidence. Preserve public I/O and V1/shadow boundaries. Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
+      "next_action": "Close native catalog prerequisites and governed identity/time/subject facts. Implement remaining loss-aware path, comparison and time semantics with actual result evidence; preserve existing public I/O and V1/shadow boundaries. Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
     },
     {
       "capability": "ResultContract",
