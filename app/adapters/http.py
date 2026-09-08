@@ -2329,14 +2329,14 @@ class HttpDataRetrievalAdapter:
 
     @staticmethod
     def _require_supported_retrieval_scope(request):
-        # Verified against Oagnet prompt_build.py::_build_where: even its list
-        # API adds shared domain -1. Until that external contract is fixed,
-        # no current-backend explicit grant may enter that retrieval path.
+        # Oagnet now filters explicit domains exactly, but the SQL translator
+        # still resolves catalog/cache entries by model only. Keep the complete
+        # execution path closed until that service supports scoped planning.
         scope = request.authorized_semantic_scope
         if scope and scope.business_domain_ids:
             code = ('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED' if len(scope.business_domain_ids) > 1
                     else 'EXPLICIT_DOMAIN_NOT_SUPPORTED')
-            raise AdapterError(code, 'Oagnet includes a shared domain outside the explicit backend grant')
+            raise AdapterError(code, 'The SQL translator cannot yet enforce explicit domains during catalog resolution and planning')
 
     @staticmethod
     def _enforce_bound_scope(request, semantic_model_id, business_domain_id):

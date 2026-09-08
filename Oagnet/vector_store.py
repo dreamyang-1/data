@@ -919,28 +919,9 @@ def build_records_from_dsl(doc: dict, embed_fn) -> list[VectorRecord]:
 
 
 def build_scope_filter(semantic_model_id: int, business_domain_id: int = None) -> dict:
-    """构建 Chroma where 过滤条件。
-
-    - 指定 business_domain_id：实体/指标按 sm+bd 过滤；维度（business_domain_id=-1）通过 $in 兼容
-    - 仅指定 semantic_model_id：取该语义建模下全部数据（含所有业务域 + 跨域共享的维度）
-
-    Args:
-        semantic_model_id: 语义建模 ID
-        business_domain_id: 业务域 ID（可选）
-
-    Returns:
-        chroma where 字典（避免 $or/$and 深度嵌套，chroma 0.5 不支持）
-    """
-    if business_domain_id is None:
-        return {"semantic_model_id": semantic_model_id}
-
-    # 用 $in 一次匹配 bd_id 或 -1（跨域共享维度），避免 $or 嵌套 $and
-    return {
-        "$and": [
-            {"semantic_model_id": semantic_model_id},
-            {"business_domain_id": {"$in": [business_domain_id, -1]}},
-        ]
-    }
+    """Apply an exact domain; shared records are accessible only in MODEL_WIDE."""
+    from scope_contract import scope_filter
+    return scope_filter(semantic_model_id, business_domain_id)
 
 
 # ============================ 索引重建入口 ============================

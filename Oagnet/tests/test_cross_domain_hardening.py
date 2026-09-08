@@ -129,29 +129,11 @@ def test_semantic_model_wide_retrieval_prioritizes_exact_metric_synonym():
 
 
 def test_explicit_multi_domain_retrieval_is_not_widened_to_whole_model():
-    store = CandidateStore({
-        "entity": [
-            _search_result("entity", score=0.5, entity_name="订单", entity_code="ent_order")
-        ]
-    })
-    builder = PromptBuilder(
-        store,
-        lambda _query: [0.1, 0.2],
-        semantic_model_id=6,
-        business_domain_ids=[7, 9, 7],
-    )
-
-    builder.retrieve("查询销售和商品数据")
-
-    assert builder.business_domain_ids == [7, 9]
-    assert store.calls
-    for _, where in store.calls:
-        domain_filter = next(
-            item["business_domain_id"]
-            for item in where["$and"]
-            if "business_domain_id" in item
-        )
-        assert domain_filter == {"$in": [7, 9, -1]}
+    store = CandidateStore({})
+    with pytest.raises(ValueError, match="EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED"):
+        PromptBuilder(store, lambda _: pytest.fail("embedding must not run"),
+                      semantic_model_id=6, business_domain_ids=[7, 9, 7])
+    assert store.calls == []
 
 
 def test_asl_rejects_omission_of_explicit_metric_and_unsafe_having():
@@ -368,11 +350,9 @@ def test_entity_attribute_search_honors_explicit_multi_domain_scope():
             },
         )
 
-    assert response.status_code == 200
-    assert response.json()["business_domain_id"] is None
-    assert response.json()["business_domain_ids"] == [7, 9]
-    where = search.call_args.kwargs["where"]
-    assert {"business_domain_id": {"$in": [7, 9]}} in where["$and"]
+    assert response.status_code == 422
+    assert response.json()["code"] == "EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED"
+    search.assert_not_called()
 
 
 def test_entity_resolution_uses_business_domain_ownership_for_legacy_rows():
@@ -507,10 +487,10 @@ def test_agent_query_supports_legacy_single_and_explicit_multi_domain_scope():
     assert legacy.status_code == 200
     assert legacy.json()["business_domain_ids"] == [7]
     assert legacy.json()["business_domain_selection_mode"] == "EXPLICIT"
-    assert multi.status_code == 200
-    assert multi.json()["business_domain_id"] is None
-    assert multi.json()["business_domain_ids"] == [7, 10]
-    assert main.call_args.kwargs["business_domain_ids"] == [7, 10]
+    assert multi.status_code == 422
+    assert multi.json()["code"] == "EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED"
+    assert main.call_count == 1
+    assert main.call_args.kwargs["business_domain_ids"] == [7]
 
 
 def test_agent_query_rejects_conflicting_domain_contracts():

@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, StrictInt, field_validator, model_validator
 
 from asl_contract import ASLValidationError, IntentASLContract
+from scope_contract import CONTRACT_VERSION, normalize_domains, require_candidate_scope
 
 from capacity_control import (
     AslCapacityController,
@@ -86,7 +87,16 @@ async def validation_exception_with_success_flag(
 ) -> JSONResponse:
     return JSONResponse(
         status_code=422,
-        content=jsonable_encoder({"success": False, "detail": exc.errors()}),
+        content=jsonable_encoder({
+            "success": False,
+            "code": ('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED'
+                     if any('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED' in str(e.get('msg', '')) for e in exc.errors())
+                     else 'REQUEST_SCOPE_INVALID'
+                     if any(any(part in {'semantic_model_id', 'business_domain_id', 'business_domain_ids'}
+                                for part in e.get('loc', ())) or 'REQUEST_SCOPE_INVALID' in str(e.get('msg', ''))
+                            for e in exc.errors()) else 'REQUEST_INVALID'),
+            "detail": exc.errors(),
+        }),
     )
 
 
@@ -252,7 +262,7 @@ class EntityAttributeSearchRequest(BaseModel):
     business_domain_ids: list[StrictPositiveInt] = Field(
         default_factory=list,
         max_length=50,
-        description="可选；显式指定一个或多个业务域。单数字段仅用于兼容旧版调用",
+        description="可选；当前支持空数组或一个不同业务域。多个显式域会被拒绝；单数字段用于兼容旧调用",
     )
     query: str = Field(min_length=1, max_length=4000)
     top_k: int = Field(default=5, ge=1, le=20)
@@ -277,10 +287,10 @@ class EntityAttributeSearchRequest(BaseModel):
 
     @model_validator(mode="after")
     def reconcile_business_domain_scope(self):
-        if self.business_domain_id is not None:
-            if self.business_domain_ids and self.business_domain_ids != [self.business_domain_id]:
-                raise ValueError("business_domain_id conflicts with business_domain_ids")
-            self.business_domain_ids = [self.business_domain_id]
+        self.business_domain_ids = normalize_domains(
+            self.business_domain_id,
+            self.business_domain_ids if 'business_domain_ids' in self.model_fields_set else None,
+        )
         return self
 
 
@@ -326,8 +336,15 @@ class SemanticDisplayResolveRequest(BaseModel):
     business_domain_ids: list[StrictPositiveInt] = Field(default_factory=list, max_length=50)
     candidates: list[SemanticDisplayCandidate] = Field(max_length=100)
 
+    @field_validator('business_domain_ids')
+    @classmethod
+    def supported_domains(cls, values):
+        return normalize_domains(business_domain_ids=values)
+
 
 class SemanticDisplayMatch(BaseModel):
+    semantic_model_id: int
+    business_domain_id: int | None
     candidate_id: str
     slot: Literal["metric", "entity", "dimension", "field", "filter"]
     input_value: str
@@ -340,8 +357,10 @@ class SemanticDisplayMatch(BaseModel):
 
 
 class SemanticDisplayResolveResponse(BaseModel):
+    scope_contract_version: Literal['1.0'] = CONTRACT_VERSION
     success: bool
     semantic_model_id: int
+    business_domain_ids: list[int] = Field(default_factory=list)
     matches: list[SemanticDisplayMatch]
 
 
@@ -414,7 +433,7 @@ def semantic_display_elements_resolve(
     candidates out of user-visible intent diagnostics.
     """
     matches: list[SemanticDisplayMatch] = []
-    domain_ids = list(dict.fromkeys([*req.business_domain_ids, -1]))
+    domain_ids = req.business_domain_ids
     for candidate in req.candidates:
         record_type, name_key, code_key, term_keys = _SEMANTIC_DISPLAY_SPECS[candidate.slot]
         clauses: list[dict[str, Any]] = [
@@ -441,6 +460,10 @@ def semantic_display_elements_resolve(
         exact_specificity: list[int] = []
         for result in results:
             metadata = result.metadata or {}
+            try:
+                require_candidate_scope(metadata, req.semantic_model_id, domain_ids)
+            except ValueError as exc:
+                raise HTTPException(502, detail={'code': 'SEMANTIC_SCOPE_MISMATCH'}) from exc
             if (
                 candidate.slot == "filter"
                 and not _semantic_filter_field_matches(candidate.field_name, metadata)
@@ -489,6 +512,8 @@ def semantic_display_elements_resolve(
             if not canonical_name or (candidate.slot == "filter" and not canonical_value):
                 continue
             exact.append(SemanticDisplayMatch(
+                semantic_model_id=metadata['semantic_model_id'],
+                business_domain_id=metadata.get('business_domain_id'),
                 candidate_id=candidate.candidate_id,
                 slot=candidate.slot,
                 input_value=candidate.value,
@@ -529,6 +554,7 @@ def semantic_display_elements_resolve(
     return SemanticDisplayResolveResponse(
         success=True,
         semantic_model_id=req.semantic_model_id,
+        business_domain_ids=domain_ids,
         matches=matches,
     )
 
@@ -1186,7 +1212,7 @@ class QueryRequest(BaseModel):
     business_domain_ids: list[StrictPositiveInt] = Field(
         default_factory=list,
         max_length=50,
-        description="可选；显式限定一个或多个业务域。留空时由智能体在语义模型内自动选择",
+        description="可选；空数组为 MODEL_WIDE，单元素为严格显式域，多个不同业务域会被拒绝",
     )
     metric_ids: list[str] = Field(
         default_factory=list,
@@ -1247,10 +1273,10 @@ class QueryRequest(BaseModel):
 
     @model_validator(mode="after")
     def reconcile_business_domain_scope(self):
-        if self.business_domain_id is not None:
-            if self.business_domain_ids and self.business_domain_ids != [self.business_domain_id]:
-                raise ValueError("business_domain_id conflicts with business_domain_ids")
-            self.business_domain_ids = [self.business_domain_id]
+        self.business_domain_ids = normalize_domains(
+            self.business_domain_id,
+            self.business_domain_ids if 'business_domain_ids' in self.model_fields_set else None,
+        )
         if any(int(item.split(":", 1)[0]) != self.semantic_model_id for item in self.metric_ids):
             raise ValueError("metric_ids conflict with semantic_model_id")
         if self.metricless_projection and self.metric_ids:
@@ -1324,6 +1350,7 @@ class SemanticQueryEvidence(BaseModel):
 
 
 class QueryResponse(BaseModel):
+    scope_contract_version: Literal['1.0'] = CONTRACT_VERSION
     success: bool
     query: str
     semantic_model_id: int
@@ -1371,8 +1398,8 @@ def agent_query(req: QueryRequest):
     通过 semantic_model_id + 可选业务域参数限定检索作用域：
       - semantic_model_id: 必填，指定语义建模
       - business_domain_id: 可选，兼容旧版的单业务域字段
-      - business_domain_ids: 可选，显式指定一个或多个业务域
-      - 两个业务域字段都为空时：AUTO 模式，在该语义模型下检索并由智能体选择
+      - business_domain_ids: 可选；当前最多一个不同业务域
+      - 两个业务域字段都为空时：MODEL_WIDE，仅在本轮模型内检索
     """
     try:
         generated = _asl_capacity.run(

@@ -138,6 +138,7 @@ def test_semantic_evidence_uses_vector_domain_to_disambiguate_duplicate_codes():
     rows = [
         {
             "id": 1,
+            "semantic_model_id": 6,
             "business_domain_id": 7,
             "indicator_code": "shared_metric",
             "indicator_name": "销售域指标",
@@ -145,6 +146,7 @@ def test_semantic_evidence_uses_vector_domain_to_disambiguate_duplicate_codes():
         },
         {
             "id": 2,
+            "semantic_model_id": 6,
             "business_domain_id": 10,
             "indicator_code": "shared_metric",
             "indicator_name": "售后域指标",
@@ -172,7 +174,7 @@ def test_semantic_evidence_uses_vector_domain_to_disambiguate_duplicate_codes():
 
 
 def test_semantic_evidence_rejects_metric_outside_explicit_domain_scope():
-    with pytest.raises(ValueError, match="outside requested business domains"):
+    with pytest.raises(ValueError, match="SEMANTIC_SCOPE_MISMATCH"):
         _build_semantic_evidence(
             _asl("actual_payment_amount"),
             {"metrics": [_metric_result(domain_id=10)]},
@@ -213,15 +215,16 @@ def test_metric_evidence_sql_is_parameterized_and_keeps_explicit_domain_scope():
         rows = mysql_tool.get_metric_evidence(
             6,
             ["actual_payment_amount", "refund_amount"],
-            [7, 10, 7],
+            [7, 7],
         )
 
     assert rows == []
     sql, args = query.call_args.args
     assert "indicator_code IN (%s, %s)" in sql
-    assert "business_domain_id IN (%s, %s)" in sql
+    assert "business_domain_id IN (%s)" in sql
+    assert "business_domain_id IS NULL" not in sql
     assert "actual_payment_amount" not in sql
-    assert args == (6, "actual_payment_amount", "refund_amount", 7, 10)
+    assert args == (6, "actual_payment_amount", "refund_amount", 7)
 
 
 def test_query_response_openapi_requires_oagnet_semantic_evidence():

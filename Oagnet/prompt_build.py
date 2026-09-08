@@ -6,6 +6,7 @@ import json
 import re
 
 from vector_store import ChromaVectorStore, SearchResult
+from scope_contract import normalize_domains, require_model_id, scope_filter
 
 SYSTEM_PROMPT = """
 【角色】
@@ -417,23 +418,13 @@ class PromptBuilder:
             semantic_model_id: 语义建模 ID（必填，限定检索作用域）
             business_domain_id: 业务域 ID（可选，进一步限定业务域；
                 为 None 时取该语义建模下全部数据）
-            business_domain_ids: 可选业务域列表；用于严格的多业务域检索
+            business_domain_ids: 兼容数组入口；当前仅支持空集合或一个不同业务域
         """
         self.store = store
         self.embed_fn = embed_fn
         self.top_k = top_k
-        self.semantic_model_id = semantic_model_id
-        if business_domain_ids is not None and not isinstance(business_domain_ids, (list, tuple)):
-            raise ValueError("business_domain_ids must be a list or tuple")
-        normalized_ids = list(dict.fromkeys(business_domain_ids or []))
-        if any(type(item) is not int or item <= 0 for item in normalized_ids):
-            raise ValueError("business_domain_ids must contain positive integers")
-        if business_domain_id is not None:
-            if type(business_domain_id) is not int or business_domain_id <= 0:
-                raise ValueError("business_domain_id must be a positive integer")
-            if normalized_ids and normalized_ids != [business_domain_id]:
-                raise ValueError("business_domain_id conflicts with business_domain_ids")
-            normalized_ids = [business_domain_id]
+        self.semantic_model_id = require_model_id(semantic_model_id)
+        normalized_ids = normalize_domains(business_domain_id, business_domain_ids)
         self.business_domain_ids = normalized_ids
         self.business_domain_id = (
             normalized_ids[0] if len(normalized_ids) == 1 else None
@@ -444,35 +435,10 @@ class PromptBuilder:
     # -------- 检索 --------
 
     def _build_where(self, type_filter: str) -> dict:
-        """构建 chroma where 条件：type + 作用域过滤（扁平化，避免深层嵌套）。
-
-        维度在向量库中标记 business_domain_id=-1（跨域共享），用 $in 兼容。
-        """
-        if self.semantic_model_id is None:
-            # 未指定作用域：只按 type 过滤（兼容旧用法）
-            return {"type": type_filter}
-
-        if not self.business_domain_ids:
-            # 只按 sm 过滤：扁平 {"$and": [type, sm_id]}
-            return {
-                "$and": [
-                    {"type": type_filter},
-                    {"semantic_model_id": self.semantic_model_id},
-                ]
-            }
-
-        # sm + one/many bd：严格限制候选业务域，并包含 -1 的共享维度。
-        return {
-            "$and": [
-                {"type": type_filter},
-                {"semantic_model_id": self.semantic_model_id},
-                {
-                    "business_domain_id": {
-                        "$in": [*self.business_domain_ids, -1]
-                    }
-                },
-            ]
-        }
+        """Apply the current model and exact explicit domain to every role."""
+        return scope_filter(self.semantic_model_id,
+                            business_domain_ids=self.business_domain_ids,
+                            record_type=type_filter)
 
     @staticmethod
     def _term_values(value) -> list[str]:

@@ -14,6 +14,8 @@ All agent API routes verify the existing service-to-service `Authorization: Bear
 
 After service authentication, `X-Tenant-Id` and `X-User-Id` are mandatory state namespace identifiers. Missing values return `STATE_NAMESPACE_REQUIRED`, even if the old development fallback flag is enabled. They do not determine data authorization. `X-Application-Id`, when supplied, must agree with body `application_id`; it is required in production or when the existing require-header setting is enabled. Roles never add semantic domains.
 
+The subsequent 2026-09-08 business contract guarantees globally unique `conversation_id` and treats tenant/user as compatibility metadata. The existing mandatory-header implementation above is a known integration constraint, not a new data-authorization requirement. Adapting that boundary must preserve conversation isolation and disable personal cross-conversation memory without a stable user principal; no identity-system reconstruction is required.
+
 The backend already sends a Bearer authKey in its Java calling utility. Deployment must provision the matching service secret and forward stable tenant/user identifiers. No real secret was added to Git or to a local .env, and no gateway/identity system was rewritten. A caller with the service secret is trusted to have completed authorization; the secret must remain server-side.
 
 ## State compatibility
@@ -26,11 +28,11 @@ Datasets and report artifacts include the complete scope fingerprint in their na
 
 ## External capability and fail-closed behavior
 
-Oagnet accepts `business_domain_ids[]`, but its actual main retrieval adds shared domain `-1` to every explicit set. This is not the requested strict-set contract. DataAnalysis therefore rejects explicit-domain Oagnet queries and discovery before network access: one domain returns `EXPLICIT_DOMAIN_NOT_SUPPORTED`; multiple domains return `EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED`. A system limitation returns SAFE_FALLBACK with `error_code`, without asking the user to change permissions or restate a metric.
+The cross-service root-cause patch removes Oagnet's implicit shared domain `-1`, rejects explicit multi-domain input, constrains SQL metric evidence and physical metadata repair, and adds display-candidate provenance. A real Oagnet API-to-retrieval-to-ASL offline test proves strict single-domain operation. SQL Translator still has model-only catalog/cache planning, so its request parser now explicitly rejects domain grants before any access. DataAnalysis retains its existing early guard: one domain returns `EXPLICIT_DOMAIN_NOT_SUPPORTED`; multiple domains return `EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED`. A system limitation returns SAFE_FALLBACK without asking the user to restate a metric.
 
 MODEL_WIDE queries remain within the required model and may use a narrower query restriction inside that grant; this never changes authorization. Oagnet responses must confirm the queried model/domain restriction and their semantic evidence cannot exceed the grant.
 
-Entity-value retrieval has a strict set filter in the audited Oagnet endpoint and remains available, with response and candidate scope validation. The display resolver adds `-1` and lacks candidate domain provenance, so it is skipped for explicit scopes. sql-translator's model-only metric metadata resolver is also rejected for explicit scopes. These are external contract blockers, documented separately; no cross-repository changes were performed.
+Entity-value retrieval remains scoped; Oagnet now rejects multiple explicit domains at its API boundary. Although Oagnet's display endpoint has been repaired, DataAnalysis retains the existing opt-out until cross-service integration is closed. The model-only metadata route remains blocked for explicit scopes. SQL Translator no longer falls back from a model-qualified Redis key to a global legacy key and rejects contradictory payload model IDs. Current cross-repository changes, evidence and remaining blockers are recorded in [the root-cause report](../phase0c_root_cause/closure_report.md); the earlier closure report remains historical evidence.
 
 The safety checks can pass while explicit-domain business execution remains blocked. Full semantic-scope acceptance must not be declared until strict single-domain execution is supported and the external integration has been validated. V2 routing and Phase 2.5.1 contracts are unchanged.
 

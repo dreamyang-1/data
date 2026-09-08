@@ -1608,9 +1608,8 @@ def get_metric_evidence(
         raise ValueError("metric_codes must contain non-empty strings")
     if not codes:
         return []
-    domains = list(dict.fromkeys(business_domain_ids or []))
-    if any(type(domain_id) is not int or domain_id <= 0 for domain_id in domains):
-        raise ValueError("business_domain_ids must contain positive integers")
+    from scope_contract import normalize_domains
+    domains = normalize_domains(business_domain_ids=business_domain_ids)
 
     code_placeholders = ", ".join(["%s"] * len(codes))
     clauses = [
@@ -1621,10 +1620,7 @@ def get_metric_evidence(
     args: list = [semantic_model_id, *codes]
     if domains:
         domain_placeholders = ", ".join(["%s"] * len(domains))
-        clauses.append(
-            f"(business_domain_id IN ({domain_placeholders}) "
-            "OR business_domain_id IS NULL)"
-        )
+        clauses.append(f"business_domain_id IN ({domain_placeholders})")
         args.extend(domains)
 
     return list(_query(
@@ -1907,7 +1903,7 @@ def get_fields(semantic_model_id=None, table_id=None, data_source_id=None):
         raise
 
 
-def get_table_field_by_scope(semantic_model_id=None, data_source_id=None):
+def get_table_field_by_scope(semantic_model_id=None, data_source_id=None, *, business_domain_id=None):
     """按作用域聚合查询：物理表 + 其下挂载的字段。
 
     作用域维度：data_source_id 为主隔离；semantic_model_id 为附加过滤。
@@ -1953,6 +1949,38 @@ def get_table_field_by_scope(semantic_model_id=None, data_source_id=None):
         WHERE {where}
         ORDER BY table_id, id
     """
+
+    if business_domain_id is not None:
+        from scope_contract import normalize_domains, require_model_id
+        require_model_id(semantic_model_id)
+        domain_ids = normalize_domains(
+            business_domain_ids=business_domain_id if isinstance(business_domain_id, (list, tuple)) else [business_domain_id]
+        )
+        if not domain_ids:
+            raise ValueError('REQUEST_SCOPE_INVALID: explicit physical scope is empty')
+        # Restrict the metadata query itself through published entities, rather
+        # than fetching the model-wide registry and filtering it afterwards.
+        scope_where = '''t.is_deleted=0 AND t.semantic_model_id=%s
+            AND EXISTS (
+                SELECT 1 FROM semantic_model_entity_type e
+                JOIN semantic_model_business_domain b ON b.id=e.business_domain_id
+                WHERE b.semantic_model_id=%s AND b.id=%s
+                  AND COALESCE(b.is_deleted,0)=0
+                  AND COALESCE(e.is_deleted,0)=0 AND e.status=1
+                  AND e.main_table_name=t.name AND e.data_source_id=t.data_source_id
+            )'''
+        args = [semantic_model_id, semantic_model_id, domain_ids[0]]
+        if data_source_id is not None:
+            scope_where += ' AND t.data_source_id=%s'
+            args.append(data_source_id)
+        sql_tables = f'''SELECT t.* FROM semantic_model_table t
+            WHERE {scope_where} ORDER BY t.data_source_id, t.id'''
+        sql_fields = f'''SELECT f.* FROM semantic_model_field f
+            JOIN semantic_model_table t ON t.id=f.table_id
+            WHERE {scope_where} AND COALESCE(f.is_deleted,0)=0
+              AND (f.semantic_model_id=t.semantic_model_id OR f.semantic_model_id IS NULL)
+              AND f.data_source_id=t.data_source_id
+            ORDER BY f.table_id, f.id'''
 
     try:
         conn = _get_connection()
