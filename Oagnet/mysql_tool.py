@@ -39,6 +39,7 @@ import hashlib
 import json
 import re
 from contextlib import contextmanager
+from contextvars import ContextVar
 
 import pymysql
 from pymysql.cursors import DictCursor
@@ -86,15 +87,54 @@ def _parse_json(value):
     return value
 
 
+_catalog_snapshot_connection = ContextVar("oagnet_catalog_snapshot_connection", default=None)
+
+
+@contextmanager
+def _catalog_read_connection():
+    """Reuse only an explicitly opened catalog snapshot; ordinary reads keep their lifecycle."""
+    snapshot = _catalog_snapshot_connection.get()
+    conn = snapshot if snapshot is not None else _get_connection()
+    try:
+        yield conn
+    finally:
+        if snapshot is None:
+            conn.close()
+
+
+@contextmanager
+def consistent_catalog_read():
+    """One read-only repeatable-read transaction for a catalog capture.
+
+    This is an opt-in export boundary. It never changes ordinary query routing,
+    commits data, takes an advisory publication lock or writes an index.
+    """
+    if _catalog_snapshot_connection.get() is not None:
+        raise ValueError("CATALOG_SNAPSHOT_NESTING_NOT_SUPPORTED")
+    conn = _get_connection()
+    token = None
+    try:
+        with conn.cursor(DictCursor) as cur:
+            cur.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+            cur.execute("SET TRANSACTION READ ONLY")
+            cur.execute("START TRANSACTION WITH CONSISTENT SNAPSHOT")
+        token = _catalog_snapshot_connection.set(conn)
+        yield
+    finally:
+        if token is not None:
+            _catalog_snapshot_connection.reset(token)
+        try:
+            conn.rollback()
+        finally:
+            conn.close()
+
+
 def _query(sql: str, args=None):
     """执行查询并返回 dict 列表，异常向上抛出。"""
-    conn = _get_connection()
-    try:
+    with _catalog_read_connection() as conn:
         with conn.cursor(DictCursor) as cur:
             cur.execute(sql, args)
             return cur.fetchall()
-    finally:
-        conn.close()
 
 
 def resolve_entity_code_by_table(
@@ -1212,8 +1252,7 @@ def get_entity(business_domain_id: int):
     """
 
     try:
-        conn = _get_connection()
-        try:
+        with _catalog_read_connection() as conn:
             with conn.cursor(DictCursor) as cur:
                 cur.execute(sql_entity, (business_domain_id,))
                 entity_rows = cur.fetchall()
@@ -1226,8 +1265,6 @@ def get_entity(business_domain_id: int):
 
                 cur.execute(sql_bind_metric, (business_domain_id,))
                 bind_metric_rows = cur.fetchall()
-        finally:
-            conn.close()
 
         # Versioned metadata tables can contain repeated physical rows with the
         # same semantic ID. Collapse them before assembling the graph. A bridge
@@ -1985,16 +2022,13 @@ def get_table_field_by_scope(semantic_model_id=None, data_source_id=None, *, bus
             ORDER BY f.table_id, f.id'''
 
     try:
-        conn = _get_connection()
-        try:
+        with _catalog_read_connection() as conn:
             with conn.cursor(DictCursor) as cur:
                 cur.execute(sql_tables, args)
                 table_rows = cur.fetchall()
 
                 cur.execute(sql_fields, args)
                 field_rows = cur.fetchall()
-        finally:
-            conn.close()
 
         # 按 (table_id, field_name) 去重，保留最新行
         field_map: dict[tuple, dict] = {}
