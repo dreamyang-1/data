@@ -166,12 +166,14 @@ class _SnapshotLoader(RedisDSLLoader):
                 target = relation.get('target_entity')
                 target = target if target in self.entities else self._entity_id_to_code.get(str(target))
                 join = relation.get('join_key')
-                # Oagnet's actual DSL preserves the two declared physical
-                # endpoints as an object. Never infer an omitted endpoint.
+                source_field = target_field = None
                 if (isinstance(join, dict) and set(join) == {'source_field', 'target_field'}
-                        and all(isinstance(v, str) and v in self.fields for v in join.values())
-                        and target in self.entities):
-                    relation['join_key'] = join['source_field'] + ' = ' + join['target_field']
+                        and target in self.entities
+                        and entity['data_source_id'] == self.entities[target]['data_source_id']):
+                    source_field = self._relation_endpoint(entity, join['source_field'])
+                    target_field = self._relation_endpoint(self.entities[target], join['target_field'])
+                if source_field is not None and target_field is not None:
+                    relation['join_key'] = source_field + ' = ' + target_field
                     relation['target_entity'] = target
                 else:
                     self.unresolved_relationships.append(relation.get('relation_code'))
@@ -216,6 +218,25 @@ class _SnapshotLoader(RedisDSLLoader):
     @property
     def redis(self):
         raise PinnedCatalogError('PINNED_EXTERNAL_CATALOG_READ_FORBIDDEN')
+
+    def _relation_endpoint(self, entity, field):
+        """Resolve a declared column only inside its declared endpoint owner.
+
+        Base and governed sub-tables participate equally. An unqualified
+        column must exist exactly once; attribute names, global field matches
+        and base-table preference cannot break ties. Qualified fields must
+        still belong to this entity's source, even if registered elsewhere.
+        """
+        if not isinstance(field, str) or not field:
+            return None
+        tables = {entity['physical_table_join']['base_table'],
+                  *(m['sub_table_name'] for m in entity['sub_table_mappings'])}
+        if '.' in field:
+            candidates = {field} if field.rsplit('.', 1)[0] in tables else set()
+        else:
+            candidates = {table + '.' + field for table in tables}
+        candidates &= self.fields
+        return next(iter(candidates)) if len(candidates) == 1 else None
 
     def require_field(self, field):
         _require(field in self.fields, 'PINNED_PHYSICAL_FIELD_MISSING')
