@@ -1,0 +1,143 @@
+{
+  "baseline_commit": "abd6e82bfffb683d829e408581dda583633ec8d8",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline": {
+        "passed": 2615,
+        "failed": 27
+      },
+      "final": {
+        "passed": 2645,
+        "failed": 27
+      },
+      "new_tests": [
+        "tests/test_v2_asl2_lowering.py::test_boolean_relation_is_not_flattened_into_different_logic[AND-True]",
+        "tests/test_v2_asl2_lowering.py::test_boolean_relation_is_not_flattened_into_different_logic[NOT-False]",
+        "tests/test_v2_asl2_lowering.py::test_boolean_relation_is_not_flattened_into_different_logic[OR-False]",
+        "tests/test_v2_asl2_lowering.py::test_explicit_display_limit_is_not_an_implicit_completeness_claim",
+        "tests/test_v2_asl2_lowering.py::test_explicitly_cleared_time_does_not_revive_a_filter",
+        "tests/test_v2_asl2_lowering.py::test_multiple_catalog_subjects_require_evidence_instead_of_list_order",
+        "tests/test_v2_asl2_lowering.py::test_numeric_precision_and_timezone_are_not_silently_lost[value0]",
+        "tests/test_v2_asl2_lowering.py::test_numeric_precision_and_timezone_are_not_silently_lost[value1]",
+        "tests/test_v2_asl2_lowering.py::test_output_labels_cannot_change_stable_column_identity",
+        "tests/test_v2_asl2_lowering.py::test_plan_and_sql_share_one_pin_acceptance[authority]",
+        "tests/test_v2_asl2_lowering.py::test_plan_and_sql_share_one_pin_acceptance[inventory]",
+        "tests/test_v2_asl2_lowering.py::test_plan_and_sql_share_one_pin_acceptance[pin_receipt]",
+        "tests/test_v2_asl2_lowering.py::test_plan_and_sql_share_one_pin_acceptance[projection_receipt]",
+        "tests/test_v2_asl2_lowering.py::test_plan_and_sql_share_one_pin_acceptance[scope_receipt]",
+        "tests/test_v2_asl2_lowering.py::test_ranking_policies_are_not_reduced_to_plain_limit[EXCLUDE_TIES-LAST]",
+        "tests/test_v2_asl2_lowering.py::test_ranking_policies_are_not_reduced_to_plain_limit[INCLUDE_TIES-EXCLUDE]",
+        "tests/test_v2_asl2_lowering.py::test_result_binding_does_not_claim_completeness_or_guess_aliases[columns]",
+        "tests/test_v2_asl2_lowering.py::test_result_binding_does_not_claim_completeness_or_guess_aliases[row_cap]",
+        "tests/test_v2_asl2_lowering.py::test_result_binding_does_not_claim_completeness_or_guess_aliases[truncated]",
+        "tests/test_v2_asl2_lowering.py::test_time_range_requires_governed_storage_timezone[GROUPED_AGGREGATE]",
+        "tests/test_v2_asl2_lowering.py::test_time_range_requires_governed_storage_timezone[SCALAR_AGGREGATE]",
+        "tests/test_v2_asl2_lowering.py::test_typed_filters_keep_values_and_operators[BETWEEN-value3-BETWEEN]",
+        "tests/test_v2_asl2_lowering.py::test_typed_filters_keep_values_and_operators[EQ-value0-=]",
+        "tests/test_v2_asl2_lowering.py::test_typed_filters_keep_values_and_operators[GTE-value2->=]",
+        "tests/test_v2_asl2_lowering.py::test_typed_filters_keep_values_and_operators[IN-value4-IN]",
+        "tests/test_v2_asl2_lowering.py::test_typed_filters_keep_values_and_operators[NE-value1-!=]",
+        "tests/test_v2_asl2_lowering.py::test_typed_payload_to_actual_sql_and_result_columns[DETAIL_ROWS]",
+        "tests/test_v2_asl2_lowering.py::test_typed_payload_to_actual_sql_and_result_columns[GROUPED_AGGREGATE]",
+        "tests/test_v2_asl2_lowering.py::test_typed_payload_to_actual_sql_and_result_columns[SCALAR_AGGREGATE]",
+        "tests/test_v2_asl2_lowering.py::test_wrong_scope_plan_is_rejected_before_lowering"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "remaining_failures": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete"
+      ]
+    },
+    "Oagnet": {
+      "baseline": {
+        "passed": 663,
+        "failed": 8
+      },
+      "final": {
+        "passed": 663,
+        "failed": 8
+      },
+      "new_tests": [],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "remaining_failures": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter"
+      ]
+    },
+    "SQL_Translator": {
+      "baseline": {
+        "passed": 251
+      },
+      "final": {
+        "passed": 261
+      },
+      "new_tests": [
+        "test_pinned_catalog.py::test_projection_alias_evidence_comes_from_select_columns[DELETE FROM t-None]",
+        "test_pinned_catalog.py::test_projection_alias_evidence_comes_from_select_columns[SELECT 'a'' FROM ''b' AS `label` FROM t-expected4]",
+        "test_pinned_catalog.py::test_projection_alias_evidence_comes_from_select_columns[SELECT (t.x AS `x` FROM t-None]",
+        "test_pinned_catalog.py::test_projection_alias_evidence_comes_from_select_columns[SELECT 1 AS `x`-None]",
+        "test_pinned_catalog.py::test_projection_alias_evidence_comes_from_select_columns[SELECT CAST(t.x AS DECIMAL(10,2)) AS `number` FROM t-expected3]",
+        "test_pinned_catalog.py::test_projection_alias_evidence_comes_from_select_columns[SELECT CONCAT('FROM, AS `fake`', t.x) AS `real` FROM t WHERE t.x=' AS `other`'-expected1]",
+        "test_pinned_catalog.py::test_projection_alias_evidence_comes_from_select_columns[SELECT DISTINCT CASE WHEN t.x=1 THEN 'a,b' ELSE 'FROM' END AS `label` FROM t-expected2]",
+        "test_pinned_catalog.py::test_projection_alias_evidence_comes_from_select_columns[SELECT SUM(t.x) AS `amount`, t.y AS `label` FROM t-expected0]",
+        "test_pinned_catalog.py::test_projection_alias_evidence_comes_from_select_columns[SELECT t.x /* AS `fake` FROM t */ AS `real` FROM t-None]",
+        "test_pinned_catalog.py::test_projection_alias_evidence_comes_from_select_columns[SELECT t.x FROM t-None]"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "remaining_failures": []
+    }
+  },
+  "new_tests": 40,
+  "critical": {
+    "total": 160,
+    "passed": 160
+  },
+  "clarification_coverage": {
+    "public_clarification_responses": 89,
+    "with_reason_trace": 89
+  },
+  "collection_errors": 0,
+  "old_pass_to_new_fail": 0,
+  "real_model_calls": 0,
+  "business_source_reads": 0,
+  "production_writes": 0,
+  "supplementary_harness": {
+    "initial_collection_errors": 2,
+    "reason": "Temporary replay file on C: triggered pytest collection of a Windows protected junction; no project source or test expectation changed.",
+    "resolution": "Replay ran directly under a network-denying harness; its actual 32 supported / 4 unsupported outcomes are retained, not claimed as all passing."
+  }
+}
