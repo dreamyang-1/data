@@ -46,7 +46,8 @@
         "docs/cutover/pinned_sql_catalog/closure_report.md",
         "docs/cutover/v2_asl2/closure_report.md",
         "docs/cutover/v2_ranking/closure_report.md",
-        "docs/cutover/v2_filters/closure_report.md"
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md"
       ],
       "next_action": "Verify native/deployed pin acceptance after C-02; connect the V2 typed plan through actual ASL 2.0 with ResultContract evidence. Resolve six unqualified catalog relationship declarations before accepting affected joins."
     },
@@ -112,13 +113,14 @@
       "classification": "CUTOVER_BLOCKER_P1",
       "blocking_level": "P1",
       "status": "OPEN",
-      "summary": "Actual output aliases and original-pin policy receipts cover common/ranked/Boolean-filter plans offline; SQLite fixtures verify bounded null/Boolean/rank semantics. Real source snapshots, SQL mode/collation, period pairing and analytical backends remain unproven.",
+      "summary": "Actual output aliases, catalog pin, filter/rank policies and bound statement/value receipts are connected offline. The opt-in executor copies/binds values and fingerprints them in snapshot identity. Native source snapshots, collation, period pairing and analytics remain unproven.",
       "evidence": [
         "app/semantic_v2/legacy_adapter.py::assess_legacy_adapter",
         "app/semantic_v2/result_contract.py",
         "docs/cutover/v2_temporal_comparisons/closure_report.md",
         "docs/cutover/v2_ranking/closure_report.md",
-        "docs/cutover/v2_filters/closure_report.md"
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md"
       ],
       "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
     },
@@ -126,8 +128,8 @@
       "blocker_id": "S-01",
       "classification": "SCHEMA_DRIFT",
       "blocking_level": "P1",
-      "status": "V2_ASL2_PARTIAL_WITH_FILTER_TREE_VERIFIED",
-      "summary": "Common queries, EXCLUDE_TIES ranking and bounded AND/OR/NOT/null filters lower through private SQL contracts. Time, relationships/comparison, INCLUDE_TIES, mode-safe literals and actual execution remain open.",
+      "status": "V2_ASL2_PARTIAL_WITH_BOUND_VALUES_VERIFIED",
+      "summary": "Common/ranked/Boolean plans carry scoped output/policy receipts and separate scalar parameter bindings. Installed-driver and executor boundary verified offline. Time, relationship/comparison, INCLUDE_TIES, catalog template modes and actual execution remain open.",
       "evidence": [
         "app/semantic_v2/legacy_adapter.py",
         "Oagnet/prompt_build.py::SYSTEM_PROMPT",
@@ -135,9 +137,10 @@
         "docs/cutover/pinned_sql_catalog/closure_report.md",
         "docs/cutover/v2_asl2/closure_report.md",
         "docs/cutover/v2_ranking/closure_report.md",
-        "docs/cutover/v2_filters/closure_report.md"
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md"
       ],
-      "next_action": "Close native catalog prerequisites and governed time/subject facts; implement remaining loss-aware execution contracts and mode-safe literal transport. Preserve public I/O and V1/shadow boundaries."
+      "next_action": "Close native catalog prerequisites and governed time/subject facts; complete remaining loss-aware backend semantics and native result evidence. Preserve public I/O and V1/shadow boundaries."
     },
     {
       "blocker_id": "B-01",
@@ -238,5 +241,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "ed35bc37c8c9685e1b1fec265c183862bf418488"
+  "latest_source_delivery_baseline": "e80132164b4335d38edd7081fd8d884551baa7fe"
 }

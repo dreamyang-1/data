@@ -337,6 +337,8 @@ class ScopedPlanSession:
         policy = {'ordering_contract': lowering.ordering_contract} if lowering.ordering_contract else {}
         if lowering.filter_contract:
             policy['filter_contract'] = lowering.filter_contract
+        if lowering.asl.get('filters') or lowering.filter_contract:
+            policy['parameterized'] = True
         result = sql_planner(self._pin, self._request.authorized_semantic_scope, lowering.asl, **policy)
         if (not isinstance(result, dict) or result.get('success') is not True
                 or not isinstance(result.get('sql'), str) or not result['sql'].strip()
@@ -355,6 +357,16 @@ class ScopedPlanSession:
             from .authorized_contract import contract_digest
             if result.get('filter_contract_hash') != contract_digest(lowering.filter_contract):
                 raise ValueError('ASL2_SQL_FILTER_CONTRACT_MISMATCH')
+        if policy.get('parameterized'):
+            from .authorized_contract import contract_digest
+            parameters = result.get('sql_parameters')
+            if not isinstance(parameters, dict):
+                raise ValueError('ASL2_SQL_PARAMETER_CONTRACT_MISMATCH')
+            expected = dict(style='PYMYSQL_PYFORMAT_V1', asl_fingerprint=contract_digest(lowering.asl),
+                statement_fingerprint=contract_digest({'sql':result['sql'], 'parameters':parameters}),
+                parameter_count=len(parameters))
+            if result.get('sql_parameter_contract') != expected:
+                raise ValueError('ASL2_SQL_PARAMETER_CONTRACT_MISMATCH')
         # A successful trusted SQL planner already called the original pin's
         # full finish; do not create a second, disconnected acceptance window.
         self._finished = True

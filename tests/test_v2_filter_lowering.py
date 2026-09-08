@@ -17,12 +17,13 @@ def leaf(session, field, op='EQ', value='A'):
 def group(op,*children): return m.BooleanFilterGroup(operator=op,children=list(children))
 
 
-def run_fixture(query):
+def run_fixture(query,parameters=None):
     with sqlite3.connect(':memory:') as db:
         db.execute('CREATE TABLE orders(id INTEGER, name TEXT, amount INTEGER, ordered_at TEXT)')
         db.executemany('INSERT INTO orders VALUES(?,?,?,NULL)', [
             (1,'A',10),(2,'B',20),(3,'C',30),(4,None,40),(5,'A',50),(6,"O'Reilly",60)])
-        cursor=db.execute(query)
+        if parameters is not None:query=query % {key:':'+key for key in parameters}
+        cursor=db.execute(query,parameters or {})
         columns=[r[0] for r in cursor.description]
         return columns,[dict(zip(columns,row)) for row in cursor.fetchall()]
 
@@ -43,7 +44,7 @@ def test_actual_sql_preserves_boolean_grouping_and_null_truth(provider,case,expe
         projection_spec=m.ProjectionSpec(items=[m.ProjectionItem(output_field_id='id',ref=bind(session,'ATTRIBUTE','id','PROJECTION_FIELD'),role='PROJECTION_FIELD',position=0)]))
     lower,result=session.compile_asl2(sql_planner=sql,**args(session,p))
     assert result['success'] and lower.filter_contract and lower.asl['filters']==[]
-    columns,rows=run_fixture(result['sql'])
+    columns,rows=run_fixture(result['sql'],result.get('sql_parameters'))
     assert sorted(r[columns[0]] for r in rows)==expected
 
 
@@ -52,7 +53,7 @@ def test_boolean_filters_and_ranking_share_both_receipts(provider):
     p.filters=group('OR',leaf(session,'name'),leaf(session,'name',value='B'))
     lower,result=session.compile_asl2(sql_planner=sql,**args(session,p))
     assert result['filter_contract_hash'] and result['ordering_contract_hash']
-    _,rows=run_fixture(result['sql'])
+    _,rows=run_fixture(result['sql'],result.get('sql_parameters'))
     assert [r[lower.output_bindings[0].sql_alias] for r in rows]==['A','B']
     assert [r[lower.output_bindings[-1].sql_alias] for r in rows]==[60,20]
 
@@ -66,7 +67,7 @@ def test_governed_metric_filter_is_not_an_or_branch(provider):
     session=current(provider)
     p=payload(session,filters=group('OR',leaf(session,'name'),leaf(session,'name',value='B')))
     lower,result=session.compile_asl2(sql_planner=sql,**args(session,p))
-    columns,rows=run_fixture(result['sql'])
+    columns,rows=run_fixture(result['sql'],result.get('sql_parameters'))
     assert rows==[{columns[0]:30}]
 
 
@@ -102,7 +103,7 @@ def test_nullable_group_is_not_silently_removed_by_flat_leaf_heuristics(provider
     session=current(provider)
     p=payload(session,'GROUPED_AGGREGATE',filters=group('OR',leaf(session,'name','IS_NULL',None),leaf(session,'name',value='B')))
     lower,result=session.compile_asl2(sql_planner=sql,**args(session,p))
-    _,rows=run_fixture(result['sql'])
+    _,rows=run_fixture(result['sql'],result.get('sql_parameters'))
     assert {r[lower.output_bindings[0].sql_alias] for r in rows}=={None,'B'}
 
 
@@ -112,7 +113,7 @@ def test_sql_mode_dependent_literals_cannot_bypass_private_guard_in_simple_and(p
     def planner(pin,scope,asl,**policy):
         assert policy.get('filter_contract')
         result=sql(pin,scope,asl,**policy)
-        assert result['error_code']=='PINNED_FILTER_LITERAL_SQL_MODE_UNPROVEN'
+        assert result['success'] and result['sql_parameters']=={'v2_p0':value}
+        assert result['sql_parameter_contract']['style']=='PYMYSQL_PYFORMAT_V1'
         return result
-    with pytest.raises(ValueError,match='ASL2_PINNED_SQL_PLANNING_REJECTED'):
-        session.compile_asl2(sql_planner=planner,**args(session,payload(session,filters=leaf(session,'name',value=value))))
+    session.compile_asl2(sql_planner=planner,**args(session,payload(session,filters=leaf(session,'name',value=value))))

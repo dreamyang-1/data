@@ -94,7 +94,9 @@ def test_typed_filters_keep_values_and_operators(provider,operator,value,expecte
     lowering,result=session.compile_asl2(sql_planner=sql,**args(session,p))
     assert lowering.status=='SUPPORTED_PLAN_ONLY' and result['success']
     assert lowering.asl['filters'][0]['operator']==expected
-    if isinstance(value,m.StringValue):assert "A''lice" in result['sql']
+    if isinstance(value,m.StringValue):
+        assert result['sql_parameters']=={'v2_p0':value.value}
+        assert value.value not in result['sql']
 
 
 @pytest.mark.parametrize('operator,supported',[('AND',True),('OR',False),('NOT',False)])

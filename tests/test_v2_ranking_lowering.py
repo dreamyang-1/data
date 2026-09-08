@@ -16,13 +16,15 @@ def ranked(session, direction='DESC', nulls='EXCLUDE', limit=2, tiebreaker=True)
             stable_tiebreakers=[bind(session, 'DIMENSION', 'customer_name', 'ORDER_BY')] if tiebreaker else []))
 
 
-def execute_fixture(query, reverse=False):
+def execute_fixture(query, reverse=False, parameters=None):
     rows = [(1, 10, 'A'), (2, 20, 'A'), (3, 20, 'B'), (4, 20, 'C'),
             (5, None, 'D'), (6, 10, 'E'), (7, 100, None)]
     with sqlite3.connect(':memory:') as db:
         db.execute('CREATE TABLE orders (id INTEGER, amount INTEGER, name TEXT, ordered_at TEXT)')
         db.executemany('INSERT INTO orders(id, amount, name) VALUES (?, ?, ?)', rows[::-1] if reverse else rows)
-        cursor = db.execute(query)
+        if parameters is not None:
+            query = query % {key: ':'+key for key in parameters}
+        cursor = db.execute(query, parameters or {})
         columns = [d[0] for d in cursor.description]
         return columns, [dict(zip(columns, row)) for row in cursor.fetchall()]
 
@@ -46,11 +48,11 @@ def test_topn_preserves_null_direction_and_stable_ties_in_executed_sql(provider,
 def test_rank_is_global_aggregate_while_display_limit_is_plain_rows(provider):
     session = current(provider)
     lower, result = session.compile_asl2(sql_planner=sql, **args(session, ranked(session, tiebreaker=False)))
-    _, rows = execute_fixture(result['sql'])
+    _, rows = execute_fixture(result['sql'], parameters=result.get('sql_parameters'))
     assert [r[lower.output_bindings[0].sql_alias] for r in rows] == [None, 'A']
     session = current(provider); detail = payload(session, 'DETAIL_ROWS'); detail.limit = m.LimitSpec(limit=2)
     lower, result = session.compile_asl2(sql_planner=sql, **args(session, detail))
-    _, rows = execute_fixture(result['sql'])
+    _, rows = execute_fixture(result['sql'], parameters=result.get('sql_parameters'))
     assert [r[lower.output_bindings[0].sql_alias] for r in rows] == ['A', 'A']
     assert lower.ordering_contract is None
 
@@ -66,7 +68,7 @@ def test_metric_global_filters_apply_before_rank_and_null_exclusion_after_aggreg
     p.filters = m.Predicate(field_ref=bind(session,'ATTRIBUTE','name','FILTER_FIELD'), operator='NE',
         value=m.StringValue(value='A'), source='CURRENT_EXPLICIT', scope='ROW')
     lower, result = session.compile_asl2(sql_planner=sql, **args(session, p))
-    _, rows = execute_fixture(result['sql'])
+    _, rows = execute_fixture(result['sql'], parameters=result.get('sql_parameters'))
     assert {r[lower.output_bindings[0].sql_alias] for r in rows} == {'B', 'C'}
     assert 'WHERE' in result['sql'] and 'HAVING' in result['sql']
 
