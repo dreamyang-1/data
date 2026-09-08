@@ -277,6 +277,8 @@ class ScopedPlanSession:
         if contract_digest({'parse':parse.model_dump(mode='json'),
                             'resolution':resolution.model_dump(mode='json')}) not in self._resolutions:
             raise ValueError('CURRENT_SCOPED_TURN_RESOLUTION_REQUIRED')
+        from .catalog_plans import validate_catalog_payload
+        validate_catalog_payload(self, payload)
         proofs = self._require_refs(collect_bound_refs(payload))
         for dataset_id in referenced_datasets(payload):
             proof = self._datasets.get(dataset_id)

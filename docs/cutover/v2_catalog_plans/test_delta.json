@@ -1,0 +1,158 @@
+{
+  "baseline_commit": "5583d8c48db49e22d236e2ee543b26dc89fa3264",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline": {
+        "passed": 2452,
+        "failed": 27
+      },
+      "final": {
+        "passed": 2484,
+        "failed": 27
+      },
+      "new_tests": [
+        "tests/test_v2_catalog_plans.py::test_catalog_completion_preserves_task_reset_without_old_metric_inheritance",
+        "tests/test_v2_catalog_plans.py::test_compile_rechecks_default_policy_claim_from_trusted_state[missing_field]",
+        "tests/test_v2_catalog_plans.py::test_compile_rechecks_default_policy_claim_from_trusted_state[policy]",
+        "tests/test_v2_catalog_plans.py::test_compile_rechecks_default_policy_claim_from_trusted_state[wrong_entity]",
+        "tests/test_v2_catalog_plans.py::test_compiler_rejects_self_declared_relationship_evidence[cardinality]",
+        "tests/test_v2_catalog_plans.py::test_compiler_rejects_self_declared_relationship_evidence[endpoints]",
+        "tests/test_v2_catalog_plans.py::test_compiler_rejects_self_declared_relationship_evidence[missing_relation]",
+        "tests/test_v2_catalog_plans.py::test_declared_relationship_direction_and_target_projection[FORWARD-\\u533b\\u9662-\\u5546\\u54c1-ONE_TO_MANY]",
+        "tests/test_v2_catalog_plans.py::test_declared_relationship_direction_and_target_projection[REVERSE-\\u5546\\u54c1-\\u533b\\u9662-MANY_TO_ONE]",
+        "tests/test_v2_catalog_plans.py::test_default_governance_gaps_are_system_reasons_not_field_questions[mapping-CATALOG_DEFAULT_DISPLAY_CONFLICT]",
+        "tests/test_v2_catalog_plans.py::test_default_governance_gaps_are_system_reasons_not_field_questions[missing_main-CATALOG_DEFAULT_DISPLAY_MISSING]",
+        "tests/test_v2_catalog_plans.py::test_default_governance_gaps_are_system_reasons_not_field_questions[wrong_flag_type-CATALOG_DEFAULT_DISPLAY_MISSING]",
+        "tests/test_v2_catalog_plans.py::test_detail_uses_governed_default_without_metric_or_field_question",
+        "tests/test_v2_catalog_plans.py::test_enum_parent_is_not_mislabeled_as_an_entity_owner",
+        "tests/test_v2_catalog_plans.py::test_explicit_clear_does_not_silently_restore_catalog_defaults",
+        "tests/test_v2_catalog_plans.py::test_explicit_projection_is_not_replaced_by_default",
+        "tests/test_v2_catalog_plans.py::test_multiple_governed_display_attributes_are_complete_and_stable",
+        "tests/test_v2_catalog_plans.py::test_partial_default_projection_cannot_claim_full_policy",
+        "tests/test_v2_catalog_plans.py::test_pending_subject_answer_completes_default_projection",
+        "tests/test_v2_catalog_plans.py::test_query_does_not_import_attribute_from_unrelated_entity[DETAIL_ROWS]",
+        "tests/test_v2_catalog_plans.py::test_query_does_not_import_attribute_from_unrelated_entity[RELATION_LIST]",
+        "tests/test_v2_catalog_plans.py::test_relation_gaps_are_not_repaired_by_model_guesses[cardinality-CATALOG_RELATION_CARDINALITY_MISSING]",
+        "tests/test_v2_catalog_plans.py::test_relation_gaps_are_not_repaired_by_model_guesses[join-CATALOG_RELATION_JOIN_EVIDENCE_MISSING]",
+        "tests/test_v2_catalog_plans.py::test_relation_gaps_are_not_repaired_by_model_guesses[target-CATALOG_RELATION_ENDPOINT_UNRESOLVED]",
+        "tests/test_v2_catalog_plans.py::test_relation_model_output_cannot_supply_catalog_authority[authority-V2_MODEL_OUTPUT_INVALID]",
+        "tests/test_v2_catalog_plans.py::test_relation_model_output_cannot_supply_catalog_authority[handle-V2_BINDING_HANDLE_NOT_OFFERED]",
+        "tests/test_v2_catalog_plans.py::test_relation_model_output_cannot_supply_catalog_authority[operation-V2_SLOT_OPERATION_CONFLICT]",
+        "tests/test_v2_catalog_plans.py::test_relation_model_output_cannot_supply_catalog_authority[role-V2_RELATION_BINDING_ROLE_CONFLICT]",
+        "tests/test_v2_catalog_plans.py::test_relation_model_output_cannot_supply_catalog_authority[whole-V2_MODEL_OUTPUT_INVALID]",
+        "tests/test_v2_catalog_plans.py::test_replacing_subject_rebinds_default_projection",
+        "tests/test_v2_catalog_plans.py::test_reversing_relation_changes_default_fields_without_inheriting_old_target",
+        "tests/test_v2_catalog_plans.py::test_subject_cannot_contradict_declared_relationship_direction"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete"
+      ]
+    },
+    "Oagnet": {
+      "baseline": {
+        "passed": 555,
+        "failed": 8
+      },
+      "final": {
+        "passed": 560,
+        "failed": 8
+      },
+      "new_tests": [
+        "tests/test_catalog_relation_declarations.py::test_missing_relation_type_is_not_invented",
+        "tests/test_catalog_relation_declarations.py::test_relation_declaration_is_preserved_through_generation[1:1]",
+        "tests/test_catalog_relation_declarations.py::test_relation_declaration_is_preserved_through_generation[1:N]",
+        "tests/test_catalog_relation_declarations.py::test_relation_declaration_is_preserved_through_generation[N:1]",
+        "tests/test_catalog_relation_declarations.py::test_relation_declaration_is_preserved_through_generation[N:M]"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter"
+      ]
+    },
+    "SQL_Translator": {
+      "baseline": {
+        "passed": 200
+      },
+      "final": {
+        "passed": 200
+      },
+      "new_tests": [],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "missing_prior_nodes": 0,
+      "collection_errors": 0,
+      "remaining_failures": []
+    }
+  },
+  "new_agent_regressions": 32,
+  "new_oagnet_regressions": 5,
+  "critical_passed": 160,
+  "critical_total": 160,
+  "agent_modules": 99,
+  "clarification_coverage": {
+    "public_clarification_responses": 89,
+    "with_reason_trace": 89
+  },
+  "focused_v2_tests": 466,
+  "full_agent_before_final_schema_review": {
+    "passed": 2482,
+    "failed": 27
+  },
+  "final_review": "Full three-service suites, then a complete nine-module / 466-test overlay after narrowing the direct-edit schema, correcting enum owner labeling and preserving TaskPatch RESET during default completion. New enum/RESET contrasts; one new negative-case node renamed with its earlier error code. Final module contents replace prior contents without double counting; all baseline nodes retained.",
+  "full_agent_sha256": "f81d780ae729a7417530354c2de258ce1e449b771a4f625f00dd62122f8ea91b",
+  "focused_sha256": "636a91d09b190be3419f7468116e8d43bd354d40ada4dffbefe8b0995e2d0eeb",
+  "oagnet_sha256": "9610cdf109b4912a5e31ca0fd588198f16dc09d7839c42325b19047b49dc064e",
+  "sql_sha256": "0f917c7857c32598473eed7a4ce22963360050a734c9535af8572c7155c14237",
+  "old_pass_to_new_fail": 0,
+  "collection_errors": 0,
+  "real_model_calls": 0,
+  "real_embedding_calls": 0,
+  "production_external_writes": 0,
+  "production_v2_routing_changed": false,
+  "public_io_changed": false,
+  "changed_v2_prompts": 1,
+  "prompt_version": "v2-current-recognition-v4",
+  "legacy_prompt_changes": 0,
+  "regex_changes": 0,
+  "old_expectation_changes": 0
+}

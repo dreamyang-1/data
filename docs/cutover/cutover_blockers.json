@@ -6,11 +6,12 @@
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
       "status": "ACTUAL_SCOPE_CAPTURE_GENERATION_VERIFIED",
-      "summary": "User-authorized 81/[205] read-only capture builds 290 records after UUID and model-copy isolation fixes; exact 13/13 dimension ownership is verified. Real embedding/index publication remains absent.",
+      "summary": "Latest actual 81/[205] read-only capture generates 290 records with retained declared relation types; 14 entities have owned main display attributes and 24 relations have known endpoints/joins/cardinalities. Native publication is absent.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
         "Oagnet/catalog_generation.py",
-        "Oagnet/mysql_tool.py"
+        "Oagnet/mysql_tool.py",
+        "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json"
       ],
       "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot."
     },
@@ -23,7 +24,7 @@
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json"
       ],
-      "next_action": "After explicit operational authorization, initialize isolated collections and publish scoped generation; verify actual Redis durability/native inventory/concurrency. Do not rebuild or relabel V1 collections."
+      "next_action": "After existing operational authorization, regenerate the isolated publication candidate from the latest capture (relation_type changed its identity), publish, then verify native full read-back and durable activation. No V1 collection rebuild."
     },
     {
       "blocker_id": "C-03",
@@ -42,13 +43,14 @@
       "blocker_id": "C-04",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "ACTUAL_DIMENSION_OWNERSHIP_VERIFIED_PARTIAL_CAPABILITIES",
-      "summary": "Actual 81/[205] has governed VARCHAR UUID/decimal identities. After model isolation all 13 dimensions and 15 enums have owned projections. Broader default projection/value/routing capability evidence remains incomplete.",
+      "status": "ACTUAL_DEFAULTS_AND_DECLARED_RELATIONSHIPS_VERIFIED",
+      "summary": "Actual 81/[205]: 14/14 entity defaults, 24/24 relation endpoints/joins/cardinalities; 14 detail + 48 directed relation typed plans pass locally with the captured catalog. External values, routing and actual published runtime capability remain open.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
-        "docs/cutover/catalog_identity/source_review.json"
+        "docs/cutover/catalog_identity/source_review.json",
+        "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json"
       ],
-      "next_action": "Verify governed display defaults and external value/routing dependencies against the pinned published release before Gold; do not infer total capability coverage from record counts."
+      "next_action": "Verify external entity-value and physical routing coverage, then actual native pinned publication; local typed acceptance is not publication or real model quality."
     },
     {
       "blocker_id": "X-01",
@@ -66,14 +68,13 @@
       "classification": "CUTOVER_BLOCKER_P0",
       "blocking_level": "P0",
       "status": "PARTIAL_AUTONOMOUS_SOURCE_PATH",
-      "summary": "Raw V2 now supports scoped canonical Pending, exact predicate/subtree and positive membership edits, partial temporal edits and explicit unbounded time. Governed defaults/relationships, comparison dependencies, remaining analytical/decision types and actual model quality remain open.",
+      "summary": "Raw V2 now includes current-catalog default display and declared single-relationship plans alongside Pending and local slot edits. Multi-hop/alias relations, dependent comparisons, external entity values, remaining analytical/decision types and real model quality remain open.",
       "evidence": [
         "app/semantic_v2/recognition.py",
-        "app/semantic_v2/structured_edits.py",
-        "docs/cutover/v2_pending/closure_report.md",
-        "docs/cutover/v2_slot_edits/closure_report.md"
+        "app/semantic_v2/catalog_plans.py",
+        "docs/cutover/v2_catalog_plans/closure_report.md"
       ],
-      "next_action": "Complete governed default projection/relationship paths, dependent temporal comparisons and remaining payload/decision coverage; evaluate real recognition only after actual catalog gates close."
+      "next_action": "Complete scoped multi-hop/alias relationship contracts, dependent temporal comparisons, entity-value and remaining payload/decision coverage; real recognition evaluation follows catalog gates."
     },
     {
       "blocker_id": "V-02",
@@ -212,5 +213,5 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "fc7c5fc2fe63c9dd4284a88d6c268a10b6b72c52"
+  "latest_source_delivery_baseline": "5583d8c48db49e22d236e2ee543b26dc89fa3264"
 }

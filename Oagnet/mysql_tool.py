@@ -1151,6 +1151,7 @@ def _row_to_relation_dict(row):
     return {
         "relation_code": row.get("code"),
         "relation_name": row.get("name"),
+        "relation_type": row.get("type"),
         "target_entity": row.get("target_entity_code") or row.get("target_entity_type_id"),
         "relation_semantic": row.get("description"),
         "relation_constraint": None,

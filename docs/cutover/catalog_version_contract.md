@@ -170,3 +170,17 @@ validated before transient labels/values reach the model. Unchanged references
 come from that restored task; new references use current pinned binding handles.
 Full catalog acceptance still precedes returned plan/state artifacts. This is
 offline source evidence and does not close native catalog publication or trust.
+
+## Current display and relationship capture
+
+`v2_catalog_plans/catalog_capability_evidence.json` records the latest read-only
+81/[205] capture: catalog version
+`c054d927062b4728fe40d28efa87bd45336f230f62282c257b4c13233a664d92`.
+Oagnet now preserves the already selected relation `type` as `relation_type`.
+The source contains 14 governed main display attributes and 24 declared
+relationships (11 one-to-many, 13 many-to-one), all with endpoints/join pairs.
+Locally, 14 detail and 48 directed relationship typed plans pass using this
+actual capture and offline publication stores. This is not native publication
+or natural-language evaluation. The older PR20 publication candidate's content
+identity is stale; regenerate and revalidate it after operational authorization.
+No collection, activation marker, V1 route or production data was changed.
