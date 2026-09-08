@@ -170,7 +170,8 @@
         "docs/cutover/pinned_sql_catalog/closure_report.md",
         "docs/cutover/v2_asl2/closure_report.md",
         "docs/cutover/v2_ranking/closure_report.md",
-        "docs/cutover/v2_filters/closure_report.md"
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md"
       ],
       "next_action": "Verify native/deployed pin acceptance after C-02; connect the V2 typed plan through actual ASL 2.0 with ResultContract evidence. Resolve six unqualified catalog relationship declarations before accepting affected joins. Close C-02 native publication/durable registry gates, then prove actual source lookup under authorized operations. Evaluate field-hypothesis/fuzzy selection after catalog gates. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
     },
@@ -185,7 +186,8 @@
       "evidence": [
         "app/semantic_v2/legacy_adapter.py; dataset transforms UNSUPPORTED; Legacy safe route regressions pass",
         "docs/cutover/v2_ranking/closure_report.md",
-        "docs/cutover/v2_filters/closure_report.md"
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md"
       ],
       "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
@@ -205,7 +207,8 @@
         "docs/cutover/pinned_sql_catalog/closure_report.md",
         "docs/cutover/v2_asl2/closure_report.md",
         "docs/cutover/v2_ranking/closure_report.md",
-        "docs/cutover/v2_filters/closure_report.md"
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md"
       ],
       "next_action": "Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]. Verify native/deployed pin acceptance after C-02; connect the V2 typed plan through actual ASL 2.0 with ResultContract evidence. Resolve six unqualified catalog relationship declarations before accepting affected joins."
     },
@@ -227,7 +230,8 @@
         "docs/cutover/pinned_sql_catalog/closure_report.md",
         "docs/cutover/v2_asl2/closure_report.md",
         "docs/cutover/v2_ranking/closure_report.md",
-        "docs/cutover/v2_filters/closure_report.md"
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md"
       ],
       "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot. Verify native/deployed pin acceptance after C-02; connect the V2 typed plan through actual ASL 2.0 with ResultContract evidence. Resolve six unqualified catalog relationship declarations before accepting affected joins."
     },
@@ -278,9 +282,10 @@
         "docs/cutover/pinned_sql_catalog/closure_report.md",
         "docs/cutover/v2_asl2/closure_report.md",
         "docs/cutover/v2_ranking/closure_report.md",
-        "docs/cutover/v2_filters/closure_report.md"
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md"
       ],
-      "next_action": "Close native catalog prerequisites and governed time/subject facts; implement remaining loss-aware execution contracts and mode-safe literal transport. Preserve public I/O and V1/shadow boundaries. Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
+      "next_action": "Close native catalog prerequisites and governed time/subject facts; complete remaining loss-aware backend semantics and native result evidence. Preserve public I/O and V1/shadow boundaries. Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
     },
     {
       "capability": "ResultContract",
@@ -295,7 +300,8 @@
         "Ordered path/occurrence source acceptance and 250 actual-catalog typed walks: docs/cutover/v2_relation_paths/closure_report.md",
         "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md",
         "docs/cutover/v2_ranking/closure_report.md",
-        "docs/cutover/v2_filters/closure_report.md"
+        "docs/cutover/v2_filters/closure_report.md",
+        "docs/cutover/v2_bound_sql/closure_report.md"
       ],
       "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
     },
