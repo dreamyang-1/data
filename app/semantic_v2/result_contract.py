@@ -9,7 +9,7 @@ from typing import Any
 from .enums import ProofStatus, SemanticRole, Severity
 from .models import (ContractProof, ResultContract, OutputFieldRequirement, OrderingRequirement,
                      CardinalityExpectation, ProofRequirement, ProofCheck, RowBounds,
-                     AliasedOutputFieldRequirement, RelationshipPathSpec)
+                     AliasedOutputFieldRequirement, RelationshipPathSpec, TemporalComparisonSpec)
 
 
 class ResultContractCompiler:
@@ -18,6 +18,7 @@ class ResultContractCompiler:
         payload = plan.payload
         outputs = []
         seen = set()
+        temporal = payload.payload_type == 'COMPARISON' and isinstance(payload.comparison, TemporalComparisonSpec)
 
         def output(ref, role, identifier=None, entity_alias=None):
             if identifier is None:
@@ -31,11 +32,11 @@ class ResultContractCompiler:
                 seen.add(identifier)
             else:
                 existing = next(o for o in outputs if o.output_field_id == identifier)
-                if entity_alias or isinstance(existing, AliasedOutputFieldRequirement):
+                if temporal or entity_alias or isinstance(existing, AliasedOutputFieldRequirement):
                     from .slot_reducer import semantic_fingerprint
                     if (getattr(existing, 'entity_alias', None) != entity_alias or existing.logical_role != role
                             or semantic_fingerprint(existing.semantic_ref) != semantic_fingerprint(ref)):
-                        raise ValueError('RESULT_OUTPUT_OCCURRENCE_ID_COLLISION')
+                        raise ValueError('RESULT_COMPARISON_OUTPUT_ID_COLLISION' if temporal else 'RESULT_OUTPUT_OCCURRENCE_ID_COLLISION')
             return identifier
 
         projection = getattr(payload, 'projection_spec', None)
@@ -44,16 +45,23 @@ class ResultContractCompiler:
         if projection:
             for item in projection.items:
                 output(item.ref, item.role, item.output_field_id, getattr(item, 'entity_alias', None))
-        for ref in getattr(payload, 'measures', []):
+        for ref in ([] if temporal else getattr(payload, 'measures', [])):
             output(ref, SemanticRole.MEASURE)
         for ref in getattr(payload, 'group_by', []):
             output(ref, SemanticRole.GROUP_BY)
         time = getattr(payload, 'time', None)
-        if time and payload.payload_type in {'TIME_SERIES', 'COMPARISON', 'ANOMALY', 'ROOT_CAUSE', 'FORECAST'}:
+        if time and (not temporal or time.grain != 'NONE') and payload.payload_type in {'TIME_SERIES', 'COMPARISON', 'ANOMALY', 'ROOT_CAUSE', 'FORECAST'}:
             output(time.anchor, SemanticRole.TIME_FIELD)
         if payload.payload_type == 'COMPARISON':
-            for ref in payload.comparison.output_metrics:
-                output(ref, SemanticRole.MEASURE)
+            if temporal:
+                from .temporal_comparisons import comparison_outputs
+                for item in comparison_outputs(payload.comparison):
+                    if item.output_field_id in seen:
+                        raise ValueError('RESULT_COMPARISON_OUTPUT_ID_COLLISION')
+                    outputs.append(item); seen.add(item.output_field_id)
+            else:
+                for ref in payload.comparison.output_metrics:
+                    output(ref, SemanticRole.MEASURE)
         ordering = []
         bounds = RowBounds()
         if payload.payload_type == 'RANKING':
@@ -75,23 +83,27 @@ class ResultContractCompiler:
             bounds = RowBounds(maximum=payload.operation.limit)
         elif limit:
             bounds = RowBounds(maximum=limit.limit)
-        kind = ('SCALAR' if payload.payload_type == 'SCALAR_AGGREGATE' else
+        kind = ('SCALAR' if payload.payload_type == 'SCALAR_AGGREGATE' or (temporal and time.grain == 'NONE' and not payload.group_by) else
                 'DISTINCT_TARGETS' if payload.payload_type == 'RELATION_LIST' else
                 'TIME_PERIODS' if time and time.grain.value != 'NONE' else
                 'GROUPS' if getattr(payload, 'group_by', []) else 'DETAIL_ROWS')
         if kind == 'SCALAR':
             bounds = RowBounds(maximum=1)
         checks = ['output_bindings', 'row_bounds', 'allow_empty', 'allow_truncated', 'numeric_constraints']
+        if temporal:
+            checks.append('temporal_comparison_arithmetic')
         if ordering:
             checks.append('required_ordering')
         if time and time.grain.value != 'NONE':
             checks.append('required_time_grain')
-        if kind == 'DISTINCT_TARGETS':
+        unique_outputs = [o.output_field_id for o in outputs if o.logical_role == SemanticRole.TARGET_ENTITY
+            or (temporal and o.logical_role in {SemanticRole.GROUP_BY, SemanticRole.TIME_FIELD})]
+        if kind == 'DISTINCT_TARGETS' or (temporal and unique_outputs):
             checks.append('cardinality')
         return ResultContract(semantic_fingerprint=plan.semantic_fingerprint, required_outputs=outputs,
                               required_ordering=ordering, row_bounds=bounds,
                               required_time_grain=time.grain if time and time.grain.value != 'NONE' else None,
-                              expected_cardinality=CardinalityExpectation(kind=kind, unique_output_field_ids=[o.output_field_id for o in outputs if o.logical_role == SemanticRole.TARGET_ENTITY]),
+                              expected_cardinality=CardinalityExpectation(kind=kind, unique_output_field_ids=unique_outputs),
                               snapshot_requirement=plan.snapshot_requirement.data_snapshot_id,
                               proof_requirements=[ProofRequirement(check_id=c) for c in checks])
 
@@ -178,6 +190,12 @@ def prove_result_contract(
             errors.append('logical output binding proof missing or invalid')
     elif any(p.check_id == 'output_bindings' for p in contract.proof_requirements):
         checks['output_bindings'] = ProofStatus.PASS
+    if any(p.check_id == 'temporal_comparison_arithmetic' for p in contract.proof_requirements):
+        from .temporal_comparisons import comparison_arithmetic
+        ok = bindings_ok and comparison_arithmetic(contract.required_outputs, bindings, rows)
+        checks['temporal_comparison_arithmetic'] = ProofStatus.PASS if ok else ProofStatus.FAIL
+        if not ok:
+            errors.append('temporal comparison arithmetic or period output binding failed')
     if contract.required_time_grain is not None:
         checks['required_time_grain'] = (ProofStatus.UNKNOWN if actual_time_grain is None else
                                        ProofStatus.PASS if actual_time_grain == contract.required_time_grain else ProofStatus.FAIL)

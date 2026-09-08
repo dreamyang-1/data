@@ -930,7 +930,15 @@
           "type": "string"
         },
         "comparison": {
-          "$ref": "#/$defs/ComparisonSpec"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemporalComparisonSpec"
+            },
+            {
+              "$ref": "#/$defs/ComparisonSpec"
+            }
+          ],
+          "title": "Comparison"
         }
       },
       "required": [
@@ -938,6 +946,57 @@
         "comparison"
       ],
       "title": "ComparisonPayload",
+      "type": "object"
+    },
+    "ComparisonPeriodRule": {
+      "additionalProperties": false,
+      "properties": {
+        "rule_type": {
+          "enum": [
+            "PREVIOUS_YEAR",
+            "PREVIOUS_PERIOD",
+            "EXPLICIT"
+          ],
+          "title": "Rule Type",
+          "type": "string"
+        },
+        "period_unit": {
+          "anyOf": [
+            {
+              "enum": [
+                "QUERY_GRAIN",
+                "CURRENT_WINDOW",
+                "DAY",
+                "WEEK",
+                "MONTH",
+                "QUARTER",
+                "YEAR"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Period Unit"
+        },
+        "baseline_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "rule_type"
+      ],
+      "title": "ComparisonPeriodRule",
       "type": "object"
     },
     "ComparisonSpec": {
@@ -3576,6 +3635,90 @@
         "context_fingerprint"
       ],
       "title": "TaskBindingEvidence",
+      "type": "object"
+    },
+    "TemporalComparisonSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "comparison_type": {
+          "$ref": "#/$defs/ComparisonType"
+        },
+        "baseline": {
+          "discriminator": {
+            "mapping": {
+              "DATASET": "#/$defs/DatasetBaseline",
+              "SEMANTIC": "#/$defs/SemanticBaseline",
+              "TASK": "#/$defs/TaskBaseline",
+              "TIME": "#/$defs/TimeBaseline"
+            },
+            "propertyName": "baseline_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/TimeBaseline"
+            },
+            {
+              "$ref": "#/$defs/TaskBaseline"
+            },
+            {
+              "$ref": "#/$defs/DatasetBaseline"
+            },
+            {
+              "$ref": "#/$defs/SemanticBaseline"
+            }
+          ],
+          "title": "Baseline"
+        },
+        "current_period": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "comparison_period": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "calculation": {
+          "$ref": "#/$defs/Calculation"
+        },
+        "output_metrics": {
+          "items": {
+            "$ref": "#/$defs/BoundSemanticRef"
+          },
+          "maxItems": 100,
+          "title": "Output Metrics",
+          "type": "array"
+        },
+        "period_rule": {
+          "$ref": "#/$defs/ComparisonPeriodRule"
+        },
+        "policy_version": {
+          "const": "exact-calendar-comparison-v1",
+          "default": "exact-calendar-comparison-v1",
+          "title": "Policy Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "comparison_type",
+        "baseline",
+        "calculation",
+        "period_rule"
+      ],
+      "title": "TemporalComparisonSpec",
       "type": "object"
     },
     "TimeBaseline": {

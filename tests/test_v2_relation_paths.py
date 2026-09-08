@@ -273,8 +273,8 @@ def test_current_path_schemas_match_source_and_frozen_contract_stays_separate():
     from app.semantic_v2.pipeline import AuthorizedLogicalPlan
     from app.semantic_v2.schema import draft_2020_12_schema
     root = Path(__file__).resolve().parents[1] / 'specs/semantic_v2'
-    for name, expected in [('semantic_task_draft_v5.schema.json', draft_2020_12_schema(SemanticTaskDraft)),
-        ('current_recognition_value_v3.schema.json', value_schema()),
+    for name, expected in [('semantic_task_draft_v6.schema.json', draft_2020_12_schema(SemanticTaskDraft)),
+        ('current_recognition_value_v4.schema.json', value_schema()),
         ('authorized_logical_plan_v0_2_2.schema.json', draft_2020_12_schema(AuthorizedLogicalPlan))]:
         assert json.loads((root / name).read_text(encoding='utf-8')) == expected
     assert 'RelationshipPathSpec' not in (root / '0.2.1/LogicalPlan.schema.json').read_text(encoding='utf-8')
