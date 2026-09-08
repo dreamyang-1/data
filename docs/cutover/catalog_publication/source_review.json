@@ -1,0 +1,60 @@
+{
+  "baseline_commit": "3ab8b4336b290d3560756345c4328278ee1ca9b3",
+  "files": [
+    {
+      "path": "Oagnet/catalog_generation.py",
+      "sha256": "db10194521b1e0e6cf8f902207e9b55fb8b5ba2afe1b775fe29db871907c3da4"
+    },
+    {
+      "path": "Oagnet/catalog_registry.py",
+      "sha256": "629323346ed7ae39fbe28016a7cff3244db9b44f7f099d598013a05655dba24b"
+    },
+    {
+      "path": "Oagnet/catalog_publication.py",
+      "sha256": "ac12181c40e83a82e1904500b855699de7e0c300cc490ab4ad94663197ce7cb2"
+    },
+    {
+      "path": "Oagnet/catalog_store.py",
+      "sha256": "cc14822aceba397653b0297cde551f6d938ce1a54898085cdd4e03a1d0c72d67"
+    },
+    {
+      "path": "Oagnet/catalog_release.py",
+      "sha256": "3244b5d68086e7e2f6f2d5ce35583e4926f67785676c5b5fbfc78dab7dd380d7"
+    },
+    {
+      "path": "Oagnet/vector_store.py",
+      "sha256": "cc57e22b2aae756051d4225e046fed98f4b0e9501e630aed94d6fcebfb12f6c0"
+    },
+    {
+      "path": "Oagnet/scripts/manage_catalog_publication.py",
+      "sha256": "f044a0b3282ffdc87e80965171d4e1c813e88f7d91a60795fbc51547a6573d3f"
+    },
+    {
+      "path": "Oagnet/tests/test_catalog_publication.py",
+      "sha256": "f29a305fb8b69dc62bbf30d5edef5bf92791754022917b17f007af7ff1cbb438"
+    },
+    {
+      "path": "Oagnet/tests/test_catalog_release.py",
+      "sha256": "8a6cc5defc5176f2ad42b02520bbe137c32614461eb4a9a337b4038c5d9b1df3"
+    }
+  ],
+  "review": "Self-review; no separate agent. Actual installed pymilvus 2.6.17 query_iterator accepts consistency_level and timeout; all service calls in validation replaced/denied by existing offline runners.",
+  "verified_edges": [
+    "consistent MySQL capture including model-owned unassigned metrics",
+    "existing DSL and physical builders to complete identity inventory",
+    "scoped immutable IDs and float32 vector hashes to isolated Milvus generation collections",
+    "full strong iterator read-back to Redis WATCH/MULTI activation",
+    "pinned search/exact reads to final authority/inventory/activation validation",
+    "embedding model/endpoint/dimension contract and cache release fingerprint",
+    "reactivation refuses obsolete authority and invalidates ABA readers",
+    "lost activation acknowledgement yields explicit outcome-unknown; no blind write retry"
+  ],
+  "retained_blockers": [
+    "Native Redis/Milvus durability and concurrent integration not exercised",
+    "No named deployed target/caller trust/catalog capability evidence",
+    "V2 recognition/binding path not yet using this read view",
+    "Existing V1 Oagnet API and SQL caches do not carry this release",
+    "External entity-value/source-routing dependencies outside this generation contract",
+    "Owned projection/default/opaque rule coverage is not established by generated-record counts"
+  ]
+}
