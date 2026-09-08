@@ -65,8 +65,8 @@ def args(session,payload):
         versions=AuthorizedVersionMetadata(prompt_version='fixture',policy_version='fixture',adapter_version='fixture'))
 
 
-def sql(pin,scope,asl):
-    return translate_pinned_catalog(pin,RequestScope.from_request({'authorized_semantic_scope':scope.model_dump(mode='json')}),asl)
+def sql(pin,scope,asl,**policy):
+    return translate_pinned_catalog(pin,RequestScope.from_request({'authorized_semantic_scope':scope.model_dump(mode='json')}),asl,**policy)
 
 
 @pytest.mark.parametrize('kind',['SCALAR_AGGREGATE','GROUPED_AGGREGATE','DETAIL_ROWS'])
@@ -174,8 +174,12 @@ def test_ranking_policies_are_not_reduced_to_plain_limit(provider,ties,nulls):
     p=m.RankingPayload(measures=[metric],group_by=[group],ranking_target=group,
         ranking=m.RankingSpec(rank_by=metric,direction='DESC',limit=5,ties_policy=ties,nulls_policy=nulls,
             stable_tiebreakers=[bind(session,'DIMENSION','customer_name','ORDER_BY')]))
-    lowering,result=session.compile_asl2(sql_planner=lambda *a:pytest.fail('Ranking policy lost'),**args(session,p))
-    assert lowering.asl is None and 'ASL2_ORDERING_POLICY_UNREPRESENTABLE' in lowering.blockers
+    lowering,result=session.compile_asl2(sql_planner=sql,**args(session,p))
+    if ties == 'INCLUDE_TIES':
+        assert lowering.asl is None and lowering.blockers == ('ASL2_RANK_TIES_CONTRACT_UNSUPPORTED',)
+    else:
+        assert result['success'] and lowering.ordering_contract['order_by'][0]['nulls_policy'] == nulls
+        assert len(lowering.ordering_contract['order_by']) == 2
 
 
 def test_explicitly_cleared_time_does_not_revive_a_filter(provider):

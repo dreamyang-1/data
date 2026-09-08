@@ -334,7 +334,8 @@ class ScopedPlanSession:
         if lowering.asl is None:
             self.accept_catalog()
             return lowering, None
-        result = sql_planner(self._pin, self._request.authorized_semantic_scope, lowering.asl)
+        policy = {'ordering_contract': lowering.ordering_contract} if lowering.ordering_contract else {}
+        result = sql_planner(self._pin, self._request.authorized_semantic_scope, lowering.asl, **policy)
         if (not isinstance(result, dict) or result.get('success') is not True
                 or not isinstance(result.get('sql'), str) or not result['sql'].strip()
                 or result.get('authorized_scope_fingerprint') != self._request.authorized_semantic_scope.fingerprint()):
@@ -344,6 +345,10 @@ class ScopedPlanSession:
             raise ValueError('ASL2_SQL_ACCEPTANCE_IDENTITY_MISMATCH')
         if result.get('sql_projection_aliases') != [b.sql_alias for b in lowering.output_bindings]:
             raise ValueError('ASL2_SQL_PROJECTION_BINDING_MISMATCH')
+        if lowering.ordering_contract:
+            from .authorized_contract import contract_digest
+            if result.get('ordering_contract_hash') != contract_digest(lowering.ordering_contract):
+                raise ValueError('ASL2_SQL_ORDERING_CONTRACT_MISMATCH')
         # A successful trusted SQL planner already called the original pin's
         # full finish; do not create a second, disconnected acceptance window.
         self._finished = True
