@@ -63,6 +63,7 @@ from app.services.conversation_followup import (
 )
 from app.services.turn_admission import TurnAdmissionGate
 from app.services.clarification_policy import decide_clarification
+from app.services.authorized_scope import bind_authorized_scope, state_scope_matches
 from app.services.legacy_guards import pending_answer_admissibility, apply_snapshot_display_default, apply_region_clear_barrier
 from app.services.history_compaction import compact_history
 from app.services.working_memory import recalls_prior_task, select_recalled_task_frame
@@ -765,6 +766,8 @@ class DataAnalysisOrchestrator:
     @staticmethod
     def _dag_scope_fingerprint(chat: ChatRequest) -> str:
         payload = {
+            'scope_contract': 'phase0c-v1',
+            'authorized_scope': chat.authorized_semantic_scope.fingerprint(),
             "semantic_model_id": chat.semantic_model_id,
             "database_id": chat.database_id,
             "business_domain_ids": sorted(chat.business_domain_ids),
@@ -835,7 +838,7 @@ class DataAnalysisOrchestrator:
         if not hmac.compare_digest(stored_scope, self._dag_scope_fingerprint(chat)):
             return self._dag_resume_error(
                 chat,
-                "本轮语义模型、业务域、知识库或数据集范围与原任务不一致；请保持原范围后重试。",
+                "原任务不适用于本次访问范围，请在当前范围内重新提交完整问题。",
             )
 
         normalized = chat.question.replace(" ", "")
@@ -1186,6 +1189,7 @@ class DataAnalysisOrchestrator:
                 identity.user_id,
                 chat.application_id,
                 source_conversation,
+                chat.authorized_semantic_scope.fingerprint(),
             )
             loaded = await asyncio.to_thread(
                 self.dataset_store.load_dataset,
@@ -1316,7 +1320,8 @@ class DataAnalysisOrchestrator:
             identity.tenant_id, identity.user_id, chat.application_id,
             chat.conversation_id, root_message_id,
         )
-        if checkpoint and checkpoint.get("plan_fingerprint") == plan_fingerprint:
+        if (checkpoint and checkpoint.get("plan_fingerprint") == plan_fingerprint
+                and checkpoint.get('authorized_scope') == chat.authorized_semantic_scope.fingerprint()):
             for task_id, raw in checkpoint.get("completed", {}).items():
                 try:
                     responses[task_id] = AgentResponse.model_validate(raw)
@@ -1344,6 +1349,7 @@ class DataAnalysisOrchestrator:
                     {
                         "schema_version": "1.0",
                         "plan_fingerprint": plan_fingerprint,
+                        'authorized_scope': chat.authorized_semantic_scope.fingerprint(),
                         "completed": completed,
                         "conversations": conversation_by_task,
                     },
@@ -1880,7 +1886,7 @@ class DataAnalysisOrchestrator:
                 chat.application_id,
                 child_conversation,
             )
-            if child_request is None:
+            if child_request is None or not state_scope_matches(child_request, chat):
                 continue
             root_request = child_request.model_copy(
                 deep=True,
@@ -2016,6 +2022,7 @@ class DataAnalysisOrchestrator:
             user_id=identity.user_id,
             application_id=chat.application_id,
             conversation_id=chat.conversation_id,
+            authorized_semantic_scope_fingerprint=chat.authorized_semantic_scope.fingerprint(),
         )
         result = await asyncio.to_thread(
             self.dataset_store.join_datasets,
@@ -2074,8 +2081,9 @@ class DataAnalysisOrchestrator:
         """Hash every effective input using a deterministic JSON representation."""
         payload = {
             "chat": chat.model_dump(mode="json"),
-            # Roles are trusted request context and may affect authorization or
-            # data visibility even though they are not part of the JSON body.
+            'scope_contract': 'phase0c-v1',
+            'authorized_scope': chat.authorized_semantic_scope.fingerprint(),
+            # Roles may vary presentation; they never grant semantic access.
             "roles": sorted(set(identity.roles)),
         }
         canonical = json.dumps(
@@ -2107,6 +2115,8 @@ class DataAnalysisOrchestrator:
         ).lower()
         payload = {
             "question": normalized_question,
+            'scope_contract': 'phase0c-v1',
+            'authorized_scope': chat.authorized_semantic_scope.fingerprint(),
             "semantic_model_id": chat.semantic_model_id,
             "database_id": chat.database_id,
             "business_domain_ids": sorted(chat.business_domain_ids),
@@ -2124,12 +2134,10 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _effective_business_domain_id(chat: ChatRequest) -> int | None:
-        """Return a hard domain constraint only when exactly one was selected.
+        """Legacy scalar alias; request.business_domain_ids always carries the set.
 
-        Oagnet already treats a null business_domain_id as semantic-model-wide
-        retrieval and lets ASL resolve one or more relevant domains. Multiple
-        requested/allowed domains therefore deliberately use that routing mode;
-        a single explicit domain remains a strict backwards-compatible hint.
+        A None alias for multiple domains is safe only together with the full
+        explicit list supported by Oagnet. It is never a model-wide grant.
         """
         if len(chat.business_domain_ids) == 1:
             return chat.business_domain_ids[0]
@@ -2141,7 +2149,7 @@ class DataAnalysisOrchestrator:
         request: CanonicalAnalysisRequest,
         chat: ChatRequest,
     ) -> int | None:
-        """Use a unique vector-resolved domain only in caller AUTO mode."""
+        """Optionally narrow execution within current MODEL_WIDE authorization."""
 
         explicit = cls._effective_business_domain_id(chat)
         if explicit is not None:
@@ -2561,10 +2569,7 @@ class DataAnalysisOrchestrator:
     @staticmethod
     def _pending_scope_matches(request: CanonicalAnalysisRequest, chat: ChatRequest) -> bool:
         return (
-            request.semantic_model_id == chat.semantic_model_id
-            and request.database_id == chat.database_id
-            and sorted(request.business_domain_ids) == sorted(chat.business_domain_ids)
-            and sorted(request.knowledge_base_names) == sorted(chat.knowledge_base_names)
+            state_scope_matches(request, chat)
             and (
                 chat.dataset_id is None
                 or request.source_dataset_id == chat.dataset_id
@@ -2601,6 +2606,8 @@ class DataAnalysisOrchestrator:
         raw_rule_request = self._classify_with_rules(
             admission_question, identity, chat.conversation_id
         )
+        bind_authorized_scope(raw_rule_request, chat.authorized_semantic_scope)
+        raw_rule_request.application_id = chat.application_id
         independent_chat = raw_rule_request.primary_intent == PrimaryIntent.CHAT
         standalone_complete_business = bool(
             pending is None
@@ -2645,6 +2652,7 @@ class DataAnalysisOrchestrator:
                 chat.conversation_id, expected_version=pending.state_version,
             )
             pending = None
+            chat = chat.model_copy(update={'history': []})
         previous_for_rewrite = (
             None
             if standalone_complete_business or chat._is_regeneration_execution
@@ -2695,6 +2703,7 @@ class DataAnalysisOrchestrator:
             previous_for_rewrite, chat
         ):
             previous_for_rewrite = None
+            chat = chat.model_copy(update={'history': []})
         if (
             not chat._is_regeneration_execution
             and not independent_chat
@@ -2733,6 +2742,11 @@ class DataAnalysisOrchestrator:
                     previous_for_rewrite.assumptions.append(
                         "VERIFIED_EXECUTION_FRAME_SELECTED"
                     )
+        # The last-request fallback must pass the same scope check as Pending
+        # and task frames; otherwise a rejected frame re-enters through here.
+        if previous_for_rewrite is not None and not self._pending_scope_matches(previous_for_rewrite, chat):
+            previous_for_rewrite = None
+            chat = chat.model_copy(update={'history': []})
         turn_decision = self.turn_admission_gate.evaluate(
             question=admission_question,
             current=raw_rule_request,
@@ -3144,6 +3158,7 @@ class DataAnalysisOrchestrator:
             request.asl_template = copy.deepcopy(previous_for_rewrite.asl_template)
             request.assumptions.append("DETERMINISTIC_TIME_FAST_PATH")
 
+        bind_authorized_scope(request, chat.authorized_semantic_scope)
         if rewrite is not None and rewrite.semantic_matches:
             # The entity-attribute endpoint is scoped to the current semantic
             # model/domain.  Use its latest dimension labels for both the raw
@@ -4047,12 +4062,7 @@ class DataAnalysisOrchestrator:
             if turn_decision.inherit_business_context
             else None
         )
-        request.semantic_model_id = chat.semantic_model_id
-        request.database_id = chat.database_id
-        request.business_domain_ids = list(chat.business_domain_ids)
-        request.business_domain_selection_mode = (
-            "EXPLICIT" if chat.business_domain_ids else "AUTO"
-        )
+        bind_authorized_scope(request, chat.authorized_semantic_scope)
         request.dependency_constraints = list(chat.dependency_constraints)
         request.assumptions = list(dict.fromkeys([
             *request.assumptions,
@@ -4467,7 +4477,7 @@ class DataAnalysisOrchestrator:
                     upstream_code=exc.upstream_code,
                 )
                 return await self._finish_terminal(
-                    request, self._fallback(request, self._dependency_message(exc))
+                    request, self._fallback(request, self._dependency_message(exc), error_code=exc.code)
                 )
 
         query_result = await self._requery_system_default_trend_at_watermark(
@@ -5407,6 +5417,8 @@ class DataAnalysisOrchestrator:
                 if raw is None:
                     return fallback
                 reference = restore_reference(raw)
+                if reference.scope.authorized_semantic_scope_fingerprint != chat.authorized_semantic_scope.fingerprint():
+                    return fallback
                 # Final chat tables are bounded. Large datasets retain the
                 # child's preview and downloadable dataset reference instead of
                 # being fully materialized merely for presentation.
@@ -5597,6 +5609,7 @@ class DataAnalysisOrchestrator:
             identity.user_id,
             chat.application_id,
             chat.conversation_id,
+            chat.authorized_semantic_scope.fingerprint(),
         )
         try:
             result = await asyncio.to_thread(
@@ -5672,6 +5685,7 @@ class DataAnalysisOrchestrator:
                     identity.user_id,
                     request.application_id,
                     request.conversation_id,
+                    request.authorized_semantic_scope.fingerprint() if request.authorized_semantic_scope else '',
                 ),
                 file_format=file_format,
                 title="数据分析报告",
@@ -5720,7 +5734,7 @@ class DataAnalysisOrchestrator:
                 request, empty_dataset, identity
             )
         except AdapterError as exc:
-            return self._fallback(request, self._dependency_message(exc))
+            return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
         if not context.documents:
             return self._fallback(
                 request,
@@ -5946,6 +5960,10 @@ class DataAnalysisOrchestrator:
                     raise ExplicitDatasetUnavailableError(
                         "指定的数据集不存在、已过期或不属于当前会话，请重新选择。"
                     )
+                return None, None
+            if not self._dataset_reference_matches_scope(selected, request):
+                if request.source_dataset_id:
+                    raise ExplicitDatasetUnavailableError('DATASET_SCOPE_MISMATCH: 指定数据集不属于本轮授权范围。')
                 return None, None
             source_reference = restore_reference(selected)
             scope = scope_for_request(request)
@@ -6410,6 +6428,8 @@ class DataAnalysisOrchestrator:
         )
         selections: list[tuple[str, str]] = []
         for frame in frames:
+            if not self._pending_scope_matches(frame, chat):
+                continue
             frame_regions = [
                 item for item in frame.filters
                 if isinstance(item, dict)
@@ -6469,10 +6489,13 @@ class DataAnalysisOrchestrator:
         never cross semantic-model or explicit business-domain scope. Legacy
         database references without provenance deliberately fail closed.
         """
+        bound_scope = request.authorized_semantic_scope
+        if bound_scope is not None and reference.get('scope', {}).get('authorized_semantic_scope_fingerprint') != bound_scope.fingerprint():
+            return False
         source_type = str(reference.get("source_type") or "")
         model_id = reference.get("semantic_model_id")
-        if source_type == "UPLOADED_SPREADSHEET":
-            return True
+        if source_type == "UPLOADED_SPREADSHEET" and bound_scope is None:
+            return False
         if model_id is None or request.semantic_model_id is None:
             return False
         try:
@@ -6497,9 +6520,7 @@ class DataAnalysisOrchestrator:
             )
         except (TypeError, ValueError):
             return False
-        if request.business_domain_ids:
-            return reference_domains == sorted(request.business_domain_ids)
-        return True
+        return reference_domains == sorted(request.business_domain_ids)
 
     async def _persist_query_dataset(
         self, request: CanonicalAnalysisRequest, query_result: DataQueryResult
@@ -6948,7 +6969,7 @@ class DataAnalysisOrchestrator:
         response.semantic_model_id = request.semantic_model_id
         response.database_id = request.database_id
         response.requested_business_domain_ids = list(request.business_domain_ids)
-        response.business_domain_selection_mode = request.business_domain_selection_mode
+        response.business_domain_selection_mode = 'EXPLICIT' if request.business_domain_ids else 'AUTO'
         response.answer = self._sanitize_user_visible_answer(response.answer)
         self._attach_query_result_file(response)
         self._append_download_links(response)
@@ -8244,7 +8265,7 @@ class DataAnalysisOrchestrator:
                 return self._fallback(request, "没有找到唯一、已发布的指标定义。")
             item = await (self.adapters.semantic.definition(resolved[0]) if request.primary_intent == PrimaryIntent.METRIC_DEFINITION else self.adapters.semantic.lineage(resolved[0], identity))
         except AdapterError as exc:
-            return self._fallback(request, self._dependency_message(exc))
+            return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
         if request.primary_intent == PrimaryIntent.DATA_LINEAGE:
             business_lineage = [
                 str(value).strip() for value in (item.payload.get("business_lineage") or [])
@@ -10112,6 +10133,9 @@ class DataAnalysisOrchestrator:
     @staticmethod
     def _dependency_message(exc: AdapterError) -> str:
         known = {
+            'EXPLICIT_DOMAIN_NOT_SUPPORTED': '当前查询服务尚不能严格限定本次授权业务域，本次未执行查询。需由服务维护方完善范围过滤。',
+            'EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED': '当前查询服务尚不能严格限定本次授权的业务域集合，本次未执行查询。需由服务维护方完善范围过滤。',
+            'EXPLICIT_DOMAIN_METADATA_NOT_SUPPORTED': '当前元数据服务尚不支持本次授权业务域范围，本次未执行元数据查询。',
             "SEMANTIC_CONTEXT_MISSING": "缺少 semantic_model_id，暂时无法确定使用哪套语义模型。business_domain_id 可不传，由语义模型自动选择业务域。",
             "ASL_GENERATION_FAILED": "自然语言转 ASL 服务暂时不可用。",
             "ASL_ANALYSIS_SHAPE_INVALID": "语义查询没有返回分析所需的分组维度，本次未执行可能产生误导的单值分析。",
@@ -10198,5 +10222,5 @@ class DataAnalysisOrchestrator:
         return requirements[:20]
 
     @staticmethod
-    def _fallback(request: CanonicalAnalysisRequest, reason: str) -> AgentResponse:
-        return AgentResponse(request_id=request.request_id, conversation_id=request.conversation_id, status="SAFE_FALLBACK", intent=request.primary_intent, intent_source=request.intent_source, intent_confidence=request.intent_confidence, answer=reason, reliability=ReliabilityReport(level="FAIL", score=0, gates={"safe_termination": True}, warnings=[reason]))
+    def _fallback(request: CanonicalAnalysisRequest, reason: str, *, error_code: str | None = None) -> AgentResponse:
+        return AgentResponse(request_id=request.request_id, conversation_id=request.conversation_id, status="SAFE_FALLBACK", error_code=error_code, intent=request.primary_intent, intent_source=request.intent_source, intent_confidence=request.intent_confidence, answer=reason, reliability=ReliabilityReport(level="FAIL", score=0, gates={"safe_termination": True}, warnings=[reason]))

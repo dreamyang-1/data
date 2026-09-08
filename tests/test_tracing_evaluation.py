@@ -110,7 +110,7 @@ async def test_orchestrator_records_trace_summary_after_final_event():
         sessions=InMemorySessionStore(), event_store=events,
     )
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app", conversation_id="conversation",
             message_id="m1", question="你好",
         ), TrustedIdentity(tenant_id="tenant", user_id="user"),

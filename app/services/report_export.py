@@ -28,7 +28,7 @@ class DatasetReportExporter:
 
     @staticmethod
     def _scope_prefix(scope: DatasetScope) -> str:
-        raw = "\x1f".join((scope.tenant_id, scope.user_id, scope.application_id)).encode()
+        raw = "\x1f".join((scope.tenant_id, scope.user_id, scope.application_id, scope.authorized_semantic_scope_fingerprint)).encode()
         return hashlib.sha256(raw).hexdigest()[:24]
 
     @staticmethod
@@ -296,6 +296,7 @@ class DatasetReportExporter:
                     "user_id": scope.user_id,
                     "application_id": scope.application_id,
                     "conversation_id": scope.conversation_id,
+                    "authorized_semantic_scope_fingerprint": scope.authorized_semantic_scope_fingerprint,
                 },
                 "dataset_ids": list(dataset_ids),
                 "created_at": created_at.isoformat(),
@@ -348,6 +349,7 @@ class DatasetReportExporter:
                 reference.scope.tenant_id != scope.tenant_id
                 or reference.scope.user_id != scope.user_id
                 or reference.scope.application_id != scope.application_id
+                or reference.scope.authorized_semantic_scope_fingerprint != scope.authorized_semantic_scope_fingerprint
             ):
                 raise ReportExportError(
                     "composite report datasets must belong to the same tenant, user and application"

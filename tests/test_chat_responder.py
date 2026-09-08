@@ -59,7 +59,7 @@ async def test_chat_mode_switch_does_not_resurrect_previous_data_task():
     )
     conversation_id = "data-then-food-chat"
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="27", conversation_id=conversation_id,
             message_id="m1", question="查询空心纤维血液透析器产品合作的经销商名单。",
         ),
@@ -72,7 +72,7 @@ async def test_chat_mode_switch_does_not_resurrect_previous_data_task():
         start=2,
     ):
         response = await agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="27", conversation_id=conversation_id,
                 message_id=f"m{index}", question=question,
             ),
@@ -103,7 +103,7 @@ async def test_chat_intent_uses_controlled_gentle_responder():
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="27",
             conversation_id="gentle-chat",
             message_id="m1",

@@ -170,12 +170,13 @@ def test_idempotency_reservation_ttl_is_at_least_session_ttl() -> None:
 
 def test_http_endpoint_maps_reuse_conflict_to_409_with_machine_code() -> None:
     settings = Settings(
+        trusted_backend_token='phase0c-fixture-token',
         env="test",
         adapter_mode="mock",
         intent_model_enabled=False,
         long_term_memory_mode="disabled",
     )
-    headers = {"X-Tenant-Id": "tenant-1", "X-User-Id": "user-1"}
+    headers = {"X-Tenant-Id": "tenant-1", "X-User-Id": "user-1", 'Authorization': 'Bearer phase0c-fixture-token'}
     body = request().model_dump(mode="json")
 
     with TestClient(create_app(settings)) as client:

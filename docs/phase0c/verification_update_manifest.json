@@ -1,0 +1,473 @@
+{
+  "files": [
+    {
+      "path": ".env.example",
+      "workspace_hash": "36bd28afacc48cf4600f67d0a30e1846ca0a845d2a26422f6e6d9b5e3810a25c",
+      "previous_git_hash": "36bd28afacc48cf4600f67d0a30e1846ca0a845d2a26422f6e6d9b5e3810a25c"
+    },
+    {
+      "path": "app/adapters/http.py",
+      "workspace_hash": "ce6b169d73730ea4161d464c57c1d0a284db547b60bc422a78bb322a1c956366",
+      "previous_git_hash": "ce6b169d73730ea4161d464c57c1d0a284db547b60bc422a78bb322a1c956366"
+    },
+    {
+      "path": "app/adapters/semantic_query.py",
+      "workspace_hash": "ffde2b52ddfc4277e564f17e74ee0f29c629f67c649ee1244a161f5ea60d254e",
+      "previous_git_hash": "ffde2b52ddfc4277e564f17e74ee0f29c629f67c649ee1244a161f5ea60d254e"
+    },
+    {
+      "path": "app/api.py",
+      "workspace_hash": "4008ef19e05650fb57e11626833c2bb215a5884104993875b2361f6ae095b111",
+      "previous_git_hash": "4008ef19e05650fb57e11626833c2bb215a5884104993875b2361f6ae095b111"
+    },
+    {
+      "path": "app/config.py",
+      "workspace_hash": "d4e1a778feb0874c7a30ff62a246a55afee302da5c24e558548b6142b97de129",
+      "previous_git_hash": "d4e1a778feb0874c7a30ff62a246a55afee302da5c24e558548b6142b97de129"
+    },
+    {
+      "path": "app/domain/models.py",
+      "workspace_hash": "a0c1c8d3b059785c5df5c9e402a20112d741cb6ad0e5144b4a4a91b7aa08d52a",
+      "previous_git_hash": "a0c1c8d3b059785c5df5c9e402a20112d741cb6ad0e5144b4a4a91b7aa08d52a"
+    },
+    {
+      "path": "app/domain/semantic_scope.py",
+      "workspace_hash": "b23f73de97ea925190d17d2bcb7301a6c58ed4d39671267f31ed4775ac1fbc36",
+      "previous_git_hash": "b23f73de97ea925190d17d2bcb7301a6c58ed4d39671267f31ed4775ac1fbc36"
+    },
+    {
+      "path": "app/main.py",
+      "workspace_hash": "6ea270eac0ae0788ec1aee3ed1ec38897e8ea783d4cc4132a9b05b16eecafd0e",
+      "previous_git_hash": "6ea270eac0ae0788ec1aee3ed1ec38897e8ea783d4cc4132a9b05b16eecafd0e"
+    },
+    {
+      "path": "app/security.py",
+      "workspace_hash": "f5f3e615d2f54527a5131a3dde6059704efdd7a27d862cbe0b638995ff32ccbc",
+      "previous_git_hash": "f5f3e615d2f54527a5131a3dde6059704efdd7a27d862cbe0b638995ff32ccbc"
+    },
+    {
+      "path": "app/services/authorized_scope.py",
+      "workspace_hash": "de72c403f7435bb5f6391269ac53271387795ff9649b292a591d90ddb05d8949",
+      "previous_git_hash": "de72c403f7435bb5f6391269ac53271387795ff9649b292a591d90ddb05d8949"
+    },
+    {
+      "path": "app/services/dataset_followup.py",
+      "workspace_hash": "b4cfbb5496a4097324019f608140d432090f5bed4fd2974be2a575c51935f299",
+      "previous_git_hash": "b4cfbb5496a4097324019f608140d432090f5bed4fd2974be2a575c51935f299"
+    },
+    {
+      "path": "app/services/orchestrator.py",
+      "workspace_hash": "38b928f1b39ba3754061e49f44f40dc910fc682f5ef8dbf1ecdd74dfb8f03631",
+      "previous_git_hash": "bae0b1ced101d167e436317d9b01701b6c7caf9c0dd12523bc5b94c200e2738a"
+    },
+    {
+      "path": "app/services/question_rewriter.py",
+      "workspace_hash": "f0b0e543d177ec340aca7102d39bf7a1e814b11163ec734f5a515bb06640d5ec",
+      "previous_git_hash": "f0b0e543d177ec340aca7102d39bf7a1e814b11163ec734f5a515bb06640d5ec"
+    },
+    {
+      "path": "app/services/report_export.py",
+      "workspace_hash": "c58a274e9768629315844c86635f15099cdc8849331e35a1ae64a98444952fc0",
+      "previous_git_hash": "c58a274e9768629315844c86635f15099cdc8849331e35a1ae64a98444952fc0"
+    },
+    {
+      "path": "app/services/validated_query_recall.py",
+      "workspace_hash": "d75056b2910031006833250c96330e0ec612bd17448dcf94a85691989c998b85",
+      "previous_git_hash": "d75056b2910031006833250c96330e0ec612bd17448dcf94a85691989c998b85"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/aggregate.json",
+      "workspace_hash": "51ce18f949d568114506f094b696246e05499a250c653f121175838219cfae2d",
+      "previous_git_hash": "51ce18f949d568114506f094b696246e05499a250c653f121175838219cfae2d"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_001.json",
+      "workspace_hash": "4cd5c20f3a752082e87edce224477361e2960bba849e8ca65c753d387c3a9207",
+      "previous_git_hash": "4cd5c20f3a752082e87edce224477361e2960bba849e8ca65c753d387c3a9207"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_002.json",
+      "workspace_hash": "84e9bc170823bd3c0e3cc606d69b7e2cc3abdaaede13f526fbd21838e514e4f1",
+      "previous_git_hash": "84e9bc170823bd3c0e3cc606d69b7e2cc3abdaaede13f526fbd21838e514e4f1"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_003.json",
+      "workspace_hash": "c6c8692ffa97479652e6f6d8942934ab7fff727d9928a085017a0935f1aae251",
+      "previous_git_hash": "c6c8692ffa97479652e6f6d8942934ab7fff727d9928a085017a0935f1aae251"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_004.json",
+      "workspace_hash": "729902655ea90bcdc7662b1c158ba913b7b8ca4aabd3c90fb8622b4398c03adb",
+      "previous_git_hash": "729902655ea90bcdc7662b1c158ba913b7b8ca4aabd3c90fb8622b4398c03adb"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_005.json",
+      "workspace_hash": "8fcb93a371877cb7b1c66d7401168fc587b09b2f7ef9fd5959f124d1c57d71dc",
+      "previous_git_hash": "8fcb93a371877cb7b1c66d7401168fc587b09b2f7ef9fd5959f124d1c57d71dc"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_006.json",
+      "workspace_hash": "080b5d526d25d4b3ab7ba282e1f2299d5f19de4c9b9ae1f02e9d41d76564b32e",
+      "previous_git_hash": "080b5d526d25d4b3ab7ba282e1f2299d5f19de4c9b9ae1f02e9d41d76564b32e"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_007.json",
+      "workspace_hash": "3a66ec477aa8f374fc2e3fdfdd6a4964637ac4fcc2f7bcf26d800ee132624bd1",
+      "previous_git_hash": "3a66ec477aa8f374fc2e3fdfdd6a4964637ac4fcc2f7bcf26d800ee132624bd1"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_008.json",
+      "workspace_hash": "77b812ffe80f1378aa3138c6e20d48b22811a6c9b647737af4227b3d73a38393",
+      "previous_git_hash": "77b812ffe80f1378aa3138c6e20d48b22811a6c9b647737af4227b3d73a38393"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_009.json",
+      "workspace_hash": "51c7a95d76577098d4f7b1aa5cef5664803da5280f5c2e935a9ab2161348562b",
+      "previous_git_hash": "51c7a95d76577098d4f7b1aa5cef5664803da5280f5c2e935a9ab2161348562b"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_010.json",
+      "workspace_hash": "5a49be3c570c080a9ac5dfd0a1772505889645655423f49a013ca4c867e06be9",
+      "previous_git_hash": "5a49be3c570c080a9ac5dfd0a1772505889645655423f49a013ca4c867e06be9"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_011.json",
+      "workspace_hash": "594f8e4b34ee8d97d15b0950ebb47f235565efa292fe968e2690eb67f9d09f39",
+      "previous_git_hash": "594f8e4b34ee8d97d15b0950ebb47f235565efa292fe968e2690eb67f9d09f39"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_012.json",
+      "workspace_hash": "e69c879180a64cc8bf8f21aefd01829f34dd40aff3fba34d841c55955588e4cd",
+      "previous_git_hash": "e69c879180a64cc8bf8f21aefd01829f34dd40aff3fba34d841c55955588e4cd"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_013.json",
+      "workspace_hash": "f53df029d3e7a791ec4a512b3439f067d8bddb990ff6dfafb88d505386a414f1",
+      "previous_git_hash": "f53df029d3e7a791ec4a512b3439f067d8bddb990ff6dfafb88d505386a414f1"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite/batch_014.json",
+      "workspace_hash": "c281e49cf55e60dcb50432bdd91e64a06f720d9e1992449e9c1274b628fa350e",
+      "previous_git_hash": "c281e49cf55e60dcb50432bdd91e64a06f720d9e1992449e9c1274b628fa350e"
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/aggregate.json",
+      "workspace_hash": "6a80c43c031ab1836892d2c9e465509d98d1e9429f132a3618416a9e2bb41c12",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_001.json",
+      "workspace_hash": "ff2d8fa28585715d2a478a5b19bd680e31fe18ce80a0f74ee5a52a884e8f0ec3",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_002.json",
+      "workspace_hash": "8505606eb1d46ec79c59cc5c51ce73836084c00ef25cf17bea7fd4a2089df9bd",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_003.json",
+      "workspace_hash": "0a63b9cd6d570efe445430a47403177896f2325cb6f24fdb893428bd43fe9306",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_004.json",
+      "workspace_hash": "bf27695bf1ef629adb577a291b52e3978e1ae7509322e8a9e611925c8630dc9b",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_005.json",
+      "workspace_hash": "500b165854490f7bcfca11d7e9b40cddb7164d43cdea7974b73808b6656fd350",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_006.json",
+      "workspace_hash": "b0ba976ea7f60c667488a27f11446a030b02f576b243dbb48a1060d51ecede1c",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_007.json",
+      "workspace_hash": "cf5b41864876ee9aa60ab88ea71920cbf33501def32ba7386e590b6ab55063d6",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_008.json",
+      "workspace_hash": "1642c92b932a1e36bb2241eca18afe297826654abb2eb9cd86e5118c10ddb853",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_009.json",
+      "workspace_hash": "d7896dad8f64d67695688726cc95b842ddb62a9fc283189fac144d33b702c415",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_010.json",
+      "workspace_hash": "985b0e81c676f5cacd5bc9740aa6caf6f370a632261a04b445e9047235e7fc14",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_011.json",
+      "workspace_hash": "fcfd4862ab2b550e83e4db9acec386e34942e13e843f68e2c70158f30daeb5c3",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_012.json",
+      "workspace_hash": "31688de3e7e95f01762b5e2b0f0ca7e76187d0e02a8291bd4b9d6e6c1de4fbc2",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_013.json",
+      "workspace_hash": "f864c1d76af2d4dd7a3f71f617b6703cc1c0b5b07d5d469890acfd0c7493c291",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/bounded_suite_final/batch_014.json",
+      "workspace_hash": "300513360dec63ef7956dacd8610ecde55616e7464a1db506c769e452fd75b79",
+      "previous_git_hash": null
+    },
+    {
+      "path": "docs/phase0c/candidate_fixture_migration.json",
+      "workspace_hash": "4708a4564acf3fafd8032b9db60724fd9bf1252debec53f6bfe0e56ca878841c",
+      "previous_git_hash": "4708a4564acf3fafd8032b9db60724fd9bf1252debec53f6bfe0e56ca878841c"
+    },
+    {
+      "path": "docs/phase0c/execution_limitations.json",
+      "workspace_hash": "ff0b5246c91e5f02cd067596da68c360a8fb85f0de8379fff7b1f4720d42359f",
+      "previous_git_hash": "d60341cb744f4fb453ce8004a87a791a7690f3b240904c58ef74e8ff30373bbd"
+    },
+    {
+      "path": "docs/phase0c/external_service_fix_candidates.md",
+      "workspace_hash": "7df0d175e886568aafcbcee8fa471d2a10943eca6bee8ae952f8f85cf5a6cf8a",
+      "previous_git_hash": "7df0d175e886568aafcbcee8fa471d2a10943eca6bee8ae952f8f85cf5a6cf8a"
+    },
+    {
+      "path": "docs/phase0c/final_candidate_test_gate.json",
+      "workspace_hash": "002f5cd5a3f50079cf53c1e737ee72ab83eedc77f783fb350484a9c97bb47fec",
+      "previous_git_hash": "002f5cd5a3f50079cf53c1e737ee72ab83eedc77f783fb350484a9c97bb47fec"
+    },
+    {
+      "path": "docs/phase0c/final_test_gate.json",
+      "workspace_hash": "b4f482a6ba504396fa5e68247339074e0bc3af324afd1d2f568eefc5ddd9c446",
+      "previous_git_hash": "b4f482a6ba504396fa5e68247339074e0bc3af324afd1d2f568eefc5ddd9c446"
+    },
+    {
+      "path": "docs/phase0c/implementation_change_manifest.json",
+      "workspace_hash": "5b78cce3a94e1d609485569d7d887f54e802078d3f927f4f4eb21b77e5fb00bc",
+      "previous_git_hash": "5b78cce3a94e1d609485569d7d887f54e802078d3f927f4f4eb21b77e5fb00bc"
+    },
+    {
+      "path": "docs/phase0c/initial_test_gate.json",
+      "workspace_hash": "7907e51707063073c79679a3fcd5b421a14212e7b7b74bca6a62cc8f0aea2337",
+      "previous_git_hash": "7907e51707063073c79679a3fcd5b421a14212e7b7b74bca6a62cc8f0aea2337"
+    },
+    {
+      "path": "docs/phase0c/revised_test_gate.json",
+      "workspace_hash": "91e5c73c39767fe66e48649f35b543f0e38f6c955778af315d5411716555dee1",
+      "previous_git_hash": "91e5c73c39767fe66e48649f35b543f0e38f6c955778af315d5411716555dee1"
+    },
+    {
+      "path": "docs/phase0c/scope_safety_gate.json",
+      "workspace_hash": "1f81d12a09a3328cade4b57a69542bd2f38d565601f3d61a6d3ad836e6aa58e9",
+      "previous_git_hash": "5991421eed1a944d6a3d5c1946b3252cb5e33ccda0909f82245a75f5c12d5be9"
+    },
+    {
+      "path": "docs/phase0c/scope_test_gate_v1.json",
+      "workspace_hash": "6cb588a7de369bd56830d93cee71bd87832deaae3e21049ed505fe37e06cdeb6",
+      "previous_git_hash": "6cb588a7de369bd56830d93cee71bd87832deaae3e21049ed505fe37e06cdeb6"
+    },
+    {
+      "path": "docs/phase0c/scope_test_gate_v2.json",
+      "workspace_hash": "ea4daeff33630b8d04bac902763959e6175b7658070ec8a4ae204b162adb96bd",
+      "previous_git_hash": "ea4daeff33630b8d04bac902763959e6175b7658070ec8a4ae204b162adb96bd"
+    },
+    {
+      "path": "docs/phase0c/scope_test_gate_v3.json",
+      "workspace_hash": "7ac8d03c2563d2ceb6b46fbd01a7be56ded6a386a54697509c19e2b19052db44",
+      "previous_git_hash": "7ac8d03c2563d2ceb6b46fbd01a7be56ded6a386a54697509c19e2b19052db44"
+    },
+    {
+      "path": "docs/phase0c/source_contract_audit.json",
+      "workspace_hash": "cea748a57673ab588f9e03617c5a6e4050c2f58f3bbd4e6a5470886e64a42c53",
+      "previous_git_hash": "cea748a57673ab588f9e03617c5a6e4050c2f58f3bbd4e6a5470886e64a42c53"
+    },
+    {
+      "path": "docs/phase0c/source_snapshot.json",
+      "workspace_hash": "d80948fed07aa1281a6c9880e9626e16494b364f273f2aee1f3ded2e10c583fc",
+      "previous_git_hash": "15aedeb3fdf615d41ac7d43116eb733f8b33152ec7993bac0cf57f5243fe7564"
+    },
+    {
+      "path": "docs/phase0c/stage_paths.json",
+      "workspace_hash": "1c870289c07cddf8e94e337937140ac7a2a73a9a0fcc126d72967489b86f71a6",
+      "previous_git_hash": "1c870289c07cddf8e94e337937140ac7a2a73a9a0fcc126d72967489b86f71a6"
+    },
+    {
+      "path": "docs/phase0c/state_fixture_migration.json",
+      "workspace_hash": "bfa22b90760f6e336db288305bb8ae5d85a8fd59449f3011ad789625f5090253",
+      "previous_git_hash": "bfa22b90760f6e336db288305bb8ae5d85a8fd59449f3011ad789625f5090253"
+    },
+    {
+      "path": "docs/phase0c/test_contract_migrations.md",
+      "workspace_hash": "fe32a382a99397db1fff28f371eca9e8d4676ddf9d7c15f9fbe03ec91bbf1803",
+      "previous_git_hash": "fe32a382a99397db1fff28f371eca9e8d4676ddf9d7c15f9fbe03ec91bbf1803"
+    },
+    {
+      "path": "docs/phase0c/test_delta_report.json",
+      "workspace_hash": "803f4a60021ffeda39095fe9088f9e30780bb08d69f42cfc9e90e2b2cd2f3ae2",
+      "previous_git_hash": "578dca8267cc95fc378f587b31900bb458db7c61512665d78432e5139aaeff18"
+    },
+    {
+      "path": "docs/phase0c/test_delta_report.md",
+      "workspace_hash": "7fc534190fdd634407a1a65ae96fc4eae311ecad8f07600e0d1e3e332a2b3c11",
+      "previous_git_hash": "c2bc20090a571e3a9fac2ce33b4377188e370217c1ab02bf43868c3fe7590384"
+    },
+    {
+      "path": "docs/phase0c/test_input_migration.json",
+      "workspace_hash": "5ef6df8aaf37d336ec4088fdf65ad4e5c98a0f51e746a5bd57c4ef15739c23df",
+      "previous_git_hash": "5ef6df8aaf37d336ec4088fdf65ad4e5c98a0f51e746a5bd57c4ef15739c23df"
+    },
+    {
+      "path": "docs/phase0c/trust_semantic_scope_contract.md",
+      "workspace_hash": "d0e0b3c515a72776fa80b241bef762f0e261920825a423b81fba6ac089cb5a2f",
+      "previous_git_hash": "d0e0b3c515a72776fa80b241bef762f0e261920825a423b81fba6ac089cb5a2f"
+    },
+    {
+      "path": "minio_followup_store.py",
+      "workspace_hash": "f1caf653d6921d27a1d6a22c52c04601066afd0fd5e9dba3d37c4f65395d584c",
+      "previous_git_hash": "f1caf653d6921d27a1d6a22c52c04601066afd0fd5e9dba3d37c4f65395d584c"
+    },
+    {
+      "path": "tests/test_api.py",
+      "workspace_hash": "299cc6b1f9e1e73bd11d3d6e102ecbda87dc07ba40d55781eb80a6b5b968a27b",
+      "previous_git_hash": "299cc6b1f9e1e73bd11d3d6e102ecbda87dc07ba40d55781eb80a6b5b968a27b"
+    },
+    {
+      "path": "tests/test_chat_request_validation.py",
+      "workspace_hash": "efac385723a9fc73f9403ccd384f96bb9b2ec2e9238f80beb0ca9e4086e21884",
+      "previous_git_hash": "efac385723a9fc73f9403ccd384f96bb9b2ec2e9238f80beb0ca9e4086e21884"
+    },
+    {
+      "path": "tests/test_chat_responder.py",
+      "workspace_hash": "7f82cc906ac7f30c50d420cfc1e2eea9060040dfd842928b4b34e6b4eaf676ec",
+      "previous_git_hash": "7f82cc906ac7f30c50d420cfc1e2eea9060040dfd842928b4b34e6b4eaf676ec"
+    },
+    {
+      "path": "tests/test_clarification_flow.py",
+      "workspace_hash": "73ce69b4adc69b258d9451aa75efb26c06fa40425f5f85a140c363400a89ad1b",
+      "previous_git_hash": "73ce69b4adc69b258d9451aa75efb26c06fa40425f5f85a140c363400a89ad1b"
+    },
+    {
+      "path": "tests/test_external_search_routing.py",
+      "workspace_hash": "e963ff921ec6d2b4d5023ab9bba115a2651e390a816f61420f9655c9d6e55d17",
+      "previous_git_hash": "e963ff921ec6d2b4d5023ab9bba115a2651e390a816f61420f9655c9d6e55d17"
+    },
+    {
+      "path": "tests/test_forecast_readiness.py",
+      "workspace_hash": "b72b58dd0f5d7825e7ccac103bb4bea3389cb40adc5265a7fa7a97549bfa0adb",
+      "previous_git_hash": "b72b58dd0f5d7825e7ccac103bb4bea3389cb40adc5265a7fa7a97549bfa0adb"
+    },
+    {
+      "path": "tests/test_handshake.py",
+      "workspace_hash": "f6727c3343046aa8222f87de77d0db58337d809c2e944b690b1c0c7d84f30f64",
+      "previous_git_hash": "f6727c3343046aa8222f87de77d0db58337d809c2e944b690b1c0c7d84f30f64"
+    },
+    {
+      "path": "tests/test_history_compaction.py",
+      "workspace_hash": "2d238d3f30ab1bb9481b24fea7d70a8ccd20a9f8c533d00858b1e7899230d3e7",
+      "previous_git_hash": "2d238d3f30ab1bb9481b24fea7d70a8ccd20a9f8c533d00858b1e7899230d3e7"
+    },
+    {
+      "path": "tests/test_idempotency_conflict.py",
+      "workspace_hash": "1dd19ad9174c89ee2c035f06f2b062f0e8eaeb68768272246a5e2b589f7375e9",
+      "previous_git_hash": "1dd19ad9174c89ee2c035f06f2b062f0e8eaeb68768272246a5e2b589f7375e9"
+    },
+    {
+      "path": "tests/test_memory_manager.py",
+      "workspace_hash": "a59aa8db97cc871b7ae259be75c6860f8fc6ed85f1bec4b781915e433c46aac7",
+      "previous_git_hash": "a59aa8db97cc871b7ae259be75c6860f8fc6ed85f1bec4b781915e433c46aac7"
+    },
+    {
+      "path": "tests/test_orchestrator.py",
+      "workspace_hash": "06b1c8aa49fb5447ddbfd181c97024fd7f57a5112676dcf8675497dd12aead79",
+      "previous_git_hash": "06b1c8aa49fb5447ddbfd181c97024fd7f57a5112676dcf8675497dd12aead79"
+    },
+    {
+      "path": "tests/test_pending_execution_transition.py",
+      "workspace_hash": "b49575864b7109b1434cfbaffbab2cd8ce900a6d054d31be71d0bee849e3b16b",
+      "previous_git_hash": "b49575864b7109b1434cfbaffbab2cd8ce900a6d054d31be71d0bee849e3b16b"
+    },
+    {
+      "path": "tests/test_phase0b_regressions.py",
+      "workspace_hash": "e3bda5456c6aa4704594e118ff9ebe84664610ae2095b77a58aac8cadd2051f0",
+      "previous_git_hash": "e3bda5456c6aa4704594e118ff9ebe84664610ae2095b77a58aac8cadd2051f0"
+    },
+    {
+      "path": "tests/test_phase0c_scope_contract.py",
+      "workspace_hash": "7547b338db163f27014e66b136f22a68573f66ab1590434b49afd2cd0a0873e6",
+      "previous_git_hash": "0000ef02e0b1ab488f2194d88cfbb92e38828a0b6ed7a99772efe398228df10d"
+    },
+    {
+      "path": "tests/test_question_rewriter.py",
+      "workspace_hash": "412b4f80064cc6d69de891a2b6b21856d5e6db613b41823fba792a088424bebe",
+      "previous_git_hash": "412b4f80064cc6d69de891a2b6b21856d5e6db613b41823fba792a088424bebe"
+    },
+    {
+      "path": "tests/test_semantic_clarification_session_recovery.py",
+      "workspace_hash": "642784b74ce5d3492bf95af795f90170b5ac65306f081267f5223e317aff660b",
+      "previous_git_hash": "642784b74ce5d3492bf95af795f90170b5ac65306f081267f5223e317aff660b"
+    },
+    {
+      "path": "tests/test_session_event_log.py",
+      "workspace_hash": "3e17051bfb7f80f90daadbfd0500414939dff7f9af307c604724262bbe05a220",
+      "previous_git_hash": "3e17051bfb7f80f90daadbfd0500414939dff7f9af307c604724262bbe05a220"
+    },
+    {
+      "path": "tests/test_task_dag.py",
+      "workspace_hash": "364aee191544f3148e04ddb79e09cbb56297137c87577fdb2a394e61df6daba1",
+      "previous_git_hash": "364aee191544f3148e04ddb79e09cbb56297137c87577fdb2a394e61df6daba1"
+    },
+    {
+      "path": "tests/test_tracing_evaluation.py",
+      "workspace_hash": "db7d0d0baf12f4e689f2c7c8010b2c01b075a820231173ad4545721a78a2099d",
+      "previous_git_hash": "db7d0d0baf12f4e689f2c7c8010b2c01b075a820231173ad4545721a78a2099d"
+    },
+    {
+      "path": "tests/test_turn_admission.py",
+      "workspace_hash": "9bdd251402c105d4e2582a60c5afe664e35dd9ae3eb430bf4c0960880530e62f",
+      "previous_git_hash": "9bdd251402c105d4e2582a60c5afe664e35dd9ae3eb430bf4c0960880530e62f"
+    },
+    {
+      "path": "tests/test_workflow.py",
+      "workspace_hash": "091c3a9ce84e8fef87ec7e92b4bd0ca778bb834f29a461f8eede1cffd375e6aa",
+      "previous_git_hash": "091c3a9ce84e8fef87ec7e92b4bd0ca778bb834f29a461f8eede1cffd375e6aa"
+    },
+    {
+      "path": "tests/test_working_memory.py",
+      "workspace_hash": "4f9c4fa090701c8a6e1b24042b06450e8f3a1e58e34f21716595e037147d66ed",
+      "previous_git_hash": "4f9c4fa090701c8a6e1b24042b06450e8f3a1e58e34f21716595e037147d66ed"
+    },
+    {
+      "path": "tools/phase0c/closure.py",
+      "workspace_hash": "1f51dc03b703d2dcc407dadbe1d8d33b0a25d1695f6594e48b52e25f5640c3db",
+      "previous_git_hash": "13c3c9af3a525f36a4dac29aa79969f564460daee54683631bb060d8084142f9"
+    },
+    {
+      "path": "tools/phase0c/migrate_state_fixtures.py",
+      "workspace_hash": "cba1ce0717331d7a036bef1d68fa8ca1a829c85c262dc2a66cbf3cc7187cb763",
+      "previous_git_hash": "cba1ce0717331d7a036bef1d68fa8ca1a829c85c262dc2a66cbf3cc7187cb763"
+    },
+    {
+      "path": "tools/phase0c/migrate_test_inputs.py",
+      "workspace_hash": "4e0dc9965116418190fe289a2d359d60d17063514e5bed4d1b362f28c223a04c",
+      "previous_git_hash": "4e0dc9965116418190fe289a2d359d60d17063514e5bed4d1b362f28c223a04c"
+    },
+    {
+      "path": "tools/phase0c/run_bounded_suite.py",
+      "workspace_hash": "9a73b8a7a1cd0341d96e014aef773c2865407a72b85e637d6f9dacca981c378c",
+      "previous_git_hash": "9a73b8a7a1cd0341d96e014aef773c2865407a72b85e637d6f9dacca981c378c"
+    }
+  ],
+  "credential_scan": "PASS",
+  "synchronization": "EXPLICIT_PATHS_ONLY",
+  "previous_staged_bytes_verified_against": "implementation_change_manifest.json",
+  "reason": "Reviewed metadata error code propagation and final complete test evidence"
+}

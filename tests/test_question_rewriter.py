@@ -135,6 +135,7 @@ async def test_display_metric_uses_registered_compound_name_from_question_contex
         "candidate_id": "metric:0:context",
         "canonical_name": "区域医院覆盖率",
         "canonical_code": "screening_area_hospital_coverage",
+        "business_domain_id": 205,
     }])
 
     await QuestionRewriter(resolver).ground_display_slots(request)
@@ -184,7 +185,7 @@ async def test_control_filter_value_is_not_displayed_as_business_entity_value():
 
 
 def test_department_followup_context_includes_semantic_entity_value():
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=81,
         conversation_id="department-context",
         tenant_id="t1",
         user_id="u1",
@@ -474,7 +475,7 @@ def test_unmatched_model_entity_span_is_preserved_for_downstream_verification():
 
 @pytest.mark.asyncio
 async def test_semantic_matches_are_retained_without_forcing_text_rewrite():
-    matches = [{
+    matches = [{"business_domain_id": 205,
         "score": 0.98,
         "entity_name": "商品主数据",
         "attribute_name": "商品品类",
@@ -563,7 +564,7 @@ async def test_candidate_catalog_failure_never_degrades_primary_rewrite_path():
 
 @pytest.mark.asyncio
 async def test_context_is_added_before_intent_classification():
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=5, business_domain_ids=[9],
         conversation_id="c1",
         tenant_id="t1",
         user_id="u1",
@@ -587,7 +588,7 @@ async def test_context_is_added_before_intent_classification():
 
 @pytest.mark.asyncio
 async def test_admitted_followup_can_force_context_for_model_completion():
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=81,
         conversation_id="c-force-model-context",
         tenant_id="t1",
         user_id="u1",
@@ -625,7 +626,7 @@ async def test_admitted_followup_can_force_context_for_model_completion():
 
 @pytest.mark.asyncio
 async def test_granularity_only_followup_inherits_metric_and_period():
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=5, business_domain_ids=[9],
         conversation_id="c1",
         tenant_id="t1",
         user_id="u1",
@@ -649,7 +650,7 @@ async def test_granularity_only_followup_inherits_metric_and_period():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("question", ["按月给我", "改成按季度", "不按月了，按季度"])
 async def test_natural_granularity_followup_inherits_metric_and_period(question):
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=81, business_domain_ids=[205],
         conversation_id="c1",
         tenant_id="t1",
         user_id="u1",
@@ -672,7 +673,7 @@ async def test_natural_granularity_followup_inherits_metric_and_period(question)
 
 @pytest.mark.asyncio
 async def test_explicit_followup_month_replaces_previous_time_range():
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=5, business_domain_ids=[9],
         conversation_id="c1",
         tenant_id="t1",
         user_id="u1",
@@ -694,7 +695,7 @@ async def test_explicit_followup_month_replaces_previous_time_range():
 
 @pytest.mark.asyncio
 async def test_dimension_and_top_n_modifier_inherits_previous_metric_and_time():
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=6,
         conversation_id="c1", tenant_id="t1", user_id="u1",
         original_question="查询本月销售额",
         primary_intent=PrimaryIntent.METRIC_QUERY,
@@ -716,7 +717,7 @@ async def test_dimension_and_top_n_modifier_inherits_previous_metric_and_time():
 
 @pytest.mark.asyncio
 async def test_additive_metric_followup_keeps_previous_metric_and_grouping():
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=81,
         conversation_id="c-add-metric",
         tenant_id="t1",
         user_id="u1",
@@ -744,7 +745,7 @@ async def test_additive_metric_followup_keeps_previous_metric_and_grouping():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("question", ["前三名", "只显示前五名", "改成后三名"])
 async def test_chinese_numeral_ranking_followup_inherits_context(question):
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=81,
         conversation_id="c1", tenant_id="t1", user_id="u1",
         original_question="查询最近一年经销商销售额",
         primary_intent=PrimaryIntent.METRIC_QUERY,
@@ -764,7 +765,7 @@ async def test_chinese_numeral_ranking_followup_inherits_context(question):
 
 @pytest.mark.asyncio
 async def test_extrema_followup_uses_previous_detail_entity_as_dimension():
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=81,
         conversation_id="c1", tenant_id="t1", user_id="u1",
         original_question="查询某经销商销售过的产品",
         primary_intent=PrimaryIntent.DETAIL_QUERY,
@@ -787,7 +788,7 @@ async def test_extrema_followup_uses_previous_detail_entity_as_dimension():
 
 @pytest.mark.asyncio
 async def test_relationship_followup_does_not_inherit_old_metric_or_dimension():
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=81,
         conversation_id="c1", tenant_id="t1", user_id="u1",
         original_question="查询商品销售额",
         primary_intent=PrimaryIntent.METRIC_QUERY,
@@ -834,7 +835,7 @@ async def test_two_digit_year_followup_is_normalized_before_context_merge():
 @pytest.mark.asyncio
 async def test_closed_form_month_switch_skips_remote_entity_search():
     searcher = FakeSearcher([])
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=5, business_domain_ids=[9],
         conversation_id="c1", tenant_id="t1", user_id="u1",
         original_question="查询2026年7月销售额",
         primary_intent=PrimaryIntent.METRIC_QUERY,
@@ -868,7 +869,7 @@ def test_free_text_filter_is_not_misclassified_as_deterministic_slot_update():
 @pytest.mark.asyncio
 async def test_high_confidence_typo_is_normalized():
     searcher = FakeSearcher([
-        {
+        {"business_domain_id": 9,
             "score": 0.95,
             "entity_name": "销售区域",
             "entity_alias": '["区域", "片区"]',
@@ -930,7 +931,7 @@ async def test_auto_domain_still_searches_across_the_semantic_model():
         "查询销售额", previous=None, semantic_model_id=5, business_domain_id=None
     )
     assert result.rewritten_question == "查询销售额"
-    assert searcher.calls == [("查询销售额", 5, None, None)]
+    assert searcher.calls == [("查询销售额", 5, None, [])]
 
 
 @pytest.mark.asyncio
@@ -970,7 +971,7 @@ async def test_context_is_not_inherited_after_semantic_model_switch():
 
 @pytest.mark.asyncio
 async def test_explicit_current_metric_does_not_inherit_conflicting_previous_metric():
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=6, business_domain_ids=[9],
         conversation_id="c1", tenant_id="t1", user_id="u1",
         original_question="查询本月销售额", primary_intent=PrimaryIntent.METRIC_QUERY,
         metrics=[MetricRef(input="销售额")],
@@ -1013,8 +1014,8 @@ async def test_low_score_candidate_never_changes_question():
 @pytest.mark.asyncio
 async def test_ambiguous_same_surface_candidates_are_not_rewritten():
     searcher = FakeSearcher([
-        {"score": 0.95, "entity_name": "华北大区", "entity_alias": '["北区"]', "attribute_code": "r1"},
-        {"score": 0.93, "entity_name": "北京城区", "entity_alias": '["北区"]', "attribute_code": "r2"},
+        {"business_domain_id": 9, "score": 0.95, "entity_name": "华北大区", "entity_alias": '["北区"]', "attribute_code": "r1"},
+        {"business_domain_id": 9, "score": 0.93, "entity_name": "北京城区", "entity_alias": '["北区"]', "attribute_code": "r2"},
     ])
     result = await QuestionRewriter(searcher).rewrite(
         "查北区销售额", previous=None, semantic_model_id=6, business_domain_id=9
@@ -1033,7 +1034,7 @@ async def test_ambiguous_same_surface_candidates_are_not_rewritten():
 @pytest.mark.asyncio
 async def test_semantic_model_version_is_carried_into_live_ambiguity():
     searcher = FakeSearcher([
-        {
+        {"business_domain_id": 205,
             "score": 0.96,
             "entity_name": "商品主数据",
             "attribute_name": "商品品牌",
@@ -1041,7 +1042,7 @@ async def test_semantic_model_version_is_carried_into_live_ambiguity():
             "attribute_value": "费森尤斯",
             "semantic_model_version": "v2026-09-02",
         },
-        {
+        {"business_domain_id": 205,
             "score": 0.94,
             "entity_name": "厂家主数据",
             "attribute_name": "厂家名称",
@@ -1181,7 +1182,7 @@ async def test_legal_manufacturer_surface_is_disambiguated_by_business_role():
 
 @pytest.mark.asyncio
 async def test_rewrite_that_destroys_intent_term_is_rejected():
-    searcher = FakeSearcher([{
+    searcher = FakeSearcher([{"business_domain_id": 9,
         "score": 0.99, "entity_name": "一号门店", "entity_alias": '["销售额趋势"]',
         "attribute_code": "shop", "attribute_value": "一号门店",
     }])
@@ -1208,9 +1209,9 @@ async def test_one_character_alias_is_never_auto_rewritten():
 @pytest.mark.asyncio
 async def test_ambiguity_is_checked_for_each_surface():
     searcher = FakeSearcher([
-        {"score": 0.99, "entity_name": "北京", "entity_alias": '["京城"]', "attribute_code": "r0"},
-        {"score": 0.95, "entity_name": "华北大区", "entity_alias": '["北区"]', "attribute_code": "r1"},
-        {"score": 0.93, "entity_name": "北京城区", "entity_alias": '["北区"]', "attribute_code": "r2"},
+        {"business_domain_id": 9, "score": 0.99, "entity_name": "北京", "entity_alias": '["京城"]', "attribute_code": "r0"},
+        {"business_domain_id": 9, "score": 0.95, "entity_name": "华北大区", "entity_alias": '["北区"]', "attribute_code": "r1"},
+        {"business_domain_id": 9, "score": 0.93, "entity_name": "北京城区", "entity_alias": '["北区"]', "attribute_code": "r2"},
     ])
     result = await QuestionRewriter(searcher).rewrite(
         "查京城和北区销售额", previous=None, semantic_model_id=6, business_domain_id=9
@@ -1221,7 +1222,7 @@ async def test_ambiguity_is_checked_for_each_surface():
 
 @pytest.mark.asyncio
 async def test_alias_does_not_rewrite_appended_confirmed_context():
-    previous = CanonicalAnalysisRequest(
+    previous = CanonicalAnalysisRequest(semantic_model_id=6, business_domain_ids=[9],
         conversation_id="c1", tenant_id="t1", user_id="u1",
         original_question="查询北京销售额", primary_intent=PrimaryIntent.METRIC_QUERY,
         metrics=[MetricRef(input="销售额")], entity="销售区域",

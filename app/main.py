@@ -4,6 +4,8 @@ import asyncio
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
 
 from app.api import router
 from app.config import Settings, get_settings
@@ -40,6 +42,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     application.include_router(router)
+
+    @application.exception_handler(RequestValidationError)
+    async def scope_validation_error(request, exc):
+        scope_fields = {'semantic_model_id', 'business_domain_id', 'business_domain_ids', 'database_id', 'knowledge_base_names'}
+        if any(scope_fields.intersection(str(v) for v in e['loc']) or 'business_domain_id conflicts' in e['msg'] for e in exc.errors()):
+            return JSONResponse(status_code=422, content={'detail': {'code': 'REQUEST_SCOPE_INVALID', 'message': 'A strict positive semantic_model_id and a consistent authorized scope are required.'}})
+        return await request_validation_exception_handler(request, exc)
 
     def custom_openapi() -> dict:
         """Keep trusted-header requirements accurate without changing 401 semantics."""

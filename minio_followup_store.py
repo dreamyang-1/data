@@ -112,9 +112,12 @@ class DatasetScope:
     user_id: str
     application_id: str
     conversation_id: str
+    authorized_semantic_scope_fingerprint: str = ''
 
     def validate(self) -> None:
         for name, value in asdict(self).items():
+            if name == 'authorized_semantic_scope_fingerprint' and value == '':
+                continue  # Legacy standalone store records cannot match a scoped request.
             if not isinstance(value, str) or not value.strip() or len(value) > 128:
                 raise ValueError(f"{name} must be a non-empty string of at most 128 characters")
 
@@ -207,7 +210,10 @@ def _canonical_json(value: Any) -> bytes:
 
 
 def _scope_digest(scope: DatasetScope) -> str:
-    raw = "\x1f".join(asdict(scope).values()).encode("utf-8")
+    values = asdict(scope)
+    if not scope.authorized_semantic_scope_fingerprint:
+        values.pop('authorized_semantic_scope_fingerprint')
+    raw = "\x1f".join(values.values()).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()[:32]
 
 
@@ -1172,6 +1178,7 @@ def _join_with_store(
             ref.scope.tenant_id != current_scope.tenant_id
             or ref.scope.user_id != current_scope.user_id
             or ref.scope.application_id != current_scope.application_id
+            or ref.scope.authorized_semantic_scope_fingerprint != current_scope.authorized_semantic_scope_fingerprint
         ):
             raise DatasetScopeMismatch("joined datasets must belong to the same tenant, user and application")
     # Branch datasets intentionally have distinct internal conversation ids.

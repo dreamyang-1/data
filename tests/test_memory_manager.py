@@ -101,7 +101,7 @@ async def test_orchestrator_records_memory_write_and_recall_events():
         event_store=events,
     )
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app", conversation_id="conversation", message_id="m1",
             question="记住，以后默认使用销售额指标，查询本月销售额",
             use_longterm_memory=True,

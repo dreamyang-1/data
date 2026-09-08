@@ -526,6 +526,7 @@ def scope_for_request(request: Any) -> DatasetScope:
         user_id=request.user_id,
         application_id=request.application_id,
         conversation_id=request.conversation_id,
+        authorized_semantic_scope_fingerprint=(request.authorized_semantic_scope.fingerprint() if request.authorized_semantic_scope else ''),
     )
 
 

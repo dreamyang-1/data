@@ -85,7 +85,7 @@ def service():
 
 async def advance_to_subject_clarification(agent):
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="subject-session",
             message_id="message-1",
@@ -97,7 +97,7 @@ async def advance_to_subject_clarification(agent):
     assert first.missing_slots == ["time_range"]
 
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="subject-session",
             message_id="message-2",
@@ -115,7 +115,7 @@ async def advance_to_subject_clarification(agent):
 async def test_explicit_day_range_resolves_report_time_without_model_reinterpretation():
     agent, classifier, retrieval, sessions = service()
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="report-time-session",
             message_id="message-1",
@@ -128,7 +128,7 @@ async def test_explicit_day_range_resolves_report_time_without_model_reinterpret
 
     date_answer = "2025年10月17日至2025年12月30日"
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="report-time-session",
             message_id="message-2",
@@ -185,7 +185,7 @@ async def test_three_turn_subject_clarification_recovers_pending_request(
             HistoryMessage(role="assistant", content=second.answer, message_id="reply-2"),
         ]
     third = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="subject-session",
             message_id="message-3",
@@ -226,7 +226,7 @@ async def test_semantic_clarification_keeps_explicit_interrupt_semantics(
     await advance_to_subject_clarification(agent)
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="subject-session",
             message_id="message-3",

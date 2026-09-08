@@ -85,7 +85,7 @@ async def test_orchestrator_records_replayable_request_intent_and_final_events()
     )
     identity = TrustedIdentity(tenant_id="tenant", user_id="user")
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app", conversation_id="conversation",
             message_id="m1", question="你好",
         ),
@@ -120,7 +120,7 @@ async def test_event_backend_failure_never_breaks_business_response():
         event_store=FailingEventStore(),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app", conversation_id="conversation",
             message_id="m1", question="你好",
         ),

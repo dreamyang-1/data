@@ -1193,7 +1193,7 @@ async def test_complete_business_query_does_not_bypass_enabled_model_classifier(
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="model-required-complete-query",
             message_id="m1",

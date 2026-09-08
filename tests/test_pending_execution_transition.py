@@ -176,7 +176,7 @@ async def test_closed_form_pending_reply_skips_async_intent_model_path():
         sessions=InMemorySessionStore(),
     )
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1", conversation_id="fast-slot",
             message_id="message-1", question="查询销售额",
         ),
@@ -185,7 +185,7 @@ async def test_closed_form_pending_reply_skips_async_intent_model_path():
     assert first.status == "NEEDS_CLARIFICATION"
     classifier.model_path_calls = 0
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1", conversation_id="fast-slot",
             message_id="message-2", question="本月",
         ),
@@ -201,7 +201,7 @@ async def test_filled_slot_can_transition_to_asl_clarification_then_complete():
     agent, sessions = service(retrieval)
 
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="multi-stage",
             message_id="message-1",
@@ -213,7 +213,7 @@ async def test_filled_slot_can_transition_to_asl_clarification_then_complete():
     assert first.missing_slots == ["time_range"]
 
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="multi-stage",
             message_id="message-2",
@@ -241,7 +241,7 @@ async def test_filled_slot_can_transition_to_asl_clarification_then_complete():
     assert "时间范围：" in pending.request.rewritten_question
 
     third = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="multi-stage",
             message_id="message-3",
@@ -272,7 +272,7 @@ async def test_terminal_dependency_failure_clears_resolved_pending_state():
     agent, sessions = service(retrieval)
 
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="terminal-failure",
             message_id="message-1",
@@ -281,7 +281,7 @@ async def test_terminal_dependency_failure_clears_resolved_pending_state():
         IDENTITY,
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1",
             conversation_id="terminal-failure",
             message_id="message-2",
@@ -309,7 +309,7 @@ async def test_corrected_pending_request_sends_no_negated_metric_to_retrieval():
     agent, _ = service(retrieval)
 
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1", conversation_id="metric-correction",
             message_id="message-1", question="查询销售额",
         ),
@@ -318,7 +318,7 @@ async def test_corrected_pending_request_sends_no_negated_metric_to_retrieval():
     assert first.status == "NEEDS_CLARIFICATION"
 
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1", conversation_id="metric-correction",
             message_id="message-2", question="不是销售额，是订单量，查2026年7月",
         ),
@@ -340,7 +340,7 @@ async def test_correction_after_completed_turn_replaces_old_dimension():
     agent, _ = service(retrieval)
 
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1", conversation_id="dimension-correction",
             message_id="message-1",
             question="查询2026年7月按区域拆分销售额",
@@ -350,7 +350,7 @@ async def test_correction_after_completed_turn_replaces_old_dimension():
     assert first.status == "COMPLETED"
 
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-1", conversation_id="dimension-correction",
             message_id="message-2", question="不看区域了，按渠道拆分",
         ),
