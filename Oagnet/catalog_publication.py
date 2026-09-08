@@ -177,7 +177,29 @@ class PinnedCatalog:
             raise CatalogEvidenceError("CATALOG_VALUE_ATTRIBUTE_NOT_PINNED")
         return bound_field(self._snapshot, rows[0], data_source_id=data_source_id)
 
-    def lookup_entity_values(self, attribute_record_id, value, *, data_source_id=None, limit=8):
+    def entity_value_lookup_fields(self):
+        """Implicit name lookup uses the existing governed vector/search policy.
+
+        Display defaults do not enable search. Explicitly mentioned fields may
+        still use exact lookup, including business identifiers.
+        """
+        from catalog_value_sources import bound_field
+        from mysql_tool import entity_value_vectorization_decision
+        self._check_active()
+        if 'entity_value_sources' not in self._snapshot['physical_catalog']:
+            return []
+        eligible = []
+        for row in self.get_by_where({'type': 'attribute'}):
+            field = bound_field(self._snapshot, row)
+            flag = field.get('vectorization')
+            if flag is not None and (type(flag) not in (bool, int) or flag not in (0, 1)):
+                raise CatalogEvidenceError('CATALOG_VALUE_SEARCH_POLICY_INVALID')
+            policy = {**field, 'attr_name': row.metadata.get('attr_name')}
+            if entity_value_vectorization_decision(policy)[0]:
+                eligible.append(row.id)
+        return eligible
+
+    def lookup_entity_values(self, attribute_record_id, value, *, data_source_id=None, limit=8, require_implicit_policy=False):
         """Internal opt-in source read; values are not published catalog members.
 
         Call finish before using an observation. A restored observation must be
@@ -186,6 +208,8 @@ class PinnedCatalog:
         """
         from catalog_value_sources import observe
         field = self.entity_value_source(attribute_record_id, data_source_id=data_source_id)
+        if require_implicit_policy and attribute_record_id not in self.entity_value_lookup_fields():
+            raise CatalogEvidenceError('CATALOG_VALUE_IMPLICIT_SEARCH_NOT_GOVERNED')
         if len(self._value_observations) >= 32:
             raise CatalogEvidenceError("CATALOG_VALUE_QUERY_BUDGET_EXCEEDED")
         observation = observe(self._manifest["scope"], field, value, limit)
