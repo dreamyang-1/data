@@ -40,12 +40,16 @@ class CatalogPublication:
         self.store, self.registry, self.capture = store, registry, capture
 
     def publish(self, semantic_model_id, business_domain_ids=(), *, embed_fn,
-                publication_id, producer_revision, embedding_contract):
+                publication_id, producer_revision, embedding_contract, expected_catalog_version=None):
         scope = catalog_scope(semantic_model_id, business_domain_ids)
         expected = self.registry.active(scope)
         snapshot = self.capture(semantic_model_id, scope["business_domain_ids"])
         if snapshot["scope"] != scope:
             raise CatalogEvidenceError("CATALOG_SCOPE_MISMATCH")
+        # Bind an operator-reviewed candidate to the actual capture used below;
+        # a separate earlier preflight cannot establish this identity.
+        if expected_catalog_version is not None and snapshot["catalog_version"] != expected_catalog_version:
+            raise CatalogEvidenceError("CATALOG_OPERATION_SOURCE_CHANGED")
         manifest, records = prepare_catalog_generation(snapshot, embed_fn,
             publication_id=publication_id, producer_revision=producer_revision,
             embedding_contract=embedding_contract, target_identity_hash=self.registry.target_identity_hash)

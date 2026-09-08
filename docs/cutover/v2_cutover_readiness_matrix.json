@@ -149,7 +149,7 @@
         "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
-      "next_action": "After operational authorization, regenerate and verify the latest isolated publication candidate and native read-back. Prove actual source lookup under authorized operations; evaluate field-hypothesis and fuzzy value selection only after catalog gates close. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Close C-02 native publication/durable registry gates, then prove actual source lookup under authorized operations. Evaluate field-hypothesis/fuzzy selection after catalog gates. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
     },
     {
       "capability": "Canonical Binding",
@@ -168,7 +168,7 @@
         "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
       ],
-      "next_action": "Connect the raw-input entry to deployment/state-store boundaries after its remaining semantic coverage gates; version downstream SQL metadata/cache reads. Verify actual deployed acceptance with unchanged public I/O. After operational authorization, regenerate and verify the latest isolated publication candidate and native read-back. Prove actual source lookup under authorized operations; evaluate field-hypothesis and fuzzy value selection only after catalog gates close. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
+      "next_action": "Connect the raw-input entry to deployment/state-store boundaries after its remaining semantic coverage gates; version downstream SQL metadata/cache reads. Verify actual deployed acceptance with unchanged public I/O. Close C-02 native publication/durable registry gates, then prove actual source lookup under authorized operations. Evaluate field-hypothesis/fuzzy selection after catalog gates. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
     },
     {
       "capability": "Dataset Follow-up",
@@ -194,9 +194,10 @@
       ],
       "evidence": [
         "0.2.2 current-scope and pinned state/compiler contract verified offline; legacy 0.2.1 guard preserved. Actual runtime binding/deployed caller trust remains unverified.",
-        "docs/cutover/v2_scope_bridge/closure_report.md"
+        "docs/cutover/v2_scope_bridge/closure_report.md",
+        "Fresh target/persistence evidence and guarded candidate: docs/cutover/catalog_publication_candidate/closure_report.md"
       ],
-      "next_action": "Connect the raw-input entry to deployment/state-store boundaries after its remaining semantic coverage gates; version downstream SQL metadata/cache reads. Verify actual deployed acceptance with unchanged public I/O. Verify deployed revisions/caller boundary and controlled release operations for this exact target. Model/domain no longer require user clarification. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence."
+      "next_action": "Connect the raw-input entry to deployment/state-store boundaries after its remaining semantic coverage gates; version downstream SQL metadata/cache reads. Verify actual deployed acceptance with unchanged public I/O. Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence."
     },
     {
       "capability": "Catalog Version",
@@ -211,7 +212,8 @@
         "docs/cutover/catalog_identity/live_scope_evidence.json",
         "V2 scoped compiler now binds pin identity and requires full finish before output; no legacy HTTP/SQL cache integration yet",
         "Actual 81/[205] display/declared relationship facts and local typed plan acceptance: docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
-        "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md"
+        "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
+        "Fresh target/persistence evidence and guarded candidate: docs/cutover/catalog_publication_candidate/closure_report.md"
       ],
       "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot. Connect the raw-input entry to deployment/state-store boundaries after its remaining semantic coverage gates; version downstream SQL metadata/cache reads. Verify actual deployed acceptance with unchanged public I/O."
     },
@@ -227,9 +229,10 @@
       "evidence": [
         "Actual isolated collections and Redis marker absent; legacy 142 rows unstamped. 290 records generated locally from current capture with placeholder vectors only.",
         "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
-        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
+        "Fresh target/persistence evidence and guarded candidate: docs/cutover/catalog_publication_candidate/closure_report.md"
       ],
-      "next_action": "After operational authorization, regenerate the isolated publication candidate from the latest capture (relation types and entity-value source facts changed its identity), publish, then verify native full read-back and durable activation. No V1 collection rebuild. After operational authorization, regenerate and verify the latest isolated publication candidate and native read-back. Prove actual source lookup under authorized operations; evaluate field-hypothesis and fuzzy value selection only after catalog gates close. Verify deployed revisions/caller boundary and controlled release operations for this exact target. Model/domain no longer require user clarification."
+      "next_action": "Locate Redis deployment/persistent storage ownership and prepare an approved durability/recovery plan. After durability evidence and native publication authorization, execute the current target/source/embedding-bound candidate and verify full read-back/activation. No shared Redis configuration or V1 index change is authorized by source commits. Close C-02 native publication/durable registry gates, then prove actual source lookup under authorized operations. Evaluate field-hypothesis/fuzzy selection after catalog gates. Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]."
     },
     {
       "capability": "Oagnet Scope",
@@ -241,9 +244,10 @@
       "evidence": [
         "Oagnet/tests/test_scope_closure.py and tests/test_scope_contract.py pass; deployed revision not verified",
         "Copied-model metadata joins now tested with real SQL execution on synthetic fixtures; actual 81/[205] capture has 13/13 owned dimensions; runtime publication unverified",
-        "Actual 81/[205] display/declared relationship facts and local typed plan acceptance: docs/cutover/v2_catalog_plans/catalog_capability_evidence.json"
+        "Actual 81/[205] display/declared relationship facts and local typed plan acceptance: docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
+        "Fresh target/persistence evidence and guarded candidate: docs/cutover/catalog_publication_candidate/closure_report.md"
       ],
-      "next_action": "Verify deployed revisions/caller boundary and controlled release operations for this exact target. Model/domain no longer require user clarification."
+      "next_action": "Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]."
     },
     {
       "capability": "ASL Contract",

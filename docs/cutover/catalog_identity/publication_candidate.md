@@ -1,3 +1,5 @@
+> Superseded by [the current guarded candidate](../catalog_publication_candidate/publication_candidate.md). The original candidate below is historical and must not be executed; current Redis durability is not proven.
+
 # Prepared operational candidate — not executed
 
 Scope: **model 81 / business_domain_ids [205]**, current configured Oagnet target.

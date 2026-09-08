@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "df09b52ea4ab76254f5005619aefa8e4cb87ac5f",
+  "feature_branch": "cutover-catalog-publication-candidate-20260909-01",
+  "source_rollback": "Reviewed revert of operator preconditions and evidence with explicit development resync; no production state was written by this stage.",
+  "operational_failure": "Before activation retain isolated incomplete generation and never reuse its reservation ID. Inspect unknown Redis acknowledgement; do not assume rollback. No prior active release exists for this observed scope.",
+  "runtime_rollback_proven": false,
+  "production_redis_configuration_changed": false,
+  "native_publication_performed": false
+}

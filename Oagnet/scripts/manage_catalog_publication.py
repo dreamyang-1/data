@@ -26,6 +26,9 @@ def main(argv=None):
     parser.add_argument("--publication-id")
     parser.add_argument("--producer-revision")
     parser.add_argument("--vector-index-version")
+    parser.add_argument("--expected-target-identity-hash")
+    parser.add_argument("--expected-catalog-version")
+    parser.add_argument("--expected-embedding-contract")
     args=parser.parse_args(argv)
     try:
         scope=catalog_scope(args.semantic_model_id,args.business_domain_id)
@@ -33,16 +36,27 @@ def main(argv=None):
             raise CatalogEvidenceError("CATALOG_RELEASE_IDENTITY_MISSING")
         if args.action=="reactivate" and not args.vector_index_version:
             raise CatalogEvidenceError("CATALOG_RELEASE_IDENTITY_MISSING")
-        store=open_catalog_store(initialize=args.action=="initialize")
+        if args.action in {"initialize","publish","reactivate"} and not args.expected_target_identity_hash:
+            raise CatalogEvidenceError("CATALOG_OPERATION_PRECONDITIONS_REQUIRED")
+        if args.action=="publish":
+            if not args.expected_catalog_version or not args.expected_embedding_contract:
+                raise CatalogEvidenceError("CATALOG_OPERATION_PRECONDITIONS_REQUIRED")
+            contract=configured_embedding_contract()
+            if contract!=args.expected_embedding_contract:
+                raise CatalogEvidenceError("CATALOG_OPERATION_EMBEDDING_CHANGED")
+        options={"initialize":args.action=="initialize"}
+        if args.expected_target_identity_hash is not None:
+            options["expected_target_identity_hash"]=args.expected_target_identity_hash
+        store=open_catalog_store(**options)
         registry=RedisCatalogReleaseRegistry(store.catalog_target_identity)
         publication=CatalogPublication(store,registry)
         if args.action=="initialize":
             receipt={"target_identity_hash":registry.target_identity_hash}
         elif args.action=="publish":
             from embedding import embed_documents
-            contract=configured_embedding_contract()
             receipt=publication.publish(args.semantic_model_id,scope["business_domain_ids"],embed_fn=embed_documents,
-                publication_id=args.publication_id,producer_revision=args.producer_revision,embedding_contract=contract)
+                publication_id=args.publication_id,producer_revision=args.producer_revision,embedding_contract=contract,
+                expected_catalog_version=args.expected_catalog_version)
         elif args.action=="reactivate":
             receipt=publication.reactivate(args.semantic_model_id,scope["business_domain_ids"],args.vector_index_version)
         else:
