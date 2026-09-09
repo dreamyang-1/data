@@ -1,10 +1,10 @@
 {
-  "baseline_commit": "8748d3d64d9a51e6a57c6769954eec90f849137e",
+  "baseline_commit": "4f23205198576cc42cb4cb0823a85917e9c0b511",
   "feature_branch": "evaluation-harness-closure-20260909t083000z",
   "final_commit": "Commit containing this manifest",
-  "planned_subject": "cutover: preserve runtime error and catalog pin replay contracts",
+  "planned_subject": "cutover: report precise inner semantic rejection boundaries",
   "runtime_source_changed": false,
   "evidence": "runtime_harness_contract.md and test_delta.json",
   "draft_pr_base": "semantic-cutover-triage-20260909t074900z",
-  "stage_baseline": "8748d3d64d9a51e6a57c6769954eec90f849137e"
+  "stage_baseline": "4f23205198576cc42cb4cb0823a85917e9c0b511"
 }

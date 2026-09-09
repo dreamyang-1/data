@@ -160,3 +160,13 @@ def test_schema_failures_keep_the_actual_model_stage_and_catalog_errors_are_sepa
     from tools.cutover.harness_runtime import error_category
     assert error_category({'reason':'V2_MODEL_OUTPUT_INVALID','last_model_stage':'v2_semantic_edits'},[],[])['stage']=='SEMANTIC_QUERY_IR'
     assert error_category({'reason':'CATALOG_RELATIONSHIP_REQUIRED'},[],[])['type']=='CATALOG_ERROR'
+
+
+@pytest.mark.parametrize('reason,stage',[
+    ('V2_ENTITY_ALIAS_REQUIRES_PATH','CANONICAL_BINDING'),
+    ('V2_RELATION_BINDING_ROLE_CONFLICT','SEMANTIC_ROLE'),
+    ('V2_TEMPORAL_BASE_REQUIRED','TIME_NORMALIZATION')])
+def test_inner_contract_boundary_is_not_hidden_by_outer_patch_observer(reason,stage):
+    from tools.cutover.harness_runtime import error_category
+    events=[{'stage':'TaskPatchInput','error_type':'RecognitionFailure'}]
+    assert error_category({'reason':reason},[],events)['stage']==stage

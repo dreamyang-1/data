@@ -1,54 +1,24 @@
 {
-  "baseline_commit": "8748d3d64d9a51e6a57c6769954eec90f849137e",
+  "baseline_commit": "4f23205198576cc42cb4cb0823a85917e9c0b511",
   "feature_branch": "evaluation-harness-closure-20260909t083000z",
   "files": [
     {
-      "repository_path": "tools/cutover/run_raw_transition_benchmark.py",
-      "development_sha256": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
-      "normalized_sha256": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
-      "baseline_sha256": "1b1b2c6a5e225344f9c9f03cd81c80aae1c2fa03a86f698598638dd1995ef30a"
-    },
-    {
-      "repository_path": "tools/cutover/harness_replay.py",
-      "development_sha256": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
-      "normalized_sha256": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
-      "baseline_sha256": "eb676a0c0d449f6e6647d0524eab7243e228617700fa3723eccca9a10a114bb4"
-    },
-    {
-      "repository_path": "tools/cutover/harness_dryplan.py",
-      "development_sha256": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
-      "normalized_sha256": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
-      "baseline_sha256": "81fc14fcd481a2c0116cdf47651cb16f0c67f3cdee169a4f75ad7cc08d9a53ce"
-    },
-    {
-      "repository_path": "tools/cutover/harness_safety.py",
-      "development_sha256": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
-      "normalized_sha256": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
-      "baseline_sha256": "4598cfa8173d9e37448ac559ae9861c9f0c5a44965196864039e84e1bedf0d11"
-    },
-    {
-      "repository_path": "tests/test_cutover_harness_transport_replay.py",
-      "development_sha256": "fdec5527d635c5d6e6a1c4b295dba6aec53a806f88f43ed8afd8c3c4914292f3",
-      "normalized_sha256": "fdec5527d635c5d6e6a1c4b295dba6aec53a806f88f43ed8afd8c3c4914292f3",
-      "baseline_sha256": "942f4d9fa3ccea30a25b16f7d6e44c11359dc48bcb4c9e1ff9759913d905641c"
-    },
-    {
-      "repository_path": "tests/test_cutover_harness_manifest_safety.py",
-      "development_sha256": "7482e405212660b9dc9028e41dab5bc083a0e6d309c6867479ca863c7abffb3b",
-      "normalized_sha256": "7482e405212660b9dc9028e41dab5bc083a0e6d309c6867479ca863c7abffb3b",
-      "baseline_sha256": "0bc272ec6313f84b164abbc4beb5cc14627a97384652b00e608b10b466d4130e"
+      "repository_path": "tools/cutover/harness_runtime.py",
+      "development_sha256": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+      "normalized_sha256": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+      "baseline_sha256": "1e6718f9364dbdfdd082d45e504e3da513693ad82fa53db79cd706145f4221be"
     },
     {
       "repository_path": "tests/test_cutover_harness_contract.py",
-      "development_sha256": "37eb8445c3722f5e8c57726be5b192b9fda17f578aad36f3a3e1ed264a4b7bd2",
-      "normalized_sha256": "37eb8445c3722f5e8c57726be5b192b9fda17f578aad36f3a3e1ed264a4b7bd2",
-      "baseline_sha256": "bb2f50b60fd9fc9d29f18744ab4bdaa1dd3ef859b36f3d0bd54518cab384ea21"
+      "development_sha256": "f595d5756c8747007843899dcdbda6a107db36161d98e53a2410f5c9e6ce24b2",
+      "normalized_sha256": "f595d5756c8747007843899dcdbda6a107db36161d98e53a2410f5c9e6ce24b2",
+      "baseline_sha256": "37eb8445c3722f5e8c57726be5b192b9fda17f578aad36f3a3e1ed264a4b7bd2"
     },
     {
       "repository_path": "docs/v2_cutover/evaluation_harness/test_delta.json",
-      "development_sha256": "87c5a2db59fe154b5dcf2d3ffbc92925a837fda5df2bd93953953a3bd113bcdd",
-      "normalized_sha256": "6b24949a9a58010ebef5e784128b422532088a5e528de336e4ba1bf39d02f859",
-      "baseline_sha256": "884dd29fdb8f1d51cb558f7e00d0c491809aefc117654ccb94d5606baa87f85e"
+      "development_sha256": "52f5ff60d5425e65ab147150966d75094b5b7761f33b6257c39e9bfec0651295",
+      "normalized_sha256": "f417e6430ce99014918d307c398032582fa67dda30d040c43ca52fee26e492d5",
+      "baseline_sha256": "6b24949a9a58010ebef5e784128b422532088a5e528de336e4ba1bf39d02f859"
     }
   ],
   "normalization": "CRLF to LF only",

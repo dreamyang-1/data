@@ -28,6 +28,13 @@ def error_category(record,calls,events):
         kind,stage='MODEL_HTTP_ERROR','EXTERNAL_BLOCKER'
     elif reason.startswith('CATALOG_'):
         kind,stage='CATALOG_ERROR','CATALOG_GAP'
+    elif reason in {'V2_ENTITY_ALIAS_REQUIRES_PATH','V2_RELATION_BINDING_ROLE_CONFLICT','V2_TEMPORAL_BASE_REQUIRED'}:
+        # These bounded codes identify an inner contract before _patch's
+        # outer observer rethrows. Preserve that more precise source boundary.
+        kind='MODEL_SEMANTIC_ERROR'
+        stage={'V2_ENTITY_ALIAS_REQUIRES_PATH':'CANONICAL_BINDING',
+               'V2_RELATION_BINDING_ROLE_CONFLICT':'SEMANTIC_ROLE',
+               'V2_TEMPORAL_BASE_REQUIRED':'TIME_NORMALIZATION'}[reason]
     else:
         kind='MODEL_SEMANTIC_ERROR' if reason.startswith('V2_') else 'RUNTIME_ERROR'
         known={'TaskPatchInput':'TASK_OPERATION','TaskSemanticState':'TASK_REDUCER',

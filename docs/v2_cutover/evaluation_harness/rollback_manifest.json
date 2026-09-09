@@ -1,5 +1,5 @@
 {
-  "baseline_commit": "8748d3d64d9a51e6a57c6769954eec90f849137e",
+  "baseline_commit": "4f23205198576cc42cb4cb0823a85917e9c0b511",
   "rollback": "Revert this feature commit to remove the opt-in evaluation harness. Production semantic behavior is unchanged. Private evidence remains outside Git. No model/key, public I/O, V1 routing, native publication or production state was changed.",
   "native_publication_performed": false,
   "redis_mutation_performed": false,
