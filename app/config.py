@@ -132,7 +132,7 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("DATA_AGENT_INTENT_MODEL_API_KEY", "API_KEY"),
     )
-    intent_model_name: str = "qwen3.6-plus"
+    intent_model_name: str = "qwen3.7-max"
     intent_model_response_format: Literal["json_schema", "json_object"] = "json_object"
     intent_model_timeout_seconds: float = Field(default=30, gt=0, le=60)
     intent_model_max_retries: int = Field(default=1, ge=0, le=2)
@@ -146,11 +146,11 @@ class Settings(BaseSettings):
     # engine. Its output is evidence-validated and safely falls back to the
     # deterministic answer when unavailable or ungrounded.
     analysis_synthesis_enabled: bool = True
-    analysis_synthesis_model_name: str = "qwen3.6-plus"
+    analysis_synthesis_model_name: str = "qwen3.7-max"
     analysis_synthesis_timeout_seconds: float = Field(default=8, gt=0, le=20)
     analysis_synthesis_max_retries: int = Field(default=0, ge=0, le=1)
     chat_model_enabled: bool = True
-    chat_model_name: str = "qwen3.6-plus"
+    chat_model_name: str = "qwen3.7-max"
     chat_model_timeout_seconds: float = Field(default=8, gt=0, le=20)
     chat_model_max_retries: int = Field(default=0, ge=0, le=1)
     # Optional Langfuse export. Content is hash/shape-only unless the explicit

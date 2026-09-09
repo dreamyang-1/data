@@ -112,7 +112,7 @@
         "docs/cutover/evaluation_gates/closure_report.md",
         "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison.",
+      "next_action": "Continue full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Configured qwen3.7-max access is restored; new-model quality remains unmeasured beyond the smoke case.",
       "blocks_offline_evaluation_globally": false,
       "production_gate_only": false
     },
@@ -208,16 +208,17 @@
       "blocker_id": "E-02",
       "classification": "EVALUATION_GAP",
       "blocking_level": "P1",
-      "status": "PARSER_REPAIRS_MEASURED_PROVIDER_AUTH_NOW_FAILING",
-      "summary": "Current parser component evidence is retained. User-requested single retry at 2026-09-09T02:46:37Z again returned HTTP401 invalid_api_key. Full requested model comparison remains open; no production default changed.",
+      "status": "USER_SELECTED_QWEN37_ACCESS_RESTORED_FULL_COMPARISON_OPEN",
+      "summary": "User selected qwen3.7-max and authorized reading its active sys_api_model credential. Local configuration and tracked defaults now use that model. One current-turn parser request returned HTTP200 and passed validation; full model comparison remains open.",
       "evidence": [
         "docs/phase0c_region_list/closure_report.md",
         "app/semantic_v2/pipeline.py::CurrentTurnParser",
         "docs/cutover/evaluation_gates/closure_report.md",
         "docs/cutover/parser_repairs/closure_report.md",
-        "docs/cutover/state_evaluation/comparison_readiness.json"
+        "docs/cutover/state_evaluation/comparison_readiness.json",
+        "docs/cutover/model_configuration/closure_report.md"
       ],
-      "next_action": "Restore existing provider access, verify actual availability of qwen3.6-plus, qwen3.8-max and deepseek-v4-pro, and run the required bounded paired benchmark after Gold is stable. Extra qwen3.7-plus probes do not replace requested candidates.",
+      "next_action": "Measure the user-selected qwen3.7-max against the unchanged frozen Gold and record model provenance separately. Complete paired V1/V2 evaluation and the outstanding comparison candidate requirements; a configuration choice or one smoke pass is not a model-quality winner.",
       "blocks_offline_evaluation_globally": false,
       "production_gate_only": false
     },
@@ -291,7 +292,7 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "66c11a1bfa414ba63b4592cb5ff3713492a5b324",
+  "latest_source_delivery_baseline": "2cd4d93de8ce151f0b859e8252db3f0ed7ce141c",
   "gate_authority": "USER_DECISION_2026_09_09",
   "gate_matrix": "docs/cutover/evaluation_gates/gate_matrix.json",
   "open_count_scope": "Production replacement acceptance; not eligibility to execute offline evaluation",

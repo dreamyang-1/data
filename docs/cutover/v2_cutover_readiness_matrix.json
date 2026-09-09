@@ -388,12 +388,12 @@
         "E-02"
       ],
       "evidence": [
-        "Real-model calls remain 0; no winner inferred",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
         "docs/cutover/parser_repairs/closure_report.md",
-        "docs/cutover/state_evaluation/closure_report.md"
+        "docs/cutover/state_evaluation/closure_report.md",
+        "docs/cutover/model_configuration/smoke.json: qwen3.7-max access/parse validation only; no quality winner inferred"
       ],
-      "next_action": "Restore existing provider access, verify actual availability of qwen3.6-plus, qwen3.8-max and deepseek-v4-pro, and run the required bounded paired benchmark after Gold is stable. Extra qwen3.7-plus probes do not replace requested candidates.",
+      "next_action": "Measure the user-selected qwen3.7-max against the unchanged frozen Gold and record model provenance separately. Complete paired V1/V2 evaluation and the outstanding comparison candidate requirements; a configuration choice or one smoke pass is not a model-quality winner.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {

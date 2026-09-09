@@ -17,7 +17,7 @@ The initial parser accepted 65/100 outputs. Exact-evidence repair and generation
 constraints now produce 94/100 accepted outputs in the final run (two reference failures,
 four authentication failures). Ten captured representation failures pass deterministic
 replay. Semantic quality and full V1/V2/result acceptance remain open; real shadow has
-not begun. Further live requests currently return HTTP401; offline evaluation continues.
+not begun. The subsequent user-selected qwen3.7-max database credential restores access (one HTTP200/parser-validation smoke). This changes configured model defaults by explicit user instruction, without changing V1 routing or public I/O. See [model configuration evidence](model_configuration/closure_report.md). The earlier qwen3.6-plus results remain historical evidence, not scores for qwen3.7-max.
 Twenty additional transition records now measure actual V1 rule/dataset service
 outputs; V2 observation adapters retain real state/patch and Pending decisions.
 These service/control results are not full V1/V2 accuracy. See the explicit
