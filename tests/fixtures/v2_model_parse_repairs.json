@@ -1,0 +1,687 @@
+[
+  {
+    "case_id": "G81-020",
+    "text": "请告诉我销售总成本",
+    "parsed": {
+      "mentions": [
+        {
+          "mention_id": "G81-020-M1",
+          "surface": "销售总成本",
+          "normalized_surface": "销售总成本",
+          "start_char": 3,
+          "end_char": 8,
+          "candidate_roles": [
+            "MEASURE"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-020"
+        }
+      ],
+      "dialogue_act_candidates": [
+        "NEW_TASK"
+      ],
+      "operation_markers": [
+        {
+          "mention_id": "G81-020-M1",
+          "operation_hint": "SET",
+          "slot_name": "metrics"
+        }
+      ],
+      "reference_signals": [],
+      "followup_signals": [],
+      "topic_shift_signals": [
+        "EXPLICIT_NEW_TASK"
+      ],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": "SCALAR_AGGREGATE",
+      "explicit_slot_mentions": {
+        "metrics": [
+          "G81-020-M1"
+        ]
+      }
+    },
+    "status": "CURRENT_TURN_VALIDATION_FAILED"
+  },
+  {
+    "case_id": "G81-040",
+    "text": "按商品统计订单笔数",
+    "parsed": {
+      "mentions": [
+        {
+          "mention_id": "G81-040-M1",
+          "surface": "商品",
+          "normalized_surface": "商品",
+          "start_char": 1,
+          "end_char": 3,
+          "candidate_roles": [
+            "GROUP_BY"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-040"
+        },
+        {
+          "mention_id": "G81-040-M2",
+          "surface": "订单笔数",
+          "normalized_surface": "订单笔数",
+          "start_char": 4,
+          "end_char": 8,
+          "candidate_roles": [
+            "MEASURE"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-040"
+        }
+      ],
+      "dialogue_act_candidates": [
+        "NEW_TASK"
+      ],
+      "operation_markers": [
+        {
+          "mention_id": "G81-040-M1",
+          "operation_hint": "SET",
+          "slot_name": "dimensions"
+        },
+        {
+          "mention_id": "G81-040-M2",
+          "operation_hint": "SET",
+          "slot_name": "metrics"
+        }
+      ],
+      "reference_signals": [],
+      "followup_signals": [],
+      "topic_shift_signals": [
+        "EXPLICIT_NEW_TASK"
+      ],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": "GROUPED_AGGREGATE",
+      "explicit_slot_mentions": {
+        "dimensions": [
+          "G81-040-M1"
+        ],
+        "metrics": [
+          "G81-040-M2"
+        ]
+      }
+    },
+    "status": "CURRENT_TURN_VALIDATION_FAILED"
+  },
+  {
+    "case_id": "G81-056",
+    "text": "结果中只返回销售员姓名",
+    "parsed": {
+      "mentions": [
+        {
+          "mention_id": "G81-056-M1",
+          "surface": "销售员姓名",
+          "normalized_surface": "销售员姓名",
+          "start_char": 7,
+          "end_char": 12,
+          "candidate_roles": [
+            "PROJECTION_FIELD"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-056"
+        }
+      ],
+      "dialogue_act_candidates": [
+        "MODIFY"
+      ],
+      "operation_markers": [
+        {
+          "mention_id": "G81-056-M1",
+          "operation_hint": "SET",
+          "slot_name": "projection_spec"
+        },
+        {
+          "mention_id": "G81-056-M1",
+          "operation_hint": "CLEAR",
+          "slot_name": "metrics"
+        },
+        {
+          "mention_id": "G81-056-M1",
+          "operation_hint": "CLEAR",
+          "slot_name": "dimensions"
+        }
+      ],
+      "reference_signals": [],
+      "followup_signals": [
+        "MODIFY"
+      ],
+      "topic_shift_signals": [],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": "DETAIL_ROWS",
+      "explicit_slot_mentions": {
+        "projection_spec": [
+          "G81-056-M1"
+        ]
+      }
+    },
+    "status": "CURRENT_TURN_VALIDATION_FAILED"
+  },
+  {
+    "case_id": "G81-072",
+    "text": "不要订单笔数",
+    "parsed": {
+      "mentions": [
+        {
+          "mention_id": "G81-072-M1",
+          "surface": "不要订单笔数",
+          "normalized_surface": "不要订单笔数",
+          "start_char": 0,
+          "end_char": 6,
+          "candidate_roles": [
+            "MEASURE"
+          ],
+          "explicit": true,
+          "negated": true,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-072"
+        }
+      ],
+      "dialogue_act_candidates": [
+        "REMOVE"
+      ],
+      "operation_markers": [
+        {
+          "mention_id": "G81-072-M1",
+          "operation_hint": "REMOVE",
+          "slot_name": "metrics"
+        }
+      ],
+      "reference_signals": [],
+      "followup_signals": [],
+      "topic_shift_signals": [],
+      "negations": [
+        "不要"
+      ],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {
+        "metrics": [
+          "G81-072-M1"
+        ]
+      }
+    },
+    "status": "CURRENT_TURN_VALIDATION_FAILED"
+  },
+  {
+    "case_id": "G81-074",
+    "text": "按季度",
+    "parsed": {
+      "mentions": [
+        {
+          "mention_id": "G81-074-0",
+          "surface": "按季度",
+          "normalized_surface": "按季度",
+          "start_char": 0,
+          "end_char": 3,
+          "candidate_roles": [
+            "TIME_GRAIN"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-074"
+        }
+      ],
+      "dialogue_act_candidates": [
+        "MODIFY"
+      ],
+      "operation_markers": [
+        {
+          "mention_id": "G81-074-0",
+          "operation_hint": "SET",
+          "slot_name": "time_spec"
+        }
+      ],
+      "reference_signals": [],
+      "followup_signals": [
+        "MODIFY"
+      ],
+      "topic_shift_signals": [],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [
+        "季度"
+      ],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {
+        "time_spec": [
+          "G81-074-0"
+        ]
+      }
+    },
+    "status": "CURRENT_TURN_VALIDATION_FAILED"
+  },
+  {
+    "case_id": "G81-076",
+    "text": "回到刚才上海那个问题",
+    "parsed": {
+      "mentions": [
+        {
+          "mention_id": "G81-076-0",
+          "surface": "回到",
+          "normalized_surface": "回到",
+          "start_char": 0,
+          "end_char": 2,
+          "candidate_roles": [
+            "SOURCE_ENTITY"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-076"
+        },
+        {
+          "mention_id": "G81-076-1",
+          "surface": "刚才",
+          "normalized_surface": "刚才",
+          "start_char": 2,
+          "end_char": 4,
+          "candidate_roles": [
+            "TIME_RANGE"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-076"
+        },
+        {
+          "mention_id": "G81-076-2",
+          "surface": "上海",
+          "normalized_surface": "上海",
+          "start_char": 4,
+          "end_char": 6,
+          "candidate_roles": [
+            "FILTER_VALUE",
+            "GROUP_BY"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-076"
+        },
+        {
+          "mention_id": "G81-076-3",
+          "surface": "那个问题",
+          "normalized_surface": "那个问题",
+          "start_char": 6,
+          "end_char": 10,
+          "candidate_roles": [
+            "SOURCE_ENTITY"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-076"
+        }
+      ],
+      "dialogue_act_candidates": [
+        "RETURN_TO_TOPIC"
+      ],
+      "operation_markers": [],
+      "reference_signals": [
+        "HISTORICAL"
+      ],
+      "followup_signals": [],
+      "topic_shift_signals": [],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [
+        "刚才"
+      ],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {}
+    },
+    "status": "CURRENT_TURN_VALIDATION_FAILED"
+  },
+  {
+    "case_id": "G81-083",
+    "text": "不要按业务员分组",
+    "parsed": {
+      "mentions": [
+        {
+          "mention_id": "G81-083-0",
+          "surface": "不要按业务员分组",
+          "normalized_surface": "不要按业务员分组",
+          "start_char": 0,
+          "end_char": 8,
+          "candidate_roles": [
+            "GROUP_BY"
+          ],
+          "explicit": true,
+          "negated": true,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-083"
+        },
+        {
+          "mention_id": "G81-083-1",
+          "surface": "业务员",
+          "normalized_surface": "业务员",
+          "start_char": 3,
+          "end_char": 6,
+          "candidate_roles": [
+            "GROUP_BY"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-083"
+        }
+      ],
+      "dialogue_act_candidates": [
+        "MODIFY"
+      ],
+      "operation_markers": [
+        {
+          "mention_id": "G81-083-0",
+          "operation_hint": "REMOVE",
+          "slot_name": "dimensions"
+        }
+      ],
+      "reference_signals": [],
+      "followup_signals": [
+        "MODIFY"
+      ],
+      "topic_shift_signals": [],
+      "negations": [
+        "不要"
+      ],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": null,
+      "explicit_slot_mentions": {
+        "dimensions": [
+          "G81-083-1"
+        ]
+      }
+    },
+    "status": "CURRENT_TURN_VALIDATION_FAILED"
+  },
+  {
+    "case_id": "G81-093",
+    "text": "医院名称字段来自哪个表？",
+    "parsed": {
+      "mentions": [
+        {
+          "mention_id": "G81-093-M1",
+          "surface": "医院名称字段",
+          "normalized_surface": "医院名称字段",
+          "start_char": 0,
+          "end_char": 6,
+          "candidate_roles": [
+            "PROJECTION_FIELD"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-093"
+        },
+        {
+          "mention_id": "G81-093-M2",
+          "surface": "哪个表",
+          "normalized_surface": "哪个表",
+          "start_char": 9,
+          "end_char": 12,
+          "candidate_roles": [
+            "DATASET_SOURCE"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-093"
+        }
+      ],
+      "dialogue_act_candidates": [
+        "NEW_TASK"
+      ],
+      "operation_markers": [
+        {
+          "mention_id": "G81-093-M1",
+          "operation_hint": "SET",
+          "slot_name": "projection_spec"
+        },
+        {
+          "mention_id": "G81-093-M2",
+          "operation_hint": "SET",
+          "slot_name": "subject"
+        }
+      ],
+      "reference_signals": [],
+      "followup_signals": [],
+      "topic_shift_signals": [
+        "EXPLICIT_NEW_TASK"
+      ],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [],
+      "query_shape_prediction": "METADATA_LOOKUP",
+      "explicit_slot_mentions": {
+        "projection_spec": [
+          "G81-093-M1"
+        ],
+        "subject": [
+          "G81-093-M2"
+        ]
+      }
+    },
+    "status": "CURRENT_TURN_VALIDATION_FAILED"
+  },
+  {
+    "case_id": "G81-099",
+    "text": "按月查看销售总成本走势",
+    "parsed": {
+      "mentions": [
+        {
+          "mention_id": "m1",
+          "surface": "按月",
+          "normalized_surface": "按月",
+          "start_char": 0,
+          "end_char": 2,
+          "candidate_roles": [
+            "TIME_GRAIN"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-099"
+        },
+        {
+          "mention_id": "m2",
+          "surface": "销售总成本",
+          "normalized_surface": "销售总成本",
+          "start_char": 4,
+          "end_char": 9,
+          "candidate_roles": [
+            "MEASURE"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-099"
+        },
+        {
+          "mention_id": "m3",
+          "surface": "走势",
+          "normalized_surface": "走势",
+          "start_char": 9,
+          "end_char": 11,
+          "candidate_roles": [
+            "PROJECTION_FIELD"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-099"
+        }
+      ],
+      "dialogue_act_candidates": [
+        "NEW_TASK"
+      ],
+      "operation_markers": [
+        {
+          "mention_id": "m1",
+          "operation_hint": "SET",
+          "slot_name": "time_spec"
+        },
+        {
+          "mention_id": "m2",
+          "operation_hint": "SET",
+          "slot_name": "metrics"
+        },
+        {
+          "mention_id": "m3",
+          "operation_hint": "SET",
+          "slot_name": "projection_spec"
+        }
+      ],
+      "reference_signals": [],
+      "followup_signals": [],
+      "topic_shift_signals": [
+        "EXPLICIT_NEW_TASK"
+      ],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [
+        "按月"
+      ],
+      "query_shape_prediction": "TIME_SERIES",
+      "explicit_slot_mentions": {
+        "time_spec": [
+          "m1"
+        ],
+        "metrics": [
+          "m2"
+        ],
+        "projection_spec": [
+          "m3"
+        ]
+      }
+    },
+    "status": "CURRENT_TURN_VALIDATION_FAILED"
+  },
+  {
+    "case_id": "G81-100",
+    "text": "2026年1月的订单笔数是多少",
+    "parsed": {
+      "mentions": [
+        {
+          "mention_id": "G81-100-M1",
+          "surface": "2026年1月",
+          "normalized_surface": "2026年1月",
+          "start_char": 0,
+          "end_char": 6,
+          "candidate_roles": [
+            "TIME_RANGE"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-100"
+        },
+        {
+          "mention_id": "G81-100-M2",
+          "surface": "订单笔数",
+          "normalized_surface": "订单笔数",
+          "start_char": 7,
+          "end_char": 11,
+          "candidate_roles": [
+            "MEASURE"
+          ],
+          "explicit": true,
+          "negated": false,
+          "clause_id": null,
+          "coordination_group_id": null,
+          "modifier_ids": [],
+          "source_turn_id": "G81-100"
+        }
+      ],
+      "dialogue_act_candidates": [
+        "NEW_TASK"
+      ],
+      "operation_markers": [
+        {
+          "mention_id": "G81-100-M1",
+          "operation_hint": "SET",
+          "slot_name": "time_spec"
+        },
+        {
+          "mention_id": "G81-100-M2",
+          "operation_hint": "SET",
+          "slot_name": "metrics"
+        }
+      ],
+      "reference_signals": [],
+      "followup_signals": [],
+      "topic_shift_signals": [
+        "EXPLICIT_NEW_TASK"
+      ],
+      "negations": [],
+      "coordination_groups": [],
+      "temporal_expressions": [
+        "2026年1月"
+      ],
+      "query_shape_prediction": "SCALAR_AGGREGATE",
+      "explicit_slot_mentions": {
+        "time_spec": [
+          "G81-100-M1"
+        ],
+        "metrics": [
+          "G81-100-M2"
+        ]
+      }
+    },
+    "status": "CURRENT_TURN_VALIDATION_FAILED"
+  }
+]

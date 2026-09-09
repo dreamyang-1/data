@@ -12,9 +12,10 @@
         "app/semantic_v2/pipeline.py::CurrentTurnParser/TurnResolver",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -33,9 +34,10 @@
         "Ordered path/occurrence source acceptance and 250 actual-catalog typed walks: docs/cutover/v2_relation_paths/closure_report.md",
         "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -54,9 +56,10 @@
         "Actual 81/[205] display/declared relationship facts and local typed plan acceptance: docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
         "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -73,9 +76,10 @@
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -91,9 +95,10 @@
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -109,9 +114,10 @@
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -127,9 +133,10 @@
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -145,9 +152,10 @@
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -164,9 +172,10 @@
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -192,9 +201,10 @@
         "docs/cutover/v2_bound_sql/closure_report.md",
         "docs/cutover/pinned_relation_endpoints/closure_report.md",
         "docs/cutover/relation_identity/closure_report.md",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Use the reviewed provisional identities per eligible shape; keep exact order/entity grain and unresolved relation paths scoped to affected cases. Continue independent role/mention/turn evaluation. Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes. Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts.",
+      "next_action": "Use the reviewed provisional identities per eligible shape; keep exact order/entity grain and unresolved relation paths scoped to affected cases. Continue independent role/mention/turn evaluation. Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes. Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -349,7 +359,7 @@
     },
     {
       "capability": "Evaluation",
-      "status": "NOT_EVALUATED",
+      "status": "PARTIAL_NOT_ACCEPTED",
       "blocking_level": "P0",
       "blocker_ids": [
         "E-01"
@@ -363,16 +373,17 @@
     },
     {
       "capability": "Real-model Evidence",
-      "status": "NOT_EVALUATED",
+      "status": "PARTIAL_NOT_ACCEPTED",
       "blocking_level": "P1",
       "blocker_ids": [
         "E-02"
       ],
       "evidence": [
         "Real-model calls remain 0; no winner inferred",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Address measured parser failures; compare models available to this account under identical bounded settings. Do not change production defaults or claim unavailable candidates are evaluated.",
+      "next_action": "Continue offline evaluation and recorded replays. Restore access using existing configured provider credentials before the next bounded live benchmark; do not substitute a different model or relax acceptance.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {

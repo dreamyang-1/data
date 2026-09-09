@@ -103,6 +103,29 @@ async def test_raw_input_reaches_model_catalog_and_plan(catalog):
 
 
 @pytest.mark.asyncio
+async def test_unique_surface_span_repair_reaches_scoped_plan_and_preserves_add(catalog,caplog):
+    steps=[metric_step('查询销售额'),metric_step('再加订单笔数','订单笔数','ADD',True)]
+    for _,parsed,_ in steps:
+        mention=parsed['mentions'][0]
+        mention['start_char']=0;mention['end_char']=len(mention['surface'])
+    original=deepcopy([parsed for _,parsed,_ in steps])
+    engine,transport=planner(catalog,steps)
+    with caplog.at_level('INFO',logger='app.semantic_v2.recognition'):
+        results=await turns(engine,steps)
+    assert {r['canonical_code'] for r in results[-1].plan['logical_plan']['payload']['measures']}=={'amount','orders'}
+    assert results[-1].plan['backend_contract']['mode']=='SHADOW_ONLY'
+    assert results[-1].next_state.context.authorized_scope.business_domain_ids==(205,)
+    assert len(transport.calls)==4
+    first_schema=json.loads(transport.calls[0]['messages'][0]['content'].split('JSON Schema:\n',1)[1])
+    assert first_schema['properties']['explicit_slot_mentions']['additionalProperties'] is False
+    assert 'limit' not in first_schema['properties']['explicit_slot_mentions']['properties']
+    assert [parsed for _,parsed,_ in steps]==original
+    traces=[r.parse_repairs for r in caplog.records if hasattr(r,'parse_repairs')]
+    assert len(traces)==2
+    assert all('销售额' not in json.dumps(trace,ensure_ascii=False) for trace in traces)
+
+
+@pytest.mark.asyncio
 async def test_add_replace_remove_apply_to_materialized_multiturn_state(catalog):
     steps=[metric_step('销售额'),metric_step('再加销售数量','销售数量','ADD',True),
         metric_step('再加订单笔数','订单笔数','ADD',True),metric_step('不要订单笔数','订单笔数','REMOVE',True),

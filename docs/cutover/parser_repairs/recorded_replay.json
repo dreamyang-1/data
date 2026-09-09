@@ -1,0 +1,194 @@
+{
+  "source": "tests/fixtures/v2_model_parse_repairs.json",
+  "cases": [
+    {
+      "case_id": "G81-020",
+      "before": "REJECTED",
+      "after": "STRICT_VALIDATION_PASS",
+      "trace": [
+        {
+          "reason_code": "EXACT_UNIQUE_CURRENT_SURFACE_SPAN",
+          "mention_id": "G81-020-M1",
+          "field": "mention.span",
+          "before": [
+            3,
+            8
+          ],
+          "after": [
+            4,
+            9
+          ]
+        }
+      ],
+      "input_unchanged": true
+    },
+    {
+      "case_id": "G81-040",
+      "before": "REJECTED",
+      "after": "STRICT_VALIDATION_PASS",
+      "trace": [
+        {
+          "reason_code": "EXACT_UNIQUE_CURRENT_SURFACE_SPAN",
+          "mention_id": "G81-040-M2",
+          "field": "mention.span",
+          "before": [
+            4,
+            8
+          ],
+          "after": [
+            5,
+            9
+          ]
+        }
+      ],
+      "input_unchanged": true
+    },
+    {
+      "case_id": "G81-056",
+      "before": "REJECTED",
+      "after": "STRICT_VALIDATION_PASS",
+      "trace": [
+        {
+          "reason_code": "EXACT_UNIQUE_CURRENT_SURFACE_SPAN",
+          "mention_id": "G81-056-M1",
+          "field": "mention.span",
+          "before": [
+            7,
+            12
+          ],
+          "after": [
+            6,
+            11
+          ]
+        }
+      ],
+      "input_unchanged": true
+    },
+    {
+      "case_id": "G81-072",
+      "before": "REJECTED",
+      "after": "STRICT_VALIDATION_PASS",
+      "trace": [
+        {
+          "reason_code": "EXACT_TOKEN_IN_UNIQUE_DECLARED_NEGATED_MENTION",
+          "mention_id": "G81-072-M1",
+          "field": "negations[0]"
+        }
+      ],
+      "input_unchanged": true
+    },
+    {
+      "case_id": "G81-074",
+      "before": "REJECTED",
+      "after": "STRICT_VALIDATION_PASS",
+      "trace": [
+        {
+          "reason_code": "EXACT_TOKEN_IN_UNIQUE_DECLARED_TEMPORAL_MENTION",
+          "mention_id": "G81-074-0",
+          "field": "temporal_expressions[0]"
+        }
+      ],
+      "input_unchanged": true
+    },
+    {
+      "case_id": "G81-076",
+      "before": "REJECTED",
+      "after": "STRICT_VALIDATION_PASS",
+      "trace": [
+        {
+          "reason_code": "EXACT_TOKEN_IN_UNIQUE_DECLARED_TEMPORAL_MENTION",
+          "mention_id": "G81-076-1",
+          "field": "temporal_expressions[0]"
+        }
+      ],
+      "input_unchanged": true
+    },
+    {
+      "case_id": "G81-083",
+      "before": "REJECTED",
+      "after": "STRICT_VALIDATION_PASS",
+      "trace": [
+        {
+          "reason_code": "EXACT_TOKEN_IN_UNIQUE_DECLARED_NEGATED_MENTION",
+          "mention_id": "G81-083-0",
+          "field": "negations[0]"
+        }
+      ],
+      "input_unchanged": true
+    },
+    {
+      "case_id": "G81-093",
+      "before": "REJECTED",
+      "after": "STRICT_VALIDATION_PASS",
+      "trace": [
+        {
+          "reason_code": "EXACT_UNIQUE_CURRENT_SURFACE_SPAN",
+          "mention_id": "G81-093-M2",
+          "field": "mention.span",
+          "before": [
+            9,
+            12
+          ],
+          "after": [
+            8,
+            11
+          ]
+        }
+      ],
+      "input_unchanged": true
+    },
+    {
+      "case_id": "G81-099",
+      "before": "REJECTED",
+      "after": "STRICT_VALIDATION_PASS",
+      "trace": [
+        {
+          "reason_code": "EXACT_TOKEN_IN_UNIQUE_DECLARED_TEMPORAL_MENTION",
+          "mention_id": "m1",
+          "field": "temporal_expressions[0]"
+        }
+      ],
+      "input_unchanged": true
+    },
+    {
+      "case_id": "G81-100",
+      "before": "REJECTED",
+      "after": "STRICT_VALIDATION_PASS",
+      "trace": [
+        {
+          "reason_code": "EXACT_UNIQUE_CURRENT_SURFACE_SPAN",
+          "mention_id": "G81-100-M1",
+          "field": "mention.span",
+          "before": [
+            0,
+            6
+          ],
+          "after": [
+            0,
+            7
+          ]
+        },
+        {
+          "reason_code": "EXACT_UNIQUE_CURRENT_SURFACE_SPAN",
+          "mention_id": "G81-100-M2",
+          "field": "mention.span",
+          "before": [
+            7,
+            11
+          ],
+          "after": [
+            8,
+            12
+          ]
+        },
+        {
+          "reason_code": "EXACT_TOKEN_IN_UNIQUE_DECLARED_TEMPORAL_MENTION",
+          "mention_id": "G81-100-M1",
+          "field": "temporal_expressions[0]"
+        }
+      ],
+      "input_unchanged": true
+    }
+  ],
+  "real_model_calls": 0
+}

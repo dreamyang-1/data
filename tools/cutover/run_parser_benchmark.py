@@ -14,9 +14,10 @@ from pathlib import Path
 from datetime import datetime, timezone
 import httpx
 from app.config import Settings
-from app.semantic_v2.recognition import PARSE_PROMPT, PROMPT_VERSION, EDIT_SLOTS
+from app.semantic_v2.recognition import PARSE_PROMPT, PROMPT_VERSION, EDIT_SLOTS, current_turn_schema
 from app.semantic_v2.recognition_client import RecognitionModelClient, RecognitionFailure
 from app.semantic_v2.pipeline import CurrentTurnSemanticParse, CurrentTurnParser
+from app.semantic_v2.recognition_repairs import repair_model_parse
 from tools.cutover.evaluation_contract import digest
 from tools.cutover.semantic_evaluator import read_jsonl, validate_gold, evaluate
 
@@ -77,7 +78,10 @@ async def run(args):
             try:
                 parsed=await model.complete(stage='v2_current_turn',instruction=PARSE_PROMPT,
                     context={'question':row['current_utterance'],'turn_id':row['case_id'],
-                        'clock':row['clock'],'slots':list(EDIT_SLOTS)},output_model=CurrentTurnSemanticParse)
+                        'clock':row['clock'],'slots':list(EDIT_SLOTS)},output_model=CurrentTurnSemanticParse,
+                    schema=current_turn_schema())
+                parsed, repairs=repair_model_parse(parsed,text=row['current_utterance'],turn_id=row['case_id'])
+                out['input_repairs']=repairs
                 checked=CurrentTurnParser.parse(text=row['current_utterance'],turn_id=row['case_id'],text_ref=row['case_id'],parsed=parsed)
                 out.update(status='OK',prediction=normalize(checked))
             except (RecognitionFailure,ValueError) as exc:
@@ -104,7 +108,7 @@ async def run(args):
     report=evaluate(selected,predictions,catalog)
     report.update({'component':'EXISTING_V2_CURRENT_TURN_PARSER','model':args.model,'thinking':args.thinking,
         'observed_at':datetime.now(timezone.utc).isoformat(),'prompt_version':PROMPT_VERSION,
-        'prompt_hash':digest(PARSE_PROMPT),'schema_hash':digest(CurrentTurnSemanticParse.model_json_schema()),
+        'prompt_hash':digest(PARSE_PROMPT),'schema_hash':digest(current_turn_schema()),
         'gold_hash':digest(rows),'requests':requests,'request_count':len(requests),'response_usage':usage,
         'temperature':0,'retries':0,'timeout_seconds':settings.intent_model_timeout_seconds,
         'production_default_model_changed':False,'catalog_usage':'FROZEN_LABEL_EVIDENCE_ONLY_NO_RETRIEVAL_IN_CURRENT_TURN_STAGE',

@@ -101,17 +101,18 @@
       "blocker_id": "V-01",
       "classification": "CUTOVER_BLOCKER_P0",
       "blocking_level": "P0",
-      "status": "ACTUAL_CURRENT_TURN_MODEL_BASELINE_MEASURED",
-      "summary": "Existing qwen3.6-plus current-turn parser measured on 100 frozen axis cases: 100 HTTP200, 35 outputs rejected by current-turn validation. Semantic role/shape errors remain. This is component evidence, not full V1/V2 accuracy.",
+      "status": "EXACT_REPRESENTATION_REPAIR_VERIFIED_SEMANTIC_GAP_OPEN",
+      "summary": "Exact current-turn span and negated/temporal reference repairs verified on ten captured failures. Final 100-case generation: 94 accepted, two unresolved reference failures, four HTTP401; semantic axes still below acceptance.",
       "evidence": [
         "app/semantic_v2/recognition.py",
         "app/semantic_v2/temporal_comparisons.py",
         "docs/cutover/v2_temporal_comparisons/closure_report.md",
         "docs/cutover/v2_temporal_comparisons/temporal_policy_gaps.json",
         "docs/cutover/v2_source_value_binding/closure_report.md",
-        "docs/cutover/evaluation_gates/closure_report.md"
+        "docs/cutover/evaluation_gates/closure_report.md",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison.",
       "blocks_offline_evaluation_globally": false,
       "production_gate_only": false
     },
@@ -206,14 +207,15 @@
       "blocker_id": "E-02",
       "classification": "EVALUATION_GAP",
       "blocking_level": "P1",
-      "status": "CURRENT_PARSER_BENCHMARK_MEASURED_CANDIDATE_LIMITS",
-      "summary": "100 current-model non-thinking requests completed. qwen3.7-plus probe returned Model.AccessDenied; qwen3.6-plus thinking probe timed out at unchanged 30s. Full model/whole-pipeline comparison remains open.",
+      "status": "PARSER_REPAIRS_MEASURED_PROVIDER_AUTH_NOW_FAILING",
+      "summary": "100-case final parser benchmark completed with 96 HTTP200 and four HTTP401 invalid_api_key. Four independent follow-up requests also returned HTTP401. Original failures retained; production model unchanged.",
       "evidence": [
         "docs/phase0c_region_list/closure_report.md",
         "app/semantic_v2/pipeline.py::CurrentTurnParser",
-        "docs/cutover/evaluation_gates/closure_report.md"
+        "docs/cutover/evaluation_gates/closure_report.md",
+        "docs/cutover/parser_repairs/closure_report.md"
       ],
-      "next_action": "Address measured parser failures; compare models available to this account under identical bounded settings. Do not change production defaults or claim unavailable candidates are evaluated.",
+      "next_action": "Continue offline evaluation and recorded replays. Restore access using existing configured provider credentials before the next bounded live benchmark; do not substitute a different model or relax acceptance.",
       "blocks_offline_evaluation_globally": false,
       "production_gate_only": false
     },
@@ -287,10 +289,10 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "011a7193f5eafda1101255209129b4d4e2ad4f94",
+  "latest_source_delivery_baseline": "f15969dcc0f90e75a399a3d80d4a489d58139dec",
   "gate_authority": "USER_DECISION_2026_09_09",
   "gate_matrix": "docs/cutover/evaluation_gates/gate_matrix.json",
   "open_count_scope": "Production replacement acceptance; not eligibility to execute offline evaluation",
-  "current_stage": "FROZEN_AXIS_EVALUATION_AND_PARSER_BASELINE",
+  "current_stage": "CURRENT_TURN_REPRESENTATION_REPAIR_AND_SEMANTIC_EVALUATION",
   "offline_evaluation_eligible": true
 }
