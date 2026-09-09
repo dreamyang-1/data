@@ -151,6 +151,16 @@ class SemanticTaskDraft(m.StrictModel):
     ambiguities: list[AmbiguityDraft] = Field(default_factory=list,max_length=10)
 
 
+def semantic_task_schema(parse, tasks):
+    """Expose only historical handles that the existing turn guard can accept."""
+    schema = SemanticTaskDraft.model_json_schema()
+    allowed = sorted(tasks) if 'HISTORICAL' in parse.reference_signals else []
+    schema['properties']['historical_task_handle'] = ({
+        'anyOf': [{'type':'string','enum':allowed}, {'type':'null'}], 'default':None}
+        if allowed else {'type':'null','default':None})
+    return schema
+
+
 class RecognizedPlan(m.StrictModel):
     """Internal result, never an HTTP/SSE response or executed result receipt."""
     parse: CurrentTurnSemanticParse
@@ -274,7 +284,7 @@ class RawTurnPlanner:
                 'datasets': [{'dataset_handle': h, 'task_handle': next(h for h,t in tasks.items() if t.task_id == d.task_id),
                     'task_version': d.task_version} for h,d in datasets.items()],
                 'payload_types': [*PayloadContractRegistry.definitions, 'INHERIT'],
-                'value_schema': value_schema()}, output_model=SemanticTaskDraft)
+                'value_schema': value_schema()}, output_model=SemanticTaskDraft, schema=semantic_task_schema(parse,tasks))
         draft, handle_repairs = repair_collection_handle_mentions(draft, parse=parse, handles=handles, candidates=candidates)
         if handle_repairs:
             logging.getLogger(__name__).info('V2 collection handle representation repaired',
