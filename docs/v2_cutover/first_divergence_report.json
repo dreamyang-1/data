@@ -1,0 +1,2416 @@
+{
+  "baseline_commit": "b42fdaf913e6e54d7de9bdb8a343183536703586",
+  "current_prompt_version": "v2-current-recognition-v8",
+  "policy": "One first observable mismatch in fixed TURN, MENTION, ROLE, OPERATION, SHAPE inspection order. This is not inferred model reasoning or a causal downstream diagnosis.",
+  "original_35": {
+    "failures": [
+      {
+        "case_id": "G81-018",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-020",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-022",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-024",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-025",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-026",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-027",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-028",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-036",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-034",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-040",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-041",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-043",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-045",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-056",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-057",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-060",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-061",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-063",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-062",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-064",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-065",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-066",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-072",
+        "error_type": "ValidationError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-074",
+        "error_type": "ValidationError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-076",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-083",
+        "error_type": "ValidationError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-085",
+        "error_type": "ValidationError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-087",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-093",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-095",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-092",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-100",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-098",
+        "error_type": "ValueError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      },
+      {
+        "case_id": "G81-099",
+        "error_type": "ValidationError",
+        "reason": "CURRENT_TURN_VALIDATION_FAILED",
+        "first_divergence_stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+        "exact_root_cause": "UNKNOWN_ORIGINAL_RESPONSE_NOT_RETAINED"
+      }
+    ],
+    "counts": {
+      "ValueError": 30,
+      "ValidationError": 5
+    },
+    "evidence": "../cutover/evaluation_gates/benchmark_bench36.json",
+    "later_replay": "../cutover/parser_repairs/recorded_replay.json",
+    "decision": "Ten separately captured outputs prove span/reference repairs. Do not retroactively assign those defects to all 35 original uncaptured responses. These were not retrieval or binding observations."
+  },
+  "current_100_distribution": {
+    "SEMANTIC_ROLE": 9,
+    "MENTION_BOUNDARY": 10,
+    "QUERY_SHAPE": 6,
+    "NO_LABELED_MISMATCH": 69,
+    "TURN_RESOLUTION": 5,
+    "TASK_OPERATION": 1
+  },
+  "current_100": [
+    {
+      "case_id": "G81-001",
+      "current_utterance": "列出产品线名单",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "SEMANTIC_ROLE",
+          "expected": {
+            "surface": "产品线",
+            "start": 2,
+            "end": 5,
+            "roles": [
+              "SUBJECT_ENTITY",
+              "TARGET_ENTITY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 5,
+              "roles": [
+                "SUBJECT_ENTITY",
+                "PROJECTION_FIELD"
+              ]
+            }
+          ],
+          "label_scope": "SELECTED_CRITICAL_ROLES"
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-002",
+      "current_utterance": "列出科室名单",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "MENTION_BOUNDARY",
+          "expected": {
+            "surface": "科室",
+            "start": 2,
+            "end": 4,
+            "roles": [
+              "SUBJECT_ENTITY",
+              "TARGET_ENTITY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 6,
+              "roles": [
+                "SUBJECT_ENTITY"
+              ]
+            }
+          ]
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-003",
+      "current_utterance": "列出城市名单",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "SEMANTIC_ROLE",
+          "expected": {
+            "surface": "城市",
+            "start": 2,
+            "end": 4,
+            "roles": [
+              "SUBJECT_ENTITY",
+              "TARGET_ENTITY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 4,
+              "roles": [
+                "SUBJECT_ENTITY",
+                "PROJECTION_FIELD"
+              ]
+            }
+          ],
+          "label_scope": "SELECTED_CRITICAL_ROLES"
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-004",
+      "current_utterance": "列出商品科室关联记录",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "MENTION_BOUNDARY",
+          "expected": {
+            "surface": "商品科室关联",
+            "start": 2,
+            "end": 8,
+            "roles": [
+              "SUBJECT_ENTITY",
+              "TARGET_ENTITY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 10,
+              "roles": [
+                "SUBJECT_ENTITY",
+                "SOURCE_ENTITY"
+              ]
+            }
+          ]
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-005",
+      "current_utterance": "列出商品名单",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "MENTION_BOUNDARY",
+          "expected": {
+            "surface": "商品",
+            "start": 2,
+            "end": 4,
+            "roles": [
+              "SUBJECT_ENTITY",
+              "TARGET_ENTITY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 6,
+              "roles": [
+                "SUBJECT_ENTITY"
+              ]
+            }
+          ]
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-006",
+      "current_utterance": "列出销售订单记录",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "MENTION_BOUNDARY",
+          "expected": {
+            "surface": "销售订单",
+            "start": 2,
+            "end": 6,
+            "roles": [
+              "SUBJECT_ENTITY",
+              "TARGET_ENTITY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 8,
+              "roles": [
+                "SUBJECT_ENTITY"
+              ]
+            }
+          ]
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-007",
+      "current_utterance": "列出经销商名单",
+      "first_divergence_stage": "QUERY_SHAPE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-008",
+      "current_utterance": "列出生产厂家名单",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "SEMANTIC_ROLE",
+          "expected": {
+            "surface": "生产厂家",
+            "start": 2,
+            "end": 6,
+            "roles": [
+              "SUBJECT_ENTITY",
+              "TARGET_ENTITY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 6,
+              "roles": [
+                "SUBJECT_ENTITY",
+                "GROUP_BY",
+                "PROJECTION_FIELD"
+              ]
+            }
+          ],
+          "label_scope": "SELECTED_CRITICAL_ROLES"
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-009",
+      "current_utterance": "列出销售项目名单",
+      "first_divergence_stage": "QUERY_SHAPE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-010",
+      "current_utterance": "列出销售公司名单",
+      "first_divergence_stage": "QUERY_SHAPE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-011",
+      "current_utterance": "列出业务员名单",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "SEMANTIC_ROLE",
+          "expected": {
+            "surface": "业务员",
+            "start": 2,
+            "end": 5,
+            "roles": [
+              "SUBJECT_ENTITY",
+              "TARGET_ENTITY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 5,
+              "roles": [
+                "SUBJECT_ENTITY",
+                "PROJECTION_FIELD"
+              ]
+            }
+          ],
+          "label_scope": "SELECTED_CRITICAL_ROLES"
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-012",
+      "current_utterance": "列出省份名单",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "SEMANTIC_ROLE",
+          "expected": {
+            "surface": "省份",
+            "start": 2,
+            "end": 4,
+            "roles": [
+              "SUBJECT_ENTITY",
+              "TARGET_ENTITY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 4,
+              "roles": [
+                "SUBJECT_ENTITY",
+                "GROUP_BY"
+              ]
+            }
+          ],
+          "label_scope": "SELECTED_CRITICAL_ROLES"
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-013",
+      "current_utterance": "列出产品分类名单",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "MENTION_BOUNDARY",
+          "expected": {
+            "surface": "产品分类",
+            "start": 2,
+            "end": 6,
+            "roles": [
+              "SUBJECT_ENTITY",
+              "TARGET_ENTITY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 8,
+              "roles": [
+                "SUBJECT_ENTITY"
+              ]
+            }
+          ]
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-014",
+      "current_utterance": "列出医院名单",
+      "first_divergence_stage": "QUERY_SHAPE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DETAIL_ROWS",
+          "actual": "RELATION_LIST"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-015",
+      "current_utterance": "查询含税销售总额",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-016",
+      "current_utterance": "请告诉我含税销售总额",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-017",
+      "current_utterance": "查询不含税销售总额",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-018",
+      "current_utterance": "请告诉我不含税销售总额",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-019",
+      "current_utterance": "查询销售总成本",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-020",
+      "current_utterance": "请告诉我销售总成本",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-021",
+      "current_utterance": "查询销售总数量",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-022",
+      "current_utterance": "请告诉我销售总数量",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-023",
+      "current_utterance": "查询订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-024",
+      "current_utterance": "请告诉我订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-025",
+      "current_utterance": "查询已合作经销商数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-026",
+      "current_utterance": "请告诉我已合作经销商数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-027",
+      "current_utterance": "查询已合作医院数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-028",
+      "current_utterance": "请告诉我已合作医院数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-029",
+      "current_utterance": "查询区域全部医院总数",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "MENTION_BOUNDARY",
+          "expected": {
+            "surface": "区域全部医院总数",
+            "start": 2,
+            "end": 10,
+            "roles": [
+              "MEASURE"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 4,
+              "roles": [
+                "FILTER_FIELD",
+                "GROUP_BY"
+              ]
+            },
+            {
+              "start": 6,
+              "end": 8,
+              "roles": [
+                "SUBJECT_ENTITY"
+              ]
+            },
+            {
+              "start": 8,
+              "end": 10,
+              "roles": [
+                "MEASURE"
+              ]
+            }
+          ]
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-030",
+      "current_utterance": "请告诉我区域全部医院总数",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "MENTION_BOUNDARY",
+          "expected": {
+            "surface": "区域全部医院总数",
+            "start": 4,
+            "end": 12,
+            "roles": [
+              "MEASURE"
+            ]
+          },
+          "actual": [
+            {
+              "start": 4,
+              "end": 6,
+              "roles": [
+                "FILTER_FIELD",
+                "GROUP_BY"
+              ]
+            },
+            {
+              "start": 8,
+              "end": 10,
+              "roles": [
+                "SUBJECT_ENTITY"
+              ]
+            },
+            {
+              "start": 10,
+              "end": 12,
+              "roles": [
+                "MEASURE"
+              ]
+            }
+          ]
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-031",
+      "current_utterance": "查询合作时长",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-032",
+      "current_utterance": "请告诉我合作时长",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-033",
+      "current_utterance": "查询医院下属科室数量",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "MENTION_BOUNDARY",
+          "expected": {
+            "surface": "医院下属科室数量",
+            "start": 2,
+            "end": 10,
+            "roles": [
+              "MEASURE"
+            ]
+          },
+          "actual": [
+            {
+              "start": 2,
+              "end": 4,
+              "roles": [
+                "SOURCE_ENTITY"
+              ]
+            },
+            {
+              "start": 6,
+              "end": 8,
+              "roles": [
+                "TARGET_ENTITY",
+                "SUBJECT_ENTITY"
+              ]
+            },
+            {
+              "start": 8,
+              "end": 10,
+              "roles": [
+                "MEASURE"
+              ]
+            }
+          ]
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-034",
+      "current_utterance": "请告诉我医院下属科室数量",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "MENTION_BOUNDARY",
+          "expected": {
+            "surface": "医院下属科室数量",
+            "start": 4,
+            "end": 12,
+            "roles": [
+              "MEASURE"
+            ]
+          },
+          "actual": [
+            {
+              "start": 4,
+              "end": 6,
+              "roles": [
+                "SUBJECT_ENTITY"
+              ]
+            },
+            {
+              "start": 6,
+              "end": 10,
+              "roles": [
+                "RELATION_TARGET"
+              ]
+            },
+            {
+              "start": 10,
+              "end": 12,
+              "roles": [
+                "MEASURE"
+              ]
+            }
+          ]
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-035",
+      "current_utterance": "查询区域医院覆盖率",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-036",
+      "current_utterance": "请告诉我区域医院覆盖率",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-037",
+      "current_utterance": "按医院等级统计订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-038",
+      "current_utterance": "按渠道业态统计订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-039",
+      "current_utterance": "按交易日期统计订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-040",
+      "current_utterance": "按商品统计订单笔数",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "SEMANTIC_ROLE",
+          "expected": {
+            "surface": "商品",
+            "start": 1,
+            "end": 3,
+            "roles": [
+              "GROUP_BY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 1,
+              "end": 3,
+              "roles": [
+                "GROUP_BY",
+                "SUBJECT_ENTITY"
+              ]
+            }
+          ],
+          "label_scope": "SELECTED_CRITICAL_ROLES"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-041",
+      "current_utterance": "按经销商统计订单笔数",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "SEMANTIC_ROLE",
+          "expected": {
+            "surface": "经销商",
+            "start": 1,
+            "end": 4,
+            "roles": [
+              "GROUP_BY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 1,
+              "end": 4,
+              "roles": [
+                "GROUP_BY",
+                "SUBJECT_ENTITY"
+              ]
+            }
+          ],
+          "label_scope": "SELECTED_CRITICAL_ROLES"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-042",
+      "current_utterance": "按医院统计订单笔数",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "SEMANTIC_ROLE",
+          "expected": {
+            "surface": "医院",
+            "start": 1,
+            "end": 3,
+            "roles": [
+              "GROUP_BY"
+            ]
+          },
+          "actual": [
+            {
+              "start": 1,
+              "end": 3,
+              "roles": [
+                "GROUP_BY",
+                "SUBJECT_ENTITY"
+              ]
+            }
+          ],
+          "label_scope": "SELECTED_CRITICAL_ROLES"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-043",
+      "current_utterance": "按业务员统计订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-044",
+      "current_utterance": "按省份统计订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-045",
+      "current_utterance": "按城市统计订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-046",
+      "current_utterance": "按商品品牌统计订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-047",
+      "current_utterance": "按商品品类统计订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-048",
+      "current_utterance": "按科室统计订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-049",
+      "current_utterance": "按适用科室统计订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-050",
+      "current_utterance": "结果中只返回医院名称",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-051",
+      "current_utterance": "结果中只返回医院标识",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-052",
+      "current_utterance": "结果中只返回医院编码",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-053",
+      "current_utterance": "结果中只返回商品名称",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-054",
+      "current_utterance": "结果中只返回商品编码",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-055",
+      "current_utterance": "结果中只返回规格型号",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-056",
+      "current_utterance": "结果中只返回销售员姓名",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-057",
+      "current_utterance": "结果中只返回销售员编码",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-058",
+      "current_utterance": "结果中只返回项目名称",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-059",
+      "current_utterance": "结果中只返回项目编码",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-060",
+      "current_utterance": "结果中只返回国药公司名称",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-061",
+      "current_utterance": "结果中只返回国药公司编码",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-062",
+      "current_utterance": "结果中只返回科室名称",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-063",
+      "current_utterance": "结果中只返回科室编码",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-064",
+      "current_utterance": "结果中只返回经销商名称",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-065",
+      "current_utterance": "结果中只返回经销商编码",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-066",
+      "current_utterance": "结果中只返回城市名称",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-067",
+      "current_utterance": "结果中只返回省份名称",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-068",
+      "current_utterance": "那江苏呢？",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-069",
+      "current_utterance": "江苏有哪些医院？",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-070",
+      "current_utterance": "再加订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-071",
+      "current_utterance": "换成江苏",
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "TURN_RESOLUTION",
+          "expected": "FOLLOW_UP",
+          "actual": "RETURN_TO_TOPIC"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-072",
+      "current_utterance": "不要订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-073",
+      "current_utterance": "不限地区",
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "TURN_RESOLUTION",
+          "expected": "FOLLOW_UP",
+          "actual": "NEW_TASK"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-074",
+      "current_utterance": "按季度",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-075",
+      "current_utterance": "江苏有哪些医院？",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-076",
+      "current_utterance": "回到刚才上海那个问题",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-077",
+      "current_utterance": "再加销售总成本",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-078",
+      "current_utterance": "把指标换成订单笔数",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-079",
+      "current_utterance": "去掉销售总成本",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-080",
+      "current_utterance": "取消地区限制",
+      "first_divergence_stage": "TASK_OPERATION",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "TASK_OPERATION",
+          "expected": "CLEAR",
+          "actual": "REMOVE"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-081",
+      "current_utterance": "增加按销售公司分组",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-082",
+      "current_utterance": "把医院换成经销商",
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "TURN_RESOLUTION",
+          "expected": "FOLLOW_UP",
+          "actual": "RETURN_TO_TOPIC"
+        },
+        {
+          "stage": "TASK_OPERATION",
+          "expected": "REPLACE",
+          "actual": null
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-083",
+      "current_utterance": "不要按业务员分组",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-084",
+      "current_utterance": "取消时间限制",
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "TURN_RESOLUTION",
+          "expected": "FOLLOW_UP",
+          "actual": "NEW_TASK"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-085",
+      "current_utterance": "只看前5条",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-086",
+      "current_utterance": "现在查询销售总成本",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-087",
+      "current_utterance": "医院名称字段来自哪个表？",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-088",
+      "current_utterance": "返回之前的医院名单",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-089",
+      "current_utterance": "改成不含税销售总额",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-090",
+      "current_utterance": "继续看下一页",
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "TURN_RESOLUTION",
+          "expected": "FOLLOW_UP",
+          "actual": "RETURN_TO_TOPIC"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-091",
+      "current_utterance": "只看前5条",
+      "first_divergence_stage": "QUERY_SHAPE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "DATASET_TRANSFORM",
+          "actual": null
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-092",
+      "current_utterance": "订单笔数最高的5家医院",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-093",
+      "current_utterance": "医院名称字段来自哪个表？",
+      "first_divergence_stage": "QUERY_SHAPE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "QUERY_SHAPE",
+          "expected": "LINEAGE_GRAPH",
+          "actual": "METADATA_LOOKUP"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-094",
+      "current_utterance": "列出TDC-3合作医院",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "MENTION_BOUNDARY",
+          "expected": {
+            "surface": "医院",
+            "start": 9,
+            "end": 11,
+            "roles": [
+              "TARGET_ENTITY",
+              "RELATION_TARGET"
+            ]
+          },
+          "actual": [
+            {
+              "start": 7,
+              "end": 11,
+              "roles": [
+                "SUBJECT_ENTITY",
+                "TARGET_ENTITY",
+                "PROJECTION_FIELD"
+              ]
+            }
+          ]
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-095",
+      "current_utterance": "按商品名称统计销售总数量",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-096",
+      "current_utterance": "返回商品名称",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-097",
+      "current_utterance": "统计销售数量",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-098",
+      "current_utterance": "列出订单中的销售数量字段",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "classification": "OBSERVED_SELECTED_AXIS_MISMATCH",
+      "evidence": [
+        {
+          "stage": "SEMANTIC_ROLE",
+          "expected": {
+            "surface": "销售数量",
+            "start": 6,
+            "end": 10,
+            "roles": [
+              "PROJECTION_FIELD"
+            ]
+          },
+          "actual": [
+            {
+              "start": 6,
+              "end": 10,
+              "roles": [
+                "PROJECTION_FIELD",
+                "MEASURE"
+              ]
+            }
+          ],
+          "label_scope": "SELECTED_CRITICAL_ROLES"
+        }
+      ],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-099",
+      "current_utterance": "按月查看销售总成本走势",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    },
+    {
+      "case_id": "G81-100",
+      "current_utterance": "2026年1月的订单笔数是多少",
+      "first_divergence_stage": null,
+      "classification": "NO_MISMATCH_ON_LABELED_AXES_ONLY",
+      "evidence": [],
+      "downstream_causality": "NOT_ESTABLISHED_BY_JOINT_COMPONENT_OUTPUT",
+      "candidate_retrieval_and_binding": "NOT_IN_THIS_COMPONENT",
+      "whole_plan": "NOT_EVALUATED"
+    }
+  ],
+  "raw_transition_observations": [
+    {
+      "run": "live_baseline",
+      "case_id": "S81-001",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_current_turn",
+      "reason": "V2_MODEL_OUTPUT_INVALID",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-002",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_HISTORICAL_TARGET_NOT_OFFERED",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-003",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_current_turn",
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-004",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-005",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-006",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-007",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-008",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-009",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-010",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-011",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_HISTORICAL_TARGET_NOT_OFFERED",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-012",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_HISTORICAL_TARGET_NOT_OFFERED",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-013",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_current_turn",
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-014",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-015",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-016",
+      "status": "NOT_RUN",
+      "failed_phase": null,
+      "last_model_stage": null,
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": "MISSING_ENTRY_FIXTURE",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-017",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-018",
+      "status": "NOT_RUN",
+      "failed_phase": null,
+      "last_model_stage": null,
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": "MISSING_ENTRY_FIXTURE",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-019",
+      "status": "NOT_RUN",
+      "failed_phase": null,
+      "last_model_stage": null,
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": "MISSING_ENTRY_FIXTURE",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_baseline",
+      "case_id": "S81-020",
+      "status": "NOT_RUN",
+      "failed_phase": null,
+      "last_model_stage": null,
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": "MISSING_ENTRY_FIXTURE",
+      "evidence": "transition_runner/live_baseline_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-001",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_HISTORICAL_TARGET_NOT_OFFERED",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-002",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-003",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_HISTORICAL_TARGET_NOT_OFFERED",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-004",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-005",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-006",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-007",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-008",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-009",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-010",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-011",
+      "status": "OK",
+      "failed_phase": "CURRENT",
+      "last_model_stage": null,
+      "reason": null,
+      "classification": "OBSERVED_PLAN_NOT_WHOLE_PLAN_ACCEPTANCE",
+      "first_divergence": "OBSERVED_PLAN_NOT_WHOLE_PLAN_ACCEPTANCE",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-012",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_SLOT_OPERATION_CONFLICT",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-013",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_HISTORICAL_TARGET_NOT_OFFERED",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-014",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_TEMPORAL_BASE_REQUIRED",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-015",
+      "status": "FAILED",
+      "failed_phase": "HISTORY",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+      "classification": "MISSING_FROZEN_SOURCE_VALUES",
+      "first_divergence": "MISSING_FROZEN_SOURCE_VALUES",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-016",
+      "status": "NOT_RUN",
+      "failed_phase": null,
+      "last_model_stage": null,
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": "MISSING_ENTRY_FIXTURE",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-017",
+      "status": "FAILED",
+      "failed_phase": "CURRENT",
+      "last_model_stage": "v2_semantic_edits",
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+      "classification": "MODEL_OR_CONTRACT_REJECTION",
+      "first_divergence": "UNKNOWN_NEEDS_REPLAY",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-018",
+      "status": "NOT_RUN",
+      "failed_phase": null,
+      "last_model_stage": null,
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": "MISSING_ENTRY_FIXTURE",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-019",
+      "status": "NOT_RUN",
+      "failed_phase": null,
+      "last_model_stage": null,
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": "MISSING_ENTRY_FIXTURE",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    },
+    {
+      "run": "live_final",
+      "case_id": "S81-020",
+      "status": "NOT_RUN",
+      "failed_phase": null,
+      "last_model_stage": null,
+      "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+      "classification": "MISSING_ENTRY_FIXTURE",
+      "first_divergence": "MISSING_ENTRY_FIXTURE",
+      "evidence": "transition_runner/live_final_turns.json",
+      "raw_private_outputs_committed": false
+    }
+  ],
+  "root_cause_candidates": [
+    {
+      "case_ids": [
+        "S81-001"
+      ],
+      "run": "live_baseline",
+      "stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+      "evidence_level": "PROVEN",
+      "reason": "A bare ADD cue was emitted as a semantic mention with candidate_roles=[], violating the strict schema."
+    },
+    {
+      "case_ids": [
+        "S81-003",
+        "S81-013"
+      ],
+      "run": "live_baseline",
+      "stage": "CURRENT_TURN_REPRESENTATION_VALIDATION",
+      "evidence_level": "PROVEN",
+      "reason": "negations contained literal cue text outside the affected semantic mention instead of its existing mention ID."
+    },
+    {
+      "case_ids": [
+        "S81-001",
+        "S81-003",
+        "S81-013"
+      ],
+      "run": "live_final",
+      "stage": "TARGET_TASK_RESOLUTION",
+      "evidence_level": "PROVEN_REJECTION_NOT_YET_FIX",
+      "reason": "A model selected an offered active-task handle as historical despite no HISTORICAL signal. The runtime guard rejects it even with a null-only generation schema."
+    },
+    {
+      "case_ids": [
+        "S81-014"
+      ],
+      "run": "live_final",
+      "stage": "MENTION_BOUNDARY",
+      "evidence_level": "PROVEN_FROM_CAPTURE",
+      "reason": "The explicit catalog metric order-count surface was split into an order entity and a count fragment. Later temporal-base rejection is not evidence that the first error was temporal."
+    },
+    {
+      "case_ids": [
+        "S81-017"
+      ],
+      "run": "live_final",
+      "stage": "QUERY_SHAPE",
+      "evidence_level": "HIGH_CONFIDENCE",
+      "reason": "The parse and draft choose GROUPED_AGGREGATE without requested grouping; contract rejection still needs exact replay, and task-operation correctness is separately unproven."
+    }
+  ]
+}

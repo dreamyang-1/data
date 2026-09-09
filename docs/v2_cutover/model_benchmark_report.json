@@ -1,0 +1,163 @@
+{
+  "status": "EXPLORATORY_COMPONENT_EVIDENCE_NOT_MODEL_SELECTION",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "baseline_evidence": "../cutover/qwen37_benchmark/parser_evaluation.json",
+  "current_evidence": "transition_runner/parser_v8_evaluation.json",
+  "model": "qwen3.7-max",
+  "thinking": false,
+  "old_prompt_hash": "ff29f7c1ddffb368a48999dce8536231216f9f7bd1805f02b56c513668c8d1de",
+  "new_prompt_hash": "621522c249ef4ab58a08eba2e0a8140a40f9afcf21f0bff85cea05e3baa62412",
+  "shared_schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+  "shared_gold_hash": "b2db7b903c691d2f696edeba3dbb90e4e1af7da80566d2a0635e1a7c9fd381b6",
+  "old_accepted": 98,
+  "new_accepted": 100,
+  "metrics": {
+    "critical_mention_recall": {
+      "before": {
+        "passed": 80,
+        "denominator": 89,
+        "value": 0.898876404494382
+      },
+      "after": {
+        "passed": 79,
+        "denominator": 89,
+        "value": 0.8876404494382022
+      }
+    },
+    "critical_role_purity": {
+      "before": {
+        "passed": 74,
+        "denominator": 89,
+        "value": 0.8314606741573034
+      },
+      "after": {
+        "passed": 70,
+        "denominator": 89,
+        "value": 0.7865168539325843
+      }
+    },
+    "critical_role_recall": {
+      "before": {
+        "passed": 80,
+        "denominator": 89,
+        "value": 0.898876404494382
+      },
+      "after": {
+        "passed": 79,
+        "denominator": 89,
+        "value": 0.8876404494382022
+      }
+    },
+    "operation": {
+      "before": {
+        "passed": 9,
+        "denominator": 13,
+        "value": 0.6923076923076923
+      },
+      "after": {
+        "passed": 11,
+        "denominator": 13,
+        "value": 0.8461538461538461
+      }
+    },
+    "query_shape": {
+      "before": {
+        "passed": 40,
+        "denominator": 56,
+        "value": 0.7142857142857143
+      },
+      "after": {
+        "passed": 41,
+        "denominator": 56,
+        "value": 0.7321428571428571
+      }
+    },
+    "turn_relation": {
+      "before": {
+        "passed": 67,
+        "denominator": 72,
+        "value": 0.9305555555555556
+      },
+      "after": {
+        "passed": 67,
+        "denominator": 72,
+        "value": 0.9305555555555556
+      }
+    }
+  },
+  "observed_axis_regressions": [
+    {
+      "case_id": "G81-005",
+      "axis": "mentions"
+    },
+    {
+      "case_id": "G81-082",
+      "axis": "turn_relation"
+    },
+    {
+      "case_id": "G81-090",
+      "axis": "turn_relation"
+    }
+  ],
+  "observed_axis_improvements": [
+    {
+      "case_id": "G81-072",
+      "axis": "turn_relation"
+    },
+    {
+      "case_id": "G81-072",
+      "axis": "operation"
+    },
+    {
+      "case_id": "G81-083",
+      "axis": "turn_relation"
+    },
+    {
+      "case_id": "G81-083",
+      "axis": "operation"
+    },
+    {
+      "case_id": "G81-098",
+      "axis": "query_shape"
+    }
+  ],
+  "selected_role_purity_in_details": "Legacy details mention boolean does not include purity; aggregate purity and first_divergence_report retain those mismatches separately.",
+  "acceptance": "NOT_PASSED",
+  "limits": [
+    "One run per prompt, generation variation; no controlled proof of overall improvement.",
+    "Role purity decreased 74/89 to 70/89; no regression is concealed by improved JSON validity.",
+    "V8 is an opt-in V2 experiment. V1 production route and public I/O stay unchanged.",
+    "Frozen candidate comparisons, role F1, blind holdout, full V1/V2 quality and Thinking comparisons remain unmeasured."
+  ],
+  "raw_runs": {
+    "live_baseline": {
+      "observation_counts": {
+        "FAILED": 16,
+        "NOT_RUN": 4
+      },
+      "real_model_calls": 45,
+      "source_value_reads_denied": 6
+    },
+    "live_final": {
+      "observation_counts": {
+        "FAILED": 15,
+        "OK": 1,
+        "NOT_RUN": 4
+      },
+      "real_model_calls": 48,
+      "source_value_reads_denied": 6
+    }
+  },
+  "real_model_requests": 193,
+  "source_SQL_executions": 0,
+  "production_external_writes": 0,
+  "production_cutover_pass": false
+}

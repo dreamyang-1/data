@@ -1,3 +1,5 @@
+Current delivery and the final master-instruction work are maintained in [docs/v2_cutover/closure_report.md](../v2_cutover/closure_report.md). This file retains historical evidence.
+
 # Current cutover status after the 2026-09-09 gate decision
 
 Current Stage: qwen3.7-max component benchmark / collection edit contract closure.

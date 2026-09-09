@@ -1,0 +1,642 @@
+[
+  {
+    "case_id": "S81-001",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "555f0c240b068e04aa1939c345276abfb1d78636c8fd1b0eda1a469caa292b22",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 556,
+      "prompt_tokens": 2115,
+      "total_tokens": 2671
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-001",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "147066896c8ab90c7b73acd67f0a632bfbc8580a8ae66a7e5945a31e7bc4a00b",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 207,
+      "prompt_tokens": 14569,
+      "total_tokens": 14776
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-001",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "input_hash": "c6266bfb83dd76e3696fe216c04940f4b2b9598b93e850e617f9ad7e9e4b2eb8",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 491,
+      "prompt_tokens": 2113,
+      "total_tokens": 2604
+    },
+    "finish_reason": "stop",
+    "schema_diagnostics": [
+      {
+        "type": "too_short",
+        "location": [
+          "mentions",
+          0,
+          "candidate_roles"
+        ]
+      }
+    ]
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "555f0c240b068e04aa1939c345276abfb1d78636c8fd1b0eda1a469caa292b22",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 556,
+      "prompt_tokens": 2115,
+      "total_tokens": 2671
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "147066896c8ab90c7b73acd67f0a632bfbc8580a8ae66a7e5945a31e7bc4a00b",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 207,
+      "prompt_tokens": 14569,
+      "total_tokens": 14776
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "input_hash": "db18054d179a59d86ef759a12219791e3d7ca4e25c6ba416f0991f62e118c389",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 469,
+      "prompt_tokens": 2115,
+      "total_tokens": 2584
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "input_hash": "82efd12e6115b50a4fc7d609595faa8a6da0147a748f381ff3f7ab66fead0156",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 145,
+      "prompt_tokens": 14602,
+      "total_tokens": 14747
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "cd36c7bc21909ef6b905753f2ef97c4fd81384ffa5c408072a95c5b7b09d583a",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 556,
+      "prompt_tokens": 2116,
+      "total_tokens": 2672
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "82f4e30a542ee07bd284d342af5eb745b4246ce2338fb8cf6858189c285ed6df",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 209,
+      "prompt_tokens": 14570,
+      "total_tokens": 14779
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "input_hash": "f9691c156022b64f277b079236577590275963ff5cdf33345d8f708be5d111f3",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 347,
+      "prompt_tokens": 2113,
+      "total_tokens": 2460
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-004",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "cc08e7edb2cbc14a7cf4531ba1a3060aeb3e807d636bc9f4b5c535099bf88397",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 711,
+      "prompt_tokens": 2115,
+      "total_tokens": 2826
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-004",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "75c306c8260139effc2451c3be1333d632313db61364df2bce19cea01f0a35f7",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 605,
+      "prompt_tokens": 19468,
+      "total_tokens": 20073
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-005",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "cc08e7edb2cbc14a7cf4531ba1a3060aeb3e807d636bc9f4b5c535099bf88397",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 711,
+      "prompt_tokens": 2115,
+      "total_tokens": 2826
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-005",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "75c306c8260139effc2451c3be1333d632313db61364df2bce19cea01f0a35f7",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 605,
+      "prompt_tokens": 19468,
+      "total_tokens": 20073
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-006",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "1176496741edc6f0318a621671d8469e0de2443fb506188adc48ce3fc30e6b06",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 533,
+      "prompt_tokens": 2113,
+      "total_tokens": 2646
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-006",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "9bd3d0cf989ad48c8551b044acf5f471c79d8715ee58f7fc6983bf941e079678",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 363,
+      "prompt_tokens": 19343,
+      "total_tokens": 19706
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-007",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "7514899733a86013ceafa94664e686d85ba1c78da68ae0841280417c330d25ad",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 728,
+      "prompt_tokens": 2115,
+      "total_tokens": 2843
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-007",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "2f57f8106b4c33170c5679075984bed38a2872ee1b98e98bb10a7e1ab14648ba",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 278,
+      "prompt_tokens": 20714,
+      "total_tokens": 20992
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-008",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "7514899733a86013ceafa94664e686d85ba1c78da68ae0841280417c330d25ad",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 719,
+      "prompt_tokens": 2115,
+      "total_tokens": 2834
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-008",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "17f26a66b560316b56d63aa538196777087dc9b624d762ed24229b5b9facd5b2",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 272,
+      "prompt_tokens": 20648,
+      "total_tokens": 20920
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-009",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "cc08e7edb2cbc14a7cf4531ba1a3060aeb3e807d636bc9f4b5c535099bf88397",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 723,
+      "prompt_tokens": 2115,
+      "total_tokens": 2838
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-009",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "0d65cbc8080b353e178ea1bb2f04dbd75b85cfeac421437e96ce9dde9a7a1683",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 589,
+      "prompt_tokens": 19533,
+      "total_tokens": 20122
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-010",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "cc08e7edb2cbc14a7cf4531ba1a3060aeb3e807d636bc9f4b5c535099bf88397",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 723,
+      "prompt_tokens": 2115,
+      "total_tokens": 2838
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-010",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "0d65cbc8080b353e178ea1bb2f04dbd75b85cfeac421437e96ce9dde9a7a1683",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 587,
+      "prompt_tokens": 19533,
+      "total_tokens": 20120
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "4285dbc642891d644f6d63498041a05864f9a44c767a4d67b383644880abdf35",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 526,
+      "prompt_tokens": 2115,
+      "total_tokens": 2641
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "bbeeb2009ccc66fd519973459fb07f8f989463fc44c096ef30c8f7c71da05c89",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 218,
+      "prompt_tokens": 14609,
+      "total_tokens": 14827
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "input_hash": "61df487d6d12b078625ded6dc9ac42ea14ef8183669964c09d53a906afeaf251",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 343,
+      "prompt_tokens": 2113,
+      "total_tokens": 2456
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "input_hash": "e954267543311ad9be8f66cc0d2a18b3290706009f15afc425531bf1e51bafa8",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 148,
+      "prompt_tokens": 13506,
+      "total_tokens": 13654
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "4285dbc642891d644f6d63498041a05864f9a44c767a4d67b383644880abdf35",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 526,
+      "prompt_tokens": 2115,
+      "total_tokens": 2641
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "bbeeb2009ccc66fd519973459fb07f8f989463fc44c096ef30c8f7c71da05c89",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 218,
+      "prompt_tokens": 14609,
+      "total_tokens": 14827
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "input_hash": "af8064aa68bac8e1607f71ca30d8825940d92b2794857c3189b96f0b0b313b22",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 510,
+      "prompt_tokens": 2113,
+      "total_tokens": 2623
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "input_hash": "610273c142aca40e35293f313c8c783b0e64b8d018c2ade1946d4274cf6afe2f",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 153,
+      "prompt_tokens": 14775,
+      "total_tokens": 14928
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "2d66ae5d209e1c783587b0d0334d9d614475706b838b2c0eb229f6c14fa5e819",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 713,
+      "prompt_tokens": 2116,
+      "total_tokens": 2829
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "5bcb7b382faae36b610a95f0dd006a2392b7490466479ed7c9ef81b240081850",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 297,
+      "prompt_tokens": 15872,
+      "total_tokens": 16169
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "input_hash": "fdc7deb9674f3bea85b21f056199c0899f233e00aadb70df43c6525f7914d8ba",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 352,
+      "prompt_tokens": 2113,
+      "total_tokens": 2465
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "733173753c0765cfcdaca631ebb1f7a340c714e72b96c917f4694650c32f00f4",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 740,
+      "prompt_tokens": 2117,
+      "total_tokens": 2857
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "8f14aa54ec24c0cce16a880f2f822828612ae7b9694168f530fc1925fef04639",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 459,
+      "prompt_tokens": 18462,
+      "total_tokens": 18921
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-015",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "1176496741edc6f0318a621671d8469e0de2443fb506188adc48ce3fc30e6b06",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 542,
+      "prompt_tokens": 2113,
+      "total_tokens": 2655
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-015",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "d39ea172cf941f92c38757dc484fd66a03c571e0d1306d6dcade13098b5b11e2",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 364,
+      "prompt_tokens": 19408,
+      "total_tokens": 19772
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "input_hash": "ee0759c3f54f85a0ceb75df163136b0152f35ce0f3684f45c7f35ea8244abbf3",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 360,
+      "prompt_tokens": 2112,
+      "total_tokens": 2472
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "input_hash": "831517f823ab6fb9b7adeee20685f3fff2f68e74140be5c538c88f94e11f9bec",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 125,
+      "prompt_tokens": 13357,
+      "total_tokens": 13482
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "input_hash": "546638c48302d2fe5d03105fda5c34615ce33f6bb437c645be838b256eb72fd1",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 357,
+      "prompt_tokens": 2112,
+      "total_tokens": 2469
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "input_hash": "dc87417c0d16e0b6e0d7c15ae8311cc1f2a6f6d130250b6b4f184a5cd0f09237",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 123,
+      "prompt_tokens": 13445,
+      "total_tokens": 13568
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 2,
+    "stage": "v2_current_turn",
+    "input_hash": "9b1d139e4f8ae106a052fb38c6301cfc9109f5489ba5e71a0b32e6d40e54f21b",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 537,
+      "prompt_tokens": 2118,
+      "total_tokens": 2655
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 2,
+    "stage": "v2_semantic_edits",
+    "input_hash": "9fb387410db8400d578cc988fadf59f5251edcbd53543d2da152128a056d884b",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 250,
+      "prompt_tokens": 14755,
+      "total_tokens": 15005
+    },
+    "finish_reason": "stop"
+  }
+]
