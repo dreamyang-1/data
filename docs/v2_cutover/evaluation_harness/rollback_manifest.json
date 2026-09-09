@@ -5,7 +5,8 @@
     "ac42bc72ec480c754dc39ce7a6bc5b1d274f9c32",
     "8748d3d64d9a51e6a57c6769954eec90f849137e",
     "4f23205198576cc42cb4cb0823a85917e9c0b511",
-    "f6ce319591d714d658916f48cdc6fe7c70d9b252"
+    "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+    "9af0817e959d0048c46ad481974f9f6a0329cc12"
   ],
   "rollback": "On a separate review branch, revert the evidence commit and the listed stage commits in reverse chronological order. This removes evaluator/tools/tests/docs only. No reset, clean or production rollout is needed.",
   "production_source_changed": false,

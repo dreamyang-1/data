@@ -12,7 +12,7 @@
 
 ## 2–6. 单轮、历史、Pending、Dataset 与 NOT_RUN
 
-原 100 条正式定义为 PUBLIC_DEV：58 TRUE_SINGLE_TURN、38 CONTEXT_DEPENDENT_TURN、2 HISTORICAL_RETURN、1 PENDING_RESPONSE、1 DATASET_FOLLOWUP。20 条 Transition 也已暴露，仍属于开发集：15 context-dependent、1 historical、1 pending、3 dataset。两个集合合计 58 真单轮、56 可执行历史场景、2 Pending 和4 Dataset 场景。另有24条 private validation（8单轮、16多轮）。Pending/Dataset 的描述型前置条件不算成已执行历史轮。
+原 100 条正式定义为 PUBLIC_DEV：58 TRUE_SINGLE_TURN、38 CONTEXT_DEPENDENT_TURN、2 HISTORICAL_RETURN、1 PENDING_RESPONSE、1 DATASET_FOLLOWUP。20 条 Transition 也已暴露，仍属于开发集：15 context-dependent、1 historical、1 pending、3 dataset。两个集合合计 58 真单轮、56 需要历史上下文的场景、2 Pending 和4 Dataset 场景。其中2条历史场景缺少所引用任务的前置证据，不能算作可完整执行。另有24条 private validation（8单轮、16多轮）。Pending/Dataset 的描述型前置条件不算成已执行历史轮。
 
 | 集合 | Case | Required turns | Executed turns | 有可评轴 Case | 全部已声明轴可评 Case | PASS | FAIL | NOT_RUN | BLOCKED |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -44,7 +44,7 @@ Case 门禁比值分别为39/94、6/17、0/24；已带可评分标签的 Turn �
 | Clarification Decision | 83/172 | 83/172 |
 | Dry Plan | 0/172 | 0/172 |
 
-分母172为实际执行轮，计划轮为219。观察到拒绝不同于正确输出。Native Pending 合同、恢复和答复/新话题通过测试；本次 live Pending 仍在下游 source/edit 处拒绝，不能宣称完整 live clarification coverage。
+分母172为实际执行轮，计划轮为219。观察到拒绝不同于正确输出。Time Normalization 与 Filter 的101条是 TaskSemanticState 中相应输出或显式缺省的观察，不代表101次独立解析器调用。Native Pending 合同、恢复和答复/新话题通过测试；本次 live Pending 仍在下游 source/edit 处拒绝，不能宣称完整 live clarification coverage。
 
 补充 Dry Plan 共83个已接受计划：46个原生规划成功，34个 lowering UNSUPPORTED，3个返回 PINNED_SQL_REQUIRED_JOIN_MISSING。没有执行 SQL；没有把这些独立 seam 的结果加入 Whole Plan Gold。后3个是 SQL/Catalog 依赖边界诊断，仍需因果归属证据，不在 Agent 加补偿。
 
@@ -109,7 +109,7 @@ COMMON_EVALUABLE_SET=0：V1 0/0，V2 0/0，无排名。V2-only 可完整观察�
 
 范围及ID证明在已接受当前轮中未发现违规；Clear/REMOVE-last/Pending/Dataset的关键 live 路径覆盖不足，Safety 总门禁 INCOMPLETE。160/160既有 Critical regression 只作为组件回归证据，不能抵销未执行业务链路。
 
-本轮340次模型请求仅用于固定模型的 Harness采集，3次超时；没有正式 Model Benchmark。172/172新 Recorded Turn 在严格断网下重现。77个历史原始capture去重后64兼容通过、13因旧上下文/Prompt/Schema不兼容而保留历史身份；旧10条Parser控制与Oracle干预回执另行版本化，不计新Gold准确率。Replay模型/SQL/Milvus/生产Redis/生产状态写入均为0。候选枚举与实时ranked Retrieval质量分开，Live Retrieval未评估。
+本轮340次模型请求仅用于固定模型的 Harness采集，3次超时；没有正式 Model Benchmark。172/172新 Recorded Turn 在严格断网下重现。77个历史原始capture去重后64兼容通过、13保留为不兼容历史证据：12条缺少当前合同要求的冻结 Source Value 观察（FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED），1条模型输入合同不匹配；不能统称为Prompt/Schema漂移。旧10条Parser控制与Oracle干预回执另行版本化，不计新Gold准确率。Replay模型/SQL/Milvus/生产Redis/生产状态写入均为0。候选枚举与实时ranked Retrieval质量分开，Live Retrieval未评估。
 
 as_of固定2026-09-09T09:00:00+08:00，Asia/Shanghai。temperature=0、retry=0；seed/top_p/max_tokens未发送或Provider支持未建立，不能宣称确定性。相同完整request body的既有重复样本及响应hash变化见 `model_call_and_stability_receipt.json`，不混作语义准确率。
 

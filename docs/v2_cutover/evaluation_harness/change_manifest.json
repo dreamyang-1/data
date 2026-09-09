@@ -17,7 +17,7 @@
     },
     {
       "repository_path": "docs/v2_cutover/evaluation_harness/closure_report.md",
-      "normalized_sha256": "eeaa6c98aca580caa34083f821f9a2b4ed59e07dc5d9219024f10ae56a656c4b"
+      "normalized_sha256": "48aae6b9e29b8032bb321e3f8633d537faf5269b04ed8d35c04002970c660b15"
     },
     {
       "repository_path": "docs/v2_cutover/evaluation_harness/critical_safety_report.json",
@@ -181,7 +181,7 @@
     },
     {
       "repository_path": "docs/v2_cutover/evaluation_harness/validation_receipt.json",
-      "normalized_sha256": "b5c74a176281d2b0b3d36aaaac52a99d8ef27a611734be42592bd1b92cd286a2"
+      "normalized_sha256": "19f608c02c76083afb5d7290b2b2375e8236229f27d9ebd303a9a9799abc0373"
     },
     {
       "repository_path": "docs/v2_cutover/evaluation_harness/verify_closure.py",

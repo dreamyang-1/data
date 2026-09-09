@@ -7,7 +7,8 @@
     "ac42bc72ec480c754dc39ce7a6bc5b1d274f9c32",
     "8748d3d64d9a51e6a57c6769954eec90f849137e",
     "4f23205198576cc42cb4cb0823a85917e9c0b511",
-    "f6ce319591d714d658916f48cdc6fe7c70d9b252"
+    "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+    "9af0817e959d0048c46ad481974f9f6a0329cc12"
   ],
   "final_evidence_commit": "Commit containing this manifest",
   "resolve_final_evidence_commit": "git log -1 --format=%H -- docs/v2_cutover/evaluation_harness/git_commit_manifest.json",
@@ -20,5 +21,5 @@
     "passed": 3136,
     "failed": 27
   },
-  "planned_evidence_subject": "cutover: record calibrated harness baseline and remaining parity gaps"
+  "planned_evidence_subject": "docs: clarify historical fixture and replay evidence limits"
 }

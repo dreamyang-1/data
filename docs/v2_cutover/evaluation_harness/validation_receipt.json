@@ -2,7 +2,7 @@
   "status": "PASS",
   "evaluator_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
   "evidence_files": 45,
-  "evidence_hash": "3d79df93bdc0945828a9a7ddbc823c9e5962b451fc73962d5c7f7fa3d59bb6fd",
+  "evidence_hash": "c7ad39bd50832466e4422ba14fcb91c2b3eee58842f159f6fe722ae8b6a1353d",
   "new_replayed_turns": 172,
   "model_calls_in_verification": 0,
   "production_writes": 0,
