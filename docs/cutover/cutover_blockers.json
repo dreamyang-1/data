@@ -101,8 +101,8 @@
       "blocker_id": "V-01",
       "classification": "CUTOVER_BLOCKER_P0",
       "blocking_level": "P0",
-      "status": "EXACT_REPRESENTATION_REPAIR_VERIFIED_SEMANTIC_GAP_OPEN",
-      "summary": "Exact current-turn span and negated/temporal reference repairs verified on ten captured failures. Final 100-case generation: 94 accepted, two unresolved reference failures, four HTTP401; semantic axes still below acceptance.",
+      "status": "COLLECTION_EDIT_REPRESENTATION_GAPS_FIXED_SEMANTIC_QUALITY_OPEN",
+      "summary": "Full qwen3.7-max parser run: 100 HTTP200, 98 accepted; 29 cases have at least one failed labeled axis. Scoped full-plan probing exposed singleton collection edits and wrong-mention copies of the same canonical handle; guarded representation fixes are verified. The bootstrap now plans correctly; a later model output still fails, so complete transition acceptance remains open.",
       "evidence": [
         "app/semantic_v2/recognition.py",
         "app/semantic_v2/temporal_comparisons.py",
@@ -110,9 +110,10 @@
         "docs/cutover/v2_temporal_comparisons/temporal_policy_gaps.json",
         "docs/cutover/v2_source_value_binding/closure_report.md",
         "docs/cutover/evaluation_gates/closure_report.md",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/qwen37_benchmark/closure_report.md"
       ],
-      "next_action": "Continue full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Configured qwen3.7-max access is restored; new-model quality remains unmeasured beyond the smoke case.",
+      "next_action": "Capture the remaining typed-output/reference failures without guessing repairs, then complete frozen-catalog multi-turn and canonical evaluation. Preserve failed bootstrap/current-turn denominators and all safety guards.",
       "blocks_offline_evaluation_globally": false,
       "production_gate_only": false
     },
@@ -208,17 +209,18 @@
       "blocker_id": "E-02",
       "classification": "EVALUATION_GAP",
       "blocking_level": "P1",
-      "status": "USER_SELECTED_QWEN37_ACCESS_RESTORED_FULL_COMPARISON_OPEN",
-      "summary": "User selected qwen3.7-max and authorized reading its active sys_api_model credential. Local configuration and tracked defaults now use that model. One current-turn parser request returned HTTP200 and passed validation; full model comparison remains open.",
+      "status": "QWEN37_FULL_PARSER_MEASURED_FULL_COMPARISON_OPEN",
+      "summary": "User-selected qwen3.7-max measured on unchanged 100-case Gold/prompt/schema: mention/role recall 80/89, role purity 74/89, operations 9/13, shapes 40/56, relation 67/72. Seven isolated full-planner model calls supplied root-cause evidence; no complete live transition pass or model winner is claimed.",
       "evidence": [
         "docs/phase0c_region_list/closure_report.md",
         "app/semantic_v2/pipeline.py::CurrentTurnParser",
         "docs/cutover/evaluation_gates/closure_report.md",
         "docs/cutover/parser_repairs/closure_report.md",
         "docs/cutover/state_evaluation/comparison_readiness.json",
-        "docs/cutover/model_configuration/closure_report.md"
+        "docs/cutover/model_configuration/closure_report.md",
+        "docs/cutover/qwen37_benchmark/closure_report.md"
       ],
-      "next_action": "Measure the user-selected qwen3.7-max against the unchanged frozen Gold and record model provenance separately. Complete paired V1/V2 evaluation and the outstanding comparison candidate requirements; a configuration choice or one smoke pass is not a model-quality winner.",
+      "next_action": "Complete paired full V1/V2 state/canonical observations and outstanding candidate/Thinking requirements. Keep the user-selected default; do not infer a winner from parser acceptance or one run.",
       "blocks_offline_evaluation_globally": false,
       "production_gate_only": false
     },
@@ -292,10 +294,10 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "2cd4d93de8ce151f0b859e8252db3f0ed7ce141c",
+  "latest_source_delivery_baseline": "037839d7df9127fa946b1580363ddf84d32c50bb",
   "gate_authority": "USER_DECISION_2026_09_09",
   "gate_matrix": "docs/cutover/evaluation_gates/gate_matrix.json",
   "open_count_scope": "Production replacement acceptance; not eligibility to execute offline evaluation",
-  "current_stage": "MULTITURN_STATE_GOLD_AND_COMPONENT_EVALUATOR",
+  "current_stage": "QWEN37_COMPONENT_BENCHMARK_AND_COLLECTION_EDIT_CLOSURE",
   "offline_evaluation_eligible": true
 }

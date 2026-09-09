@@ -1,6 +1,6 @@
 # Current cutover status after the 2026-09-09 gate decision
 
-Current Stage: multi-turn state Gold / component evaluator.
+Current Stage: qwen3.7-max component benchmark / collection edit contract closure.
 V1 Replacement Readiness: **NOT_READY**; production acceptance has **8 P0 / 4 P1** open.
 Offline evaluation is now **ELIGIBLE**, independently of production Redis recovery
 and native catalog publication. Entity identity is checked per query shape.
@@ -22,6 +22,8 @@ Twenty additional transition records now measure actual V1 rule/dataset service
 outputs; V2 observation adapters retain real state/patch and Pending decisions.
 These service/control results are not full V1/V2 accuracy. See the explicit
 evaluation coverage matrix for every remaining required metric.
+
+The user-selected qwen3.7-max now has a full 100-case parser run: 98 accepted, with 29 cases failing at least one labeled axis. Two guarded collection-edit representation fixes allow the recorded bootstrap request to reach a correct plan. A later live model output still fails; complete transition acceptance is not claimed. See [current benchmark and root-cause evidence](qwen37_benchmark/closure_report.md).
 
 The historical report below predates this explicit user decision. Its global
 catalog-first evaluation gates are superseded; its source/test evidence is historical.

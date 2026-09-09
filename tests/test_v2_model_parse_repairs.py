@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import pytest
 from app.semantic_v2.pipeline import CurrentTurnSemanticParse, CurrentTurnParser
-from app.semantic_v2.recognition_repairs import repair_model_parse
+from app.semantic_v2.recognition_repairs import repair_model_parse, repair_collection_handle_mentions
 from app.semantic_v2.enums import SemanticRole
 
 
@@ -154,3 +154,61 @@ def test_actual_recorded_failure_replay_without_model_calls(row):
     assert trace and parsed.model_dump(mode='json')==row['parsed']
     assert result.operation_markers==parsed.operation_markers
     assert result.query_shape_prediction==parsed.query_shape_prediction
+
+
+def collection_fixture(*, slot='metrics', array=False):
+    from app.semantic_v2.recognition import SemanticTaskDraft
+    role='MEASURE' if slot=='metrics' else 'GROUP_BY'
+    text='销售额销售数量' if slot=='metrics' else '省份城市'
+    left,right=('销售额','销售数量') if slot=='metrics' else ('省份','城市')
+    parsed=CurrentTurnSemanticParse.model_validate({'mentions':[
+        dict(mention_id='m0',surface=left,normalized_surface=left,start_char=0,end_char=len(left),candidate_roles=[role],source_turn_id='t'),
+        dict(mention_id='m1',surface=right,normalized_surface=right,start_char=len(left),end_char=len(text),candidate_roles=[role],source_turn_id='t')],
+        'explicit_slot_mentions':{slot:['m1']}})
+    value={'binding_handle':'old'}
+    draft=SemanticTaskDraft.model_validate(dict(payload_type='INHERIT',edits=[dict(slot_path=slot,operation='ADD',
+        evidence_mention_ids=['m1'],value=[value] if array else value)]))
+    handles={'old':('same-catalog-identity',role,'m0'),'correct':('same-catalog-identity',role,'m1')}
+    candidates=[dict(binding_handle=h,mention_id=mid,name=right,role=role,catalog_type='METRIC' if slot=='metrics' else 'DIMENSION')
+        for h,mid in [('old','m0'),('correct','m1')]]
+    return draft,parsed,handles,candidates
+
+
+@pytest.mark.parametrize('slot',['metrics','dimensions'])
+@pytest.mark.parametrize('array',[True,False])
+def test_collection_handle_repair_keeps_identity_role_operation_and_evidence(slot,array):
+    from copy import deepcopy
+    draft,parsed,handles,candidates=collection_fixture(slot=slot,array=array)
+    original=draft.model_dump(mode='json');original_parse=parsed.model_dump(mode='json');original_handles=deepcopy(handles)
+    repaired,trace=repair_collection_handle_mentions(draft,parse=parsed,handles=handles,candidates=candidates)
+    expected=deepcopy(original)
+    value=expected['edits'][0]['value'][0] if array else expected['edits'][0]['value']
+    value['binding_handle']='correct'
+    assert repaired.model_dump(mode='json')==expected
+    assert handles['old'][:2]==handles['correct'][:2]
+    assert draft.model_dump(mode='json')==original and parsed.model_dump(mode='json')==original_parse and handles==original_handles
+    assert len(trace)==1 and trace[0]['from_mention_id']=='m0' and trace[0]['to_mention_id']=='m1'
+    assert '销售数量' not in json.dumps(trace,ensure_ascii=False) and '城市' not in json.dumps(trace,ensure_ascii=False)
+
+
+@pytest.mark.parametrize('fault',['repeated_surface','catalog_collision','alias_only','outside_evidence','unresolved',
+    'foreign_handle','wrong_role','authority_fields','missing_correct_handle','different_identity'])
+def test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence(fault):
+    from copy import deepcopy
+    draft,parsed,handles,candidates=collection_fixture()
+    if fault=='repeated_surface':parsed.mentions.append(parsed.mentions[1].model_copy(update={'mention_id':'m2'}))
+    if fault=='catalog_collision':
+        candidates.append({**candidates[1],'binding_handle':'collision'})
+        handles['collision']=('different-identity','MEASURE','m1')
+    if fault=='alias_only':
+        for c in candidates:c['name']='另一名称';c['aliases']=['销售数量']
+    if fault=='outside_evidence':draft.edits[0].evidence_mention_ids=['m2']
+    if fault=='unresolved':draft.unresolved_mention_ids=['m1']
+    if fault=='foreign_handle':draft.edits[0].value={'binding_handle':'not-offered'}
+    if fault=='wrong_role':candidates[0]['role']='GROUP_BY'
+    if fault=='authority_fields':draft.edits[0].value['semantic_model_id']=82
+    if fault=='missing_correct_handle':handles.pop('correct')
+    if fault=='different_identity':handles['correct']=('different-identity','MEASURE','m1')
+    original=deepcopy(draft.model_dump(mode='json'))
+    repaired,trace=repair_collection_handle_mentions(draft,parse=parsed,handles=handles,candidates=candidates)
+    assert repaired.model_dump(mode='json')==original and not trace

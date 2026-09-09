@@ -1,0 +1,101 @@
+{
+  "status": "COMPONENT_MEASUREMENT_ONLY_NO_MODEL_WINNER",
+  "previous_model": "qwen3.6-plus",
+  "current_model": "qwen3.7-max",
+  "shared_gold_hash": "b2db7b903c691d2f696edeba3dbb90e4e1af7da80566d2a0635e1a7c9fd381b6",
+  "shared_prompt_hash": "ff29f7c1ddffb368a48999dce8536231216f9f7bd1805f02b56c513668c8d1de",
+  "shared_schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+  "previous_accepted": 94,
+  "current_accepted": 98,
+  "previous_http_counts": {
+    "200": 96,
+    "401": 4
+  },
+  "current_http_counts": {
+    "200": 100
+  },
+  "axes": {
+    "critical_mention_recall": {
+      "previous": {
+        "passed": 73,
+        "denominator": 89,
+        "value": 0.8202247191011236
+      },
+      "current": {
+        "passed": 80,
+        "denominator": 89,
+        "value": 0.898876404494382
+      }
+    },
+    "critical_role_purity": {
+      "previous": {
+        "passed": 67,
+        "denominator": 89,
+        "value": 0.7528089887640449
+      },
+      "current": {
+        "passed": 74,
+        "denominator": 89,
+        "value": 0.8314606741573034
+      }
+    },
+    "critical_role_recall": {
+      "previous": {
+        "passed": 73,
+        "denominator": 89,
+        "value": 0.8202247191011236
+      },
+      "current": {
+        "passed": 80,
+        "denominator": 89,
+        "value": 0.898876404494382
+      }
+    },
+    "operation": {
+      "previous": {
+        "passed": 11,
+        "denominator": 13,
+        "value": 0.8461538461538461
+      },
+      "current": {
+        "passed": 9,
+        "denominator": 13,
+        "value": 0.6923076923076923
+      }
+    },
+    "query_shape": {
+      "previous": {
+        "passed": 49,
+        "denominator": 56,
+        "value": 0.875
+      },
+      "current": {
+        "passed": 40,
+        "denominator": 56,
+        "value": 0.7142857142857143
+      }
+    },
+    "turn_relation": {
+      "previous": {
+        "passed": 70,
+        "denominator": 72,
+        "value": 0.9722222222222222
+      },
+      "current": {
+        "passed": 67,
+        "denominator": 72,
+        "value": 0.9305555555555556
+      }
+    }
+  },
+  "limits": [
+    "Single runs with different models/credentials; previous run had four HTTP401 responses.",
+    "Frozen selected-axis labels are unchanged but not a complete semantic/result corpus.",
+    "Improved representation/mention scores do not erase lower operation/query-shape/turn scores.",
+    "No paired full V1/V2 quality measurement or Thinking/candidate comparison acceptance."
+  ],
+  "user_selected_default_changed_in_previous_commit": "037839d7df9127fa946b1580363ddf84d32c50bb",
+  "model_default_changed_in_this_commit": false,
+  "full_v1_v2_quality_delta": null,
+  "production_cutover_pass": false
+}

@@ -8,7 +8,7 @@ supersedes the prior catalog-first global gate.
 | --- | --- | --- |
 | Offline axis Gold | ELIGIBLE / 100 cases established | Frozen scoped catalog and reviewed labels for listed axes |
 | Semantic evaluator | ELIGIBLE / verified | Hash/scope checks, explicit denominators, missing predictions fail |
-| Model benchmark | ELIGIBLE / current parser measured | Frozen corpus/prompt; qwen3.7-max access restored by user-selected database credential; full comparison pending |
+| Model benchmark | ELIGIBLE / current parser measured | Frozen corpus/prompt; qwen3.7-max 100-case component run measured; complete V1/V2/candidate comparison pending |
 | Plan-only shadow | WAITING FOR EVALUATION ACCEPTANCE | Isolated state, no production writes/SQL/response takeover |
 | Production canary | BLOCKED | Accepted shadow, native catalog, production Redis recovery and trust |
 | Final cutover | BLOCKED | All replacement gates plus explicit user approval |
@@ -23,6 +23,8 @@ permission to run an offline experiment.
 Latest [parser repair evidence](parser_repairs/closure_report.md): 94/100 parsed; two reference failures and four authentication failures occurred in that historical run. The new user-selected qwen3.7-max configuration passes a one-request connectivity/parse smoke; full quality remains open.
 
 Latest [state evaluation evidence](state_evaluation/closure_report.md): twenty transition records, actual V1 service observations and a scope-checked V2 observation adapter. Full V1/V2 comparison remains unmeasured.
+
+Latest [qwen3.7-max benchmark and collection-edit evidence](qwen37_benchmark/closure_report.md): 98/100 parsed; full live transition remains failed and safety acceptance is open.
 
 | Capability | Status | Level | Next action |
 | --- | --- | --- | --- |
@@ -44,6 +46,6 @@ Latest [state evaluation evidence](state_evaluation/closure_report.md): twenty t
 | ASL Contract | FAIL | P1 | Complete loss-aware lowering for supported identity/query-shape combinations; keep unsupported cases explicit without gating turn/role/mention Gold. Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness. |
 | ResultContract | BLOCKED | P1 | Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness. |
 | Evaluation | NOT_EVALUATED | P0 | Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy. |
-| Real-model Evidence | NOT_EVALUATED | P1 | Measure the user-selected qwen3.7-max against the unchanged frozen Gold and record model provenance separately. Complete paired V1/V2 evaluation and the outstanding comparison candidate requirements; a configuration choice or one smoke pass is not a model-quality winner. |
+| Real-model Evidence | NOT_EVALUATED | P1 | Complete paired full V1/V2 state/canonical observations and outstanding candidate/Thinking requirements. Keep the user-selected default; do not infer a winner from parser acceptance or one run. |
 | Shadow Evidence | NOT_EVALUATED | P0 | After relevant evaluation passes, run isolated plan-only shadow without SQL, production-state writes or response takeover. |
 | Rollback | BLOCKED | P1 | After offline and real shadow gates, prepare canary flag, automatic stop/rollback procedure and drill; obtain user approval before formal replacement. |
