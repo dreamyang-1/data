@@ -43,7 +43,8 @@ def catalog(monkeypatch):
             if params is None: return
             column = next(k for k in business if '`'+k+'`' in sql)
             reads.append((column, params[0]))
-            self.rows = sorted(v for v in business[column] if mysql.normalize_catalog_text(v)==params[0])[:params[1]]
+            self.rows = (sorted(business[column])[:params[0]] if 'MAX_EXECUTION_TIME' in sql else
+                sorted(v for v in business[column] if mysql.normalize_catalog_text(v)==params[0])[:params[1]])
         def fetchall(self): return [(v.encode('utf-8'),) for v in self.rows]
         def rollback(self): pass
         def close(self): pass

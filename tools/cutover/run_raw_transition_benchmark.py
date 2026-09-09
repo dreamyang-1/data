@@ -98,6 +98,7 @@ def frozen_publication(raw_snapshot, catalog, denied_source_reads, *, native_sou
     def pin(*args, **kwargs):
         result = native_pin(*args, **kwargs)
         result.lookup_entity_values = deny_source
+        result.probe_entity_values = deny_source
         return result
     if not native_source_values:
         publication.pin = pin
@@ -275,6 +276,7 @@ async def replay_turn(capture, case, catalog, raw_snapshot, *, expected_capture_
                 expected_hash=source_observations_hash, allow_synthetic=capture['mode']=='SCRIPTED_MODEL_PIPELINE')
             import catalog_value_sources
             stack.enter_context(patch.object(catalog_value_sources, 'observe', replay.observe))
+            stack.enter_context(patch.object(catalog_value_sources, 'observe_probe', replay.observe_probe))
         engine = RawTurnPlanner(Recorded(), publication, clock=lambda:datetime.fromisoformat(capture['clock']))
         request = ChatRequest(semantic_model_id=case['scope']['semantic_model_id'],business_domain_ids=case['scope']['business_domain_ids'],
             database_id=case.get('database_id'),knowledge_base_names=case.get('knowledge_base_names',[]),
@@ -337,6 +339,7 @@ async def run(rows, catalog, raw_snapshot, settings, *, allow_model_calls=False,
                     expected_hash=source_observations_hash, allow_synthetic=transport is not None)
                 import catalog_value_sources
                 stack.enter_context(patch.object(catalog_value_sources, 'observe', replay.observe))
+                stack.enter_context(patch.object(catalog_value_sources, 'observe_probe', replay.observe_probe))
             for row in rows:
                 record_start, call_start = len(records), len(model.calls)
                 case = {k:v for k,v in row.items() if k not in {'labels','safety_checks','catalog_evidence','business_evidence','missing_labels','review_method'}}

@@ -1,59 +1,53 @@
-# V2 replacement readiness — deterministic temporal authority
+# V2 replacement readiness — controlled value probe
 
-Current Stage: DETERMINISTIC_TEMPORAL_EDIT_AND_COMPARISON_AUTHORITY.
-Baseline `42547ca85fcc9a2ad6f83260df444ada3ea81ddd` / Draft PR #49. Branch `cutover-time-components-20260909t070300z`.
-Final commit: commit containing this report. V1 Replacement Readiness: **NOT_READY**.
-Acceptance groups remain 8 P0 / 4 P1; not independent-bug counts.
+Current Stage: Candidate Probe implementation and evidence closure; next is the
+user-requested SEMANTIC CUTOVER TRIAGE CHECKPOINT. Baseline `b79fbd02a0f054ea5bd6ab6106569ea0019b0a28` / Draft PR50.
+Feature branch `cutover-source-alias-20260909t071700z`. Final commit: commit containing this report.
+V1 Replacement Readiness: **NOT_READY**. V1 remains production.
 
-## Verified defects and behavior
+## Actual behavior and evidence
 
-Executed counterexamples proved that a current 2026 range could accept model
-1990 dates, a quarter edit could accept YEAR, and a literal March 2020 comparison
-could accept a 1990 baseline. First divergence was typed temporal lowering and
-the explicit comparison baseline path, not missing user information or transport.
+Oagnet now performs bounded readonly discovery only after a complete empty exact
+lookup on a current pinned field. Agent only probes a single selected field,
+offers at most64 short real values, validates the chosen opaque ID, then uses the
+original exact lookup/binding and final catalog acceptance. Source scope/mapping,
+implicit-search policy and source drift guards remain enforced. No prefix/suffix
+dictionary or business-specific branch was added. This is a new bounded semantic
+choice prompt, not a deterministic alias certification.
 
-RANGE/GRAIN edits now derive values from whole current expressions and the
-existing business clock. Model values still pass original structural/authority
-guards before normalization. Initial legacy TIME_FIELD whole-expression inputs
-also derive their date and grain; an actual field name alone cannot authorize an
-invented date window. Explicit comparison baselines use current calendar/literal
-evidence; relative comparison arithmetic remains deterministic existing code.
+The existing province short_name pairs are unique but do not contain the Gold
+spellings Shanghai/Beijing/Jiangsu. No alias policy was inferred from that column.
+The native province probe returned34 values; city exceeded64 and returned no
+partial candidates. Source audit used23 readonly business SELECTs (2 pair audit,
+21 exact/probe capture); production writes0. Frozen catalog version and scope81/205
+were checked before and after capture. Raw values/captures and credentials stay
+outside Git. No catalog publication, Redis mutation, API/SSE or routing change.
 
-CLEAR, anchor binding, current Scope, task versions and comparison dependencies
-remain enforced. No new calendar/default/watermark policy is inferred. Unsupported
-grammar and conflicting evidence fail closed. The legacy time-field selection
-path retains its existing scoped candidate selection; this is not a claim that
-every role or anchor choice now meets semantic whole-plan acceptance.
+Three live qwen3.7-max calls with an explicitly selected province field chose all
+three reviewed canonical values and passed current binding/finish. This field
+Oracle is component evidence, not full-plan accuracy. The unchanged20-case live
+Gold used52 calls:6OK/10FAILED/4NOT_RUN,26executed turns. City-field selections
+hit the cardinality guard; other draft/shape/fixture failures remain. Every one
+of the26 recorded turn results or failures reproduced exactly with no model/SQL
+call. Total stage real model calls55; no production business writes.
 
 ## Validation and review
 
-Focused 198 passed; 40 new tests. Agent 3038 passed / 27 historical failures;
-Oagnet 663 / 8; SQL Translator 381 / 0. Critical 160/160, clarification trace
-89/89; old-pass -> new-fail 0, removed tests 0, collection errors 0. All 25 recorded
-turns from PR #49 reproduce their entire original result or original rejection.
-No additional model request was needed; this is recorded pipeline evidence.
+Agent3062passed/27preexisting failed; Oagnet677passed/8preexisting failed;
+SQL381passed/0failed. Added38tests (Agent24/Oagnet14). Critical160passed;
+collection errors0, old-pass to new-fail0, removed tests0. Focused189Agent and87
+Oagnet tests pass. Old assertions unchanged; exact-only test fixtures gained the
+new query and model stage. Checks include arbitrary candidate/scope rejection,
+high cardinality, ambiguity, source/mapping drift, exact revalidation,
+ADD/REPLACE/REMOVE/CLEAR and full native frozen replay.
 
-Self-review caught three old malformed-input rejection codes changing when the
-normalizer ran before structural validation. Original validation order was
-restored; no old assertion was changed. Comparisons and legacy initial dates were
-audited as part of the same date-authority defect, closing those bypasses too.
+Current acceptance groups remain8P0/4P1, not independent root-cause counts.
+Catalog gap: strict shape identity/relation facts and production publication.
+Evaluation gap: full labels/Oracle, real candidate ranking, Pending/Dataset
+fixtures, region/safety observations and holdout. Shadow gap: no qualifying
+semantic gate or real isolated shadow evidence. Redis recovery/publication remain
+Canary/Cutover gates; they do not block this offline evaluation.
 
-Real model calls 0; source SQL 0; production writes 0. Prompt/regex patterns,
-public API/SSE, model/key and V1 production routing unchanged. Finite assignment
-and comparison grammar with positive/negative controls is documented in
-temporal_authority/contract.json. No native publication or Redis changes.
-
-## Remaining shortest path
-
-Cutover P0: semantic quality and complete safety acceptance remain open. The last
-live 20-case sample is still PR #49: 6 observable plans, 10 failures, 4 NOT_RUN;
-do not promote recorded replay or these new tests to full model accuracy.
-Catalog Gap: scoped source values/aliases and shape-specific identity, grain and
-relation endpoints. Evaluation Gap: region observation, Pending/Dataset entries,
-whole-plan/Oracle/holdout labels and formal available-model comparison. Shadow Gap:
-offline acceptance remains incomplete. Native publication and Redis recovery only
-constrain their production gates and were not re-audited.
-
-Next: resolve the proven scoped source-value gap using existing catalog facts and
-bounded read-only evidence, then continue unchanged Gold/evaluation. Do not lower
-acceptance, claim production readiness or ask for replacement approval yet.
+Per the latest user instruction, stop per-case semantic fixes after this commit
+and perform a read-only root-cause/overfit/evaluator checkpoint. No claim of
+SEMANTIC_FREEZE, model selection, shadow readiness or production replacement.

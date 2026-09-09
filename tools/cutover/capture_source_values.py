@@ -1,7 +1,8 @@
-"""Opt-in exact reads for already selected catalog fields. Private output only.
+"""Opt-in exact reads or bounded probes of selected fields. Private output only.
 
-No scan, suffix guessing, publication or business writes. Each source SELECT is
-parameterized, bounded and rolled back by the existing Oagnet reader. This tool
+No unrelated fields, suffix guessing, publication or business writes. A probe
+requires a complete empty exact lookup. Each source SELECT is parameterized,
+bounded and rolled back by the Oagnet reader. This tool
 captures source evidence; it does not label a query or certify production data.
 """
 import argparse
@@ -30,29 +31,38 @@ def capture(raw, catalog, requests, *, service_root, allow_source_reads=False):
     selected = []
     seen = set()
     for request in requests:
-        if not isinstance(request, dict) or set(request) != {'attribute_id','query','limit'}:
+        if not isinstance(request, dict) or set(request) not in ({'attribute_id','query','limit'}, {'attribute_id','query','limit','mode'}):
+            raise ValueError('SOURCE_CAPTURE_REQUEST_INVALID')
+        mode = request.get('mode', 'EXACT_NORMALIZED')
+        if mode not in ('EXACT_NORMALIZED','CANDIDATE_DISCOVERY'):
             raise ValueError('SOURCE_CAPTURE_REQUEST_INVALID')
         field = [f for f in fields if f['attribute_id'] == request['attribute_id']]
         query, limit = request['query'], request['limit']
         if (len(field) != 1 or not isinstance(query, str) or not 1 <= len(query.strip()) <= 256
-                or type(limit) is not int or not 1 <= limit <= 32):
+                or type(limit) is not int or not 1 <= limit <= (64 if mode=='CANDIDATE_DISCOVERY' else 32)):
             raise ValueError('SOURCE_CAPTURE_REQUEST_INVALID')
-        key = (request['attribute_id'], query, limit)
+        key = (request['attribute_id'], query, limit, mode)
         if key in seen: raise ValueError('SOURCE_CAPTURE_DUPLICATE_REQUEST')
-        seen.add(key); selected.append((field[0], query, limit))
+        seen.add(key); selected.append((field[0], query, limit, mode))
     previous_logging = logging.root.manager.disable
     try:
         logging.disable(logging.CRITICAL)
         with patch.object(sys, 'path', [*sys.path, str(service_root)]), redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
             import mysql_tool as mysql
             from catalog_release import capture_catalog
-            from catalog_value_sources import observe
+            from catalog_value_sources import observe, observe_probe
             if capture_catalog(*[catalog['scope'][k] for k in ('semantic_model_id','business_domain_ids')])['catalog_version'] != catalog['catalog_version']:
                 raise ValueError('SOURCE_CAPTURE_CATALOG_DRIFT')
             entries = []
             with patch.object(mysql, 'MYSQL_CONNECT_TIMEOUT', 8), patch.object(mysql, 'MYSQL_READ_TIMEOUT', 20):
-                for field, query, limit in selected:
-                    observation = observe(catalog['scope'], field, query, limit)
+                for field, query, limit, mode in selected:
+                    if mode == 'CANDIDATE_DISCOVERY':
+                        exact = observe(catalog['scope'], field, query, 8)
+                        if not exact['complete'] or exact['values']:
+                            raise ValueError('SOURCE_CAPTURE_PROBE_REQUIRES_EMPTY_EXACT')
+                        observation = observe_probe(catalog['scope'], field, query, limit)
+                    else:
+                        observation = observe(catalog['scope'], field, query, limit)
                     entries.append(dict(query=mysql.normalize_catalog_text(query), limit=limit, observation=observation))
             if capture_catalog(*[catalog['scope'][k] for k in ('semantic_model_id','business_domain_ids')])['catalog_version'] != catalog['catalog_version']:
                 raise ValueError('SOURCE_CAPTURE_CATALOG_DRIFT')

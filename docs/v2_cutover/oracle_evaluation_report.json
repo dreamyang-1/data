@@ -61,5 +61,15 @@
     "new_model_calls": 0,
     "full_oracle_suite_complete": false,
     "production_cutover_pass": false
+  },
+  "value_probe_stage": {
+    "evidence": "value_probe/probe_component_receipt.json",
+    "field_oracle_components": 3,
+    "downstream_model_regenerated": true,
+    "current_binding_and_finish_passed": 3,
+    "full_plan_accuracy_established": false,
+    "exact_live_turn_replays": 26,
+    "full_oracle_suite_complete": false,
+    "production_cutover_pass": false
   }
 }
