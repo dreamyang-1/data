@@ -1,7 +1,7 @@
 {
-  "current_stage": "REPLACEMENT_REPRESENTATION_AND_PARTIAL_BINDING_ORACLE",
+  "current_stage": "FROZEN_SOURCE_EVIDENCE_AND_COMPLETE_PRIVATE_TURN_CAPTURE",
   "readiness": "NOT_READY",
-  "baseline_commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
+  "baseline_commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
   "production_acceptance_groups": {
     "P0": 8,
     "P1": 4
@@ -32,9 +32,10 @@
         "first_divergence_report.json",
         "model_benchmark_report.json",
         "task_context/comparison.json",
-        "replacement_oracle/comparison.json"
+        "replacement_oracle/comparison.json",
+        "source_evidence/comparison.json"
       ],
-      "next_action": "Keep turn-model variability explicit; diagnose remaining operation/shape failures and complete candidate/Oracle and full-state observations."
+      "next_action": "Use private full-turn captures for Oracle/candidate/whole-plan analysis; implement a governed bounded value-resolution path for proven short-name misses, without fabricated aliases or widening scope."
     },
     {
       "blocker_id": "EVALUATION-COVERAGE",
@@ -57,9 +58,10 @@
       "evidence": [
         "../cutover/state_evaluation/transition_gold.jsonl",
         "transition_runner/live_final_evaluation.json",
-        "oracle_evaluation_report.json"
+        "oracle_evaluation_report.json",
+        "source_evidence/comparison.json"
       ],
-      "next_action": "Extend existing tools, retain fixed denominators, certify exact frozen value observations before using region fixtures."
+      "next_action": "Use private full-turn captures for Oracle/candidate/whole-plan analysis; implement a governed bounded value-resolution path for proven short-name misses, without fabricated aliases or widening scope."
     },
     {
       "blocker_id": "PRODUCTION-PUBLICATION",

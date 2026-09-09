@@ -22,5 +22,11 @@
   "complete_IR_ASL_SQL_or_result": "NOT_EVALUATED",
   "source_SQL_executions": 0,
   "production_writes": 0,
-  "whole_plan_or_cutover_pass": false
+  "whole_plan_or_cutover_pass": false,
+  "source_proof_controls": {
+    "tests": "tests/test_cutover_frozen_source_values.py",
+    "scope_mapping_hash_query_and_provenance_guards": "PASS",
+    "actual_native_pin_binding_restore_finish_and_state_digest": "PASS",
+    "model_gold_accuracy": "NOT_ESTABLISHED_BY_SCRIPTED_TESTS"
+  }
 }

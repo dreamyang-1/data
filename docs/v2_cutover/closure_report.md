@@ -1,88 +1,80 @@
-# V2 replacement readiness — collection replacement evidence
+# V2 replacement readiness — frozen source evidence
 
-Current Stage: REPLACEMENT_REPRESENTATION_AND_PARTIAL_BINDING_ORACLE.
-Baseline: `299513e6d0b7d02f7e7dffb68feeeba4f677f071` / Draft PR #44.
-Branch: `cutover-replacement-oracle-20260909t045212z`.
+Current Stage: FROZEN_SOURCE_EVIDENCE_AND_COMPLETE_PRIVATE_TURN_CAPTURE.
+Baseline `9696077296b29ee8eb9d381c60e376053d4cf035` / Draft PR #45. Branch `cutover-source-evidence-20260909t052100z`.
 Final commit: the commit containing this report. **NOT_READY** for V1 replacement.
-The inherited production acceptance groups remain 8 P0 / 4 P1.
+The inherited production acceptance groups remain 8 P0 / 4 P1; these are groups,
+not a count of independent bugs. V1 production and all public request/response/SSE
+formats are unchanged. No runtime source, model default, prompt, regex or external
+service source was modified.
 
-## Proven failure and change
+## Evidence and correction
 
-The captured S81-002 REPLACE draft selected the current frozen catalog's
-`order_count` metric with MEASURE role and the correct current mention. Its exact
-handle was reconstructed against the existing frozen publication and independently
-verified, without a model or source database call. The first rejecting boundary
-was the collection representation required by TaskPatch, not missing retrieval.
+The existing opt-in transition runner now captures both successful and failed
+executed turns privately: exact model request bodies without headers, raw content,
+typed outputs, actual before/after scoped state, plans, clock, catalog and source
+fixture identity. Public receipts retain only bounded observations and hashes.
+The run captured 24/24 executed turns, with all hashes verified.
+Unexecuted history/current/Pending/Dataset turns are not fabricated.
 
-An explicit REPLACE on an existing restored set-valued task slot may now normalize
-an exact offered-handle object to a complete one-element list. A target at its
-current version is required. Hydration verifies the offered handle; the original
-type, role, current evidence, operation and scope validators still run. The
-operation remains REPLACE, so old values are removed. Internal reason code:
-`CURRENT_TURN_SINGLETON_REPLACEMENT`. No full business text is added to the trace.
+The evaluator previously hashed only the state payload. Native ScopedArtifact
+includes source-value binding proofs when present, so a legitimate source-backed
+plan was rejected as corrupt. The adapter now uses existing
+`scoped_artifact_material`; corrupt payloads and missing proofs remain rejected.
+This is an evaluator fix, not relaxed planner validation.
 
-This does not infer a task, change SET to REPLACE, normalize arbitrary dictionaries
-or relax the final collection schema. Initial assignments still require a complete
-collection. Existing SET/REPLACE rejection tests on new tasks remain unchanged.
-There are no prompt, regex, schema-model, scope, public API/SSE, model/key, V1 routing
-or cross-service source changes. The code change is confined to recognition.py.
+Frozen source observations require an explicit expected hash, exact catalog file
+hash/version/scope/mapping/query/limit and valid native observation hashes. Live
+model evaluation rejects SYNTHETIC_TEST provenance. The local capture is trusted
+evaluation input; its hash is not a signature or proof of current production data.
+Native pin, implicit-field policy, binding, state restore and finish checks execute
+against the frozen fixture; absent queries cannot fall through to real SQL.
 
-## Oracle and live evidence
+Separate authorized read-only evidence comprises six exact source SELECTs and
+three controlled probe SELECTs, with current catalog checks, timeouts, limits and
+rollback. The short Gold mentions have no exact rows in the two selected region
+fields. A 34-value province probe verifies full administrative forms privately.
+The city field has 396 distinct values, exceeds the 64-value budget, and was not
+enumerated. Raw source values, source locators and credentials are not published.
+These observations do not authorize automatic suffix aliases, identity by name,
+different fields or a wider scope. Existing Gold remains unchanged.
 
-The partial Oracle Binding tests supply a uniquely correct offered catalog choice
-and execute real scoped binding, TaskPatch, reducer, materialized state and logical
-compiler. Three positive nodes compare singleton/array metric and dimension
-replacement and distinguish ADD from REPLACE; nine controls retain invalid-input
-guards. This is not a complete Oracle Mention/Role/Candidate/Relation suite.
+## Model and regression results
 
-Verified red run: five failures and seven passes. Three failures were positive
-representation cases; two invalid cases previously stopped at generic list typing
-before the retained precise role/evidence guards. An initial dimension fixture
-lacked its second governed dimension; that fixture was corrected before the
-verified red run. Final focused suite: **174 passed**. No old assertion changed.
+The same 20-case model run used 48 actual HTTP200 requests: {'OK': 5, 'FAILED': 11, 'NOT_RUN': 4}.
+These statuses count observable plans, not whole-case passes. Required unobserved
+safety and whole-plan metrics remain NOT_EVALUATED. Exact empty source results
+now surface as source-value misses, distinct from missing evaluation fixtures.
+S81-002's private capture proves a HISTORICAL parse signal and a selected historical
+handle despite the expected ordinary replacement; no silent relation repair was
+introduced. See the evaluation details for every observed axis and failure.
 
-The full unchanged 20-transition model run has **five observable plans, 11 failures
-and four NOT_RUN fixtures**, using 48 HTTP200 calls. Metric ADD/REPLACE/REMOVE axes
-are 3/3, but **S81-002 fails its turn-relation label**: the model called the correct
-current-task replacement RETURN_TO_TOPIC instead of FOLLOW_UP. It is not a passed
-whole case. A separate four-call repeat produced FOLLOW_UP and the same correct
-metric/target; that later row does not replace the original failed observation.
-The repeat emitted an array, so it does not prove singleton normalization executed
-in that live call. The captured candidate and deterministic Oracle tests establish
-the code effect; the live observations establish behavior and remaining variation.
+Model evaluation executed zero source SQL and zero production writes. The separate
+read-only audit executed nine source SELECTs; this total must not be reported as
+zero. No production publication, Redis mutation, V2 routing or user answer changed.
 
-Total current-stage real model requests: **52**, all HTTP200. Source SQL: 0;
-production external writes: 0. Four cases reached the denied source-value boundary;
-two previously reaching it instead failed earlier in model source-request linkage.
-The frozen values are still absent, so this lower denial count is not improved
-coverage. Pending and Dataset entry fixtures, whole-plan labels and hard-safety
-observations remain incomplete. No unobserved safety is marked zero-violation PASS.
+Focused regression: 112 passed. New tests: 28. Agent: 2902 passed /
+27 historical failures; Oagnet: 663 / 8; SQL Translator: 381 / 0.
+Old-pass -> new-fail 0; removed tests 0; collection errors 0. Critical 160/160;
+clarification trace 89/89. Review found that the file entry could classify a missing
+fixture differently from the imported module because of duplicated exception class
+identity. Both entries are now tested using a shared exception. The completed live
+run had zero missing-fixture lookups, so its observations are unaffected by this
+subsequent diagnostic correction. Focused and full service suites were rerun after
+the correction and all final adversarial tests were added.
 
-## Regression, review and remaining path
+## Remaining shortest path
 
-New regressions: **12**. Full Agent: **2874 passed / 27 historical failures**;
-Oagnet: **663 / 8**; SQL Translator: **381 / 0**. Old-pass -> new-fail 0;
-removed tests 0; collection errors 0; Critical 160/160; clarification traces 89/89.
-All started evaluation and regression processes are terminal before release.
+Catalog Gap: resolve actual short-name source-value misses under a bounded governed
+probe/selection contract; identity/grain/endpoints remain shape-specific. Native
+publication and Redis recovery remain production gates only.
+Evaluation Gap: complete Oracle/candidate/whole-plan labels and Pending/Dataset
+entry coverage; diagnose model operation, relation and shape failures using the
+new private full-turn observations. No quality threshold was lowered and no model
+winner was selected. Shadow Gap: offline acceptance still has not passed.
 
-Self-review checked scoped current target/version, exact handle-only shape,
-strict hydration before normalization, retained role/evidence checks, explicit
-REPLACE semantics and complete list validation before state mutation. Private
-captures stay outside Git; only curated candidate metadata/hash and evaluation
-receipts are published. Explicit manifests compare normalized source hashes and
-preserve unrelated files and the original Oagnet HEAD/index.
-
-Catalog Gap: shape-specific identity/grain/endpoints and native production
-publication. Evaluation Gap: model turn variation, operation/shape failures,
-frozen entity-value observations, full Pending/Dataset entry and complete
-Oracle/candidate/whole-plan labels. Shadow Gap: required offline acceptance has
-not passed. Redis recovery and native publication remain production-stage gates.
-
-Next shortest path: complete the missing frozen source-value/observation evidence
-and diagnose the remaining operation/query-shape errors without guessed repair.
-Continue controlled model comparison once the evaluator supports those labels;
-keep V1 production until explicit user approval after all readiness gates pass.
-
-Evidence: replacement_oracle/comparison.json, oracle_evaluation_report.json,
-first_divergence_report.json, test_delta.json and the shared readiness matrix.
-Earlier Gold, catalog, identity and Redis evidence remains at its original paths.
+Continue the internal evaluation path; no user cutover approval is requested yet.
+No Identity or Redis re-audit, duplicate Gold, runner or production authority was
+introduced. Review verified manifest-only synchronization, preserved unrelated
+Git changes and private-data exclusion. The complete tracked-source equality and
+clean Git gates are recorded in the delivery manifests.

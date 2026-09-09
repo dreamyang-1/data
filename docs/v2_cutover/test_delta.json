@@ -1,34 +1,50 @@
 {
-  "baseline_commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
+  "baseline_commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
   "services": {
     "DataAnalysis_Agent": {
       "baseline_counts": {
-        "passed": 2862,
-        "failed": 27
-      },
-      "final_counts": {
         "passed": 2874,
         "failed": 27
       },
+      "final_counts": {
+        "passed": 2902,
+        "failed": 27
+      },
       "new_tests": {
-        "tests/test_v2_raw_turn_recognition.py::test_single_offered_replacement_matches_a_complete_single_item_collection[metrics]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_single_offered_replacement_matches_a_complete_single_item_collection[dimensions]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_and_add_have_different_state_semantics": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[foreign-V2_BINDING_HANDLE_NOT_OFFERED]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[extra-V2_BINDING_HANDLE_NOT_OFFERED]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[authority-V2_MODEL_AUTHORITY_FIELD_FORBIDDEN]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[role-V2_SLOT_ROLE_CONFLICT]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[evidence-V2_BINDING_OUTSIDE_EDIT_EVIDENCE]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[null-V2_CONTRACT_VALIDATION_FAILURE]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[string-V2_CONTRACT_VALIDATION_FAILURE]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[operation-V2_SLOT_OPERATION_CONFLICT]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_singleton_set_is_not_inferred_to_be_a_followup_replace": "passed"
+        "tests/test_cutover_raw_transition_benchmark.py::test_private_capture_includes_success_inputs_candidates_and_actual_state": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_capture_is_absent_unless_opted_in_and_callback_failure_is_visible": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_real_pin_restores_and_rechecks_frozen_values_without_source_connection": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_empty_observation_is_not_replaced_with_a_fabricated_candidate": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_replay_does_not_allow_caller_mutation_to_change_later_evidence": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_missing_query_never_falls_back_to_live_or_wider_scope[scope]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_missing_query_never_falls_back_to_live_or_wider_scope[field]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_missing_query_never_falls_back_to_live_or_wider_scope[query]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_missing_query_never_falls_back_to_live_or_wider_scope[limit]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_tampered_or_incompatible_evidence_is_rejected[hash]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_tampered_or_incompatible_evidence_is_rejected[catalog]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_tampered_or_incompatible_evidence_is_rejected[scope]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_tampered_or_incompatible_evidence_is_rejected[field]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_tampered_or_incompatible_evidence_is_rejected[query]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_tampered_or_incompatible_evidence_is_rejected[value]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_tampered_or_incompatible_evidence_is_rejected[complete]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_tampered_or_incompatible_evidence_is_rejected[timestamp]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_tampered_or_incompatible_evidence_is_rejected[observation_hash]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_tampered_or_incompatible_evidence_is_rejected[duplicate]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_tampered_or_incompatible_evidence_is_rejected[extra]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_a_synthetic_fixture_cannot_claim_live_source_provenance": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_missing_frozen_evidence_has_the_same_failure_code_from_script_entry[imported]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_missing_frozen_evidence_has_the_same_failure_code_from_script_entry[script]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_read_only_collector_uses_existing_source_reader_and_current_catalog": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_collector_rejects_invalid_authority_before_source_reads[opt_in]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_collector_rejects_invalid_authority_before_source_reads[drift]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_collector_rejects_invalid_authority_before_source_reads[field]": "passed",
+        "tests/test_cutover_frozen_source_values.py::test_collector_rejects_invalid_authority_before_source_reads[budget]": "passed"
       },
       "old_pass_to_new_fail": [],
       "old_fail_to_new_pass": [],
       "removed_tests": [],
       "collection_errors": [],
-      "receipt_sha256": "c802588331aa787293b03d7ee8d6f11bcbb420fcc5f6a88d8fe232dd7d64d646",
+      "receipt_sha256": "caf087b49b2e329ab6ec853803b51c13c8b1d4eee2e8fbd148ba9a922c18e2cd",
       "critical": {
         "passed": 160,
         "failed": 0
@@ -69,18 +85,23 @@
       "receipt_sha256": "ff47ab9bcb6773bb0421db0a9646800f27bf1c1f9f432901e13a9cd3f416abe1"
     }
   },
-  "focused": {
-    "passed": 174
+  "focused_final": {
+    "passed": 112
   },
-  "before_verified": {
-    "failed": 5,
-    "passed": 7
+  "initial_focused": {
+    "failed": 2,
+    "passed": 77
   },
-  "red_evidence": "Three positive replacement/ADD contrast tests rejected the singleton; two negative cases stopped at generic list validation before the more precise retained role/evidence guards. Seven controls already passed.",
-  "fixture_issue": "The initial dimension oracle lacked a second dimension. Added it with matching physical/catalog fixture metadata and republished only its in-memory test catalog before the verified red run.",
+  "initial_failures": "One test referenced a nonexistent candidate context key; corrected the test to the actual catalog_candidates field. The other exposed a real evaluator digest bug for state containing source-value bindings; reused scoped_artifact_material and retained corruption controls.",
+  "script_entry_red": {
+    "passed": 1,
+    "failed": 1
+  },
+  "script_entry_fix": "The file entry created a different exception class from the imported runner; moved the exception to the shared source-fixture module. Imported and file-loaded entry now retain the same missing-evidence reason. First draft of this test omitted required history; corrected before the verified red run.",
   "old_assertions_changed": 0,
-  "stale_test_changes": 0,
+  "runtime_source_changed": false,
+  "prompt_changes": 0,
+  "regex_changes": 0,
   "real_model_calls_in_regression": 0,
-  "production_writes_in_regression": 0,
-  "baseline_reconstruction": "PR38 results + PR39/40/42 new tests + test_delta new nodes from PR43 a87df7d and PR44 baseline commit; append this delivery."
+  "production_writes_in_regression": 0
 }

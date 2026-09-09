@@ -100,8 +100,8 @@ def observe_v2_plan(result,case,*,catalog,mode,previous=None,history=()):
     if (actual_scope!=case['scope'] or context.catalog_pin.catalog_version!=catalog['catalog_version'] or case['catalog_ref']!=catalog['artifact_hash']
             or scope.database_id!=case.get('database_id') or list(scope.knowledge_base_names)!=case.get('knowledge_base_names',[])):
         raise ValueError('V2_OBSERVATION_SCOPE_OR_CATALOG_MISMATCH')
-    from app.semantic_v2.authorized_contract import contract_digest
-    if contract_digest(result.next_state.payload)!=result.next_state.payload_digest:
+    from app.semantic_v2.authorized_contract import contract_digest, scoped_artifact_material
+    if contract_digest(scoped_artifact_material(result.next_state.payload,result.next_state.source_value_bindings))!=result.next_state.payload_digest:
         raise ValueError('V2_OBSERVATION_STATE_DIGEST_INVALID')
     def task_id_of(value):
         return value.plan['logical_plan']['task_id'] if value.plan is not None else value.pending_state.payload['task_id']

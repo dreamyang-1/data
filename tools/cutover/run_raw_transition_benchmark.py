@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from contextlib import contextmanager, redirect_stdout, redirect_stderr
+from contextlib import contextmanager, redirect_stdout, redirect_stderr, ExitStack
 from contextvars import ContextVar
 from copy import deepcopy
 from datetime import datetime
@@ -33,14 +33,11 @@ from tools.cutover.evaluation_contract import digest
 from tools.cutover.semantic_evaluator import read_jsonl
 from tools.cutover.transition_evaluator import evaluate_transitions, validate_transitions
 from tools.cutover.transition_observations import observe_v2_plan
+from tools.cutover.frozen_source_values import FrozenSourceValues, SourceValuesUnavailable
 
 ROOT = Path(__file__).resolve().parents[2]
 COMPONENT = 'V2_RAW_TURN_PLANNER'
 MODEL_NETWORK = ContextVar('cutover_model_transport_network', default=False)
-
-
-class SourceValuesUnavailable(RuntimeError):
-    pass
 
 
 class ModelBudgetExhausted(RuntimeError):
@@ -63,7 +60,7 @@ def network_guard():
         yield
 
 
-def frozen_publication(raw_snapshot, catalog, denied_source_reads):
+def frozen_publication(raw_snapshot, catalog, denied_source_reads, *, native_source_values=False):
     snapshot = json.loads(raw_snapshot)
     if freeze(snapshot, hashlib.sha256(raw_snapshot).hexdigest(), catalog['observed_at']) != catalog:
         raise ValueError('FROZEN_SNAPSHOT_PROJECTION_MISMATCH')
@@ -90,7 +87,8 @@ def frozen_publication(raw_snapshot, catalog, denied_source_reads):
         result = native_pin(*args, **kwargs)
         result.lookup_entity_values = deny_source
         return result
-    publication.pin = pin
+    if not native_source_values:
+        publication.pin = pin
     return publication
 
 
@@ -109,11 +107,13 @@ def schema_diagnostics(exc, output_model):
 
 
 class ModelRecorder:
-    def __init__(self, settings, *, transport=None, max_calls=100):
+    def __init__(self, settings, *, transport=None, max_calls=100, capture_exchanges=False):
         self.settings = settings.model_copy(update={'intent_model_max_retries':0})
         self.calls = []
         self.active = {}
         self.outputs = []
+        self.exchanges = []
+        self.capture_exchanges = capture_exchanges
         self.last_content = None
         self.last_schema = None
         self.max_calls = max_calls
@@ -130,11 +130,19 @@ class ModelRecorder:
                     raise ValueError('MODEL_TRANSPORT_TARGET_MISMATCH')
                 receipt = {**owner.active, 'input_hash':digest(body['messages']), 'status':None}
                 owner.calls.append(receipt)
+                exchange = None
+                if owner.capture_exchanges:
+                    # The HTTP body contains the exact prompt/candidates/schema;
+                    # headers, credentials and service URLs are never captured.
+                    exchange = {'stage':owner.active['stage'], 'request_body':deepcopy(body),
+                        'status':None, 'raw_content':None}
+                    owner.exchanges.append(exchange)
                 token = MODEL_NETWORK.set(owner.live_transport)
                 try:
                     response = await owner.upstream.handle_async_request(request)
                     await response.aread()
                     receipt['status'] = response.status_code
+                    if exchange is not None: exchange['status'] = response.status_code
                     try:
                         payload = response.json()
                         if not isinstance(payload, dict): return response
@@ -148,6 +156,7 @@ class ModelRecorder:
                                 content = message.get('content')
                                 if isinstance(content, str) and len(content) <= 128_000:
                                     owner.last_content = content
+                                    if exchange is not None: exchange['raw_content'] = content
                             receipt['finish_reason'] = choices[0].get('finish_reason')
                     except (ValueError, TypeError, AttributeError):
                         receipt['receipt_decode_failed'] = True
@@ -160,6 +169,7 @@ class ModelRecorder:
     def begin_turn(self, case_id, index):
         self.active = {'case_id':case_id, 'turn_index':index, 'stage':'ENTRY'}
         self.outputs = []
+        self.exchanges = []
         self.last_content = None
         self.last_schema = None
 
@@ -189,7 +199,8 @@ def failure_reason(exc):
 
 
 async def run(rows, catalog, raw_snapshot, settings, *, allow_model_calls=False,
-        transport=None, max_calls=100, private_capture=None, progress=None):
+        transport=None, max_calls=100, private_capture=None, progress=None,
+        source_observations=None, source_observations_hash=None):
     validate_transitions(rows, catalog)
     if not rows:
         raise ValueError('EMPTY_TRANSITION_CORPUS')
@@ -199,13 +210,22 @@ async def run(rows, catalog, raw_snapshot, settings, *, allow_model_calls=False,
         raise ValueError('EXPLICIT_MODEL_CALL_OPT_IN_REQUIRED')
     if type(max_calls) is not int or not 1 <= max_calls <= 200:
         raise ValueError('MODEL_REQUEST_BUDGET_INVALID')
+    if (source_observations is None) != (source_observations_hash is None):
+        raise ValueError('FROZEN_VALUES_AND_EXPECTED_HASH_REQUIRED_TOGETHER')
     mode = 'LIVE_MODEL_PLAN_ONLY' if transport is None else 'SCRIPTED_MODEL_PIPELINE'
     predictions, records, denied = [], [], []
-    model = ModelRecorder(settings, transport=transport, max_calls=max_calls)
+    captured_turns = 0
+    replay = None
+    model = ModelRecorder(settings, transport=transport, max_calls=max_calls, capture_exchanges=private_capture is not None)
     try:
         oagnet = ROOT/'Oagnet' if (ROOT/'Oagnet').is_dir() else ROOT.parent/'Oagnet'
-        with network_guard(), patch.object(sys, 'path', [*sys.path, str(oagnet), str(oagnet/'tests')]):
-            publication = frozen_publication(raw_snapshot, catalog, denied)
+        with network_guard(), patch.object(sys, 'path', [*sys.path, str(oagnet), str(oagnet/'tests')]), ExitStack() as stack:
+            publication = frozen_publication(raw_snapshot, catalog, denied, native_source_values=source_observations is not None)
+            if source_observations is not None:
+                replay = FrozenSourceValues(source_observations, catalog=catalog, snapshot=json.loads(raw_snapshot),
+                    expected_hash=source_observations_hash, allow_synthetic=transport is not None)
+                import catalog_value_sources
+                stack.enter_context(patch.object(catalog_value_sources, 'observe', replay.observe))
             for row in rows:
                 record_start, call_start = len(records), len(model.calls)
                 case = {k:v for k,v in row.items() if k not in {'labels','safety_checks','catalog_evidence','business_evidence','missing_labels','review_method'}}
@@ -231,6 +251,12 @@ async def run(rows, catalog, raw_snapshot, settings, *, allow_model_calls=False,
                     model.begin_turn(case['case_id'], index)
                     record = {'case_id':case['case_id'], 'turn_index':index, 'phase':'HISTORY' if index < len(case['history']) else 'CURRENT'}
                     records.append(record)
+                    result = None
+                    before = None
+                    if private_capture is not None:
+                        before = {'state':state.model_dump(mode='json') if state else None,
+                            'pending':pending.model_dump(mode='json') if pending else None,
+                            'plans':[p.model_dump(mode='json') for p in plans.values()]}
                     try:
                         req = ChatRequest(**{k:case['scope'][k] for k in ('semantic_model_id','business_domain_ids')},
                             database_id=case.get('database_id'), knowledge_base_names=case.get('knowledge_base_names',[]),
@@ -256,23 +282,39 @@ async def run(rows, catalog, raw_snapshot, settings, *, allow_model_calls=False,
                         if isinstance(exc, ValidationError) and model.last_schema:
                             record['schema_diagnostics'] = schema_diagnostics(exc, model.last_schema)
                         prediction.update(status='FAILED', reason='HISTORY_PRECONDITION_FAILED' if record['phase']=='HISTORY' else record['reason'])
-                        if private_capture is not None:
-                            private_capture({'case_id':case['case_id'], 'turn_index':index, 'stage':model.active['stage'],
-                                'outputs':deepcopy(model.outputs), 'last_content':model.last_content})
                         break
+                    finally:
+                        if private_capture is not None:
+                            capture = {'format':'PRIVATE_RAW_TRANSITION_V1', 'case_id':case['case_id'], 'turn_index':index,
+                                'stage':model.active['stage'], 'phase':record['phase'], 'mode':mode,
+                                'scope':catalog['scope'], 'catalog_ref':catalog['artifact_hash'],
+                                'source_observations_hash':source_observations_hash, 'clock':case['clock'],
+                                'question':text, 'before':before, 'exchanges':deepcopy(model.exchanges),
+                                'outputs':deepcopy(model.outputs), 'last_content':model.last_content,
+                                'result':result.model_dump(mode='json') if result is not None else None,
+                                'outcome':deepcopy(record)}
+                            record['private_capture_hash'] = digest(capture)
+                            private_capture(capture)
+                            captured_turns += 1
                 checkpoint()
     finally:
         await model.upstream.aclose()
     report = evaluate_transitions(rows, predictions, catalog, component=COMPONENT, mode=mode)
     report.update(model=settings.intent_model_name, thinking=settings.intent_model_enable_thinking,
         real_model_calls=len(model.calls) if transport is None else 0, model_transport_requests=len(model.calls),
-        source_value_reads_denied=len(denied), source_SQL_executions=0, production_external_writes=0,
+        source_value_reads_denied=len(denied) + (sum(c['status']=='MISSING' for c in replay.calls) if replay else 0),
+        source_value_observations_replayed=sum(c['status']=='REPLAYED' for c in replay.calls) if replay else 0,
+        source_observations_hash=source_observations_hash,
+        source_value_evidence_mode='FROZEN_READ_ONLY_CAPTURE' if replay and replay.capture_mode=='READ_ONLY_SOURCE'
+            else 'SYNTHETIC_TEST' if replay else 'UNAVAILABLE',
+        source_SQL_executions=0, production_external_writes=0,
         catalog_storage_mode='FROZEN_CATALOG_IN_MEMORY_PUBLICATION', query_vector_quality_evaluated=False,
         prompt_version=PROMPT_VERSION, current_turn_prompt_hash=digest(PARSE_PROMPT),
         current_turn_schema_hash=digest(current_turn_schema()), semantic_edit_prompt_hash=digest(DRAFT_PROMPT),
         history_policy='STOP_ON_UNRESOLVED_OR_FAILED_HISTORY; NO_SUCCESS_INJECTION',
         network_policy='ONLY_VALIDATED_MODEL_TRANSPORT_CAN_CONNECT', max_model_requests=max_calls,
         private_diagnostics_enabled=private_capture is not None,
+        private_capture_turns=captured_turns, observed_turns=len(records),
         observation_counts=dict(__import__('collections').Counter(p['status'] for p in predictions)))
     return {'predictions':predictions, 'evaluation':report, 'turns':records, 'model_calls':model.calls}
 
@@ -284,6 +326,8 @@ if __name__ == '__main__':
     parser.add_argument('--case-ids')
     parser.add_argument('--max-model-requests',type=int,default=100)
     parser.add_argument('--private-diagnostics-dir',type=Path)
+    parser.add_argument('--source-observations',type=Path)
+    parser.add_argument('--source-observations-hash')
     parser.add_argument('--allow-model-calls',action='store_true',required=True)
     args = parser.parse_args()
     rows = read_jsonl(args.gold)
@@ -307,7 +351,9 @@ if __name__ == '__main__':
         print(json.dumps({'case_id':value['prediction']['case_id'],'status':value['prediction']['status'],
             'model_requests':len(value['model_calls'])}),flush=True)
     result = asyncio.run(run(rows,catalog,args.snapshot.read_bytes(),Settings(),allow_model_calls=args.allow_model_calls,
-        max_calls=args.max_model_requests,private_capture=capture,progress=progress))
+        max_calls=args.max_model_requests,private_capture=capture,progress=progress,
+        source_observations=json.loads(args.source_observations.read_text(encoding='utf-8')) if args.source_observations else None,
+        source_observations_hash=args.source_observations_hash))
     for name,value in result.items():
         with (args.output_dir/(name+'.json')).open('x',encoding='utf-8') as f: json.dump(value,f,ensure_ascii=False,indent=2)
     print(json.dumps({k:v for k,v in result['evaluation'].items() if k!='details'},ensure_ascii=False))

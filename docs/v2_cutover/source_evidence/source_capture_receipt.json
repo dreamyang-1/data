@@ -1,0 +1,66 @@
+{
+  "artifact_hash": "5da05463c521b88eeec4c06b83b456df68ec623eaed0c5dd458a529f1950d24d",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "source_SQL_executions": 6,
+  "production_writes": 0,
+  "catalog_checked_before_and_after": true,
+  "read_policy": "EXACT_NORMALIZED; READ ONLY; ROLLBACK; LIMIT 9; CONNECT 8s / READ 20s",
+  "entries": [
+    {
+      "attribute_id": "2094307294823661570",
+      "query_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+      "result_count": 0,
+      "complete": true,
+      "observation_hash": "116fabad755e99b11d7c298109fadc74c07d20398f175846965067337ac65dfc",
+      "observed_at": "2026-09-09T05:30:13.770819+00:00"
+    },
+    {
+      "attribute_id": "2094307294823661570",
+      "query_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+      "result_count": 0,
+      "complete": true,
+      "observation_hash": "9b3f0525e3efd9a6bc5369b3e259ba22d5b6e0cb461ce76797dfd00452b0f93e",
+      "observed_at": "2026-09-09T05:30:14.001700+00:00"
+    },
+    {
+      "attribute_id": "2094307294823661570",
+      "query_hash": "e9042243f9222214e0cb9238173edd9447db60874b49594dd91adaafa0400237",
+      "result_count": 0,
+      "complete": true,
+      "observation_hash": "1b1576deff3e5c5f9395cbc02b5565120959cc4c051e4d0b73c1a718c918df59",
+      "observed_at": "2026-09-09T05:30:14.264563+00:00"
+    },
+    {
+      "attribute_id": "2094306753653587970",
+      "query_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+      "result_count": 0,
+      "complete": true,
+      "observation_hash": "4f0c0f91e4e68985b2257848ee1251c1f360c47303751b99b3e9bad27905dd36",
+      "observed_at": "2026-09-09T05:30:14.509872+00:00"
+    },
+    {
+      "attribute_id": "2094306753653587970",
+      "query_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+      "result_count": 0,
+      "complete": true,
+      "observation_hash": "4efff31f7a13805a3c618f42261987b3c566c3a6ffe8ba9da8e9a4e3231e5744",
+      "observed_at": "2026-09-09T05:30:14.744864+00:00"
+    },
+    {
+      "attribute_id": "2094306753653587970",
+      "query_hash": "e9042243f9222214e0cb9238173edd9447db60874b49594dd91adaafa0400237",
+      "result_count": 0,
+      "complete": true,
+      "observation_hash": "60fb8c0229f72c592b6b5290dd3ed13f1d8de9b94e1f7348bb522bc351878628",
+      "observed_at": "2026-09-09T05:30:14.986079+00:00"
+    }
+  ]
+}
