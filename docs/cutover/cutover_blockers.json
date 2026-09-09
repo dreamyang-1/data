@@ -190,16 +190,17 @@
       "blocker_id": "E-01",
       "classification": "EVALUATION_GAP",
       "blocking_level": "P0",
-      "status": "AXIS_GOLD_AND_DETERMINISTIC_EVALUATOR_ESTABLISHED",
-      "summary": "100 engineer-reviewed cases cover listed turn/operation/critical mention/role/query-shape axes against 127 frozen catalog facts. SQL/result/full-state/canonical labels are still incomplete; no row marked COMPLETE.",
+      "status": "STATE_TRANSITION_GOLD_AND_SERVICE_BASELINE_ESTABLISHED",
+      "summary": "100 fixed axis records plus 20 reviewed transition records now have deterministic per-slot/state scoring. V1 rule/dataset services measured; full V1/V2, canonical, clarification and safety observations remain incomplete.",
       "evidence": [
         "docs/phase2/gold_cases_seed.jsonl",
         "docs/phase25/gold_v2_seed.jsonl",
         "docs/phase25_1/gold_v0_2_1.jsonl",
         "docs/phase0b/gold_candidate_inventory.jsonl",
-        "docs/cutover/evaluation_gates/closure_report.md"
+        "docs/cutover/evaluation_gates/closure_report.md",
+        "docs/cutover/state_evaluation/closure_report.md"
       ],
-      "next_action": "Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "blocks_offline_evaluation_globally": false,
       "production_gate_only": false
     },
@@ -208,14 +209,15 @@
       "classification": "EVALUATION_GAP",
       "blocking_level": "P1",
       "status": "PARSER_REPAIRS_MEASURED_PROVIDER_AUTH_NOW_FAILING",
-      "summary": "100-case final parser benchmark completed with 96 HTTP200 and four HTTP401 invalid_api_key. Four independent follow-up requests also returned HTTP401. Original failures retained; production model unchanged.",
+      "summary": "Current parser component evidence is retained. User-requested single retry at 2026-09-09T02:46:37Z again returned HTTP401 invalid_api_key. Full requested model comparison remains open; no production default changed.",
       "evidence": [
         "docs/phase0c_region_list/closure_report.md",
         "app/semantic_v2/pipeline.py::CurrentTurnParser",
         "docs/cutover/evaluation_gates/closure_report.md",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/state_evaluation/comparison_readiness.json"
       ],
-      "next_action": "Continue offline evaluation and recorded replays. Restore access using existing configured provider credentials before the next bounded live benchmark; do not substitute a different model or relax acceptance.",
+      "next_action": "Restore existing provider access, verify actual availability of qwen3.6-plus, qwen3.8-max and deepseek-v4-pro, and run the required bounded paired benchmark after Gold is stable. Extra qwen3.7-plus probes do not replace requested candidates.",
       "blocks_offline_evaluation_globally": false,
       "production_gate_only": false
     },
@@ -289,10 +291,10 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "f15969dcc0f90e75a399a3d80d4a489d58139dec",
+  "latest_source_delivery_baseline": "66c11a1bfa414ba63b4592cb5ff3713492a5b324",
   "gate_authority": "USER_DECISION_2026_09_09",
   "gate_matrix": "docs/cutover/evaluation_gates/gate_matrix.json",
   "open_count_scope": "Production replacement acceptance; not eligibility to execute offline evaluation",
-  "current_stage": "CURRENT_TURN_REPRESENTATION_REPAIR_AND_SEMANTIC_EVALUATION",
+  "current_stage": "MULTITURN_STATE_GOLD_AND_COMPONENT_EVALUATOR",
   "offline_evaluation_eligible": true
 }

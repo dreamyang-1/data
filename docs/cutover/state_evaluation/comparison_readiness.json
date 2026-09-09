@@ -1,0 +1,35 @@
+{
+  "status": "NOT_COMPARABLE_YET",
+  "v1_component": "V1_RULE_AND_DATASET_SERVICES",
+  "v1_observation_mode": "RULE_SERVICE_OFFLINE",
+  "v2_full_corpus_observation": null,
+  "v2_adapter_validation": "Actual scoped RawTurnPlanner outputs using synthetic scripted-model integration controls; ADD state and Pending ASK/ANSWER verified.",
+  "live_model_blocker": "User-requested single retry at 2026-09-09T02:46:37Z again returned HTTP401 invalid_api_key. See model_retry.json.",
+  "required_model_candidates": [
+    "qwen3.6-plus",
+    "qwen3.8-max",
+    "deepseek-v4-pro"
+  ],
+  "candidate_status": "Verify actual official interface/account availability for the requested models after configured access is restored. Prior qwen3.7-plus probes do not replace this requirement.",
+  "full_v1_v2_quality_delta": null,
+  "real_model_requests": 1,
+  "offline_evaluation_model_calls": 0,
+  "production_external_writes": 0,
+  "gold_inventory": {
+    "unchanged_axis_cases": 100,
+    "new_transition_records": 20,
+    "record_count": 120,
+    "independent_business_failures_claimed": false,
+    "full_gold_complete": false
+  },
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "transition_gold_hash": "f9307933e72e2c85fe189dcdad6855edfa09dce85926e761539beee2f621f825"
+}

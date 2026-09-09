@@ -1,0 +1,103 @@
+{
+  "baseline_commit": "66c11a1bfa414ba63b4592cb5ff3713492a5b324",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline_counts": {
+        "passed": 2769,
+        "failed": 27
+      },
+      "final_counts": {
+        "passed": 2799,
+        "failed": 27
+      },
+      "baseline_evidence": "../parser_repairs/test_delta.json plus ../evaluation_gates/final_DataAnalysis_Agent.json",
+      "final_receipt_sha256": "ca2378492621f2d4dc7b995e53303b142d9a4af66a2f2778946ca306bc0feef5",
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {
+        "tests/test_cutover_transition_evaluator.py::test_fixed_catalog_gold_has_twenty_reviewed_transitions_not_complete_labels": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_missing_observations_never_turn_into_perfect_safety_or_shrunk_denominators[missing]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_missing_observations_never_turn_into_perfect_safety_or_shrunk_denominators[failed]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_missing_observations_never_turn_into_perfect_safety_or_shrunk_denominators[not_run]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_missing_observations_never_turn_into_perfect_safety_or_shrunk_denominators[partial]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_state_and_operation_contrasts_fail_independently[metric_surfaces-bad0]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_state_and_operation_contrasts_fail_independently[metric_surfaces-bad1]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_state_and_operation_contrasts_fail_independently[canonical_metrics-bad2]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_state_and_operation_contrasts_fail_independently[target_task-NEW]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_state_and_operation_contrasts_fail_independently[metric_operations-bad4]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_collection_order_can_differ_but_types_and_duplicates_cannot": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_invalid_or_mixed_receipts_are_rejected[catalog]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_invalid_or_mixed_receipts_are_rejected[scope]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_invalid_or_mixed_receipts_are_rejected[duplicate]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_invalid_or_mixed_receipts_are_rejected[unknown]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_invalid_or_mixed_receipts_are_rejected[mode]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_invalid_or_mixed_receipts_are_rejected[component]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_invalid_or_mixed_receipts_are_rejected[safety_type]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_a_safety_violation_is_not_hidden_by_perfect_semantic_axes": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_unlabeled_scope_safety_violation_is_not_discarded": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_gold_requires_authoritative_scoped_label_evidence[hash]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_gold_requires_authoritative_scoped_label_evidence[unknown_axis]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_gold_requires_authoritative_scoped_label_evidence[unknown_fact]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_gold_requires_authoritative_scoped_label_evidence[no_evidence]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_gold_requires_authoritative_scoped_label_evidence[unknown_safety]": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_v1_actual_service_observation_never_reads_expected_answers": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_actual_v1_dataset_limit_and_global_rank_contrast": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_runner_denies_connect_and_restores_process_boundary": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_v2_adapter_reads_actual_scoped_multiturn_state_and_patch_without_gold": "passed",
+        "tests/test_cutover_transition_evaluator.py::test_v2_actual_pending_ask_and_answer_remain_distinct_observations": "passed"
+      },
+      "removed_tests": [],
+      "collection_errors": [],
+      "unchanged_existing_node_outcomes": true,
+      "real_model_calls": 0,
+      "production_external_writes": 0,
+      "critical": {
+        "passed": 160,
+        "failed": 0
+      },
+      "clarification_coverage": {
+        "public_clarification_responses": 89,
+        "with_reason_trace": 89
+      }
+    },
+    "Oagnet": {
+      "baseline_counts": {
+        "passed": 663,
+        "failed": 8
+      },
+      "final_counts": {
+        "passed": 663,
+        "failed": 8
+      },
+      "baseline_evidence": "../parser_repairs/test_delta.json plus ../evaluation_gates/final_Oagnet.json",
+      "final_receipt_sha256": "79b32909c6165535d980c2d31c84c79fa64f95c01b7a39adec3fed5a39b7c6a7",
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {},
+      "removed_tests": [],
+      "collection_errors": [],
+      "unchanged_existing_node_outcomes": true,
+      "real_model_calls": 0,
+      "production_external_writes": 0
+    },
+    "SQL_Translator": {
+      "baseline_counts": {
+        "passed": 381
+      },
+      "final_counts": {
+        "passed": 381
+      },
+      "baseline_evidence": "../parser_repairs/test_delta.json plus ../evaluation_gates/final_SQL_Translator.json",
+      "final_receipt_sha256": "ff47ab9bcb6773bb0421db0a9646800f27bf1c1f9f432901e13a9cd3f416abe1",
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {},
+      "removed_tests": [],
+      "collection_errors": [],
+      "unchanged_existing_node_outcomes": true,
+      "real_model_calls": 0,
+      "production_external_writes": 0
+    }
+  },
+  "receipt_policy": "Committed baseline outcomes plus exact new-test deltas reconstruct final outcomes. Final full receipt hashes retained; unchanged archives not duplicated."
+}
