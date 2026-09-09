@@ -1,9 +1,9 @@
 {
   "status": "PASS_PRECOMMIT_ALIGNMENT",
-  "baseline_commit": "4f23205198576cc42cb4cb0823a85917e9c0b511",
-  "feature_branch": "evaluation-harness-closure-20260909t083000z",
-  "tracked_and_manifest_files": 1370,
+  "source_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+  "stage_baseline_commit": "ec48f654d6bcaa48ed09d41d7aca4fcbaedcd82e",
+  "tracked_and_manifest_files": 1409,
   "unexpected_source_drift": 0,
   "normalization": "CRLF to LF only",
-  "post_commit_gate": "Every mapped development file = repository file = Git blob; clean tree; original Oagnet HEAD/index preserved"
+  "final_gate": "After evidence commit: every mapped development file equals repository file and Git blob; working tree clean; original Oagnet HEAD/index unchanged."
 }

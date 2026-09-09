@@ -1,0 +1,192 @@
+{
+  "same_raw_runtime_entry": false,
+  "receipts": [
+    {
+      "case_id": "S81-001",
+      "turn_index": 0,
+      "logical_input_hash": "1455d70898dc785490b713df6867c52789fe8ff1c55f6eb2b298d8f2e8de7d20",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "1bc2051c9570875f96971631544304d4de3034b0e1ec8af53d1ff7d26d3a0b69",
+      "native_result_hash": "c5c17f137d0a23f1d21599a4c59c552eb9a844dbcbcc77e70eaf6b2a6505dc3f",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-001",
+      "turn_index": 1,
+      "logical_input_hash": "c2bc98f3916298ccdcdb7c277e84882b9c8f1bb3479d2bf2dc18a1db76e59b39",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "b67f418318b5f982366d090a34faee9e91e26caff56af2808a554a8680d69620",
+      "native_result_hash": "4b050211068e3323859b5125d4bb51ece54e55877120ebfa3a6ad3ac0afa877e",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-002",
+      "turn_index": 0,
+      "logical_input_hash": "6df6ab01008f1b92f04b8cb9081337f746dda56c14ee419b700e96a53a2c6d4c",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "1bc2051c9570875f96971631544304d4de3034b0e1ec8af53d1ff7d26d3a0b69",
+      "native_result_hash": "c5c17f137d0a23f1d21599a4c59c552eb9a844dbcbcc77e70eaf6b2a6505dc3f",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-002",
+      "turn_index": 1,
+      "logical_input_hash": "60de322d2e5707a8a1b6d9c16f90cc8e4ddcc97f8a75a662883fafa1f5ae408c",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "4b7acba197b3e53b3cf2692117dc9c7f8cc64b87b28375c76f63bec0a5b55a95",
+      "native_result_hash": "4a77d9cb62135afc1010a46e3ae86129c2b2696221ed06c80fffd8f9af52ddbd",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-003",
+      "turn_index": 0,
+      "logical_input_hash": "099bb8b7d43f76acece811f8e63a0a5ad0a4882619006ed8558be32a56b50815",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "7013d5f08737378dd46e67a524a7e4c32f1850a74bfcbdf35fc2b88a994654e9",
+      "native_result_hash": "c51fb5298e22aaef04eec1cf8805673e3ff68a266b88f69ee1c084f6bc8e3c02",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-003",
+      "turn_index": 1,
+      "logical_input_hash": "5345bd7437c4781f82e85c8233522cc962c73945402fc80b2c2764a398ccfd8e",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "bcf0c9638bf727897a7d80cda1b2f7a80286300758d3b579eff2e832a1c00641",
+      "native_result_hash": "b3100f36d71211cd9058012df58d6ea220a0db8c3cac668aad452f6ab4835daf",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-011",
+      "turn_index": 0,
+      "logical_input_hash": "08b9e938ac9a1db2f9f79a43ad9d883b09ace382be899a1276d5849dd2e238f2",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "2f14bf09adbbd65e1e3e090678dd09293c9246ebff338fca659b3698da35e0ee",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-011",
+      "turn_index": 1,
+      "logical_input_hash": "17b43d701ecc32922dc6730373e3c628455c4df3ede08d69a60cdd9e7b396b19",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "c83ab455a4e453003de360ab9255e973fb747397160cbda5768ff60e4111d48d",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-012",
+      "turn_index": 0,
+      "logical_input_hash": "a9e5e10bdc35555598c0b6419558504415d6958a30f8a4131ec19723da2105a2",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "b92b8f3f4b50b5ff63deae17d29d69d754a667bd2f4a6e4579d7b2c2efb065e1",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-013",
+      "turn_index": 0,
+      "logical_input_hash": "5aa20cc2362a5899441b1cd5d1b0a247928a64f98999d7f10327e1f28abf3fd1",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "361aee1bd082fca98827c7c91b526ca6a6f20294cccd6a1329cb9706443e2905",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-013",
+      "turn_index": 1,
+      "logical_input_hash": "28fa7000677165f280df296816b0137a3d67a6bd1085fdd362a12166d552d583",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "9ca9f3c31d76dd54d417c314c7fff4d4ebe8946e699fd6b82a049d45043fd899",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 0,
+      "logical_input_hash": "1bb07d55364fa26a4972d7ed7cc9891fc214b8b4dfc538d65fb441c1e7902b62",
+      "lowering_status": "UNSUPPORTED",
+      "lowering_hash": "b16e89d6a1af5b98c1a21961dd60ffaae3841b80623f0172b4eb17b3f64926b2",
+      "native_result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "native_success": null,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 1,
+      "logical_input_hash": "07afd53f1c0618b3390da6adea190009dfd2d1eaa592a67288284a7edbbcde08",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "b221143a00e9f56265daa2604be381133408b9913ef7f172db27c09ff96736d3",
+      "native_result_hash": "2896b49076da5189e7ffa7116713c9b273087b42a8673e78072d3c0af890b2ad",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 2,
+      "logical_input_hash": "3018b68af2a25741e5dc6de3613258659630ecb05fd93e5088ad51fb842e66b0",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "65e06e4b98c491218390365e5c40e22499385c9589cb7f04e8f6cdbeb612449c",
+      "native_result_hash": "df75833a1ae4ce7595bc667c35167544f5a2ccf743d7788015d2f8818943bcd9",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-017",
+      "turn_index": 0,
+      "logical_input_hash": "3d2e3839fb9e7b4bf8320f092a4233d3697e245e1c6eca96a07cff26038b008c",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "6d7a646dbdd0df1a8e95d213d7b83633c57ffc778f61e4833dee672b533029a0",
+      "native_result_hash": "b3100f36d71211cd9058012df58d6ea220a0db8c3cac668aad452f6ab4835daf",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-017",
+      "turn_index": 1,
+      "logical_input_hash": "d7f5d36a8badc0520987f8335b10be7d188d2583a375b695bf6eb96a9b41e50c",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "da052556bd45558a14588e600c5771ccccd9f585358edadc2cf384f7850215ff",
+      "native_result_hash": "a13388e4043ee0b754d1aaf08460eb270a7bcc99a28d9f96a6260c268580cdca",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    },
+    {
+      "case_id": "S81-017",
+      "turn_index": 2,
+      "logical_input_hash": "19255bfe4636a85db45e3a6a59b542ac34a64db18959191d907e0fbf633e05aa",
+      "lowering_status": "SUPPORTED_PLAN_ONLY",
+      "lowering_hash": "2b33d057ab5ce675dec1f501231d6e20a3c4aff61ce4141bbd8abff732a14603",
+      "native_result_hash": "c51fb5298e22aaef04eec1cf8805673e3ff68a266b88f69ee1c084f6bc8e3c02",
+      "native_success": true,
+      "same_raw_runtime_entry": false,
+      "SQL_executed": false
+    }
+  ]
+}

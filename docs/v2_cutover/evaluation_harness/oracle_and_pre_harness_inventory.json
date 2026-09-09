@@ -1,0 +1,164 @@
+{
+  "status": "HISTORICAL_COMPONENT_EVIDENCE_NOT_CURRENT_GOLD_ACCURACY",
+  "replay_sources": [
+    {
+      "path": "docs/cutover/parser_repairs/recorded_replay.json",
+      "sha256": "e14db9941928a7e0455a9d0476d6bb8dc1550bb7c56bf72cf5597ff26c453ff6",
+      "receipt_rows": 10,
+      "modes": {
+        "PARSER_REPRESENTATION_CONTROL": 10
+      },
+      "case_ids": [
+        "G81-020",
+        "G81-040",
+        "G81-056",
+        "G81-072",
+        "G81-074",
+        "G81-076",
+        "G81-083",
+        "G81-093",
+        "G81-099",
+        "G81-100"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": false
+    },
+    {
+      "path": "docs/v2_cutover/compound_mentions/targeted_observation_evidence.json",
+      "sha256": "e2b258bfdb56a44830e75900aae15bbfeb10b2c61071a0c6cd20d32ddb914ab4",
+      "receipt_rows": 3,
+      "modes": {
+        "RECORDED_MODEL_PIPELINE": 3
+      },
+      "case_ids": [
+        "S81-014"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": false
+    },
+    {
+      "path": "docs/v2_cutover/governed_time/recorded_time_receipts.json",
+      "sha256": "aacbe35799b579a1ab3bf34b043b829ca93dfb96ce58328bb7c5be50b78e9492",
+      "receipt_rows": 2,
+      "modes": {
+        "RECORDED_MODEL_PIPELINE": 1,
+        "RECORDED_OUTPUT_ORACLE_INTERVENTION": 1
+      },
+      "case_ids": [
+        "S81-014"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": false
+    },
+    {
+      "path": "docs/v2_cutover/recorded_oracle/replay_receipts.json",
+      "sha256": "99882f49c74ad7dd522a323df4b9bf597e95a4e2319182a271a02984dc9fcafa",
+      "receipt_rows": 28,
+      "modes": {
+        "RECORDED_MODEL_PIPELINE": 24,
+        "RECORDED_OUTPUT_ORACLE_INTERVENTION": 4
+      },
+      "case_ids": [
+        "S81-001",
+        "S81-002",
+        "S81-003",
+        "S81-004",
+        "S81-005",
+        "S81-006",
+        "S81-007",
+        "S81-008",
+        "S81-009",
+        "S81-010",
+        "S81-011",
+        "S81-012",
+        "S81-013",
+        "S81-014",
+        "S81-015",
+        "S81-017"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": false
+    },
+    {
+      "path": "docs/v2_cutover/temporal_authority/replay_receipts.json",
+      "sha256": "21e84760618b5aaa8f6c6e1c132a3b0ce76ce51dbb85d1f11079e24f82bb56b3",
+      "receipt_rows": 25,
+      "modes": {
+        "RECORDED_MODEL_PIPELINE": 25
+      },
+      "case_ids": [
+        "S81-001",
+        "S81-002",
+        "S81-003",
+        "S81-004",
+        "S81-005",
+        "S81-006",
+        "S81-007",
+        "S81-008",
+        "S81-009",
+        "S81-010",
+        "S81-011",
+        "S81-012",
+        "S81-013",
+        "S81-014",
+        "S81-015",
+        "S81-017"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": false
+    },
+    {
+      "path": "docs/v2_cutover/value_probe/replay_receipts.json",
+      "sha256": "8c2bdcbc336ba9bebd11215434a4e8d87064e47a00a7bb3773aa2f232caf3f1e",
+      "receipt_rows": 26,
+      "modes": {
+        "RECORDED_MODEL_PIPELINE": 26
+      },
+      "case_ids": [
+        "S81-001",
+        "S81-002",
+        "S81-003",
+        "S81-004",
+        "S81-005",
+        "S81-006",
+        "S81-007",
+        "S81-008",
+        "S81-009",
+        "S81-010",
+        "S81-011",
+        "S81-012",
+        "S81-013",
+        "S81-014",
+        "S81-015",
+        "S81-017"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": true
+    }
+  ],
+  "oracle_sources": [
+    {
+      "path": "docs/v2_cutover/oracle_evaluation_report.json",
+      "sha256": "eea61ef9c13561bb4b70953379f4422ebcd759f382932aba0e70994ac156e0c4"
+    },
+    {
+      "path": "docs/v2_cutover/replacement_oracle/recorded_candidate_evidence.json",
+      "sha256": "8a86eedd77fd5af5e9f1345b12171a3b7aafc163c04827f88d0a83db95c84732"
+    },
+    {
+      "path": "docs/v2_cutover/recorded_oracle/temporal_candidate_evidence.json",
+      "sha256": "5686243ec0d1a290ec9998523ee77d3772053d0ef9c1e75298cdb47dd4a87197"
+    },
+    {
+      "path": "docs/v2_cutover/value_probe/probe_component_receipt.json",
+      "sha256": "5847e15007538f0f3a3b00b7b2dc61732175aca34469d8bcce9420995c4c8e2e"
+    }
+  ],
+  "parser_control_receipts": 10,
+  "total_old_receipt_rows": 94,
+  "unique_raw_capture_hashes": 77,
+  "final_old_raw_replay": "historical_replay_inventory.json",
+  "full_oracle_suite_completed": false,
+  "historical_outputs_or_labels_modified": false,
+  "current_formal_baseline": "evaluation_baseline_manifest.json"
+}

@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "evaluator_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+  "evidence_files": 45,
+  "evidence_hash": "3d79df93bdc0945828a9a7ddbc823c9e5962b451fc73962d5c7f7fa3d59bb6fd",
+  "new_replayed_turns": 172,
+  "model_calls_in_verification": 0,
+  "production_writes": 0,
+  "stage_readiness": "EVALUATION_HARNESS_NOT_READY"
+}

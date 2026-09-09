@@ -1,0 +1,769 @@
+{
+  "contract": "runtime-evaluation-harness-v1",
+  "evaluator_version": "runtime-evaluation-harness-v1",
+  "evaluator_git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+  "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+  "evaluator_files": {
+    "tools/cutover/harness_contract.py": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
+    "tools/cutover/harness_corpus.py": "6d3e6d5993387c6135f047b6821b47b1317e1b27a0ac4cbbdac0706f00ec6454",
+    "tools/cutover/harness_fixtures.py": "db3f29f10d10a764f2b51a4300427291a362165896a48019c2c8e21d220a8a7b",
+    "tools/cutover/harness_observation.py": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b",
+    "tools/cutover/harness_runtime.py": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+    "tools/cutover/harness_replay.py": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
+    "tools/cutover/harness_splits.py": "0e8bd22147b2072c427de4ba9657eef8a5671bf5f0e413fa7962691874abd90f",
+    "tools/cutover/harness_manifest.py": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
+    "tools/cutover/harness_safety.py": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
+    "tools/cutover/harness_cli.py": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+    "tools/cutover/harness_dryplan.py": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
+    "tools/cutover/harness_transport_replay.py": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
+    "tools/cutover/harness_replay_corpus.py": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
+    "tools/cutover/run_raw_transition_benchmark.py": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
+    "tools/cutover/transition_observations.py": "106460a9ba5ff70f383f11463df8cb5e362d374fdce82e8d6ca4121c65bde6ba",
+    "tools/cutover/frozen_source_values.py": "8209b7402e95cdfc1bdec563826f5bd94d999269a54b38081c047a52dcdfdd6a",
+    "tools/cutover/transition_evaluator.py": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2"
+  },
+  "corpus": "PRIVATE_VALIDATION",
+  "mode": "RECORDED_RUNTIME_REEVALUATION",
+  "gold_hash": "782c9c7b01a848d04f6a0ec72115b0f9979b6fd1e362050f6c05d7ec862732a2",
+  "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "candidate_snapshot_hash": "d7668b20c8f611570829a6b4115d8c7dd5d19e4b051bc271e93810579276d007",
+  "as_of": "2026-09-09T09:00:00+08:00",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "capture_runtime_commit": "871183e62ada81c5526e51948a7e11ba2d3c8908",
+  "observation_contract": "IMMUTABLE_NATIVE_CALL_TRACES_WITH_EXACT_REPLAY",
+  "runtime_parity_verified": true,
+  "runtime_parity_boundary": "RawTurnPlanner only; see artifact matrix for excluded capabilities",
+  "baseline_manifest_hash": "e3f1030df2531f12f6a483d3af4fe8619f33b8fd872801e639aaf94a5fc1eab9",
+  "case_count": 24,
+  "turn_count": 40,
+  "executed_turn_count": 37,
+  "evaluable_case_count": 21,
+  "fully_evaluable_case_count": 1,
+  "status_counts": {
+    "PASS": 0,
+    "FAIL": 24,
+    "NOT_RUN": 0,
+    "BLOCKED": 0
+  },
+  "CASE_LEVEL": {
+    "exact_match": {
+      "n": 0,
+      "N": 24,
+      "value": 0.0,
+      "evidence": "EVIDENCE_INSUFFICIENT"
+    },
+    "excluded_not_run_or_blocked": 0,
+    "fully_labeled_axis_coverage": {
+      "n": 1,
+      "N": 24,
+      "value": 0.041666666666666664,
+      "evidence": "EVIDENCE_INSUFFICIENT"
+    }
+  },
+  "TURN_LEVEL": {
+    "semantic_match": {
+      "n": 0,
+      "N": 21,
+      "value": 0.0,
+      "evidence": "EVIDENCE_INSUFFICIENT"
+    },
+    "unlabeled_or_unobserved": 19,
+    "turns_are_correlated": "Do not treat turns as independent case samples"
+  },
+  "FULL_PLAN_GOLD_COUNT": 0,
+  "WHOLE_PLAN_PASS": 0,
+  "WHOLE_PLAN_FAIL": 0,
+  "WHOLE_PLAN_UNOBSERVED": 0,
+  "POST_HARNESS_FIRST_DIVERGENCE": {
+    "SEMANTIC_QUERY_IR": 6,
+    "TURN_RESOLUTION": 13,
+    "SEMANTIC_ROLE": 1,
+    "TASK_OPERATION": 2,
+    "MENTION_BOUNDARY": 2
+  },
+  "details": [
+    {
+      "case_id": "PV81-001",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_RECOGNITION_UNRESOLVED"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-002",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-003",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-004",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_RECOGNITION_UNRESOLVED"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-005",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "PASS",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-006",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-007",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_ROLE",
+        "reason_code": "V2_RELATION_BINDING_ROLE_CONFLICT"
+      },
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-008",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-009",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "canonical_metrics",
+        "turn_relation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_PAYLOAD_WOULD_DROP_BINDING"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-010",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-011",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-012",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-013",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_RECOGNITION_UNRESOLVED"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-014",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-015",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-016",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-017",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-018",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-019",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_RECOGNITION_UNRESOLVED"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-020",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-021",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "canonical_metrics",
+        "turn_relation"
+      ],
+      "error": {
+        "type": "RUNTIME_ERROR",
+        "stage": "MENTION_BOUNDARY",
+        "reason_code": "CONTRACT_OR_HARNESS_FAILURE"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-022",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_RECOGNITION_UNRESOLVED"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-023",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "PV81-024",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "canonical_metrics",
+        "turn_relation"
+      ],
+      "error": {
+        "type": "RUNTIME_ERROR",
+        "stage": "MENTION_BOUNDARY",
+        "reason_code": "CONTRACT_OR_HARNESS_FAILURE"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false
+    }
+  ],
+  "production_cutover_pass": false,
+  "stage_observation_coverage": {
+    "AuthorizedSemanticScope": {
+      "observed_turns": 37,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "CandidateSet": {
+      "observed_turns": 35,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "CanonicalBinding": {
+      "observed_turns": 30,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "CatalogSnapshot": {
+      "observed_turns": 37,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "CurrentClock": {
+      "observed_turns": 37,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "CurrentTurnParseInput": {
+      "observed_turns": 37,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "DatasetReference": {
+      "observed_turns": 37,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "HistoricalTasks": {
+      "observed_turns": 35,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "LogicalPlan": {
+      "observed_turns": 14,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "ModelInput": {
+      "observed_turns": 37,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "PendingState": {
+      "observed_turns": 37,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "PreviousTask": {
+      "observed_turns": 37,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "RecentTasks": {
+      "observed_turns": 37,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "SemanticQueryIR": {
+      "observed_turns": 15,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "SemanticResolutionInput": {
+      "observed_turns": 14,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "TaskPatchInput": {
+      "observed_turns": 30,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "TaskSemanticState": {
+      "observed_turns": 15,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    },
+    "TurnResolutionInput": {
+      "observed_turns": 35,
+      "executed_turn_denominator": 37,
+      "required_turn_denominator": 40
+    }
+  },
+  "real_model_calls": 0,
+  "source_capture_model_calls": 72,
+  "source_SQL_calls": 0,
+  "milvus_calls": 0,
+  "production_redis_writes": 0,
+  "production_state_mutations": 0,
+  "formal_model_benchmark": false,
+  "blind_holdout_run": false,
+  "full_production_orchestrator": false,
+  "fixture_receipts": {},
+  "capture_manifest_hash": "35d6f5bc371f3065857ce47fe7f4f5c19c495fb9be9db0afb6affc634459bc0e"
+}
