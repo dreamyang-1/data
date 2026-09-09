@@ -1,10 +1,10 @@
 {
-  "baseline_commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
-  "feature_branch": "cutover-replacement-oracle-20260909t045212z",
+  "baseline_commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
+  "feature_branch": "cutover-source-evidence-20260909t052100z",
   "final_commit": "Commit containing this manifest",
-  "planned_subject": "cutover: normalize scoped singleton collection replacements",
-  "runtime_source_changed": true,
+  "planned_subject": "cutover: verify frozen source evidence and capture full evaluation turns",
+  "runtime_source_changed": false,
   "evidence": "closure_report.md and test_delta.json",
-  "draft_pr_base": "cutover-task-context-20260909t042538z",
-  "stage_baseline": "299513e6d0b7d02f7e7dffb68feeeba4f677f071"
+  "draft_pr_base": "cutover-replacement-oracle-20260909t045212z",
+  "stage_baseline": "9696077296b29ee8eb9d381c60e376053d4cf035"
 }

@@ -51,6 +51,38 @@ async def test_real_scoped_planner_observes_state_without_reading_expected_answe
 
 
 @pytest.mark.asyncio
+async def test_private_capture_includes_success_inputs_candidates_and_actual_state(inputs):
+    from tools.cutover.evaluation_contract import digest
+    rows,catalog,raw,settings,steps=inputs;captures=[]
+    result=await run(rows,catalog,raw,settings,transport=httpx.MockTransport(ScriptedTransport(steps)),private_capture=captures.append)
+    assert result['evaluation']['private_capture_turns']==result['evaluation']['observed_turns']==2
+    first,current=captures
+    assert first['before']['state'] is None
+    assert current['before']['state']==first['result']['next_state']
+    assert current['before']['plans']==[first['result']['plan_state']]
+    for capture,record in zip(captures,result['turns']):
+        assert record['private_capture_hash']==digest(capture)
+        assert len(capture['exchanges'])==len(capture['outputs'])==2
+        assert all(e['status']==200 and e['raw_content'] for e in capture['exchanges'])
+        context=json.loads(capture['exchanges'][1]['request_body']['messages'][1]['content'])
+        assert context['catalog_candidates'] and capture['scope']==catalog['scope']
+        assert capture['result']['plan']['backend_contract']['mode']=='SHADOW_ONLY'
+    assert 'private-test-token' not in json.dumps(captures)
+    assert 'request_body' not in json.dumps(result)
+
+
+@pytest.mark.asyncio
+async def test_capture_is_absent_unless_opted_in_and_callback_failure_is_visible(inputs):
+    rows,catalog,raw,settings,steps=inputs
+    result=await run(rows,catalog,raw,settings,transport=httpx.MockTransport(ScriptedTransport(steps)))
+    assert result['evaluation']['private_capture_turns']==0
+    assert all('private_capture_hash' not in r for r in result['turns'])
+    def broken(_):raise OSError('private evidence disk unavailable')
+    with pytest.raises(OSError,match='disk unavailable'):
+        await run(rows,catalog,raw,settings,transport=httpx.MockTransport(ScriptedTransport(steps)),private_capture=broken)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize('fixture',['pending','dataset'])
 async def test_missing_state_fixture_stays_unobserved_without_model_calls(inputs,fixture):
     rows,catalog,raw,settings,_=inputs

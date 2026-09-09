@@ -1,120 +1,130 @@
 {
-  "baseline_commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
-  "feature_branch": "cutover-replacement-oracle-20260909t045212z",
+  "baseline_commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
+  "feature_branch": "cutover-source-evidence-20260909t052100z",
   "files": [
     {
-      "repository_path": "app/semantic_v2/recognition.py",
-      "development_sha256": "8f8770eba084460f32b2fa05d2102a9effd04ebe207da23c081df05a43f3590f",
-      "normalized_sha256": "6e825018dff11474e4fa85a756f6e2d29d9095c5d9aa27050c2d553ca233b30a",
-      "baseline_sha256": "3f8ee3153af1dd7fe6eeb185467d1c7563deb27fa14ebeae0b53435c5331f40e"
+      "repository_path": "tools/cutover/frozen_source_values.py",
+      "development_sha256": "0d1d6cc154abdf8d54f7cbbc68af276d70af1e673b9397c52b5ea2b7fe8c3e93",
+      "normalized_sha256": "0d1d6cc154abdf8d54f7cbbc68af276d70af1e673b9397c52b5ea2b7fe8c3e93",
+      "baseline_sha256": null
     },
     {
-      "repository_path": "tests/test_v2_raw_turn_recognition.py",
-      "development_sha256": "5d8b1f15c1caa5a822dd4d24cd9604da58aa2190385c8bb885cda43cde123384",
-      "normalized_sha256": "5d8b1f15c1caa5a822dd4d24cd9604da58aa2190385c8bb885cda43cde123384",
-      "baseline_sha256": "e5c829e981e92fd9be1355750f0e0e79233d1992e46c1e3a4caf49aaa979361f"
+      "repository_path": "tools/cutover/capture_source_values.py",
+      "development_sha256": "41ee00e7e29f0456718716eab35d09dd262f2eaa706ee317ace09b950ef363c1",
+      "normalized_sha256": "41ee00e7e29f0456718716eab35d09dd262f2eaa706ee317ace09b950ef363c1",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "tools/cutover/run_raw_transition_benchmark.py",
+      "development_sha256": "02c4a6cf5bfd9ae91080715c3d4261b65574cbaeb7a61b272373c00769f7efae",
+      "normalized_sha256": "02c4a6cf5bfd9ae91080715c3d4261b65574cbaeb7a61b272373c00769f7efae",
+      "baseline_sha256": "08409fced98a34c96f57a895c72da5f01c43ef30d6a74912059f19b59e42c7d2"
+    },
+    {
+      "repository_path": "tools/cutover/transition_observations.py",
+      "development_sha256": "68cc0d7f2960a93f4d55d431b97b5accfd735af16383d6211b2381879b52406c",
+      "normalized_sha256": "68cc0d7f2960a93f4d55d431b97b5accfd735af16383d6211b2381879b52406c",
+      "baseline_sha256": "138e61448ed422e0fb6ddb7c0639fb916a2b16af74e2ddd634b3580bc6dff15d"
+    },
+    {
+      "repository_path": "tests/test_cutover_frozen_source_values.py",
+      "development_sha256": "55011f46819fc87f6507cb5b4218e3861fcf2f164d285be06b162bca0012fbc2",
+      "normalized_sha256": "55011f46819fc87f6507cb5b4218e3861fcf2f164d285be06b162bca0012fbc2",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "tests/test_cutover_raw_transition_benchmark.py",
+      "development_sha256": "94926ffee88d454b7dc6afac628d0f7f1601cf9ea7f4bc13c7e63fda7ec268de",
+      "normalized_sha256": "94926ffee88d454b7dc6afac628d0f7f1601cf9ea7f4bc13c7e63fda7ec268de",
+      "baseline_sha256": "e5b927282f36cf1f85a0cf7c6acfe8bf2c630a5fddc21eecf726615acdb55292"
     },
     {
       "repository_path": "docs/v2_cutover/closure_report.md",
-      "development_sha256": "ebfe8c02eddc8afa699922b85c61c36d2fa94ace97367b7f9dd3a728d18f1ebe",
-      "normalized_sha256": "866450ade9f4b3b07c46dbc5aa5a1a0dc6947bfe131e24df3c6eb4ee92a0b48a",
-      "baseline_sha256": "fc3811455716c35be1ff30a76ba1de26c1c17fb48e2d4512dd528a5a9e89e5da"
-    },
-    {
-      "repository_path": "docs/v2_cutover/cutover_readiness_matrix.json",
-      "development_sha256": "e58661980cfb097efddead14d58cdf086bb73969d383c73c6e4ee58e18e1f9c6",
-      "normalized_sha256": "4246f25e53d78ceeac030a34b3e3168a9c6fa3c90bf6b116055eff926524ccaf",
-      "baseline_sha256": "6c747b61f49c9ac4f92e5638a829ace97063122e31f21a21ed4ee8a41089ccd7"
-    },
-    {
-      "repository_path": "docs/v2_cutover/first_divergence_report.json",
-      "development_sha256": "7ce7f3dc6fd08aaa1f5b8e5d49ab2d0bd22a9b65e88971e84d1ed9753a4cf3c3",
-      "normalized_sha256": "139f0f5ad6bb1a8cfb9ccce89f55969ae94a4d101dcf5d613d59982ca43d669e",
-      "baseline_sha256": "e83135779c92ddb84cd269d904fa17db632faf0ed37fca9d0adc72d095fde06b"
-    },
-    {
-      "repository_path": "docs/v2_cutover/model_benchmark_report.json",
-      "development_sha256": "8dd5d25874b257724c820e74ed3c202d72edeaa017f21aeb78114e2e10d58e5a",
-      "normalized_sha256": "b32e553a7ac14d762397d37a19f8c72d4e61ceea899a951c16be7873a3a2ff45",
-      "baseline_sha256": "029991d791c7caf77bafad4114e33d501817d8ae523855612818b831602202c5"
+      "development_sha256": "85bc34cad68350db85c62f01b312cb35da220a79a7d29ec7a452d8edc8357fb0",
+      "normalized_sha256": "55daeed0ad4f3f0c2daf0d4b3c19a3534ce79f4743c1a1c08753a74b9296c727",
+      "baseline_sha256": "866450ade9f4b3b07c46dbc5aa5a1a0dc6947bfe131e24df3c6eb4ee92a0b48a"
     },
     {
       "repository_path": "docs/v2_cutover/test_delta.json",
-      "development_sha256": "b329feae714f2e84c22c340d0876fd8fde6f5cccd7afffa485ca166b617fef14",
-      "normalized_sha256": "0eecb26b751da52ad12d230086eb4a82cd5f5b7b748e69e6152b2458bd488d06",
-      "baseline_sha256": "7a124b961d44f1e994eb68a2aa1eafc968f5fef9623c729d33aa127231aa755b"
+      "development_sha256": "0d2d7eb0d4965f43c6c5c341f36475abdf1b86b331964c6d65d9e8e1056f50dd",
+      "normalized_sha256": "24ee8a774e5aa8d8358bfa2f590ed7892afac6f0279a4727abe5f2c176c10c8c",
+      "baseline_sha256": "0eecb26b751da52ad12d230086eb4a82cd5f5b7b748e69e6152b2458bd488d06"
+    },
+    {
+      "repository_path": "docs/v2_cutover/cutover_readiness_matrix.json",
+      "development_sha256": "10335b65cc0fc6a162b36bd97e1b7c117d357359afab92e03b79161afe84d5e9",
+      "normalized_sha256": "2cfa9984196f35fac4d224f2f6fe679fb3a1edf6f5c3a1d0b1a4c803ef3f379b",
+      "baseline_sha256": "4246f25e53d78ceeac030a34b3e3168a9c6fa3c90bf6b116055eff926524ccaf"
+    },
+    {
+      "repository_path": "docs/v2_cutover/first_divergence_report.json",
+      "development_sha256": "6eb2eaac86e9185f1fc59e87fb2d3f6c6648ac3e9f883d7792abf9d44866a262",
+      "normalized_sha256": "ae190a5dccdf80415e5d0e6fde67a0737d05f8199a23889d4e2a6ebd30f7834a",
+      "baseline_sha256": "139f0f5ad6bb1a8cfb9ccce89f55969ae94a4d101dcf5d613d59982ca43d669e"
+    },
+    {
+      "repository_path": "docs/v2_cutover/model_benchmark_report.json",
+      "development_sha256": "af70c75797c8340335dba620a227e341e49436658701cc0f72c00614c69bdbbc",
+      "normalized_sha256": "2555db4d4d04ddfe5a3c156569c760832a3ab432b8a477dce8639b8bf632553d",
+      "baseline_sha256": "b32e553a7ac14d762397d37a19f8c72d4e61ceea899a951c16be7873a3a2ff45"
     },
     {
       "repository_path": "docs/v2_cutover/oracle_evaluation_report.json",
-      "development_sha256": "e1a5e38ca4fcc341edfe1ee8dcadc682e18b1c57969f8d036102ed2d41c9cc9c",
-      "normalized_sha256": "4921c013d402d6075080e9112c922020b7339a0f6d8bd89189683e4254b6c0be",
+      "development_sha256": "7defbc08ca0ffcaea8bcbab1cde1a6ede55a0e403c679917ba569c6336608bd4",
+      "normalized_sha256": "b5c7a9ceeec46c32cf03e6bbd7ee8b6b750b43d4d83c21601234bb41ea2b26ef",
+      "baseline_sha256": "4921c013d402d6075080e9112c922020b7339a0f6d8bd89189683e4254b6c0be"
+    },
+    {
+      "repository_path": "docs/v2_cutover/source_evidence/capture_coverage.json",
+      "development_sha256": "990052dfbb8df73a68aa41adbe6584e5460bffe3913a589a5a85bb9d3a51a5bc",
+      "normalized_sha256": "1e1eaafeaa02a6d017b53d3311ac46ae48e4e33d23c9730bf695b97a3de2b456",
       "baseline_sha256": null
     },
     {
-      "repository_path": "docs/v2_cutover/replacement_oracle/comparison.json",
-      "development_sha256": "291f27eb9799fa34f4ba839576e272617e86dd8ff8c5d177a0bdac9dba63877d",
-      "normalized_sha256": "8359f44ed2acc42dfbc87e18ebab97cf933b9538d3daf34cfae87ebe05eafd2f",
+      "repository_path": "docs/v2_cutover/source_evidence/comparison.json",
+      "development_sha256": "a9b0de45f2793fb1fa69a775077476ad6ae3a0dccf786d728f463b29d6ffc216",
+      "normalized_sha256": "ddeb9aeaac1d16017ac96d4bf9dfaa6b41b4bd0b97540390d22b13ccb38b3e41",
       "baseline_sha256": null
     },
     {
-      "repository_path": "docs/v2_cutover/replacement_oracle/live_final_evaluation.json",
-      "development_sha256": "6f5c0ece5a5c571043ec88c3beaaab35003030dd3f4f9503a5d71cb337be1936",
-      "normalized_sha256": "6b26116acd8d75269133b6d018dca24ff181e492cb7322cbab27b9437ab120f1",
+      "repository_path": "docs/v2_cutover/source_evidence/live_final_evaluation.json",
+      "development_sha256": "de49030020d0187be02686e57a5a1faae79519587e612888d296975a71ce5a77",
+      "normalized_sha256": "b5870b07dc5875a52fbb8284e6225213a995644a6201b7a7ea8b2e0e61994bd8",
       "baseline_sha256": null
     },
     {
-      "repository_path": "docs/v2_cutover/replacement_oracle/live_final_model_calls.json",
-      "development_sha256": "4d2cf80c5ff7c310adb569a5cda6209dc7e85ac6cecedd17217adce77e060144",
-      "normalized_sha256": "b353f6aa8e7fe84e70e76311a2703a2d727703d946ca124d1034c4a3e072826b",
+      "repository_path": "docs/v2_cutover/source_evidence/live_final_model_calls.json",
+      "development_sha256": "e7033ad51c1adfd6a8f542fd7693eee528f225246362c40530e1f5661d94a34e",
+      "normalized_sha256": "a652e44a791605933f49ac102771a9e1e7ce339fe7c14f4c5f927e89e594fbe0",
       "baseline_sha256": null
     },
     {
-      "repository_path": "docs/v2_cutover/replacement_oracle/live_final_predictions.json",
+      "repository_path": "docs/v2_cutover/source_evidence/live_final_predictions.json",
       "development_sha256": "f71d7d4292d4b63c595dd2563a83ea639532ba9b57932d1e4c2e2870be25c6d9",
       "normalized_sha256": "76771e47d467fddfd1c40aa884429e577c6a3d1129506fbf63a60bb2d6ea5b91",
       "baseline_sha256": null
     },
     {
-      "repository_path": "docs/v2_cutover/replacement_oracle/live_final_turns.json",
-      "development_sha256": "4235b700a38f66bc630a1faaf4904b214c8d393ad168bec16bdd580f24270d37",
-      "normalized_sha256": "8b623ac43c99cead30eaa6aa9a79370dc10799e65fbf0e352bf7b7cdaa9d1977",
+      "repository_path": "docs/v2_cutover/source_evidence/live_final_turns.json",
+      "development_sha256": "ad92438322fff28e579c3eba90c014ad0d7fb2538795deeded8e493cf26586ed",
+      "normalized_sha256": "58efd128cc48218d389ec0ee29bfefa43d98d734df74fff3dc728ab176457cc4",
       "baseline_sha256": null
     },
     {
-      "repository_path": "docs/v2_cutover/replacement_oracle/recorded_candidate_evidence.json",
-      "development_sha256": "9597953e878624be16b53d410d3db61aa59278828a187aff92e7c3fda3b381e5",
-      "normalized_sha256": "8a86eedd77fd5af5e9f1345b12171a3b7aafc163c04827f88d0a83db95c84732",
+      "repository_path": "docs/v2_cutover/source_evidence/region_probe_receipt.json",
+      "development_sha256": "cacff1c5f5612855ae2c513271b8d65f48030dbbdcf4ae34528889c5fb985574",
+      "normalized_sha256": "d1a960028cc3fe71fc73ee31a9fb4b10a9e221f6314bd3f6286250833c55a71f",
       "baseline_sha256": null
     },
     {
-      "repository_path": "docs/v2_cutover/replacement_oracle/targeted_repeat_evaluation.json",
-      "development_sha256": "c6bfbcb57f116445a0a8f0a9c9b8c0ba40977e55b2b4453c1182e85131c6f502",
-      "normalized_sha256": "401c39422199a47052f534a12f863da8fd77e820294aa8feb84e9a5c1fdb4be3",
-      "baseline_sha256": null
-    },
-    {
-      "repository_path": "docs/v2_cutover/replacement_oracle/targeted_repeat_model_calls.json",
-      "development_sha256": "6f8b6a441ae821607b9bd313eb73927946b3763abac7ecf90e492cc39dfedc07",
-      "normalized_sha256": "1d05040923fe531a597855b880abd2be30c652959e3a78b667c5160f7a21ee4e",
-      "baseline_sha256": null
-    },
-    {
-      "repository_path": "docs/v2_cutover/replacement_oracle/targeted_repeat_predictions.json",
-      "development_sha256": "275062c7050a3e963a0748246d5b984d0ebcf72d3e6e524d6bbf5f0d92c03d68",
-      "normalized_sha256": "ca1a03412933f6a03271ad8657df25036afa8ddedd28c56bdfe3633a1076de1b",
-      "baseline_sha256": null
-    },
-    {
-      "repository_path": "docs/v2_cutover/replacement_oracle/targeted_repeat_turns.json",
-      "development_sha256": "cc8779624dfc61b7cc0eaab83a52d344f77b55ae4e564dd173962fd70d8e3724",
-      "normalized_sha256": "da12c4a6ccef3fdbe17f3272fd0fbfd6a6962c29f9ee05397d0b1ed772b06c76",
+      "repository_path": "docs/v2_cutover/source_evidence/source_capture_receipt.json",
+      "development_sha256": "3a89669f3ca956f7438b6ab70ce4426cd3bdf7893c1656a1b33ef8c8153429da",
+      "normalized_sha256": "712ef7028d0c801b712e6217c300d34f7ae1cdbbe2bbfebe32d5c8ff5ef0f071",
       "baseline_sha256": null
     }
   ],
   "normalization": "CRLF to LF only",
-  "runtime_files_changed": [
-    "app/semantic_v2/recognition.py"
-  ],
+  "runtime_files_changed": [],
   "v1_routing_changed": false,
   "private_snapshot_or_credentials_copied": false
 }

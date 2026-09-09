@@ -177,5 +177,42 @@
     "formal_model_winner": null,
     "full_case_S81_002_pass": false,
     "whole_plan_gate": "NOT_PASSED"
+  },
+  "latest_source_evidence_stage": {
+    "evidence": "source_evidence/live_final_evaluation.json",
+    "model": "qwen3.7-max",
+    "real_model_calls": 48,
+    "source_SQL_during_model_evaluation": 0,
+    "observation_counts": {
+      "OK": 5,
+      "FAILED": 11,
+      "NOT_RUN": 4
+    },
+    "complete_private_capture_coverage": {
+      "observed_turns": 24,
+      "captured_turns": 24,
+      "model_requests": 48,
+      "successful_result_captures": 13,
+      "failed_turn_captures": 11,
+      "all_capture_hashes_verified": true,
+      "fields": [
+        "exact_model_HTTP_body_without_headers",
+        "raw_model_content",
+        "typed_outputs",
+        "before_scoped_state_pending_plans",
+        "actual_result",
+        "clock",
+        "scope",
+        "catalog_ref",
+        "source_fixture_hash",
+        "observed_outcome"
+      ],
+      "private_business_values_or_credentials_published": false,
+      "unexecuted_turns_have_no_fabricated_captures": true,
+      "full_oracle_evaluation": "NOT_COMPLETE",
+      "production_state_used": false
+    },
+    "model_quality_improvement_claimed": false,
+    "formal_model_winner_declared": false
   }
 }

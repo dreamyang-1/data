@@ -2609,5 +2609,78 @@
       "replacement_oracle/comparison.json",
       "oracle_evaluation_report.json"
     ]
+  },
+  "latest_source_evidence_stage": {
+    "baseline_commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
+    "evidence": "source_evidence/comparison.json",
+    "observed_rejections": [
+      {
+        "case_id": "S81-004",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+      },
+      {
+        "case_id": "S81-005",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+      },
+      {
+        "case_id": "S81-006",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+      },
+      {
+        "case_id": "S81-007",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      {
+        "case_id": "S81-008",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      {
+        "case_id": "S81-009",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+      },
+      {
+        "case_id": "S81-010",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+      },
+      {
+        "case_id": "S81-012",
+        "turn_index": 1,
+        "phase": "CURRENT",
+        "reason": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      {
+        "case_id": "S81-014",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+      },
+      {
+        "case_id": "S81-015",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND"
+      },
+      {
+        "case_id": "S81-017",
+        "turn_index": 2,
+        "phase": "CURRENT",
+        "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+      }
+    ],
+    "causal_limit": "The first rejecting boundary is observed. Empty exact source lookup is proven; selected field correctness and the correct short-name resolution are separate semantic questions. Joint model-output label errors do not reveal the model causal order."
   }
 }

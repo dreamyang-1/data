@@ -1,0 +1,722 @@
+[
+  {
+    "case_id": "S81-001",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "6644932f84d55bf644b0413bea9b50cb794f8e08805cb829127b389bbcbe2ac8",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 556,
+      "prompt_tokens": 2182,
+      "total_tokens": 2738
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-001",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "9f08af820f4bbfda7cfda0db978b45a70be14b1198334a063b04040e0db71c0f",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 209,
+      "prompt_tokens": 14534,
+      "total_tokens": 14743
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-001",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "eb41206da6a23865363a8966ef4fd90e2daa49b31c02ffe0f647d0087b90495e",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 347,
+      "prompt_tokens": 2180,
+      "total_tokens": 2527
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-001",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "95d397741632a726118da64605c39e3ee65304a952e9bfb7022f895dc0ccede9",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 112,
+      "prompt_tokens": 13404,
+      "total_tokens": 13516
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "6644932f84d55bf644b0413bea9b50cb794f8e08805cb829127b389bbcbe2ac8",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 556,
+      "prompt_tokens": 2182,
+      "total_tokens": 2738
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "9f08af820f4bbfda7cfda0db978b45a70be14b1198334a063b04040e0db71c0f",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 209,
+      "prompt_tokens": 14534,
+      "total_tokens": 14743
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "01ea8243dc42fe54bc0de8ca4d6245815dabba9c94d231150aad7aeae5a8f061",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 480,
+      "prompt_tokens": 2182,
+      "total_tokens": 2662
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "2710967c890ec4fa22526b16239146bee93668b25fd9dfcfd2ff76c0ce59a532",
+    "input_hash": "6944ea8c8e41753d6a510e86a84a698c135e9519d66431b05e00e15166510ab6",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 145,
+      "prompt_tokens": 14643,
+      "total_tokens": 14788
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "95f125f06920abd1c8b7d54f89de0b859380ce69496bcdf268d90ed4874e76d3",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 556,
+      "prompt_tokens": 2183,
+      "total_tokens": 2739
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "6d4baeda518dfdab1acd0cfe334866670c80b8e97271e22112fee4a9c962ce55",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 209,
+      "prompt_tokens": 14535,
+      "total_tokens": 14744
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "0de0d801d7b14ac696ffe67ef464795e0f6bf46ae29c6c88f0561399dee171ac",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 348,
+      "prompt_tokens": 2180,
+      "total_tokens": 2528
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "096b82ecdea3bf1a300f0e1e6a452790a4aac45cc1932eefc1ed0803f33dafe6",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 115,
+      "prompt_tokens": 13405,
+      "total_tokens": 13520
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-004",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "4b5a3dacdb4776a3bd5b71aecdf0c7594be67626eaf69fb601c59c416dcec2ed",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 725,
+      "prompt_tokens": 2182,
+      "total_tokens": 2907
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-004",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "66e8d7159cd74119b3fd2c05dbea50d4f5b4c7daa7a2910d82986b05ba653ea2",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 514,
+      "prompt_tokens": 19498,
+      "total_tokens": 20012
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-005",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "4b5a3dacdb4776a3bd5b71aecdf0c7594be67626eaf69fb601c59c416dcec2ed",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 725,
+      "prompt_tokens": 2182,
+      "total_tokens": 2907
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-005",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "66e8d7159cd74119b3fd2c05dbea50d4f5b4c7daa7a2910d82986b05ba653ea2",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 495,
+      "prompt_tokens": 19498,
+      "total_tokens": 19993
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-006",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "60ad40b6883b75c3973032feab3c272b10b97fc3c0ed79384168ab94f9b11d55",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 542,
+      "prompt_tokens": 2180,
+      "total_tokens": 2722
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-006",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "b6f064227ce4d7d590e1d99c198186ed6d8660ecefd3679e13131045e87c9ea0",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 341,
+      "prompt_tokens": 19373,
+      "total_tokens": 19714
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-007",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "b8918197d62ff2697aea09932b06879129b80b309ba6d58102074bc48bac9f62",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 728,
+      "prompt_tokens": 2182,
+      "total_tokens": 2910
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-007",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "607e8a5da267360c4e67dd7bbccc2e832cade6a5e9072be255eb1cdb3aee4d65",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 278,
+      "prompt_tokens": 20679,
+      "total_tokens": 20957
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-008",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "b8918197d62ff2697aea09932b06879129b80b309ba6d58102074bc48bac9f62",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 728,
+      "prompt_tokens": 2182,
+      "total_tokens": 2910
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-008",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "607e8a5da267360c4e67dd7bbccc2e832cade6a5e9072be255eb1cdb3aee4d65",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 278,
+      "prompt_tokens": 20679,
+      "total_tokens": 20957
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-009",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "4b5a3dacdb4776a3bd5b71aecdf0c7594be67626eaf69fb601c59c416dcec2ed",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 725,
+      "prompt_tokens": 2182,
+      "total_tokens": 2907
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-009",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "66e8d7159cd74119b3fd2c05dbea50d4f5b4c7daa7a2910d82986b05ba653ea2",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 608,
+      "prompt_tokens": 19498,
+      "total_tokens": 20106
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-010",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "4b5a3dacdb4776a3bd5b71aecdf0c7594be67626eaf69fb601c59c416dcec2ed",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 725,
+      "prompt_tokens": 2182,
+      "total_tokens": 2907
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-010",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "66e8d7159cd74119b3fd2c05dbea50d4f5b4c7daa7a2910d82986b05ba653ea2",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 608,
+      "prompt_tokens": 19498,
+      "total_tokens": 20106
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "5f752d77d8e87b8ffe17c426f285f712b712f0f27edf25b9aa0f46f9d6e7602c",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 535,
+      "prompt_tokens": 2182,
+      "total_tokens": 2717
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "4e2f7d337b7d07398a6164b5a6ee1ecdddb752ed0ba8e1eecbdd9f7348a22041",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 211,
+      "prompt_tokens": 14626,
+      "total_tokens": 14837
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "76f3bf38c51e88805dda2263ba0c80d778c6a804c7d58a49d1c69dd8a49e0c87",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 343,
+      "prompt_tokens": 2180,
+      "total_tokens": 2523
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "375bffa6f579226db03a37c58e69059542a9beaed68332d2dd15820bc6712950",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 116,
+      "prompt_tokens": 13469,
+      "total_tokens": 13585
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "5f752d77d8e87b8ffe17c426f285f712b712f0f27edf25b9aa0f46f9d6e7602c",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 526,
+      "prompt_tokens": 2182,
+      "total_tokens": 2708
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "c2299504d6aa3730bfc6c02f0f0c010f501989a9402fea0839327654b1094e41",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 206,
+      "prompt_tokens": 14574,
+      "total_tokens": 14780
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "754f7d168362cade5a5798bd56dd42776e1ed002e19390a7512ec062d0839f19",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 504,
+      "prompt_tokens": 2180,
+      "total_tokens": 2684
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "bcea29360be0da97452e57e7c1778b4ad3d0a83a4f95dc0dd1dd3bc3efcf19bf",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 124,
+      "prompt_tokens": 14690,
+      "total_tokens": 14814
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "ae69a821d6ec02336034e4f57568347968416a2d11a10b6d098184bb4ffdc96d",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 719,
+      "prompt_tokens": 2183,
+      "total_tokens": 2902
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "83c47f2b09a203e1ea1fc7c7c691a9f977f057e791ab596781ebabe20ee00d7d",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 298,
+      "prompt_tokens": 15870,
+      "total_tokens": 16168
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "e91a9d7bb97b74b457b46828c5e5bfac92061cba1b6ed9b6014bcf44932c78dc",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 348,
+      "prompt_tokens": 2180,
+      "total_tokens": 2528
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "c1c17332a47713b0cf4a26c6ee973d047258d8bc6b4d9087d75bdced2fad684f",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 119,
+      "prompt_tokens": 13486,
+      "total_tokens": 13605
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "a77611cf878ea0b6bb87ac0130f4b350bc44b3aee6a9be080dd0eb3b8ecd99cf",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 740,
+      "prompt_tokens": 2184,
+      "total_tokens": 2924
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "fdd1c041055d393ac24be26b8da58be8961cf89ae257a0b762c586f1d14eaa28",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 459,
+      "prompt_tokens": 18427,
+      "total_tokens": 18886
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-015",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "60ad40b6883b75c3973032feab3c272b10b97fc3c0ed79384168ab94f9b11d55",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 542,
+      "prompt_tokens": 2180,
+      "total_tokens": 2722
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-015",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "b6f064227ce4d7d590e1d99c198186ed6d8660ecefd3679e13131045e87c9ea0",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 341,
+      "prompt_tokens": 19373,
+      "total_tokens": 19714
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 0,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "5e7204865642ab812174a94ef9553017a77f1479cb1b31f0c05fb15516d3e701",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 357,
+      "prompt_tokens": 2179,
+      "total_tokens": 2536
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 0,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "043188029cf8bd9d4c006ee51fe0bc47e8aa0be5321b8fd86eed281351506687",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 115,
+      "prompt_tokens": 13302,
+      "total_tokens": 13417
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 1,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "604a3ec8b8e5fff8e20b31bd56278e2e0925a32cc71330a844e90e81186ec678",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 357,
+      "prompt_tokens": 2179,
+      "total_tokens": 2536
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 1,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "3ece567603577867a9dad94aa3c67d83db35e9df3c984d7dffc8af42af307a6a",
+    "input_hash": "db959ee010287e9c338e46e1c21c1b5e97a2d186234afee1cbd7fe2618cfe0b9",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 117,
+      "prompt_tokens": 13298,
+      "total_tokens": 13415
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 2,
+    "stage": "v2_current_turn",
+    "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "input_hash": "5c3978fe520391fcc15d818864e711c4800ccb06a2d6f2337077a0e4a6e2e511",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 561,
+      "prompt_tokens": 2185,
+      "total_tokens": 2746
+    },
+    "finish_reason": "stop"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 2,
+    "stage": "v2_semantic_edits",
+    "schema_hash": "e3a7ea4ba1027843992127ff1e4de663cd7ae1adebb9460bef40475d13aa8cfd",
+    "input_hash": "f0e1232a5b38148b7db827f12d2c8c3786d5b728fc8ce6ca09bc89c0750d3265",
+    "status": 200,
+    "returned_model": "qwen3.7-max",
+    "usage": {
+      "completion_tokens": 257,
+      "prompt_tokens": 14961,
+      "total_tokens": 15218
+    },
+    "finish_reason": "stop"
+  }
+]
