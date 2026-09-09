@@ -1,0 +1,277 @@
+[
+  {
+    "stage": "TURN_RESOLUTION",
+    "case_count": 0,
+    "case_ids": [],
+    "severity": [],
+    "cutover_blocker": false,
+    "root_cause_count": 0,
+    "one_root_fix_coverage": []
+  },
+  {
+    "stage": "MENTION_EXTRACTION",
+    "case_count": 0,
+    "case_ids": [],
+    "severity": [],
+    "cutover_blocker": false,
+    "root_cause_count": 0,
+    "one_root_fix_coverage": []
+  },
+  {
+    "stage": "MENTION_BOUNDARY",
+    "case_count": 10,
+    "case_ids": [
+      "G81-002",
+      "G81-004",
+      "G81-005",
+      "G81-006",
+      "G81-013",
+      "G81-029",
+      "G81-030",
+      "G81-033",
+      "G81-034",
+      "G81-094"
+    ],
+    "severity": [
+      "P0",
+      "P1"
+    ],
+    "cutover_blocker": true,
+    "root_cause_count": 2,
+    "one_root_fix_coverage": [
+      {
+        "root_cause_id": "RC-BOUNDARY-OBJECT",
+        "primary_cases": 6,
+        "full_case_passes_guaranteed": 0
+      },
+      {
+        "root_cause_id": "RC-BOUNDARY-METRIC",
+        "primary_cases": 4,
+        "full_case_passes_guaranteed": 0
+      }
+    ]
+  },
+  {
+    "stage": "SEMANTIC_ROLE",
+    "case_count": 0,
+    "case_ids": [],
+    "severity": [],
+    "cutover_blocker": false,
+    "root_cause_count": 0,
+    "one_root_fix_coverage": []
+  },
+  {
+    "stage": "CANDIDATE_RETRIEVAL",
+    "case_count": 0,
+    "case_ids": [],
+    "severity": [],
+    "cutover_blocker": false,
+    "root_cause_count": 0,
+    "one_root_fix_coverage": []
+  },
+  {
+    "stage": "CANONICAL_BINDING",
+    "case_count": 0,
+    "case_ids": [],
+    "severity": [],
+    "cutover_blocker": false,
+    "root_cause_count": 0,
+    "one_root_fix_coverage": []
+  },
+  {
+    "stage": "ENTITY_VALUE_GROUNDING",
+    "case_count": 5,
+    "case_ids": [
+      "S81-004",
+      "S81-005",
+      "S81-009",
+      "S81-010",
+      "S81-015"
+    ],
+    "severity": [
+      "P1"
+    ],
+    "cutover_blocker": true,
+    "root_cause_count": 1,
+    "one_root_fix_coverage": [
+      {
+        "root_cause_id": "RC-VALUE-CANDIDATES",
+        "primary_cases": 5,
+        "full_case_passes_guaranteed": 0
+      }
+    ]
+  },
+  {
+    "stage": "TIME_NORMALIZATION",
+    "case_count": 0,
+    "case_ids": [],
+    "severity": [],
+    "cutover_blocker": false,
+    "root_cause_count": 0,
+    "one_root_fix_coverage": []
+  },
+  {
+    "stage": "TASK_OPERATION",
+    "case_count": 6,
+    "case_ids": [
+      "G81-080",
+      "S81-006",
+      "S81-007",
+      "S81-008",
+      "S81-012",
+      "S81-017"
+    ],
+    "severity": [
+      "P0",
+      "P1"
+    ],
+    "cutover_blocker": true,
+    "root_cause_count": 3,
+    "one_root_fix_coverage": [
+      {
+        "root_cause_id": "RC-OP-ATOMIC",
+        "primary_cases": 2,
+        "full_case_passes_guaranteed": 0
+      },
+      {
+        "root_cause_id": "RC-EDIT-COVERAGE",
+        "primary_cases": 3,
+        "full_case_passes_guaranteed": 0
+      },
+      {
+        "root_cause_id": "RC-REFERENCE-AS-EDIT",
+        "primary_cases": 1,
+        "full_case_passes_guaranteed": 0
+      }
+    ]
+  },
+  {
+    "stage": "TASK_REDUCER",
+    "case_count": 0,
+    "case_ids": [],
+    "severity": [],
+    "cutover_blocker": false,
+    "root_cause_count": 0,
+    "one_root_fix_coverage": []
+  },
+  {
+    "stage": "QUERY_SHAPE",
+    "case_count": 10,
+    "case_ids": [
+      "G81-001",
+      "G81-003",
+      "G81-007",
+      "G81-008",
+      "G81-009",
+      "G81-010",
+      "G81-011",
+      "G81-012",
+      "G81-014",
+      "G81-093"
+    ],
+    "severity": [
+      "P1"
+    ],
+    "cutover_blocker": true,
+    "root_cause_count": 2,
+    "one_root_fix_coverage": [
+      {
+        "root_cause_id": "RC-SHAPE-LIST",
+        "primary_cases": 9,
+        "full_case_passes_guaranteed": 0
+      },
+      {
+        "root_cause_id": "RC-SHAPE-LINEAGE",
+        "primary_cases": 1,
+        "full_case_passes_guaranteed": 0
+      }
+    ]
+  },
+  {
+    "stage": "SEMANTIC_QUERY_IR",
+    "case_count": 0,
+    "case_ids": [],
+    "severity": [],
+    "cutover_blocker": false,
+    "root_cause_count": 0,
+    "one_root_fix_coverage": []
+  },
+  {
+    "stage": "DRY_PLAN",
+    "case_count": 0,
+    "case_ids": [],
+    "severity": [],
+    "cutover_blocker": false,
+    "root_cause_count": 0,
+    "one_root_fix_coverage": []
+  },
+  {
+    "stage": "EVALUATOR_GAP",
+    "case_count": 6,
+    "case_ids": [
+      "G81-071",
+      "G81-073",
+      "G81-082",
+      "G81-084",
+      "G81-090",
+      "G81-091"
+    ],
+    "severity": [
+      "P2"
+    ],
+    "cutover_blocker": true,
+    "root_cause_count": 2,
+    "one_root_fix_coverage": [
+      {
+        "root_cause_id": "RC-EVAL-TURN-PROXY",
+        "primary_cases": 5,
+        "full_case_passes_guaranteed": 0
+      },
+      {
+        "root_cause_id": "RC-EVAL-DATASET-PROXY",
+        "primary_cases": 1,
+        "full_case_passes_guaranteed": 0
+      }
+    ]
+  },
+  {
+    "stage": "FIXTURE_GAP",
+    "case_count": 4,
+    "case_ids": [
+      "S81-016",
+      "S81-018",
+      "S81-019",
+      "S81-020"
+    ],
+    "severity": [
+      "P2"
+    ],
+    "cutover_blocker": true,
+    "root_cause_count": 1,
+    "one_root_fix_coverage": [
+      {
+        "root_cause_id": "RC-FIXTURE-STATE-ENTRY",
+        "primary_cases": 4,
+        "full_case_passes_guaranteed": 0
+      }
+    ]
+  },
+  {
+    "stage": "CATALOG_GAP",
+    "case_count": 0,
+    "case_ids": [],
+    "severity": [],
+    "cutover_blocker": false,
+    "root_cause_count": 0,
+    "one_root_fix_coverage": []
+  },
+  {
+    "stage": "EXTERNAL_BLOCKER",
+    "case_count": 0,
+    "case_ids": [],
+    "severity": [],
+    "cutover_blocker": false,
+    "root_cause_count": 0,
+    "one_root_fix_coverage": []
+  }
+]
