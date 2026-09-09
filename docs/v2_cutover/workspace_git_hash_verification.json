@@ -1,8 +1,8 @@
 {
   "status": "PASS_PRECOMMIT_ALIGNMENT",
-  "baseline_commit": "499d0550910759833fa57e1f3db766f18f0e1ae6",
-  "feature_branch": "cutover-transition-runner-20260909t034400z",
-  "tracked_and_manifest_files": 1252,
+  "baseline_commit": "a87df7d37756d160f93db2acf9b9de5af928f8a3",
+  "feature_branch": "cutover-task-context-20260909t042538z",
+  "tracked_and_manifest_files": 1262,
   "unexpected_source_drift": 0,
   "normalization": "CRLF to LF only",
   "post_commit_gate": "Every mapped development file = repository file = Git blob; clean tree; original Oagnet HEAD/index preserved"

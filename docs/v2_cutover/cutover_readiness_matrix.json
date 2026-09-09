@@ -1,7 +1,7 @@
 {
-  "current_stage": "RAW_TRANSITION_EVIDENCE_AND_SCHEMA_GUARD",
+  "current_stage": "CURRENT_TASK_CONTEXT_AND_DESTRUCTIVE_EDIT_P0",
   "readiness": "NOT_READY",
-  "baseline_commit": "b42fdaf913e6e54d7de9bdb8a343183536703586",
+  "baseline_commit": "a87df7d37756d160f93db2acf9b9de5af928f8a3",
   "production_acceptance_groups": {
     "P0": 8,
     "P1": 4
@@ -30,9 +30,10 @@
       "blocks_final_cutover": true,
       "evidence": [
         "first_divergence_report.json",
-        "model_benchmark_report.json"
+        "model_benchmark_report.json",
+        "task_context/comparison.json"
       ],
-      "next_action": "Diagnose recorded active/historical task and operation/shape failures with strict state guards; complete missing observation axes."
+      "next_action": "Close remaining exact assignment/operation/shape errors; extend full-state and oracle evidence without relaxing validators or changing V1."
     },
     {
       "blocker_id": "EVALUATION-COVERAGE",

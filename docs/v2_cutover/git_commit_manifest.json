@@ -1,11 +1,10 @@
 {
-  "baseline_commit": "499d0550910759833fa57e1f3db766f18f0e1ae6",
-  "feature_branch": "cutover-transition-runner-20260909t034400z",
+  "baseline_commit": "a87df7d37756d160f93db2acf9b9de5af928f8a3",
+  "feature_branch": "cutover-task-context-20260909t042538z",
   "final_commit": "Commit containing this manifest",
-  "planned_subject": "cutover: record bounded mention-contract prompt experiment",
+  "planned_subject": "cutover: preserve current task evidence for remove and clear",
   "runtime_source_changed": true,
   "evidence": "closure_report.md and test_delta.json",
-  "draft_pr_base": "cutover-qwen37-benchmark-20260909t031600z",
-  "stage_baseline": "b42fdaf913e6e54d7de9bdb8a343183536703586",
-  "runner_commit": "499d0550910759833fa57e1f3db766f18f0e1ae6"
+  "draft_pr_base": "cutover-transition-runner-20260909t034400z",
+  "stage_baseline": "a87df7d37756d160f93db2acf9b9de5af928f8a3"
 }

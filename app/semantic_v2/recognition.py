@@ -158,7 +158,7 @@ class SemanticTaskDraft(m.StrictModel):
 def semantic_task_schema(parse, tasks):
     """Expose only historical handles that the existing turn guard can accept."""
     schema = SemanticTaskDraft.model_json_schema()
-    allowed = sorted(tasks) if 'HISTORICAL' in parse.reference_signals else []
+    allowed = sorted(tasks) if 'HISTORICAL' in parse.reference_signals and not parse.topic_shift_signals else []
     schema['properties']['historical_task_handle'] = ({
         'anyOf': [{'type':'string','enum':allowed}, {'type':'null'}], 'default':None}
         if allowed else {'type':'null','default':None})
@@ -284,7 +284,7 @@ class RawTurnPlanner:
         datasets = {'dataset:' + contract_digest({'dataset': d.dataset_id})[:24]: d for d in current.datasets.values() if d.status == 'VALID'}
         draft = await self.model.complete(stage='v2_semantic_edits', instruction=DRAFT_PROMPT,
             context={'question': request.question, 'parse': parsed.model_dump(mode='json'), 'clock': now.isoformat(),
-                'catalog_candidates': candidates, 'tasks': self._task_labels(tasks),
+                'catalog_candidates': candidates, 'tasks': self._task_context(parse, current, tasks, previous_plans),
                 'datasets': [{'dataset_handle': h, 'task_handle': next(h for h,t in tasks.items() if t.task_id == d.task_id),
                     'task_version': d.task_version} for h,d in datasets.items()],
                 'payload_types': [*PayloadContractRegistry.definitions, 'INHERIT'],
@@ -295,7 +295,7 @@ class RawTurnPlanner:
                 extra={'message_id': request.message_id, 'handle_repairs': handle_repairs})
         draft,blockers,pending_operations,deferred=prepare_ambiguities(session,parse,draft,handles,candidates,SlotEditDraft)
         historical = tasks.get(draft.historical_task_handle)
-        if draft.historical_task_handle and ('HISTORICAL' not in parse.reference_signals or historical is None):
+        if draft.historical_task_handle and (parse.topic_shift_signals or 'HISTORICAL' not in parse.reference_signals or historical is None):
             raise RecognitionFailure('V2_HISTORICAL_TARGET_NOT_OFFERED')
         skeleton = TurnResolver.resolve(parse, state=current, task_patch=TaskPatch(base_task_version=0),
             semantic_resolution=m.SemanticResolutionContract(status='UNRESOLVED'),
@@ -417,6 +417,30 @@ class RawTurnPlanner:
             **structured_labels(task),
             'slot_labels': {name: [r.display_name for r in collect_bound_refs(getattr(next(v.semantics for v in task.versions if v.version == task.active_version), name))]
                 for name in EDIT_SLOTS}} for handle, task in tasks.items()]
+
+
+    @classmethod
+    def _task_context(cls, parse, current, tasks, plans):
+        """Offer reference candidates separately from deterministically current state.
+
+        These labels come from restored scope-checked artifacts, never the model.
+        The later resolver and runtime handle guard remain authoritative.
+        """
+        historical = 'HISTORICAL' in parse.reference_signals and not parse.topic_shift_signals
+        if historical:
+            selected = tasks
+        else:
+            reference = TurnResolver.resolve(parse, state=current, task_patch=TaskPatch(base_task_version=0),
+                semantic_resolution=m.SemanticResolutionContract(status='UNRESOLVED'))
+            selected = {h:t for h,t in tasks.items() if t.task_id == reference.target_task_id}
+        labels = cls._task_labels(selected)
+        for label, task in zip(labels, selected.values()):
+            label['reference_kind'] = 'HISTORICAL_CANDIDATE' if historical else 'CURRENT_TASK'
+            label['payload_type'] = plans[task.task_id].payload.payload_type if task.task_id in plans else None
+            label['cleared_slots'] = sorted(task.clear_barriers)
+            if not historical:
+                label.pop('task_handle')
+        return labels
 
     @staticmethod
     def _candidates(session, parse):

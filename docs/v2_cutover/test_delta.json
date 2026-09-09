@@ -1,39 +1,39 @@
 {
-  "baseline_commit": "b42fdaf913e6e54d7de9bdb8a343183536703586",
+  "baseline_commit": "a87df7d37756d160f93db2acf9b9de5af928f8a3",
   "services": {
     "DataAnalysis_Agent": {
       "baseline_counts": {
-        "passed": 2828,
-        "failed": 27
-      },
-      "final_counts": {
         "passed": 2845,
         "failed": 27
       },
+      "final_counts": {
+        "passed": 2862,
+        "failed": 27
+      },
       "new_tests": {
-        "tests/test_v2_raw_turn_recognition.py::test_semantic_generation_schema_exposes_only_admissible_history[False-handles0]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_semantic_generation_schema_exposes_only_admissible_history[False-handles1]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_semantic_generation_schema_exposes_only_admissible_history[True-handles2]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_semantic_generation_schema_exposes_only_admissible_history[True-handles3]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_generation_constraint_does_not_remove_runtime_history_guard": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_real_scoped_planner_observes_state_without_reading_expected_answers": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_missing_state_fixture_stays_unobserved_without_model_calls[pending]": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_missing_state_fixture_stays_unobserved_without_model_calls[dataset]": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_failed_history_stops_current_and_retains_bounded_schema_diagnostics": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_model_budget_cannot_be_hidden_by_an_incomplete_history": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_auth_failure_stops_remaining_cases_instead_of_repeating_requests": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_wrong_snapshot_scope_or_call_authority_fails_before_network[hash]": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_wrong_snapshot_scope_or_call_authority_fails_before_network[scope]": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_wrong_snapshot_scope_or_call_authority_fails_before_network[opt_in]": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_wrong_snapshot_scope_or_call_authority_fails_before_network[transport]": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_scripted_transport_cannot_open_a_real_connection": "passed",
-        "tests/test_cutover_raw_transition_benchmark.py::test_schema_diagnostics_do_not_echo_dynamic_field_names_or_values": "passed"
+        "tests/test_v2_raw_turn_recognition.py::test_followup_context_exposes_only_current_state_without_historical_handle": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_complete_new_task_has_no_inheritable_task_context": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_historical_context_retains_scoped_handles_and_recorded_plan_shapes": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_clear_barrier_remains_visible_in_current_task_context": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_explicit_topic_shift_overrides_historical_offer[False]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_explicit_topic_shift_overrides_historical_offer[True]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_agreed_destructive_edit_act_does_not_require_a_duplicate_followup_signal[REMOVE]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_agreed_destructive_edit_act_does_not_require_a_duplicate_followup_signal[CLEAR]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts0-operations0-False-True-CURRENT_TASK]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts1-operations1-False-True-CURRENT_TASK]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts2-operations2-False-True-SELF_CONTAINED]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts3-operations3-False-True-SELF_CONTAINED]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts4-operations4-False-True-SELF_CONTAINED]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts5-operations5-False-True-SELF_CONTAINED]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts6-operations6-False-True-SELF_CONTAINED]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts7-operations7-True-True-SELF_CONTAINED]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts8-operations8-False-False-UNRESOLVED_REFERENCE]": "passed"
       },
       "old_pass_to_new_fail": [],
       "old_fail_to_new_pass": [],
       "removed_tests": [],
       "collection_errors": [],
-      "receipt_sha256": "52f99f859f7feebc6077fdfa3e47fe81d199b7466f1f7e03f78f45ba0da40687",
+      "receipt_sha256": "6121c53ee2f32240e1b8203d994f19cae334ec1c4aea208efddd578ce0efd7dd",
       "critical": {
         "passed": 160,
         "failed": 0
@@ -75,14 +75,31 @@
     }
   },
   "focused": {
-    "passed": 145
+    "passed": 409
   },
-  "offline_real_model_calls": 0,
-  "offline_external_writes": 0,
-  "semantic_benchmark_regressions": "model_benchmark_report.json; not hidden by deterministic regression passes",
-  "baseline_reconstruction": "PR38 node receipts plus PR39/40/42 new-test deltas; this receipt appends the exact 17 newly passing nodes.",
-  "v7_independent_commit_focused": {
-    "passed": 145
+  "before_context_tests": {
+    "passed": 1,
+    "failed": 6
   },
-  "verification_launch_issue": "Duplicate pytest plugin auto-registration before collection; corrected established environment, 145 passed."
+  "before_destructive_tests": {
+    "failed": 5,
+    "passed": 6
+  },
+  "before_limits": "Four destructive-edit failures exercised the production behavior; a fifth empty-state test initially lacked identity fields and was corrected before final verification.",
+  "fixture_adaptations": [
+    {
+      "nodeid": "test_invalid_filter_edits_fail_before_plan_or_state[new_task-V2_FILTER_TARGET_NOT_CURRENT_TASK]",
+      "old_assertion": "V2_FILTER_TARGET_NOT_CURRENT_TASK",
+      "new_assertion": "V2_FILTER_TARGET_NOT_CURRENT_TASK",
+      "reason": "New-task contexts no longer offer old handles. The adversarial fixture now captures the real prior handle out of band and supplies the same attack; runtime expectation is unchanged."
+    },
+    {
+      "nodeid": "test_generation_constraint_does_not_remove_runtime_history_guard",
+      "reason": "The attack uses the known real prior task handle independently of model context; the same guard remains required."
+    }
+  ],
+  "stale_expectation_changes": 0,
+  "real_model_calls_in_regression": 0,
+  "production_writes_in_regression": 0,
+  "baseline_reconstruction": "PR38 results + PR39/40/42 new tests + baseline commit docs/v2_cutover/test_delta.json new tests; append the 17 new nodes in this delivery."
 }
