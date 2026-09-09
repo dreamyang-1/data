@@ -168,5 +168,14 @@
     "formal_model_winner": null,
     "parser_component_rerun": false,
     "whole_plan_gate": "NOT_PASSED"
+  },
+  "latest_replacement_evidence": {
+    "path": "replacement_oracle/comparison.json",
+    "real_model_requests": 52,
+    "prompt_changes": 0,
+    "model_default_changed": false,
+    "formal_model_winner": null,
+    "full_case_S81_002_pass": false,
+    "whole_plan_gate": "NOT_PASSED"
   }
 }

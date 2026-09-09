@@ -1,6 +1,6 @@
 {
-  "baseline_commit": "a87df7d37756d160f93db2acf9b9de5af928f8a3",
-  "rollback": "Revert this independent feature commit after review to restore prior V2 task context and destructive dependency handling. No V1 route, public I/O, model configuration, native publication or production state was changed.",
+  "baseline_commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
+  "rollback": "Revert this independent feature commit after review to restore strict model-output list representation for existing-task REPLACE. No model/key, public I/O, V1 route, native publication or production state was changed.",
   "native_publication_performed": false,
   "redis_mutation_performed": false,
   "production_route_changed": false,

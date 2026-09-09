@@ -2595,5 +2595,19 @@
       }
     ],
     "parser_role_caveat": "The retained 100-case role-purity diagnostic scores role hypotheses, not final canonical choices; additional hypotheses alone do not prove a final role or binding production defect."
+  },
+  "latest_replacement_stage": {
+    "baseline_commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
+    "proven_first_divergence": "TASK_PATCH_VALUE_REPRESENTATION",
+    "case_id": "S81-002",
+    "before": "The captured REPLACE draft selects the real current-scope order_count metric for its current mention, but sends a single offered handle where the internal collection value is a list.",
+    "after": "Only explicit REPLACE of a restored set-valued task slot normalizes that exact handle object to a complete one-element list. Operation, scope, role/evidence checks and final collection contract stay intact.",
+    "evidence_level": "PROVEN_CAPTURED_CANDIDATE_AND_ORACLE_BINDING_RED_GREEN",
+    "reason_code": "CURRENT_TURN_SINGLETON_REPLACEMENT",
+    "remaining_first_divergence": "TURN_RESOLUTION_MODEL_VARIATION in the full live S81-002 parse; not repaired by a later repeat.",
+    "evidence": [
+      "replacement_oracle/comparison.json",
+      "oracle_evaluation_report.json"
+    ]
   }
 }

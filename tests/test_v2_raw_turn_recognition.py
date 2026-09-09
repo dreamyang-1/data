@@ -207,6 +207,83 @@ async def test_assignment_still_requires_the_complete_collection(catalog,operati
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize('slot',['metrics','dimensions'])
+async def test_single_offered_replacement_matches_a_complete_single_item_collection(catalog,slot):
+    # Oracle binding: both variants select the same real current-scope catalog
+    # candidate; only the captured model's list-vs-singleton representation varies.
+    if slot=='metrics':
+        first=metric_step('销售额');second=metric_step('再加销售数量','销售数量','ADD',True)
+        prefix=[first,second];name,role='订单笔数','MEASURE'
+    else:
+        source=deepcopy(catalog[4][(81,(205,))]);doc=source['documents'][0]
+        doc['entities'][0]['attributes'].append(dict(attribute_id=1207,attr_code='order_date',attr_name='订单日期',field_mapping='hospitals.order_date'))
+        source['physical_catalog']['tables'][0]['fields'].append(dict(field_id=1207,field_name='order_date',table_id=1))
+        doc['dimensions'].append(dict(dim_code='order_date',dim_name='订单日期',bind_entities=[dict(entity='205',attr='1207',businessDomain='205')]))
+        catalog[4][(81,(205,))]=reseal(source);publish(catalog[0],publication_id='replacement-oracle')
+        text='按城市看销售额'
+        first=(text,parse(text,[('城市','GROUP_BY','dimensions','SET'),('销售额','MEASURE','metrics','SET')]),
+            lambda c:dict(payload_type='GROUPED_AGGREGATE',edits=[edit('dimensions',[binding(c,'城市','GROUP_BY')]),
+                edit('metrics',[binding(c,'销售额','MEASURE','m1')],ids=('m1',))]))
+        prefix=[first];name,role='订单日期','GROUP_BY'
+    text='换成'+name;parsed=parse(text,[(name,role,slot,'REPLACE')],follow=True)
+    observed=[]
+    for singleton in (False,True):
+        def draft(c):
+            value=binding(c,name,role)
+            return dict(payload_type='INHERIT',edits=[edit(slot,value if singleton else [value],'REPLACE')])
+        steps=[*prefix,(text,parsed,draft)];result=(await turns(planner(catalog,steps)[0],steps))[-1]
+        payload=result.plan['logical_plan']['payload'];op=result.resolution['task_patch']['replacements'][0]
+        assert isinstance(op['new_value'],list) and len(op['new_value'])==1
+        assert op['operation']=='REPLACE'
+        if singleton:assert op['reason_code']=='CURRENT_TURN_SINGLETON_REPLACEMENT'
+        observed.append(([m['display_name'] for m in payload['measures']],[d['display_name'] for d in payload.get('group_by',[])]))
+    assert observed[0]==observed[1]
+    expected=(['订单笔数'],[]) if slot=='metrics' else (['销售额'],['订单日期'])
+    assert observed[1]==expected
+
+
+@pytest.mark.asyncio
+async def test_single_replacement_and_add_have_different_state_semantics(catalog):
+    results=[]
+    for operation in ('ADD','REPLACE'):
+        text='修改订单笔数';parsed=parse(text,[('订单笔数','MEASURE','metrics',operation)],follow=True)
+        current=(text,parsed,lambda c:dict(payload_type='INHERIT',edits=[edit('metrics',binding(c,'订单笔数','MEASURE'),operation)]))
+        steps=[metric_step('销售额'),current]
+        result=(await turns(planner(catalog,steps)[0],steps))[-1]
+        results.append({m['canonical_code'] for m in result.plan['logical_plan']['payload']['measures']})
+    assert results==[{'amount','orders'},{'orders'}]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('fault,reason',[
+    ('foreign','V2_BINDING_HANDLE_NOT_OFFERED'),('extra','V2_BINDING_HANDLE_NOT_OFFERED'),
+    ('authority','V2_MODEL_AUTHORITY_FIELD_FORBIDDEN'),('role','V2_SLOT_ROLE_CONFLICT'),
+    ('evidence','V2_BINDING_OUTSIDE_EDIT_EVIDENCE'),('null','V2_CONTRACT_VALIDATION_FAILURE'),
+    ('string','V2_CONTRACT_VALIDATION_FAILURE'),('operation','V2_SLOT_OPERATION_CONFLICT')])
+async def test_single_replacement_keeps_catalog_role_evidence_and_operation_guards(catalog,fault,reason):
+    text='订单笔数销售数量';parsed=parse(text,[('订单笔数','MEASURE','metrics','REPLACE'),('销售数量','MEASURE',None,None)],follow=True)
+    if fault=='role':parsed['mentions'][0]['candidate_roles']=['GROUP_BY']
+    def draft(c):
+        value=({'binding_handle':'not-offered'} if fault=='foreign' else
+            {'canonical_id':'invented'} if fault=='authority' else
+            binding(c,'城市','GROUP_BY') if fault=='role' else
+            binding(c,'销售数量','MEASURE','m1') if fault=='evidence' else
+            None if fault=='null' else 'unbound-name' if fault=='string' else binding(c,'订单笔数','MEASURE'))
+        if fault=='extra':value['business_domain_ids']=[206]
+        return dict(payload_type='INHERIT',edits=[edit('metrics',value,'ADD' if fault=='operation' else 'REPLACE')])
+    steps=[metric_step('销售额'),(text,parsed,draft)]
+    with pytest.raises(RecognitionFailure,match=reason):await turns(planner(catalog,steps)[0],steps)
+
+
+@pytest.mark.asyncio
+async def test_singleton_set_is_not_inferred_to_be_a_followup_replace(catalog):
+    text='订单笔数';parsed=parse(text,[(text,'MEASURE','metrics','SET')],follow=True)
+    step=(text,parsed,lambda c:dict(payload_type='INHERIT',edits=[edit('metrics',binding(c,'订单笔数','MEASURE'),'SET')]))
+    steps=[metric_step('销售额'),step]
+    with pytest.raises(RecognitionFailure,match='V2_CONTRACT_VALIDATION_FAILURE'):await turns(planner(catalog,steps)[0],steps)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize('operation',['ADD','REMOVE'])
 @pytest.mark.parametrize('fault',['foreign_handle','wrong_role','outside_evidence','null_value'])
 async def test_single_item_edits_keep_handle_role_and_current_evidence_guards(catalog,operation,fault):

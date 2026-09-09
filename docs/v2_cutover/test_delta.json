@@ -1,39 +1,34 @@
 {
-  "baseline_commit": "a87df7d37756d160f93db2acf9b9de5af928f8a3",
+  "baseline_commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
   "services": {
     "DataAnalysis_Agent": {
       "baseline_counts": {
-        "passed": 2845,
-        "failed": 27
-      },
-      "final_counts": {
         "passed": 2862,
         "failed": 27
       },
+      "final_counts": {
+        "passed": 2874,
+        "failed": 27
+      },
       "new_tests": {
-        "tests/test_v2_raw_turn_recognition.py::test_followup_context_exposes_only_current_state_without_historical_handle": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_complete_new_task_has_no_inheritable_task_context": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_historical_context_retains_scoped_handles_and_recorded_plan_shapes": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_clear_barrier_remains_visible_in_current_task_context": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_explicit_topic_shift_overrides_historical_offer[False]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_explicit_topic_shift_overrides_historical_offer[True]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_agreed_destructive_edit_act_does_not_require_a_duplicate_followup_signal[REMOVE]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_agreed_destructive_edit_act_does_not_require_a_duplicate_followup_signal[CLEAR]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts0-operations0-False-True-CURRENT_TASK]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts1-operations1-False-True-CURRENT_TASK]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts2-operations2-False-True-SELF_CONTAINED]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts3-operations3-False-True-SELF_CONTAINED]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts4-operations4-False-True-SELF_CONTAINED]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts5-operations5-False-True-SELF_CONTAINED]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts6-operations6-False-True-SELF_CONTAINED]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts7-operations7-True-True-SELF_CONTAINED]": "passed",
-        "tests/test_v2_raw_turn_recognition.py::test_destructive_act_dependency_requires_agreement_and_respects_new_task[acts8-operations8-False-False-UNRESOLVED_REFERENCE]": "passed"
+        "tests/test_v2_raw_turn_recognition.py::test_single_offered_replacement_matches_a_complete_single_item_collection[metrics]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_offered_replacement_matches_a_complete_single_item_collection[dimensions]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_and_add_have_different_state_semantics": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[foreign-V2_BINDING_HANDLE_NOT_OFFERED]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[extra-V2_BINDING_HANDLE_NOT_OFFERED]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[authority-V2_MODEL_AUTHORITY_FIELD_FORBIDDEN]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[role-V2_SLOT_ROLE_CONFLICT]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[evidence-V2_BINDING_OUTSIDE_EDIT_EVIDENCE]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[null-V2_CONTRACT_VALIDATION_FAILURE]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[string-V2_CONTRACT_VALIDATION_FAILURE]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_replacement_keeps_catalog_role_evidence_and_operation_guards[operation-V2_SLOT_OPERATION_CONFLICT]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_singleton_set_is_not_inferred_to_be_a_followup_replace": "passed"
       },
       "old_pass_to_new_fail": [],
       "old_fail_to_new_pass": [],
       "removed_tests": [],
       "collection_errors": [],
-      "receipt_sha256": "6121c53ee2f32240e1b8203d994f19cae334ec1c4aea208efddd578ce0efd7dd",
+      "receipt_sha256": "c802588331aa787293b03d7ee8d6f11bcbb420fcc5f6a88d8fe232dd7d64d646",
       "critical": {
         "passed": 160,
         "failed": 0
@@ -75,31 +70,17 @@
     }
   },
   "focused": {
-    "passed": 409
+    "passed": 174
   },
-  "before_context_tests": {
-    "passed": 1,
-    "failed": 6
-  },
-  "before_destructive_tests": {
+  "before_verified": {
     "failed": 5,
-    "passed": 6
+    "passed": 7
   },
-  "before_limits": "Four destructive-edit failures exercised the production behavior; a fifth empty-state test initially lacked identity fields and was corrected before final verification.",
-  "fixture_adaptations": [
-    {
-      "nodeid": "test_invalid_filter_edits_fail_before_plan_or_state[new_task-V2_FILTER_TARGET_NOT_CURRENT_TASK]",
-      "old_assertion": "V2_FILTER_TARGET_NOT_CURRENT_TASK",
-      "new_assertion": "V2_FILTER_TARGET_NOT_CURRENT_TASK",
-      "reason": "New-task contexts no longer offer old handles. The adversarial fixture now captures the real prior handle out of band and supplies the same attack; runtime expectation is unchanged."
-    },
-    {
-      "nodeid": "test_generation_constraint_does_not_remove_runtime_history_guard",
-      "reason": "The attack uses the known real prior task handle independently of model context; the same guard remains required."
-    }
-  ],
-  "stale_expectation_changes": 0,
+  "red_evidence": "Three positive replacement/ADD contrast tests rejected the singleton; two negative cases stopped at generic list validation before the more precise retained role/evidence guards. Seven controls already passed.",
+  "fixture_issue": "The initial dimension oracle lacked a second dimension. Added it with matching physical/catalog fixture metadata and republished only its in-memory test catalog before the verified red run.",
+  "old_assertions_changed": 0,
+  "stale_test_changes": 0,
   "real_model_calls_in_regression": 0,
   "production_writes_in_regression": 0,
-  "baseline_reconstruction": "PR38 results + PR39/40/42 new tests + baseline commit docs/v2_cutover/test_delta.json new tests; append the 17 new nodes in this delivery."
+  "baseline_reconstruction": "PR38 results + PR39/40/42 new tests + test_delta new nodes from PR43 a87df7d and PR44 baseline commit; append this delivery."
 }
