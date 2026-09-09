@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import logging
 from datetime import datetime
 from typing import Literal
 from zoneinfo import ZoneInfo
@@ -19,6 +20,7 @@ from .enums import CatalogType, SemanticRole
 from .pipeline import CurrentTurnParser, CurrentTurnSemanticParse, TurnResolver, collect_bound_refs
 from .pipeline import AuthorizedLogicalPlan
 from .recognition_client import RecognitionFailure
+from .recognition_repairs import repair_model_parse
 from .pending_recognition import (AmbiguityDraft, PendingResume, clarification_result,
     governed_aliases, pending_identity, prepare_ambiguities, selected_option)
 from .registries import PayloadContractRegistry, SlotDefinitionRegistry
@@ -109,6 +111,22 @@ and global ranking is never a local operation on a partial or unknown dataset.''
 EDIT_SLOTS = ('subject', 'metrics', 'dimensions', 'projection_spec', 'filter_expression',
     'time_spec', 'ranking_spec', 'comparison_spec', 'delivery_spec', 'relationship_spec')
 DIRECT_EDIT_SLOTS = tuple(slot for slot in EDIT_SLOTS if slot not in {'relationship_spec', 'comparison_spec'})
+
+
+def current_turn_schema():
+    """Generation may name only slots already accepted by the strict registry.
+
+    This private schema view narrows Identifier/dict keys; it does not change
+    the frozen parse models, add aliases, or guess where an unknown slot belongs.
+    """
+    schema = CurrentTurnSemanticParse.model_json_schema()
+    schema['$defs']['OperationMarker']['properties']['slot_name'] = {
+        'type': 'string', 'enum': list(EDIT_SLOTS)}
+    slot_map = schema['properties']['explicit_slot_mentions']
+    value_schema = slot_map['additionalProperties']
+    slot_map['properties'] = {slot: deepcopy(value_schema) for slot in EDIT_SLOTS}
+    slot_map['additionalProperties'] = False
+    return schema
 
 
 class SlotEditDraft(m.StrictModel):
@@ -233,7 +251,12 @@ class RawTurnPlanner:
             raise RecognitionFailure('V2_MESSAGE_ALREADY_PLANNED')
         parsed = await self.model.complete(stage='v2_current_turn', instruction=PARSE_PROMPT,
             context={'question': request.question, 'turn_id': request.message_id,
-                'clock': now.isoformat(), 'slots': list(EDIT_SLOTS)}, output_model=CurrentTurnSemanticParse)
+                'clock': now.isoformat(), 'slots': list(EDIT_SLOTS)}, output_model=CurrentTurnSemanticParse,
+            schema=current_turn_schema())
+        parsed, repairs = repair_model_parse(parsed, text=request.question, turn_id=request.message_id)
+        if repairs:
+            logging.getLogger(__name__).info('V2 current-turn representation repaired',
+                extra={'message_id': request.message_id, 'parse_repairs': repairs})
         parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
             text_ref=request.message_id, parsed=parsed)
         if current.pending and not parse.topic_shift_signals:

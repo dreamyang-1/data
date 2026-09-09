@@ -1,0 +1,152 @@
+{
+  "contract": "semantic-axis-evaluation-v1",
+  "cases": 4,
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "missing_or_failed_predictions": 4,
+  "metrics": {
+    "critical_mention_recall": {
+      "passed": 0,
+      "denominator": 4,
+      "value": 0.0
+    },
+    "critical_role_purity": {
+      "passed": 0,
+      "denominator": 4,
+      "value": 0.0
+    },
+    "critical_role_recall": {
+      "passed": 0,
+      "denominator": 4,
+      "value": 0.0
+    },
+    "query_shape": {
+      "passed": 0,
+      "denominator": 3,
+      "value": 0.0
+    }
+  },
+  "unlabeled_axes": [
+    "SQL_EXECUTION",
+    "RESULT_ACCURACY",
+    "FULL_STATE_MUTATION",
+    "CANONICAL_BINDING",
+    "EXACT_ENTITY_COUNT"
+  ],
+  "critical_mention_precision": "NOT_LABELED",
+  "end_to_end_acceptance": "NOT_EVALUATED",
+  "production_cutover_pass": false,
+  "details": [
+    {
+      "case_id": "G81-096",
+      "axes": {
+        "mentions": false
+      },
+      "prediction_status": "FAILED"
+    },
+    {
+      "case_id": "G81-097",
+      "axes": {
+        "query_shape": false,
+        "mentions": false
+      },
+      "prediction_status": "FAILED"
+    },
+    {
+      "case_id": "G81-098",
+      "axes": {
+        "query_shape": false,
+        "mentions": false
+      },
+      "prediction_status": "FAILED"
+    },
+    {
+      "case_id": "G81-100",
+      "axes": {
+        "query_shape": false,
+        "mentions": false
+      },
+      "prediction_status": "FAILED"
+    }
+  ],
+  "component": "EXISTING_V2_CURRENT_TURN_PARSER",
+  "model": "qwen3.6-plus",
+  "thinking": false,
+  "observed_at": "2026-09-09T02:20:38.426688+00:00",
+  "prompt_version": "v2-current-recognition-v7",
+  "prompt_hash": "ff29f7c1ddffb368a48999dce8536231216f9f7bd1805f02b56c513668c8d1de",
+  "schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+  "gold_hash": "b2db7b903c691d2f696edeba3dbb90e4e1af7da80566d2a0635e1a7c9fd381b6",
+  "requests": [
+    {
+      "input_hash": "faa914fd3608db879d608b3081816fe4705ee7cab7c08d06aa19e94efa69cb8c",
+      "model": "qwen3.6-plus",
+      "thinking": false,
+      "schema_transport": "json_object"
+    },
+    {
+      "input_hash": "be51551790b60938a9df4a157d976dae88abc6360ae9758281ad714c5473e8d2",
+      "model": "qwen3.6-plus",
+      "thinking": false,
+      "schema_transport": "json_object"
+    },
+    {
+      "input_hash": "e7af040ff37e7090cefee75992a24a58be8d57a067035ccde85d80e1da92725c",
+      "model": "qwen3.6-plus",
+      "thinking": false,
+      "schema_transport": "json_object"
+    },
+    {
+      "input_hash": "55b4b96405a93c38020c4d083af4fa9ee8529bbb290585320e6d0115889ea581",
+      "model": "qwen3.6-plus",
+      "thinking": false,
+      "schema_transport": "json_object"
+    }
+  ],
+  "request_count": 4,
+  "response_usage": [
+    {
+      "status": 401,
+      "model": null,
+      "usage": null,
+      "provider_code": "invalid_api_key"
+    },
+    {
+      "status": 401,
+      "model": null,
+      "usage": null,
+      "provider_code": "invalid_api_key"
+    },
+    {
+      "status": 401,
+      "model": null,
+      "usage": null,
+      "provider_code": "invalid_api_key"
+    },
+    {
+      "status": 401,
+      "model": null,
+      "usage": null,
+      "provider_code": "invalid_api_key"
+    }
+  ],
+  "temperature": 0,
+  "retries": 0,
+  "timeout_seconds": 30.0,
+  "production_default_model_changed": false,
+  "catalog_usage": "FROZEN_LABEL_EVIDENCE_ONLY_NO_RETRIEVAL_IN_CURRENT_TURN_STAGE",
+  "history_usage": "CURRENT_TURN_STAGE_DOES_NOT_RECEIVE_HISTORY",
+  "sql_executions": 0,
+  "production_state_writes": 0,
+  "latency_seconds": {
+    "mean": 0.0785,
+    "p95": 0.125
+  }
+}
