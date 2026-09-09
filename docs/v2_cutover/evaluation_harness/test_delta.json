@@ -5,13 +5,13 @@
       "failed": 27
     },
     "final": {
-      "passed": 3131,
+      "passed": 3133,
       "failed": 27
     },
     "collection_errors": [],
     "old_pass_to_new_fail": 0,
     "changed_previous_outcomes": 0,
-    "new_tests": 69,
+    "new_tests": 71,
     "critical": {
       "passed": 160,
       "failed": 0
@@ -20,7 +20,7 @@
       "public_clarification_responses": 89,
       "with_reason_trace": 89
     },
-    "verification_strategy": "Full established batches; final dependent batch (1254 passing) after all evaluator, replay and safety review corrections. Final 69 harness tests after mid-run freeze guard."
+    "verification_strategy": "Full established batches; final dependent batch (1254 passing) after all evaluator, replay and safety review corrections. Final 69 harness tests after mid-run freeze guard. Final 97 harness/raw replay/oracle tests after runtime wrapper and pin lifecycle review."
   },
   "oagnet": {
     "baseline": {

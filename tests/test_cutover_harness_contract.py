@@ -152,6 +152,7 @@ def test_common_set_requires_same_frozen_inputs_and_runtime_parity():
 def test_parse_only_difference_is_not_an_accepted_plan_safety_claim():
     from tools.cutover.harness_safety import ACCEPTANCE_AXES
     assert 'mentions' not in ACCEPTANCE_AXES and 'candidate_set' not in ACCEPTANCE_AXES
+    assert not {'turn_relation','dialogue_act','metric_operations'}&ACCEPTANCE_AXES
     assert {'task_state','canonical_metrics','query_shape'}<=ACCEPTANCE_AXES
 
 

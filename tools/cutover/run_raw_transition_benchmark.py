@@ -218,7 +218,8 @@ def failure_reason(exc):
 
 
 async def replay_turn(capture, case, catalog, raw_snapshot, *, expected_capture_hash,
-        oracle_outputs=None, source_observations=None, source_observations_hash=None, case_validator=None):
+        oracle_outputs=None, source_observations=None, source_observations_hash=None, case_validator=None,
+        runtime_entry=False):
     """Replay one recorded turn in the same isolated pipeline, with no model HTTP.
 
     An Oracle intervention replaces only supplied model outputs; subsequent
@@ -290,7 +291,8 @@ async def replay_turn(capture, case, catalog, raw_snapshot, *, expected_capture_
         try:
             # Same computation as run(), exposing the original ValidationError
             # before the normal bounded RecognitionFailure wrapper loses it.
-            result = await engine._run(request, TrustedIdentity(tenant_id='evaluation',user_id='evaluation'),
+            entry=engine.run if runtime_entry else engine._run
+            result = await entry(request, TrustedIdentity(tenant_id='evaluation',user_id='evaluation'),
                 state=ScopedArtifact.model_validate(before['state']) if before['state'] else None,
                 pending=ScopedArtifact.model_validate(before['pending']) if before['pending'] else None,
                 plans=tuple(ScopedArtifact.model_validate(p) for p in before['plans']))

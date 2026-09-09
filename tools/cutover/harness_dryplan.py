@@ -29,7 +29,8 @@ def observe_dry_plan(capture,case,catalog,raw_snapshot,*,source_observations=Non
     result=capture['result'];logical=result['plan']['logical_plan']
     root=Path(__file__).resolve().parents[2]
     sql=root/'sql-translator' if (root/'sql-translator').is_dir() else root.parent/'sql-translator'
-    with deny_external_calls() as counters,patch.object(sys,'path',[*sys.path,str(sql)]),ExitStack() as stack:
+    oagnet=root/'Oagnet' if (root/'Oagnet').is_dir() else root.parent/'Oagnet'
+    with deny_external_calls() as counters,patch.object(sys,'path',[*sys.path,str(sql),str(oagnet)]),ExitStack() as stack:
         publication=frozen_publication(raw_snapshot,catalog,[],native_source_values=source_observations is not None,
             recorded_activation_id=result['next_state']['context']['catalog_pin']['activation_id'])
         if source_observations is not None:
@@ -54,7 +55,15 @@ def observe_dry_plan(capture,case,catalog,raw_snapshot,*,source_observations=Non
             if lowering.asl.get('filters') or lowering.filter_contract:policy['parameterized']=True
             native=translate_pinned_catalog(session._pin,RequestScope.from_request(
                 {'authorized_semantic_scope':request.authorized_semantic_scope.model_dump(mode='json')}),lowering.asl,**policy)
-        session.accept_catalog()
+        if native and native.get('success'):
+            # Native translation owns finish() on success. Validate its exact
+            # receipt instead of attempting to finish the consumed pin again.
+            expected=session.context.catalog_pin.model_dump(mode='json')
+            receipt=native.get('catalog_pin') or {}
+            if any(receipt.get(k)!=v for k,v in expected.items()):
+                raise ValueError('DRY_PLAN_CATALOG_ACCEPTANCE_IDENTITY_MISMATCH')
+        else:
+            session.accept_catalog()
     lowered=json_value(asdict(lowering))
     return {'status':'OBSERVED_SUPPLEMENTAL_NATIVE_SEAM','same_raw_runtime_entry':False,
         'dry_plan_input_hash':digest(logical),'lowering':lowered,

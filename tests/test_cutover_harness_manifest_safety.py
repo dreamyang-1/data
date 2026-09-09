@@ -52,6 +52,36 @@ async def test_existing_dry_plan_seam_observes_same_accepted_plan_without_execut
     assert output['public_receipt']['logical_input_hash']
 
 
+@pytest.mark.asyncio
+async def test_dry_plan_respects_native_translator_pin_finish_ownership(inputs,monkeypatch):
+    from dataclasses import replace
+    from pathlib import Path
+    import sys
+    from tools.cutover import harness_dryplan
+    root=Path(__file__).resolve().parents[1]
+    sql=root/'sql-translator' if (root/'sql-translator').is_dir() else root.parent/'sql-translator'
+    monkeypatch.syspath_prepend(str(sql))
+    import pinned_catalog
+    rows,catalog,raw,settings,steps=inputs;captures=[]
+    await run(rows,catalog,raw,settings,transport=httpx.MockTransport(ScriptedTransport(steps)),private_capture=captures.append)
+    original=harness_dryplan.lower_asl2;finishes=[]
+    def lower(*a,**kw):return replace(original(*a,**kw),status='SUPPORTED_PLAN_ONLY',asl={'fixture':'pin-lifecycle-only'})
+    def translate(pin,*a,**kw):
+        receipt=pin.finish();finishes.append(receipt)
+        return {'success':True,'catalog_pin':receipt}
+    monkeypatch.setattr(harness_dryplan,'lower_asl2',lower)
+    monkeypatch.setattr(pinned_catalog,'translate_pinned_catalog',translate)
+    output=observe_dry_plan(captures[0],rows[0],catalog,raw)
+    assert len(finishes)==1 and output['public_receipt']['native_success'] is True
+    assert not any(output['external_call_attempts'].values())
+    def wrong_identity(pin,*a,**kw):
+        receipt=pin.finish();receipt['catalog_version']='different'
+        return {'success':True,'catalog_pin':receipt}
+    monkeypatch.setattr(pinned_catalog,'translate_pinned_catalog',wrong_identity)
+    with pytest.raises(ValueError,match='CATALOG_ACCEPTANCE_IDENTITY_MISMATCH'):
+        observe_dry_plan(captures[0],rows[0],catalog,raw)
+
+
 def _state_result(values,patch):
     return {'plan':{'logical_plan':{'task_id':'task'}},'resolution':{'task_patch':patch},
         'next_state':{'payload':{'tasks':{'task':{'active_version':1,'versions':[{'version':1,'semantics':{'metrics':values}}]}}}}}

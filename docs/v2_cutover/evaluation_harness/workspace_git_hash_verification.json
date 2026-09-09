@@ -1,6 +1,6 @@
 {
   "status": "PASS_PRECOMMIT_ALIGNMENT",
-  "baseline_commit": "ac42bc72ec480c754dc39ce7a6bc5b1d274f9c32",
+  "baseline_commit": "8748d3d64d9a51e6a57c6769954eec90f849137e",
   "feature_branch": "evaluation-harness-closure-20260909t083000z",
   "tracked_and_manifest_files": 1370,
   "unexpected_source_drift": 0,

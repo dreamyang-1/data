@@ -90,6 +90,9 @@ async def replay_verified(*args,**kwargs):
                     raise ValueError('HARNESS_REPLAY_CASE_SCOPE_MISMATCH')
         kwargs['case_validator']=validate_cases
     before=digest(capture)
+    # Use the public runtime wrapper as well: its ValidationError mapping is
+    # part of the behavior being measured, not an evaluator normalization.
+    kwargs['runtime_entry']=True
     with deny_external_calls() as counters:
         receipt,result=await replay_turn(*args,**kwargs)
     assert digest(capture)==before

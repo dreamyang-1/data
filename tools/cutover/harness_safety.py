@@ -1,12 +1,11 @@
 """Observe invariant violations in accepted native plans and state artifacts."""
 from tools.cutover.evaluation_contract import digest
 
-ACCEPTANCE_AXES=frozenset({'target_task','dialogue_act','turn_relation','bindings',
+ACCEPTANCE_AXES=frozenset({'target_task','bindings',
     'canonical_metrics','canonical_dimensions','metric_surfaces','dimension_surfaces',
     'entity','region_values','filters','time','time_relation','time_grain','task_patch',
     'task_state','query_shape','semantic_query_ir','dry_plan','ranking','dataset_truncation',
-    'pending_action','operation','slot_operations','metric_operations','dimension_operations',
-    'region_operations','metric_clarification_required','clarification_decision'})
+    'pending_action','metric_clarification_required','clarification_decision'})
 
 
 def _refs(value):

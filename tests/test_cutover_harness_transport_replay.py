@@ -105,3 +105,17 @@ async def test_live_collection_cannot_publish_when_evaluator_changes_mid_run(inp
             private_directory=tmp_path/'private',public_directory=tmp_path/'public')
     assert list((tmp_path/'private/captures').glob('*.json'))
     assert not (tmp_path/'public/evaluation.json').exists()
+
+
+@pytest.mark.asyncio
+async def test_typed_replay_keeps_the_actual_runtime_validation_error_wrapper(inputs,monkeypatch):
+    from app.semantic_v2 import recognition
+    from app.semantic_v2.models import TaskSemanticState
+    from tools.cutover.harness_replay import replay_verified
+    rows,catalog,raw,settings,steps=inputs;captures=[]
+    def invalid(*a,**kw):return TaskSemanticState.model_validate({'metrics':'invalid'})
+    monkeypatch.setattr(recognition,'materialize_payload',invalid)
+    await run(rows,catalog,raw,settings,transport=httpx.MockTransport(ScriptedTransport(steps)),private_capture=captures.append)
+    capture=captures[0];assert capture['outcome']['reason']=='V2_CONTRACT_VALIDATION_FAILURE'
+    receipt,result=await replay_verified(capture,rows[0],catalog,raw,expected_capture_hash=digest(capture))
+    assert result is None and receipt['failure']['reason']==capture['outcome']['reason']
