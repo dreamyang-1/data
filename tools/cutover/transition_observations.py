@@ -119,6 +119,23 @@ def observe_v2_plan(result,case,*,catalog,mode,previous=None,history=()):
         return out
     task=result.next_state.payload['tasks'][task_id]
     state=next(v['semantics'] for v in task['versions'] if v['version']==task['active_version'])
+    # Time relation measures the actual range, independently of grouping grain,
+    # matching the existing transition-axis meaning. Explicitly cleared range
+    # and no time spec are both ABSENT; no expected label supplies this value.
+    from app.semantic_v2.models import TimeSpec
+    time=TimeSpec.model_validate(state['time_spec']) if state.get('time_spec') else None
+    prior_time=None
+    if previous is not None:
+        artifact=previous.next_state
+        if (artifact.context != context or contract_digest(scoped_artifact_material(
+                artifact.payload,artifact.source_value_bindings)) != artifact.payload_digest):
+            raise ValueError('V2_OBSERVATION_PREVIOUS_STATE_MISMATCH')
+        prior_task=artifact.payload['tasks'][last]
+        prior_semantics=next(v['semantics'] for v in prior_task['versions'] if v['version']==prior_task['active_version'])
+        prior_time=TimeSpec.model_validate(prior_semantics['time_spec']) if prior_semantics.get('time_spec') else None
+    out['axes']['time_relation']=('ABSENT' if time is None or time.range is None else
+        'SAME_AS_PREVIOUS' if prior_time is not None and time.range==prior_time.range else 'CHANGED')
+    out['axes']['time_grain']=time.grain.value if time else 'NONE'
     fact_ids={f['fact_id'] for f in catalog['facts']}
     def refs(slot,kind):
         values=state.get(slot,[]);canonical=[]

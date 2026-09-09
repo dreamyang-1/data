@@ -1,61 +1,64 @@
-# V2 replacement readiness — governed initial time contract
+# V2 replacement readiness — catalog metric boundary and time observation
 
-Current Stage: GOVERNED_INITIAL_TIME_CONTRACT. Baseline `c19e65544664395200d814300e27d330006ea9a1` / Draft PR #47.
-Branch `cutover-governed-time-20260909t062000z`. Final commit: commit containing this report.
-V1 Replacement Readiness: **NOT_READY**. Acceptance groups remain 8 P0 / 4 P1.
+Current Stage: CATALOG_METRIC_BOUNDARY_AND_TEMPORAL_OBSERVATION.
+Baseline `9d680ae096b9deafe42767d0d7952e0525be0c0a` / Draft PR #48. Branch `cutover-compound-mention-20260909t064400z`.
+Final commit: commit containing this report. V1 Replacement Readiness: **NOT_READY**.
+Acceptance groups remain 8 P0 / 4 P1; these are not independent-bug counts.
 
-## Change and measured scope
+## Verified behavior
 
-For an initial TimeSpec with a current TIME_RANGE mention, the program now computes
-dates from the existing business calendar and an injected aware clock, requiring
-the full expression to match. Existing V1 callers retain their default substring
-behavior and clock seam. Internal UTC serialization is unchanged. TIME_RANGE does
-not imply grouping; explicit TIME_GRAIN has a separate finite calendar-unit map.
+An exact full metric name in the current scoped catalog can recover a split
+subject-plus-measure span before stage-two candidate selection. Recovery requires
+one metric identity, contiguous current mentions and consistent operation/clause/
+negation evidence. Full-term cross-role, name/code/alias collisions, independent
+modifiers, overlapping proposals and repeated terms preserve the original facts.
+The measure ID and operation survive; no canonical binding is selected by this
+step. The original guard against dropping state bindings is unchanged.
 
-Explicit time-field choices retain their scoped binding checks. Without such a
-choice, every selected metric must declare time_caliber.time_anchor, resolve to
-one same-domain attribute and agree on that anchor. No guessed field, catalog
-mutation or system-default range is introduced. Unknown special calendars/rules,
-comparison/default extras and foreign/invented handles remain rejected.
+The unchanged S81-014 targeted run used 6 qwen3.7-max calls. The raw parser again
+split 订单笔数 into 订单 and 笔数. Catalog recovery restored the whole metric before
+the draft. All three turns planned: 2025 order count, clear time, add quantity.
+The time anchor is the catalog created_date attribute, grain NONE, and the cleared
+range stayed absent on the next turn. Three complete result/state recordings
+replay exactly without model calls. This is direct execution evidence of the fix.
 
-This closes the recorded S81-014 timezone and catalog time-anchor defects, but
-does not make the unchanged case pass: its split metric still creates a redundant
-subject and V2_PAYLOAD_WOULD_DROP_BINDING correctly rejects it. A controlled output
-Oracle removing only that subject assignment produces the expected scalar time
-plan, retaining all original time values as non-authoritative hypotheses. Later
-model outputs were recorded, not regenerated; this is not model accuracy evidence.
+The existing transition observer now measures actual time ranges and grouping
+grain separately. It validates previous artifact scope/digest and never reads
+Gold labels. All three listed S81-014 targeted axes pass. Unmeasured broader
+wrong-inheritance and other safety gates remain NOT_EVALUATED.
 
-## Validation and review
+## Whole corpus and regression
 
-Focused 239 passed; 50 new tests. Agent 2964 passed / 27 preexisting failures,
-Oagnet 663 / 8, SQL Translator final repeat 381 / 0. Critical 160/160, clarification
-trace 89/89. No old assertions changed, removed tests or collection errors.
-Final old-pass -> new-fail 0. SQL's first full run had a loopback connection reset
-in one unchanged test; two independent reruns and a whole-suite rerun passed.
-The initial failure is retained in governed_time/sql_repeat_evidence.json; its
-precise socket timing remains unproven. No SQL source/test patch was made.
+Unchanged 20-case transition Gold, prompt/schema, model, clock and frozen catalog:
+{'OK': 6, 'FAILED': 10, 'NOT_RUN': 4}. Full run 50 model calls, plus 6 targeted calls;
+56 total this stage. Status OK means an observable plan, not full business
+acceptance. Sample regressions and newly observed time axes are retained in
+compound_mentions/comparison.json; changes outside the targeted trace are not
+claimed as causal quality improvements. Pending/Dataset cases retain fixed
+denominators and NOT_RUN where their entry fixtures are absent.
 
-New time tests initially compared UTC serialization to a local textual date and
-used a shortened quarter unsupported by the existing full-expression grammar.
-Their fixtures now assert identical aware instants and the supported full form;
-the shortened form has an explicit rejection test. Review also prevented dropping
-extra fiscal/default/comparison instructions during normalization.
+Focused 225 passed, 34 new tests. Agent 2998 passed / 27 historical failures,
+Oagnet 663 / 8, SQL Translator 381 / 0. Critical 160/160; clarification trace
+89/89; old-pass -> new-fail 0; removed tests 0; collection errors 0. Four new
+observer fixtures initially missed an imported dependency; fixture wiring was
+corrected before final checks. No old test assertions changed.
 
-Real model calls 0; source SQL 0; production writes 0. No prompt or regex pattern
-change. Existing regexes use fullmatch only through the new V2 opt-in. Model/key,
-public API/SSE and V1 production routing unchanged; native publication and Redis
-were not changed. Source capture remains private.
+Source SQL 0; production writes 0. No prompt, regex, public API/SSE, model/key or
+V1 routing changes. Original Oagnet user-owned staged state preserved. Private
+raw captures and source observations remain outside Git; only curated receipts
+and existing evaluation outputs are published.
 
 ## Remaining shortest path
 
-Cutover P0: semantic whole-plan quality and safety acceptance still open.
-Catalog Gap: exact compound metric resolution and source value canonicalization;
-existing identity/grain/relationship limits remain query-shape-specific.
-Evaluation Gap: temporal component ownership, time/region observation axes,
-Pending/Dataset entry coverage, whole-plan/Oracle/holdout labels and model comparison.
-Shadow Gap: offline acceptance not passed. Native publication and Redis recovery
-only constrain their production gates, not all offline work.
+Cutover P0: semantic quality and whole-plan/safety acceptance still incomplete.
+Catalog Gap: source-value names/aliases and existing shape-specific identity,
+grain and relation endpoints. Current source records show province short_name
+alongside province_name, but no new alias mapping or source lookup was asserted.
+Evaluation Gap: full deterministic temporal component ownership, region axes,
+Pending/Dataset entries, whole-plan/Oracle/holdout labels and formal model comparison.
+Shadow Gap: offline acceptance has not passed. Native publication and Redis
+recovery remain production gates and were not re-audited.
 
-Next: correct the proven atomic catalog metric segmentation failure, then finish
-temporal edit ownership and measure unchanged Gold. Do not disable the guard
-against silently dropping bindings, relax labels, or claim production readiness.
+Next: close deterministic temporal component edits and the proven scoped source
+value resolution gap, then measure the unchanged corpus. Continue internal work;
+do not request production replacement approval until all required gates pass.

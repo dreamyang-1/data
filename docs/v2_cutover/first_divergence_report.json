@@ -2696,5 +2696,102 @@
     "evidence": "governed_time/recorded_time_receipts.json",
     "S81_014": "Original recorded outputs now pass time range/anchor checks but still reject V2_PAYLOAD_WOULD_DROP_BINDING. Subject-state-only output Oracle yields scalar order_count with created_date, Shanghai 2025 range, grain NONE. Not a live Gold pass.",
     "next_cause": "Current split of exact catalog metric into entity and measure creates redundant subject assignment; preserve semantic coverage guard."
+  },
+  "compound_metric_stage": {
+    "baseline_commit": "9d680ae096b9deafe42767d0d7952e0525be0c0a",
+    "evidence": "compound_mentions/targeted_observation_evidence.json",
+    "proven": "Live raw parse again split order_count display name into subject and measure; scoped exact-span recovery removed the redundant subject slot before draft, and three native turns planned. Captured plans/states reproduce exactly.",
+    "full_corpus_failures": [
+      {
+        "case_id": "S81-004",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "error_type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+        "last_model_stage": "v2_semantic_edits",
+        "private_capture_hash": "369e948c3e21d6b6b6e436c8fd0f60cb60866f416706acc8ad3779d72a45a508"
+      },
+      {
+        "case_id": "S81-005",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "error_type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+        "last_model_stage": "v2_semantic_edits",
+        "private_capture_hash": "093d65f171338c7b4dec45ba8ef2dc62bb958fd58117fc081bab1ac9fe428b45"
+      },
+      {
+        "case_id": "S81-006",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "error_type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+        "last_model_stage": "v2_semantic_edits",
+        "private_capture_hash": "27fd98c428df65709c8457724c86c1d25c8cab29d938c1e207b2a8af3fbfaf5d"
+      },
+      {
+        "case_id": "S81-007",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "error_type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+        "last_model_stage": "v2_semantic_edits",
+        "private_capture_hash": "9f45fe0f855d52d1470e77e739eafa92e993aa123c162b07e8f6271c373365ba"
+      },
+      {
+        "case_id": "S81-008",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "error_type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+        "last_model_stage": "v2_semantic_edits",
+        "private_capture_hash": "ad339adc15bdfaf301572e5a22555d8d4f7f9e55e629bc913d3cc74554f6ce74"
+      },
+      {
+        "case_id": "S81-009",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "error_type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+        "last_model_stage": "v2_semantic_edits",
+        "private_capture_hash": "525e18479f3f5eb250a7ebaa396424a129262c90035e3c2d0cf3750e096ecaa6"
+      },
+      {
+        "case_id": "S81-010",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "error_type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+        "last_model_stage": "v2_semantic_edits",
+        "private_capture_hash": "c3a4aa1a8ff99102879eceedc9e2a98833ec2923eb254501daff54586b323284"
+      },
+      {
+        "case_id": "S81-012",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "error_type": "RecognitionFailure",
+        "reason": "V2_SLOT_OPERATION_CONFLICT",
+        "last_model_stage": "v2_semantic_edits",
+        "private_capture_hash": "870ee38e1a3c33ce0f25a9d42771a2046674d9199f248b48dc46187469312842"
+      },
+      {
+        "case_id": "S81-015",
+        "turn_index": 0,
+        "phase": "HISTORY",
+        "error_type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+        "last_model_stage": "v2_semantic_edits",
+        "private_capture_hash": "1e50e938f140533c4d7a54eaceb0e51e07ca832bd0248df8d884e162cecdcdf9"
+      },
+      {
+        "case_id": "S81-017",
+        "turn_index": 2,
+        "phase": "CURRENT",
+        "error_type": "RecognitionFailure",
+        "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+        "last_model_stage": "v2_semantic_edits",
+        "private_capture_hash": "5963b2b02c5ec77dcaf2267fcff696bc898d45647cdbf192d31650c9a2cb1cc6"
+      }
+    ]
   }
 }
