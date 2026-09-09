@@ -1,0 +1,3776 @@
+{
+  "baseline_commit": "6cc55e217574a68d7faa66e6d4c4de4c101341c9",
+  "single_artifact": "CurrentTurnSemanticParse",
+  "unchanged": [
+    "SemanticTaskDraft",
+    "mentions",
+    "roles",
+    "candidates",
+    "target task",
+    "query shape",
+    "catalog",
+    "scope",
+    "clock"
+  ],
+  "semantic_scores_changed": false,
+  "results": [
+    {
+      "case_id": "G81-001",
+      "source_capture_hash": "dd49aea9b0fdcc614208c075d0c753a9ef69114de9ad4abbe0eb6bd10d042e82",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "G81-001",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-001",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "dd49aea9b0fdcc614208c075d0c753a9ef69114de9ad4abbe0eb6bd10d042e82",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-0"
+                ],
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-0"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:product_line",
+                    "canonical_code": "product_line",
+                    "display_name": "产品线",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "72334fd8bb168542590d394d27fe290df8c773c5ed1016325b8e7c042bbb5b25",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-001",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-001",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "dd49aea9b0fdcc614208c075d0c753a9ef69114de9ad4abbe0eb6bd10d042e82",
+            "oracle_outputs_hash": "1d0a8cce79121f746dd1fed5aa46b12b06470e9593390c66d251162e5edcd5e9",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:product_line",
+                    "canonical_code": "product_line",
+                    "display_name": "产品线",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "72334fd8bb168542590d394d27fe290df8c773c5ed1016325b8e7c042bbb5b25",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-001",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-001",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "dd49aea9b0fdcc614208c075d0c753a9ef69114de9ad4abbe0eb6bd10d042e82",
+            "oracle_outputs_hash": "7aa692666ad35d7bbe7f21a335613383a9b291983f3632c41b81478f689c7834",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+              "first_rejecting_boundary": "RAW_TURN_CONTRACT"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "72334fd8bb168542590d394d27fe290df8c773c5ed1016325b8e7c042bbb5b25",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "G81-003",
+      "source_capture_hash": "828c671c3d0e8af08cd2d5480fecb31cc183f7c96ce2ce4b9ae2819da619d258",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "G81-003",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-003",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "828c671c3d0e8af08cd2d5480fecb31cc183f7c96ce2ce4b9ae2819da619d258",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-turn-0-0"
+                ],
+                [
+                  "subject",
+                  "SET",
+                  "m-turn-0-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-turn-0-0"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-turn-0-0"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-turn-0-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:city",
+                    "canonical_code": "city",
+                    "display_name": "市",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-turn-0-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-turn-0-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "d37e76bc387df42c7687528cfe30fbf40aa49ee0d4e2ae5d2f98a518014c151b",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-003",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-003",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "828c671c3d0e8af08cd2d5480fecb31cc183f7c96ce2ce4b9ae2819da619d258",
+            "oracle_outputs_hash": "c0cce93eaa2165ce1117ff23e769997f71873c172739958e072015aad09f8a75",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-turn-0-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-turn-0-0"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-turn-0-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:city",
+                    "canonical_code": "city",
+                    "display_name": "市",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-turn-0-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-turn-0-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "d37e76bc387df42c7687528cfe30fbf40aa49ee0d4e2ae5d2f98a518014c151b",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-003",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+          "receipt": {
+            "case_id": "G81-003",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "828c671c3d0e8af08cd2d5480fecb31cc183f7c96ce2ce4b9ae2819da619d258",
+            "oracle_outputs_hash": "70dd4144837f33c2ddc93643fa3f9504015574f3ab58b5798c8ca789ae3c457d",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": null,
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "d37e76bc387df42c7687528cfe30fbf40aa49ee0d4e2ae5d2f98a518014c151b",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": "04b34e59d27ff2717a96a0560c18efd3e79aa6023aded29da0ec0d04177d8dba"
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "G81-008",
+      "source_capture_hash": "1c59c902b6fddcabd2b12e043b639c3b64b9ecbddde6c0c8ee20f282defbfd9c",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "G81-008",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-008",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "1c59c902b6fddcabd2b12e043b639c3b64b9ecbddde6c0c8ee20f282defbfd9c",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-turn-0-1"
+                ],
+                [
+                  "subject",
+                  "SET",
+                  "m-turn-0-1"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-turn-0-1"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-turn-0-1"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-turn-0-1"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:main_data_domain_ent_manufacturer",
+                    "canonical_code": "main_data_domain_ent_manufacturer",
+                    "display_name": "生产厂家",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-turn-0-1"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-turn-0-1"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "86c73858185d64f6d86e30041031b5895c6d234983da5b6c68859fe49677daa7",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-008",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-008",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "1c59c902b6fddcabd2b12e043b639c3b64b9ecbddde6c0c8ee20f282defbfd9c",
+            "oracle_outputs_hash": "9701cf6e3d9ee17d03398968b2df58a91db5beebe8a4fafa682f3bd60947442f",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-turn-0-1"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-turn-0-1"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-turn-0-1"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:main_data_domain_ent_manufacturer",
+                    "canonical_code": "main_data_domain_ent_manufacturer",
+                    "display_name": "生产厂家",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-turn-0-1"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-turn-0-1"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "86c73858185d64f6d86e30041031b5895c6d234983da5b6c68859fe49677daa7",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-008",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-008",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "1c59c902b6fddcabd2b12e043b639c3b64b9ecbddde6c0c8ee20f282defbfd9c",
+            "oracle_outputs_hash": "35e54114a83daa2a7bbb186b3ce7b1b69d8c9e019b4feabdf59535a49b2f4ac4",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+              "first_rejecting_boundary": "RAW_TURN_CONTRACT"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "86c73858185d64f6d86e30041031b5895c6d234983da5b6c68859fe49677daa7",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "G81-009",
+      "source_capture_hash": "ef4f1c917a4d9a9ee70ff46c406d7abbfee26d087eec6f4a05b404889fdbe734",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "G81-009",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-009",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "ef4f1c917a4d9a9ee70ff46c406d7abbfee26d087eec6f4a05b404889fdbe734",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m-1"
+                ],
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m-1"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:project",
+                    "canonical_code": "project",
+                    "display_name": "销售项目",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-009",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-009",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "ef4f1c917a4d9a9ee70ff46c406d7abbfee26d087eec6f4a05b404889fdbe734",
+            "oracle_outputs_hash": "ef2b4af9f5fdecb8d7c1689de736d0c34a4d580b241a5755649764d5519beb8b",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:project",
+                    "canonical_code": "project",
+                    "display_name": "销售项目",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-009",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-009",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "ef4f1c917a4d9a9ee70ff46c406d7abbfee26d087eec6f4a05b404889fdbe734",
+            "oracle_outputs_hash": "cd9a7f244958d3a39ad999fbf911c3b7048264b8f506a13ac03297bddb7ece68",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_QUERY_SHAPE_CONFLICT",
+              "first_rejecting_boundary": "RAW_TURN_CONTRACT"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "G81-010",
+      "source_capture_hash": "8fa3be77c408b2fc053f337a65b5edde93532ab5f976de84e9730668abb02aab",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "G81-010",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-010",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "8fa3be77c408b2fc053f337a65b5edde93532ab5f976de84e9730668abb02aab",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m-1"
+                ],
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m-1"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:sales_company",
+                    "canonical_code": "sales_company",
+                    "display_name": "销售公司",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-010",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-010",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "8fa3be77c408b2fc053f337a65b5edde93532ab5f976de84e9730668abb02aab",
+            "oracle_outputs_hash": "7415d7c03e4cd48a9f3dbe3008148b0c2d017c72d2e04b859a38c32fc630fa8b",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:sales_company",
+                    "canonical_code": "sales_company",
+                    "display_name": "销售公司",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-010",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-010",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "8fa3be77c408b2fc053f337a65b5edde93532ab5f976de84e9730668abb02aab",
+            "oracle_outputs_hash": "27ff001f8aece002e435e80e8709c61dee0456d8328acb37304c6e9b7c0db730",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+              "first_rejecting_boundary": "RAW_TURN_CONTRACT"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "G81-012",
+      "source_capture_hash": "eb5a5b394d7ea97339ec4b327fba2cfb813af3f895e119d774f67e4720fb552a",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "G81-012",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-012",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "eb5a5b394d7ea97339ec4b327fba2cfb813af3f895e119d774f67e4720fb552a",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-province"
+                ],
+                [
+                  "subject",
+                  "SET",
+                  "m-province"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-province"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-province"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-province"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:province",
+                    "canonical_code": "province",
+                    "display_name": "省份",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-province"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-province"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "53be61e83cb432d517de2c980893d638a0fad632685e1b43889db58778703708",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-012",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-012",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "eb5a5b394d7ea97339ec4b327fba2cfb813af3f895e119d774f67e4720fb552a",
+            "oracle_outputs_hash": "4ad28b96b6743e520a8df58837d77bb8455aac95bb433cb1358a280da8056aa4",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-province"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-province"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-province"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:province",
+                    "canonical_code": "province",
+                    "display_name": "省份",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-province"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-province"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "53be61e83cb432d517de2c980893d638a0fad632685e1b43889db58778703708",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-012",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-012",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "eb5a5b394d7ea97339ec4b327fba2cfb813af3f895e119d774f67e4720fb552a",
+            "oracle_outputs_hash": "6f8af0fcf9e5a3d04524e20e221afa2868259d5d2d80f153e893d867d7c5d030",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+              "first_rejecting_boundary": "RAW_TURN_CONTRACT"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "53be61e83cb432d517de2c980893d638a0fad632685e1b43889db58778703708",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "G81-058",
+      "source_capture_hash": "cf5d3ace4ecce6bbc7004c9aa2e1a9cd99e8d861dd00a6e5602565d344ab101d",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "G81-058",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-058",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "cf5d3ace4ecce6bbc7004c9aa2e1a9cd99e8d861dd00a6e5602565d344ab101d",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m1"
+                ],
+                [
+                  "subject",
+                  "SET",
+                  "m0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m0"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m1"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:project",
+                    "canonical_code": "project",
+                    "display_name": "销售项目",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "e51cad48fa897a569b63fbcefbeb374bb06725779133cf467c590a6d640ccc98",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-058",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-058",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "cf5d3ace4ecce6bbc7004c9aa2e1a9cd99e8d861dd00a6e5602565d344ab101d",
+            "oracle_outputs_hash": "1dd0bb3f4eb22687acdb144fedc9209f0f747179ee8503063854ea2b38bc84e3",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m0"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:project",
+                    "canonical_code": "project",
+                    "display_name": "销售项目",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "e51cad48fa897a569b63fbcefbeb374bb06725779133cf467c590a6d640ccc98",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-058",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-058",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "cf5d3ace4ecce6bbc7004c9aa2e1a9cd99e8d861dd00a6e5602565d344ab101d",
+            "oracle_outputs_hash": "754969e6636c0e0dda8494a9e419fed8e368094a2c8d2eac9de78df05e856cce",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_QUERY_SHAPE_CONFLICT",
+              "first_rejecting_boundary": "RAW_TURN_CONTRACT"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "e51cad48fa897a569b63fbcefbeb374bb06725779133cf467c590a6d640ccc98",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "G81-059",
+      "source_capture_hash": "a4a71d2e6fa3f2a4f6a4aafa89d3630df8f4ebfd3354fcb7888e3e11aaade83c",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "G81-059",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-059",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "a4a71d2e6fa3f2a4f6a4aafa89d3630df8f4ebfd3354fcb7888e3e11aaade83c",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m1"
+                ],
+                [
+                  "subject",
+                  "SET",
+                  "m0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m0"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m1"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:project",
+                    "canonical_code": "project",
+                    "display_name": "销售项目",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "e51cad48fa897a569b63fbcefbeb374bb06725779133cf467c590a6d640ccc98",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-059",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-059",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "a4a71d2e6fa3f2a4f6a4aafa89d3630df8f4ebfd3354fcb7888e3e11aaade83c",
+            "oracle_outputs_hash": "1dd0bb3f4eb22687acdb144fedc9209f0f747179ee8503063854ea2b38bc84e3",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m0"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:project",
+                    "canonical_code": "project",
+                    "display_name": "销售项目",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "e51cad48fa897a569b63fbcefbeb374bb06725779133cf467c590a6d640ccc98",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-059",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-059",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "a4a71d2e6fa3f2a4f6a4aafa89d3630df8f4ebfd3354fcb7888e3e11aaade83c",
+            "oracle_outputs_hash": "754969e6636c0e0dda8494a9e419fed8e368094a2c8d2eac9de78df05e856cce",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_QUERY_SHAPE_CONFLICT",
+              "first_rejecting_boundary": "RAW_TURN_CONTRACT"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "e51cad48fa897a569b63fbcefbeb374bb06725779133cf467c590a6d640ccc98",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "G81-060",
+      "source_capture_hash": "55a2023d6ef28a22685e7ef328eabd5e21fe67dc860cf7cbd2fac8e089589e88",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "G81-060",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-060",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "55a2023d6ef28a22685e7ef328eabd5e21fe67dc860cf7cbd2fac8e089589e88",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m-1"
+                ],
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m-1"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:sales_company",
+                    "canonical_code": "sales_company",
+                    "display_name": "销售公司",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-060",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-060",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "55a2023d6ef28a22685e7ef328eabd5e21fe67dc860cf7cbd2fac8e089589e88",
+            "oracle_outputs_hash": "7415d7c03e4cd48a9f3dbe3008148b0c2d017c72d2e04b859a38c32fc630fa8b",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:sales_company",
+                    "canonical_code": "sales_company",
+                    "display_name": "销售公司",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-060",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-060",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "55a2023d6ef28a22685e7ef328eabd5e21fe67dc860cf7cbd2fac8e089589e88",
+            "oracle_outputs_hash": "27ff001f8aece002e435e80e8709c61dee0456d8328acb37304c6e9b7c0db730",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+              "first_rejecting_boundary": "RAW_TURN_CONTRACT"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "G81-061",
+      "source_capture_hash": "70a5b8a69c569b68ffaa382506cbd0d80142d76373a53a7a9729b20ab578f522",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "G81-061",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-061",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "70a5b8a69c569b68ffaa382506cbd0d80142d76373a53a7a9729b20ab578f522",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m-1"
+                ],
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m-1"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:sales_company",
+                    "canonical_code": "sales_company",
+                    "display_name": "销售公司",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-061",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-061",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "70a5b8a69c569b68ffaa382506cbd0d80142d76373a53a7a9729b20ab578f522",
+            "oracle_outputs_hash": "7415d7c03e4cd48a9f3dbe3008148b0c2d017c72d2e04b859a38c32fc630fa8b",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:sales_company",
+                    "canonical_code": "sales_company",
+                    "display_name": "销售公司",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-061",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-061",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "70a5b8a69c569b68ffaa382506cbd0d80142d76373a53a7a9729b20ab578f522",
+            "oracle_outputs_hash": "27ff001f8aece002e435e80e8709c61dee0456d8328acb37304c6e9b7c0db730",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+              "first_rejecting_boundary": "RAW_TURN_CONTRACT"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "G81-066",
+      "source_capture_hash": "6577d44b328c2cfc42fa80e8f592f15eb37ee82c87f2a4d4c5b7b88f1f251c21",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "G81-066",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-066",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "6577d44b328c2cfc42fa80e8f592f15eb37ee82c87f2a4d4c5b7b88f1f251c21",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m-city-list"
+                ],
+                [
+                  "subject",
+                  "SET",
+                  "m-city-list"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-city-list"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "SET",
+                  "m-city-list"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-city-list"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:city",
+                    "canonical_code": "city",
+                    "display_name": "市",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-city-list"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-city-list"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "1f0d8642202ce89ab53929b6d23a327591953f087b438aef3106a74691009b05",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-066",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-066",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "6577d44b328c2cfc42fa80e8f592f15eb37ee82c87f2a4d4c5b7b88f1f251c21",
+            "oracle_outputs_hash": "4f5036545d6c08782adf1ef788b23ba6246aa5735c691c2f1d63e6ff1bdd2320",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-city-list"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "subject",
+                  "SET",
+                  "m-city-list"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "subject",
+                  "m-city-list"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "subject",
+                  "operation": "SET",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "ENTITY",
+                    "semantic_role": "SUBJECT_ENTITY",
+                    "canonical_id": "sm81_bd205:entity:city",
+                    "canonical_code": "city",
+                    "display_name": "市",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-city-list"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-city-list"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "1f0d8642202ce89ab53929b6d23a327591953f087b438aef3106a74691009b05",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "G81-066",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "G81-066",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "6577d44b328c2cfc42fa80e8f592f15eb37ee82c87f2a4d4c5b7b88f1f251c21",
+            "oracle_outputs_hash": "32d583bf374a0fa17cc99653dc0d49b73af509a0cc927e9552f975c5ad4ec984",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_QUERY_SHAPE_CONFLICT",
+              "first_rejecting_boundary": "RAW_TURN_CONTRACT"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "1f0d8642202ce89ab53929b6d23a327591953f087b438aef3106a74691009b05",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "PV81-010",
+      "source_capture_hash": "676d0dcccee0f338c0274420d0a13027cbba14b4d14d513fd3c08e6d97c6fc7a",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "PV81-010",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "PV81-010",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "676d0dcccee0f338c0274420d0a13027cbba14b4d14d513fd3c08e6d97c6fc7a",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "metrics",
+                  "ADD",
+                  "m-turn0-0"
+                ],
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-turn0-1"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "metrics",
+                  "ADD",
+                  "m-turn0-0"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-turn0-1"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "metrics",
+                  "m-turn0-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "metrics",
+                  "operation": "ADD",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "METRIC",
+                    "semantic_role": "MEASURE",
+                    "canonical_id": "sm81_bd205:metric:sales_total_cost",
+                    "canonical_code": "sales_total_cost",
+                    "display_name": "销售总成本",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-turn0-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-turn0-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "3fcf430efe5fe08442547fc748f8e18cdb56d026207826c7ff51c0ebe6679f85",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "PV81-010",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "PV81-010",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "676d0dcccee0f338c0274420d0a13027cbba14b4d14d513fd3c08e6d97c6fc7a",
+            "oracle_outputs_hash": "f1f7d2cdd482f19a83c979223a2ebbfe9ac286546caf738363302a4d9075c0b8",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "metrics",
+                  "ADD",
+                  "m-turn0-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "metrics",
+                  "ADD",
+                  "m-turn0-0"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "metrics",
+                  "m-turn0-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "metrics",
+                  "operation": "ADD",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "METRIC",
+                    "semantic_role": "MEASURE",
+                    "canonical_id": "sm81_bd205:metric:sales_total_cost",
+                    "canonical_code": "sales_total_cost",
+                    "display_name": "销售总成本",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-turn0-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-turn0-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "3fcf430efe5fe08442547fc748f8e18cdb56d026207826c7ff51c0ebe6679f85",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "PV81-010",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+          "receipt": {
+            "case_id": "PV81-010",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "676d0dcccee0f338c0274420d0a13027cbba14b4d14d513fd3c08e6d97c6fc7a",
+            "oracle_outputs_hash": "5e46ff7b6d7daa69586d24b878e11e79f4343b9f1964f8ffb508781c6adb0df4",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": null,
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "3fcf430efe5fe08442547fc748f8e18cdb56d026207826c7ff51c0ebe6679f85",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": "9395e9351940b4963e6e01541c1581b59defeb91bab940107b7a5efd750948c0"
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    },
+    {
+      "case_id": "PV81-016",
+      "source_capture_hash": "843b89eae1c68af7fae8c6a075b43dda024c2a38a6c88b72af33472c0afff1b1",
+      "instrumentation_parity": "PASS",
+      "runs": [
+        {
+          "case_id": "PV81-016",
+          "turn_index": 0,
+          "variant": "BASELINE_OBSERVED",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "PV81-016",
+            "turn_index": 0,
+            "mode": "RECORDED_MODEL_PIPELINE",
+            "source_capture_hash": "843b89eae1c68af7fae8c6a075b43dda024c2a38a6c88b72af33472c0afff1b1",
+            "oracle_outputs_hash": null,
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": false
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": true,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 646,
+              "reason": "V2_EXPLICIT_OPERATION_DROPPED",
+              "markers": [
+                [
+                  "metrics",
+                  "ADD",
+                  "m-0"
+                ],
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-1"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "metrics",
+                  "ADD",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [
+                [
+                  "projection_spec",
+                  "ADD",
+                  "m-1"
+                ]
+              ],
+              "covered_mentions": [
+                [
+                  "metrics",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "metrics",
+                  "operation": "ADD",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "METRIC",
+                    "semantic_role": "MEASURE",
+                    "canonical_id": "sm81_bd205:metric:dealer_cooperation_months",
+                    "canonical_code": "dealer_cooperation_months",
+                    "display_name": "合作时长",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "1fd1e9e2308c1e1e85625d0e8be561e4c93859bec6a4cfea79f9b43b6c3f1510",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "PV81-016",
+          "turn_index": 0,
+          "variant": "MARKER_ONLY",
+          "status": "SAFE_REJECT",
+          "receipt": {
+            "case_id": "PV81-016",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "843b89eae1c68af7fae8c6a075b43dda024c2a38a6c88b72af33472c0afff1b1",
+            "oracle_outputs_hash": "bbeab4d17701b8d5b717c900cebfd5a88109d4a952ae06b7c97dffe3867b501d",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": {
+              "type": "RecognitionFailure",
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "first_rejecting_boundary": "TASK_PATCH"
+            },
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [
+            {
+              "boundary": "RawTurnPlanner._patch",
+              "line": 648,
+              "reason": "V2_EXPLICIT_SLOT_DROPPED",
+              "markers": [
+                [
+                  "metrics",
+                  "ADD",
+                  "m-0"
+                ]
+              ],
+              "used_markers": [
+                [
+                  "metrics",
+                  "ADD",
+                  "m-0"
+                ]
+              ],
+              "unconsumed_markers": [],
+              "covered_mentions": [
+                [
+                  "metrics",
+                  "m-0"
+                ]
+              ],
+              "operations_created_before_reject": [
+                {
+                  "operation_id": "operation:0",
+                  "slot_path": "metrics",
+                  "operation": "ADD",
+                  "old_value": null,
+                  "new_value": {
+                    "catalog_type": "METRIC",
+                    "semantic_role": "MEASURE",
+                    "canonical_id": "sm81_bd205:metric:dealer_cooperation_months",
+                    "canonical_code": "dealer_cooperation_months",
+                    "display_name": "合作时长",
+                    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+                    "semantic_model_id": "81",
+                    "business_domain_ids": [
+                      "205"
+                    ],
+                    "source_mention_ids": [
+                      "turn-0:m-0"
+                    ],
+                    "resolution_source": "PINNED_CATALOG"
+                  },
+                  "target_item_id": null,
+                  "evidence_mention_ids": [
+                    "m-0"
+                  ],
+                  "source": "CURRENT_EXPLICIT",
+                  "reason_code": "CURRENT_TURN_EVIDENCE",
+                  "base_task_version": 0,
+                  "presence": "PRESENT"
+                }
+              ],
+              "base_task_version": 0
+            }
+          ],
+          "candidate_artifact_hash": "1fd1e9e2308c1e1e85625d0e8be561e4c93859bec6a4cfea79f9b43b6c3f1510",
+          "target_task": "task:turn-0",
+          "reducer_called": false,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": null
+        },
+        {
+          "case_id": "PV81-016",
+          "turn_index": 0,
+          "variant": "DECLARED_SLOT_PROPOSITION",
+          "status": "ACCEPTED_DIAGNOSTIC_ONLY",
+          "receipt": {
+            "case_id": "PV81-016",
+            "turn_index": 0,
+            "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+            "source_capture_hash": "843b89eae1c68af7fae8c6a075b43dda024c2a38a6c88b72af33472c0afff1b1",
+            "oracle_outputs_hash": "ab833b439520dfeb187793f3a4d3a09b076934fcd6fb7dafe0a89fdf5715b1ac",
+            "model_stages": [
+              {
+                "stage": "v2_current_turn",
+                "context_matches_recording": true,
+                "output_changed": true
+              },
+              {
+                "stage": "v2_semantic_edits",
+                "context_matches_recording": false,
+                "output_changed": false
+              }
+            ],
+            "failure": null,
+            "real_model_calls": 0,
+            "source_SQL_executions": 0,
+            "production_writes": 0,
+            "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+            "source_observations_replayed": 0,
+            "model_accuracy_established": false,
+            "production_cutover_pass": false
+          },
+          "rejecting_patch": [],
+          "candidate_artifact_hash": "1fd1e9e2308c1e1e85625d0e8be561e4c93859bec6a4cfea79f9b43b6c3f1510",
+          "target_task": "task:turn-0",
+          "reducer_called": true,
+          "external_call_attempts": {
+            "model_attempts": 0,
+            "database_attempts": 0,
+            "network_attempts": 0,
+            "redis_attempts": 0
+          },
+          "Gold_PASS": false,
+          "Whole_Plan_PASS": false,
+          "result_hash": "ee2f34335b87df3a2c66f42c5118a1623000dc601ec59af445d533816ae387aa"
+        }
+      ],
+      "production_code_changes": 0,
+      "real_model_calls": 0
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "6cc55e217574a68d7faa66e6d4c4de4c101341c9",
+  "phase": "PRE_COMMIT_VERIFICATION",
+  "tracked_existing_files": 1448,
+  "unexpected_tracked_drift": 0,
+  "method": "LF-normalized SHA-256 for existing tracked files; exact bytes for explicit new file sync.",
+  "existing_tracked_files_manifest_hash": "53e833124e47bff62ad796cec37707934223fa958129ccbebb8ae6de8b0d8096",
+  "new_files": 23,
+  "expected_final_tracked_files": 1471,
+  "env_unchanged": true,
+  "original_oagnet_HEAD_and_index_preserved": true,
+  "post_commit_check": "Verify all committed blobs against both workspaces, Git clean status and remote head."
+}

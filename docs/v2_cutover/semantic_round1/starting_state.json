@@ -1,0 +1,14 @@
+{
+  "starting_commit": "6cc55e217574a68d7faa66e6d4c4de4c101341c9",
+  "base_branch": "pre-semantic-calibration-20260909t111841z",
+  "feature_branch": "semantic-operation-round1-20260909t122901z",
+  "parent_draft_pr": "https://github.com/dreamyang-1/data/pull/54",
+  "tracked_files": 1448,
+  "unexpected_drift": 0,
+  "origin_HEAD_verified": true,
+  "git_clean": true,
+  "original_oagnet_head": "656637304eb1c7dbdf8ddb8714ea3b8df6b0990c",
+  "original_oagnet_index_hash": "ce14d88f7b52b4adf4f0f54114f15635dafdbba672c256fd05f06a2b564fba0b",
+  "formal": "E:\\YouoAgent\\DataAnalysis_Agent\\docs\\v2_cutover\\semantic_round1",
+  "started_at": "2026-09-09T12:29:01.563575+00:00"
+}

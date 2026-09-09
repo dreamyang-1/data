@@ -1,0 +1,130 @@
+{
+  "rows": [
+    {
+      "family": "CLEAR and REMOVE-last barriers across follow-up / time / metric ADD",
+      "nodeids": [
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[ADD-CLEAR]",
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[ADD-REMOVE]",
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[INHERIT-CLEAR]",
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[INHERIT-REMOVE]",
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[TIME-CLEAR]",
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[TIME-REMOVE]"
+      ],
+      "case_count": 6,
+      "status": "PASS",
+      "evidence_kind": "NATIVE_RAW_PLANNER_WITH_CONTROLLED_MODEL_HTTP"
+    },
+    {
+      "family": "Duplicate canonical ADD and no-op version",
+      "nodeids": [
+        "tests/test_v2_operation_round1.py::test_duplicate_add_is_canonical_noop_but_current_patch_is_explicit"
+      ],
+      "case_count": 1,
+      "status": "PASS",
+      "evidence_kind": "NATIVE_RAW_PLANNER_WITH_CONTROLLED_MODEL_HTTP"
+    },
+    {
+      "family": "Single to single / multi REPLACE and slot isolation",
+      "nodeids": [
+        "tests/test_v2_operation_round1.py::test_replace_collection_only_changes_declared_slot[False]",
+        "tests/test_v2_operation_round1.py::test_replace_collection_only_changes_declared_slot[True]"
+      ],
+      "case_count": 2,
+      "status": "PASS",
+      "evidence_kind": "NATIVE_RAW_PLANNER_WITH_CONTROLLED_MODEL_HTTP"
+    },
+    {
+      "family": "Canonical mixed ADD/REMOVE and atomic success",
+      "nodeids": [
+        "tests/test_v2_operation_round1.py::test_mixed_add_remove_canonical_members_is_atomic"
+      ],
+      "case_count": 1,
+      "status": "PASS",
+      "evidence_kind": "NATIVE_RAW_PLANNER_WITH_CONTROLLED_MODEL_HTTP"
+    },
+    {
+      "family": "Missing operand / bad binding / overlap / conflict: atomic reject and same-message retry",
+      "nodeids": [
+        "tests/test_v2_operation_round1.py::test_rejected_mixed_patch_leaves_state_barriers_versions_and_message_unchanged[bad_metric]",
+        "tests/test_v2_operation_round1.py::test_rejected_mixed_patch_leaves_state_barriers_versions_and_message_unchanged[missing_operand]",
+        "tests/test_v2_operation_round1.py::test_rejected_mixed_patch_leaves_state_barriers_versions_and_message_unchanged[overlap]",
+        "tests/test_v2_operation_round1.py::test_rejected_mixed_patch_leaves_state_barriers_versions_and_message_unchanged[slot_conflict]"
+      ],
+      "case_count": 4,
+      "status": "PASS",
+      "evidence_kind": "NATIVE_RAW_PLANNER_WITH_CONTROLLED_MODEL_HTTP"
+    },
+    {
+      "family": "Independent slot order and mixed CLEAR/ADD",
+      "nodeids": [
+        "tests/test_v2_operation_round1.py::test_independent_slot_order_and_clear_add_do_not_change_other_slots"
+      ],
+      "case_count": 1,
+      "status": "PASS",
+      "evidence_kind": "NATIVE_RAW_PLANNER_WITH_CONTROLLED_MODEL_HTTP"
+    },
+    {
+      "family": "Same-target unordered CLEAR plus ADD/REPLACE conflict",
+      "nodeids": [
+        "tests/test_v2_operation_round1.py::test_conflicting_same_filter_target_cannot_apply_partial_clear[ADD]",
+        "tests/test_v2_operation_round1.py::test_conflicting_same_filter_target_cannot_apply_partial_clear[REPLACE]"
+      ],
+      "case_count": 2,
+      "status": "PASS",
+      "evidence_kind": "NATIVE_RAW_PLANNER_WITH_CONTROLLED_MODEL_HTTP"
+    },
+    {
+      "family": "Operation-like business wording does not force follow-up",
+      "nodeids": [
+        "tests/test_v2_operation_round1.py::test_operation_like_business_word_does_not_force_followup"
+      ],
+      "case_count": 1,
+      "status": "PASS",
+      "evidence_kind": "NATIVE_RAW_PLANNER_WITH_CONTROLLED_MODEL_HTTP"
+    },
+    {
+      "family": "Query negation is a filter, not a REMOVE edit",
+      "nodeids": [
+        "tests/test_v2_operation_round1.py::test_query_negation_stays_filter_condition_not_remove"
+      ],
+      "case_count": 1,
+      "status": "PASS",
+      "evidence_kind": "NATIVE_RAW_PLANNER_WITH_CONTROLLED_MODEL_HTTP"
+    },
+    {
+      "family": "Cross-scope operation rejected before model and mutation",
+      "nodeids": [
+        "tests/test_v2_operation_round1.py::test_cross_scope_operation_rejected_before_model_and_state_mutation"
+      ],
+      "case_count": 1,
+      "status": "PASS",
+      "evidence_kind": "NATIVE_RAW_PLANNER_WITH_CONTROLLED_MODEL_HTTP"
+    },
+    {
+      "family": "Minimal existing Pending operation admissibility",
+      "nodeids": [
+        "tests/test_v2_operation_round1.py::test_explicit_operation_is_not_an_exact_pending_answer"
+      ],
+      "case_count": 1,
+      "status": "PASS",
+      "evidence_kind": "NATIVE_RAW_PLANNER_WITH_CONTROLLED_MODEL_HTTP"
+    }
+  ],
+  "new_controlled_native_cases": 21,
+  "new_oracle_artifact_tests": 2,
+  "new_tests_total": 23,
+  "existing_critical_tests": 160,
+  "existing_critical_passed": 160,
+  "atomicity": "Invalid mixed edit leaves input state, messages, versions and barriers identical; valid retry applies once",
+  "versions": "Semantic no-op keeps task version; accepted turn increments state version; semantic mutation increments task version",
+  "provenance": "Current operation patch and structured semantic trace use CURRENT_EXPLICIT; inherited refs preserve turn0 provenance",
+  "conflict_scope": "Raw structured same-target edits reject; established declarative TaskPatch CLEAR+ADD phase semantics are unchanged",
+  "live_model_operation_safety_gate": "INCOMPLETE_UNCHANGED",
+  "whole_plan_safety_pass_claimed": false,
+  "new_live_gold_cases": 0,
+  "out_of_scope_gaps": [
+    "DATASET_RUNTIME_INTEGRATION_GAP",
+    "DRY_PLAN_RUNTIME_INTEGRATION_GAP"
+  ],
+  "new_scope_test_axis": "knowledge_base_names mismatch; model/domain rejection also covered by unchanged Critical scope suite"
+}
