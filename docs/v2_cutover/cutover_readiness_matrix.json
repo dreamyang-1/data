@@ -1,7 +1,7 @@
 {
-  "current_stage": "SEMANTIC_CUTOVER_TRIAGE_CHECKPOINT_PENDING",
+  "current_stage": "SEMANTIC_TRIAGE_COMPLETE",
   "readiness": "NOT_READY",
-  "baseline_commit": "b79fbd02a0f054ea5bd6ab6106569ea0019b0a28",
+  "baseline_commit": "0e408509126aae0a3a324aff02aef848fd0d3c56",
   "production_acceptance_groups": {
     "P0": 8,
     "P1": 4
@@ -121,5 +121,19 @@
   "redis_reaudit_performed": false,
   "existing_gold_recreated": false,
   "unmeasured_required_metrics": "NOT_EVALUATED, never zero-violation PASS",
-  "v1_production_routing_changed": false
+  "v1_production_routing_changed": false,
+  "semantic_triage": {
+    "report": "semantic_triage/checkpoint_report.md",
+    "root_groups": 11,
+    "semantic_groups": 8,
+    "evaluator_fixture_groups": 3,
+    "case_counts": {
+      "FAIL": 37,
+      "PASS": 79,
+      "NOT_RUN": 4,
+      "BLOCKED": 0
+    },
+    "freeze_gate": "FAIL",
+    "stop_requested": true
+  }
 }

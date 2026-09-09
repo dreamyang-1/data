@@ -1,0 +1,18 @@
+﻿stage,case_count,case_ids,severity,cutover_blocker,root_cause_count,one_root_fix_coverage
+TURN_RESOLUTION,0,[],[],False,0,[]
+MENTION_EXTRACTION,0,[],[],False,0,[]
+MENTION_BOUNDARY,10,"[""G81-002"", ""G81-004"", ""G81-005"", ""G81-006"", ""G81-013"", ""G81-029"", ""G81-030"", ""G81-033"", ""G81-034"", ""G81-094""]","[""P0"", ""P1""]",True,2,"[{""root_cause_id"": ""RC-BOUNDARY-OBJECT"", ""primary_cases"": 6, ""full_case_passes_guaranteed"": 0}, {""root_cause_id"": ""RC-BOUNDARY-METRIC"", ""primary_cases"": 4, ""full_case_passes_guaranteed"": 0}]"
+SEMANTIC_ROLE,0,[],[],False,0,[]
+CANDIDATE_RETRIEVAL,0,[],[],False,0,[]
+CANONICAL_BINDING,0,[],[],False,0,[]
+ENTITY_VALUE_GROUNDING,5,"[""S81-004"", ""S81-005"", ""S81-009"", ""S81-010"", ""S81-015""]","[""P1""]",True,1,"[{""root_cause_id"": ""RC-VALUE-CANDIDATES"", ""primary_cases"": 5, ""full_case_passes_guaranteed"": 0}]"
+TIME_NORMALIZATION,0,[],[],False,0,[]
+TASK_OPERATION,6,"[""G81-080"", ""S81-006"", ""S81-007"", ""S81-008"", ""S81-012"", ""S81-017""]","[""P0"", ""P1""]",True,3,"[{""root_cause_id"": ""RC-OP-ATOMIC"", ""primary_cases"": 2, ""full_case_passes_guaranteed"": 0}, {""root_cause_id"": ""RC-EDIT-COVERAGE"", ""primary_cases"": 3, ""full_case_passes_guaranteed"": 0}, {""root_cause_id"": ""RC-REFERENCE-AS-EDIT"", ""primary_cases"": 1, ""full_case_passes_guaranteed"": 0}]"
+TASK_REDUCER,0,[],[],False,0,[]
+QUERY_SHAPE,10,"[""G81-001"", ""G81-003"", ""G81-007"", ""G81-008"", ""G81-009"", ""G81-010"", ""G81-011"", ""G81-012"", ""G81-014"", ""G81-093""]","[""P1""]",True,2,"[{""root_cause_id"": ""RC-SHAPE-LIST"", ""primary_cases"": 9, ""full_case_passes_guaranteed"": 0}, {""root_cause_id"": ""RC-SHAPE-LINEAGE"", ""primary_cases"": 1, ""full_case_passes_guaranteed"": 0}]"
+SEMANTIC_QUERY_IR,0,[],[],False,0,[]
+DRY_PLAN,0,[],[],False,0,[]
+EVALUATOR_GAP,6,"[""G81-071"", ""G81-073"", ""G81-082"", ""G81-084"", ""G81-090"", ""G81-091""]","[""P2""]",True,2,"[{""root_cause_id"": ""RC-EVAL-TURN-PROXY"", ""primary_cases"": 5, ""full_case_passes_guaranteed"": 0}, {""root_cause_id"": ""RC-EVAL-DATASET-PROXY"", ""primary_cases"": 1, ""full_case_passes_guaranteed"": 0}]"
+FIXTURE_GAP,4,"[""S81-016"", ""S81-018"", ""S81-019"", ""S81-020""]","[""P2""]",True,1,"[{""root_cause_id"": ""RC-FIXTURE-STATE-ENTRY"", ""primary_cases"": 4, ""full_case_passes_guaranteed"": 0}]"
+CATALOG_GAP,0,[],[],False,0,[]
+EXTERNAL_BLOCKER,0,[],[],False,0,[]
