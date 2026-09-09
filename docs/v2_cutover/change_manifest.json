@@ -1,125 +1,59 @@
 {
-  "baseline_commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
-  "feature_branch": "cutover-source-evidence-20260909t052100z",
+  "baseline_commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
+  "feature_branch": "cutover-recorded-oracle-20260909t055600z",
   "files": [
     {
-      "repository_path": "tools/cutover/frozen_source_values.py",
-      "development_sha256": "0d1d6cc154abdf8d54f7cbbc68af276d70af1e673b9397c52b5ea2b7fe8c3e93",
-      "normalized_sha256": "0d1d6cc154abdf8d54f7cbbc68af276d70af1e673b9397c52b5ea2b7fe8c3e93",
-      "baseline_sha256": null
-    },
-    {
-      "repository_path": "tools/cutover/capture_source_values.py",
-      "development_sha256": "41ee00e7e29f0456718716eab35d09dd262f2eaa706ee317ace09b950ef363c1",
-      "normalized_sha256": "41ee00e7e29f0456718716eab35d09dd262f2eaa706ee317ace09b950ef363c1",
-      "baseline_sha256": null
-    },
-    {
       "repository_path": "tools/cutover/run_raw_transition_benchmark.py",
-      "development_sha256": "02c4a6cf5bfd9ae91080715c3d4261b65574cbaeb7a61b272373c00769f7efae",
-      "normalized_sha256": "02c4a6cf5bfd9ae91080715c3d4261b65574cbaeb7a61b272373c00769f7efae",
-      "baseline_sha256": "08409fced98a34c96f57a895c72da5f01c43ef30d6a74912059f19b59e42c7d2"
+      "development_sha256": "8a75cab71720a6d0d6194339ff1cbe5216f25b3303683917e2282753722b12a2",
+      "normalized_sha256": "8a75cab71720a6d0d6194339ff1cbe5216f25b3303683917e2282753722b12a2",
+      "baseline_sha256": "02c4a6cf5bfd9ae91080715c3d4261b65574cbaeb7a61b272373c00769f7efae"
     },
     {
-      "repository_path": "tools/cutover/transition_observations.py",
-      "development_sha256": "68cc0d7f2960a93f4d55d431b97b5accfd735af16383d6211b2381879b52406c",
-      "normalized_sha256": "68cc0d7f2960a93f4d55d431b97b5accfd735af16383d6211b2381879b52406c",
-      "baseline_sha256": "138e61448ed422e0fb6ddb7c0639fb916a2b16af74e2ddd634b3580bc6dff15d"
-    },
-    {
-      "repository_path": "tests/test_cutover_frozen_source_values.py",
-      "development_sha256": "55011f46819fc87f6507cb5b4218e3861fcf2f164d285be06b162bca0012fbc2",
-      "normalized_sha256": "55011f46819fc87f6507cb5b4218e3861fcf2f164d285be06b162bca0012fbc2",
+      "repository_path": "tests/test_cutover_recorded_oracle.py",
+      "development_sha256": "c6263475eca6006cd2f5d18b0aeefda46d1f6352b3f89d19c4bdb6b45cde4032",
+      "normalized_sha256": "c6263475eca6006cd2f5d18b0aeefda46d1f6352b3f89d19c4bdb6b45cde4032",
       "baseline_sha256": null
-    },
-    {
-      "repository_path": "tests/test_cutover_raw_transition_benchmark.py",
-      "development_sha256": "94926ffee88d454b7dc6afac628d0f7f1601cf9ea7f4bc13c7e63fda7ec268de",
-      "normalized_sha256": "94926ffee88d454b7dc6afac628d0f7f1601cf9ea7f4bc13c7e63fda7ec268de",
-      "baseline_sha256": "e5b927282f36cf1f85a0cf7c6acfe8bf2c630a5fddc21eecf726615acdb55292"
     },
     {
       "repository_path": "docs/v2_cutover/closure_report.md",
-      "development_sha256": "85bc34cad68350db85c62f01b312cb35da220a79a7d29ec7a452d8edc8357fb0",
-      "normalized_sha256": "55daeed0ad4f3f0c2daf0d4b3c19a3534ce79f4743c1a1c08753a74b9296c727",
-      "baseline_sha256": "866450ade9f4b3b07c46dbc5aa5a1a0dc6947bfe131e24df3c6eb4ee92a0b48a"
+      "development_sha256": "5d54d1aa3a5dc8752cfda33eae80ef4b57c8aa0f692826744b8abf59b58f9843",
+      "normalized_sha256": "982e104b343a5713699b4e013424cbd65b93b4780157e02c88a8f2ca34c70de5",
+      "baseline_sha256": "55daeed0ad4f3f0c2daf0d4b3c19a3534ce79f4743c1a1c08753a74b9296c727"
     },
     {
       "repository_path": "docs/v2_cutover/test_delta.json",
-      "development_sha256": "0d2d7eb0d4965f43c6c5c341f36475abdf1b86b331964c6d65d9e8e1056f50dd",
-      "normalized_sha256": "24ee8a774e5aa8d8358bfa2f590ed7892afac6f0279a4727abe5f2c176c10c8c",
-      "baseline_sha256": "0eecb26b751da52ad12d230086eb4a82cd5f5b7b748e69e6152b2458bd488d06"
+      "development_sha256": "8b991bf37c1bf86eddc46d45d1a709dbf673b84924b4978f2ef0cfaeef6cf5f5",
+      "normalized_sha256": "7670db0e86088f0a7a8d2ea0f4eb72839484155ac48173b238754d58611c359f",
+      "baseline_sha256": "24ee8a774e5aa8d8358bfa2f590ed7892afac6f0279a4727abe5f2c176c10c8c"
     },
     {
       "repository_path": "docs/v2_cutover/cutover_readiness_matrix.json",
-      "development_sha256": "10335b65cc0fc6a162b36bd97e1b7c117d357359afab92e03b79161afe84d5e9",
-      "normalized_sha256": "2cfa9984196f35fac4d224f2f6fe679fb3a1edf6f5c3a1d0b1a4c803ef3f379b",
-      "baseline_sha256": "4246f25e53d78ceeac030a34b3e3168a9c6fa3c90bf6b116055eff926524ccaf"
+      "development_sha256": "3d3e569ff15e10610416330e0dfd57e4e3ca13d274609bb3abbe65b2b00ed62a",
+      "normalized_sha256": "ac00f3e16a75d3d3ee8fdacf9830b5c6d807c24afa6dbda7fbf01fd49ff718e9",
+      "baseline_sha256": "2cfa9984196f35fac4d224f2f6fe679fb3a1edf6f5c3a1d0b1a4c803ef3f379b"
     },
     {
       "repository_path": "docs/v2_cutover/first_divergence_report.json",
-      "development_sha256": "6eb2eaac86e9185f1fc59e87fb2d3f6c6648ac3e9f883d7792abf9d44866a262",
-      "normalized_sha256": "ae190a5dccdf80415e5d0e6fde67a0737d05f8199a23889d4e2a6ebd30f7834a",
-      "baseline_sha256": "139f0f5ad6bb1a8cfb9ccce89f55969ae94a4d101dcf5d613d59982ca43d669e"
-    },
-    {
-      "repository_path": "docs/v2_cutover/model_benchmark_report.json",
-      "development_sha256": "af70c75797c8340335dba620a227e341e49436658701cc0f72c00614c69bdbbc",
-      "normalized_sha256": "2555db4d4d04ddfe5a3c156569c760832a3ab432b8a477dce8639b8bf632553d",
-      "baseline_sha256": "b32e553a7ac14d762397d37a19f8c72d4e61ceea899a951c16be7873a3a2ff45"
+      "development_sha256": "575bf008ee9a4b40e0782e222f1bfcc8cb8e6d3c762ba95aadf40759c24eba5c",
+      "normalized_sha256": "9566132013b188e18fc26721b9cd02e64dc29c518fac0deb72bd889f497716a9",
+      "baseline_sha256": "ae190a5dccdf80415e5d0e6fde67a0737d05f8199a23889d4e2a6ebd30f7834a"
     },
     {
       "repository_path": "docs/v2_cutover/oracle_evaluation_report.json",
-      "development_sha256": "7defbc08ca0ffcaea8bcbab1cde1a6ede55a0e403c679917ba569c6336608bd4",
-      "normalized_sha256": "b5c7a9ceeec46c32cf03e6bbd7ee8b6b750b43d4d83c21601234bb41ea2b26ef",
-      "baseline_sha256": "4921c013d402d6075080e9112c922020b7339a0f6d8bd89189683e4254b6c0be"
+      "development_sha256": "fba2ac56c5465313929e4f9a280399149f61209c39248e188f4163073842c13c",
+      "normalized_sha256": "04d07194131cee515913c3268d9f32c80b7becaea888f5fb8c4eab136b678f83",
+      "baseline_sha256": "b5c7a9ceeec46c32cf03e6bbd7ee8b6b750b43d4d83c21601234bb41ea2b26ef"
     },
     {
-      "repository_path": "docs/v2_cutover/source_evidence/capture_coverage.json",
-      "development_sha256": "990052dfbb8df73a68aa41adbe6584e5460bffe3913a589a5a85bb9d3a51a5bc",
-      "normalized_sha256": "1e1eaafeaa02a6d017b53d3311ac46ae48e4e33d23c9730bf695b97a3de2b456",
+      "repository_path": "docs/v2_cutover/recorded_oracle/replay_receipts.json",
+      "development_sha256": "0d62c5904af6a61f11be353e8f934b0dd52aadf8a20e5499c0f255e48de53810",
+      "normalized_sha256": "99882f49c74ad7dd522a323df4b9bf597e95a4e2319182a271a02984dc9fcafa",
       "baseline_sha256": null
     },
     {
-      "repository_path": "docs/v2_cutover/source_evidence/comparison.json",
-      "development_sha256": "a9b0de45f2793fb1fa69a775077476ad6ae3a0dccf786d728f463b29d6ffc216",
-      "normalized_sha256": "ddeb9aeaac1d16017ac96d4bf9dfaa6b41b4bd0b97540390d22b13ccb38b3e41",
-      "baseline_sha256": null
-    },
-    {
-      "repository_path": "docs/v2_cutover/source_evidence/live_final_evaluation.json",
-      "development_sha256": "de49030020d0187be02686e57a5a1faae79519587e612888d296975a71ce5a77",
-      "normalized_sha256": "b5870b07dc5875a52fbb8284e6225213a995644a6201b7a7ea8b2e0e61994bd8",
-      "baseline_sha256": null
-    },
-    {
-      "repository_path": "docs/v2_cutover/source_evidence/live_final_model_calls.json",
-      "development_sha256": "e7033ad51c1adfd6a8f542fd7693eee528f225246362c40530e1f5661d94a34e",
-      "normalized_sha256": "a652e44a791605933f49ac102771a9e1e7ce339fe7c14f4c5f927e89e594fbe0",
-      "baseline_sha256": null
-    },
-    {
-      "repository_path": "docs/v2_cutover/source_evidence/live_final_predictions.json",
-      "development_sha256": "f71d7d4292d4b63c595dd2563a83ea639532ba9b57932d1e4c2e2870be25c6d9",
-      "normalized_sha256": "76771e47d467fddfd1c40aa884429e577c6a3d1129506fbf63a60bb2d6ea5b91",
-      "baseline_sha256": null
-    },
-    {
-      "repository_path": "docs/v2_cutover/source_evidence/live_final_turns.json",
-      "development_sha256": "ad92438322fff28e579c3eba90c014ad0d7fb2538795deeded8e493cf26586ed",
-      "normalized_sha256": "58efd128cc48218d389ec0ee29bfefa43d98d734df74fff3dc728ab176457cc4",
-      "baseline_sha256": null
-    },
-    {
-      "repository_path": "docs/v2_cutover/source_evidence/region_probe_receipt.json",
-      "development_sha256": "cacff1c5f5612855ae2c513271b8d65f48030dbbdcf4ae34528889c5fb985574",
-      "normalized_sha256": "d1a960028cc3fe71fc73ee31a9fb4b10a9e221f6314bd3f6286250833c55a71f",
-      "baseline_sha256": null
-    },
-    {
-      "repository_path": "docs/v2_cutover/source_evidence/source_capture_receipt.json",
-      "development_sha256": "3a89669f3ca956f7438b6ab70ce4426cd3bdf7893c1656a1b33ef8c8153429da",
-      "normalized_sha256": "712ef7028d0c801b712e6217c300d34f7ae1cdbbe2bbfebe32d5c8ff5ef0f071",
+      "repository_path": "docs/v2_cutover/recorded_oracle/temporal_candidate_evidence.json",
+      "development_sha256": "1dd5fe0924a80263f5004604591411b7fc69354b8c461ed3698711b747afad55",
+      "normalized_sha256": "5686243ec0d1a290ec9998523ee77d3772053d0ef9c1e75298cdb47dd4a87197",
       "baseline_sha256": null
     }
   ],

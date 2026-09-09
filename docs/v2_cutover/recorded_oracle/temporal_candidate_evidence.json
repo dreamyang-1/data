@@ -1,0 +1,50 @@
+{
+  "case_id": "S81-014",
+  "turn_index": 0,
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "source_capture_hash": "555124263d7033efd935a74999404c505626f3862dfe6bc1cbd1c8fb6d01276f",
+  "source_field_path": "metric.time_caliber.time_anchor",
+  "metric_code": "order_count",
+  "governed_anchor": "sales_order.created_date",
+  "matching_attributes": [
+    {
+      "entity_code": "sales_order",
+      "attribute_id": "2094691218049478658",
+      "attr_code": "created_date",
+      "field_mapping": "sales_order.created_date"
+    }
+  ],
+  "offered_TIME_FIELD_candidates": 0,
+  "selected_anchor": {
+    "binding_handle": "binding:fbbd42956da27cd1844a2d1bfe82f36e",
+    "mention_id": "m-turn-0-subject",
+    "role": "SUBJECT_ENTITY",
+    "catalog_type": "ENTITY",
+    "name": "销售订单",
+    "code": "sales_order",
+    "aliases": [
+      "订单、销售单据、出货单"
+    ]
+  },
+  "observed_timezone": "+08:00",
+  "observed_grain": "YEAR",
+  "time_mention_roles": [
+    [
+      "TIME_RANGE"
+    ]
+  ],
+  "initial_rejecting_boundary": "TASK_PATCH TimeSpec IANA timezone validation",
+  "after_IANA_oracle": "BINDING_ROLE rejection: selected subject entity is not a time field",
+  "candidate_gap": "TIME_RANGE currently supplies no TIME_FIELD candidate; metric catalog declares an anchor with one mapped attribute",
+  "date_authority_gap": "Current draft supplies date/grain/timezone; master contract requires deterministic time normalization",
+  "new_model_calls": 0,
+  "new_source_queries": 0,
+  "production_writes": 0
+}
