@@ -1,10 +1,10 @@
 {
-  "baseline_commit": "42547ca85fcc9a2ad6f83260df444ada3ea81ddd",
-  "feature_branch": "cutover-time-components-20260909t070300z",
+  "baseline_commit": "b79fbd02a0f054ea5bd6ab6106569ea0019b0a28",
+  "feature_branch": "cutover-source-alias-20260909t071700z",
   "final_commit": "Commit containing this manifest",
-  "planned_subject": "cutover: derive temporal edits and explicit comparisons from current expressions",
+  "planned_subject": "cutover: bound source value discovery and revalidate model choices",
   "runtime_source_changed": true,
   "evidence": "closure_report.md and test_delta.json",
-  "draft_pr_base": "cutover-compound-mention-20260909t064400z",
-  "stage_baseline": "42547ca85fcc9a2ad6f83260df444ada3ea81ddd"
+  "draft_pr_base": "cutover-time-components-20260909t070300z",
+  "stage_baseline": "b79fbd02a0f054ea5bd6ab6106569ea0019b0a28"
 }

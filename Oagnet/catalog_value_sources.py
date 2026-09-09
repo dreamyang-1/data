@@ -225,3 +225,56 @@ def observe(scope, field, value, limit):
         "values": values[:limit], "complete": len(values) <= limit}
     return {**material, "observation_hash": digest(material),
             "observed_at": datetime.now(timezone.utc).isoformat()}
+
+
+def query_probe_values(scope, field, limit):
+    """Read one proved field only; limit+1 detects high cardinality, never truncates silently."""
+    import mysql_tool as mysql
+    try:
+        rows = _definition_rows(scope, credentials=True, attribute_id=field['attribute_id'])
+        if len(rows) != 1 or field_identity(rows[0], scope) != field:
+            raise CatalogEvidenceError('CATALOG_VALUE_SOURCE_CHANGED')
+        source = rows[0]
+        if field['route']['db_type'] not in ('mysql', 'mariadb'):
+            raise CatalogEvidenceError('CATALOG_VALUE_SOURCE_DRIVER_UNSUPPORTED')
+        table = mysql._validated_identifier(field['mapping_table'], label='table')
+        column = mysql._validated_identifier(field['mapping_column'], label='column')
+        connection = mysql.pymysql.connect(host=source['host'], port=_port(source['port']),
+            user=_text(source.get('username')), password=source.get('password') or '', database=source['db_name'],
+            charset=mysql.MYSQL_CHARSET, connect_timeout=min(mysql.MYSQL_CONNECT_TIMEOUT, 8),
+            read_timeout=min(mysql.MYSQL_READ_TIMEOUT, 20), write_timeout=8, autocommit=False)
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('START TRANSACTION READ ONLY')
+                expression = f'CAST(TRIM(CAST(`{column}` AS CHAR)) AS BINARY)'
+                statement = (f'SELECT /*+ MAX_EXECUTION_TIME(15000) */ DISTINCT {expression} FROM `{table}` '
+                    f"WHERE `{column}` IS NOT NULL AND {expression}<>CAST('' AS BINARY) "
+                    f'ORDER BY {expression} LIMIT %s')
+                if field['route']['db_type'] == 'mariadb':
+                    statement = 'SET STATEMENT max_statement_time=15 FOR ' + statement
+                cursor.execute(statement, (limit + 1,))
+                return [r[0].decode('utf-8') if isinstance(r[0], bytes) else r[0] for r in cursor.fetchall()]
+        finally:
+            try: connection.rollback()
+            finally: connection.close()
+    except CatalogEvidenceError:
+        raise
+    except Exception:
+        raise CatalogEvidenceError('CATALOG_VALUE_PROBE_FAILED') from None
+
+
+def observe_probe(scope, field, value, limit):
+    """Candidate discovery, never an exact-match receipt or an alias declaration."""
+    import mysql_tool as mysql
+    if not isinstance(value, str) or not 1 <= len(value.strip()) <= 256 or type(limit) is not int or not 1 <= limit <= 64:
+        raise CatalogEvidenceError('CATALOG_VALUE_PROBE_QUERY_INVALID')
+    rows = query_probe_values(scope, field, limit)
+    if (not isinstance(rows, list) or len(rows) > limit + 1
+            or any(not isinstance(v, str) or not v.strip() or len(v) > 256 for v in rows)
+            or len(rows) != len(set(rows))):
+        raise CatalogEvidenceError('CATALOG_VALUE_PROBE_RESULT_INVALID')
+    complete = len(rows) <= limit
+    material = dict(source='VERIFIED_SOURCE_BOUNDED_PROBE', scope=deepcopy(scope), field=deepcopy(field),
+        match_mode='CANDIDATE_DISCOVERY', query_hash=digest(mysql.normalize_catalog_text(value)),
+        values=sorted(rows) if complete else [], complete=complete)
+    return {**material, 'observation_hash': digest(material), 'observed_at': datetime.now(timezone.utc).isoformat()}

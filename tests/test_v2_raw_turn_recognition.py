@@ -64,6 +64,11 @@ class ScriptedTransport:
     def __call__(self,req):
         body=json.loads(req.content);context=json.loads(body['messages'][1]['content'])
         self.calls.append(body)
+        if 'mention' in context and 'candidates' in context:
+            # This legacy fixture has no alias ground truth. A bounded probe
+            # cannot manufacture a match; specific choices use their own fixture.
+            return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{
+                'content':json.dumps({'status':'REJECTED','candidate_id':None})}}]})
         question,parsed,draft=self.steps[self.next]
         assert context['question']==question
         if 'parse' not in context:

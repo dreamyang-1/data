@@ -1,62 +1,46 @@
 {
-  "baseline_commit": "42547ca85fcc9a2ad6f83260df444ada3ea81ddd",
+  "baseline_commit": "b79fbd02a0f054ea5bd6ab6106569ea0019b0a28",
   "services": {
     "DataAnalysis_Agent": {
       "baseline_counts": {
-        "passed": 2998,
-        "failed": 27
-      },
-      "final_counts": {
         "passed": 3038,
         "failed": 27
       },
+      "final_counts": {
+        "passed": 3062,
+        "failed": 27
+      },
       "new_tests": {
-        "tests/test_v2_temporal_normalization.py::test_current_time_expression_overrides_model_generated_range_boundaries": "passed",
-        "tests/test_v2_temporal_normalization.py::test_current_grain_expression_overrides_model_generated_grain": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_RANGE-2026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_RANGE-\\u6362\\u62102026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_RANGE-\\u6539\\u4e3a2026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_RANGE-\\u6539\\u62102026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_RANGE-\\u8bbe\\u4e3a2026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_RANGE-\\u8bbe\\u7f6e\\u4e3a2026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_FIELD-2026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_FIELD-\\u6362\\u62102026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_FIELD-\\u6539\\u4e3a2026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_FIELD-\\u6539\\u62102026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_FIELD-\\u8bbe\\u4e3a2026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_full_range_surface_and_bounded_assignment_cues_preserve_existing_representation[TIME_FIELD-\\u8bbe\\u7f6e\\u4e3a2026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_unknown_partial_or_conflicting_time_surfaces_cannot_authorize_model_dates[\\u4e0d\\u8981\\u6362\\u62102026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_unknown_partial_or_conflicting_time_surfaces_cannot_authorize_model_dates[\\u6362\\u62102026\\u5e74\\u4f46\\u4e0d\\u542b3\\u6708]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_unknown_partial_or_conflicting_time_surfaces_cannot_authorize_model_dates[\\u6362\\u62102026\\u5e74\\u6216\\u80052027\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_unknown_partial_or_conflicting_time_surfaces_cannot_authorize_model_dates[\\u9500\\u552e\\u989d2026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_unknown_partial_or_conflicting_time_surfaces_cannot_authorize_model_dates[\\u6539\\u4e3a\\u4fee\\u65392026\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_unknown_partial_or_conflicting_time_surfaces_cannot_authorize_model_dates[\\u6539\\u4e3a2026\\u5e74\\u7b2c\\u4e00\\u5b63\\u5ea6\\u6216\\u8005\\u7b2c\\u4e8c\\u5b63\\u5ea6]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_unknown_partial_or_conflicting_time_surfaces_cannot_authorize_model_dates[\\u4fee\\u6539\\u65f6\\u95f4]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_unknown_partial_or_conflicting_time_surfaces_cannot_authorize_model_dates[\\u8ba2\\u5355\\u65e5\\u671f]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_range_clear_grain_edit_and_metric_add_cannot_restore_model_dates": "passed",
-        "tests/test_v2_temporal_normalization.py::test_normalization_does_not_hide_invented_authority_or_extra_date_fields[canonical_id]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_normalization_does_not_hide_invented_authority_or_extra_date_fields[binding_handle]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_normalization_does_not_hide_invented_authority_or_extra_date_fields[extra_date_key]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_relative_range_uses_current_business_clock_not_model_asof": "passed",
-        "tests/test_v2_temporal_normalization.py::test_legacy_whole_time_field_mention_cannot_bypass_initial_date_and_grain_normalization": "passed",
-        "tests/test_v2_temporal_normalization.py::test_combined_legacy_time_requires_full_consumption_and_aware_ordered_literal_bounds[2025\\u5e74\\u6309\\u6708\\u6309\\u5b63\\u5ea6]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_combined_legacy_time_requires_full_consumption_and_aware_ordered_literal_bounds[2025\\u5e74\\u4e0d\\u542b3\\u6708\\u6309\\u6708]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_combined_legacy_time_requires_full_consumption_and_aware_ordered_literal_bounds[2025\\u5e74\\u6309\\u6708\\u6216\\u6309\\u5e74]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_combined_legacy_time_requires_full_consumption_and_aware_ordered_literal_bounds[2025-01-01\\u81f32026-01-01\\uff08\\u4e0d\\u542b\\u7ed3\\u675f\\u65f6\\u523b\\uff09]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_combined_legacy_time_requires_full_consumption_and_aware_ordered_literal_bounds[2026-01-01T00:00:00+08:00\\u81f32025-01-01T00:00:00+08:00\\uff08\\u4e0d\\u542b\\u7ed3\\u675f\\u65f6\\u523b\\uff09]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_explicit_comparison_dates_come_from_current_literal_not_model_baseline": "passed",
-        "tests/test_v2_temporal_normalization.py::test_comparison_cannot_use_model_dates_without_a_supported_whole_explicit_baseline[\\u540c\\u6bd4]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_comparison_cannot_use_model_dates_without_a_supported_whole_explicit_baseline[\\u4e0e2020\\u5e74\\u6216\\u80052021\\u5e74\\u6bd4\\u8f83]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_comparison_cannot_use_model_dates_without_a_supported_whole_explicit_baseline[\\u4e0e2020\\u5e74\\u4e0d\\u542b\\u6625\\u8282\\u6bd4\\u8f83]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_comparison_cannot_use_model_dates_without_a_supported_whole_explicit_baseline[\\u4e0e2020\\u5e74\\u6309\\u5b63\\u5ea6\\u6bd4\\u8f83]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_comparison_cannot_use_model_dates_without_a_supported_whole_explicit_baseline[\\u4e0d\\u8981\\u4e0e2020\\u5e74\\u6bd4\\u8f83]": "passed",
-        "tests/test_v2_temporal_normalization.py::test_comparison_cannot_use_model_dates_without_a_supported_whole_explicit_baseline[\\u4e0e\\u53bb\\u5e74\\u540c\\u671f\\u6bd4\\u8f83]": "passed"
+        "tests/test_v2_source_value_probe.py::test_real_offered_choice_is_exactly_revalidated_with_shadow_output": "passed",
+        "tests/test_v2_source_value_probe.py::test_probe_add_replace_remove_clear_do_not_change_slot_operations": "passed",
+        "tests/test_v2_source_value_probe.py::test_uncertainty_does_not_choose_the_nearest_or_ask_for_a_metric[REJECTED]": "passed",
+        "tests/test_v2_source_value_probe.py::test_uncertainty_does_not_choose_the_nearest_or_ask_for_a_metric[AMBIGUOUS]": "passed",
+        "tests/test_v2_source_value_probe.py::test_uncertainty_does_not_choose_the_nearest_or_ask_for_a_metric[UNRESOLVED]": "passed",
+        "tests/test_v2_source_value_probe.py::test_model_cannot_create_candidates_scope_or_output_fields[choice0]": "passed",
+        "tests/test_v2_source_value_probe.py::test_model_cannot_create_candidates_scope_or_output_fields[choice1]": "passed",
+        "tests/test_v2_source_value_probe.py::test_model_cannot_create_candidates_scope_or_output_fields[choice2]": "passed",
+        "tests/test_v2_source_value_probe.py::test_model_cannot_create_candidates_scope_or_output_fields[choice3]": "passed",
+        "tests/test_v2_source_value_probe.py::test_large_field_is_not_sent_to_model": "passed",
+        "tests/test_v2_source_value_probe.py::test_selected_value_disappearing_before_exact_read_cannot_bind": "passed",
+        "tests/test_v2_source_value_probe.py::test_adding_an_alternative_during_model_choice_rejects_finish": "passed",
+        "tests/test_v2_source_value_probe.py::test_exact_match_does_not_probe_or_add_a_model_call": "passed",
+        "tests/test_cutover_source_value_probe.py::test_discovery_receipt_cannot_satisfy_exact_lookup": "passed",
+        "tests/test_cutover_source_value_probe.py::test_rehashed_probe_receipts_still_enforce_contract[mode]": "passed",
+        "tests/test_cutover_source_value_probe.py::test_rehashed_probe_receipts_still_enforce_contract[source]": "passed",
+        "tests/test_cutover_source_value_probe.py::test_rehashed_probe_receipts_still_enforce_contract[field]": "passed",
+        "tests/test_cutover_source_value_probe.py::test_rehashed_probe_receipts_still_enforce_contract[scope]": "passed",
+        "tests/test_cutover_source_value_probe.py::test_rehashed_probe_receipts_still_enforce_contract[value_size]": "passed",
+        "tests/test_cutover_source_value_probe.py::test_rehashed_probe_receipts_still_enforce_contract[incomplete_values]": "passed",
+        "tests/test_cutover_source_value_probe.py::test_rehashed_probe_receipts_still_enforce_contract[duplicate]": "passed",
+        "tests/test_cutover_source_value_probe.py::test_rehashed_probe_receipts_still_enforce_contract[limit]": "passed",
+        "tests/test_cutover_source_value_probe.py::test_benchmark_and_exact_capture_replay_include_third_model_stage_without_sql": "passed",
+        "tests/test_cutover_source_value_probe.py::test_collector_checks_empty_exact_before_probe_and_retains_mode": "passed"
       },
       "old_pass_to_new_fail": [],
       "old_fail_to_new_pass": [],
       "removed_tests": [],
       "collection_errors": [],
-      "receipt_sha256": "832f9b5879d6a66372976547a23c3be2662d1013d57a379726dea25bba303002",
+      "receipt_sha256": "82a7cb9d5b79d781cb80f6548855b1ac5d1b591c3648dee65455e8d6f5c609ae",
       "critical": {
         "passed": 160,
         "failed": 0
@@ -72,15 +56,30 @@
         "failed": 8
       },
       "final_counts": {
-        "passed": 663,
+        "passed": 677,
         "failed": 8
       },
-      "new_tests": {},
+      "new_tests": {
+        "tests/test_catalog_value_probe.py::test_bounded_probe_is_readonly_one_field_and_does_not_claim_exact_match": "passed",
+        "tests/test_catalog_value_probe.py::test_probe_requires_current_empty_lookup_and_implicit_governance": "passed",
+        "tests/test_catalog_value_probe.py::test_high_cardinality_never_returns_a_partial_candidate_set": "passed",
+        "tests/test_catalog_value_probe.py::test_probe_cannot_bypass_scope_mapping_freshness_or_budget[scope]": "passed",
+        "tests/test_catalog_value_probe.py::test_probe_cannot_bypass_scope_mapping_freshness_or_budget[mapping]": "passed",
+        "tests/test_catalog_value_probe.py::test_probe_cannot_bypass_scope_mapping_freshness_or_budget[policy]": "passed",
+        "tests/test_catalog_value_probe.py::test_probe_cannot_bypass_scope_mapping_freshness_or_budget[value_drift]": "passed",
+        "tests/test_catalog_value_probe.py::test_probe_cannot_bypass_scope_mapping_freshness_or_budget[budget]": "passed",
+        "tests/test_catalog_value_probe.py::test_untrusted_probe_results_are_rejected[rows0]": "passed",
+        "tests/test_catalog_value_probe.py::test_untrusted_probe_results_are_rejected[rows1]": "passed",
+        "tests/test_catalog_value_probe.py::test_untrusted_probe_results_are_rejected[rows2]": "passed",
+        "tests/test_catalog_value_probe.py::test_untrusted_probe_results_are_rejected[rows3]": "passed",
+        "tests/test_catalog_value_probe.py::test_untrusted_probe_results_are_rejected[rows4]": "passed",
+        "tests/test_catalog_value_probe.py::test_source_failure_rolls_back_closes_and_masks_private_error": "passed"
+      },
       "old_pass_to_new_fail": [],
       "old_fail_to_new_pass": [],
       "removed_tests": [],
       "collection_errors": [],
-      "receipt_sha256": "79b32909c6165535d980c2d31c84c79fa64f95c01b7a39adec3fed5a39b7c6a7"
+      "receipt_sha256": "c16a714c68c0f3d4ad2d6f6e529002860278b978dd41c77426a9b8e27f4504a4"
     },
     "SQL_Translator": {
       "baseline_counts": {
@@ -98,14 +97,21 @@
     }
   },
   "focused": {
-    "passed": 198
+    "passed": 189
   },
-  "new_tests": 40,
+  "oagnet_focused": {
+    "passed": 87
+  },
+  "new_tests": 38,
   "old_assertions_changed": 0,
-  "real_model_calls": 0,
-  "source_SQL_executions": 0,
+  "fixture_changes": "Exact-only mock connection supports bounded DISTINCT; generic scripted model rejects unknown alias choices; old expected outcomes unchanged",
+  "initial_fixture_failures": {
+    "agent_initial": 2,
+    "agent_second": 1,
+    "reason": "New query/stage support and new transition fixture history requirement; repaired fixtures, no weakening of old assertions"
+  },
+  "real_model_calls": 55,
+  "source_SQL_executions": 23,
   "production_writes": 0,
-  "first_divergence_evidence": "temporal_authority/first_divergence.json",
-  "exact_recorded_results_or_rejections": 25,
-  "review": "Preserve old structural rejection before semantic normalization; ensure initial legacy path and explicit comparison baseline cannot bypass program date ownership. Scope, operation, clear and comparison dependency guards retained."
+  "exact_replays": 26
 }

@@ -313,7 +313,7 @@ class RawTurnPlanner:
         target = current.tasks.get(skeleton.target_task_id)
         base = target.active_version if target else 0
         prior = next(v.semantics for v in target.versions if v.version == base) if target else m.TaskSemanticState()
-        patch, edit_trace, source_blockers, source_operations = source_filter_patch(self, session, parse, draft, handles, base, now,
+        patch, edit_trace, source_blockers, source_operations = await source_filter_patch(self, session, parse, draft, handles, base, now,
             deferred=deferred, prior=prior, target=target)
         blockers.extend(source_blockers)
         pending_operations.update(source_operations)

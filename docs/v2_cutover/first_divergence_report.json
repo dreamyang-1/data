@@ -2799,5 +2799,16 @@
     "evidence": "temporal_authority/first_divergence.json",
     "status": "THREE_EXECUTED_COUNTEREXAMPLES_FIXED; LEGACY_INITIAL_PATH_COVERED",
     "recorded_original_results_preserved": 25
+  },
+  "value_probe_stage": {
+    "baseline_commit": "b79fbd02a0f054ea5bd6ab6106569ea0019b0a28",
+    "evidence": "value_probe/contract.json",
+    "field_oracle_component_passed": 3,
+    "current_gold_counts": {
+      "OK": 6,
+      "FAILED": 10,
+      "NOT_RUN": 4
+    },
+    "source_retrieval_or_field_selection_not_closed": true
   }
 }

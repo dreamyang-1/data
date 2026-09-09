@@ -1,7 +1,7 @@
 {
-  "current_stage": "DETERMINISTIC_TEMPORAL_EDIT_AND_COMPARISON_AUTHORITY",
+  "current_stage": "SEMANTIC_CUTOVER_TRIAGE_CHECKPOINT_PENDING",
   "readiness": "NOT_READY",
-  "baseline_commit": "42547ca85fcc9a2ad6f83260df444ada3ea81ddd",
+  "baseline_commit": "b79fbd02a0f054ea5bd6ab6106569ea0019b0a28",
   "production_acceptance_groups": {
     "P0": 8,
     "P1": 4
@@ -39,9 +39,10 @@
         "governed_time/contract.json",
         "compound_mentions/contract.json",
         "compound_mentions/comparison.json",
-        "temporal_authority/contract.json"
+        "temporal_authority/contract.json",
+        "value_probe/contract.json"
       ],
-      "next_action": "Close source-value resolution with current scoped catalog and bounded read-only evidence; preserve real role/operation/shape ambiguity. Complete Pending/Dataset/whole-plan/Oracle evaluation and model comparison before shadow."
+      "next_action": "Read-only semantic checkpoint: one first divergence per Gold case, root-cause deduplication, contract/overfit and evaluator/fixture audits, ranked next root causes; no further per-case semantic patching."
     },
     {
       "blocker_id": "EVALUATION-COVERAGE",
@@ -71,9 +72,10 @@
         "governed_time/contract.json",
         "compound_mentions/contract.json",
         "compound_mentions/comparison.json",
-        "temporal_authority/contract.json"
+        "temporal_authority/contract.json",
+        "value_probe/contract.json"
       ],
-      "next_action": "Close source-value resolution with current scoped catalog and bounded read-only evidence; preserve real role/operation/shape ambiguity. Complete Pending/Dataset/whole-plan/Oracle evaluation and model comparison before shadow."
+      "next_action": "Read-only semantic checkpoint: one first divergence per Gold case, root-cause deduplication, contract/overfit and evaluator/fixture audits, ranked next root causes; no further per-case semantic patching."
     },
     {
       "blocker_id": "PRODUCTION-PUBLICATION",

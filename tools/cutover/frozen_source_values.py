@@ -51,20 +51,22 @@ class FrozenSourceValues:
             if not isinstance(entry, dict) or set(entry) != {'query','limit','observation'}:
                 raise ValueError('FROZEN_VALUES_ENTRY_INVALID')
             value, limit, observation = entry['query'], entry['limit'], entry['observation']
+            probe = isinstance(observation, dict) and observation.get('match_mode') == 'CANDIDATE_DISCOVERY'
             if (not isinstance(value, str) or not 1 <= len(value) <= 256 or value != self.normalize(value)
-                    or type(limit) is not int or not 1 <= limit <= 32):
+                    or type(limit) is not int or not 1 <= limit <= (64 if probe else 32)):
                 raise ValueError('FROZEN_VALUES_QUERY_INVALID')
             expected_keys = {'source','scope','field','match_mode','query_hash','values','complete','observation_hash','observed_at'}
             if not isinstance(observation, dict) or set(observation) != expected_keys:
                 raise ValueError('FROZEN_VALUES_OBSERVATION_INVALID')
             values = observation['values']
-            if (observation['source'] != 'VERIFIED_SOURCE_EXACT_LOOKUP'
+            if (observation['source'] != ('VERIFIED_SOURCE_BOUNDED_PROBE' if probe else 'VERIFIED_SOURCE_EXACT_LOOKUP')
                     or observation['scope'] != catalog['scope'] or observation['field'] not in fields
-                    or observation['match_mode'] != 'EXACT_NORMALIZED' or observation['query_hash'] != digest(value)
+                    or observation['match_mode'] != ('CANDIDATE_DISCOVERY' if probe else 'EXACT_NORMALIZED') or observation['query_hash'] != digest(value)
                     or not isinstance(values, list) or len(values) > limit
-                    or any(not isinstance(v, str) or not 1 <= len(v) <= 1024 or self.normalize(v) != value for v in values)
+                    or any(not isinstance(v, str) or not v.strip() or not 1 <= len(v) <= (256 if probe else 1024)
+                           or (not probe and self.normalize(v) != value) for v in values)
                     or values != sorted(set(values)) or type(observation['complete']) is not bool
-                    or (not observation['complete'] and len(values) != limit)):
+                    or (not observation['complete'] and len(values) != (0 if probe else limit))):
                 raise ValueError('FROZEN_VALUES_OBSERVATION_INVALID')
             observed = datetime.fromisoformat(observation['observed_at'])
             if observed.tzinfo is None or observed.utcoffset() is None:
@@ -73,6 +75,7 @@ class FrozenSourceValues:
             if digest(proof) != observation['observation_hash']:
                 raise ValueError('FROZEN_VALUES_OBSERVATION_HASH_MISMATCH')
             key = self.key(observation['scope'], observation['field'], value, limit)
+            if probe: key = digest(['PROBE', key])
             if key in self.entries:
                 raise ValueError('FROZEN_VALUES_DUPLICATE_QUERY')
             self.entries[key] = deepcopy(observation)
@@ -85,6 +88,12 @@ class FrozenSourceValues:
     def observe(self, scope, field, value, limit):
         # No fallback to a live source, another field, a wider scope or a guessed value.
         key = self.key(scope, field, value, limit)
+        return self._read(key)
+
+    def observe_probe(self, scope, field, value, limit):
+        return self._read(digest(['PROBE', self.key(scope, field, value, limit)]))
+
+    def _read(self, key):
         observation = self.entries.get(key)
         self.calls.append({'query_fingerprint':key, 'status':'REPLAYED' if observation is not None else 'MISSING'})
         if observation is None:

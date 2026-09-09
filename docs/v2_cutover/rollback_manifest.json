@@ -1,6 +1,6 @@
 {
-  "baseline_commit": "42547ca85fcc9a2ad6f83260df444ada3ea81ddd",
-  "rollback": "Revert this feature commit to restore the previous V2 time component and explicit comparison normalization behavior. Private evidence remains outside Git. No model/key, public I/O, V1 routing, native publication or production state was changed.",
+  "baseline_commit": "b79fbd02a0f054ea5bd6ab6106569ea0019b0a28",
+  "rollback": "Revert this feature commit to restore the previous exact-only V2 source value resolution behavior. Private evidence remains outside Git. No model/key, public I/O, V1 routing, native publication or production state was changed.",
   "native_publication_performed": false,
   "redis_mutation_performed": false,
   "production_route_changed": false,

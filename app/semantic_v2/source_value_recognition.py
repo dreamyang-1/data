@@ -26,7 +26,7 @@ class SourceValueRequestDraft(m.StrictModel):
         return self
 
 
-def resolve_requests(session, parse, draft, handles, target):
+async def resolve_requests(session, parse, draft, handles, target, model):
     mentions = {item.mention_id: item for item in parse.mentions}
     alternatives = {}
     def requested_ids(value):
@@ -79,6 +79,14 @@ def resolve_requests(session, parse, draft, handles, target):
                     candidates[candidate] = (candidate, 'FILTER_VALUE', mention.mention_id)
                 continue
             for candidate in session.lookup_source_values(attribute, mention.surface, implicit=implicit):
+                candidates[candidate['candidate_id']] = (candidate['candidate_id'], 'FILTER_VALUE', mention.mention_id)
+        # Discovery is allowed only after complete empty exact lookups and a
+        # single selected field. Do not scan alternative or unrelated fields.
+        selected_fields = set(fields)
+        if not candidates and len(selected_fields) == 1:
+            from .source_value_probe import select_probed_value
+            attribute, implicit = next(iter(selected_fields))
+            for candidate in await select_probed_value(model, session, attribute, mention, implicit=implicit):
                 candidates[candidate['candidate_id']] = (candidate['candidate_id'], 'FILTER_VALUE', mention.mention_id)
         if not candidates:
             raise RecognitionFailure('V2_SOURCE_VALUE_NOT_FOUND')
@@ -151,8 +159,8 @@ def hydrate_choice(value, handles, session):
             else proof.field_ref.model_dump(mode='json'))
 
 
-def source_filter_patch(planner, session, parse, draft, handles, base, now, *, deferred, prior, target):
-    variants = resolve_requests(session, parse, draft, handles, target)
+async def source_filter_patch(planner, session, parse, draft, handles, base, now, *, deferred, prior, target):
+    variants = await resolve_requests(session, parse, draft, handles, target, planner.model)
     patches, labels = {}, {}
     last_rejected = None
     for choices in variants:
