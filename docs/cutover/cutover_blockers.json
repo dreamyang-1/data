@@ -5,8 +5,8 @@
       "blocker_id": "C-01",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "ACTUAL_SCOPE_CAPTURE_GENERATION_VERIFIED",
-      "summary": "Current 81/[205] metadata capture versions SQL base tables, data sources, governed sub-tables and metric dependencies together with existing semantic/value facts. 290 static records, 89 source mappings and 25 offline SQL plans verified; native publication unproven.",
+      "status": "FROZEN_SCOPED_EVALUATION_CATALOG_VERIFIED",
+      "summary": "Actual 81/[205] capture and 127-fact frozen evaluation projection verified. Native publication remains unproven; it no longer globally gates offline Gold/evaluation/benchmark.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
         "Oagnet/catalog_generation.py",
@@ -16,29 +16,35 @@
         "docs/cutover/v2_entity_value_sources/catalog_source_evidence.json",
         "docs/cutover/catalog_publication_candidate/live_scope_evidence.json",
         "docs/cutover/pinned_sql_catalog/closure_report.md",
-        "docs/cutover/v2_asl2/closure_report.md"
+        "docs/cutover/v2_asl2/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
       ],
-      "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot."
+      "next_action": "Continue offline axis evaluation against the frozen hash; complete native publication before production canary/cutover.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": true
     },
     {
       "blocker_id": "C-02",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "PUBLICATION_ABSENT_REGISTRY_DURABILITY_NOT_PROVEN",
-      "summary": "Fresh 81/[205] read confirms both isolated collections and active marker absent. Redis AOF is disabled and automatic RDB schedule empty; no durable release-marker recovery is proven. Updated reviewed candidate and guarded operator commands are prepared, not executed.",
+      "status": "PRODUCTION_PUBLICATION_AND_RECOVERY_GAP",
+      "summary": "Native publication absent. DataAnalysis session Redis DB3 is directly reachable; AOF off, save empty, no replicas, deployed volume/restore unproven. Session code capability is not registry-publication or recovery evidence.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
         "docs/cutover/catalog_publication_candidate/closure_report.md",
-        "docs/cutover/pinned_sql_catalog/closure_report.md"
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
       ],
-      "next_action": "Locate Redis deployment/persistent storage ownership and prepare an approved durability/recovery plan. After durability evidence and native publication authorization, execute the current target/source/embedding-bound candidate and verify full read-back/activation. No shared Redis configuration or V1 index change is authorized by source commits."
+      "next_action": "Keep production recovery/publication as Canary/Cutover gates. Offline evaluation and isolated plan-only shadow do not depend on Redis production recovery.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": true
     },
     {
       "blocker_id": "C-03",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "V2_ASL2_SQL_SHARED_PIN_VERIFIED_OFFLINE",
-      "summary": "Current scoped pin and partial typed-plan receipts verified offline. Fresh 81/[205] audit finds all 14 entities lack governed target-identity keys; two relationship declarations and two metric subjects remain unresolved. Native/deployed evidence missing.",
+      "status": "PROVISIONAL_IDENTITIES_VERIFIED_PER_SHAPE",
+      "summary": "All 14 entities now have snapshot-verified ID/code candidates and physical constraints. Current catalog flags still differ from the three user-reported declarations. Two relationship endpoints and two metric subjects remain unresolved.",
       "evidence": [
         "app/semantic_v2/catalog_bridge.py",
         "Oagnet/catalog_publication.py::PinnedCatalog.identity",
@@ -49,53 +55,65 @@
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
         "docs/cutover/pinned_relation_endpoints/closure_report.md",
-        "docs/cutover/relation_identity/closure_report.md"
+        "docs/cutover/relation_identity/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
       ],
-      "next_action": "Obtain governed entity identity rules before relation-list lowering; resolve two endpoint declarations and two metric subjects. Verify native/deployed pin acceptance after C-02. Do not infer distinct target identity from names, row keys or model guesses."
+      "next_action": "Use the reviewed provisional identities per eligible shape; keep exact order/entity grain and unresolved relation paths scoped to affected cases. Continue independent role/mention/turn evaluation.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     },
     {
       "blocker_id": "C-04",
       "classification": "CATALOG_BLOCKER",
       "blocking_level": "P0",
-      "status": "ACTUAL_VALUE_MAPPINGS_AND_OFFLINE_RAW_BINDING_VERIFIED",
-      "summary": "PR28 actual 81/[205] capture verifies 89 attribute mappings. Raw V2 now binds exact source values with current pin/field/scope evidence and complete Pending choices in offline tests. Actual value retrieval and isolated native publication remain unproven.",
+      "status": "ACTUAL_SOURCE_AGGREGATE_READ_VERIFIED",
+      "summary": "Current governed source connections, 14 physical tables and 29 identity candidates audited with aggregate read-only SQL. Exact/fuzzy value retrieval quality is a separate per-query gap; no native publication claim.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
         "docs/cutover/catalog_identity/source_review.json",
         "docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
         "docs/cutover/v2_relation_paths/catalog_path_evidence.json",
         "docs/cutover/v2_entity_value_sources/closure_report.md",
-        "docs/cutover/v2_source_value_binding/closure_report.md"
+        "docs/cutover/v2_source_value_binding/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
       ],
-      "next_action": "Close C-02 native publication/durable registry gates, then prove actual source lookup under authorized operations. Evaluate field-hypothesis/fuzzy selection after catalog gates."
+      "next_action": "Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     },
     {
       "blocker_id": "X-01",
       "classification": "EXTERNAL_BLOCKER",
       "blocking_level": "P0",
-      "status": "TARGET_SCOPE_IDENTIFIED_READ_ONLY_VERIFIED",
-      "summary": "Scope 81/[205] was selected and catalog services verified read-only. Current Redis target is not a local interface; local Docker cannot establish its deployment/volume ownership. Deployed revisions, trusted gateway and durable recovery remain unverified.",
+      "status": "DATA_AGENT_REDIS_RUNTIME_VERIFIED_DEPLOYMENT_RECOVERY_OPEN",
+      "summary": "Actual DataAnalysis settings resolve redis mode, DB3, prefix youo:data-analysis:v2 and TTL7200. Read-only persistence/replication/config verified. Deployment storage/restart/restore and deployed trusted caller remain unproven.",
       "evidence": [
         "docs/cutover/catalog_identity/live_scope_evidence.json",
         "docs/cutover/catalog_publication_candidate/live_scope_evidence.json",
-        "docs/cutover/pinned_sql_catalog/closure_report.md"
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
       ],
-      "next_action": "Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]."
+      "next_action": "Close production deployment trust and recovery before canary/cutover; continue offline evaluation now.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": true
     },
     {
       "blocker_id": "V-01",
       "classification": "CUTOVER_BLOCKER_P0",
       "blocking_level": "P0",
-      "status": "PARTIAL_AUTONOMOUS_SOURCE_PATH",
-      "summary": "Raw scoped V2 now has explicit temporal comparison rules, atomic period/metric recomputation, Pending completion and period-specific result requirements. Unsupported calendar policies, external entity values, remaining analytical/decision types and real recognition quality remain open. Raw source-value requests, filter mutation, complete filter Pending choices and current selected-value restore now pass offline; real recognition accuracy remains unproven.",
+      "status": "ACTUAL_CURRENT_TURN_MODEL_BASELINE_MEASURED",
+      "summary": "Existing qwen3.6-plus current-turn parser measured on 100 frozen axis cases: 100 HTTP200, 35 outputs rejected by current-turn validation. Semantic role/shape errors remain. This is component evidence, not full V1/V2 accuracy.",
       "evidence": [
         "app/semantic_v2/recognition.py",
         "app/semantic_v2/temporal_comparisons.py",
         "docs/cutover/v2_temporal_comparisons/closure_report.md",
         "docs/cutover/v2_temporal_comparisons/temporal_policy_gaps.json",
-        "docs/cutover/v2_source_value_binding/closure_report.md"
+        "docs/cutover/v2_source_value_binding/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
       ],
-      "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
+      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     },
     {
       "blocker_id": "V-02",
@@ -108,7 +126,9 @@
         "app/semantic_v2/catalog_bridge.py",
         "docs/cutover/v2_scope_bridge/test_delta.json"
       ],
-      "next_action": "Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence."
+      "next_action": "Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     },
     {
       "blocker_id": "V-03",
@@ -124,14 +144,16 @@
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md"
       ],
-      "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
+      "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     },
     {
       "blocker_id": "S-01",
       "classification": "SCHEMA_DRIFT",
       "blocking_level": "P1",
-      "status": "V2_ASL2_PARTIAL_WITH_BOUND_VALUES_VERIFIED",
-      "summary": "Common/ranked/Boolean plans carry scoped output/policy receipts and separate scalar parameter bindings. Installed-driver and executor boundary verified offline. Time, relationship/comparison, INCLUDE_TIES, catalog template modes and actual execution remain open.",
+      "status": "PARTIAL_TYPED_BACKEND_PER_QUERY_SHAPE",
+      "summary": "Common/ranked/Boolean plans retain receipts. All entities have provisional observed identities; exact order grain, two relation paths, temporal storage policy and unsupported query shapes remain scoped gaps.",
       "evidence": [
         "app/semantic_v2/legacy_adapter.py",
         "Oagnet/prompt_build.py::SYSTEM_PROMPT",
@@ -142,9 +164,12 @@
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
         "docs/cutover/pinned_relation_endpoints/closure_report.md",
-        "docs/cutover/relation_identity/closure_report.md"
+        "docs/cutover/relation_identity/closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
       ],
-      "next_action": "Close native catalog prerequisites and governed identity/time/subject facts. Implement remaining loss-aware path, comparison and time semantics with actual result evidence; preserve existing public I/O and V1/shadow boundaries."
+      "next_action": "Complete loss-aware lowering for supported identity/query-shape combinations; keep unsupported cases explicit without gating turn/role/mention Gold.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     },
     {
       "blocker_id": "B-01",
@@ -156,45 +181,56 @@
         "Oagnet/agent.py::_normalize_relation_name_filters",
         "Oagnet/tests/test_cutover_binding_safety.py"
       ],
-      "next_action": "Keep the regression in cutover safety acceptance and verify the deployed service revision before canary."
+      "next_action": "Keep the regression in cutover safety acceptance and verify the deployed service revision before canary.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     },
     {
       "blocker_id": "E-01",
       "classification": "EVALUATION_GAP",
       "blocking_level": "P0",
-      "status": "OPEN",
-      "summary": "No 80-120 business Gold/evaluator comparison exists; existing 200 partial intent rows and synthetic V2 contract fixtures cannot prove V1/V2 accuracy.",
+      "status": "AXIS_GOLD_AND_DETERMINISTIC_EVALUATOR_ESTABLISHED",
+      "summary": "100 engineer-reviewed cases cover listed turn/operation/critical mention/role/query-shape axes against 127 frozen catalog facts. SQL/result/full-state/canonical labels are still incomplete; no row marked COMPLETE.",
       "evidence": [
         "docs/phase2/gold_cases_seed.jsonl",
         "docs/phase25/gold_v2_seed.jsonl",
         "docs/phase25_1/gold_v0_2_1.jsonl",
-        "docs/phase0b/gold_candidate_inventory.jsonl"
+        "docs/phase0b/gold_candidate_inventory.jsonl",
+        "docs/cutover/evaluation_gates/closure_report.md"
       ],
-      "next_action": "After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     },
     {
       "blocker_id": "E-02",
       "classification": "EVALUATION_GAP",
       "blocking_level": "P1",
-      "status": "OPEN",
-      "summary": "No controlled real-model comparison exists for the requested current production baseline and candidate models.",
+      "status": "CURRENT_PARSER_BENCHMARK_MEASURED_CANDIDATE_LIMITS",
+      "summary": "100 current-model non-thinking requests completed. qwen3.7-plus probe returned Model.AccessDenied; qwen3.6-plus thinking probe timed out at unchanged 30s. Full model/whole-pipeline comparison remains open.",
       "evidence": [
         "docs/phase0c_region_list/closure_report.md",
-        "app/semantic_v2/pipeline.py::CurrentTurnParser"
+        "app/semantic_v2/pipeline.py::CurrentTurnParser",
+        "docs/cutover/evaluation_gates/closure_report.md"
       ],
-      "next_action": "After stable Gold, verify official model availability then benchmark identical prompt/schema/catalog/scope/temperature/retries with model/thinking mode as the only variations. Keep runtime defaults."
+      "next_action": "Address measured parser failures; compare models available to this account under identical bounded settings. Do not change production defaults or claim unavailable candidates are evaluated.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     },
     {
       "blocker_id": "H-01",
       "classification": "EVALUATION_GAP",
       "blocking_level": "P0",
-      "status": "OPEN",
-      "summary": "No real plan-only V1/V2 shadow difference dataset or first-divergence metric exists; current shadow evidence is synthetic/offline.",
+      "status": "ELIGIBLE_WITH_ISOLATION_AFTER_EVALUATION_ACCEPTANCE",
+      "summary": "Production Redis recovery/publication do not globally gate isolated plan-only shadow. Real shadow evidence is still absent and current parser evaluation is not accepted.",
       "evidence": [
         "tools/phase25/run_semantic_v2_shadow.py",
-        "docs/phase25_1/phase25_1_closure_report.md"
+        "docs/phase25_1/phase25_1_closure_report.md",
+        "docs/cutover/evaluation_gates/closure_report.md"
       ],
-      "next_action": "Only after evaluation gate, instrument plan-only shadow with no V2 SQL/state writes or response takeover, then measure all safety metrics."
+      "next_action": "After relevant evaluation passes, run isolated plan-only shadow without SQL, production-state writes or response takeover.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     },
     {
       "blocker_id": "R-01",
@@ -206,7 +242,9 @@
         "docs/phase0c_region_list/rollback_manifest.json",
         "app/workflow.py"
       ],
-      "next_action": "After offline and real shadow gates, prepare canary flag, automatic stop/rollback procedure and drill; obtain user approval before formal replacement."
+      "next_action": "After offline and real shadow gates, prepare canary flag, automatic stop/rollback procedure and drill; obtain user approval before formal replacement.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": true
     },
     {
       "blocker_id": "B-02",
@@ -218,7 +256,9 @@
         "docs/cutover/catalog_identity/closure_report.md",
         "docs/cutover/catalog_identity/test_delta.json"
       ],
-      "next_action": "Retain safety regressions and deploy only through the controlled pinned-catalog path; no target release/traffic change performed."
+      "next_action": "Retain safety regressions and deploy only through the controlled pinned-catalog path; no target release/traffic change performed.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     },
     {
       "blocker_id": "B-03",
@@ -230,7 +270,9 @@
         "docs/cutover/catalog_identity/closure_report.md",
         "docs/cutover/catalog_identity/test_delta.json"
       ],
-      "next_action": "Retain safety regressions and deploy only through the controlled pinned-catalog path; no target release/traffic change performed."
+      "next_action": "Retain safety regressions and deploy only through the controlled pinned-catalog path; no target release/traffic change performed.",
+      "blocks_offline_evaluation_globally": false,
+      "production_gate_only": false
     }
   ],
   "counts": {
@@ -245,5 +287,10 @@
   "open_p1": 4,
   "readiness": "NOT_READY",
   "catalog_cutover_blocker_closed": false,
-  "latest_source_delivery_baseline": "011a7193f5eafda1101255209129b4d4e2ad4f94"
+  "latest_source_delivery_baseline": "011a7193f5eafda1101255209129b4d4e2ad4f94",
+  "gate_authority": "USER_DECISION_2026_09_09",
+  "gate_matrix": "docs/cutover/evaluation_gates/gate_matrix.json",
+  "open_count_scope": "Production replacement acceptance; not eligibility to execute offline evaluation",
+  "current_stage": "FROZEN_AXIS_EVALUATION_AND_PARSER_BASELINE",
+  "offline_evaluation_eligible": true
 }

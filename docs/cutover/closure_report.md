@@ -1,3 +1,24 @@
+# Current cutover status after the 2026-09-09 gate decision
+
+Current Stage: frozen axis Gold / semantic evaluator / current parser baseline.
+V1 Replacement Readiness: **NOT_READY**; production acceptance has **8 P0 / 4 P1** open.
+Offline evaluation is now **ELIGIBLE**, independently of production Redis recovery
+and native catalog publication. Entity identity is checked per query shape.
+
+See [current closure evidence](evaluation_gates/closure_report.md),
+[14-entity identity matrix](evaluation_gates/identity_matrix.csv), and
+[stage gate matrix](evaluation_gates/gate_matrix.json).
+
+Fourteen provisional identities are supported by current-source aggregate and
+physical evidence. 100 reviewed axis cases and deterministic scoring are established.
+The actual existing parser accepted 65/100 model outputs; span/reference and semantic
+failures are the next work. Full V1/V2/result acceptance and real shadow remain open.
+
+The historical report below predates this explicit user decision. Its global
+catalog-first evaluation gates are superseded; its source/test evidence is historical.
+
+---
+
 # V2 production replacement readiness — blocker audit and catalog contract
 
 Date: 2026-09-08. Baseline: `c4c00d131f53848d279cd7353cd22dc4ea4be4e0`

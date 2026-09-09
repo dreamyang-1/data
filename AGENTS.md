@@ -40,3 +40,14 @@
 - Evaluation 门禁通过后才开展 Phase1A plan-only shadow；V2 不执行真实 SQL、不写生产业务状态、不影响 V1 回答。真实 Shadow 通过后才准备不超过 5% 的受控 Canary、自动停流和 Rollback。
 - 每次阶段汇报必须包含 Current Stage、Cutover Blocker P0/P1、Catalog/Evaluation/Shadow Gap、V1 Replacement Readiness 和 Next shortest blocking path。
 - 只有全部替代条件满足时报告 `READY_FOR_USER_APPROVAL` 并停止自动推进，明确问“是否批准V2正式替代V1？”。在用户明确批准之前，不关闭 V1、不让 V2 全量接管、不删除 Legacy fallback。
+
+## 2026-09-09 用户补充：按能力拆分评测与生产门禁
+
+以下正式业务决策覆盖上文将 Catalog/Phase0C 全量闭环作为所有评测前置条件的要求。
+
+- Offline Gold、Semantic Evaluator、Model Benchmark 可使用经过校验并冻结的当前授权 Catalog snapshot；必须记录模型/业务域、catalog_version、快照哈希和标签证据。真实目录发布和 Redis 生产恢复能力不再是这些工作的全局前置 P0。
+- Plan-only Shadow 可使用隔离状态和冻结目录；不能写正式生产状态、执行真实 SQL 或接管 V1 回答，仍须通过相应评测与副作用边界检查。Redis 恢复和原生发布证据主要约束 Production Canary/Final Cutover。
+- Entity Identity 缺口只约束实际依赖精确实体身份的 query shapes。正式 Catalog Identity 优先；唯一的 Attribute.is_primary_key 声明不能因为 Entity.primary_key 为空而丢失。冲突和多字段含义不明时保留证据，不猜复合键。
+- 已授权对 81/[205] 的候选字段、物理约束、关系键以及源数据库做只读 null/count/distinct/duplicate-group 审计。仅保存统计与元数据证据，不提交原始业务记录或凭据。非空、无缺失且唯一的 Code/ID 可依据本次决策作为 PROVISIONAL_VERIFIED_IDENTITY，记录实际快照/版本、关系使用及物理约束；不能把当前唯一性当作永久保证，也不能将 order_key 自动等同于订单明细行身份。
+- NAME_FALLBACK 只用于展示、名称列表、明确按名称统计和低风险非关系查询，必须带用户规定的警告。不能静默用于精确实体计数、实体排名、关系、Join、归因。同名但不同 ID/code 时保留各实体并用名称加编码展示；关系连接仍使用 Catalog Relation、Join Key、Canonical Binding。
+- 本轮已授权继续能够运行的旁路 Gold/Evaluator/Model Benchmark。生产模型、API/SSE 输入输出和 V1 路由保持不变；正式替换仍须用户明确批准。原生目录发布操作仍需其已有独立授权。
