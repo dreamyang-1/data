@@ -1,0 +1,5134 @@
+[
+  {
+    "case_id": "G81-001",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "fc70a7aac9ff0da345c0558bad2011ca5e94a208295584f1b4c05a50d620f6cc",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:fc70a7aac9ff0da345c0558bad2011ca5e94a208295584f1b4c05a50d620f6cc"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:fc70a7aac9ff0da345c0558bad2011ca5e94a208295584f1b4c05a50d620f6cc"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:product_line"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-002",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "7c3d978f81444b8ef79649f84a011debb49aa39c93d4ac02d53edaa41a3b76e9",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:7c3d978f81444b8ef79649f84a011debb49aa39c93d4ac02d53edaa41a3b76e9"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:7c3d978f81444b8ef79649f84a011debb49aa39c93d4ac02d53edaa41a3b76e9"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:department"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-003",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "7e8f6fdb8ce9c1be16b0ad558951d1f4e996535bd9a10264e2f5d93403eaae19",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:7e8f6fdb8ce9c1be16b0ad558951d1f4e996535bd9a10264e2f5d93403eaae19"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:7e8f6fdb8ce9c1be16b0ad558951d1f4e996535bd9a10264e2f5d93403eaae19"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:city"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-004",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "eb520653e05ca58e8cc36fdd97885e1e8b6fe9098dccebd5bdc4c4831bc05314",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:eb520653e05ca58e8cc36fdd97885e1e8b6fe9098dccebd5bdc4c4831bc05314"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:eb520653e05ca58e8cc36fdd97885e1e8b6fe9098dccebd5bdc4c4831bc05314"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:product_dept_relation"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-005",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "01527232fa3021133f169d38114263188bbfc219bc265ebf366038da169bf315",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:01527232fa3021133f169d38114263188bbfc219bc265ebf366038da169bf315"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:01527232fa3021133f169d38114263188bbfc219bc265ebf366038da169bf315"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:product"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-006",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "0d2a69ea60fa0d76991c29e34d8eaac49e699f02398cef7912b5f91924069a8c",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:0d2a69ea60fa0d76991c29e34d8eaac49e699f02398cef7912b5f91924069a8c"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:0d2a69ea60fa0d76991c29e34d8eaac49e699f02398cef7912b5f91924069a8c"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:sales_order"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-007",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "751e3bb24a6708d8590bb2d3eb93c1feaaf028e0360dca8b1ea5b399c060ef4d",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:751e3bb24a6708d8590bb2d3eb93c1feaaf028e0360dca8b1ea5b399c060ef4d"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:751e3bb24a6708d8590bb2d3eb93c1feaaf028e0360dca8b1ea5b399c060ef4d"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:dealer"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-008",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "da94dad6fe9b1f65c66781ae96e0dd9a4a3499063b633c742fc2347863b94b8a",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:da94dad6fe9b1f65c66781ae96e0dd9a4a3499063b633c742fc2347863b94b8a"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:da94dad6fe9b1f65c66781ae96e0dd9a4a3499063b633c742fc2347863b94b8a"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:main_data_domain_ent_manufacturer"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-009",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "559b0a4e3e812912bb36e928c22fe28034eddc779840f7dce4a2de61c1cc85a1",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:559b0a4e3e812912bb36e928c22fe28034eddc779840f7dce4a2de61c1cc85a1"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:559b0a4e3e812912bb36e928c22fe28034eddc779840f7dce4a2de61c1cc85a1"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:project"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-010",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "91eb5d5577528c3763bbc37a60215b967d0f6fb97d6f5a0e9834a4527cee7eaf",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:91eb5d5577528c3763bbc37a60215b967d0f6fb97d6f5a0e9834a4527cee7eaf"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:91eb5d5577528c3763bbc37a60215b967d0f6fb97d6f5a0e9834a4527cee7eaf"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:sales_company"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-011",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "79dbaa9584102dfbdb11196babd853a6e991f7c15aa6ccbf3d943732af77dc76",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:79dbaa9584102dfbdb11196babd853a6e991f7c15aa6ccbf3d943732af77dc76"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:79dbaa9584102dfbdb11196babd853a6e991f7c15aa6ccbf3d943732af77dc76"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:salesperson"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-012",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "45470194ad73ef38a6c213ae2e2c606a4ee373af20ec781d30f624259afaaa42",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:45470194ad73ef38a6c213ae2e2c606a4ee373af20ec781d30f624259afaaa42"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:45470194ad73ef38a6c213ae2e2c606a4ee373af20ec781d30f624259afaaa42"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:province"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-013",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "4a59f6c342cdd164087ece5b87aa80e40d99609c4e782bcc0d7a25ed4453c7f4",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:4a59f6c342cdd164087ece5b87aa80e40d99609c4e782bcc0d7a25ed4453c7f4"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:4a59f6c342cdd164087ece5b87aa80e40d99609c4e782bcc0d7a25ed4453c7f4"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:product_category"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-014",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "1224eff9390bdd23bcf5bcd7d37fcb3abc4d9207484f6316f4411b831722eb6a",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:1224eff9390bdd23bcf5bcd7d37fcb3abc4d9207484f6316f4411b831722eb6a"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:1224eff9390bdd23bcf5bcd7d37fcb3abc4d9207484f6316f4411b831722eb6a"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:hospital"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-015",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "36f6878b6972b7b288c0a096a66348b20571a39482e3d48e6261bf2bef876b54",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:36f6878b6972b7b288c0a096a66348b20571a39482e3d48e6261bf2bef876b54"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:36f6878b6972b7b288c0a096a66348b20571a39482e3d48e6261bf2bef876b54"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-016",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "0cd37af29c58f2a81601b75ea281c34df60865c2c9b5fabba0bd7acf99bb478b",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:0cd37af29c58f2a81601b75ea281c34df60865c2c9b5fabba0bd7acf99bb478b"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:0cd37af29c58f2a81601b75ea281c34df60865c2c9b5fabba0bd7acf99bb478b"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-017",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "54d41581fb9f828d9c1c88f625213d57bedf25345f63b1cfbd23324cd0cbb2cb",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:54d41581fb9f828d9c1c88f625213d57bedf25345f63b1cfbd23324cd0cbb2cb"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:54d41581fb9f828d9c1c88f625213d57bedf25345f63b1cfbd23324cd0cbb2cb"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:tax_free_sales_amount"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-018",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "d8135011fce584d1eecb8d157cba361cbebc4b1d882678a3536a911b640d9692",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:d8135011fce584d1eecb8d157cba361cbebc4b1d882678a3536a911b640d9692"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:d8135011fce584d1eecb8d157cba361cbebc4b1d882678a3536a911b640d9692"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:tax_free_sales_amount"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-019",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "8b94d8282f23219a7d26856c1065e51f7b3798494680cd2be6327ba50c75b400",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:8b94d8282f23219a7d26856c1065e51f7b3798494680cd2be6327ba50c75b400"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:8b94d8282f23219a7d26856c1065e51f7b3798494680cd2be6327ba50c75b400"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:sales_total_cost"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-020",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "8eed6cdd66a7d4ab687ef51875d48f9035340ea159149256d59d82a0666e4051",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:8eed6cdd66a7d4ab687ef51875d48f9035340ea159149256d59d82a0666e4051"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:8eed6cdd66a7d4ab687ef51875d48f9035340ea159149256d59d82a0666e4051"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:sales_total_cost"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-021",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "917f24078d175c879cc07ddb336f35271f9370c563980970affdc98cca5de71d",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:917f24078d175c879cc07ddb336f35271f9370c563980970affdc98cca5de71d"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:917f24078d175c879cc07ddb336f35271f9370c563980970affdc98cca5de71d"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:sales_total_quantity"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-022",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "80ff99a0a6aec183cf1e651b4c1fa80720d36e529d422fd67c4e16a653efbcd0",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:80ff99a0a6aec183cf1e651b4c1fa80720d36e529d422fd67c4e16a653efbcd0"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:80ff99a0a6aec183cf1e651b4c1fa80720d36e529d422fd67c4e16a653efbcd0"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:sales_total_quantity"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-023",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "af00a7851c1043310edd1d9e9f01ad13cfacecd9989a01018c45d98eb6985404",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:af00a7851c1043310edd1d9e9f01ad13cfacecd9989a01018c45d98eb6985404"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:af00a7851c1043310edd1d9e9f01ad13cfacecd9989a01018c45d98eb6985404"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-024",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "12eb1cc55927af06edcfe95f3b43d54e67a20260f7bcc06870c0a3a73881f26e",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:12eb1cc55927af06edcfe95f3b43d54e67a20260f7bcc06870c0a3a73881f26e"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:12eb1cc55927af06edcfe95f3b43d54e67a20260f7bcc06870c0a3a73881f26e"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-025",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "8d00ab288dc7b33a1e720819a5d98eeda3544510925d88ae3ca31e84b62e6ef6",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:8d00ab288dc7b33a1e720819a5d98eeda3544510925d88ae3ca31e84b62e6ef6"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:8d00ab288dc7b33a1e720819a5d98eeda3544510925d88ae3ca31e84b62e6ef6"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:cooperating_dealer_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-026",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "a405934d5336698d6c7c31a4c6a8d0b5598ecbd7bf2ea8b87ca336dbcd2be836",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:a405934d5336698d6c7c31a4c6a8d0b5598ecbd7bf2ea8b87ca336dbcd2be836"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:a405934d5336698d6c7c31a4c6a8d0b5598ecbd7bf2ea8b87ca336dbcd2be836"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:cooperating_dealer_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-027",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "896d622d5dffd0669661342d6d6b919a40af6c3e8a528186f6a271b456bd24bf",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:896d622d5dffd0669661342d6d6b919a40af6c3e8a528186f6a271b456bd24bf"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:896d622d5dffd0669661342d6d6b919a40af6c3e8a528186f6a271b456bd24bf"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:cooperating_hospital_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-028",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "96b2f5668e419276f1ccc0259fd831eeec13613dff24f22da8ebb52b0c197c65",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:96b2f5668e419276f1ccc0259fd831eeec13613dff24f22da8ebb52b0c197c65"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:96b2f5668e419276f1ccc0259fd831eeec13613dff24f22da8ebb52b0c197c65"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:cooperating_hospital_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-029",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "f9fc3ffa4ae172a1cb21a3b39729cdcca0f22a3a98259127dc9c4fe05f48d048",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:f9fc3ffa4ae172a1cb21a3b39729cdcca0f22a3a98259127dc9c4fe05f48d048"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:f9fc3ffa4ae172a1cb21a3b39729cdcca0f22a3a98259127dc9c4fe05f48d048"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:total_hospital_count_by_region"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-030",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "14cb719567ea0d68b8dc3398197e42b443aa3aec67af6c40a1306a7b68352b16",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:14cb719567ea0d68b8dc3398197e42b443aa3aec67af6c40a1306a7b68352b16"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:14cb719567ea0d68b8dc3398197e42b443aa3aec67af6c40a1306a7b68352b16"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:total_hospital_count_by_region"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-031",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "834f2a4710e0027b34928e056626e02c863bf43b92649f7ced3d0da48727d90f",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:834f2a4710e0027b34928e056626e02c863bf43b92649f7ced3d0da48727d90f"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:834f2a4710e0027b34928e056626e02c863bf43b92649f7ced3d0da48727d90f"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:dealer_cooperation_months"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-032",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "da65ad860ed28f418df79ba04042c252c0686a34862e4af52635b424d3b6520c",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:da65ad860ed28f418df79ba04042c252c0686a34862e4af52635b424d3b6520c"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:da65ad860ed28f418df79ba04042c252c0686a34862e4af52635b424d3b6520c"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:dealer_cooperation_months"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-033",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "44405f2188c3f88a75316b75564c971b04ddbc67bedf5b6a73f9513b99637b1c",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:44405f2188c3f88a75316b75564c971b04ddbc67bedf5b6a73f9513b99637b1c"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:44405f2188c3f88a75316b75564c971b04ddbc67bedf5b6a73f9513b99637b1c"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:hospital_affiliated_department_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-034",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "e1babb21352519df45081f824cc83934fce0e4134cfb5407f23246f8e32c500d",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:e1babb21352519df45081f824cc83934fce0e4134cfb5407f23246f8e32c500d"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:e1babb21352519df45081f824cc83934fce0e4134cfb5407f23246f8e32c500d"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:hospital_affiliated_department_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-035",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "168e66be7bef3a4396a86603ba55fcd676edf62e764d380873570d6bc1bc92b6",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:168e66be7bef3a4396a86603ba55fcd676edf62e764d380873570d6bc1bc92b6"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:168e66be7bef3a4396a86603ba55fcd676edf62e764d380873570d6bc1bc92b6"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:screening_area_hospital_coverage"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-036",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "73284cf714a9000533f3d0c4759f7c2328db961cb1e5c1f4815e1cfd6d9816b2",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:73284cf714a9000533f3d0c4759f7c2328db961cb1e5c1f4815e1cfd6d9816b2"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:73284cf714a9000533f3d0c4759f7c2328db961cb1e5c1f4815e1cfd6d9816b2"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:screening_area_hospital_coverage"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-037",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "2a6fbd1c91a98be5947ff38300e5a698a6971573837ec84ce165382b1448aba3",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:2a6fbd1c91a98be5947ff38300e5a698a6971573837ec84ce165382b1448aba3"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:hospital_level",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:2a6fbd1c91a98be5947ff38300e5a698a6971573837ec84ce165382b1448aba3"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-038",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "4fb260125b62a1c1a1e8f10bfad45e3c82b5ce929db751c889139c6f8d367993",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:4fb260125b62a1c1a1e8f10bfad45e3c82b5ce929db751c889139c6f8d367993"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:channel_format",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:4fb260125b62a1c1a1e8f10bfad45e3c82b5ce929db751c889139c6f8d367993"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-039",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "2323b5529f668392cd033f22c5977d16b4ef316d974c4f71b98914aa73d7729c",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:2323b5529f668392cd033f22c5977d16b4ef316d974c4f71b98914aa73d7729c"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:transaction_date",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-040",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "ac03b60f664b632534e3ee65adc8f669d4255ac19e15d054756f45f3cf8c0f70",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:ac03b60f664b632534e3ee65adc8f669d4255ac19e15d054756f45f3cf8c0f70"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:product",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:ac03b60f664b632534e3ee65adc8f669d4255ac19e15d054756f45f3cf8c0f70"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-041",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "ec04996744df6f9e4b81157923e1bcf9445fa7352e8e532a85132d859a9c24c9",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:ec04996744df6f9e4b81157923e1bcf9445fa7352e8e532a85132d859a9c24c9"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:dealer",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:ec04996744df6f9e4b81157923e1bcf9445fa7352e8e532a85132d859a9c24c9"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-042",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "7e57333d73412376218f5a00a01c92874938418c8f8c2680aea3b3127fcd9c47",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:7e57333d73412376218f5a00a01c92874938418c8f8c2680aea3b3127fcd9c47"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:hospital",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:7e57333d73412376218f5a00a01c92874938418c8f8c2680aea3b3127fcd9c47"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-043",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "89b9892d69a966b9b78f1d64d7e06bde448cdf0306c606ce501ab4a011f20e56",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:89b9892d69a966b9b78f1d64d7e06bde448cdf0306c606ce501ab4a011f20e56"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:salesperson",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:89b9892d69a966b9b78f1d64d7e06bde448cdf0306c606ce501ab4a011f20e56"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-044",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "cf55579f9547a83b41033b98aacd512c6c5d249e3f301880b92a9c81fbc3bec3",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:cf55579f9547a83b41033b98aacd512c6c5d249e3f301880b92a9c81fbc3bec3"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:province",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:cf55579f9547a83b41033b98aacd512c6c5d249e3f301880b92a9c81fbc3bec3"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-045",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "bc9a0237f63cac77d053e00b7e7698f5154587c8c60adb5c89f04383b4d40266",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:bc9a0237f63cac77d053e00b7e7698f5154587c8c60adb5c89f04383b4d40266"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:city",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:bc9a0237f63cac77d053e00b7e7698f5154587c8c60adb5c89f04383b4d40266"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-046",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "1e882ff3a1ff05ab0b0ec7cb357ad4f2d2b63c3583c6d50fef2b1c4037c8bf02",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:1e882ff3a1ff05ab0b0ec7cb357ad4f2d2b63c3583c6d50fef2b1c4037c8bf02"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:product_brand",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:1e882ff3a1ff05ab0b0ec7cb357ad4f2d2b63c3583c6d50fef2b1c4037c8bf02"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-047",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "07439d5d21a77bf407fa26681ca592c9aefcaac11fb52ec4f41b4248fca5f01a",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:07439d5d21a77bf407fa26681ca592c9aefcaac11fb52ec4f41b4248fca5f01a"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:product_category",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:07439d5d21a77bf407fa26681ca592c9aefcaac11fb52ec4f41b4248fca5f01a"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-048",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "63e5bcbe76c9313bc5a2ae399e0aa85fe2eca75a22e286803bd470e0951076f0",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:63e5bcbe76c9313bc5a2ae399e0aa85fe2eca75a22e286803bd470e0951076f0"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:department",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:63e5bcbe76c9313bc5a2ae399e0aa85fe2eca75a22e286803bd470e0951076f0"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-049",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "d0a2a4e1d36709a1bc1ef0902e3133fcaff64598956da0fe2cb6f8b2740ab0b4",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:d0a2a4e1d36709a1bc1ef0902e3133fcaff64598956da0fe2cb6f8b2740ab0b4"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:applicable_department",
+          "METRIC:order_count"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      },
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:d0a2a4e1d36709a1bc1ef0902e3133fcaff64598956da0fe2cb6f8b2740ab0b4"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-050",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "8bf0674d5205d2d49487b9e698101c8f629026224756d5886d8234501b5cb9c1",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:hospital.hospital_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-051",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "98d8dc5bb644e6696411eaa367cf65b063561f59d3703bc2a992919f46495945",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:hospital.hospital_id"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-052",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "29d10a0a27e4345a3a07d5bf190e9ea1942efb72cb8f1804c238703ae7d2b4f5",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:hospital.hospital_code"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-053",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "48b4c1c064ba10fd67af7333a135e0c4daff1e0698fec151be45d88e90c96dbb",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:product.product_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-054",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "3c8ff66f38020a02d53444e83fe4cbee7d97e93c83d8147dcfcf5e8e0733943d",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:product.product_code"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-055",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "0f08f5917931c7b6d927929393f61dce619038f5fd0b578898002476d3e536d5",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:product.specification"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-056",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "0881461cfd2d5d2cf038869154ceb41871a81ae1034d77a57154366475b79ed0",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:salesperson.salesperson_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-057",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "43f8936f50261866df78167d4b1b244943c3acfc5d2cdf81aa6f79f4e382da4c",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:salesperson.salesperson_code"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-058",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "959f95567a0d45ac75b1c7132762cabb2fc38ebeb7dd396306305319fbcb0b46",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:project.project_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-059",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "559bf0de5fa230170b4f7e6c645b66f5eb81d335665e4e84d282a9439dc6434b",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:project.project_code"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-060",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "ef190ac9958b2298457e6fb80e9c1391f100455aef00463feeae9f50b4e6612f",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:sales_company.guoyao_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-061",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "6b900dc3a97d58c6550c63e8254d36a8902d0e5917ff8649f7e0e52cd5f614fa",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:sales_company.guoyao_code"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-062",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "455506fdd518fbe28792e56be81d907639c4de5c4729314e7ae149a71416b5af",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:department.dept_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-063",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "966db20ee67f3a61192d2900e8d2125e76b99b696fbdeb0193d85598e595516c",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:department.dept_code"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-064",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "38b65ed89c3dcee903ba5332dee735177eda1b49c0b6398a08b3c8c350362135",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:dealer.dealer_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-065",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "87f6b537d45ffbbfdac67885dcb88d0a466d140d0b517b0cac898496149ad950",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:dealer.dealer_code"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-066",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "154932558a0e50c6ddf68451e2f6f65eba51c52ddc0432c5a1ff324d1ea99cc9",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:city.city_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-067",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "7f8dcf65802185061c51e71be5bf9fa8e293c1733d94172433e5a7aa8c43cb23",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ATTRIBUTE:province.province_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-068",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "01bfd2d83b63597ce001b359f8db4b9f3d630a7254174942042ce8ec75b48485",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:01bfd2d83b63597ce001b359f8db4b9f3d630a7254174942042ce8ec75b48485"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-069",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "c6d082eb12e3f1cb27b942bfc36f4c09db061e6d6c51485d7fd03329262d0ba4",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:c6d082eb12e3f1cb27b942bfc36f4c09db061e6d6c51485d7fd03329262d0ba4"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-070",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "9e255541be156eccc59690e26f1d68f8e911671e1ef4053924aa1f06d6c28f40",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:9e255541be156eccc59690e26f1d68f8e911671e1ef4053924aa1f06d6c28f40"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:9e255541be156eccc59690e26f1d68f8e911671e1ef4053924aa1f06d6c28f40"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-071",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "c33262aa218a398ee1a4a1161cfdde60842c72768137ff3013d03b813dcfb04c",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:c33262aa218a398ee1a4a1161cfdde60842c72768137ff3013d03b813dcfb04c"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:c33262aa218a398ee1a4a1161cfdde60842c72768137ff3013d03b813dcfb04c"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-072",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "0551005417ea3643a8f7d4ff3a666bf9d4560c03c2bfd71b19f37ee41a96b4b0",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:0551005417ea3643a8f7d4ff3a666bf9d4560c03c2bfd71b19f37ee41a96b4b0"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:0551005417ea3643a8f7d4ff3a666bf9d4560c03c2bfd71b19f37ee41a96b4b0"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-073",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "eb3f1af9e386633f096976da1c11e0ab873c2e4132b7c659a8db621c8605e9e3",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:eb3f1af9e386633f096976da1c11e0ab873c2e4132b7c659a8db621c8605e9e3"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:eb3f1af9e386633f096976da1c11e0ab873c2e4132b7c659a8db621c8605e9e3"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-074",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "caa42ef5e5fdebb76cf598c72b6e1bc91e870a7e3d262fb1b4ffa81a0247fb64",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:caa42ef5e5fdebb76cf598c72b6e1bc91e870a7e3d262fb1b4ffa81a0247fb64"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-075",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "c68464e87ff24a51f487eb650ed64f286444172b3a3d807e2b32eab5b894ecb6",
+    "entry_group": "PENDING_RESPONSE",
+    "history_kind": "DECLARED_STATE_PRECONDITION",
+    "turn_count": 1,
+    "precondition_description_count": 1,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:c68464e87ff24a51f487eb650ed64f286444172b3a3d807e2b32eab5b894ecb6"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-076",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "84dcd5477ac2d97841cbad999f8577ea3cfdc3092c9815504b0f049ac98d39c4",
+    "entry_group": "HISTORICAL_RETURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:84dcd5477ac2d97841cbad999f8577ea3cfdc3092c9815504b0f049ac98d39c4"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1",
+    "fixture_gap": "REFERENCED_HISTORICAL_TASK_NOT_IN_GOLD_HISTORY"
+  },
+  {
+    "case_id": "G81-077",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "2f0b84fbf42805cf01a78836293e93442acb038a5207c757f68da8aa7eaaf34a",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:2f0b84fbf42805cf01a78836293e93442acb038a5207c757f68da8aa7eaaf34a"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:2f0b84fbf42805cf01a78836293e93442acb038a5207c757f68da8aa7eaaf34a"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-078",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "eb5686933ee582c951c6d5895038b2d6ed18a7762e4c3294879aba34f97996d8",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:eb5686933ee582c951c6d5895038b2d6ed18a7762e4c3294879aba34f97996d8"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:eb5686933ee582c951c6d5895038b2d6ed18a7762e4c3294879aba34f97996d8"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-079",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "7a35b4cf77d367d87404fc443ef321030732da7e6dcf7b7d427774a84dea27b3",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:7a35b4cf77d367d87404fc443ef321030732da7e6dcf7b7d427774a84dea27b3"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:7a35b4cf77d367d87404fc443ef321030732da7e6dcf7b7d427774a84dea27b3"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-080",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "bb8c06333d514745fbadca87b5044b0d6fbc536599a97cc7fee0b5e2de8c1b3a",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:bb8c06333d514745fbadca87b5044b0d6fbc536599a97cc7fee0b5e2de8c1b3a"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:bb8c06333d514745fbadca87b5044b0d6fbc536599a97cc7fee0b5e2de8c1b3a"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-081",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "c46f3fa1bdbf91a684802ba7242d52ce091c07a821f0d37936f7dc87eddc02eb",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:c46f3fa1bdbf91a684802ba7242d52ce091c07a821f0d37936f7dc87eddc02eb"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:c46f3fa1bdbf91a684802ba7242d52ce091c07a821f0d37936f7dc87eddc02eb"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-082",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "6d80107c2417332fbdfcdd431e9faea352822e6a8a5e56185307b96097d041a1",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6d80107c2417332fbdfcdd431e9faea352822e6a8a5e56185307b96097d041a1"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6d80107c2417332fbdfcdd431e9faea352822e6a8a5e56185307b96097d041a1"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-083",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "859ef26ae15fa09880dfbecfaa03b8095e20a2a222a4e68c6931ee0446f84342",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:859ef26ae15fa09880dfbecfaa03b8095e20a2a222a4e68c6931ee0446f84342"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:859ef26ae15fa09880dfbecfaa03b8095e20a2a222a4e68c6931ee0446f84342"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-084",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "2ccd5afce5fa516398d5e90d5b38836cbba08655a009a9ded0ce04c297973e79",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:2ccd5afce5fa516398d5e90d5b38836cbba08655a009a9ded0ce04c297973e79"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:2ccd5afce5fa516398d5e90d5b38836cbba08655a009a9ded0ce04c297973e79"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-085",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "e6ee337a975ac8d167ad5d3c4f428e05f29e070191be57b58162cfa20afd13c8",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:e6ee337a975ac8d167ad5d3c4f428e05f29e070191be57b58162cfa20afd13c8"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-086",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "63953c059030c380dc2ba696a2f89dd0b1946b555c1c07522a3126e7a75f91da",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:63953c059030c380dc2ba696a2f89dd0b1946b555c1c07522a3126e7a75f91da"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-087",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "2c3f492778173b18ca5344a0355e6caf99f5ab2b7fb94b468a03fed6505697bb",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:2c3f492778173b18ca5344a0355e6caf99f5ab2b7fb94b468a03fed6505697bb"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-088",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "70de3ecb851288011ecfefdf3610793b23123a0c9e2aac350bccc62c6e3cff01",
+    "entry_group": "HISTORICAL_RETURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:70de3ecb851288011ecfefdf3610793b23123a0c9e2aac350bccc62c6e3cff01"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1",
+    "fixture_gap": "REFERENCED_HISTORICAL_TASK_NOT_IN_GOLD_HISTORY"
+  },
+  {
+    "case_id": "G81-089",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "6605f1a147bc67ee9e47fd2196d802018771b6c2ccda891fcc7f032941af06f0",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6605f1a147bc67ee9e47fd2196d802018771b6c2ccda891fcc7f032941af06f0"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "operation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6605f1a147bc67ee9e47fd2196d802018771b6c2ccda891fcc7f032941af06f0"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-090",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "606c72060c728bc5c0062317d18e0644c2ee46ccfc7eedb3375d248ebc21c2f8",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "TURN_ONLY",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:606c72060c728bc5c0062317d18e0644c2ee46ccfc7eedb3375d248ebc21c2f8"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-091",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "ccffc79aeaf9c9f0c2e115fefdc7f2b54231c9f55abc26aa8068c13120221d17",
+    "entry_group": "DATASET_FOLLOWUP",
+    "history_kind": "DECLARED_STATE_PRECONDITION",
+    "turn_count": 1,
+    "precondition_description_count": 1,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:ccffc79aeaf9c9f0c2e115fefdc7f2b54231c9f55abc26aa8068c13120221d17"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1",
+    "fixture_gap": "DATASET_PROOFS_ABSENT_FROM_ORIGINAL_GOLD"
+  },
+  {
+    "case_id": "G81-092",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "709bbac97f7a5bc3c2de674b2d0ca5b22ddf2127fcc1b102219dde000fd22308",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:709bbac97f7a5bc3c2de674b2d0ca5b22ddf2127fcc1b102219dde000fd22308"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_quantity",
+          "ATTRIBUTE:product.product_name",
+          "ATTRIBUTE:hospital.hospital_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-093",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "a2ddb36abdaed599806d2424ab4abff2e4ffcfbaca1541e20c8229bc09cb3247",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:a2ddb36abdaed599806d2424ab4abff2e4ffcfbaca1541e20c8229bc09cb3247"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-094",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "005312e6788e46a7f1e7729add0ae6c80ba1b4842b1688bb094efc050c478d99",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_quantity",
+          "ATTRIBUTE:product.product_name",
+          "ATTRIBUTE:hospital.hospital_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-095",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "10dc38133bb893612e244d7ef4655a4a1fe7afb0ae7e71fa8c2e6bae6ec38cb5",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:10dc38133bb893612e244d7ef4655a4a1fe7afb0ae7e71fa8c2e6bae6ec38cb5"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_quantity",
+          "ATTRIBUTE:product.product_name",
+          "ATTRIBUTE:hospital.hospital_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-096",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "7b807f85c0aa067eb717eb13d93451a8c74f617d3b757c78df3996bf8c2a261d",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_quantity",
+          "ATTRIBUTE:product.product_name",
+          "ATTRIBUTE:hospital.hospital_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-097",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "f4c1d103e28e5413b3518c18694079000eaf848135e8db45e3e4f226a66dceb5",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:f4c1d103e28e5413b3518c18694079000eaf848135e8db45e3e4f226a66dceb5"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_quantity",
+          "ATTRIBUTE:product.product_name",
+          "ATTRIBUTE:hospital.hospital_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-098",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "90c9df9d652e5bc865f90c7bbbc65e11988fbe01fc54d25e8a9b67ddbe1d74cc",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:90c9df9d652e5bc865f90c7bbbc65e11988fbe01fc54d25e8a9b67ddbe1d74cc"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_quantity",
+          "ATTRIBUTE:product.product_name",
+          "ATTRIBUTE:hospital.hospital_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-099",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "181516fcb58215fc237ca09f885ba7a9b5fe7bd0ffee1bfaec773e8f59a52db8",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:181516fcb58215fc237ca09f885ba7a9b5fe7bd0ffee1bfaec773e8f59a52db8"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_quantity",
+          "ATTRIBUTE:product.product_name",
+          "ATTRIBUTE:hospital.hospital_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "G81-100",
+    "corpus": "PUBLIC_DEV",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "8651b16bc427a4854bfa7f2cd53d5ae23b3d68e0e0206fc4d42ae0ab4553b5c2",
+    "entry_group": "TRUE_SINGLE_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 1,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "query_shape": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:8651b16bc427a4854bfa7f2cd53d5ae23b3d68e0e0206fc4d42ae0ab4553b5c2"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "mentions": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_quantity",
+          "ATTRIBUTE:product.product_name",
+          "ATTRIBUTE:hospital.hospital_name"
+        ],
+        "limits": "Selected mention recall/allowed roles only; no precision or complete plan claim"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-001",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "82060fdccee611cb7b46839377704b74ceabef9702b3e699059f55a3568191b9",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_including_tax",
+          "METRIC:sales_total_quantity"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "canonical_metrics": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_including_tax",
+          "METRIC:sales_total_quantity"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:82060fdccee611cb7b46839377704b74ceabef9702b3e699059f55a3568191b9"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:82060fdccee611cb7b46839377704b74ceabef9702b3e699059f55a3568191b9"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "metric_operations": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:82060fdccee611cb7b46839377704b74ceabef9702b3e699059f55a3568191b9"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-002",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "e52bb2e6cb7d21e3089c84a83130b192a29a636dca691a3c64e444bcb2789bbb",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:e52bb2e6cb7d21e3089c84a83130b192a29a636dca691a3c64e444bcb2789bbb"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:e52bb2e6cb7d21e3089c84a83130b192a29a636dca691a3c64e444bcb2789bbb"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "metric_operations": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:e52bb2e6cb7d21e3089c84a83130b192a29a636dca691a3c64e444bcb2789bbb"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-003",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "59561daf489b8aa4e816f8d6e791598ed947edb03f58d455840f735b5bed6055",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_including_tax"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:59561daf489b8aa4e816f8d6e791598ed947edb03f58d455840f735b5bed6055"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:59561daf489b8aa4e816f8d6e791598ed947edb03f58d455840f735b5bed6055"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "metric_operations": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:59561daf489b8aa4e816f8d6e791598ed947edb03f58d455840f735b5bed6055"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-004",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "3624a02bebfcfedc18a543e3dc4d394e29f03544dc1068f1f2d9210a39ba02c1",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 3,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "region_values": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:3624a02bebfcfedc18a543e3dc4d394e29f03544dc1068f1f2d9210a39ba02c1"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "time_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:3624a02bebfcfedc18a543e3dc4d394e29f03544dc1068f1f2d9210a39ba02c1"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "time_grain": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:3624a02bebfcfedc18a543e3dc4d394e29f03544dc1068f1f2d9210a39ba02c1"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:3624a02bebfcfedc18a543e3dc4d394e29f03544dc1068f1f2d9210a39ba02c1"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-005",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "af3486497c45deb9ddf46271b968260fbd2c8062a50b631d65695d64fd25e5ae",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "region_values": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:af3486497c45deb9ddf46271b968260fbd2c8062a50b631d65695d64fd25e5ae"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "time_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:af3486497c45deb9ddf46271b968260fbd2c8062a50b631d65695d64fd25e5ae"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:af3486497c45deb9ddf46271b968260fbd2c8062a50b631d65695d64fd25e5ae"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:af3486497c45deb9ddf46271b968260fbd2c8062a50b631d65695d64fd25e5ae"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-006",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "f360fb836cc3a94d67d5b7859bf837fae77a03f791f0541d6edb58d936fe57fa",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "region_values": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:f360fb836cc3a94d67d5b7859bf837fae77a03f791f0541d6edb58d936fe57fa"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:f360fb836cc3a94d67d5b7859bf837fae77a03f791f0541d6edb58d936fe57fa"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "region_operations": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:f360fb836cc3a94d67d5b7859bf837fae77a03f791f0541d6edb58d936fe57fa"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-007",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "8cb3fbc431ca3c31de4c9ad95a1d932c29661f91b28718e8fe7d525a33cd7781",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "region_values": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:8cb3fbc431ca3c31de4c9ad95a1d932c29661f91b28718e8fe7d525a33cd7781"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:8cb3fbc431ca3c31de4c9ad95a1d932c29661f91b28718e8fe7d525a33cd7781"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "region_operations": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:8cb3fbc431ca3c31de4c9ad95a1d932c29661f91b28718e8fe7d525a33cd7781"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-008",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "6fedb6e6c07162e59ceec842e8a6faf2192c525c631cee627aada2bab2fcddd2",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:sales_total_including_tax"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "region_values": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6fedb6e6c07162e59ceec842e8a6faf2192c525c631cee627aada2bab2fcddd2"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6fedb6e6c07162e59ceec842e8a6faf2192c525c631cee627aada2bab2fcddd2"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "region_operations": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6fedb6e6c07162e59ceec842e8a6faf2192c525c631cee627aada2bab2fcddd2"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-009",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "6f4a117c09eca8ac773043027e5df1335f81ec4e13075020a64259b2c12242ee",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:hospital"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "region_values": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6f4a117c09eca8ac773043027e5df1335f81ec4e13075020a64259b2c12242ee"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6f4a117c09eca8ac773043027e5df1335f81ec4e13075020a64259b2c12242ee"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6f4a117c09eca8ac773043027e5df1335f81ec4e13075020a64259b2c12242ee"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-010",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "31d72ac2cd17aea31391ae84a74d68f14346068eeacb4d4b068e81ba6b0f7032",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "region_values": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:31d72ac2cd17aea31391ae84a74d68f14346068eeacb4d4b068e81ba6b0f7032"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:31d72ac2cd17aea31391ae84a74d68f14346068eeacb4d4b068e81ba6b0f7032"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:31d72ac2cd17aea31391ae84a74d68f14346068eeacb4d4b068e81ba6b0f7032"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-011",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "b826c81a47e5eaa4615dd6e210ac47049d730e1128104ca8ad8078a523c2a79b",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:city",
+          "DIMENSION:hospital"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "dimension_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:city",
+          "DIMENSION:hospital"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:b826c81a47e5eaa4615dd6e210ac47049d730e1128104ca8ad8078a523c2a79b"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "dimension_operations": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:b826c81a47e5eaa4615dd6e210ac47049d730e1128104ca8ad8078a523c2a79b"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-012",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "b6c91ff9c871f13a42933935543b98ed1f5d8af8343fd9fcc8f0adef84ecf75a",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:dealer"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "dimension_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:dealer"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:b6c91ff9c871f13a42933935543b98ed1f5d8af8343fd9fcc8f0adef84ecf75a"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "dimension_operations": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:b6c91ff9c871f13a42933935543b98ed1f5d8af8343fd9fcc8f0adef84ecf75a"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-013",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "6eeefba5f6a765f9b6a32ac1b725c85ee5c2b462cb936be487cfd6af282bdb91",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:city",
+          "DIMENSION:salesperson"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "dimension_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "DIMENSION:city",
+          "DIMENSION:salesperson"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6eeefba5f6a765f9b6a32ac1b725c85ee5c2b462cb936be487cfd6af282bdb91"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "dimension_operations": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:6eeefba5f6a765f9b6a32ac1b725c85ee5c2b462cb936be487cfd6af282bdb91"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-014",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "5212ed148c509a1dfb06f1cedf14db4935bf36aef2aa9052023f2ad898ddbdc0",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 3,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_quantity"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "time_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:5212ed148c509a1dfb06f1cedf14db4935bf36aef2aa9052023f2ad898ddbdc0"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:5212ed148c509a1dfb06f1cedf14db4935bf36aef2aa9052023f2ad898ddbdc0"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-015",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "ac5266e9d73df46572a9d59e71c4d4b061298df8360752b407773ba70acd53c4",
+    "entry_group": "CONTEXT_DEPENDENT_TURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 2,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:ac5266e9d73df46572a9d59e71c4d4b061298df8360752b407773ba70acd53c4"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:ac5266e9d73df46572a9d59e71c4d4b061298df8360752b407773ba70acd53c4"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "metric_clarification_required": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:ac5266e9d73df46572a9d59e71c4d4b061298df8360752b407773ba70acd53c4"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-016",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "f52be5e905841e6421a2b2ae1b99dcb785723931a6ce0fc1295c6d14ab0e607c",
+    "entry_group": "PENDING_RESPONSE",
+    "history_kind": "DECLARED_STATE_PRECONDITION",
+    "turn_count": 1,
+    "precondition_description_count": 1,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:f52be5e905841e6421a2b2ae1b99dcb785723931a6ce0fc1295c6d14ab0e607c"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:f52be5e905841e6421a2b2ae1b99dcb785723931a6ce0fc1295c6d14ab0e607c"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "ENTITY:hospital"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "pending_action": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:f52be5e905841e6421a2b2ae1b99dcb785723931a6ce0fc1295c6d14ab0e607c"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-017",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "7e7385298befae1b7fb0c594010eae847be082a1b245460403cc4a709ee711d2",
+    "entry_group": "HISTORICAL_RETURN",
+    "history_kind": "EXECUTABLE_HISTORY",
+    "turn_count": 3,
+    "precondition_description_count": 0,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "turn_relation": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:7e7385298befae1b7fb0c594010eae847be082a1b245460403cc4a709ee711d2"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "target_task": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:7e7385298befae1b7fb0c594010eae847be082a1b245460403cc4a709ee711d2"
+        ],
+        "limits": "Only this labeled axis"
+      },
+      "metric_surfaces": {
+        "label_source": "CATALOG_PROVEN",
+        "evidence": [
+          "METRIC:order_count",
+          "METRIC:sales_total_including_tax"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-018",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "36d566614f81bd53210323eaa8edb461273afc1aaaf56081a349104302bca4d7",
+    "entry_group": "DATASET_FOLLOWUP",
+    "history_kind": "DECLARED_STATE_PRECONDITION",
+    "turn_count": 1,
+    "precondition_description_count": 1,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "dataset_route": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:36d566614f81bd53210323eaa8edb461273afc1aaaf56081a349104302bca4d7"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-019",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "5fb83605911b37cfd121b0120eeda3019ed3f378262020ac5bf0d92058bab135",
+    "entry_group": "DATASET_FOLLOWUP",
+    "history_kind": "DECLARED_STATE_PRECONDITION",
+    "turn_count": 1,
+    "precondition_description_count": 1,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "dataset_route": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:5fb83605911b37cfd121b0120eeda3019ed3f378262020ac5bf0d92058bab135"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  },
+  {
+    "case_id": "S81-020",
+    "corpus": "TRANSITION",
+    "split": "PUBLIC_DEV",
+    "source_case_hash": "7d622f81bda5c8e55199c84050498a1c05d3ed62f2085f3a2df3f033b9a9d20b",
+    "entry_group": "DATASET_FOLLOWUP",
+    "history_kind": "DECLARED_STATE_PRECONDITION",
+    "turn_count": 1,
+    "precondition_description_count": 1,
+    "label_coverage": "PARTIAL_SEMANTIC",
+    "label_provenance": {
+      "dataset_route": {
+        "label_source": "BUSINESS_CONTRACT",
+        "evidence": [
+          "USER_CRITICAL_MULTITURN_CONTRACT",
+          "REVIEWED_ORIGINAL_GOLD:7d622f81bda5c8e55199c84050498a1c05d3ed62f2085f3a2df3f033b9a9d20b"
+        ],
+        "limits": "Only this labeled axis"
+      }
+    },
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+    "business_timezone": "Asia/Shanghai",
+    "as_of_datetime": "2026-09-09T09:00:00+08:00",
+    "calendar_version": "gregorian-business-calendar-v1"
+  }
+]

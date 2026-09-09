@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "ec48f654d6bcaa48ed09d41d7aca4fcbaedcd82e",
+  "feature_branch": "evaluation-harness-closure-20260909t083000z",
+  "final_commit": "Commit containing this manifest",
+  "planned_subject": "cutover: observe runtime evaluation and build typed state fixtures",
+  "runtime_source_changed": false,
+  "evidence": "runtime_harness_contract.md and test_delta.json",
+  "draft_pr_base": "semantic-cutover-triage-20260909t074900z",
+  "stage_baseline": "ec48f654d6bcaa48ed09d41d7aca4fcbaedcd82e"
+}

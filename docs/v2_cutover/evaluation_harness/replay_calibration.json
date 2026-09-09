@@ -1,0 +1,1090 @@
+[
+  {
+    "case_id": "S81-009",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "3d022e786974992f4008aec06d8e188895782916cf132a067cf702ed136cb481",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 2,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-006",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "04774fb83da9f3eef38de524d6c6c7d3d526960a724652304bd11a560753dda0",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "fc7033ad2e3b21aa3e98d3b4e0fe8c984b7e2fdedbd0230afb52555196df4438",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "2cffacc8c4c422cde6b543aa7bb8b11cd27a01c15961d38f75792f7e9157593d",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "a51b900a6650901a5dfdc846db2f21fff5488abc748123165dd63d7797f5fcea",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-007",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "16a2ba9532c78d47c75410a720222a9c56f16ea40c8eed2dfb4948b98dcb9bbc",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "b8f539396566387383802f4a4e2d1a29402b953aac90cbd24867c32a219f2451",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "8b258abefa249d22630a8123a072cb5977e319b2d46dcf1349d31c365f864ecc",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-008",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "dc962e436900938b6b6b9a44a62c852dbaf67f0c5b26450b94f07b320ba3916f",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "c74a59c694ccb48b0b4764ebde5a8d5f65c8bfc16dbec85012e5d0fb4a3eb575",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SLOT_OPERATION_CONFLICT",
+      "first_rejecting_boundary": "TASK_PATCH"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-010",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "8f13a98c71a0b7e7e74e0fc2aae94f1b0de65fc7ca286a0ccc27a5b442f18a73",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 2,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-001",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "65ae2253c4dc487dbd4663335da49006198abca794f8c008d1e0104a5e8556d9",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-005",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "90396a264d0398158cddf79aa03105533393a52a6c7d3a1a1c6332686e5aafa7",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 2,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "6d744f0090e170df3208a02fb9ea075754807be77212deb75c24fe611555e0ce",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "c82a1a9683820305ea30ea9c387ba0d3fcaf65605bc51c5fa0bce9c4fcf08ba2",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "10eef8cb164c0598f942c0dd09fedbd834ecd45f2f4e5d5a3cdb4ce9b2dac979",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "090a5a2daf099517bc2d67c56dc7f6bade1a34954f5b8fbaa1d90032460e1323",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "6c22f29354fa6c646210bf5cf783a6c58756564ab412981d9f4cba8992ed314e",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "3d33f8287d21521f79149dc16537883211d4f90aeb903ae54cf5ce2a212db590",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "88a8c9f28455aaf1bba8bc0ca80c005e7219fac93176701b881fcf325dc6552b",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-004",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "29f68a44070fa0a400b748170ad05cd892f51d23eaa615d93ec497513e0c5033",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 2,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "eb9f548d2b2d8f9a99eda3fbc5080b40e817fa1420404e7ad87fede35177b7e9",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-015",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "9f7be47d34602d713726a8fa8397b6b1dbde36978a99a3ad61d2c95ea92faf1c",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 2,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-001",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "d85b76cf20014bde3253316f6e8fb94a1b730cd37b948bab7acfeb699b6108bc",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 2,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "19c83267284b4eab2dc7fda82fe96b0300b976d5dea3a7a83d2571858224d9b1",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "ValidationError",
+      "reason": "CONTRACT_OR_HARNESS_FAILURE",
+      "schema_diagnostics": [
+        {
+          "type": "too_short",
+          "location": [
+            "group_by"
+          ]
+        }
+      ],
+      "first_rejecting_boundary": "SEMANTIC_IR"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 2,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "3f37553ac4cb52a04c6b2641be7b58ad54e8767c614b71145f78de97ba45f4bd",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "external_call_attempts": {
+      "model_attempts": 0,
+      "database_attempts": 0,
+      "network_attempts": 0,
+      "redis_attempts": 0
+    },
+    "equality": {
+      "byte_equal": true,
+      "semantic_equal": true,
+      "policy_hash": "83d04dc6a6f2450a9f976a9e9d1fafced0fba1a51975a33c9c3278deeaf97cac"
+    },
+    "production_state_mutations": 0,
+    "storage": "FRESH_MEMORY_PUBLICATION_AND_LOCAL_STATE"
+  }
+]
