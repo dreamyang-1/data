@@ -1,0 +1,183 @@
+{
+  "baseline_commit": "d01d305e23059d99d147aa4a5d2f1ff6022e02e1",
+  "files": [
+    {
+      "path": "docs/v2_cutover/semantic_round3/ablation_metrics.json",
+      "action": "ADD",
+      "sha256_raw": "d01448d773d28ee7e508f518a4f3e37730952a1bcef52216450d13ba7b458a42",
+      "sha256_lf_normalized": "3ddbb4868114c759611eaf6e63fc9f224842134568d90f35a767a3bb3462b992",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/arbitration_coverage.json",
+      "action": "ADD",
+      "sha256_raw": "9b4dd81058dfbcb623c8813150eb9e88cb80c12b6eb926451c92907fe4cd8459",
+      "sha256_lf_normalized": "b1667ebdf37e48acd1c90030acef3b3ea9c37c41914fb2b4d2953188a17335b6",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/arbitration_trace_contract.json",
+      "action": "ADD",
+      "sha256_raw": "fc9e8dfcb41a17cd9cacca7e51badc38ae569246cdc7357eb57834f2f8fb96f7",
+      "sha256_lf_normalized": "58cf5eb8821e673414e7e5c3de8ca0a966246b1d407d924d4898291b8adaf676",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/closure_report.md",
+      "action": "ADD",
+      "sha256_raw": "00107855cf563c57b75469eebd1cb71665a1fcf2c1e15eb643292eee28dbbd4d",
+      "sha256_lf_normalized": "de7e604bdb4f59ef7350dd3195fcd6a0d3c110ba19f0734f4872e7ab1397b510",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/confidence_inventory.json",
+      "action": "ADD",
+      "sha256_raw": "c4322c224a84dcbf004c84e28f078936e4a78d1faddbd04c01043d4e3f9fb1d1",
+      "sha256_lf_normalized": "3743357069295e81a14d1e15d34e048c3e18fdd3a20b9f5317942e5e6dda72ac",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/context_attachment_dataflow.md",
+      "action": "ADD",
+      "sha256_raw": "d60befa1fe607f653170a9eebf97c49debd8f6816d72ecf9218f6fdf6a285cbd",
+      "sha256_lf_normalized": "d60befa1fe607f653170a9eebf97c49debd8f6816d72ecf9218f6fdf6a285cbd",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/context_case_inventory.json",
+      "action": "ADD",
+      "sha256_raw": "fc4fb9cd1d68713b05080adf5ac6b41b3eeab571ffe4631971fc4c4d5daaabed",
+      "sha256_lf_normalized": "d3105cfe9b1ce9dd6f3ce6316d20aa798de55035e8c5fa4a59d62b501d034e16",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/context_exposure_audit.json",
+      "action": "ADD",
+      "sha256_raw": "6dc855d9d2d0c72dc1f6a1b53bf2c0ef33452375d8412e636c29acb2bd75bb54",
+      "sha256_lf_normalized": "b1738b015852c3a13a12160789329dae9921033533aafc797e321dd07a9fdf96",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/contrast_matrix.json",
+      "action": "ADD",
+      "sha256_raw": "3759f19b6dbb1b1ba23154dbc275ac2772429d483e02121936c3c26b2287ca0c",
+      "sha256_lf_normalized": "3be7791b4cc7307b1a2ab98c8c96cf74373177b6284bbcf6e58fb794fed66e3b",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/cutover_priority_and_gates.json",
+      "action": "ADD",
+      "sha256_raw": "617c94597ac8f52eb9a94197fa521ec5f9d3fab8f0280f1a8ce48891d748c582",
+      "sha256_lf_normalized": "e14ecc2f191c66da6beaf38541f898f34989c25ef54e2ad71af5a8e129120784",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/llm_rule_arbitration_matrix.csv",
+      "action": "ADD",
+      "sha256_raw": "9646594b178b5b035760b8d4128ce4088c8849cea550e13b1391b909f52a4a8f",
+      "sha256_lf_normalized": "9326098d14aadbe7a28cb81192f527e4aa29de78cf0cc3e4ea1cb5e7707ef8ec",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/llm_rule_arbitration_matrix.json",
+      "action": "ADD",
+      "sha256_raw": "16ce43b2d893ab190d4690ac16a01705bee3135593e4a171bba5739f68e234fc",
+      "sha256_lf_normalized": "98f4c4cb9bc32f00ad7842a20d8d977a4e4e712297dadd799064c3740f866ddb",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/oracle_evidence.json",
+      "action": "ADD",
+      "sha256_raw": "79dd4f813b4d25cf11e99304bb7619d1a5c8f7afdb63c26bc63c911fe2b5d085",
+      "sha256_lf_normalized": "dad1ad5f24c92861694edb3b8c690d659659fc01b7835e4cde8fe2fe1d1c53da",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/private_promotion_manifest.json",
+      "action": "ADD",
+      "sha256_raw": "bff8e29ba4cefc40c80326f31f99785969bf1a7ed77289c509435fb5be3fbdf7",
+      "sha256_lf_normalized": "bdd2d27f75cad4a789bf242d1dc77a64760d1f8c8d1ae6fba8f6987fa78d1eab",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/replay_receipt.json",
+      "action": "ADD",
+      "sha256_raw": "f60e06fd58a572f30d9556ac1c91edcb318eefaed65a85272b10d75e175e4230",
+      "sha256_lf_normalized": "e868c7242de46384c89234ff39d1800b02e3daa5d8d1f1084e0d5b48750b2e32",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/reproduction.md",
+      "action": "ADD",
+      "sha256_raw": "8ab42261adfa19bccdf28838955be256e395a81ae7f4c8cb9c0c3c00aea670f6",
+      "sha256_lf_normalized": "8ab42261adfa19bccdf28838955be256e395a81ae7f4c8cb9c0c3c00aea670f6",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/round3_manifest.json",
+      "action": "ADD",
+      "sha256_raw": "4a9abbd84bca30dbc549c312d6e755aa441397a7167556dc2936d5591818b4e6",
+      "sha256_lf_normalized": "758a207dec39cd814ece0ea2218387429086831f931df372e3034717839514f1",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/starting_state.json",
+      "action": "ADD",
+      "sha256_raw": "efce17c9f779af011dc230b91f89f1dafb0dc2d0c4d4ef1b8a93377ecf3f8076",
+      "sha256_lf_normalized": "0ac14529bd1f1c2871ba43e8721fcdd47d56a1cb523a8aa2628afc8a90b4b334",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/test_delta.json",
+      "action": "ADD",
+      "sha256_raw": "11f14ebfae80665d488197c2bb35b7be2a8070a3c0ae3ba178e9a904e8a49332",
+      "sha256_lf_normalized": "4e410c1e32efdeaec8e89cd90a2c85a32f0c45a372d844e3ea6b280e63e2beec",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round3/verify_round3.py",
+      "action": "ADD",
+      "sha256_raw": "6a82d28af6e406593d28e85bb9dc341859e059dfa22a09ab2b4c8903fdf6a19c",
+      "sha256_lf_normalized": "d236aff4b81ebcc265415ef68b3a60e5080a25ca1b6cc660864030e1d3df8b02",
+      "classification": "PUBLIC_ROUND3_EVIDENCE"
+    },
+    {
+      "path": "tests/test_v2_context_round3.py",
+      "action": "ADD",
+      "sha256_raw": "4837357e85c638e354c8a724696365b47543dfd316aa7b421d3dc1d76573cb85",
+      "sha256_lf_normalized": "4837357e85c638e354c8a724696365b47543dfd316aa7b421d3dc1d76573cb85",
+      "classification": "OFFLINE_DIAGNOSTIC_OR_TEST"
+    },
+    {
+      "path": "tools/cutover/context_round3.py",
+      "action": "ADD",
+      "sha256_raw": "bfa622aa4c8b03c4220ac2837bc55426bf56abf44c9281a8f2230c4ececea992",
+      "sha256_lf_normalized": "bfa622aa4c8b03c4220ac2837bc55426bf56abf44c9281a8f2230c4ececea992",
+      "classification": "OFFLINE_DIAGNOSTIC_OR_TEST"
+    },
+    {
+      "path": "tools/cutover/context_round3_controls.py",
+      "action": "ADD",
+      "sha256_raw": "e300dd1f437d9f23632fcc5728b13fc192f3d5a70e732b0031cf4f6c69d1fbbd",
+      "sha256_lf_normalized": "274d3fbbc3cf5535679fd8f962f681600457ab674f49a03e883fa358f2c6044d",
+      "classification": "OFFLINE_DIAGNOSTIC_OR_TEST"
+    },
+    {
+      "path": "tools/cutover/context_round3_replay.py",
+      "action": "ADD",
+      "sha256_raw": "caccc2f7da6111348ccc07349f6dbb108209626c7ba551b17a862b74075b0fa8",
+      "sha256_lf_normalized": "9157a9356e11f63e45be0c7188ae281b74f37bf4e0076ececc4afd3f1ccf162f",
+      "classification": "OFFLINE_DIAGNOSTIC_OR_TEST"
+    }
+  ],
+  "release_envelope_paths": [
+    "docs/v2_cutover/semantic_round3/change_manifest.json",
+    "docs/v2_cutover/semantic_round3/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round3/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round3/validation_receipt.json",
+    "docs/v2_cutover/semantic_round3/workspace_git_hash_verification.json"
+  ],
+  "recursive_hash_policy": "Release envelopes excluded from own hash list; final Git tree binds every file.",
+  "production_source_changes": 0,
+  "private_or_credentials_copied": false
+}

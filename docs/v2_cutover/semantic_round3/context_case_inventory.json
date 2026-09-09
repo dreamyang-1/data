@@ -1,0 +1,421 @@
+{
+  "cases": [
+    {
+      "case_id": "G81-082",
+      "corpus": "public_dev",
+      "turn_index": 1,
+      "source_capture_hash": "a380e1b5a08efe015db0223d86fc8d659c4438010ea6b2db5bfd878429792bcd",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_ROLE_AND_OPERATION_CONFLICT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_SLOT_OPERATION_CONFLICT",
+      "unconsumed_declarations": [],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_SLOT_OPERATION_CONFLICT"
+      ],
+      "causal_representative": null,
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "REVIEWED_PUBLIC_OR_PROMOTED_REPRESENTATIVE"
+    },
+    {
+      "case_id": "S81-002",
+      "corpus": "transition",
+      "turn_index": 1,
+      "source_capture_hash": "36c4ff2ebb58da025ccf5ad7c3c54ddc31696f62354ded7cec3b817e06f0103d",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "RELATION_LABEL_ONLY_MISMATCH",
+      "first_divergence_stage": "RELATION_LABEL_ONLY_MISMATCH",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": null,
+      "unconsumed_declarations": [],
+      "patch_published": true,
+      "state_mutated": true,
+      "risk": "CORRECT_ATTACHMENT_LABEL_MISMATCH",
+      "downstream_effects": [],
+      "causal_representative": null,
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "REVIEWED_PUBLIC_OR_PROMOTED_REPRESENTATIVE"
+    },
+    {
+      "case_id": "PV81-002",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "9734fdd4f726fbe49b55a4bbf6ae22b99c41770f1bc4617eecdc045b006c8420",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m1"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-002",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "REVIEWED_PUBLIC_OR_PROMOTED_REPRESENTATIVE"
+    },
+    {
+      "case_id": "PV81-003",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "144771c855057c6d24f83a6806fb1ddb66f4d4c3d05b5cd3034b7997b5e3c0a7",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m2"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-003",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "REVIEWED_PUBLIC_OR_PROMOTED_REPRESENTATIVE"
+    },
+    {
+      "case_id": "PV81-005",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "534485826beccf9e90a438b60de70f63ffe56922311595943dfd4cba6d63f2f2",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "RELATION_LABEL_ONLY_MISMATCH",
+      "first_divergence_stage": "RELATION_LABEL_ONLY_MISMATCH",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": null,
+      "unconsumed_declarations": [],
+      "patch_published": true,
+      "state_mutated": true,
+      "risk": "CORRECT_ATTACHMENT_LABEL_MISMATCH",
+      "downstream_effects": [],
+      "causal_representative": null,
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "ANONYMOUS_ARTIFACT_CLUSTER_ONLY"
+    },
+    {
+      "case_id": "PV81-006",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "69c75306b047570a31e01fc90792b194651d4be86d469a5273d5e7448eaeb701",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m2"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-003",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "ANONYMOUS_ARTIFACT_CLUSTER_ONLY"
+    },
+    {
+      "case_id": "PV81-008",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "03798109c41e2d02e0de48741fb104f749c7b48fbb8e46d966874492a1227623",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m1"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-002",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "ANONYMOUS_ARTIFACT_CLUSTER_ONLY"
+    },
+    {
+      "case_id": "PV81-011",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "36af476ace4bab6c73fc0eaf14a5d91669f2ba5fb97714dad3b1200f42f18017",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m1"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-002",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "ANONYMOUS_ARTIFACT_CLUSTER_ONLY"
+    },
+    {
+      "case_id": "PV81-012",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "c9db9bcb437c31416612e6de08868acf07eacd193f2c9010ec601152c7786760",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m2"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-003",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "ANONYMOUS_ARTIFACT_CLUSTER_ONLY"
+    },
+    {
+      "case_id": "PV81-014",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "44bbf28e37b20099739de2113d52ee997ad28236463bfb70c731ea3e92262d18",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m1"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-002",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "ANONYMOUS_ARTIFACT_CLUSTER_ONLY"
+    },
+    {
+      "case_id": "PV81-015",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "a4dd75fabdaa8d8fbf82c4fc399696df3dd09444dbf6c54f98c630eb51b38492",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m2"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-003",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "ANONYMOUS_ARTIFACT_CLUSTER_ONLY"
+    },
+    {
+      "case_id": "PV81-017",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "ad89e33f64b49591fdb4ef63f3ee87f44d0db3832a9b4c4a7e00a6bfe87b3c17",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m1"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-002",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "ANONYMOUS_ARTIFACT_CLUSTER_ONLY"
+    },
+    {
+      "case_id": "PV81-018",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "c57dbb7a85cd550bb0bd52aa220594f5e733d11e42c47795c69ea9f08ab6030b",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m2"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-003",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "ANONYMOUS_ARTIFACT_CLUSTER_ONLY"
+    },
+    {
+      "case_id": "PV81-020",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "aeb45ac478ee7f1406845060f02e9cd72527600e2cab04371cbe7943b379e5b2",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m1"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-002",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "ANONYMOUS_ARTIFACT_CLUSTER_ONLY"
+    },
+    {
+      "case_id": "PV81-023",
+      "corpus": "private_validation",
+      "turn_index": 1,
+      "source_capture_hash": "cbcb6fdfe3049d0fdef6141e18b4cfa9748ec3b37d9088cc13b59f80da1a102d",
+      "original_first_divergence": "TURN_RESOLUTION",
+      "classification": "MODEL_REFERENCE_AS_EXPLICIT_EDIT",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "model_selected_active_task": true,
+      "expected_target": "PREVIOUS",
+      "actual_target": "PREVIOUS",
+      "actual_reason": "V2_EXPLICIT_SLOT_DROPPED",
+      "unconsumed_declarations": [
+        {
+          "slot": "metrics",
+          "mention_id": "m1"
+        }
+      ],
+      "patch_published": false,
+      "state_mutated": false,
+      "risk": "SAFE_REJECT",
+      "downstream_effects": [
+        "V2_EXPLICIT_SLOT_DROPPED"
+      ],
+      "causal_representative": "PV81-002",
+      "evidence_boundary": "Remaining private: anonymous artifacts only; representative Oracle does not prove all surface classifications.",
+      "semantic_classification_evidence": "ANONYMOUS_ARTIFACT_CLUSTER_ONLY"
+    }
+  ],
+  "case_count": 15,
+  "distribution": {
+    "MODEL_ROLE_AND_OPERATION_CONFLICT": 1,
+    "RELATION_LABEL_ONLY_MISMATCH": 2,
+    "MODEL_REFERENCE_AS_EXPLICIT_EDIT": 12
+  },
+  "target_match": {
+    "n": 15,
+    "N": 15
+  },
+  "formal_gold_status_changed": false,
+  "private_original": 24,
+  "private_promoted": 4,
+  "private_remaining": 20,
+  "first_dropping_boundary": "RawTurnPlanner._patch checks unconsumed explicit_slot_mentions; real current ADD/REMOVE operations had already been constructed, no patch/state was published.",
+  "root_cause_estimate": "12 share rejection/artifact structure; only 2 promoted representatives have semantic causal review. Do not claim 12 independent bugs or universally proven model-word errors."
+}

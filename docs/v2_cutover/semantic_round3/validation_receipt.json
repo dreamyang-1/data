@@ -1,0 +1,41 @@
+{
+  "round3": {
+    "status": "PASS",
+    "stage_status": "SEMANTIC_ROOT_CLOSURE_ROUND_3_COMPLETE",
+    "parent_round2_round1_calibration_harness": "PASS",
+    "evidence_hash": "da3622a592514484d9cc42b1a7136cc28f09c2863d2b792e28dda82708a25a5d",
+    "evidence_files": 20,
+    "production_changes": 0,
+    "real_model_calls": 0,
+    "private_or_blind_reads": 0,
+    "scoped_tests": 320,
+    "strict_replays": 136,
+    "CONTEXT_ATTACHMENT_CORE_READY": false,
+    "CONTEXT_FOLLOWUP_READY": false,
+    "READY_FOR_USER_APPROVAL": false
+  },
+  "engineering_tests": "test_delta.json",
+  "review": {
+    "production_source_changes": 0,
+    "original_cluster_target_match": "15/15",
+    "explicit_slot_guard_not_relaxed": true,
+    "contextless_parse_and_historical_exposure_gap_documented": true,
+    "legacy_confidence_thresholds_not_falsely_attributed_to_V2": true,
+    "no_independent_context_model_claimed": true,
+    "A_B_diagnostic_scope_and_per_turn_preconditions_disclosed": true,
+    "zero_soft_veto_on_recorded_targets_not_generalized_to_no_risk": true,
+    "model_relation_in_audit_is_reconstructed_not_independent_output": true,
+    "Oracle_acceptance_not_Gold_pass": true,
+    "private_representatives_promoted_before_text_review": true,
+    "remaining_private_semantics_not_claimed_individually_proven": true,
+    "all_26_contrasts_mapped_to_executed_nodes_with_capability_limits": true,
+    "context_slice_not_live_model_accuracy": true,
+    "native_arbitration_trace_gap_retained": true,
+    "frozen_captures_and_labels_unchanged": true,
+    "rule_clock_controlled": true,
+    "Blind_Holdout_untouched": true,
+    "full_agent_not_mechanically_repeated": true,
+    "next_round_not_started": true,
+    "owned_scripts_or_tests_still_running": 0
+  }
+}
