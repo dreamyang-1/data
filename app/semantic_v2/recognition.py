@@ -557,6 +557,7 @@ class RawTurnPlanner:
                 reason_code='CURRENT_PINNED_RELATIONSHIP', base_task_version=base,
                 presence='EXPLICITLY_CLEARED' if path is None else 'PRESENT', evidence_mention_ids=edit.evidence_mention_ids))
         for index, edit in enumerate(draft.edits):
+            singleton_replacement = False
             if not set(edit.evidence_mention_ids) <= ids:
                 raise RecognitionFailure('V2_EDIT_EVIDENCE_NOT_CURRENT')
             matching = {(edit.slot_path, edit.operation, i) for i in edit.evidence_mention_ids} & markers
@@ -576,9 +577,18 @@ class RawTurnPlanner:
                 checked_value = value
                 # TaskPatch accepts single-item ADD/REMOVE for set-valued slots.
                 # Validate the item as that collection without changing the edit;
-                # SET/REPLACE and all role/current-evidence checks remain strict.
+                # Initial assignments and all role/evidence checks remain strict.
                 if definition.cardinality == 'SET' and edit.operation in {'ADD', 'REMOVE'} and not isinstance(value, list):
                     checked_value = [value]
+                if (definition.cardinality == 'SET' and edit.operation == 'REPLACE'
+                        and target is not None and base == target.active_version
+                        and isinstance(edit.value, dict) and set(edit.value) == {'binding_handle'}):
+                    # An offered reference replacing a restored collection means
+                    # a complete collection of one. Preserve REPLACE, never ADD.
+                    # Hydration above and the validators below still prove the
+                    # handle, role and current evidence before accepting it.
+                    value = checked_value = [value]
+                    singleton_replacement = True
                 typed = TypeAdapter(definition.value_type).validate_python(checked_value)
                 expected = {'metrics': 'MEASURE', 'dimensions': 'GROUP_BY'}
                 if edit.slot_path in expected and any(r.semantic_role != expected[edit.slot_path] for r in collect_bound_refs(typed)):
@@ -588,7 +598,8 @@ class RawTurnPlanner:
                 if any(not set(r.source_mention_ids) <= allowed_sources for r in collect_bound_refs(typed)):
                     raise RecognitionFailure('V2_BINDING_OUTSIDE_EDIT_EVIDENCE')
             operations.append(m.SlotOperation(operation_id='operation:' + str(index), slot_path=edit.slot_path,
-                operation=edit.operation, new_value=value, source='CURRENT_EXPLICIT', reason_code='CURRENT_TURN_EVIDENCE',
+                operation=edit.operation, new_value=value, source='CURRENT_EXPLICIT',
+                reason_code='CURRENT_TURN_SINGLETON_REPLACEMENT' if singleton_replacement else 'CURRENT_TURN_EVIDENCE',
                 base_task_version=base, presence='EXPLICITLY_CLEARED' if edit.operation == 'CLEAR' else 'PRESENT',
                 evidence_mention_ids=edit.evidence_mention_ids))
         def hydrate(value, evidence):

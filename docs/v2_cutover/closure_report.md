@@ -1,98 +1,88 @@
-# V2 replacement readiness — current task and destructive edits
+# V2 replacement readiness — collection replacement evidence
 
-Current Stage: CURRENT_TASK_CONTEXT_AND_DESTRUCTIVE_EDIT_P0.
-Baseline: `a87df7d37756d160f93db2acf9b9de5af928f8a3` / Draft PR #43. Branch: `cutover-task-context-20260909t042538z`.
-Final commit: the commit containing this report. **NOT_READY** for replacement.
-The inherited production acceptance groups remain 8 P0 / 4 P1; fixed code defects
-and those broader acceptance groups are different counts.
+Current Stage: REPLACEMENT_REPRESENTATION_AND_PARTIAL_BINDING_ORACLE.
+Baseline: `299513e6d0b7d02f7e7dffb68feeeba4f677f071` / Draft PR #44.
+Branch: `cutover-replacement-oracle-20260909t045212z`.
+Final commit: the commit containing this report. **NOT_READY** for V1 replacement.
+The inherited production acceptance groups remain 8 P0 / 4 P1.
 
-## Proven root cause and bounded fix
+## Proven failure and change
 
-The live REMOVE parse already supplied a single REMOVE dialogue act and current
-REMOVE markers, with empty followup/reference arrays. TurnResolver ignored the
-act/marker agreement and started a new task. REMOVE/CLEAR are not options in the
-followup_signals enum, so requiring a second signal was an avoidable dependency
-on redundant model output. Deterministic regressions reproduce the wrong target.
+The captured S81-002 REPLACE draft selected the current frozen catalog's
+`order_count` metric with MEASURE role and the correct current mention. Its exact
+handle was reconstructed against the existing frozen publication and independently
+verified, without a model or source database call. The first rejecting boundary
+was the collection representation required by TaskPatch, not missing retrieval.
 
-The resolver now recognizes dependency only when a single REMOVE/CLEAR act agrees
-with every current marker. It uses no missing execution slots or text regex.
-Conflicting acts, bare hints, absent markers and mixed SET/query operations do not
-gain inheritance. Explicit new-topic signals still win. With no current task the
-result is unresolved, not an invented default task. The frozen contract receives
-this minimal proven multi-turn P0 correction; V1 remains unchanged.
+An explicit REPLACE on an existing restored set-valued task slot may now normalize
+an exact offered-handle object to a complete one-element list. A target at its
+current version is required. Hydration verifies the offered handle; the original
+type, role, current evidence, operation and scope validators still run. The
+operation remains REPLACE, so old values are removed. Internal reason code:
+`CURRENT_TURN_SINGLETON_REPLACEMENT`. No full business text is added to the trace.
 
-Before this, the semantic-edit model also received all restored task labels and
-historical handles during ordinary continuation and new tasks. It repeatedly
-copied a current handle into the historical selector, correctly triggering the
-runtime guard. The context now offers only deterministic current-task state for
-ordinary continuation, no old task state for complete new tasks, and scoped
-historical candidates only for an explicit historical return. Actual recorded
-payload type and clear barriers are included. Current-state labels omit the
-historical handle. Runtime rejection remains and now rejects conflicting explicit
-new-topic/history handles too. No model-selected identity, scope or plan is trusted.
+This does not infer a task, change SET to REPLACE, normalize arbitrary dictionaries
+or relax the final collection schema. Initial assignments still require a complete
+collection. Existing SET/REPLACE rejection tests on new tasks remain unchanged.
+There are no prompt, regex, schema-model, scope, public API/SSE, model/key, V1 routing
+or cross-service source changes. The code change is confined to recognition.py.
 
-No prompt text, regex, model/key default, public request/response/SSE, native
-publication or cross-service source changed. The source change is confined to
-recognition.py and pipeline.py. Private evaluation artifacts are now gitignored.
+## Oracle and live evidence
 
-## Measured evidence, without changing denominators
+The partial Oracle Binding tests supply a uniquely correct offered catalog choice
+and execute real scoped binding, TaskPatch, reducer, materialized state and logical
+compiler. Three positive nodes compare singleton/array metric and dimension
+replacement and distinguish ADD from REPLACE; nine controls retain invalid-input
+guards. This is not a complete Oracle Mention/Role/Candidate/Relation suite.
 
-| Full 20-transition run | Observable plans | Failed | Not run | Actual model requests |
-| --- | ---: | ---: | ---: | ---: |
-| PR #43 baseline | 1 | 15 | 4 | 48 (previous delivery) |
-| Current task context | 2 | 14 | 4 | 48 |
-| Context plus REMOVE/CLEAR dependency | 4 | 12 | 4 | 46 |
+Verified red run: five failures and seven passes. Three failures were positive
+representation cases; two invalid cases previously stopped at generic list typing
+before the retained precise role/evidence guards. An initial dimension fixture
+lacked its second governed dimension; that fixture was corrected before the
+verified red run. Final focused suite: **174 passed**. No old assertion changed.
 
-All **94** current-stage model requests returned HTTP200. Prompt v8, Gold,
-catalog/hash, scope, model, thinking mode and current-turn schema stay the same.
-All attempts and failed histories are retained. Live generations vary; the red/
-green tests isolate the resolver defect instead of attributing every score change
-to code. S81-012 fails at different history/current stages across the two runs.
+The full unchanged 20-transition model run has **five observable plans, 11 failures
+and four NOT_RUN fixtures**, using 48 HTTP200 calls. Metric ADD/REPLACE/REMOVE axes
+are 3/3, but **S81-002 fails its turn-relation label**: the model called the correct
+current-task replacement RETURN_TO_TOPIC instead of FOLLOW_UP. It is not a passed
+whole case. A separate four-call repeat produced FOLLOW_UP and the same correct
+metric/target; that later row does not replace the original failed observation.
+The repeat emitted an array, so it does not prove singleton normalization executed
+in that live call. The captured candidate and deterministic Oracle tests establish
+the code effect; the live observations establish behavior and remaining variation.
 
-The final observed cases are S81-001 metric ADD (all three metrics retained),
-S81-003 metric REMOVE (only sales amount remains), S81-011 dimension ADD (hospital
-and city), and S81-013 dimension REMOVE (only city remains). Six cases still stop
-at missing frozen source-value observations. One Pending and three Dataset entry
-fixtures remain NOT_RUN. None are removed from denominators or called model bugs.
+Total current-stage real model requests: **52**, all HTTP200. Source SQL: 0;
+production external writes: 0. Four cases reached the denied source-value boundary;
+two previously reaching it instead failed earlier in model source-request linkage.
+The frozen values are still absent, so this lower denial count is not improved
+coverage. Pending and Dataset entry fixtures, whole-plan labels and hard-safety
+observations remain incomplete. No unobserved safety is marked zero-violation PASS.
 
-These are selected state/operation/target observations, **not** whole-plan exact
-match or complete hard-safety passes. Required unobserved safety stays
-NOT_EVALUATED. Source SQL and production external writes are both 0. No parser
-100-case rerun was needed because this stage changes task context/resolution,
-not the current-turn parser component; the earlier parser measurements retain
-their original timestamp and limitations.
+## Regression, review and remaining path
 
-## Tests and review
+New regressions: **12**. Full Agent: **2874 passed / 27 historical failures**;
+Oagnet: **663 / 8**; SQL Translator: **381 / 0**. Old-pass -> new-fail 0;
+removed tests 0; collection errors 0; Critical 160/160; clarification traces 89/89.
+All started evaluation and regression processes are terminal before release.
 
-Final focused/contract tests: **409 passed**. New tests: **17**. Full Agent:
-**2862 passed / 27 historical failures**; Oagnet **663 / 8**; SQL Translator
-**381 / 0**. Old-pass -> new-fail 0; collection errors 0; removed tests 0;
-Critical 160/160; clarification traces 89/89. No old expected outcome was relaxed.
+Self-review checked scoped current target/version, exact handle-only shape,
+strict hydration before normalization, retained role/evidence checks, explicit
+REPLACE semantics and complete list validation before state mutation. Private
+captures stay outside Git; only curated candidate metadata/hash and evaluation
+receipts are published. Explicit manifests compare normalized source hashes and
+preserve unrelated files and the original Oagnet HEAD/index.
 
-Six new context regressions failed before the context fix. Four valid destructive
-edit regressions demonstrated the resolver failure before its fix; one additional
-empty-state test initially lacked required identity fields, which was corrected.
-An existing adversarial test was adapted to obtain the same real prior handle
-out of band because new tasks no longer receive it; its exact guard expectation
-is unchanged. See test_delta.json. All initiated evaluation/test jobs are terminal.
+Catalog Gap: shape-specific identity/grain/endpoints and native production
+publication. Evaluation Gap: model turn variation, operation/shape failures,
+frozen entity-value observations, full Pending/Dataset entry and complete
+Oracle/candidate/whole-plan labels. Shadow Gap: required offline acceptance has
+not passed. Redis recovery and native publication remain production-stage gates.
 
-Self-review checked actual current pointer selection, scoped restore before
-context, recorded plan/version correspondence, topic-shift priority, unchanged
-runtime guards, historical subtree regressions, clear barriers and absent-task
-handling. Source and evidence are synced by explicit manifest and normalized
-SHA-256; user-owned Oagnet HEAD/index, private .env and unrelated files are preserved.
+Next shortest path: complete the missing frozen source-value/observation evidence
+and diagnose the remaining operation/query-shape errors without guessed repair.
+Continue controlled model comparison once the evaluator supports those labels;
+keep V1 production until explicit user approval after all readiness gates pass.
 
-Catalog Gap: shape-specific endpoint/grain ambiguities and production publication.
-Evaluation Gap: singleton assignment representation, operation/shape conflicts,
-frozen entity values, complete Pending/Dataset observations, Oracle/candidate and
-whole-plan labels. Shadow Gap: full offline acceptance still missing. Redis and
-native publication do not halt available offline work.
-
-Next shortest path: diagnose the exact remaining assignment/operation cases using
-captured evidence, and extend existing evaluator/controlled value observations.
-Then complete controlled model comparisons and plan-only shadow once their gates
-pass. No production replacement approval is requested at this stage.
-
-Current evidence: task_context/comparison.json, first_divergence_report.json,
-semantic_architecture_audit.md and cutover_readiness_matrix.json. Previous evidence
-and the completed identity/Redis audits remain in their referenced original files.
+Evidence: replacement_oracle/comparison.json, oracle_evaluation_report.json,
+first_divergence_report.json, test_delta.json and the shared readiness matrix.
+Earlier Gold, catalog, identity and Redis evidence remains at its original paths.

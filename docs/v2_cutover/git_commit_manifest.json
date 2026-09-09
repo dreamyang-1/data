@@ -1,10 +1,10 @@
 {
-  "baseline_commit": "a87df7d37756d160f93db2acf9b9de5af928f8a3",
-  "feature_branch": "cutover-task-context-20260909t042538z",
+  "baseline_commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
+  "feature_branch": "cutover-replacement-oracle-20260909t045212z",
   "final_commit": "Commit containing this manifest",
-  "planned_subject": "cutover: preserve current task evidence for remove and clear",
+  "planned_subject": "cutover: normalize scoped singleton collection replacements",
   "runtime_source_changed": true,
   "evidence": "closure_report.md and test_delta.json",
-  "draft_pr_base": "cutover-transition-runner-20260909t034400z",
-  "stage_baseline": "a87df7d37756d160f93db2acf9b9de5af928f8a3"
+  "draft_pr_base": "cutover-task-context-20260909t042538z",
+  "stage_baseline": "299513e6d0b7d02f7e7dffb68feeeba4f677f071"
 }

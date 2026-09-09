@@ -1,0 +1,26 @@
+{
+  "status": "PARTIAL_ORACLE_BINDING_AND_STATE_CONTROLS_PASS_FULL_ORACLE_SUITE_OPEN",
+  "baseline_commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
+  "source_test": "tests/test_v2_raw_turn_recognition.py",
+  "verified_recorded_candidate": "replacement_oracle/recorded_candidate_evidence.json",
+  "oracle_boundary": "Fixture supplies one correct offered candidate by unique catalog name/role; actual scoped binding, TaskPatch validation, reducer, state and logical compiler run. This is not model accuracy.",
+  "oracle_positive_test_nodes": 3,
+  "negative_and_contrast_test_nodes": 9,
+  "passed_test_nodes": 12,
+  "verified_effects": [
+    "Existing metric collection REPLACE deletes all old metrics and retains only the selected metric.",
+    "Existing dimension REPLACE deletes the old dimension and preserves metrics.",
+    "Explicit singleton and one-element array yield identical materialized collection semantics.",
+    "ADD retains previous values whereas REPLACE removes them.",
+    "Foreign/raw/extra authority, wrong roles/evidence, null/string values and wrong operations still reject.",
+    "Initial assignment and SET singleton rejection are unchanged; no task or operation is inferred."
+  ],
+  "oracle_mention": "NOT_EVALUATED",
+  "oracle_role": "NOT_EVALUATED",
+  "oracle_candidate_ranking": "NOT_EVALUATED",
+  "oracle_relation": "NOT_EVALUATED",
+  "complete_IR_ASL_SQL_or_result": "NOT_EVALUATED",
+  "source_SQL_executions": 0,
+  "production_writes": 0,
+  "whole_plan_or_cutover_pass": false
+}
