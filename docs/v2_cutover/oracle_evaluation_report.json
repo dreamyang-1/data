@@ -40,5 +40,12 @@
     "method": "Intervene on independently reviewed model-output fields; run real pin/restore/TaskPatch/reducer/compiler. Later model outputs remain recorded, not newly generated under changed context.",
     "model_accuracy_or_production_acceptance_proved": false,
     "whole_oracle_mention_role_candidate_relation_suite": "NOT_COMPLETE"
+  },
+  "governed_time_stage": {
+    "evidence": "governed_time/recorded_time_receipts.json",
+    "intervention": "Remove redundant subject marker/slot and draft assignment only; original mentions, offered handles and raw TimeSpec retained",
+    "downstream_model_regenerated": false,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false
   }
 }

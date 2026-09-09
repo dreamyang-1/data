@@ -2690,5 +2690,11 @@
     "S81_014": "TimeSpec first rejects non-IANA timezone; after timezone intervention role validation rejects entity-as-time-anchor. Current TIME_RANGE has zero offered TIME_FIELD candidates despite a uniquely mapped catalog metric anchor.",
     "S81_017": "GroupedAggregate payload rejects empty group_by; scalar shape intervention accepts the originally selected historical task and metrics.",
     "causal_limit": "These are measured rejecting boundaries and fixed-output counterfactuals, not unseen model reasoning or full model Oracle accuracy."
+  },
+  "governed_time_stage": {
+    "baseline_commit": "c19e65544664395200d814300e27d330006ea9a1",
+    "evidence": "governed_time/recorded_time_receipts.json",
+    "S81_014": "Original recorded outputs now pass time range/anchor checks but still reject V2_PAYLOAD_WOULD_DROP_BINDING. Subject-state-only output Oracle yields scalar order_count with created_date, Shanghai 2025 range, grain NONE. Not a live Gold pass.",
+    "next_cause": "Current split of exact catalog metric into entity and measure creates redundant subject assignment; preserve semantic coverage guard."
   }
 }

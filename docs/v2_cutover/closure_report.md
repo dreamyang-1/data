@@ -1,70 +1,61 @@
-# V2 replacement readiness — recorded Oracle diagnostics
+# V2 replacement readiness — governed initial time contract
 
-Current Stage: RECORDED_ORACLE_AND_TEMPORAL_CANDIDATE_DIAGNOSIS.
-Baseline `adb10068be9e5ed5669c5f2acf59ec2a87bf8f64` / Draft PR #46. Branch `cutover-recorded-oracle-20260909t055600z`.
-Final commit: the commit containing this report. **NOT_READY** for V1 replacement.
-Production acceptance groups remain 8 P0 / 4 P1, not independent-bug counts.
+Current Stage: GOVERNED_INITIAL_TIME_CONTRACT. Baseline `c19e65544664395200d814300e27d330006ea9a1` / Draft PR #47.
+Branch `cutover-governed-time-20260909t062000z`. Final commit: commit containing this report.
+V1 Replacement Readiness: **NOT_READY**. Acceptance groups remain 8 P0 / 4 P1.
 
-## What is now reproducible
+## Change and measured scope
 
-The existing raw-transition tool now exposes a recorded-turn replay/Oracle seam.
-It verifies the private capture hash, current case/clock/scope/catalog and frozen
-source evidence. It creates a fresh in-memory publication with the recorded
-evaluation activation identity, then restores the original state through native
-scope/digest/binding checks. It does not rewrite the state to make restore pass.
-Only this MemoryStore/FakeRedis publication uses the recorded activation; no
-production registry, authentication, source publication or runtime route changes.
+For an initial TimeSpec with a current TIME_RANGE mention, the program now computes
+dates from the existing business calendar and an injected aware clock, requiring
+the full expression to match. Existing V1 callers retain their default substring
+behavior and clock seam. Internal UTC serialization is unchanged. TIME_RANGE does
+not imply grouping; explicit TIME_GRAIN has a separate finite calendar-unit map.
 
-All 24 executed turns from PR #46 reproduce their original success or rejection.
-Every successful complete result, including plans and state, equals its original
-private recording. Exact replay verifies model contexts, prompts, schemas and
-stage order. The typed seam deliberately rejects missing/untyped model outputs;
-it cannot reconstruct the original unretained historical parser failures.
+Explicit time-field choices retain their scoped binding checks. Without such a
+choice, every selected metric must declare time_caliber.time_anchor, resolve to
+one same-domain attribute and agree on that anchor. No guessed field, catalog
+mutation or system-default range is introduced. Unknown special calendars/rules,
+comparison/default extras and foreign/invented handles remain rejected.
 
-An Oracle intervention changes only explicitly supplied model outputs and runs
-the real scoped binder, TaskPatch, reducer and compiler. Changed later contexts
-are reported. Downstream model outputs are recorded, not regenerated; this is a
-controlled contract diagnostic, not a full model Oracle accuracy measurement.
+This closes the recorded S81-014 timezone and catalog time-anchor defects, but
+does not make the unchanged case pass: its split metric still creates a redundant
+subject and V2_PAYLOAD_WOULD_DROP_BINDING correctly rejects it. A controlled output
+Oracle removing only that subject assignment produces the expected scalar time
+plan, retaining all original time values as non-authoritative hypotheses. Later
+model outputs were recorded, not regenerated; this is not model accuracy evidence.
 
-## Diagnosed failures
+## Validation and review
 
-S81-012 current text is `把分组换成经销商`. The parse creates REMOVE/ADD markers,
-while the draft expresses the expected REPLACE. Replacing the generic grouping
-mention/operation evidence with the reviewed replacement parse makes the existing
-dealer replacement pass. No production text rule or marker relaxation was added.
+Focused 239 passed; 50 new tests. Agent 2964 passed / 27 preexisting failures,
+Oagnet 663 / 8, SQL Translator final repeat 381 / 0. Critical 160/160, clarification
+trace 89/89. No old assertions changed, removed tests or collection errors.
+Final old-pass -> new-fail 0. SQL's first full run had a loopback connection reset
+in one unchanged test; two independent reruns and a whole-suite rerun passed.
+The initial failure is retained in governed_time/sql_repeat_evidence.json; its
+precise socket timing remains unproven. No SQL source/test patch was made.
 
-S81-014 first fails TimeSpec's IANA timezone validation. Fixing that one diagnostic
-input exposes the next rejection: the model selected the sales_order subject
-entity as the time field. TIME_RANGE supplied zero TIME_FIELD candidates, although
-`order_count.time_caliber.time_anchor` declares `sales_order.created_date`, which
-matches one captured catalog attribute. Normalizing only timezone/grain still
-fails role validation. The governed anchor and deterministic time normalization
-are concrete remaining contract work, not a request for an owner to invent a key.
+New time tests initially compared UTC serialization to a local textual date and
+used a shortened quarter unsupported by the existing full-expression grammar.
+Their fixtures now assert identical aware instants and the supported full form;
+the shortened form has an explicit rejection test. Review also prevented dropping
+extra fiscal/default/comparison instructions during normalization.
 
-S81-017 selects the intended historical task and correct metrics, but predicts a
-grouped payload with no group_by member. A reviewed scalar-shape intervention
-accepts that task and metric state. The guard against invalid grouped plans stays.
-No Gold label, model winner or quality threshold was changed by these experiments.
+Real model calls 0; source SQL 0; production writes 0. No prompt or regex pattern
+change. Existing regexes use fullmatch only through the new V2 opt-in. Model/key,
+public API/SSE and V1 production routing unchanged; native publication and Redis
+were not changed. Source capture remains private.
 
-## Validation and remaining path
+## Remaining shortest path
 
-This stage used zero real model calls, zero source SQL and zero production writes.
-Focused: 167 passed. New tests: 12. Agent: 2914 passed / 27 historical failures;
-Oagnet: 663 / 8; SQL Translator: 381 / 0. Critical 160/160, traces 89/89;
-old-pass -> new-fail 0, removed tests 0, collection errors 0.
-Runtime source, prompt, regex, model default, public request/response/SSE and V1
-production routing are unchanged. Capture contents stay private; curated receipts
-and catalog metadata alone are published through explicit manifests.
+Cutover P0: semantic whole-plan quality and safety acceptance still open.
+Catalog Gap: exact compound metric resolution and source value canonicalization;
+existing identity/grain/relationship limits remain query-shape-specific.
+Evaluation Gap: temporal component ownership, time/region observation axes,
+Pending/Dataset entry coverage, whole-plan/Oracle/holdout labels and model comparison.
+Shadow Gap: offline acceptance not passed. Native publication and Redis recovery
+only constrain their production gates, not all offline work.
 
-Catalog Gap: the proven metric-time-anchor candidate path and controlled source
-value resolution, plus existing shape-specific identity/grain/endpoints.
-Evaluation Gap: complete candidate/whole-plan/Oracle labels, model quality,
-Pending/Dataset entry fixtures and holdout coverage. Shadow Gap: offline acceptance
-has not passed. Native publication and Redis recovery remain production gates;
-neither was re-audited or promoted to a global offline prerequisite.
-
-Next shortest path: implement the governed temporal contract using this evidence,
-then validate with recorded counterexamples, unchanged Gold and live model runs.
-Continue internally; do not ask for V2 replacement approval before readiness.
-Evidence: oracle_evaluation_report.json, recorded_oracle/, test_delta.json,
-first_divergence_report.json and the shared readiness matrix.
+Next: correct the proven atomic catalog metric segmentation failure, then finish
+temporal edit ownership and measure unchanged Gold. Do not disable the guard
+against silently dropping bindings, relax labels, or claim production readiness.

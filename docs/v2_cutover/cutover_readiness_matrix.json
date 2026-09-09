@@ -1,7 +1,7 @@
 {
-  "current_stage": "RECORDED_ORACLE_AND_TEMPORAL_CANDIDATE_DIAGNOSIS",
+  "current_stage": "GOVERNED_INITIAL_TIME_CONTRACT",
   "readiness": "NOT_READY",
-  "baseline_commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
+  "baseline_commit": "c19e65544664395200d814300e27d330006ea9a1",
   "production_acceptance_groups": {
     "P0": 8,
     "P1": 4
@@ -35,9 +35,10 @@
         "replacement_oracle/comparison.json",
         "source_evidence/comparison.json",
         "recorded_oracle/replay_receipts.json",
-        "recorded_oracle/temporal_candidate_evidence.json"
+        "recorded_oracle/temporal_candidate_evidence.json",
+        "governed_time/contract.json"
       ],
-      "next_action": "Close the proven governed metric-time-anchor and deterministic time-normalization gaps, then reuse these exact recorded controls and unchanged Gold for live validation; retain source-value and wider evaluation gaps."
+      "next_action": "Preserve exact compound metric mentions using scoped catalog evidence, complete temporal component ownership, then rerun unchanged Gold. Source-value and evaluator coverage remain open."
     },
     {
       "blocker_id": "EVALUATION-COVERAGE",
@@ -63,9 +64,10 @@
         "oracle_evaluation_report.json",
         "source_evidence/comparison.json",
         "recorded_oracle/replay_receipts.json",
-        "recorded_oracle/temporal_candidate_evidence.json"
+        "recorded_oracle/temporal_candidate_evidence.json",
+        "governed_time/contract.json"
       ],
-      "next_action": "Close the proven governed metric-time-anchor and deterministic time-normalization gaps, then reuse these exact recorded controls and unchanged Gold for live validation; retain source-value and wider evaluation gaps."
+      "next_action": "Preserve exact compound metric mentions using scoped catalog evidence, complete temporal component ownership, then rerun unchanged Gold. Source-value and evaluator coverage remain open."
     },
     {
       "blocker_id": "PRODUCTION-PUBLICATION",

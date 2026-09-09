@@ -1,6 +1,6 @@
 {
-  "baseline_commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
-  "rollback": "Revert this feature commit to restore the previous evaluator and runner. Private read-only evidence is kept outside Git. No model/key, runtime code, public I/O, V1 route, native publication or production state was changed.",
+  "baseline_commit": "c19e65544664395200d814300e27d330006ea9a1",
+  "rollback": "Revert this feature commit to restore the previous V2 time normalization and classifier helper. Private evidence remains outside Git. No model/key, public I/O, V1 routing, native publication or production state was changed.",
   "native_publication_performed": false,
   "redis_mutation_performed": false,
   "production_route_changed": false,

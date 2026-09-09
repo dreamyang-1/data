@@ -1,10 +1,10 @@
 {
-  "baseline_commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
-  "feature_branch": "cutover-recorded-oracle-20260909t055600z",
+  "baseline_commit": "c19e65544664395200d814300e27d330006ea9a1",
+  "feature_branch": "cutover-governed-time-20260909t062000z",
   "final_commit": "Commit containing this manifest",
-  "planned_subject": "cutover: replay recorded turns through native scope and plan contracts",
-  "runtime_source_changed": false,
+  "planned_subject": "cutover: normalize explicit time with governed metric anchors",
+  "runtime_source_changed": true,
   "evidence": "closure_report.md and test_delta.json",
-  "draft_pr_base": "cutover-source-evidence-20260909t052100z",
-  "stage_baseline": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64"
+  "draft_pr_base": "cutover-recorded-oracle-20260909t055600z",
+  "stage_baseline": "c19e65544664395200d814300e27d330006ea9a1"
 }
