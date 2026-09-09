@@ -11,9 +11,11 @@
       "evidence": [
         "app/semantic_v2/pipeline.py::CurrentTurnParser/TurnResolver",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
-        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
+      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "TaskPatch",
@@ -30,9 +32,11 @@
         "Actual 81/[205] display/declared relationship facts and local typed plan acceptance: docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
         "Ordered path/occurrence source acceptance and 250 actual-catalog typed walks: docs/cutover/v2_relation_paths/closure_report.md",
         "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md",
-        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence."
+      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Pending",
@@ -49,9 +53,11 @@
         "Governed canonical-option raw V2 clarification/resume and previous-state first-ask trace pass offline: docs/cutover/v2_pending/closure_report.md; real-model/full decision coverage not yet accepted",
         "Actual 81/[205] display/declared relationship facts and local typed plan acceptance: docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
         "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md",
-        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Historical Recall",
@@ -66,9 +72,11 @@
         "app/semantic_v2/pipeline.py::TurnResolver requires historical_task_id; tests/test_task_recall_contract.py covers Legacy",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
-        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "ADD",
@@ -82,9 +90,11 @@
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
-        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "REPLACE",
@@ -98,9 +108,11 @@
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
-        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "REMOVE",
@@ -114,9 +126,11 @@
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
-        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "CLEAR",
@@ -130,9 +144,11 @@
         "app/semantic_v2/slot_reducer.py; supplied operations pass, natural-language V2 accuracy not measured",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
-        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Semantic Role",
@@ -147,9 +163,11 @@
         "app/semantic_v2/models.py::Mention/SemanticCandidate; no live role benchmark",
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
-        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md"
+        "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Close C-02 native publication/durable registry gates, then prove actual source lookup under authorized operations. Evaluate field-hypothesis/fuzzy selection after catalog gates. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts. Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Canonical Binding",
@@ -173,9 +191,11 @@
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
         "docs/cutover/pinned_relation_endpoints/closure_report.md",
-        "docs/cutover/relation_identity/closure_report.md"
+        "docs/cutover/relation_identity/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Obtain governed entity identity rules before relation-list lowering; resolve two endpoint declarations and two metric subjects. Verify native/deployed pin acceptance after C-02. Do not infer distinct target identity from names, row keys or model guesses. Close C-02 native publication/durable registry gates, then prove actual source lookup under authorized operations. Evaluate field-hypothesis/fuzzy selection after catalog gates. Complete external entity-value retrieval and remaining semantic/decision coverage; resolve governed calendar policies. Prove path/time-period ASL/SQL mappings with downstream contract work. Recognition evaluation follows catalog gates."
+      "next_action": "Use the reviewed provisional identities per eligible shape; keep exact order/entity grain and unresolved relation paths scoped to affected cases. Continue independent role/mention/turn evaluation. Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes. Investigate current-turn spans/reference validation and list-versus-relation semantics using the new measured failure cases; keep Gold labels fixed and test contrasts.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Dataset Follow-up",
@@ -189,9 +209,11 @@
         "app/semantic_v2/legacy_adapter.py; dataset transforms UNSUPPORTED; Legacy safe route regressions pass",
         "docs/cutover/v2_ranking/closure_report.md",
         "docs/cutover/v2_filters/closure_report.md",
-        "docs/cutover/v2_bound_sql/closure_report.md"
+        "docs/cutover/v2_bound_sql/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness. After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Semantic Scope",
@@ -212,9 +234,11 @@
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
         "docs/cutover/pinned_relation_endpoints/closure_report.md",
-        "docs/cutover/relation_identity/closure_report.md"
+        "docs/cutover/relation_identity/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]. Obtain governed entity identity rules before relation-list lowering; resolve two endpoint declarations and two metric subjects. Verify native/deployed pin acceptance after C-02. Do not infer distinct target identity from names, row keys or model guesses."
+      "next_action": "Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Close production deployment trust and recovery before canary/cutover; continue offline evaluation now. Use the reviewed provisional identities per eligible shape; keep exact order/entity grain and unresolved relation paths scoped to affected cases. Continue independent role/mention/turn evaluation.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Catalog Version",
@@ -237,9 +261,11 @@
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
         "docs/cutover/pinned_relation_endpoints/closure_report.md",
-        "docs/cutover/relation_identity/closure_report.md"
+        "docs/cutover/relation_identity/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Publish the approved scope through isolated collections with actual configured embeddings, then verify full native read-back against the fresh authoritative snapshot. Obtain governed entity identity rules before relation-list lowering; resolve two endpoint declarations and two metric subjects. Verify native/deployed pin acceptance after C-02. Do not infer distinct target identity from names, row keys or model guesses."
+      "next_action": "Continue offline axis evaluation against the frozen hash; complete native publication before production canary/cutover. Use the reviewed provisional identities per eligible shape; keep exact order/entity grain and unresolved relation paths scoped to affected cases. Continue independent role/mention/turn evaluation.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Catalog Publication",
@@ -255,9 +281,11 @@
         "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Fresh target/persistence evidence and guarded candidate: docs/cutover/catalog_publication_candidate/closure_report.md",
-        "docs/cutover/pinned_sql_catalog/closure_report.md"
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Locate Redis deployment/persistent storage ownership and prepare an approved durability/recovery plan. After durability evidence and native publication authorization, execute the current target/source/embedding-bound candidate and verify full read-back/activation. No shared Redis configuration or V1 index change is authorized by source commits. Close C-02 native publication/durable registry gates, then prove actual source lookup under authorized operations. Evaluate field-hypothesis/fuzzy selection after catalog gates. Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]."
+      "next_action": "Keep production recovery/publication as Canary/Cutover gates. Offline evaluation and isolated plan-only shadow do not depend on Redis production recovery. Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes. Close production deployment trust and recovery before canary/cutover; continue offline evaluation now.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Oagnet Scope",
@@ -271,9 +299,11 @@
         "Copied-model metadata joins now tested with real SQL execution on synthetic fixtures; actual 81/[205] capture has 13/13 owned dimensions; runtime publication unverified",
         "Actual 81/[205] display/declared relationship facts and local typed plan acceptance: docs/cutover/v2_catalog_plans/catalog_capability_evidence.json",
         "Fresh target/persistence evidence and guarded candidate: docs/cutover/catalog_publication_candidate/closure_report.md",
-        "docs/cutover/pinned_sql_catalog/closure_report.md"
+        "docs/cutover/pinned_sql_catalog/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Identify current Redis deployment/volume owner; verify approved persistent storage and recovery, then deployed service revisions and caller boundary. Scope remains the selected 81/[205]."
+      "next_action": "Close production deployment trust and recovery before canary/cutover; continue offline evaluation now.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "ASL Contract",
@@ -291,9 +321,11 @@
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
         "docs/cutover/pinned_relation_endpoints/closure_report.md",
-        "docs/cutover/relation_identity/closure_report.md"
+        "docs/cutover/relation_identity/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Close native catalog prerequisites and governed identity/time/subject facts. Implement remaining loss-aware path, comparison and time semantics with actual result evidence; preserve existing public I/O and V1/shadow boundaries. Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
+      "next_action": "Complete loss-aware lowering for supported identity/query-shape combinations; keep unsupported cases explicit without gating turn/role/mention Gold. Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "ResultContract",
@@ -309,9 +341,11 @@
         "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md",
         "docs/cutover/v2_ranking/closure_report.md",
         "docs/cutover/v2_filters/closure_report.md",
-        "docs/cutover/v2_bound_sql/closure_report.md"
+        "docs/cutover/v2_bound_sql/closure_report.md",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness."
+      "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Evaluation",
@@ -321,9 +355,11 @@
         "E-01"
       ],
       "evidence": [
-        "Gold/evaluator business metrics not produced"
+        "Gold/evaluator business metrics not produced",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "After catalog/Phase0C gates pass, curate 80-120 grounded cases and implement each requested deterministic metric with denominator and zero-tolerance safety gates."
+      "next_action": "Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Real-model Evidence",
@@ -333,9 +369,11 @@
         "E-02"
       ],
       "evidence": [
-        "Real-model calls remain 0; no winner inferred"
+        "Real-model calls remain 0; no winner inferred",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "After stable Gold, verify official model availability then benchmark identical prompt/schema/catalog/scope/temperature/retries with model/thinking mode as the only variations. Keep runtime defaults."
+      "next_action": "Address measured parser failures; compare models available to this account under identical bounded settings. Do not change production defaults or claim unavailable candidates are evaluated.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Shadow Evidence",
@@ -345,9 +383,11 @@
         "H-01"
       ],
       "evidence": [
-        "No real shadow sampling; synthetic shadow is not deployed evidence"
+        "No real shadow sampling; synthetic shadow is not deployed evidence",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "Only after evaluation gate, instrument plan-only shadow with no V2 SQL/state writes or response takeover, then measure all safety metrics."
+      "next_action": "After relevant evaluation passes, run isolated plan-only shadow without SQL, production-state writes or response takeover.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Rollback",
@@ -357,9 +397,13 @@
         "R-01"
       ],
       "evidence": [
-        "Catalog index reactivation tested including obsolete authority and ABA rejection; V1/V2 canary rollback remains unimplemented/unproven"
+        "Catalog index reactivation tested including obsolete authority and ABA rejection; V1/V2 canary rollback remains unimplemented/unproven",
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
       ],
-      "next_action": "After offline and real shadow gates, prepare canary flag, automatic stop/rollback procedure and drill; obtain user approval before formal replacement."
+      "next_action": "After offline and real shadow gates, prepare canary flag, automatic stop/rollback procedure and drill; obtain user approval before formal replacement.",
+      "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     }
-  ]
+  ],
+  "stage_gate_matrix": "docs/cutover/evaluation_gates/gate_matrix.json",
+  "offline_evaluation_eligible": true
 }

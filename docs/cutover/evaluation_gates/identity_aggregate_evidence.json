@@ -1,0 +1,4085 @@
+{
+  "observed_at": "2026-09-09T01:20:36.323909+00:00",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "snapshot_file_sha256": "a34612e53b64200bb3f28e55d6721653251fd23d3adf9b0cdaecd87b37683ac2",
+  "production_writes": 0,
+  "raw_business_values_returned": 0,
+  "relations": [
+    {
+      "relation_code": "department_product_applicable_product_department_association",
+      "source": "department",
+      "target": "product_dept_relation",
+      "declared_join_key": {
+        "source_field": "department.dept_code",
+        "target_field": "product_dept_relation.dept_code"
+      },
+      "source_matches": [
+        "department.dept_code"
+      ],
+      "target_matches": [
+        "product_dept_relation.dept_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "pharmaceutical_products_affiliation_product_category",
+      "source": "product",
+      "target": "product_category",
+      "declared_join_key": {
+        "source_field": "product.category_id",
+        "target_field": "product_category.category_id"
+      },
+      "source_matches": [
+        "product.category_id"
+      ],
+      "target_matches": [
+        "product_category.category_id"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "pharmaceutical_products_affiliation_product_line",
+      "source": "product",
+      "target": "product_line",
+      "declared_join_key": {
+        "source_field": "product_line_id",
+        "target_field": "product_line_id"
+      },
+      "source_matches": [
+        "product.product_line_id"
+      ],
+      "target_matches": [
+        "product_line.product_line_id"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "product_belongs_to_manufacturer",
+      "source": "product",
+      "target": "main_data_domain_ent_manufacturer",
+      "declared_join_key": {
+        "source_field": "product.manufacturer_code",
+        "target_field": "manufacturer.manufacturer_code"
+      },
+      "source_matches": [
+        "product.manufacturer_code"
+      ],
+      "target_matches": [
+        "manufacturer.manufacturer_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "product_has_applicable_department_product_department_association",
+      "source": "product",
+      "target": "product_dept_relation",
+      "declared_join_key": {
+        "source_field": "product.product_code",
+        "target_field": "product_dept_relation.product_code"
+      },
+      "source_matches": [
+        "product.product_code"
+      ],
+      "target_matches": [
+        "product_dept_relation.product_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "sales_order_belongs_to_dealer",
+      "source": "sales_order",
+      "target": "dealer",
+      "declared_join_key": {
+        "source_field": "sales_order.dealer_code",
+        "target_field": "dealer.dealer_code"
+      },
+      "source_matches": [
+        "sales_order.dealer_code"
+      ],
+      "target_matches": [
+        "dealer.dealer_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "sales_order_belongs_to_product",
+      "source": "sales_order",
+      "target": "product",
+      "declared_join_key": {
+        "source_field": "sales_order.product_code",
+        "target_field": "product.product_code"
+      },
+      "source_matches": [
+        "sales_order.product_code"
+      ],
+      "target_matches": [
+        "product.product_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "sales_order_belongs_to_hospital",
+      "source": "sales_order",
+      "target": "hospital",
+      "declared_join_key": {
+        "source_field": "sales_order.hospital_id",
+        "target_field": "hospital.hospital_id"
+      },
+      "source_matches": [
+        "sales_order.hospital_id"
+      ],
+      "target_matches": [
+        "hospital.hospital_id"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "sales_order_belongs_to_salesperson",
+      "source": "sales_order",
+      "target": "salesperson",
+      "declared_join_key": {
+        "source_field": "sales_order.salesperson_code",
+        "target_field": "salesperson.salesperson_code"
+      },
+      "source_matches": [
+        "sales_order.salesperson_code"
+      ],
+      "target_matches": [
+        "salesperson.salesperson_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "sales_order_belongs_to_project",
+      "source": "sales_order",
+      "target": "project",
+      "declared_join_key": {
+        "source_field": "sales_order.project_code",
+        "target_field": "project.project_code"
+      },
+      "source_matches": [
+        "sales_order.project_code"
+      ],
+      "target_matches": [
+        "project.project_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "sales_order_association_product",
+      "source": "sales_order",
+      "target": "product",
+      "declared_join_key": {
+        "source_field": "sales_order.product_code",
+        "target_field": "product.product_code"
+      },
+      "source_matches": [
+        "sales_order.product_code"
+      ],
+      "target_matches": [
+        "product.product_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "dealer_place_sales_order",
+      "source": "dealer",
+      "target": "sales_order",
+      "declared_join_key": {
+        "source_field": "dealer.dealer_code",
+        "target_field": "sales_order.dealer_code"
+      },
+      "source_matches": [
+        "dealer.dealer_code"
+      ],
+      "target_matches": [
+        "sales_order.dealer_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "dealer_located_in_city",
+      "source": "dealer",
+      "target": "city",
+      "declared_join_key": {
+        "source_field": "dealer.city_id",
+        "target_field": "dim_city.city_id"
+      },
+      "source_matches": [
+        "dealer.city_id"
+      ],
+      "target_matches": [
+        "dim_city.city_id"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "manufacturer_production_pharmaceutical_products",
+      "source": "main_data_domain_ent_manufacturer",
+      "target": "product",
+      "declared_join_key": {
+        "source_field": "manufacturer_code",
+        "target_field": "manufacturer_code"
+      },
+      "source_matches": [
+        "manufacturer.manufacturer_code"
+      ],
+      "target_matches": [
+        "product.manufacturer_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "sales_item_association_sales_order",
+      "source": "project",
+      "target": "sales_order",
+      "declared_join_key": {
+        "source_field": "project_code",
+        "target_field": "project_code"
+      },
+      "source_matches": [
+        "project.project_code"
+      ],
+      "target_matches": [
+        "sales_order.project_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "china_national_pharmaceuticals_subsidiary_sales_representative",
+      "source": "sales_company",
+      "target": "salesperson",
+      "declared_join_key": {
+        "source_field": "guoyao_code",
+        "target_field": "guoyao_code"
+      },
+      "source_matches": [
+        "guoyao_company.guoyao_code"
+      ],
+      "target_matches": [
+        "salesperson.guoyao_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "salesperson_responsible_sales_order",
+      "source": "salesperson",
+      "target": "sales_order",
+      "declared_join_key": {
+        "source_field": "salesperson_code",
+        "target_field": "salesperson_code"
+      },
+      "source_matches": [
+        "salesperson.salesperson_code"
+      ],
+      "target_matches": [
+        "sales_order.salesperson_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "salesperson_belongs_to_sales_company",
+      "source": "salesperson",
+      "target": "sales_company",
+      "declared_join_key": {
+        "source_field": "salesperson.guoyao_code",
+        "target_field": "guoyao_company.guoyao_code"
+      },
+      "source_matches": [
+        "salesperson.guoyao_code"
+      ],
+      "target_matches": [
+        "guoyao_company.guoyao_code"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "province_includes_city",
+      "source": "province",
+      "target": "city",
+      "declared_join_key": {
+        "source_field": "dim_province.province_id",
+        "target_field": "dim_city.province_id"
+      },
+      "source_matches": [
+        "dim_province.province_id"
+      ],
+      "target_matches": [
+        "dim_city.province_id"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "hospital_purchase_generation_sales_order",
+      "source": "hospital",
+      "target": "sales_order",
+      "declared_join_key": {
+        "source_field": "hospital.hospital_id",
+        "target_field": "sales_order.hospital_id"
+      },
+      "source_matches": [
+        "hospital.hospital_id"
+      ],
+      "target_matches": [
+        "sales_order.hospital_id"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "hospital_initiate_sales_item",
+      "source": "hospital",
+      "target": "project",
+      "declared_join_key": {
+        "source_field": "hospital_id",
+        "target_field": "hospital_id"
+      },
+      "source_matches": [
+        "hospital.hospital_id",
+        "hospital_dept_relation.hospital_id"
+      ],
+      "target_matches": [
+        "project.hospital_id"
+      ],
+      "resolved": false
+    },
+    {
+      "relation_code": "hospital_located_in_province",
+      "source": "hospital",
+      "target": "province",
+      "declared_join_key": {
+        "source_field": "hospital.province_id",
+        "target_field": "dim_province.province_id"
+      },
+      "source_matches": [
+        "hospital.province_id"
+      ],
+      "target_matches": [
+        "dim_province.province_id"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "hospital_located_in_city",
+      "source": "hospital",
+      "target": "city",
+      "declared_join_key": {
+        "source_field": "hospital.city_id",
+        "target_field": "dim_city.city_id"
+      },
+      "source_matches": [
+        "hospital.city_id"
+      ],
+      "target_matches": [
+        "dim_city.city_id"
+      ],
+      "resolved": true
+    },
+    {
+      "relation_code": "hospital_include_department",
+      "source": "hospital",
+      "target": "department",
+      "declared_join_key": {
+        "source_field": "hospital.hospital_id",
+        "target_field": "hospital_dept_relation.hospital_id"
+      },
+      "source_matches": [
+        "hospital.hospital_id"
+      ],
+      "target_matches": [],
+      "resolved": false
+    }
+  ],
+  "entities": [
+    {
+      "entity_code": "sales_order",
+      "base_table": "sales_order",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "订单 ID",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.id"
+        },
+        {
+          "attr_code": "order_key",
+          "attr_name": "订单号",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.order_key"
+        },
+        {
+          "attr_code": "fiscal_year",
+          "attr_name": "总账年份",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.fiscal_year"
+        },
+        {
+          "attr_code": "fiscal_month",
+          "attr_name": "总账年月",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.fiscal_month"
+        },
+        {
+          "attr_code": "unit",
+          "attr_name": "计量单位",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.unit"
+        },
+        {
+          "attr_code": "tax_rate",
+          "attr_name": "税率",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.tax_rate"
+        },
+        {
+          "attr_code": "quantity",
+          "attr_name": "销售数量",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.quantity"
+        },
+        {
+          "attr_code": "price_without_tax",
+          "attr_name": "无税单价",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.price_without_tax"
+        },
+        {
+          "attr_code": "price_with_tax",
+          "attr_name": "含税单价",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.price_with_tax"
+        },
+        {
+          "attr_code": "amount_without_tax",
+          "attr_name": "无税金额",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.amount_without_tax"
+        },
+        {
+          "attr_code": "amount_with_tax",
+          "attr_name": "含税金额",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.amount_with_tax"
+        },
+        {
+          "attr_code": "cost",
+          "attr_name": "销售成本",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.cost"
+        },
+        {
+          "attr_code": "order_type",
+          "attr_name": "销售单类型",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.order_type"
+        },
+        {
+          "attr_code": "rn",
+          "attr_name": "行号",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.rn"
+        },
+        {
+          "attr_code": "salesperson_code",
+          "attr_name": "销售员编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.salesperson_code"
+        },
+        {
+          "attr_code": "project_code",
+          "attr_name": "项目编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.project_code"
+        },
+        {
+          "attr_code": "product_code",
+          "attr_name": "商品编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.product_code"
+        },
+        {
+          "attr_code": "hospital_id",
+          "attr_name": "医院标识",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.hospital_id"
+        },
+        {
+          "attr_code": "dealer_code",
+          "attr_name": "经销商编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.dealer_code"
+        },
+        {
+          "attr_code": "business_department",
+          "attr_name": "业务科室",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.business_department"
+        },
+        {
+          "attr_code": "business_type_code",
+          "attr_name": "业态编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.business_type_code"
+        },
+        {
+          "attr_code": "business_type_name",
+          "attr_name": "业态说明",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.business_type_name"
+        },
+        {
+          "attr_code": "created_date",
+          "attr_name": "订单日期",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "sales_order.created_date"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "id"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "sales_order",
+              "attr_code": "id",
+              "mapping_table": "sales_order",
+              "mapping_column": "id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 60000,
+          "non_null_count": 60000,
+          "distinct_count": 60000,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "business_type_name": 7
+          }
+        },
+        {
+          "identity_candidate": [
+            "order_key"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "uk_order"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "sales_order",
+              "attr_code": "order_key",
+              "mapping_table": "sales_order",
+              "mapping_column": "order_key",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 60000,
+          "non_null_count": 60000,
+          "distinct_count": 60000,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "business_type_name": 7
+          }
+        },
+        {
+          "identity_candidate": [
+            "order_key",
+            "rn"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [],
+          "catalog_evidence": [
+            {
+              "entity_code": "sales_order",
+              "attr_code": "order_key",
+              "mapping_table": "sales_order",
+              "mapping_column": "order_key",
+              "is_primary_key": 0,
+              "is_unique": 0
+            },
+            {
+              "entity_code": "sales_order",
+              "attr_code": "rn",
+              "mapping_table": "sales_order",
+              "mapping_column": "rn",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 60000,
+          "non_null_count": 60000,
+          "distinct_count": 60000,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "business_type_name": 7
+          }
+        },
+        {
+          "identity_candidate": [
+            "order_key",
+            "rn",
+            "product_code"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "sales_order_belongs_to_product",
+            "sales_order_association_product"
+          ],
+          "physical_schema_evidence": [],
+          "catalog_evidence": [
+            {
+              "entity_code": "sales_order",
+              "attr_code": "order_key",
+              "mapping_table": "sales_order",
+              "mapping_column": "order_key",
+              "is_primary_key": 0,
+              "is_unique": 0
+            },
+            {
+              "entity_code": "sales_order",
+              "attr_code": "product_code",
+              "mapping_table": "sales_order",
+              "mapping_column": "product_code",
+              "is_primary_key": 0,
+              "is_unique": 0
+            },
+            {
+              "entity_code": "sales_order",
+              "attr_code": "rn",
+              "mapping_table": "sales_order",
+              "mapping_column": "rn",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 60000,
+          "non_null_count": 60000,
+          "distinct_count": 60000,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "business_type_name": 7
+          }
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "id",
+          "data_type": "int",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "order_key",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "UNI",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "fiscal_year",
+          "data_type": "int",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "fiscal_month",
+          "data_type": "int",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "unit",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "tax_rate",
+          "data_type": "decimal",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "quantity",
+          "data_type": "decimal",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "price_without_tax",
+          "data_type": "decimal",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "price_with_tax",
+          "data_type": "decimal",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "amount_without_tax",
+          "data_type": "decimal",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "amount_with_tax",
+          "data_type": "decimal",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "cost",
+          "data_type": "decimal",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "business_type_code",
+          "data_type": "int",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "business_type_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "order_type",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "created_date",
+          "data_type": "datetime",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "rn",
+          "data_type": "int",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "salesperson_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "MUL",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "project_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "MUL",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "product_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "MUL",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "hospital_id",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "MUL",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "dealer_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "MUL",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "business_department",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "business_province",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "business_city",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "idx_dealer",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "dealer_code",
+          "sub_part": null
+        },
+        {
+          "index_name": "idx_hosp",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "hospital_id",
+          "sub_part": null
+        },
+        {
+          "index_name": "idx_prod",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "product_code",
+          "sub_part": null
+        },
+        {
+          "index_name": "idx_proj",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "project_code",
+          "sub_part": null
+        },
+        {
+          "index_name": "idx_sp",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "salesperson_code",
+          "sub_part": null
+        },
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "id",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_order",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "order_key",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "project",
+      "base_table": "project",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "项目 ID",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "project.id"
+        },
+        {
+          "attr_code": "project_code",
+          "attr_name": "项目编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "project.project_code"
+        },
+        {
+          "attr_code": "project_name",
+          "attr_name": "项目名称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "project.project_name"
+        },
+        {
+          "attr_code": "hospital_id",
+          "attr_name": "医院标识",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "project.hospital_id"
+        },
+        {
+          "attr_code": "salesperson_code",
+          "attr_name": "销售员编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "project.salesperson_code"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "id"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "project",
+              "attr_code": "id",
+              "mapping_table": "project",
+              "mapping_column": "id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 138,
+          "non_null_count": 138,
+          "distinct_count": 138,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "project_name": 0
+          }
+        },
+        {
+          "identity_candidate": [
+            "project_code"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "sales_order_belongs_to_project",
+            "sales_item_association_sales_order"
+          ],
+          "physical_schema_evidence": [
+            "uk_proj"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "project",
+              "attr_code": "project_code",
+              "mapping_table": "project",
+              "mapping_column": "project_code",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 138,
+          "non_null_count": 138,
+          "distinct_count": 138,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "project_name": 0
+          }
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "id",
+          "data_type": "int",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "project_code",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "UNI",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "project_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "hospital_id",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "salesperson_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "id",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_proj",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "project_code",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "sales_company",
+      "base_table": "guoyao_company",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "公司 ID",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "guoyao_company.id"
+        },
+        {
+          "attr_code": "guoyao_code",
+          "attr_name": "国药公司编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "guoyao_company.guoyao_code"
+        },
+        {
+          "attr_code": "guoyao_name",
+          "attr_name": "国药公司名称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "guoyao_company.guoyao_name"
+        },
+        {
+          "attr_code": "guoyao_short_name",
+          "attr_name": "国药公司简称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "guoyao_company.guoyao_short_name"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "id"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "sales_company",
+              "attr_code": "id",
+              "mapping_table": "guoyao_company",
+              "mapping_column": "id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 1,
+          "non_null_count": 1,
+          "distinct_count": 1,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "guoyao_name": 0,
+            "guoyao_short_name": 0
+          }
+        },
+        {
+          "identity_candidate": [
+            "guoyao_code"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "china_national_pharmaceuticals_subsidiary_sales_representative",
+            "salesperson_belongs_to_sales_company"
+          ],
+          "physical_schema_evidence": [
+            "uk_gy"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "sales_company",
+              "attr_code": "guoyao_code",
+              "mapping_table": "guoyao_company",
+              "mapping_column": "guoyao_code",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 1,
+          "non_null_count": 1,
+          "distinct_count": 1,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "guoyao_name": 0,
+            "guoyao_short_name": 0
+          }
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "id",
+          "data_type": "int",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "guoyao_code",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "UNI",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "guoyao_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "guoyao_short_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "province",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "city",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "id",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_gy",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "guoyao_code",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "province",
+      "base_table": "dim_province",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "province_name",
+          "attr_name": "省份名称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dim_province.province_name"
+        },
+        {
+          "attr_code": "short_name",
+          "attr_name": "省份简称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dim_province.short_name"
+        },
+        {
+          "attr_code": "province_id",
+          "attr_name": "省份ID（国家标准行政区划代码，前2位+0000）",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dim_province.province_id"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "province_id"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "province_includes_city",
+            "hospital_located_in_province"
+          ],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "province",
+              "attr_code": "province_id",
+              "mapping_table": "dim_province",
+              "mapping_column": "province_id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 34,
+          "non_null_count": 34,
+          "distinct_count": 34,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "province_name": 0,
+            "short_name": 0
+          }
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "province_id",
+          "data_type": "bigint",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "province_name",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "MUL",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "short_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "sort",
+          "data_type": "int",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "status",
+          "data_type": "tinyint",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "datetime",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "datetime",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "idx_province_name",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "province_name",
+          "sub_part": null
+        },
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "province_id",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "department",
+      "base_table": "department",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "dept_code",
+          "attr_name": "科室编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "department.dept_code"
+        },
+        {
+          "attr_code": "dept_name",
+          "attr_name": "科室名称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "department.dept_name"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "dept_code"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "department_product_applicable_product_department_association"
+          ],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "department",
+              "attr_code": "dept_code",
+              "mapping_table": "department",
+              "mapping_column": "dept_code",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 78,
+          "non_null_count": 78,
+          "distinct_count": 78,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "dept_name": 0
+          }
+        },
+        {
+          "identity_candidate": [
+            "dept_name"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "uk_dept_name"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "department",
+              "attr_code": "dept_name",
+              "mapping_table": "department",
+              "mapping_column": "dept_name",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 78,
+          "non_null_count": 78,
+          "distinct_count": 78,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "dept_name": 0
+          }
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "dept_code",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "dept_name",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "UNI",
+          "collation_name": "utf8mb4_general_ci"
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "dept_code",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_dept_name",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "dept_name",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "hospital",
+      "base_table": "hospital",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "医院id",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "hospital.id"
+        },
+        {
+          "attr_code": "hospital_id",
+          "attr_name": "医院标识",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "hospital.hospital_id"
+        },
+        {
+          "attr_code": "hospital_code",
+          "attr_name": "医院编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "hospital.hospital_code"
+        },
+        {
+          "attr_code": "hospital_name",
+          "attr_name": "医院名称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "hospital.hospital_name"
+        },
+        {
+          "attr_code": "hospital_level",
+          "attr_name": "医院等级",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "hospital.hospital_level"
+        },
+        {
+          "attr_code": "province_id",
+          "attr_name": "省份ID，关联dim_province.province_id",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "hospital.province_id"
+        },
+        {
+          "attr_code": "city_id",
+          "attr_name": "城市ID，关联dim_city.city_id",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "hospital.city_id"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "hospital_id"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "sales_order_belongs_to_hospital",
+            "hospital_purchase_generation_sales_order"
+          ],
+          "physical_schema_evidence": [
+            "uk_hosp"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "hospital",
+              "attr_code": "hospital_id",
+              "mapping_table": "hospital",
+              "mapping_column": "hospital_id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 139,
+          "non_null_count": 139,
+          "distinct_count": 139,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "hospital_name": 0
+          }
+        },
+        {
+          "identity_candidate": [
+            "hospital_code"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [],
+          "catalog_evidence": [
+            {
+              "entity_code": "hospital",
+              "attr_code": "hospital_code",
+              "mapping_table": "hospital",
+              "mapping_column": "hospital_code",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 139,
+          "non_null_count": 138,
+          "distinct_count": 138,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 0.9928057553956835,
+          "uniqueness_verified": false,
+          "status": "NOT_UNIQUE_OR_NULL",
+          "same_name_different_identity_groups": {}
+        },
+        {
+          "identity_candidate": [
+            "id"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "hospital",
+              "attr_code": "id",
+              "mapping_table": "hospital",
+              "mapping_column": "id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 139,
+          "non_null_count": 139,
+          "distinct_count": 139,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "hospital_name": 0
+          }
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "id",
+          "data_type": "int",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "hospital_id",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "UNI",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "hospital_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "hospital_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "business_province",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "business_city",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "province_id",
+          "data_type": "bigint",
+          "is_nullable": "YES",
+          "column_key": "MUL",
+          "collation_name": null
+        },
+        {
+          "column_name": "city_id",
+          "data_type": "bigint",
+          "is_nullable": "YES",
+          "column_key": "MUL",
+          "collation_name": null
+        },
+        {
+          "column_name": "hospital_level",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "idx_city_id",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "city_id",
+          "sub_part": null
+        },
+        {
+          "index_name": "idx_province_id",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "province_id",
+          "sub_part": null
+        },
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "id",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_hosp",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "hospital_id",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "product",
+      "base_table": "product",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "产品 ID",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product.id"
+        },
+        {
+          "attr_code": "product_code",
+          "attr_name": "商品编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product.product_code"
+        },
+        {
+          "attr_code": "product_name",
+          "attr_name": "商品名称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product.product_name"
+        },
+        {
+          "attr_code": "specification",
+          "attr_name": "规格型号",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product.specification"
+        },
+        {
+          "attr_code": "category_id",
+          "attr_name": "产品分类标识",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product.category_id"
+        },
+        {
+          "attr_code": "product_line_id",
+          "attr_name": "产品线分类标识",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product.product_line_id"
+        },
+        {
+          "attr_code": "manufacturer_code",
+          "attr_name": "厂家编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product.manufacturer_code"
+        },
+        {
+          "attr_code": "guoyao_code",
+          "attr_name": "国药公司编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product.guoyao_code"
+        },
+        {
+          "attr_code": "material_code",
+          "attr_name": "厂家物料编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product.material_code"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "product_code"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "product_has_applicable_department_product_department_association",
+            "sales_order_belongs_to_product",
+            "sales_order_association_product"
+          ],
+          "physical_schema_evidence": [
+            "uk_prod"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "product",
+              "attr_code": "product_code",
+              "mapping_table": "product",
+              "mapping_column": "product_code",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 7211,
+          "non_null_count": 7211,
+          "distinct_count": 7211,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "product_name": 832
+          }
+        },
+        {
+          "identity_candidate": [
+            "id"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "product",
+              "attr_code": "id",
+              "mapping_table": "product",
+              "mapping_column": "id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 7211,
+          "non_null_count": 7211,
+          "distinct_count": 7211,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "product_name": 832
+          }
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "id",
+          "data_type": "int",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "product_code",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "UNI",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "product_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "specification",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "registration_no",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "main_department",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "sub_department",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "medical_insurance_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "material_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "category_id",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "product_line_id",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "manufacturer_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "guoyao_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "id",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_prod",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "product_code",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "product_category",
+      "base_table": "product_category",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "分类 ID",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_category.id"
+        },
+        {
+          "attr_code": "category_id",
+          "attr_name": "产品分类标识",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_category.category_id"
+        },
+        {
+          "attr_code": "product_type",
+          "attr_name": "产品类别",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_category.product_type"
+        },
+        {
+          "attr_code": "product_subdirectory",
+          "attr_name": "产品子目录",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_category.product_subdirectory"
+        },
+        {
+          "attr_code": "category_level1",
+          "attr_name": "产品一级分类",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_category.category_level1"
+        },
+        {
+          "attr_code": "category_level2",
+          "attr_name": "产品二级分类",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_category.category_level2"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "category_id"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "pharmaceutical_products_affiliation_product_category"
+          ],
+          "physical_schema_evidence": [
+            "uk_cat"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "product_category",
+              "attr_code": "category_id",
+              "mapping_table": "product_category",
+              "mapping_column": "category_id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 413,
+          "non_null_count": 413,
+          "distinct_count": 413,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {}
+        },
+        {
+          "identity_candidate": [
+            "id"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "product_category",
+              "attr_code": "id",
+              "mapping_table": "product_category",
+              "mapping_column": "id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 413,
+          "non_null_count": 413,
+          "distinct_count": 413,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {}
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "id",
+          "data_type": "int",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "category_id",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "UNI",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "product_type",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "product_subdirectory",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "category_level1",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "category_level2",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "import_domestic",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "id",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_cat",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "category_id",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "main_data_domain_ent_manufacturer",
+      "base_table": "manufacturer",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "厂家 ID",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "manufacturer.id"
+        },
+        {
+          "attr_code": "manufacturer_code",
+          "attr_name": "厂家编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "manufacturer.manufacturer_code"
+        },
+        {
+          "attr_code": "manufacturer_name",
+          "attr_name": "厂家名称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "manufacturer.manufacturer_name"
+        },
+        {
+          "attr_code": "standard_name",
+          "attr_name": "标准厂家名称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "manufacturer.standard_name"
+        },
+        {
+          "attr_code": "country",
+          "attr_name": "厂家国家",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "manufacturer.country"
+        },
+        {
+          "attr_code": "parent_brand",
+          "attr_name": "母厂牌",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "manufacturer.parent_brand"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "manufacturer_code"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "product_belongs_to_manufacturer",
+            "manufacturer_production_pharmaceutical_products"
+          ],
+          "physical_schema_evidence": [
+            "uk_mfr"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "main_data_domain_ent_manufacturer",
+              "attr_code": "manufacturer_code",
+              "mapping_table": "manufacturer",
+              "mapping_column": "manufacturer_code",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 1286,
+          "non_null_count": 1286,
+          "distinct_count": 1286,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "manufacturer_name": 40,
+            "standard_name": 149
+          }
+        },
+        {
+          "identity_candidate": [
+            "id"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "main_data_domain_ent_manufacturer",
+              "attr_code": "id",
+              "mapping_table": "manufacturer",
+              "mapping_column": "id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 1286,
+          "non_null_count": 1286,
+          "distinct_count": 1286,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "manufacturer_name": 40,
+            "standard_name": 149
+          }
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "id",
+          "data_type": "int",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "manufacturer_code",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "UNI",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "manufacturer_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "standard_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "country",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "parent_brand",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "id",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_mfr",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "manufacturer_code",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "dealer",
+      "base_table": "dealer",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "经销商 ID",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dealer.id"
+        },
+        {
+          "attr_code": "dealer_code",
+          "attr_name": "经销商编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dealer.dealer_code"
+        },
+        {
+          "attr_code": "dealer_name",
+          "attr_name": "经销商名称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dealer.dealer_name"
+        },
+        {
+          "attr_code": "dealer_type",
+          "attr_name": "经销商类别",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dealer.dealer_type"
+        },
+        {
+          "attr_code": "first_order_date",
+          "attr_name": "经销商首笔有效成交订单日期",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dealer.first_order_date"
+        },
+        {
+          "attr_code": "province_id",
+          "attr_name": "关联省份档案",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dealer.province_id"
+        },
+        {
+          "attr_code": "city_id",
+          "attr_name": "关联城市档案",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dealer.city_id"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "dealer_code"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "sales_order_belongs_to_dealer",
+            "dealer_place_sales_order"
+          ],
+          "physical_schema_evidence": [
+            "uk_dealer"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "dealer",
+              "attr_code": "dealer_code",
+              "mapping_table": "dealer",
+              "mapping_column": "dealer_code",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 2154,
+          "non_null_count": 2154,
+          "distinct_count": 2154,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "dealer_name": 0
+          }
+        },
+        {
+          "identity_candidate": [
+            "id"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "dealer",
+              "attr_code": "id",
+              "mapping_table": "dealer",
+              "mapping_column": "id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 2154,
+          "non_null_count": 2154,
+          "distinct_count": 2154,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "dealer_name": 0
+          }
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "id",
+          "data_type": "int",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "dealer_code",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "UNI",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "dealer_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "dealer_type",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "province",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "city",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "province_id",
+          "data_type": "bigint",
+          "is_nullable": "YES",
+          "column_key": "MUL",
+          "collation_name": null
+        },
+        {
+          "column_name": "city_id",
+          "data_type": "bigint",
+          "is_nullable": "YES",
+          "column_key": "MUL",
+          "collation_name": null
+        },
+        {
+          "column_name": "first_order_date",
+          "data_type": "date",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "idx_city_id",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "city_id",
+          "sub_part": null
+        },
+        {
+          "index_name": "idx_province_id",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "province_id",
+          "sub_part": null
+        },
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "id",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_dealer",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "dealer_code",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "product_dept_relation",
+      "base_table": "product_dept_relation",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "主键ID",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_dept_relation.id"
+        },
+        {
+          "attr_code": "product_code",
+          "attr_name": "商品编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_dept_relation.product_code"
+        },
+        {
+          "attr_code": "dept_code",
+          "attr_name": "科室编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_dept_relation.dept_code"
+        },
+        {
+          "attr_code": "relation_type",
+          "attr_name": "适用科室类型",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_dept_relation.relation_type"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "id"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "product_dept_relation",
+              "attr_code": "id",
+              "mapping_table": "product_dept_relation",
+              "mapping_column": "id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 47872,
+          "non_null_count": 47872,
+          "distinct_count": 47872,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {}
+        },
+        {
+          "identity_candidate": [
+            "product_code",
+            "dept_code",
+            "relation_type"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "department_product_applicable_product_department_association",
+            "product_has_applicable_department_product_department_association"
+          ],
+          "physical_schema_evidence": [
+            "uk_product_dept_type"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "product_dept_relation",
+              "attr_code": "dept_code",
+              "mapping_table": "product_dept_relation",
+              "mapping_column": "dept_code",
+              "is_primary_key": 0,
+              "is_unique": 0
+            },
+            {
+              "entity_code": "product_dept_relation",
+              "attr_code": "product_code",
+              "mapping_table": "product_dept_relation",
+              "mapping_column": "product_code",
+              "is_primary_key": 0,
+              "is_unique": 0
+            },
+            {
+              "entity_code": "product_dept_relation",
+              "attr_code": "relation_type",
+              "mapping_table": "product_dept_relation",
+              "mapping_column": "relation_type",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 47872,
+          "non_null_count": 47872,
+          "distinct_count": 47872,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {}
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "id",
+          "data_type": "bigint",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "product_code",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "MUL",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "dept_code",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "MUL",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "relation_type",
+          "data_type": "tinyint",
+          "is_nullable": "NO",
+          "column_key": "",
+          "collation_name": null
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "idx_dept_code",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "dept_code",
+          "sub_part": null
+        },
+        {
+          "index_name": "idx_product_code",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "product_code",
+          "sub_part": null
+        },
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "id",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_product_dept_type",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "product_code",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_product_dept_type",
+          "non_unique": 0,
+          "seq_in_index": 2,
+          "column_name": "dept_code",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_product_dept_type",
+          "non_unique": 0,
+          "seq_in_index": 3,
+          "column_name": "relation_type",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "city",
+      "base_table": "dim_city",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "city_name",
+          "attr_name": "城市名称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dim_city.city_name"
+        },
+        {
+          "attr_code": "province_id",
+          "attr_name": "所属省份ID，关联dim_province.province_id",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dim_city.province_id"
+        },
+        {
+          "attr_code": "city_id",
+          "attr_name": "城市ID（国家标准行政区划代码，6位数字）",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "dim_city.city_id"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "city_id"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "dealer_located_in_city",
+            "hospital_located_in_city"
+          ],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "city",
+              "attr_code": "city_id",
+              "mapping_table": "dim_city",
+              "mapping_column": "city_id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 396,
+          "non_null_count": 396,
+          "distinct_count": 396,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "city_name": 0
+          }
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "city_id",
+          "data_type": "bigint",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "city_name",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "MUL",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "province_id",
+          "data_type": "bigint",
+          "is_nullable": "NO",
+          "column_key": "MUL",
+          "collation_name": null
+        },
+        {
+          "column_name": "sort",
+          "data_type": "int",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "status",
+          "data_type": "tinyint",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "datetime",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "datetime",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": null
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "idx_city_name",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "city_name",
+          "sub_part": null
+        },
+        {
+          "index_name": "idx_province_id",
+          "non_unique": 1,
+          "seq_in_index": 1,
+          "column_name": "province_id",
+          "sub_part": null
+        },
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "city_id",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "product_line",
+      "base_table": "product_line",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "产品线 ID",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_line.id"
+        },
+        {
+          "attr_code": "product_line_id",
+          "attr_name": "产品线分类标识",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_line.product_line_id"
+        },
+        {
+          "attr_code": "line_level1",
+          "attr_name": "产品线一级分类",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_line.line_level1"
+        },
+        {
+          "attr_code": "line_level2",
+          "attr_name": "产品线二级分类",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "product_line.line_level2"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "product_line_id"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "pharmaceutical_products_affiliation_product_line"
+          ],
+          "physical_schema_evidence": [
+            "uk_line"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "product_line",
+              "attr_code": "product_line_id",
+              "mapping_table": "product_line",
+              "mapping_column": "product_line_id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 92,
+          "non_null_count": 92,
+          "distinct_count": 92,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {}
+        },
+        {
+          "identity_candidate": [
+            "id"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "product_line",
+              "attr_code": "id",
+              "mapping_table": "product_line",
+              "mapping_column": "id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 92,
+          "non_null_count": 92,
+          "distinct_count": 92,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {}
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "id",
+          "data_type": "int",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "product_line_id",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "UNI",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "line_level1",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "line_level2",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "id",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_line",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "product_line_id",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    },
+    {
+      "entity_code": "salesperson",
+      "base_table": "salesperson",
+      "data_source_id": 58,
+      "entity_primary_key": null,
+      "catalog_attributes": [
+        {
+          "attr_code": "id",
+          "attr_name": "业务员 ID",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "salesperson.id"
+        },
+        {
+          "attr_code": "salesperson_code",
+          "attr_name": "销售员编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "salesperson.salesperson_code"
+        },
+        {
+          "attr_code": "salesperson_name",
+          "attr_name": "销售员姓名",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "salesperson.salesperson_name"
+        },
+        {
+          "attr_code": "department_code",
+          "attr_name": "销售部门编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "salesperson.department_code"
+        },
+        {
+          "attr_code": "department_name",
+          "attr_name": "销售部门名称",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "salesperson.department_name"
+        },
+        {
+          "attr_code": "guoyao_code",
+          "attr_name": "国药公司编码",
+          "is_primary_key": false,
+          "is_unique": false,
+          "field_mapping": "salesperson.guoyao_code"
+        }
+      ],
+      "candidates": [
+        {
+          "identity_candidate": [
+            "id"
+          ],
+          "exists": true,
+          "relation_join_usage": [],
+          "physical_schema_evidence": [
+            "PRIMARY"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "salesperson",
+              "attr_code": "id",
+              "mapping_table": "salesperson",
+              "mapping_column": "id",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 89,
+          "non_null_count": 89,
+          "distinct_count": 89,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "department_name": 10,
+            "salesperson_name": 1
+          }
+        },
+        {
+          "identity_candidate": [
+            "salesperson_code"
+          ],
+          "exists": true,
+          "relation_join_usage": [
+            "sales_order_belongs_to_salesperson",
+            "salesperson_responsible_sales_order"
+          ],
+          "physical_schema_evidence": [
+            "uk_sp"
+          ],
+          "catalog_evidence": [
+            {
+              "entity_code": "salesperson",
+              "attr_code": "salesperson_code",
+              "mapping_table": "salesperson",
+              "mapping_column": "salesperson_code",
+              "is_primary_key": 0,
+              "is_unique": 0
+            }
+          ],
+          "total_count": 89,
+          "non_null_count": 89,
+          "distinct_count": 89,
+          "blank_count": 0,
+          "duplicate_groups": 0,
+          "duplicate_count": 0,
+          "non_null_rate": 1.0,
+          "uniqueness_verified": true,
+          "status": "SNAPSHOT_UNIQUE",
+          "same_name_different_identity_groups": {
+            "department_name": 10,
+            "salesperson_name": 1
+          }
+        }
+      ],
+      "status": "AGGREGATE_READ_COMPLETE",
+      "physical_columns": [
+        {
+          "column_name": "id",
+          "data_type": "int",
+          "is_nullable": "NO",
+          "column_key": "PRI",
+          "collation_name": null
+        },
+        {
+          "column_name": "salesperson_code",
+          "data_type": "varchar",
+          "is_nullable": "NO",
+          "column_key": "UNI",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "salesperson_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "department_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "department_name",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        },
+        {
+          "column_name": "guoyao_code",
+          "data_type": "varchar",
+          "is_nullable": "YES",
+          "column_key": "",
+          "collation_name": "utf8mb4_general_ci"
+        }
+      ],
+      "physical_indexes": [
+        {
+          "index_name": "PRIMARY",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "id",
+          "sub_part": null
+        },
+        {
+          "index_name": "uk_sp",
+          "non_unique": 0,
+          "seq_in_index": 1,
+          "column_name": "salesperson_code",
+          "sub_part": null
+        }
+      ],
+      "physical_table": {
+        "engine": "InnoDB",
+        "table_type": "BASE TABLE"
+      }
+    }
+  ],
+  "sources": [
+    {
+      "data_source_id": 58,
+      "route_hash": "0a391bb6134320c0fc14872b66b8d92cd201cb23c6c8fe90482fedc286e26929",
+      "started_at": "2026-09-09T01:20:36.513404+00:00",
+      "transaction": "REPEATABLE READ / WITH CONSISTENT SNAPSHOT / READ ONLY",
+      "server_identity_hash": "67af1a6ecb79c5f8f9903e63a86a7180b7b8804cb9f36f84fcb7362df6e0127c",
+      "runtime_timezones": {
+        "session_time_zone": "SYSTEM",
+        "system_time_zone": "UTC"
+      },
+      "status": "READ_ONLY_SNAPSHOT_COMPLETE",
+      "finished_at": "2026-09-09T01:20:41.018775+00:00"
+    }
+  ],
+  "catalog_raw_flags": [
+    {
+      "entity_code": "city",
+      "attr_code": "city_id",
+      "mapping_table": "dim_city",
+      "mapping_column": "city_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "city",
+      "attr_code": "city_name",
+      "mapping_table": "dim_city",
+      "mapping_column": "city_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "city",
+      "attr_code": "province_id",
+      "mapping_table": "dim_city",
+      "mapping_column": "province_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "dealer",
+      "attr_code": "city_id",
+      "mapping_table": "dealer",
+      "mapping_column": "city_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "dealer",
+      "attr_code": "dealer_code",
+      "mapping_table": "dealer",
+      "mapping_column": "dealer_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "dealer",
+      "attr_code": "dealer_name",
+      "mapping_table": "dealer",
+      "mapping_column": "dealer_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "dealer",
+      "attr_code": "dealer_type",
+      "mapping_table": "dealer",
+      "mapping_column": "dealer_type",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "dealer",
+      "attr_code": "first_order_date",
+      "mapping_table": "dealer",
+      "mapping_column": "first_order_date",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "dealer",
+      "attr_code": "id",
+      "mapping_table": "dealer",
+      "mapping_column": "id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "dealer",
+      "attr_code": "province_id",
+      "mapping_table": "dealer",
+      "mapping_column": "province_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "department",
+      "attr_code": "dept_code",
+      "mapping_table": "department",
+      "mapping_column": "dept_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "department",
+      "attr_code": "dept_name",
+      "mapping_table": "department",
+      "mapping_column": "dept_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "hospital",
+      "attr_code": "city_id",
+      "mapping_table": "hospital",
+      "mapping_column": "city_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "hospital",
+      "attr_code": "hospital_code",
+      "mapping_table": "hospital",
+      "mapping_column": "hospital_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "hospital",
+      "attr_code": "hospital_id",
+      "mapping_table": "hospital",
+      "mapping_column": "hospital_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "hospital",
+      "attr_code": "hospital_level",
+      "mapping_table": "hospital",
+      "mapping_column": "hospital_level",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "hospital",
+      "attr_code": "hospital_name",
+      "mapping_table": "hospital",
+      "mapping_column": "hospital_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "hospital",
+      "attr_code": "id",
+      "mapping_table": "hospital",
+      "mapping_column": "id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "hospital",
+      "attr_code": "province_id",
+      "mapping_table": "hospital",
+      "mapping_column": "province_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "main_data_domain_ent_manufacturer",
+      "attr_code": "country",
+      "mapping_table": "manufacturer",
+      "mapping_column": "country",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "main_data_domain_ent_manufacturer",
+      "attr_code": "id",
+      "mapping_table": "manufacturer",
+      "mapping_column": "id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "main_data_domain_ent_manufacturer",
+      "attr_code": "manufacturer_code",
+      "mapping_table": "manufacturer",
+      "mapping_column": "manufacturer_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "main_data_domain_ent_manufacturer",
+      "attr_code": "manufacturer_name",
+      "mapping_table": "manufacturer",
+      "mapping_column": "manufacturer_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "main_data_domain_ent_manufacturer",
+      "attr_code": "parent_brand",
+      "mapping_table": "manufacturer",
+      "mapping_column": "parent_brand",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "main_data_domain_ent_manufacturer",
+      "attr_code": "standard_name",
+      "mapping_table": "manufacturer",
+      "mapping_column": "standard_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product",
+      "attr_code": "category_id",
+      "mapping_table": "product",
+      "mapping_column": "category_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product",
+      "attr_code": "guoyao_code",
+      "mapping_table": "product",
+      "mapping_column": "guoyao_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product",
+      "attr_code": "id",
+      "mapping_table": "product",
+      "mapping_column": "id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product",
+      "attr_code": "manufacturer_code",
+      "mapping_table": "product",
+      "mapping_column": "manufacturer_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product",
+      "attr_code": "material_code",
+      "mapping_table": "product",
+      "mapping_column": "material_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product",
+      "attr_code": "product_code",
+      "mapping_table": "product",
+      "mapping_column": "product_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product",
+      "attr_code": "product_line_id",
+      "mapping_table": "product",
+      "mapping_column": "product_line_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product",
+      "attr_code": "product_name",
+      "mapping_table": "product",
+      "mapping_column": "product_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product",
+      "attr_code": "specification",
+      "mapping_table": "product",
+      "mapping_column": "specification",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_category",
+      "attr_code": "category_id",
+      "mapping_table": "product_category",
+      "mapping_column": "category_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_category",
+      "attr_code": "category_level1",
+      "mapping_table": "product_category",
+      "mapping_column": "category_level1",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_category",
+      "attr_code": "category_level2",
+      "mapping_table": "product_category",
+      "mapping_column": "category_level2",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_category",
+      "attr_code": "id",
+      "mapping_table": "product_category",
+      "mapping_column": "id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_category",
+      "attr_code": "product_subdirectory",
+      "mapping_table": "product_category",
+      "mapping_column": "product_subdirectory",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_category",
+      "attr_code": "product_type",
+      "mapping_table": "product_category",
+      "mapping_column": "product_type",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_dept_relation",
+      "attr_code": "dept_code",
+      "mapping_table": "product_dept_relation",
+      "mapping_column": "dept_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_dept_relation",
+      "attr_code": "id",
+      "mapping_table": "product_dept_relation",
+      "mapping_column": "id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_dept_relation",
+      "attr_code": "product_code",
+      "mapping_table": "product_dept_relation",
+      "mapping_column": "product_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_dept_relation",
+      "attr_code": "relation_type",
+      "mapping_table": "product_dept_relation",
+      "mapping_column": "relation_type",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_line",
+      "attr_code": "id",
+      "mapping_table": "product_line",
+      "mapping_column": "id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_line",
+      "attr_code": "line_level1",
+      "mapping_table": "product_line",
+      "mapping_column": "line_level1",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_line",
+      "attr_code": "line_level2",
+      "mapping_table": "product_line",
+      "mapping_column": "line_level2",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "product_line",
+      "attr_code": "product_line_id",
+      "mapping_table": "product_line",
+      "mapping_column": "product_line_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "project",
+      "attr_code": "hospital_id",
+      "mapping_table": "project",
+      "mapping_column": "hospital_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "project",
+      "attr_code": "id",
+      "mapping_table": "project",
+      "mapping_column": "id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "project",
+      "attr_code": "project_code",
+      "mapping_table": "project",
+      "mapping_column": "project_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "project",
+      "attr_code": "project_name",
+      "mapping_table": "project",
+      "mapping_column": "project_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "project",
+      "attr_code": "salesperson_code",
+      "mapping_table": "project",
+      "mapping_column": "salesperson_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "province",
+      "attr_code": "province_id",
+      "mapping_table": "dim_province",
+      "mapping_column": "province_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "province",
+      "attr_code": "province_name",
+      "mapping_table": "dim_province",
+      "mapping_column": "province_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "province",
+      "attr_code": "short_name",
+      "mapping_table": "dim_province",
+      "mapping_column": "short_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "salesperson",
+      "attr_code": "department_code",
+      "mapping_table": "salesperson",
+      "mapping_column": "department_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "salesperson",
+      "attr_code": "department_name",
+      "mapping_table": "salesperson",
+      "mapping_column": "department_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "salesperson",
+      "attr_code": "guoyao_code",
+      "mapping_table": "salesperson",
+      "mapping_column": "guoyao_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "salesperson",
+      "attr_code": "id",
+      "mapping_table": "salesperson",
+      "mapping_column": "id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "salesperson",
+      "attr_code": "salesperson_code",
+      "mapping_table": "salesperson",
+      "mapping_column": "salesperson_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "salesperson",
+      "attr_code": "salesperson_name",
+      "mapping_table": "salesperson",
+      "mapping_column": "salesperson_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_company",
+      "attr_code": "guoyao_code",
+      "mapping_table": "guoyao_company",
+      "mapping_column": "guoyao_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_company",
+      "attr_code": "guoyao_name",
+      "mapping_table": "guoyao_company",
+      "mapping_column": "guoyao_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_company",
+      "attr_code": "guoyao_short_name",
+      "mapping_table": "guoyao_company",
+      "mapping_column": "guoyao_short_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_company",
+      "attr_code": "id",
+      "mapping_table": "guoyao_company",
+      "mapping_column": "id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "amount_without_tax",
+      "mapping_table": "sales_order",
+      "mapping_column": "amount_without_tax",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "amount_with_tax",
+      "mapping_table": "sales_order",
+      "mapping_column": "amount_with_tax",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "business_department",
+      "mapping_table": "sales_order",
+      "mapping_column": "business_department",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "business_type_code",
+      "mapping_table": "sales_order",
+      "mapping_column": "business_type_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "business_type_name",
+      "mapping_table": "sales_order",
+      "mapping_column": "business_type_name",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "cost",
+      "mapping_table": "sales_order",
+      "mapping_column": "cost",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "created_date",
+      "mapping_table": "sales_order",
+      "mapping_column": "created_date",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "dealer_code",
+      "mapping_table": "sales_order",
+      "mapping_column": "dealer_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "fiscal_month",
+      "mapping_table": "sales_order",
+      "mapping_column": "fiscal_month",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "fiscal_year",
+      "mapping_table": "sales_order",
+      "mapping_column": "fiscal_year",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "hospital_id",
+      "mapping_table": "sales_order",
+      "mapping_column": "hospital_id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "id",
+      "mapping_table": "sales_order",
+      "mapping_column": "id",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "order_key",
+      "mapping_table": "sales_order",
+      "mapping_column": "order_key",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "order_type",
+      "mapping_table": "sales_order",
+      "mapping_column": "order_type",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "price_without_tax",
+      "mapping_table": "sales_order",
+      "mapping_column": "price_without_tax",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "price_with_tax",
+      "mapping_table": "sales_order",
+      "mapping_column": "price_with_tax",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "product_code",
+      "mapping_table": "sales_order",
+      "mapping_column": "product_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "project_code",
+      "mapping_table": "sales_order",
+      "mapping_column": "project_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "quantity",
+      "mapping_table": "sales_order",
+      "mapping_column": "quantity",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "rn",
+      "mapping_table": "sales_order",
+      "mapping_column": "rn",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "salesperson_code",
+      "mapping_table": "sales_order",
+      "mapping_column": "salesperson_code",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "tax_rate",
+      "mapping_table": "sales_order",
+      "mapping_column": "tax_rate",
+      "is_primary_key": 0,
+      "is_unique": 0
+    },
+    {
+      "entity_code": "sales_order",
+      "attr_code": "unit",
+      "mapping_table": "sales_order",
+      "mapping_column": "unit",
+      "is_primary_key": 0,
+      "is_unique": 0
+    }
+  ],
+  "catalog_unchanged_after_read": true,
+  "finished_at": "2026-09-09T01:20:42.466660+00:00"
+}

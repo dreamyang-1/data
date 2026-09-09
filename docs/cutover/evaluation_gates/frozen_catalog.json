@@ -1,0 +1,880 @@
+{
+  "contract": "frozen-evaluation-catalog-v1",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "source_snapshot_sha256": "a34612e53b64200bb3f28e55d6721653251fd23d3adf9b0cdaecd87b37683ac2",
+  "source_identity_hash": "88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1",
+  "observed_at": "2026-09-09T01:16:52.806110+00:00",
+  "certification": "VERIFIED_SCOPED_CAPTURE_FOR_OFFLINE_EVALUATION",
+  "certification_checks": [
+    "capture digest",
+    "exact 81/205 ownership",
+    "unique fact IDs",
+    "projection from authoritative scoped snapshot"
+  ],
+  "certification_limits": [
+    "not native publication",
+    "not business identity completeness",
+    "not full SQL/result gold"
+  ],
+  "facts": [
+    {
+      "fact_id": "ENTITY:product_line",
+      "catalog_type": "ENTITY",
+      "code": "product_line",
+      "name": "产品线"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_line.id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "id",
+      "name": "产品线 ID",
+      "owner": "product_line"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_line.product_line_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "product_line_id",
+      "name": "产品线分类标识",
+      "owner": "product_line"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_line.line_level1",
+      "catalog_type": "ATTRIBUTE",
+      "code": "line_level1",
+      "name": "产品线一级分类",
+      "owner": "product_line"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_line.line_level2",
+      "catalog_type": "ATTRIBUTE",
+      "code": "line_level2",
+      "name": "产品线二级分类",
+      "owner": "product_line"
+    },
+    {
+      "fact_id": "ENTITY:department",
+      "catalog_type": "ENTITY",
+      "code": "department",
+      "name": "科室"
+    },
+    {
+      "fact_id": "ATTRIBUTE:department.dept_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "dept_code",
+      "name": "科室编码",
+      "owner": "department"
+    },
+    {
+      "fact_id": "ATTRIBUTE:department.dept_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "dept_name",
+      "name": "科室名称",
+      "owner": "department"
+    },
+    {
+      "fact_id": "ENTITY:city",
+      "catalog_type": "ENTITY",
+      "code": "city",
+      "name": "市"
+    },
+    {
+      "fact_id": "ATTRIBUTE:city.city_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "city_name",
+      "name": "城市名称",
+      "owner": "city"
+    },
+    {
+      "fact_id": "ATTRIBUTE:city.province_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "province_id",
+      "name": "所属省份ID，关联dim_province.province_id",
+      "owner": "city"
+    },
+    {
+      "fact_id": "ATTRIBUTE:city.city_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "city_id",
+      "name": "城市ID（国家标准行政区划代码，6位数字）",
+      "owner": "city"
+    },
+    {
+      "fact_id": "ENTITY:product_dept_relation",
+      "catalog_type": "ENTITY",
+      "code": "product_dept_relation",
+      "name": "商品科室关联"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_dept_relation.id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "id",
+      "name": "主键ID",
+      "owner": "product_dept_relation"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_dept_relation.product_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "product_code",
+      "name": "商品编码",
+      "owner": "product_dept_relation"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_dept_relation.dept_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "dept_code",
+      "name": "科室编码",
+      "owner": "product_dept_relation"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_dept_relation.relation_type",
+      "catalog_type": "ATTRIBUTE",
+      "code": "relation_type",
+      "name": "适用科室类型",
+      "owner": "product_dept_relation"
+    },
+    {
+      "fact_id": "ENTITY:product",
+      "catalog_type": "ENTITY",
+      "code": "product",
+      "name": "商品"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product.id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "id",
+      "name": "产品 ID",
+      "owner": "product"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product.product_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "product_code",
+      "name": "商品编码",
+      "owner": "product"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product.product_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "product_name",
+      "name": "商品名称",
+      "owner": "product"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product.specification",
+      "catalog_type": "ATTRIBUTE",
+      "code": "specification",
+      "name": "规格型号",
+      "owner": "product"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product.category_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "category_id",
+      "name": "产品分类标识",
+      "owner": "product"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product.product_line_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "product_line_id",
+      "name": "产品线分类标识",
+      "owner": "product"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product.manufacturer_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "manufacturer_code",
+      "name": "厂家编码",
+      "owner": "product"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product.guoyao_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "guoyao_code",
+      "name": "国药公司编码",
+      "owner": "product"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product.material_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "material_code",
+      "name": "厂家物料编码",
+      "owner": "product"
+    },
+    {
+      "fact_id": "ENTITY:sales_order",
+      "catalog_type": "ENTITY",
+      "code": "sales_order",
+      "name": "销售订单"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "id",
+      "name": "订单 ID",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.order_key",
+      "catalog_type": "ATTRIBUTE",
+      "code": "order_key",
+      "name": "订单号",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.fiscal_year",
+      "catalog_type": "ATTRIBUTE",
+      "code": "fiscal_year",
+      "name": "总账年份",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.fiscal_month",
+      "catalog_type": "ATTRIBUTE",
+      "code": "fiscal_month",
+      "name": "总账年月",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.unit",
+      "catalog_type": "ATTRIBUTE",
+      "code": "unit",
+      "name": "计量单位",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.tax_rate",
+      "catalog_type": "ATTRIBUTE",
+      "code": "tax_rate",
+      "name": "税率",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.quantity",
+      "catalog_type": "ATTRIBUTE",
+      "code": "quantity",
+      "name": "销售数量",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.price_without_tax",
+      "catalog_type": "ATTRIBUTE",
+      "code": "price_without_tax",
+      "name": "无税单价",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.price_with_tax",
+      "catalog_type": "ATTRIBUTE",
+      "code": "price_with_tax",
+      "name": "含税单价",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.amount_without_tax",
+      "catalog_type": "ATTRIBUTE",
+      "code": "amount_without_tax",
+      "name": "无税金额",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.amount_with_tax",
+      "catalog_type": "ATTRIBUTE",
+      "code": "amount_with_tax",
+      "name": "含税金额",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.cost",
+      "catalog_type": "ATTRIBUTE",
+      "code": "cost",
+      "name": "销售成本",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.order_type",
+      "catalog_type": "ATTRIBUTE",
+      "code": "order_type",
+      "name": "销售单类型",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.rn",
+      "catalog_type": "ATTRIBUTE",
+      "code": "rn",
+      "name": "行号",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.salesperson_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "salesperson_code",
+      "name": "销售员编码",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.project_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "project_code",
+      "name": "项目编码",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.product_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "product_code",
+      "name": "商品编码",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.hospital_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "hospital_id",
+      "name": "医院标识",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.dealer_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "dealer_code",
+      "name": "经销商编码",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.business_department",
+      "catalog_type": "ATTRIBUTE",
+      "code": "business_department",
+      "name": "业务科室",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.business_type_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "business_type_code",
+      "name": "业态编码",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.business_type_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "business_type_name",
+      "name": "业态说明",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_order.created_date",
+      "catalog_type": "ATTRIBUTE",
+      "code": "created_date",
+      "name": "订单日期",
+      "owner": "sales_order"
+    },
+    {
+      "fact_id": "ENTITY:dealer",
+      "catalog_type": "ENTITY",
+      "code": "dealer",
+      "name": "经销商"
+    },
+    {
+      "fact_id": "ATTRIBUTE:dealer.id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "id",
+      "name": "经销商 ID",
+      "owner": "dealer"
+    },
+    {
+      "fact_id": "ATTRIBUTE:dealer.dealer_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "dealer_code",
+      "name": "经销商编码",
+      "owner": "dealer"
+    },
+    {
+      "fact_id": "ATTRIBUTE:dealer.dealer_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "dealer_name",
+      "name": "经销商名称",
+      "owner": "dealer"
+    },
+    {
+      "fact_id": "ATTRIBUTE:dealer.dealer_type",
+      "catalog_type": "ATTRIBUTE",
+      "code": "dealer_type",
+      "name": "经销商类别",
+      "owner": "dealer"
+    },
+    {
+      "fact_id": "ATTRIBUTE:dealer.first_order_date",
+      "catalog_type": "ATTRIBUTE",
+      "code": "first_order_date",
+      "name": "经销商首笔有效成交订单日期",
+      "owner": "dealer"
+    },
+    {
+      "fact_id": "ATTRIBUTE:dealer.province_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "province_id",
+      "name": "关联省份档案",
+      "owner": "dealer"
+    },
+    {
+      "fact_id": "ATTRIBUTE:dealer.city_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "city_id",
+      "name": "关联城市档案",
+      "owner": "dealer"
+    },
+    {
+      "fact_id": "ENTITY:main_data_domain_ent_manufacturer",
+      "catalog_type": "ENTITY",
+      "code": "main_data_domain_ent_manufacturer",
+      "name": "生产厂家"
+    },
+    {
+      "fact_id": "ATTRIBUTE:main_data_domain_ent_manufacturer.id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "id",
+      "name": "厂家 ID",
+      "owner": "main_data_domain_ent_manufacturer"
+    },
+    {
+      "fact_id": "ATTRIBUTE:main_data_domain_ent_manufacturer.manufacturer_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "manufacturer_code",
+      "name": "厂家编码",
+      "owner": "main_data_domain_ent_manufacturer"
+    },
+    {
+      "fact_id": "ATTRIBUTE:main_data_domain_ent_manufacturer.manufacturer_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "manufacturer_name",
+      "name": "厂家名称",
+      "owner": "main_data_domain_ent_manufacturer"
+    },
+    {
+      "fact_id": "ATTRIBUTE:main_data_domain_ent_manufacturer.standard_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "standard_name",
+      "name": "标准厂家名称",
+      "owner": "main_data_domain_ent_manufacturer"
+    },
+    {
+      "fact_id": "ATTRIBUTE:main_data_domain_ent_manufacturer.country",
+      "catalog_type": "ATTRIBUTE",
+      "code": "country",
+      "name": "厂家国家",
+      "owner": "main_data_domain_ent_manufacturer"
+    },
+    {
+      "fact_id": "ATTRIBUTE:main_data_domain_ent_manufacturer.parent_brand",
+      "catalog_type": "ATTRIBUTE",
+      "code": "parent_brand",
+      "name": "母厂牌",
+      "owner": "main_data_domain_ent_manufacturer"
+    },
+    {
+      "fact_id": "ENTITY:project",
+      "catalog_type": "ENTITY",
+      "code": "project",
+      "name": "销售项目"
+    },
+    {
+      "fact_id": "ATTRIBUTE:project.id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "id",
+      "name": "项目 ID",
+      "owner": "project"
+    },
+    {
+      "fact_id": "ATTRIBUTE:project.project_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "project_code",
+      "name": "项目编码",
+      "owner": "project"
+    },
+    {
+      "fact_id": "ATTRIBUTE:project.project_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "project_name",
+      "name": "项目名称",
+      "owner": "project"
+    },
+    {
+      "fact_id": "ATTRIBUTE:project.hospital_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "hospital_id",
+      "name": "医院标识",
+      "owner": "project"
+    },
+    {
+      "fact_id": "ATTRIBUTE:project.salesperson_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "salesperson_code",
+      "name": "销售员编码",
+      "owner": "project"
+    },
+    {
+      "fact_id": "ENTITY:sales_company",
+      "catalog_type": "ENTITY",
+      "code": "sales_company",
+      "name": "销售公司"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_company.id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "id",
+      "name": "公司 ID",
+      "owner": "sales_company"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_company.guoyao_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "guoyao_code",
+      "name": "国药公司编码",
+      "owner": "sales_company"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_company.guoyao_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "guoyao_name",
+      "name": "国药公司名称",
+      "owner": "sales_company"
+    },
+    {
+      "fact_id": "ATTRIBUTE:sales_company.guoyao_short_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "guoyao_short_name",
+      "name": "国药公司简称",
+      "owner": "sales_company"
+    },
+    {
+      "fact_id": "ENTITY:salesperson",
+      "catalog_type": "ENTITY",
+      "code": "salesperson",
+      "name": "业务员"
+    },
+    {
+      "fact_id": "ATTRIBUTE:salesperson.id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "id",
+      "name": "业务员 ID",
+      "owner": "salesperson"
+    },
+    {
+      "fact_id": "ATTRIBUTE:salesperson.salesperson_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "salesperson_code",
+      "name": "销售员编码",
+      "owner": "salesperson"
+    },
+    {
+      "fact_id": "ATTRIBUTE:salesperson.salesperson_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "salesperson_name",
+      "name": "销售员姓名",
+      "owner": "salesperson"
+    },
+    {
+      "fact_id": "ATTRIBUTE:salesperson.department_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "department_code",
+      "name": "销售部门编码",
+      "owner": "salesperson"
+    },
+    {
+      "fact_id": "ATTRIBUTE:salesperson.department_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "department_name",
+      "name": "销售部门名称",
+      "owner": "salesperson"
+    },
+    {
+      "fact_id": "ATTRIBUTE:salesperson.guoyao_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "guoyao_code",
+      "name": "国药公司编码",
+      "owner": "salesperson"
+    },
+    {
+      "fact_id": "ENTITY:province",
+      "catalog_type": "ENTITY",
+      "code": "province",
+      "name": "省份"
+    },
+    {
+      "fact_id": "ATTRIBUTE:province.province_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "province_name",
+      "name": "省份名称",
+      "owner": "province"
+    },
+    {
+      "fact_id": "ATTRIBUTE:province.short_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "short_name",
+      "name": "省份简称",
+      "owner": "province"
+    },
+    {
+      "fact_id": "ATTRIBUTE:province.province_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "province_id",
+      "name": "省份ID（国家标准行政区划代码，前2位+0000）",
+      "owner": "province"
+    },
+    {
+      "fact_id": "ENTITY:product_category",
+      "catalog_type": "ENTITY",
+      "code": "product_category",
+      "name": "产品分类"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_category.id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "id",
+      "name": "分类 ID",
+      "owner": "product_category"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_category.category_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "category_id",
+      "name": "产品分类标识",
+      "owner": "product_category"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_category.product_type",
+      "catalog_type": "ATTRIBUTE",
+      "code": "product_type",
+      "name": "产品类别",
+      "owner": "product_category"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_category.product_subdirectory",
+      "catalog_type": "ATTRIBUTE",
+      "code": "product_subdirectory",
+      "name": "产品子目录",
+      "owner": "product_category"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_category.category_level1",
+      "catalog_type": "ATTRIBUTE",
+      "code": "category_level1",
+      "name": "产品一级分类",
+      "owner": "product_category"
+    },
+    {
+      "fact_id": "ATTRIBUTE:product_category.category_level2",
+      "catalog_type": "ATTRIBUTE",
+      "code": "category_level2",
+      "name": "产品二级分类",
+      "owner": "product_category"
+    },
+    {
+      "fact_id": "ENTITY:hospital",
+      "catalog_type": "ENTITY",
+      "code": "hospital",
+      "name": "医院"
+    },
+    {
+      "fact_id": "ATTRIBUTE:hospital.id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "id",
+      "name": "医院id",
+      "owner": "hospital"
+    },
+    {
+      "fact_id": "ATTRIBUTE:hospital.hospital_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "hospital_id",
+      "name": "医院标识",
+      "owner": "hospital"
+    },
+    {
+      "fact_id": "ATTRIBUTE:hospital.hospital_code",
+      "catalog_type": "ATTRIBUTE",
+      "code": "hospital_code",
+      "name": "医院编码",
+      "owner": "hospital"
+    },
+    {
+      "fact_id": "ATTRIBUTE:hospital.hospital_name",
+      "catalog_type": "ATTRIBUTE",
+      "code": "hospital_name",
+      "name": "医院名称",
+      "owner": "hospital"
+    },
+    {
+      "fact_id": "ATTRIBUTE:hospital.hospital_level",
+      "catalog_type": "ATTRIBUTE",
+      "code": "hospital_level",
+      "name": "医院等级",
+      "owner": "hospital"
+    },
+    {
+      "fact_id": "ATTRIBUTE:hospital.province_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "province_id",
+      "name": "省份ID，关联dim_province.province_id",
+      "owner": "hospital"
+    },
+    {
+      "fact_id": "ATTRIBUTE:hospital.city_id",
+      "catalog_type": "ATTRIBUTE",
+      "code": "city_id",
+      "name": "城市ID，关联dim_city.city_id",
+      "owner": "hospital"
+    },
+    {
+      "fact_id": "METRIC:sales_total_including_tax",
+      "catalog_type": "METRIC",
+      "code": "sales_total_including_tax",
+      "name": "含税销售总额"
+    },
+    {
+      "fact_id": "METRIC:tax_free_sales_amount",
+      "catalog_type": "METRIC",
+      "code": "tax_free_sales_amount",
+      "name": "不含税销售总额"
+    },
+    {
+      "fact_id": "METRIC:sales_total_cost",
+      "catalog_type": "METRIC",
+      "code": "sales_total_cost",
+      "name": "销售总成本"
+    },
+    {
+      "fact_id": "METRIC:sales_total_quantity",
+      "catalog_type": "METRIC",
+      "code": "sales_total_quantity",
+      "name": "销售总数量"
+    },
+    {
+      "fact_id": "METRIC:order_count",
+      "catalog_type": "METRIC",
+      "code": "order_count",
+      "name": "订单笔数"
+    },
+    {
+      "fact_id": "METRIC:cooperating_dealer_count",
+      "catalog_type": "METRIC",
+      "code": "cooperating_dealer_count",
+      "name": "已合作经销商数"
+    },
+    {
+      "fact_id": "METRIC:cooperating_hospital_count",
+      "catalog_type": "METRIC",
+      "code": "cooperating_hospital_count",
+      "name": "已合作医院数"
+    },
+    {
+      "fact_id": "METRIC:total_hospital_count_by_region",
+      "catalog_type": "METRIC",
+      "code": "total_hospital_count_by_region",
+      "name": "区域全部医院总数"
+    },
+    {
+      "fact_id": "METRIC:dealer_cooperation_months",
+      "catalog_type": "METRIC",
+      "code": "dealer_cooperation_months",
+      "name": "合作时长"
+    },
+    {
+      "fact_id": "METRIC:hospital_affiliated_department_count",
+      "catalog_type": "METRIC",
+      "code": "hospital_affiliated_department_count",
+      "name": "医院下属科室数量"
+    },
+    {
+      "fact_id": "METRIC:screening_area_hospital_coverage",
+      "catalog_type": "METRIC",
+      "code": "screening_area_hospital_coverage",
+      "name": "区域医院覆盖率"
+    },
+    {
+      "fact_id": "DIMENSION:hospital_level",
+      "catalog_type": "DIMENSION",
+      "code": "hospital_level",
+      "name": "医院等级"
+    },
+    {
+      "fact_id": "DIMENSION:channel_format",
+      "catalog_type": "DIMENSION",
+      "code": "channel_format",
+      "name": "渠道业态"
+    },
+    {
+      "fact_id": "DIMENSION:transaction_date",
+      "catalog_type": "DIMENSION",
+      "code": "transaction_date",
+      "name": "交易日期"
+    },
+    {
+      "fact_id": "DIMENSION:product",
+      "catalog_type": "DIMENSION",
+      "code": "product",
+      "name": "商品"
+    },
+    {
+      "fact_id": "DIMENSION:dealer",
+      "catalog_type": "DIMENSION",
+      "code": "dealer",
+      "name": "经销商"
+    },
+    {
+      "fact_id": "DIMENSION:hospital",
+      "catalog_type": "DIMENSION",
+      "code": "hospital",
+      "name": "医院"
+    },
+    {
+      "fact_id": "DIMENSION:salesperson",
+      "catalog_type": "DIMENSION",
+      "code": "salesperson",
+      "name": "业务员"
+    },
+    {
+      "fact_id": "DIMENSION:province",
+      "catalog_type": "DIMENSION",
+      "code": "province",
+      "name": "省份"
+    },
+    {
+      "fact_id": "DIMENSION:city",
+      "catalog_type": "DIMENSION",
+      "code": "city",
+      "name": "城市"
+    },
+    {
+      "fact_id": "DIMENSION:product_brand",
+      "catalog_type": "DIMENSION",
+      "code": "product_brand",
+      "name": "商品品牌"
+    },
+    {
+      "fact_id": "DIMENSION:product_category",
+      "catalog_type": "DIMENSION",
+      "code": "product_category",
+      "name": "商品品类"
+    },
+    {
+      "fact_id": "DIMENSION:department",
+      "catalog_type": "DIMENSION",
+      "code": "department",
+      "name": "科室"
+    },
+    {
+      "fact_id": "DIMENSION:applicable_department",
+      "catalog_type": "DIMENSION",
+      "code": "applicable_department",
+      "name": "适用科室"
+    }
+  ],
+  "artifact_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e"
+}

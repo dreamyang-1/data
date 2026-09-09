@@ -1,0 +1,647 @@
+{
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "observation": {
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "snapshot_hash": "a34612e53b64200bb3f28e55d6721653251fd23d3adf9b0cdaecd87b37683ac2",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "data_observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+    "started_at": "2026-09-09T01:20:36.513404+00:00",
+    "finished_at": "2026-09-09T01:20:41.018775+00:00",
+    "data_snapshot_type": "EPHEMERAL_INNODB_REPEATABLE_READ",
+    "revalidation": "Current observations are not a perpetual uniqueness guarantee or a persisted source-data snapshot."
+  },
+  "entities": [
+    {
+      "entity": "sales_order",
+      "entity_name": "销售订单",
+      "identity_candidate": [
+        "id"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 60000,
+      "non_null_rate": 1.0,
+      "distinct_count": 60000,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [],
+      "physical_schema_evidence": [
+        "PRIMARY"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {},
+      "warning": null,
+      "strict_query_eligible": false,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": "Business order versus detail-row grain for exact order-entity queries; id is proven only for source rows. order_key is unique in this snapshot and has uk_order, but not assumed universally to identify order detail rows.",
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "project",
+      "entity_name": "销售项目",
+      "identity_candidate": [
+        "project_code"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 138,
+      "non_null_rate": 1.0,
+      "distinct_count": 138,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "sales_order_belongs_to_project",
+        "sales_item_association_sales_order"
+      ],
+      "physical_schema_evidence": [
+        "uk_proj"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {},
+      "warning": null,
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "sales_company",
+      "entity_name": "销售公司",
+      "identity_candidate": [
+        "guoyao_code"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 1,
+      "non_null_rate": 1.0,
+      "distinct_count": 1,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "china_national_pharmaceuticals_subsidiary_sales_representative",
+        "salesperson_belongs_to_sales_company"
+      ],
+      "physical_schema_evidence": [
+        "uk_gy"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {},
+      "warning": null,
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "province",
+      "entity_name": "省份",
+      "identity_candidate": [
+        "province_id"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 34,
+      "non_null_rate": 1.0,
+      "distinct_count": 34,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "province_includes_city",
+        "hospital_located_in_province"
+      ],
+      "physical_schema_evidence": [
+        "PRIMARY"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {},
+      "warning": null,
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "department",
+      "entity_name": "科室",
+      "identity_candidate": [
+        "dept_code"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 78,
+      "non_null_rate": 1.0,
+      "distinct_count": 78,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "department_product_applicable_product_department_association"
+      ],
+      "physical_schema_evidence": [
+        "PRIMARY"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {},
+      "warning": null,
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "hospital",
+      "entity_name": "医院",
+      "identity_candidate": [
+        "hospital_id"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 139,
+      "non_null_rate": 1.0,
+      "distinct_count": 139,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "sales_order_belongs_to_hospital",
+        "hospital_purchase_generation_sales_order"
+      ],
+      "physical_schema_evidence": [
+        "uk_hosp"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {},
+      "warning": null,
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "product",
+      "entity_name": "商品",
+      "identity_candidate": [
+        "product_code"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 7211,
+      "non_null_rate": 1.0,
+      "distinct_count": 7211,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "product_has_applicable_department_product_department_association",
+        "sales_order_belongs_to_product",
+        "sales_order_association_product"
+      ],
+      "physical_schema_evidence": [
+        "uk_prod"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {
+        "product_name": 832
+      },
+      "warning": "检测到同名实体，已按实体编码区分。",
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "product_category",
+      "entity_name": "产品分类",
+      "identity_candidate": [
+        "category_id"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 413,
+      "non_null_rate": 1.0,
+      "distinct_count": 413,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "pharmaceutical_products_affiliation_product_category"
+      ],
+      "physical_schema_evidence": [
+        "uk_cat"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {},
+      "warning": null,
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "main_data_domain_ent_manufacturer",
+      "entity_name": "生产厂家",
+      "identity_candidate": [
+        "manufacturer_code"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 1286,
+      "non_null_rate": 1.0,
+      "distinct_count": 1286,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "product_belongs_to_manufacturer",
+        "manufacturer_production_pharmaceutical_products"
+      ],
+      "physical_schema_evidence": [
+        "uk_mfr"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {
+        "manufacturer_name": 40,
+        "standard_name": 149
+      },
+      "warning": "检测到同名实体，已按实体编码区分。",
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "dealer",
+      "entity_name": "经销商",
+      "identity_candidate": [
+        "dealer_code"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 2154,
+      "non_null_rate": 1.0,
+      "distinct_count": 2154,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "sales_order_belongs_to_dealer",
+        "dealer_place_sales_order"
+      ],
+      "physical_schema_evidence": [
+        "uk_dealer"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {},
+      "warning": null,
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "product_dept_relation",
+      "entity_name": "商品科室关联",
+      "identity_candidate": [
+        "product_code",
+        "dept_code",
+        "relation_type"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 47872,
+      "non_null_rate": 1.0,
+      "distinct_count": 47872,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "department_product_applicable_product_department_association",
+        "product_has_applicable_department_product_department_association"
+      ],
+      "physical_schema_evidence": [
+        "uk_product_dept_type"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {},
+      "warning": null,
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution.",
+        "Composite uniqueness is not inferred from partial joins: product_code/dept_code are declared relation endpoints; relation_type is in the full physical unique constraint. Preserve all tuple members for identity."
+      ]
+    },
+    {
+      "entity": "city",
+      "entity_name": "市",
+      "identity_candidate": [
+        "city_id"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 396,
+      "non_null_rate": 1.0,
+      "distinct_count": 396,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "dealer_located_in_city",
+        "hospital_located_in_city"
+      ],
+      "physical_schema_evidence": [
+        "PRIMARY"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {},
+      "warning": null,
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "product_line",
+      "entity_name": "产品线",
+      "identity_candidate": [
+        "product_line_id"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 92,
+      "non_null_rate": 1.0,
+      "distinct_count": 92,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "pharmaceutical_products_affiliation_product_line"
+      ],
+      "physical_schema_evidence": [
+        "uk_line"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {},
+      "warning": null,
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    },
+    {
+      "entity": "salesperson",
+      "entity_name": "业务员",
+      "identity_candidate": [
+        "salesperson_code"
+      ],
+      "identity_status": "PROVISIONAL_VERIFIED_IDENTITY",
+      "catalog_declared": false,
+      "uniqueness_verified": true,
+      "total_count": 89,
+      "non_null_rate": 1.0,
+      "distinct_count": 89,
+      "duplicate_count": 0,
+      "duplicate_groups": 0,
+      "relation_join_usage": [
+        "sales_order_belongs_to_salesperson",
+        "salesperson_responsible_sales_order"
+      ],
+      "physical_schema_evidence": [
+        "uk_sp"
+      ],
+      "catalog_evidence": {
+        "key": null,
+        "evidence": "NO_CURRENT_DECLARATION",
+        "metadata_inconsistency": false
+      },
+      "same_name_different_ids": {
+        "salesperson_name": 1
+      },
+      "warning": "检测到同名实体，已按实体编码区分。",
+      "strict_query_eligible": true,
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "observation_id": "2416079d4527f588bf12c907f468ffcae87ab1b1c7ba742190d65b18e234d7f6",
+      "owner_decision": null,
+      "limitations": [
+        "Only declared relation paths and canonical field ownership may join.",
+        "Revalidate provisional identity against the applicable data snapshot before exact execution."
+      ]
+    }
+  ],
+  "counts": {
+    "entities": 14,
+    "formal_catalog_identities_in_current_capture": 0,
+    "provisional_verified_identity": 14,
+    "name_fallback_only": 0,
+    "strict_grain_owner_decisions": 1
+  },
+  "user_reported_declarations": [
+    "salesperson.id",
+    "project.id",
+    "sales_company.id"
+  ],
+  "declaration_discrepancy": "Current fresh scoped raw catalog rows and serialized attributes still have flags zero/false. Physical PRIMARY constraints and aggregate uniqueness for the three id fields are proven. Do not overwrite the user report or manufacture catalog flags; exact catalog source/version discrepancy remains open, without blocking evaluation."
+}
