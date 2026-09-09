@@ -83,3 +83,25 @@ async def test_corpus_reassessment_replays_actual_history_and_preserves_frozen_c
     assert report['executed_turn_count']==2 and report['real_model_calls']==0
     assert report['runtime_parity_verified'] and report['FULL_PLAN_GOLD_COUNT']==0
     assert before=={p.name:p.read_bytes() for p in (source/'captures').iterdir()}
+
+
+@pytest.mark.asyncio
+async def test_live_collection_cannot_publish_when_evaluator_changes_mid_run(inputs,tmp_path,monkeypatch):
+    from tools.cutover import harness_cli
+    from tools.cutover.harness_corpus import enrich
+    from tools.cutover.harness_manifest import freeze_versions
+    rows,catalog,raw,settings,steps=inputs;cases=enrich(rows,corpus='TRANSITION')
+    manifest=freeze_versions(catalog,commit='test',settings=settings,candidate_snapshot={'version':'test','snapshot_hash':'test'})
+    original_run=harness_cli.run;checks=[]
+    async def offline(*a,**kw):
+        kw['transport']=httpx.MockTransport(ScriptedTransport(steps))
+        return await original_run(*a,**kw)
+    def changed(value):
+        checks.append(True)
+        if len(checks)>1:raise ValueError('EVALUATOR_CHANGED_REOPEN_BASELINE')
+    monkeypatch.setattr(harness_cli,'run',offline);monkeypatch.setattr(harness_cli,'verify_frozen',changed)
+    with pytest.raises(ValueError,match='EVALUATOR_CHANGED'):
+        await harness_cli.execute(cases,catalog,raw,settings,manifest=manifest,
+            private_directory=tmp_path/'private',public_directory=tmp_path/'public')
+    assert list((tmp_path/'private/captures').glob('*.json'))
+    assert not (tmp_path/'public/evaluation.json').exists()

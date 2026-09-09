@@ -1,72 +1,24 @@
 {
-  "baseline_commit": "871183e62ada81c5526e51948a7e11ba2d3c8908",
+  "baseline_commit": "ac42bc72ec480c754dc39ce7a6bc5b1d274f9c32",
   "feature_branch": "evaluation-harness-closure-20260909t083000z",
   "files": [
     {
-      "repository_path": "docs/v2_cutover/evaluation_harness/runtime_harness_contract.md",
-      "development_sha256": "98b7f01bd180b7868784958d90a4b131e1cb30206d3ad7347fd6862e6976aed7",
-      "normalized_sha256": "072f5b2dfe240a68ad06c165ae3dccae1ffa128d507668ca2dbff87f82df3e47",
-      "baseline_sha256": "830ee082394b1a82f9d614ab59113b17b2e57397971f102c648c933dbee65de8"
-    },
-    {
-      "repository_path": "docs/v2_cutover/evaluation_harness/test_delta.json",
-      "development_sha256": "efbdef64c70dde801c99a16124cae046e2748b1468a34f916114acbea07536d2",
-      "normalized_sha256": "51d1bd205de7418cb4cdaf7de7a84f515b9e4febabf951b72f6029cd11064349",
-      "baseline_sha256": "3c64143c7644987c35384591280b850cfa415aeb649b63595555c97d62f4602e"
-    },
-    {
-      "repository_path": "tests/test_cutover_harness_contract.py",
-      "development_sha256": "bb2f50b60fd9fc9d29f18744ab4bdaa1dd3ef859b36f3d0bd54518cab384ea21",
-      "normalized_sha256": "bb2f50b60fd9fc9d29f18744ab4bdaa1dd3ef859b36f3d0bd54518cab384ea21",
-      "baseline_sha256": "5d282d77537bdf77ad88a6b58ae8250e8f23da369ecc286fb9ce03a193590da0"
-    },
-    {
-      "repository_path": "tools/cutover/harness_contract.py",
-      "development_sha256": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
-      "normalized_sha256": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
-      "baseline_sha256": "ebffc2e6c822b35d4ac5ede8ce997943b257aa691384be1423f81e00eb774d19"
-    },
-    {
-      "repository_path": "tools/cutover/harness_manifest.py",
-      "development_sha256": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
-      "normalized_sha256": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
-      "baseline_sha256": "a410a8ed355815080b5880ab29db99c61e05022f462c8cfd8b9e838bdc8e0176"
-    },
-    {
-      "repository_path": "tools/cutover/harness_replay.py",
-      "development_sha256": "eb676a0c0d449f6e6647d0524eab7243e228617700fa3723eccca9a10a114bb4",
-      "normalized_sha256": "eb676a0c0d449f6e6647d0524eab7243e228617700fa3723eccca9a10a114bb4",
-      "baseline_sha256": "b8554f6e48d7b1e26fc8d64901bfde1b3de47749addecad3200488c0ced72692"
-    },
-    {
-      "repository_path": "tools/cutover/harness_runtime.py",
-      "development_sha256": "1e6718f9364dbdfdd082d45e504e3da513693ad82fa53db79cd706145f4221be",
-      "normalized_sha256": "1e6718f9364dbdfdd082d45e504e3da513693ad82fa53db79cd706145f4221be",
-      "baseline_sha256": "c9454993566e70ae52d7e6d19f8b04cdbd2228b5048eb9fb7427c67286fd5137"
-    },
-    {
-      "repository_path": "tools/cutover/harness_safety.py",
-      "development_sha256": "4598cfa8173d9e37448ac559ae9861c9f0c5a44965196864039e84e1bedf0d11",
-      "normalized_sha256": "4598cfa8173d9e37448ac559ae9861c9f0c5a44965196864039e84e1bedf0d11",
-      "baseline_sha256": "59e4f2a536d0800479c89ddb201aa71cbdef8b5a702b32547a3bd44a4a94548b"
-    },
-    {
-      "repository_path": "tools/cutover/harness_transport_replay.py",
-      "development_sha256": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
-      "normalized_sha256": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
-      "baseline_sha256": null
-    },
-    {
-      "repository_path": "tools/cutover/harness_replay_corpus.py",
-      "development_sha256": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
-      "normalized_sha256": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
-      "baseline_sha256": null
+      "repository_path": "tools/cutover/harness_cli.py",
+      "development_sha256": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+      "normalized_sha256": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+      "baseline_sha256": "b7bfbfe831eccd90731286c9c51658bf2e3959ed286dc96fe4d57b119a0ccfd5"
     },
     {
       "repository_path": "tests/test_cutover_harness_transport_replay.py",
-      "development_sha256": "d53a0cc28d0c715bd2b07523c13aec925e0cc260088378a1943875806e2b7b7e",
-      "normalized_sha256": "d53a0cc28d0c715bd2b07523c13aec925e0cc260088378a1943875806e2b7b7e",
-      "baseline_sha256": null
+      "development_sha256": "942f4d9fa3ccea30a25b16f7d6e44c11359dc48bcb4c9e1ff9759913d905641c",
+      "normalized_sha256": "942f4d9fa3ccea30a25b16f7d6e44c11359dc48bcb4c9e1ff9759913d905641c",
+      "baseline_sha256": "d53a0cc28d0c715bd2b07523c13aec925e0cc260088378a1943875806e2b7b7e"
+    },
+    {
+      "repository_path": "docs/v2_cutover/evaluation_harness/test_delta.json",
+      "development_sha256": "82ea8010a80bee3f312364eaf8ee45d413066f53431e92c3fb62a58e74a80fa8",
+      "normalized_sha256": "884dd29fdb8f1d51cb558f7e00d0c491809aefc117654ccb94d5606baa87f85e",
+      "baseline_sha256": "51d1bd205de7418cb4cdaf7de7a84f515b9e4febabf951b72f6029cd11064349"
     }
   ],
   "normalization": "CRLF to LF only",

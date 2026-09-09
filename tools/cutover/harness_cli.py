@@ -66,10 +66,14 @@ async def execute(cases,catalog,raw_snapshot,settings,*,manifest,private_directo
         # a completed corpus and never silently overwrites captured evidence.
         write_json(public_directory/'progress_receipt.json',{'completed_cases':len(observations),
             'required_cases':len(cases),'completed_batches':len(reports),'model_requests':len(model_calls)})
-    provenance={**evaluator_identity(manifest['evaluator_git_commit']),
+    # Captures survive a development interruption, but an evaluator changed
+    # during collection must not publish a falsely versioned baseline report.
+    verify_frozen(manifest)
+    provenance={k:manifest[k] for k in ('evaluator_version','evaluator_git_commit','evaluator_hash','evaluator_files')}
+    provenance.update({
         'mode':'LIVE_MODEL_PLAN_ONLY','corpus':cases[0]['corpus'],'gold_hash':digest(cases),
         'catalog_hash':catalog['artifact_hash'],'candidate_snapshot_hash':manifest['candidate_snapshot_hash'],
-        'as_of':manifest['as_of'],'scope':catalog['scope'],'baseline_manifest_hash':digest(manifest)}
+        'as_of':manifest['as_of'],'scope':catalog['scope'],'baseline_manifest_hash':digest(manifest)})
     report=summarize(cases,observations,provenance=provenance)
     stage_sets={}
     for trace in traces:

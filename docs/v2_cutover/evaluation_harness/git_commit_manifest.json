@@ -1,10 +1,10 @@
 {
-  "baseline_commit": "871183e62ada81c5526e51948a7e11ba2d3c8908",
+  "baseline_commit": "ac42bc72ec480c754dc39ce7a6bc5b1d274f9c32",
   "feature_branch": "evaluation-harness-closure-20260909t083000z",
   "final_commit": "Commit containing this manifest",
-  "planned_subject": "cutover: distinguish evaluation faults and replay captured transport",
+  "planned_subject": "cutover: reject evaluation reports after input freeze changes",
   "runtime_source_changed": false,
   "evidence": "runtime_harness_contract.md and test_delta.json",
   "draft_pr_base": "semantic-cutover-triage-20260909t074900z",
-  "stage_baseline": "871183e62ada81c5526e51948a7e11ba2d3c8908"
+  "stage_baseline": "ac42bc72ec480c754dc39ce7a6bc5b1d274f9c32"
 }
