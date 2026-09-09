@@ -1,0 +1,88 @@
+{
+  "baseline_commit": "b42fdaf913e6e54d7de9bdb8a343183536703586",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline_counts": {
+        "passed": 2828,
+        "failed": 27
+      },
+      "final_counts": {
+        "passed": 2845,
+        "failed": 27
+      },
+      "new_tests": {
+        "tests/test_v2_raw_turn_recognition.py::test_semantic_generation_schema_exposes_only_admissible_history[False-handles0]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_semantic_generation_schema_exposes_only_admissible_history[False-handles1]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_semantic_generation_schema_exposes_only_admissible_history[True-handles2]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_semantic_generation_schema_exposes_only_admissible_history[True-handles3]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_generation_constraint_does_not_remove_runtime_history_guard": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_real_scoped_planner_observes_state_without_reading_expected_answers": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_missing_state_fixture_stays_unobserved_without_model_calls[pending]": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_missing_state_fixture_stays_unobserved_without_model_calls[dataset]": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_failed_history_stops_current_and_retains_bounded_schema_diagnostics": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_model_budget_cannot_be_hidden_by_an_incomplete_history": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_auth_failure_stops_remaining_cases_instead_of_repeating_requests": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_wrong_snapshot_scope_or_call_authority_fails_before_network[hash]": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_wrong_snapshot_scope_or_call_authority_fails_before_network[scope]": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_wrong_snapshot_scope_or_call_authority_fails_before_network[opt_in]": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_wrong_snapshot_scope_or_call_authority_fails_before_network[transport]": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_scripted_transport_cannot_open_a_real_connection": "passed",
+        "tests/test_cutover_raw_transition_benchmark.py::test_schema_diagnostics_do_not_echo_dynamic_field_names_or_values": "passed"
+      },
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "removed_tests": [],
+      "collection_errors": [],
+      "receipt_sha256": "52f99f859f7feebc6077fdfa3e47fe81d199b7466f1f7e03f78f45ba0da40687",
+      "critical": {
+        "passed": 160,
+        "failed": 0
+      },
+      "clarification_coverage": {
+        "public_clarification_responses": 89,
+        "with_reason_trace": 89
+      }
+    },
+    "Oagnet": {
+      "baseline_counts": {
+        "passed": 663,
+        "failed": 8
+      },
+      "final_counts": {
+        "passed": 663,
+        "failed": 8
+      },
+      "new_tests": {},
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "removed_tests": [],
+      "collection_errors": [],
+      "receipt_sha256": "79b32909c6165535d980c2d31c84c79fa64f95c01b7a39adec3fed5a39b7c6a7"
+    },
+    "SQL_Translator": {
+      "baseline_counts": {
+        "passed": 381
+      },
+      "final_counts": {
+        "passed": 381
+      },
+      "new_tests": {},
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "removed_tests": [],
+      "collection_errors": [],
+      "receipt_sha256": "ff47ab9bcb6773bb0421db0a9646800f27bf1c1f9f432901e13a9cd3f416abe1"
+    }
+  },
+  "focused": {
+    "passed": 145
+  },
+  "offline_real_model_calls": 0,
+  "offline_external_writes": 0,
+  "semantic_benchmark_regressions": "model_benchmark_report.json; not hidden by deterministic regression passes",
+  "baseline_reconstruction": "PR38 node receipts plus PR39/40/42 new-test deltas; this receipt appends the exact 17 newly passing nodes.",
+  "v7_independent_commit_focused": {
+    "passed": 145
+  },
+  "verification_launch_issue": "Duplicate pytest plugin auto-registration before collection; corrected established environment, 145 passed."
+}

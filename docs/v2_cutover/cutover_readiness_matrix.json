@@ -1,0 +1,106 @@
+{
+  "current_stage": "RAW_TRANSITION_EVIDENCE_AND_SCHEMA_GUARD",
+  "readiness": "NOT_READY",
+  "baseline_commit": "b42fdaf913e6e54d7de9bdb8a343183536703586",
+  "production_acceptance_groups": {
+    "P0": 8,
+    "P1": 4
+  },
+  "inherited_matrix_ref": "../cutover/v2_cutover_readiness_matrix.json",
+  "inherited_matrix_sha256": "aef5de952b04a78ce7e009dac24a35fc51c5e83a339f73913feed994ba199214",
+  "gate_policy_ref": "../cutover/evaluation_gates/gate_matrix.json",
+  "active_blockers": [
+    {
+      "blocker_id": "SEMANTIC-QUALITY",
+      "category": "SEMANTIC_UNDERSTANDING",
+      "severity": "P0",
+      "status": "FAIL",
+      "affected_capabilities": [
+        "Turn",
+        "Mention",
+        "Role",
+        "Binding",
+        "TaskPatch",
+        "WholePlan"
+      ],
+      "blocks_offline_gold": false,
+      "blocks_model_benchmark": false,
+      "blocks_shadow": true,
+      "blocks_canary": true,
+      "blocks_final_cutover": true,
+      "evidence": [
+        "first_divergence_report.json",
+        "model_benchmark_report.json"
+      ],
+      "next_action": "Diagnose recorded active/historical task and operation/shape failures with strict state guards; complete missing observation axes."
+    },
+    {
+      "blocker_id": "EVALUATION-COVERAGE",
+      "category": "EVALUATOR",
+      "severity": "P1",
+      "status": "NOT_EVALUATED",
+      "affected_capabilities": [
+        "CandidateRecall",
+        "Oracle",
+        "WholePlan",
+        "Pending",
+        "Dataset",
+        "BlindHoldout"
+      ],
+      "blocks_offline_gold": false,
+      "blocks_model_benchmark": false,
+      "blocks_shadow": true,
+      "blocks_canary": true,
+      "blocks_final_cutover": true,
+      "evidence": [
+        "../cutover/state_evaluation/transition_gold.jsonl",
+        "transition_runner/live_final_evaluation.json"
+      ],
+      "next_action": "Extend existing tools, retain fixed denominators, certify exact frozen value observations before using region fixtures."
+    },
+    {
+      "blocker_id": "PRODUCTION-PUBLICATION",
+      "category": "CATALOG",
+      "severity": "P1",
+      "status": "BLOCKED",
+      "affected_capabilities": [
+        "NativeCatalogPublication"
+      ],
+      "blocks_offline_gold": false,
+      "blocks_model_benchmark": false,
+      "blocks_shadow": false,
+      "blocks_canary": true,
+      "blocks_final_cutover": true,
+      "evidence": [
+        "../cutover/pinned_sql_catalog/publication_candidate.md"
+      ],
+      "next_action": "Obtain specific publication-write approval when preparation and evaluation warrant the action."
+    },
+    {
+      "blocker_id": "PRODUCTION-RECOVERY",
+      "category": "REDIS",
+      "severity": "P1",
+      "status": "BLOCKED",
+      "affected_capabilities": [
+        "Canary",
+        "FinalCutover"
+      ],
+      "blocks_offline_gold": false,
+      "blocks_model_benchmark": false,
+      "blocks_shadow": false,
+      "blocks_canary": true,
+      "blocks_final_cutover": true,
+      "evidence": [
+        "../cutover/evaluation_gates/redis_runtime_evidence.json",
+        "../cutover/evaluation_gates/redis_deployment_evidence.json"
+      ],
+      "next_action": "Reuse completed runtime audit; production persistence/restore evidence remains required before cutover."
+    }
+  ],
+  "identity_evidence_ref": "../cutover/evaluation_gates/identity_matrix.json",
+  "identity_reaudit_performed": false,
+  "redis_reaudit_performed": false,
+  "existing_gold_recreated": false,
+  "unmeasured_required_metrics": "NOT_EVALUATED, never zero-violation PASS",
+  "v1_production_routing_changed": false
+}

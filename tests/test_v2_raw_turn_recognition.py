@@ -256,6 +256,35 @@ async def test_historical_task_selected_only_from_scoped_offer(catalog):
     assert {r['canonical_code'] for r in results[2].plan['logical_plan']['payload']['measures']}=={'amount','orders'}
 
 
+@pytest.mark.parametrize('historical,handles',[(False,[]),(False,['task:one']),(True,[]),(True,['task:one','task:two'])])
+def test_semantic_generation_schema_exposes_only_admissible_history(historical,handles):
+    from app.semantic_v2.recognition import SemanticTaskDraft, semantic_task_schema
+    from app.semantic_v2.pipeline import CurrentTurnSemanticParse
+    before=SemanticTaskDraft.model_json_schema()
+    parsed=CurrentTurnSemanticParse(reference_signals=['HISTORICAL'] if historical else [])
+    schema=semantic_task_schema(parsed,dict.fromkeys(handles))
+    field=schema['properties']['historical_task_handle']
+    if historical and handles:
+        assert field['anyOf']==[{'type':'string','enum':handles},{'type':'null'}]
+    else:assert field=={'type':'null','default':None}
+    assert SemanticTaskDraft.model_json_schema()==before
+
+
+@pytest.mark.asyncio
+async def test_generation_constraint_does_not_remove_runtime_history_guard(catalog):
+    first=metric_step('销售额');next_step=metric_step('再加订单笔数','订单笔数','ADD',True)
+    def bad_draft(context):
+        value=next_step[2](context)
+        value['historical_task_handle']=context['tasks'][0]['task_handle']
+        return value
+    steps=[first,(next_step[0],next_step[1],bad_draft)]
+    engine,transport=planner(catalog,steps)
+    with pytest.raises(RecognitionFailure,match='V2_HISTORICAL_TARGET_NOT_OFFERED'):
+        await turns(engine,steps)
+    schema=json.loads(transport.calls[-1]['messages'][0]['content'].split('JSON Schema:\n',1)[1])
+    assert schema['properties']['historical_task_handle']=={'type':'null','default':None}
+
+
 @pytest.mark.asyncio
 async def test_field_lineage_does_not_require_metric(catalog):
     text='城市字段来自哪个表'
