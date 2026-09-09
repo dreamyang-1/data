@@ -1,0 +1,43 @@
+{
+  "status": "BLOCKED",
+  "V1_adapter_version": "v1-native-outcome-observer-v1",
+  "V2_adapter_version": "runtime-evaluation-harness-v1",
+  "COMMON_EVALUABLE_SET": [],
+  "COMMON_EVALUABLE_SET_COUNT": 0,
+  "V1": {
+    "n": 0,
+    "N": 0
+  },
+  "V2": {
+    "n": 0,
+    "N": 0
+  },
+  "V1_ONLY_EVALUABLE": [],
+  "V2_ONLY_COMMON_OUTCOME_EVALUABLE": [],
+  "V2_ONLY_DECLARED_RUNTIME_AXES_CASE_COUNT": 55,
+  "V2_only_breakdown": {
+    "PUBLIC_DEV": 41,
+    "TRANSITION": 7,
+    "PRIVATE_VALIDATION": 1,
+    "NEW_FULL_PLAN_INPUTS": 6
+  },
+  "NOT_COMPARABLE_AXES": {
+    "task_relation": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "clarification_decision": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "metrics": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "dimensions": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "entity_types": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "entity_values": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "filters": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "time_range": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "time_grain": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "query_shape": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "authorized_scope": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "final_semantic_request": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING",
+    "asl_semantics": "V1_FROZEN_DEPENDENCY_OR_TERMINAL_OBSERVATION_MISSING"
+  },
+  "internal_V2_objects_required_from_V1": false,
+  "blocking_stage": "CUTOVER_COMPARISON_ONLY",
+  "blocks_verified_V2_semantic_root_closure": false,
+  "next_action": "Capture/replay exact scope/catalog-bound V1 semantic and ASL HTTP responses; retain native history receipts. Do not infer V2 objects from V1 fields."
+}

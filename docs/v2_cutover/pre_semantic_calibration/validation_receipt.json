@@ -1,0 +1,36 @@
+{
+  "calibration": {
+    "status": "PASS",
+    "stage_status": "PRE_SEMANTIC_CLOSURE_CALIBRATION_COMPLETE",
+    "evidence_files": 28,
+    "evidence_hash": "5b92e4bb398925ee63ba5a577760451fb4726b389d9e3aeef336bfc7e1be56ef",
+    "calibration_code_commit": "b2478b5125f2b7d8ce463b0b42b389f1b3462367",
+    "model_calls": 0,
+    "private_or_blind_payloads_read": 0,
+    "production_writes": 0
+  },
+  "preserved_parent_evidence": {
+    "status": "PASS",
+    "evaluator_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+    "evidence_files": 45,
+    "evidence_hash": "c7ad39bd50832466e4422ba14fcb91c2b3eee58842f159f6fe722ae8b6a1353d",
+    "new_replayed_turns": 172,
+    "model_calls_in_verification": 0,
+    "production_writes": 0,
+    "stage_readiness": "EVALUATION_HARNESS_NOT_READY"
+  },
+  "engineering_tests": "test_delta.json",
+  "review": {
+    "production_diff_files": 0,
+    "prompt_schema_retrieval_routing_changed": false,
+    "scope_comparison_preserves_database_and_knowledge": true,
+    "full_gold_label_sources_independent_of_model_outputs": true,
+    "full_plan_dry_gap_not_counted_as_pass": true,
+    "zero_denominator_safety_never_pass": true,
+    "private_failure_distribution_not_population_accuracy": true,
+    "root_clusters_not_asserted_independent_bugs": true,
+    "v1_dependency_gap_not_counted_as_semantic_outcome": true,
+    "old_evidence_preserved": true,
+    "blind_payloads_opened_or_run": 0
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "rows": [
+    {
+      "code": "DATASET_RUNTIME_INTEGRATION_GAP",
+      "affected": [
+        "Dataset followup",
+        "Unsafe truncated ranking",
+        "Dataset Whole Plan",
+        "related Shadow/Cutover"
+      ],
+      "blocks_independent_turn_mention_role_operation": false,
+      "production_fix_this_stage": false
+    },
+    {
+      "code": "DRY_PLAN_RUNTIME_INTEGRATION_GAP",
+      "affected": [
+        "Full runtime DryPlan",
+        "Whole Plan completion",
+        "Shadow/Cutover"
+      ],
+      "supplemental_seam_only": true,
+      "new_native_diagnostics": {
+        "success": 7,
+        "unsupported": 3
+      },
+      "SQL_executed": false
+    },
+    {
+      "code": "ASL2_DIMENSION_OWNER_UNRESOLVED",
+      "affected": [
+        "hospital_level grouping on sales_order-owned metric"
+      ],
+      "source_evidence": "Frozen metric bind_entity=sales_order; hospital_level direct binding=hospital; current compiler requires direct owner",
+      "diagnostic_only": true,
+      "catalog_defect_proven": false,
+      "new_negative_full_gold_cases": [
+        "FP81-202",
+        "FP81-203"
+      ]
+    },
+    {
+      "code": "V1_FROZEN_DEPENDENCY_RECORD_MISSING",
+      "affected": [
+        "V1/V2 Common-set",
+        "Cutover comparison"
+      ],
+      "blocks_verified_V2_semantic_root_closure": false
+    }
+  ]
+}

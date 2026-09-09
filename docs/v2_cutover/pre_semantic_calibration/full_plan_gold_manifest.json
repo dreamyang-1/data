@@ -1,0 +1,118 @@
+{
+  "full_plan_gold_version": "certified-full-semantic-plan-v1",
+  "label_hash": "8c20a794f9a5d7b3ff90cde44eb35b14b807c2b59750c5f1678fbb66e7210184",
+  "case_manifest": [
+    {
+      "case_id": "FP81-015",
+      "source_case_id": "G81-015",
+      "input_hash": "13b2cf98d1c0360b5edc8e9fe35f8e94e3326c42141ce16d8102934ca4c3740e",
+      "label_hash": "b68cd5282bfeb69717179c5b4a995f90aad9fb1e1441aae162dbf7f0cd9be1ee"
+    },
+    {
+      "case_id": "FP81-016",
+      "source_case_id": "G81-016",
+      "input_hash": "48f4c6d1c247b976ce314305829197a638dd0b9cf9515dea51b321b2d0a73231",
+      "label_hash": "b68cd5282bfeb69717179c5b4a995f90aad9fb1e1441aae162dbf7f0cd9be1ee"
+    },
+    {
+      "case_id": "FP81-017",
+      "source_case_id": "G81-017",
+      "input_hash": "09b9ed5d5eafbc79a950a234ab6b32ccfe570bcd8c7fb1460ab1030b29c0b89e",
+      "label_hash": "d46237fac05a5b748c4751625b512cf77354d4e4cb1529e9cf9c22d81113785d"
+    },
+    {
+      "case_id": "FP81-018",
+      "source_case_id": "G81-018",
+      "input_hash": "868d5900b27cf78ca34ef4ca4dda91feca1c4d346259e40b4f952e01e6d5f840",
+      "label_hash": "d46237fac05a5b748c4751625b512cf77354d4e4cb1529e9cf9c22d81113785d"
+    },
+    {
+      "case_id": "FP81-019",
+      "source_case_id": "G81-019",
+      "input_hash": "c54763958559a87a3f6e0412bf5c60111249b0d208047ab19c0865f1b039c8b0",
+      "label_hash": "8230dc269096e99b236f13d28733648972d870338c4dcdd8aa801f8957d7c71a"
+    },
+    {
+      "case_id": "FP81-020",
+      "source_case_id": "G81-020",
+      "input_hash": "78fab8c0521692bc60ee8be609a513e90088ed44ec83f7ad6d1ddf7707c1c084",
+      "label_hash": "8230dc269096e99b236f13d28733648972d870338c4dcdd8aa801f8957d7c71a"
+    },
+    {
+      "case_id": "FP81-021",
+      "source_case_id": "G81-021",
+      "input_hash": "197917c92bcdcb7e766379e8b8c96cc811829fad4828c5f7d972fae2b32faa5f",
+      "label_hash": "b5b6e838a2c731af76432f55db38cb9363c285cc3e30f956b55822e1f454ebd3"
+    },
+    {
+      "case_id": "FP81-022",
+      "source_case_id": "G81-022",
+      "input_hash": "64f83142ec52fb7b85ccaa6bc29494f231a45da9791a379abe9a569125cc1932",
+      "label_hash": "b5b6e838a2c731af76432f55db38cb9363c285cc3e30f956b55822e1f454ebd3"
+    },
+    {
+      "case_id": "FP81-079",
+      "source_case_id": "G81-079",
+      "input_hash": "cc10975623088da6a05f5c7bbac05c382e15711f64a37f9a9c51c6e089c2fafb",
+      "label_hash": "d9bef634892c446334c4b4bb2cbdefb931470581402708ac09eb6470ac1afda1"
+    },
+    {
+      "case_id": "FP81-089",
+      "source_case_id": "G81-089",
+      "input_hash": "d94f9e2efde532c2d60ba8189050b220657339275bb338e3ef70fbed41864c80",
+      "label_hash": "43e633aee80f1f4e0a9e311d1dae955431a84b9a519d85109c55c7376e0b617d"
+    },
+    {
+      "case_id": "FP81-201",
+      "source_case_id": "C81-201",
+      "input_hash": "2a901db96fc0eab2e9ea7399f5a1852750ae4e766abea4811cb3085ecc503b5c",
+      "label_hash": "7d6eaf3241befda2c86c7b9a1d0153002bca5f13606056860ee74a7a8a3574fd"
+    },
+    {
+      "case_id": "FP81-202",
+      "source_case_id": "C81-202",
+      "input_hash": "f82ffa03ee25bfde384d2e49dc92bca3b64b21074622bd22feab41c79e1ae177",
+      "label_hash": "a910739964b2d5871cf6e2d868175538ee623a76f64357c45c3db77cd9a24043"
+    },
+    {
+      "case_id": "FP81-203",
+      "source_case_id": "C81-203",
+      "input_hash": "5ed0e19da0d0ed5b613c8b48d7ad575f920bda6c11c2881639036114ad9982a4",
+      "label_hash": "7bc8dbb2255c5c6307ca6afebd8b66df94086cd2eeb5f3372e54d4e7dc2cf860"
+    },
+    {
+      "case_id": "FP81-204",
+      "source_case_id": "C81-204",
+      "input_hash": "9d785cf6d4e1f4bcf38d065f726042ba604699e03ee01656eceb3c54dea6ab00",
+      "label_hash": "dda0d23ac87ce74ae2f16dfa066bec4cf9e1b9906f9d64524587cc5d72c9efa9"
+    },
+    {
+      "case_id": "FP81-205",
+      "source_case_id": "C81-205",
+      "input_hash": "84e50cdd70a59169f4748b405d2b7549f827dcfd55e713e374f67b971b3f7b06",
+      "label_hash": "47a3991869e944fa262fcf1fd20ad3817f9daff26ad4340a002d1766ab04bbb4"
+    },
+    {
+      "case_id": "FP81-206",
+      "source_case_id": "C81-206",
+      "input_hash": "4c66ccf684e9e55b6385216b8d47bc0e4eef7f90f20784f42bad7d1418c23c2e",
+      "label_hash": "540102b91974b6af47c0e225ff26223c7eb32a2b7792d74ed87b8ab55edb9330"
+    }
+  ],
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "as_of": "2026-09-09T09:00:00+08:00",
+  "timezone": "Asia/Shanghai",
+  "semantic_labels_only": true,
+  "new_independent_cases": 6,
+  "existing_public_inputs_reused_without_model_rerun": 10,
+  "label_provenance": "CATALOG_PROVEN + BUSINESS_CONTRACT + DETERMINISTIC_RULE; no V1/V2/LLM outputs used as labels",
+  "version_change_required_on_any_label_edit": true
+}
