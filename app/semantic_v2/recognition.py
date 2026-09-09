@@ -16,6 +16,7 @@ from .catalog_plans import (RelationshipEditDraft, relationship, complete_catalo
 from .catalog_paths import relationship_path, resolve_alias
 from .temporal_comparisons import ComparisonEditDraft, complete_comparison_patch
 from .source_value_recognition import SourceValueRequestDraft, source_filter_patch, hydrate_choice
+from .explicit_time import normalize_initial_assignment
 from .enums import CatalogType, SemanticRole
 from .pipeline import CurrentTurnParser, CurrentTurnSemanticParse, TurnResolver, collect_bound_refs
 from .pipeline import AuthorizedLogicalPlan
@@ -556,8 +557,11 @@ class RawTurnPlanner:
                 operation=edit.operation, new_value=path.model_dump(mode='json') if path else None, source='CURRENT_EXPLICIT',
                 reason_code='CURRENT_PINNED_RELATIONSHIP', base_task_version=base,
                 presence='EXPLICITLY_CLEARED' if path is None else 'PRESENT', evidence_mention_ids=edit.evidence_mention_ids))
-        for index, edit in enumerate(draft.edits):
+        # Metrics must be validated before deriving their governed time anchor.
+        # Original operation IDs/order within a slot stay intact.
+        for index, edit in sorted(enumerate(draft.edits), key=lambda pair:pair[1].slot_path == 'time_spec'):
             singleton_replacement = False
+            normalization_reason = None
             if not set(edit.evidence_mention_ids) <= ids:
                 raise RecognitionFailure('V2_EDIT_EVIDENCE_NOT_CURRENT')
             matching = {(edit.slot_path, edit.operation, i) for i in edit.evidence_mention_ids} & markers
@@ -572,6 +576,11 @@ class RawTurnPlanner:
                 if value.get('source') != 'USER_EXPLICIT' or value.get('data_watermark'):
                     raise RecognitionFailure('V2_TIME_POLICY_EVIDENCE_REQUIRED')
                 value['as_of'] = now.isoformat()
+                if edit.operation != 'CLEAR':
+                    metric_patch = TaskPatch.compile([op for op in operations if op.slot_path == 'metrics'],base_task_version=base)
+                    metrics = apply_task_patch(prior or m.TaskSemanticState(),metric_patch,
+                        clear_barriers=target.clear_barriers if target else []).semantics.metrics
+                    value, normalization_reason = normalize_initial_assignment(session,parse,edit,value,metrics,now)
             if edit.operation not in {'CLEAR'}:
                 definition = SlotDefinitionRegistry.get(edit.slot_path)
                 checked_value = value
@@ -599,7 +608,7 @@ class RawTurnPlanner:
                     raise RecognitionFailure('V2_BINDING_OUTSIDE_EDIT_EVIDENCE')
             operations.append(m.SlotOperation(operation_id='operation:' + str(index), slot_path=edit.slot_path,
                 operation=edit.operation, new_value=value, source='CURRENT_EXPLICIT',
-                reason_code='CURRENT_TURN_SINGLETON_REPLACEMENT' if singleton_replacement else 'CURRENT_TURN_EVIDENCE',
+                reason_code=normalization_reason or ('CURRENT_TURN_SINGLETON_REPLACEMENT' if singleton_replacement else 'CURRENT_TURN_EVIDENCE'),
                 base_task_version=base, presence='EXPLICITLY_CLEARED' if edit.operation == 'CLEAR' else 'PRESENT',
                 evidence_mention_ids=edit.evidence_mention_ids))
         def hydrate(value, evidence):

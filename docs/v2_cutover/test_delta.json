@@ -1,34 +1,72 @@
 {
-  "baseline_commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
+  "baseline_commit": "c19e65544664395200d814300e27d330006ea9a1",
   "services": {
     "DataAnalysis_Agent": {
       "baseline_counts": {
-        "passed": 2902,
-        "failed": 27
-      },
-      "final_counts": {
         "passed": 2914,
         "failed": 27
       },
+      "final_counts": {
+        "passed": 2964,
+        "failed": 27
+      },
       "new_tests": {
-        "tests/test_cutover_recorded_oracle.py::test_recorded_current_turn_reproduces_the_original_pin_state_and_plan[0]": "passed",
-        "tests/test_cutover_recorded_oracle.py::test_recorded_current_turn_reproduces_the_original_pin_state_and_plan[-1]": "passed",
-        "tests/test_cutover_recorded_oracle.py::test_oracle_changes_only_model_outputs_and_reexecutes_real_state_rules": "passed",
-        "tests/test_cutover_recorded_oracle.py::test_oracle_does_not_bypass_operation_binding_or_authority_guards[operation-V2_SLOT_OPERATION_CONFLICT]": "passed",
-        "tests/test_cutover_recorded_oracle.py::test_oracle_does_not_bypass_operation_binding_or_authority_guards[handle-V2_BINDING_HANDLE_NOT_OFFERED]": "passed",
-        "tests/test_cutover_recorded_oracle.py::test_oracle_does_not_bypass_operation_binding_or_authority_guards[authority-V2_MODEL_AUTHORITY_FIELD_FORBIDDEN]": "passed",
-        "tests/test_cutover_recorded_oracle.py::test_invalid_capture_authority_or_frozen_catalog_rejects_replay[hash]": "passed",
-        "tests/test_cutover_recorded_oracle.py::test_invalid_capture_authority_or_frozen_catalog_rejects_replay[case]": "passed",
-        "tests/test_cutover_recorded_oracle.py::test_invalid_capture_authority_or_frozen_catalog_rejects_replay[scope]": "passed",
-        "tests/test_cutover_recorded_oracle.py::test_invalid_capture_authority_or_frozen_catalog_rejects_replay[snapshot]": "passed",
-        "tests/test_cutover_recorded_oracle.py::test_corrupt_or_foreign_state_is_not_rewritten_to_match_the_replay_pin": "passed",
-        "tests/test_cutover_recorded_oracle.py::test_changed_recorded_model_context_cannot_pass_as_an_exact_replay": "passed"
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[2025\\u5e74-2025-01-01-2026-01-01]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[2025\\u5e742\\u6708-2025-02-01-2025-03-01]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[2024\\u5e742\\u670829\\u65e5-2024-02-29-2024-03-01]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[\\u53bb\\u5e74-2025-01-01-2026-01-01]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[\\u672c\\u5b63\\u5ea6-2026-07-01-2026-10-01]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[\\u4e0a\\u5b63\\u5ea6-2026-04-01-2026-07-01]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[\\u6700\\u8fd1\\u4e00\\u5e74-2025-09-09-2026-09-10]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[\\u8fd17\\u5929-2026-09-03-2026-09-10]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[2025\\u5e741\\u6708\\u52303\\u6708-2025-01-01-2025-04-01]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[2025\\u5e74\\u7b2c\\u4e00\\u5b63\\u5ea6-2025-01-01-2025-04-01]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[2025\\u5e74\\u4e0a\\u534a\\u5e74-2025-01-01-2025-07-01]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[2025\\u5e741\\u67081\\u65e5\\u81f32025\\u5e741\\u67083\\u65e5-2025-01-01-2025-01-04]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[25\\u5e743\\u6708-2025-03-01-2025-04-01]": "passed",
+        "tests/test_v2_explicit_time.py::test_time_range_reuses_business_calendar_with_fixed_reference_and_exact_consumption[\\u672c\\u6708\\u81f3\\u4eca-2026-09-01-2026-09-10]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[\\u9500\\u552e\\u989d2025\\u5e74]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[2025\\u5e74\\u548c2026\\u5e74]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[2025\\u5e74\\u4ee5\\u540e]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[2025\\u5e7413\\u6708]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[2025\\u5e742\\u670830\\u65e5]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[\\u6700\\u8fd1400\\u5929]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[ABC\\u4eca\\u5929]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[\\u4eca\\u5929\\u6216\\u6628\\u5929]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[2025\\u5e74\\u8ba2\\u5355]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[2025\\u8d22\\u5e74]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[\\u53bb\\u5e74\\u9500\\u552e\\u989d]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[\\u6700\\u8fd1\\u4e00\\u5e74\\u4e4b\\u524d]": "passed",
+        "tests/test_v2_explicit_time.py::test_partial_ambiguous_unsupported_or_invalid_ranges_cannot_become_authoritative[2025\\u5e74\\u4e00\\u5b63\\u5ea6]": "passed",
+        "tests/test_v2_explicit_time.py::test_default_legacy_substring_contract_is_preserved_and_clock_is_explicit": "passed",
+        "tests/test_v2_explicit_time.py::test_metric_anchor_and_dates_are_owned_by_catalog_and_current_expression[False]": "passed",
+        "tests/test_v2_explicit_time.py::test_metric_anchor_and_dates_are_owned_by_catalog_and_current_expression[True]": "passed",
+        "tests/test_v2_explicit_time.py::test_an_explicit_time_field_is_preserved_and_time_grain_requires_its_own_mention": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_does_not_accept_foreign_handles_or_model_authority[foreign-V2_BINDING_HANDLE_NOT_OFFERED]": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_does_not_accept_foreign_handles_or_model_authority[authority-V2_MODEL_AUTHORITY_FIELD_FORBIDDEN]": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_does_not_accept_foreign_handles_or_model_authority[watermark-V2_TIME_POLICY_EVIDENCE_REQUIRED]": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_does_not_accept_foreign_handles_or_model_authority[default-V2_TIME_POLICY_EVIDENCE_REQUIRED]": "passed",
+        "tests/test_v2_explicit_time.py::test_missing_or_unsupported_catalog_time_facts_do_not_become_defaults[missing-CATALOG_METRIC_TIME_ANCHOR_MISSING]": "passed",
+        "tests/test_v2_explicit_time.py::test_missing_or_unsupported_catalog_time_facts_do_not_become_defaults[unknown_field-CATALOG_METRIC_TIME_ANCHOR_NOT_UNIQUE]": "passed",
+        "tests/test_v2_explicit_time.py::test_missing_or_unsupported_catalog_time_facts_do_not_become_defaults[special-CATALOG_METRIC_TIME_RULE_UNSUPPORTED]": "passed",
+        "tests/test_v2_explicit_time.py::test_explicit_range_clear_survives_a_later_metric_add": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_cannot_silently_erase_other_policy_or_comparison_instructions[extra0-V2_MODEL_AUTHORITY_FIELD_FORBIDDEN]": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_cannot_silently_erase_other_policy_or_comparison_instructions[extra1-V2_TIME_POLICY_EVIDENCE_REQUIRED]": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_cannot_silently_erase_other_policy_or_comparison_instructions[extra2-V2_MODEL_AUTHORITY_FIELD_FORBIDDEN]": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_cannot_silently_erase_other_policy_or_comparison_instructions[extra3-V2_TIME_POLICY_EVIDENCE_REQUIRED]": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_cannot_silently_erase_other_policy_or_comparison_instructions[extra4-V2_TIME_POLICY_EVIDENCE_REQUIRED]": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_cannot_silently_erase_other_policy_or_comparison_instructions[extra5-V2_TIME_POLICY_EVIDENCE_REQUIRED]": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_cannot_silently_erase_other_policy_or_comparison_instructions[extra6-V2_TIME_POLICY_EVIDENCE_REQUIRED]": "passed",
+        "tests/test_v2_explicit_time.py::test_normalization_cannot_silently_erase_other_policy_or_comparison_instructions[extra7-V2_EXPLICIT_TIME_EXTRA_FIELD]": "passed",
+        "tests/test_v2_explicit_time.py::test_all_selected_metrics_must_share_one_current_catalog_anchor[False]": "passed",
+        "tests/test_v2_explicit_time.py::test_all_selected_metrics_must_share_one_current_catalog_anchor[True]": "passed",
+        "tests/test_v2_explicit_time.py::test_naive_clock_and_unresolved_grain_are_rejected": "passed"
       },
       "old_pass_to_new_fail": [],
       "old_fail_to_new_pass": [],
       "removed_tests": [],
       "collection_errors": [],
-      "receipt_sha256": "81c3964c4787d5f573910c0173ba72361ffe99ca2f427775518ba05745dfe5f6",
+      "receipt_sha256": "26412ce79098feeafb48ff94a9a42141e1f49e9c6b1755a87dc5fda12c593f75",
       "critical": {
         "passed": 160,
         "failed": 0
@@ -70,12 +108,14 @@
     }
   },
   "focused": {
-    "passed": 167
+    "passed": 239
   },
-  "new_tests": 12,
+  "new_tests": 50,
   "old_assertions_changed": 0,
   "real_model_calls": 0,
   "source_SQL_executions": 0,
   "production_writes": 0,
-  "review": "Exact initial/current replay, controlled output-only intervention, hostile operation/handle/authority, capture hash/case/scope/snapshot/context, and corrupted/foreign state controls."
+  "transient_failure_evidence": "governed_time/sql_repeat_evidence.json",
+  "new_test_development_failures": "Initial UTC serialization assertions and unsupported shortened-quarter fixture corrected to documented contract; two authority rejection assertions corrected to earlier existing guard. No old assertion modified.",
+  "review": "Fixed aware clocks, full-expression consumption, raw model range/grain/zone not authoritative, explicit field choice, metric anchor conflicts, hostile handles and policy extras, range CLEAR survives metric ADD."
 }

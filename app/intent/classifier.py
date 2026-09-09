@@ -4997,7 +4997,15 @@ class RuleBasedIntentClassifier:
         return ConversationControl.NEW_REQUEST
 
     @staticmethod
-    def _time_range(text: str) -> TimeRange | None:
+    def _time_range(text: str, *, reference_date: date | None = None,
+                    whole_expression: bool = False) -> TimeRange | None:
+        # Optional deterministic entry for a current-turn time mention. Existing
+        # callers keep substring recognition and the business-clock/test seam.
+        search = re.fullmatch if whole_expression else re.search
+        def match(pattern):
+            return pattern.fullmatch(text) if whole_expression else pattern.search(text)
+        def has(token):
+            return text == token if whole_expression else token in text
         text = re.sub(r"\s+", "", text)
         text = re.sub(
             r"(?<!\d)(?P<year>\d{2})年(?=\d{1,2}月)",
@@ -5007,7 +5015,9 @@ class RuleBasedIntentClassifier:
         # Production uses the business timezone instead of the host's local
         # timezone.  The compatibility branch keeps the existing test seam
         # where ``classifier.date`` is replaced with a frozen date class.
-        today = (
+        if reference_date is not None and not isinstance(reference_date, _NATIVE_DATE_CLASS):
+            raise ValueError('reference_date must be a date')
+        today = reference_date if reference_date is not None else (
             date.today()
             if date is not _NATIVE_DATE_CLASS
             else datetime.now(_SHANGHAI_TZ).date()
@@ -5026,7 +5036,7 @@ class RuleBasedIntentClassifier:
         # These expressions have an open-ended boundary and must be handled
         # before ordinary single-date/month parsing.  Otherwise a phrase such
         # as "2026年7月1日起至今" would silently degrade to one day.
-        start_to_now = _START_TO_NOW_PATTERN.search(text)
+        start_to_now = match(_START_TO_NOW_PATTERN)
         if start_to_now:
             try:
                 start = date(
@@ -5040,7 +5050,7 @@ class RuleBasedIntentClassifier:
                 return None
             return TimeRange(start=start, end_exclusive=today + timedelta(days=1))
 
-        period_to_date = re.search(
+        period_to_date = search(
             r"(?P<period>本月|这个月|今年|本年)"
             r"(?P<cutoff>至今|截至今天|截止今天|截至今日|截止今日|截至昨天|截止昨天|截至昨日|截止昨日)",
             text,
@@ -5057,7 +5067,7 @@ class RuleBasedIntentClassifier:
         # A bare “截至今天” is a common answer to a time clarification. With
         # no earlier boundary supplied, normalize it to the current
         # year-to-date window instead of repeatedly asking for time.
-        if re.search(r"(?:截至今天|截止今天|截至今日|截止今日)", text):
+        if search(r"(?:截至今天|截止今天|截至今日|截止今日)", text):
             return TimeRange(
                 start=date(today.year, 1, 1),
                 end_exclusive=today + timedelta(days=1),
@@ -5072,7 +5082,7 @@ class RuleBasedIntentClassifier:
         ):
             return None
 
-        recent_days = re.search(
+        recent_days = search(
             r"(?:最近|近|过去)(?P<days>\d+)个?(?:自然)?(?:天|日)(?!\d)", text
         )
         if recent_days:
@@ -5101,7 +5111,7 @@ class RuleBasedIntentClassifier:
                 return int(raw)
             return count_words.get(raw)
 
-        recent_weeks = re.search(
+        recent_weeks = search(
             r"(?:最近|近|过去)(?P<count>\d{1,2}|一|二|两|三|四|五|六|七|八|九|十|十二)个?(?:自然)?(?:周|星期)(?![\d期])",
             text,
         )
@@ -5114,11 +5124,11 @@ class RuleBasedIntentClassifier:
                 end_exclusive=today + timedelta(days=1),
             )
 
-        recent_months = re.search(
+        recent_months = search(
             r"(?:最近|近|过去)(?P<count>\d{1,2}|一|二|两|三|四|五|六|七|八|九|十|十二)个?月(?!份)",
             text,
         )
-        if recent_months or re.search(r"(?:最近|近|过去)半年", text):
+        if recent_months or search(r"(?:最近|近|过去)半年", text):
             months = 6 if recent_months is None else parse_count(recent_months.group("count"))
             if months is None or not 1 <= months <= 36:
                 return None
@@ -5131,7 +5141,7 @@ class RuleBasedIntentClassifier:
                 end_exclusive=today + timedelta(days=1),
             )
 
-        recent_years = re.search(
+        recent_years = search(
             r"(?:最近|近|过去)(?P<count>\d{1,2}|一|二|两|三|四|五|六|七|八|九|十)年",
             text,
         )
@@ -5147,7 +5157,7 @@ class RuleBasedIntentClassifier:
             )
 
         for pattern in _EXPLICIT_DATE_RANGE_PATTERNS:
-            explicit = pattern.search(text)
+            explicit = match(pattern)
             if not explicit:
                 continue
             try:
@@ -5168,7 +5178,7 @@ class RuleBasedIntentClassifier:
             return TimeRange(start=start, end_exclusive=end + timedelta(days=1))
 
         for pattern in _EXPLICIT_MONTH_RANGE_PATTERNS:
-            explicit_month_range = pattern.search(text)
+            explicit_month_range = match(pattern)
             if not explicit_month_range:
                 continue
             try:
@@ -5186,7 +5196,7 @@ class RuleBasedIntentClassifier:
                 return None
             return TimeRange(start=start, end_exclusive=end)
 
-        explicit_quarter = _EXPLICIT_QUARTER_PATTERN.search(text)
+        explicit_quarter = match(_EXPLICIT_QUARTER_PATTERN)
         if explicit_quarter:
             year = int(explicit_quarter.group("year"))
             quarter = int(explicit_quarter.group("quarter"))
@@ -5195,7 +5205,7 @@ class RuleBasedIntentClassifier:
             end = date(year + 1, 1, 1) if quarter == 4 else date(year, month + 3, 1)
             return TimeRange(start=start, end_exclusive=end)
 
-        named_quarter = _NAMED_QUARTER_PATTERN.search(text)
+        named_quarter = match(_NAMED_QUARTER_PATTERN)
         if named_quarter:
             quarter_values = {"一": 1, "二": 2, "三": 3, "四": 4}
             raw_quarter = named_quarter.group("quarter")
@@ -5207,7 +5217,7 @@ class RuleBasedIntentClassifier:
             end = date(year + 1, 1, 1) if quarter == 4 else date(year, month + 3, 1)
             return TimeRange(start=start, end_exclusive=end)
 
-        half_year = _HALF_YEAR_PATTERN.search(text)
+        half_year = match(_HALF_YEAR_PATTERN)
         if half_year:
             year_text = half_year.groupdict().get("year")
             year = int(year_text) if year_text else relative_year(half_year.groupdict().get("relative"))
@@ -5215,7 +5225,7 @@ class RuleBasedIntentClassifier:
                 return TimeRange(start=date(year, 1, 1), end_exclusive=date(year, 7, 1))
             return TimeRange(start=date(year, 7, 1), end_exclusive=date(year + 1, 1, 1))
 
-        explicit_year_range = _EXPLICIT_YEAR_RANGE_PATTERN.search(text)
+        explicit_year_range = match(_EXPLICIT_YEAR_RANGE_PATTERN)
         if explicit_year_range:
             start_year = int(explicit_year_range.group("start_year"))
             end_year = int(explicit_year_range.group("end_year"))
@@ -5226,7 +5236,7 @@ class RuleBasedIntentClassifier:
                 end_exclusive=date(end_year + 1, 1, 1),
             )
 
-        single_day = _SINGLE_EXPLICIT_DATE_PATTERN.search(text)
+        single_day = match(_SINGLE_EXPLICIT_DATE_PATTERN)
         if single_day:
             # If a range marker follows the date but the endpoint did not match
             # one of the supported forms above, do not silently drop it.
@@ -5246,7 +5256,7 @@ class RuleBasedIntentClassifier:
                 return None
             return TimeRange(start=day, end_exclusive=day + timedelta(days=1))
 
-        explicit_month = _EXPLICIT_YEAR_MONTH_PATTERN.search(text)
+        explicit_month = match(_EXPLICIT_YEAR_MONTH_PATTERN)
         if explicit_month:
             remaining = text[explicit_month.end() :]
             preceding = text[: explicit_month.start()]
@@ -5263,7 +5273,7 @@ class RuleBasedIntentClassifier:
                 return None
             return TimeRange(start=start, end_exclusive=end)
 
-        explicit_year = _EXPLICIT_YEAR_PATTERN.search(text)
+        explicit_year = match(_EXPLICIT_YEAR_PATTERN)
         if explicit_year:
             year = int(explicit_year.group("year"))
             return TimeRange(
@@ -5271,7 +5281,7 @@ class RuleBasedIntentClassifier:
                 end_exclusive=date(year + 1, 1, 1),
             )
 
-        bare_month = _BARE_MONTH_PATTERN.search(text)
+        bare_month = match(_BARE_MONTH_PATTERN)
         if bare_month:
             try:
                 year = relative_year(bare_month.groupdict().get("relative"))
@@ -5282,41 +5292,41 @@ class RuleBasedIntentClassifier:
                 return None
             return TimeRange(start=start, end_exclusive=end)
 
-        if "本周" in text or "这周" in text or "这个星期" in text:
+        if has("本周") or has("这周") or has("这个星期"):
             start = today - timedelta(days=today.weekday())
             return TimeRange(start=start, end_exclusive=start + timedelta(days=7))
-        if "上周" in text or "上个星期" in text:
+        if has("上周") or has("上个星期"):
             end = today - timedelta(days=today.weekday())
             return TimeRange(start=end - timedelta(days=7), end_exclusive=end)
-        if "本月" in text or "这个月" in text:
+        if has("本月") or has("这个月"):
             start = today.replace(day=1)
             end = next_month_start(start.year, start.month)
             return TimeRange(start=start, end_exclusive=end)
-        if "上月" in text or "上个月" in text:
+        if has("上月") or has("上个月"):
             end = today.replace(day=1)
             start = (end - timedelta(days=1)).replace(day=1)
             return TimeRange(start=start, end_exclusive=end)
-        if "今天" in text:
+        if has("今天"):
             return TimeRange(start=today, end_exclusive=today + timedelta(days=1))
-        if "昨天" in text:
+        if has("昨天"):
             day = today - timedelta(days=1)
             return TimeRange(start=day, end_exclusive=today)
-        if "今年" in text or "本年" in text:
+        if has("今年") or has("本年"):
             return TimeRange(start=date(today.year, 1, 1), end_exclusive=date(today.year + 1, 1, 1))
-        if "去年" in text:
+        if has("去年"):
             return TimeRange(start=date(today.year - 1, 1, 1), end_exclusive=date(today.year, 1, 1))
-        if "本季度" in text or "这个季度" in text:
+        if has("本季度") or has("这个季度"):
             month = ((today.month - 1) // 3) * 3 + 1
             start = date(today.year, month, 1)
             end = date(today.year + (month == 10), 1 if month == 10 else month + 3, 1)
             return TimeRange(start=start, end_exclusive=end)
-        if "上季度" in text or "上个季度" in text:
+        if has("上季度") or has("上个季度"):
             current_month = ((today.month - 1) // 3) * 3 + 1
             end = date(today.year, current_month, 1)
             previous = end - timedelta(days=1)
             start_month = ((previous.month - 1) // 3) * 3 + 1
             return TimeRange(start=date(previous.year, start_month, 1), end_exclusive=end)
-        if "下月" in text or "下个月" in text:
+        if has("下月") or has("下个月"):
             start = next_month_start(today.year, today.month)
             end = next_month_start(start.year, start.month)
             return TimeRange(start=start, end_exclusive=end)

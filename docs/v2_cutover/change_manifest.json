@@ -1,64 +1,86 @@
 {
-  "baseline_commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
-  "feature_branch": "cutover-recorded-oracle-20260909t055600z",
+  "baseline_commit": "c19e65544664395200d814300e27d330006ea9a1",
+  "feature_branch": "cutover-governed-time-20260909t062000z",
   "files": [
     {
-      "repository_path": "tools/cutover/run_raw_transition_benchmark.py",
-      "development_sha256": "8a75cab71720a6d0d6194339ff1cbe5216f25b3303683917e2282753722b12a2",
-      "normalized_sha256": "8a75cab71720a6d0d6194339ff1cbe5216f25b3303683917e2282753722b12a2",
-      "baseline_sha256": "02c4a6cf5bfd9ae91080715c3d4261b65574cbaeb7a61b272373c00769f7efae"
+      "repository_path": "app/intent/classifier.py",
+      "development_sha256": "2a365abf07b464c407a315a4a46cbadf1723425620d73e12e0ea0cc713763bdf",
+      "normalized_sha256": "2a365abf07b464c407a315a4a46cbadf1723425620d73e12e0ea0cc713763bdf",
+      "baseline_sha256": "3c96419c6611678907fca71c222e1a8566256ca71df9e7d02bf4213d38dc3298"
     },
     {
-      "repository_path": "tests/test_cutover_recorded_oracle.py",
-      "development_sha256": "c6263475eca6006cd2f5d18b0aeefda46d1f6352b3f89d19c4bdb6b45cde4032",
-      "normalized_sha256": "c6263475eca6006cd2f5d18b0aeefda46d1f6352b3f89d19c4bdb6b45cde4032",
+      "repository_path": "app/semantic_v2/explicit_time.py",
+      "development_sha256": "959f66794fdd8e1e21ebad1f2ecaf6318c9cc2173ce0e65c85f103ce104f1e38",
+      "normalized_sha256": "959f66794fdd8e1e21ebad1f2ecaf6318c9cc2173ce0e65c85f103ce104f1e38",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "app/semantic_v2/recognition.py",
+      "development_sha256": "a662d452a9b7199352a7471913cfc33803b4969a0f7267b1520b2d95e5fd3b68",
+      "normalized_sha256": "f423e4e9e5f66872fb09c5ba3d48aa242b5514d6690bbd1acefa9cff9a13f48e",
+      "baseline_sha256": "6e825018dff11474e4fa85a756f6e2d29d9095c5d9aa27050c2d553ca233b30a"
+    },
+    {
+      "repository_path": "tests/test_v2_explicit_time.py",
+      "development_sha256": "240fd7f1afbf6b324748042c914873abaf0c84909a4449403c153f71354eddad",
+      "normalized_sha256": "240fd7f1afbf6b324748042c914873abaf0c84909a4449403c153f71354eddad",
       "baseline_sha256": null
     },
     {
       "repository_path": "docs/v2_cutover/closure_report.md",
-      "development_sha256": "5d54d1aa3a5dc8752cfda33eae80ef4b57c8aa0f692826744b8abf59b58f9843",
-      "normalized_sha256": "982e104b343a5713699b4e013424cbd65b93b4780157e02c88a8f2ca34c70de5",
-      "baseline_sha256": "55daeed0ad4f3f0c2daf0d4b3c19a3534ce79f4743c1a1c08753a74b9296c727"
+      "development_sha256": "157062ab698b816e438f1a5671037029c1e2f2dd8ceaa40cfc136bb76040d4b8",
+      "normalized_sha256": "30883b49559396e088e87083b0e4df3c8b1284f2281aadbff9452ecf8c061dc8",
+      "baseline_sha256": "982e104b343a5713699b4e013424cbd65b93b4780157e02c88a8f2ca34c70de5"
     },
     {
       "repository_path": "docs/v2_cutover/test_delta.json",
-      "development_sha256": "8b991bf37c1bf86eddc46d45d1a709dbf673b84924b4978f2ef0cfaeef6cf5f5",
-      "normalized_sha256": "7670db0e86088f0a7a8d2ea0f4eb72839484155ac48173b238754d58611c359f",
-      "baseline_sha256": "24ee8a774e5aa8d8358bfa2f590ed7892afac6f0279a4727abe5f2c176c10c8c"
+      "development_sha256": "8abc9a85c6166b11ae1541468e4e20806ec03a24dd65397d264ba36ab01633c1",
+      "normalized_sha256": "2b9bdddcefdaf37fc64da7fecc2f25ee23ac99b2caf650a7c47bbda2e31d8521",
+      "baseline_sha256": "7670db0e86088f0a7a8d2ea0f4eb72839484155ac48173b238754d58611c359f"
     },
     {
       "repository_path": "docs/v2_cutover/cutover_readiness_matrix.json",
-      "development_sha256": "3d3e569ff15e10610416330e0dfd57e4e3ca13d274609bb3abbe65b2b00ed62a",
-      "normalized_sha256": "ac00f3e16a75d3d3ee8fdacf9830b5c6d807c24afa6dbda7fbf01fd49ff718e9",
-      "baseline_sha256": "2cfa9984196f35fac4d224f2f6fe679fb3a1edf6f5c3a1d0b1a4c803ef3f379b"
+      "development_sha256": "269696906b6f793fbe9599299241fb29e75a617d46934d6fbd5d902a0c9207a6",
+      "normalized_sha256": "48f7fb9dfedddae70858b3a09338c187acd86cd8af739af87e90ba2aeb1c183f",
+      "baseline_sha256": "ac00f3e16a75d3d3ee8fdacf9830b5c6d807c24afa6dbda7fbf01fd49ff718e9"
     },
     {
       "repository_path": "docs/v2_cutover/first_divergence_report.json",
-      "development_sha256": "575bf008ee9a4b40e0782e222f1bfcc8cb8e6d3c762ba95aadf40759c24eba5c",
-      "normalized_sha256": "9566132013b188e18fc26721b9cd02e64dc29c518fac0deb72bd889f497716a9",
-      "baseline_sha256": "ae190a5dccdf80415e5d0e6fde67a0737d05f8199a23889d4e2a6ebd30f7834a"
+      "development_sha256": "6c3618e06eda18c0ece77d0d081a61af9956bd2d5ec84cb4b7a286327210b5ad",
+      "normalized_sha256": "c13c5bea6ae2171fed7abf8297202c04792e6bfab6db91ebb32a176cc39e82c0",
+      "baseline_sha256": "9566132013b188e18fc26721b9cd02e64dc29c518fac0deb72bd889f497716a9"
     },
     {
       "repository_path": "docs/v2_cutover/oracle_evaluation_report.json",
-      "development_sha256": "fba2ac56c5465313929e4f9a280399149f61209c39248e188f4163073842c13c",
-      "normalized_sha256": "04d07194131cee515913c3268d9f32c80b7becaea888f5fb8c4eab136b678f83",
-      "baseline_sha256": "b5c7a9ceeec46c32cf03e6bbd7ee8b6b750b43d4d83c21601234bb41ea2b26ef"
+      "development_sha256": "5f09780fc7a2e4ec75dae48c114e23bbada5ad31c2905ac87d16d62b476bbeaf",
+      "normalized_sha256": "a18fd8c7fdd5b048083cfb66e16e3217f48a61ec1119be3b6e1f5e9acbad975a",
+      "baseline_sha256": "04d07194131cee515913c3268d9f32c80b7becaea888f5fb8c4eab136b678f83"
     },
     {
-      "repository_path": "docs/v2_cutover/recorded_oracle/replay_receipts.json",
-      "development_sha256": "0d62c5904af6a61f11be353e8f934b0dd52aadf8a20e5499c0f255e48de53810",
-      "normalized_sha256": "99882f49c74ad7dd522a323df4b9bf597e95a4e2319182a271a02984dc9fcafa",
+      "repository_path": "docs/v2_cutover/governed_time/contract.json",
+      "development_sha256": "c48e13b3942f8c8cc3c23d4358ca1d6771df6afaef28987a3527800482fc083a",
+      "normalized_sha256": "9dc1eff073d954ea4f5f7b5a46593760e9c5c2589414ae84f6e7afc0ec35b979",
       "baseline_sha256": null
     },
     {
-      "repository_path": "docs/v2_cutover/recorded_oracle/temporal_candidate_evidence.json",
-      "development_sha256": "1dd5fe0924a80263f5004604591411b7fc69354b8c461ed3698711b747afad55",
-      "normalized_sha256": "5686243ec0d1a290ec9998523ee77d3772053d0ef9c1e75298cdb47dd4a87197",
+      "repository_path": "docs/v2_cutover/governed_time/recorded_time_receipts.json",
+      "development_sha256": "07b232b6136f9ccb494dd52a5d23100367faa98ecb3b0621b2ffe3b7817f06db",
+      "normalized_sha256": "aacbe35799b579a1ab3bf34b043b829ca93dfb96ce58328bb7c5be50b78e9492",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/v2_cutover/governed_time/sql_repeat_evidence.json",
+      "development_sha256": "91fbaa1b6be5ac92ec15436633e0bc5752a1b0f3f71694cc4c4f0cf3ea8f92ca",
+      "normalized_sha256": "b9901a66a1b5c5d9801c2a92686473ca198f59e2c64eaf7f4ece731d110d18ce",
       "baseline_sha256": null
     }
   ],
   "normalization": "CRLF to LF only",
-  "runtime_files_changed": [],
+  "runtime_files_changed": [
+    "app/intent/classifier.py",
+    "app/semantic_v2/explicit_time.py",
+    "app/semantic_v2/recognition.py"
+  ],
   "v1_routing_changed": false,
   "private_snapshot_or_credentials_copied": false
 }
