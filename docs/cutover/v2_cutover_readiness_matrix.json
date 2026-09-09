@@ -57,9 +57,10 @@
         "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/state_evaluation/closure_report.md"
       ],
-      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -77,9 +78,10 @@
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/state_evaluation/closure_report.md"
       ],
-      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -96,9 +98,10 @@
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/state_evaluation/closure_report.md"
       ],
-      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -115,9 +118,10 @@
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/state_evaluation/closure_report.md"
       ],
-      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -134,9 +138,10 @@
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/state_evaluation/closure_report.md"
       ],
-      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -153,9 +158,10 @@
         "Raw V2 subtree/membership and partial-time edits pass offline; exact task/version handles and scalar/grain conflict guard: docs/cutover/v2_slot_edits/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/state_evaluation/closure_report.md"
       ],
-      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -173,9 +179,10 @@
         "Current source mapping capture and offline value read/acceptance: docs/cutover/v2_entity_value_sources/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/state_evaluation/closure_report.md"
       ],
-      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -220,9 +227,10 @@
         "docs/cutover/v2_ranking/closure_report.md",
         "docs/cutover/v2_filters/closure_report.md",
         "docs/cutover/v2_bound_sql/closure_report.md",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/state_evaluation/closure_report.md"
       ],
-      "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness. Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Bind actual ASL/SQL output identities and execution receipts to ResultContract, including correct baseline period selection/bucket pairing. Arithmetic consistency alone does not prove source query correctness. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
@@ -359,21 +367,22 @@
     },
     {
       "capability": "Evaluation",
-      "status": "PARTIAL_NOT_ACCEPTED",
+      "status": "NOT_EVALUATED",
       "blocking_level": "P0",
       "blocker_ids": [
         "E-01"
       ],
       "evidence": [
         "Gold/evaluator business metrics not produced",
-        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json"
+        "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
+        "docs/cutover/state_evaluation/closure_report.md"
       ],
-      "next_action": "Expand full V1/V2 state/result labels and holdout evidence independently of production recovery/publication; preserve per-axis denominators and missing predictions as failures.",
+      "next_action": "Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
       "capability": "Real-model Evidence",
-      "status": "PARTIAL_NOT_ACCEPTED",
+      "status": "NOT_EVALUATED",
       "blocking_level": "P1",
       "blocker_ids": [
         "E-02"
@@ -381,9 +390,10 @@
       "evidence": [
         "Real-model calls remain 0; no winner inferred",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/state_evaluation/closure_report.md"
       ],
-      "next_action": "Continue offline evaluation and recorded replays. Restore access using existing configured provider credentials before the next bounded live benchmark; do not substitute a different model or relax acceptance.",
+      "next_action": "Restore existing provider access, verify actual availability of qwen3.6-plus, qwen3.8-max and deepseek-v4-pro, and run the required bounded paired benchmark after Gold is stable. Extra qwen3.7-plus probes do not replace requested candidates.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {
