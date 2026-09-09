@@ -1,8 +1,8 @@
 {
   "status": "PASS_PRECOMMIT_ALIGNMENT",
-  "baseline_commit": "ec48f654d6bcaa48ed09d41d7aca4fcbaedcd82e",
+  "baseline_commit": "871183e62ada81c5526e51948a7e11ba2d3c8908",
   "feature_branch": "evaluation-harness-closure-20260909t083000z",
-  "tracked_and_manifest_files": 1367,
+  "tracked_and_manifest_files": 1370,
   "unexpected_source_drift": 0,
   "normalization": "CRLF to LF only",
   "post_commit_gate": "Every mapped development file = repository file = Git blob; clean tree; original Oagnet HEAD/index preserved"

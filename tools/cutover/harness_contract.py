@@ -101,7 +101,13 @@ def score_case(case, observation):
         else:
             ok=equivalent(expected,observed[axis],axis)
             results[axis]='PASS' if ok else 'FAIL'
-            if not ok:failures.append((AXIS_STAGE[axis],axis))
+            if not ok:
+                stage=AXIS_STAGE[axis]
+                if axis=='mentions' and isinstance(expected,list) and isinstance(observed[axis],list):
+                    boundaries_match=all(any(all(e.get(k)==a.get(k) for k in ('surface','start','end'))
+                        for a in observed[axis]) for e in expected)
+                    if boundaries_match:stage='SEMANTIC_ROLE'
+                failures.append((stage,axis))
     # Scope is mandatory even on a turn-only Gold record. Model/catalog/state
     # observations cannot substitute a copied request scope for actual scope.
     scope=observation.get('scope_evidence',{})
@@ -182,8 +188,15 @@ def common_set(v1, v2):
     def eligible(report):
         return {r['case_id']:r for r in report['details'] if r['fully_evaluable']}
     a,b=eligible(v1),eligible(v2); shared=set(a)&set(b)
+    required=('gold_hash','catalog_hash','candidate_snapshot_hash','as_of','scope',
+              'evaluator_version','evaluator_hash')
+    gaps=[k for k in required if k not in v1 or k not in v2 or v1[k]!=v2[k]]
+    if not v1.get('runtime_parity_verified') or not v2.get('runtime_parity_verified'):
+        gaps.append('runtime_parity_verified')
+    if gaps:shared=set()
     shared={k for k in shared if set(a[k]['axis_results'])==set(b[k]['axis_results'])}
     return {'COMMON_EVALUABLE_SET':sorted(shared),
+            'comparison_valid':not gaps,'parity_gaps':gaps,
             'V1':ratio(sum(a[k]['status']=='PASS' for k in shared),len(shared)),
             'V2':ratio(sum(b[k]['status']=='PASS' for k in shared),len(shared)),
             'V1_ONLY_EVALUABLE':sorted(set(a)-shared),'V2_ONLY_EVALUABLE':sorted(set(b)-shared)}

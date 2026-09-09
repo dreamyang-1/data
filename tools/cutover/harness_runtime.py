@@ -20,11 +20,14 @@ def error_category(record,calls,events):
              (isinstance(c.get('status'),int) and c['status']!=200) for c in calls):
         kind,stage='MODEL_HTTP_ERROR','EXTERNAL_BLOCKER'
     elif reason in {'V2_MODEL_OUTPUT_INVALID','V2_MODEL_OUTPUT_INCOMPLETE'}:
-        kind,stage='MODEL_SCHEMA_ERROR','MENTION_EXTRACTION'
+        kind='MODEL_SCHEMA_ERROR'
+        stage='MENTION_EXTRACTION' if record.get('last_model_stage')=='v2_current_turn' else 'SEMANTIC_QUERY_IR'
     elif reason=='FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED':
         kind,stage='FIXTURE_ERROR','FIXTURE_GAP'
     elif reason in {'MODEL_REQUEST_BUDGET_EXHAUSTED','MODEL_BUDGET_OR_ACCESS_UNAVAILABLE'}:
         kind,stage='MODEL_HTTP_ERROR','EXTERNAL_BLOCKER'
+    elif reason.startswith('CATALOG_'):
+        kind,stage='CATALOG_ERROR','CATALOG_GAP'
     else:
         kind='MODEL_SEMANTIC_ERROR' if reason.startswith('V2_') else 'RUNTIME_ERROR'
         known={'TaskPatchInput':'TASK_OPERATION','TaskSemanticState':'TASK_REDUCER',
@@ -141,8 +144,12 @@ class HarnessRuntime:
                     if result.get('plan'):
                         # A returned plan proves acceptance. Only independently
                         # supplied labels can prove a silent wrong acceptance.
+                        # A parse-span discrepancy alone does not prove a wrong
+                        # accepted query. Safety needs independently labeled
+                        # plan/state behavior, not an intermediate mention axis.
+                        from tools.cutover.harness_safety import ACCEPTANCE_AXES
                         checked=[equivalent(v,axes[k],k) for k,v in case['labels'].items()
-                                 if k in axes and case['label_provenance'][k]['label_source']!='UNKNOWN']
+                                 if k in ACCEPTANCE_AXES and k in axes and case['label_provenance'][k]['label_source']!='UNKNOWN']
                         if checked:current['safety']['wrong_silent_auto_accept']=not all(checked)
                         if 'pending_action' in case['labels'] and 'pending_action' in axes:
                             current['safety']['pending_hijack']=(case['labels']['pending_action']=='DETACHED' and axes['pending_action']=='ANSWER')

@@ -5,13 +5,13 @@
       "failed": 27
     },
     "final": {
-      "passed": 3122,
+      "passed": 3130,
       "failed": 27
     },
     "collection_errors": [],
     "old_pass_to_new_fail": 0,
     "changed_previous_outcomes": 0,
-    "new_tests": 60,
+    "new_tests": 68,
     "critical": {
       "passed": 160,
       "failed": 0
@@ -20,7 +20,7 @@
       "public_clarification_responses": 89,
       "with_reason_trace": 89
     },
-    "verification_strategy": "Full established batches, dependent batch replay review, then final 60 harness tests after denominator review"
+    "verification_strategy": "Full established batches; final dependent batch (1254 passing) after all evaluator, replay and safety review corrections."
   },
   "oagnet": {
     "baseline": {

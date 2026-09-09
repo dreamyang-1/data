@@ -11,7 +11,8 @@ ROOT=Path(__file__).resolve().parents[2]
 EVALUATOR_FILES=tuple('tools/cutover/'+name for name in (
     'harness_contract.py','harness_corpus.py','harness_fixtures.py','harness_observation.py',
     'harness_runtime.py','harness_replay.py','harness_splits.py','harness_manifest.py','harness_safety.py',
-    'harness_cli.py','harness_dryplan.py','run_raw_transition_benchmark.py','transition_observations.py',
+    'harness_cli.py','harness_dryplan.py','harness_transport_replay.py','harness_replay_corpus.py',
+    'run_raw_transition_benchmark.py','transition_observations.py',
     'frozen_source_values.py','transition_evaluator.py'))
 
 

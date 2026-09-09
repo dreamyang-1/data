@@ -95,3 +95,9 @@ comparison is authorized while harness or semantic safety gates remain open.
 The current work is a harness candidate. Final closure requires the post-harness
 run, artifact parity evidence and remaining-gap review; passing unit tests alone
 does not declare `EVALUATION_HARNESS_CLOSED`.
+
+## Review corrections before final replay baseline
+
+The final scorer separates span-boundary failures from role failures when exact spans match. A mention-only discrepancy cannot establish a wrong silently accepted plan: that safety assertion requires an independently labeled plan or state axis. Transport and draft-schema failures retain distinct stages. Common-set comparison refuses differing frozen inputs or missing runtime parity.
+
+Immutable captures created at the initial harness commit remain unchanged. The final evaluator uses the exact same captures and native runtime with sockets and external clients denied. Incomplete typed responses use the existing RecognitionModelClient with an exact MockTransport and the captured finish reason; missing response evidence is rejected rather than fabricated. Capture commit and evaluator commit are reported separately. Supplemental ASL2 lowering and pinned SQL planning are observed outside RawTurnPlanner and are never reported as integrated production execution.

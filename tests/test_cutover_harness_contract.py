@@ -127,3 +127,35 @@ def test_common_set_excludes_missing_axes_and_different_contracts():
     b=summarize([other],[obs],provenance={})
     common=common_set(a,b)
     assert common['COMMON_EVALUABLE_SET']==[] and common['V1']['N']==common['V2']['N']==0
+
+
+def test_matching_mention_boundary_with_wrong_role_is_role_divergence():
+    case,actual=specimen();mention={'surface':'x','start':0,'end':1,'roles':['MEASURE']}
+    case['labels']['mentions']=[mention]
+    case['label_provenance']['mentions']={'label_source':'DETERMINISTIC_RULE','evidence':['ROLE_CONTRACT']}
+    actual['axes']['mentions']=[{**mention,'roles':['ATTRIBUTE']}]
+    assert score_case(case,actual)['first_divergence_stage']=='SEMANTIC_ROLE'
+    actual['axes']['mentions'][0]['end']=2
+    assert score_case(case,actual)['first_divergence_stage']=='MENTION_BOUNDARY'
+
+
+def test_common_set_requires_same_frozen_inputs_and_runtime_parity():
+    case,actual=specimen()
+    provenance={k:'frozen' for k in ('gold_hash','catalog_hash','candidate_snapshot_hash','as_of','scope','evaluator_version','evaluator_hash')}
+    provenance['runtime_parity_verified']=True
+    a=summarize([case],[actual],provenance=provenance);b=deepcopy(a)
+    assert common_set(a,b)['COMMON_EVALUABLE_SET']==[case['case_id']]
+    b['catalog_hash']='different'
+    assert not common_set(a,b)['comparison_valid'] and not common_set(a,b)['COMMON_EVALUABLE_SET']
+
+
+def test_parse_only_difference_is_not_an_accepted_plan_safety_claim():
+    from tools.cutover.harness_safety import ACCEPTANCE_AXES
+    assert 'mentions' not in ACCEPTANCE_AXES and 'candidate_set' not in ACCEPTANCE_AXES
+    assert {'task_state','canonical_metrics','query_shape'}<=ACCEPTANCE_AXES
+
+
+def test_schema_failures_keep_the_actual_model_stage_and_catalog_errors_are_separate():
+    from tools.cutover.harness_runtime import error_category
+    assert error_category({'reason':'V2_MODEL_OUTPUT_INVALID','last_model_stage':'v2_semantic_edits'},[],[])['stage']=='SEMANTIC_QUERY_IR'
+    assert error_category({'reason':'CATALOG_RELATIONSHIP_REQUIRED'},[],[])['type']=='CATALOG_ERROR'

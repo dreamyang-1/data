@@ -51,7 +51,7 @@ def compare_results(expected,actual):
 
 
 @contextmanager
-def deny_external_calls():
+def deny_external_calls(*, allowed_mock_transport=None):
     """Enter after the event loop exists. No model escape ContextVar is honored."""
     counters={'model_attempts':0,'database_attempts':0,'network_attempts':0,'redis_attempts':0}
     def denied(kind):
@@ -59,7 +59,13 @@ def deny_external_calls():
             counters[kind]+=1
             raise RuntimeError('FROZEN_REPLAY_EXTERNAL_CALL_DENIED')
         return fail
-    async def model_denied(*a,**kw):return denied('model_attempts')()
+    original_send=httpx.AsyncClient.send
+    if allowed_mock_transport is not None and type(allowed_mock_transport) is not httpx.MockTransport:
+        raise ValueError('ONLY_EXACT_MOCK_TRANSPORT_CAN_REPLAY')
+    async def model_denied(client,*a,**kw):
+        if allowed_mock_transport is not None and client._transport is allowed_mock_transport:
+            return await original_send(client,*a,**kw)
+        return denied('model_attempts')()
     with ExitStack() as stack:
         for name in ('connect','connect_ex'):
             stack.enter_context(patch.object(socket.socket,name,denied('network_attempts')))
