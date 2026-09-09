@@ -16,7 +16,7 @@ from .catalog_plans import (RelationshipEditDraft, relationship, complete_catalo
 from .catalog_paths import relationship_path, resolve_alias
 from .temporal_comparisons import ComparisonEditDraft, complete_comparison_patch
 from .source_value_recognition import SourceValueRequestDraft, source_filter_patch, hydrate_choice
-from .explicit_time import normalize_initial_assignment
+from .explicit_time import normalize_initial_assignment, normalize_component_edits, normalize_comparison_edits
 from .catalog_mentions import recover_metric_spans
 from .enums import CatalogType, SemanticRole
 from .pipeline import CurrentTurnParser, CurrentTurnSemanticParse, TurnResolver, collect_bound_refs
@@ -633,8 +633,10 @@ class RawTurnPlanner:
                     for item in v: check(item)
             check(value)
             return value
+        temporal_edits = normalize_component_edits(parse, draft.temporal_edits,
+            prior or m.TaskSemanticState(), now, hydrate)
         extra, traces = lower_edits(prior or m.TaskSemanticState(), target, draft.filter_edits,
-            draft.temporal_edits, hydrate, base, now, comparison_edit=bool(draft.comparison_edits))
+            temporal_edits, hydrate, base, now, comparison_edit=bool(draft.comparison_edits))
         extra.extend(relation_ops)
         for op in extra:
             typed = TypeAdapter(SlotDefinitionRegistry.get(op.slot_path).value_type).validate_python(op.new_value)
@@ -645,7 +647,8 @@ class RawTurnPlanner:
         if {(slot,i) for slot,items in parse.explicit_slot_mentions.items() for i in items} - covered_mentions:
             raise RecognitionFailure('V2_EXPLICIT_SLOT_DROPPED')
         patch = TaskPatch.compile(operations, base_task_version=base)
-        return complete_comparison_patch(prior or m.TaskSemanticState(), patch, draft.comparison_edits), traces
+        comparison_edits = normalize_comparison_edits(parse, draft.comparison_edits, now)
+        return complete_comparison_patch(prior or m.TaskSemanticState(), patch, comparison_edits), traces
 
     @staticmethod
     def _create_pending(session,current,target,resolution,patch,reduced,blockers,operations,kind,parse,now):
