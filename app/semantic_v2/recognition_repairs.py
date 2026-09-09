@@ -61,3 +61,52 @@ def repair_model_parse(parsed: CurrentTurnSemanticParse, *, text: str, turn_id: 
         trace.append({'reason_code': 'EXACT_TOKEN_IN_UNIQUE_DECLARED_TEMPORAL_MENTION',
             'mention_id': mention.mention_id, 'field': f'temporal_expressions[{index}]'})
     return repaired, trace
+
+
+def repair_collection_handle_mentions(draft, *, parse, handles, candidates):
+    """Retag an already selected identity only with unique exact current evidence.
+
+    Catalog handles encode candidate, role and mention. A model can select the
+    correct candidate but copy its handle offered for another current mention.
+    Only metrics/dimensions with one exact display-name mention and one matching
+    offered identity are repaired. No alias/fuzzy/normalized-name inference, new
+    identity, role, evidence, operation or scope is introduced. All later guards
+    still run. Ambiguity and repeated mentions stay rejected.
+    """
+    repaired = draft.model_copy(deep=True)
+    offered = {c['binding_handle']: c for c in candidates}
+    trace = []
+    for index, edit in enumerate(repaired.edits):
+        role = {'metrics': 'MEASURE', 'dimensions': 'GROUP_BY'}.get(edit.slot_path)
+        if role is None or edit.operation == 'CLEAR':
+            continue
+        values = edit.value if isinstance(edit.value, list) else [edit.value]
+        for position, value in enumerate(values):
+            if not isinstance(value, dict) or set(value) != {'binding_handle'}:
+                continue
+            old_handle = value['binding_handle']
+            chosen = offered.get(old_handle)
+            if chosen is None or old_handle not in handles or chosen['role'] != role:
+                continue
+            if chosen['mention_id'] in edit.evidence_mention_ids:
+                continue
+            mentions = [m for m in parse.mentions if m.surface == chosen['name'] and role in m.candidate_roles]
+            if len(mentions) != 1:
+                continue
+            mention = mentions[0]
+            if mention.mention_id not in edit.evidence_mention_ids or mention.mention_id in draft.unresolved_mention_ids:
+                continue
+            matching = [c for c in candidates if c['mention_id'] == mention.mention_id
+                and c['role'] == role and c['name'] == mention.surface and c['binding_handle'] in handles]
+            identities = {handles[c['binding_handle']][0] for c in matching}
+            old_identity = handles[old_handle][0]
+            if identities != {old_identity} or len(matching) != 1:
+                continue
+            new_handle = matching[0]['binding_handle']
+            if handles[new_handle] != (old_identity, handles[old_handle][1], mention.mention_id):
+                continue
+            value['binding_handle'] = new_handle
+            trace.append({'reason_code': 'EXACT_UNIQUE_COLLECTION_MENTION_HANDLE',
+                'field': f'edits[{index}].value[{position}]',
+                'from_mention_id': chosen['mention_id'], 'to_mention_id': mention.mention_id})
+    return repaired, trace

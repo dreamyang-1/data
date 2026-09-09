@@ -145,6 +145,86 @@ def filtered_step():
 
 
 @pytest.mark.asyncio
+async def test_recorded_single_item_add_shape_preserves_multiple_metrics_and_followup(catalog):
+    # The live 81/205 model emitted two ADD edits, each with one offered handle,
+    # rather than an array. Replay that representation with independent fixtures.
+    text='销售额和销售数量'
+    first=(text,parse(text,[('销售额','MEASURE','metrics','ADD'),('销售数量','MEASURE','metrics','ADD')]),
+        lambda c:dict(payload_type='SCALAR_AGGREGATE',edits=[
+            edit('metrics',binding(c,'销售额','MEASURE','m0'),'ADD',('m0',)),
+            # Recorded model copied the quantity handle offered for m0, while
+            # its declared quantity evidence was m1. Identity itself is correct.
+            edit('metrics',binding(c,'销售数量','MEASURE','m0'),'ADD',('m1',))]))
+    next_text='再加订单笔数'
+    second=(next_text,parse(next_text,[('订单笔数','MEASURE','metrics','ADD')],follow=True),
+        lambda c:dict(payload_type='INHERIT',edits=[edit('metrics',binding(c,'订单笔数','MEASURE'),'ADD')]))
+    results=await turns(planner(catalog,[first,second])[0],[first,second])
+    assert {m['canonical_code'] for m in results[0].plan['logical_plan']['payload']['measures']}=={'amount','quantity'}
+    assert {m['canonical_code'] for m in results[1].plan['logical_plan']['payload']['measures']}=={'amount','quantity','orders'}
+    assert results[0].plan['logical_plan']['task_id']==results[1].plan['logical_plan']['task_id']
+    assert results[1].plan['backend_contract']['mode']=='SHADOW_ONLY'
+    assert results[1].next_state.context.authorized_scope.business_domain_ids==(205,)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('operation',['ADD','REMOVE'])
+@pytest.mark.parametrize('slot',['metrics','dimensions'])
+async def test_single_item_collection_edit_matches_array_and_preserves_other_state(catalog,operation,slot):
+    initial_text='销售额和订单笔数'+('按城市分组' if slot=='dimensions' and operation=='REMOVE' else '')
+    specs=[('销售额','MEASURE','metrics','SET'),('订单笔数','MEASURE','metrics','SET')]
+    if slot=='dimensions' and operation=='REMOVE':specs.append(('城市','GROUP_BY','dimensions','SET'))
+    def first_draft(c):
+        edits=[edit('metrics',[binding(c,'销售额','MEASURE','m0'),binding(c,'订单笔数','MEASURE','m1')],ids=('m0','m1'))]
+        if len(specs)==3:edits.append(edit('dimensions',[binding(c,'城市','GROUP_BY','m2')],ids=('m2',)))
+        return dict(payload_type='GROUPED_AGGREGATE' if len(specs)==3 else 'SCALAR_AGGREGATE',edits=edits)
+    first=(initial_text,parse(initial_text,specs),first_draft)
+    surface=('销售数量' if operation=='ADD' else '订单笔数') if slot=='metrics' else '城市'
+    role='MEASURE' if slot=='metrics' else 'GROUP_BY'
+    current=('再加' if operation=='ADD' else '不要')+surface
+    parsed=parse(current,[(surface,role,slot,operation)],follow=True)
+    observed=[]
+    for singleton in (False,True):
+        def second_draft(c):
+            value=binding(c,surface,role)
+            kind='GROUPED_AGGREGATE' if slot=='dimensions' and operation=='ADD' else 'SCALAR_AGGREGATE'
+            return dict(payload_type=kind,edits=[edit(slot,value if singleton else [value],operation)])
+        second=(current,parsed,second_draft)
+        result=(await turns(planner(catalog,[first,second])[0],[first,second]))[-1]
+        payload=result.plan['logical_plan']['payload']
+        observed.append(({m['canonical_code'] for m in payload['measures']},{d['canonical_code'] for d in payload.get('group_by',[])}))
+    assert observed[0]==observed[1]
+    assert observed[1][0]==({'amount','orders','quantity'} if slot=='metrics' and operation=='ADD' else {'amount'} if slot=='metrics' else {'amount','orders'})
+    assert observed[1][1]==({'city'} if slot=='dimensions' and operation=='ADD' else set())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('operation',['SET','REPLACE'])
+async def test_assignment_still_requires_the_complete_collection(catalog,operation):
+    step=metric_step('销售额',operation=operation)
+    bad=(step[0],step[1],lambda c:dict(payload_type='SCALAR_AGGREGATE',edits=[edit('metrics',binding(c,'销售额','MEASURE'),operation)]))
+    with pytest.raises(RecognitionFailure,match='V2_CONTRACT_VALIDATION_FAILURE'):
+        await turns(planner(catalog,[bad])[0],[bad])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('operation',['ADD','REMOVE'])
+@pytest.mark.parametrize('fault',['foreign_handle','wrong_role','outside_evidence','null_value'])
+async def test_single_item_edits_keep_handle_role_and_current_evidence_guards(catalog,operation,fault):
+    text='销售额销售数量'
+    parsed=parse(text,[('销售额','MEASURE','metrics',operation),('销售数量','MEASURE','metrics',None)])
+    if fault=='wrong_role':parsed['mentions'][0]['candidate_roles']=['GROUP_BY']
+    def draft(c):
+        value=({'binding_handle':'not-offered'} if fault=='foreign_handle' else
+            binding(c,'城市','GROUP_BY') if fault=='wrong_role' else
+            binding(c,'销售数量','MEASURE','m1') if fault=='outside_evidence' else None)
+        return dict(payload_type='SCALAR_AGGREGATE',edits=[edit('metrics',value,operation)])
+    expected={'foreign_handle':'V2_BINDING_HANDLE_NOT_OFFERED','wrong_role':'V2_SLOT_ROLE_CONFLICT',
+        'outside_evidence':'V2_BINDING_OUTSIDE_EDIT_EVIDENCE','null_value':'V2_CONTRACT_VALIDATION_FAILURE'}[fault]
+    with pytest.raises(RecognitionFailure,match=expected):
+        await turns(planner(catalog,[(text,parsed,draft)])[0],[(text,parsed,draft)])
+
+
+@pytest.mark.asyncio
 async def test_clear_filter_survives_next_add(catalog):
     clear=('不限地区',parse('不限地区',[('不限地区','FILTER_FIELD','filter_expression','CLEAR')],follow=True),
         dict(payload_type='INHERIT',edits=[edit('filter_expression',None,'CLEAR')]))

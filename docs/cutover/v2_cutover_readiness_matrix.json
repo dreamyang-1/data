@@ -13,7 +13,8 @@
         "Raw-input HTTP/mock transport, pinned candidate, reducer and common payload integration: docs/cutover/v2_recognition/closure_report.md; actual model quality/full semantic coverage still unproven",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/qwen37_benchmark/collection_failure_evidence.json"
       ],
       "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
@@ -35,7 +36,8 @@
         "Typed temporal dependency/period-output acceptance: docs/cutover/v2_temporal_comparisons/closure_report.md",
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/qwen37_benchmark/collection_failure_evidence.json"
       ],
       "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
@@ -58,7 +60,8 @@
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
         "docs/cutover/parser_repairs/closure_report.md",
-        "docs/cutover/state_evaluation/closure_report.md"
+        "docs/cutover/state_evaluation/closure_report.md",
+        "docs/cutover/qwen37_benchmark/collection_failure_evidence.json"
       ],
       "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
@@ -79,7 +82,8 @@
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
         "docs/cutover/parser_repairs/closure_report.md",
-        "docs/cutover/state_evaluation/closure_report.md"
+        "docs/cutover/state_evaluation/closure_report.md",
+        "docs/cutover/qwen37_benchmark/collection_failure_evidence.json"
       ],
       "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Integrate the autonomous recognition path through ScopedPlanSession; retain current-request and state isolation guards. Runtime adoption remains gated by catalog/evaluation/shadow evidence. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
@@ -99,7 +103,8 @@
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
         "docs/cutover/parser_repairs/closure_report.md",
-        "docs/cutover/state_evaluation/closure_report.md"
+        "docs/cutover/state_evaluation/closure_report.md",
+        "docs/cutover/qwen37_benchmark/collection_failure_evidence.json"
       ],
       "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
@@ -119,7 +124,8 @@
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
         "docs/cutover/parser_repairs/closure_report.md",
-        "docs/cutover/state_evaluation/closure_report.md"
+        "docs/cutover/state_evaluation/closure_report.md",
+        "docs/cutover/qwen37_benchmark/collection_failure_evidence.json"
       ],
       "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
@@ -139,7 +145,8 @@
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
         "docs/cutover/parser_repairs/closure_report.md",
-        "docs/cutover/state_evaluation/closure_report.md"
+        "docs/cutover/state_evaluation/closure_report.md",
+        "docs/cutover/qwen37_benchmark/collection_failure_evidence.json"
       ],
       "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
@@ -159,7 +166,8 @@
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
         "docs/cutover/parser_repairs/closure_report.md",
-        "docs/cutover/state_evaluation/closure_report.md"
+        "docs/cutover/state_evaluation/closure_report.md",
+        "docs/cutover/qwen37_benchmark/collection_failure_evidence.json"
       ],
       "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
@@ -180,7 +188,8 @@
         "Raw source-value/Pending/current restore offline evidence: docs/cutover/v2_source_value_binding/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
         "docs/cutover/parser_repairs/closure_report.md",
-        "docs/cutover/state_evaluation/closure_report.md"
+        "docs/cutover/state_evaluation/closure_report.md",
+        "docs/cutover/qwen37_benchmark/collection_failure_evidence.json"
       ],
       "next_action": "Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison. Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes. Connect paired complete V1/V2 observations to the same labeled transitions, finish full TaskPatch/plan/clarification and safety labels, and investigate measured state differences at the actual first divergence. Do not treat rule-seam results as production accuracy.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
@@ -209,7 +218,8 @@
         "docs/cutover/pinned_relation_endpoints/closure_report.md",
         "docs/cutover/relation_identity/closure_report.md",
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
-        "docs/cutover/parser_repairs/closure_report.md"
+        "docs/cutover/parser_repairs/closure_report.md",
+        "docs/cutover/qwen37_benchmark/collection_failure_evidence.json"
       ],
       "next_action": "Use the reviewed provisional identities per eligible shape; keep exact order/entity grain and unresolved relation paths scoped to affected cases. Continue independent role/mention/turn evaluation. Continue frozen-catalog evaluation. Validate actual entity-value lookup and result behavior for cases that require source values; do not block unrelated axes. Continue offline full-state/canonical label and evaluator work; investigate measured semantic mismatches and two rejected references without loosening validation. Provider access must recover before further live comparison.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
@@ -391,9 +401,10 @@
         "Stage-specific eligibility: docs/cutover/evaluation_gates/gate_matrix.json",
         "docs/cutover/parser_repairs/closure_report.md",
         "docs/cutover/state_evaluation/closure_report.md",
-        "docs/cutover/model_configuration/smoke.json: qwen3.7-max access/parse validation only; no quality winner inferred"
+        "docs/cutover/model_configuration/smoke.json: qwen3.7-max access/parse validation only; no quality winner inferred",
+        "docs/cutover/qwen37_benchmark/parser_comparison.json; full component runs are not full V1/V2 replacement evidence"
       ],
-      "next_action": "Measure the user-selected qwen3.7-max against the unchanged frozen Gold and record model provenance separately. Complete paired V1/V2 evaluation and the outstanding comparison candidate requirements; a configuration choice or one smoke pass is not a model-quality winner.",
+      "next_action": "Complete paired full V1/V2 state/canonical observations and outstanding candidate/Thinking requirements. Keep the user-selected default; do not infer a winner from parser acceptance or one run.",
       "status_scope": "PRODUCTION_REPLACEMENT_ACCEPTANCE"
     },
     {

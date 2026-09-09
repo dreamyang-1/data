@@ -20,7 +20,7 @@ from .enums import CatalogType, SemanticRole
 from .pipeline import CurrentTurnParser, CurrentTurnSemanticParse, TurnResolver, collect_bound_refs
 from .pipeline import AuthorizedLogicalPlan
 from .recognition_client import RecognitionFailure
-from .recognition_repairs import repair_model_parse
+from .recognition_repairs import repair_model_parse, repair_collection_handle_mentions
 from .pending_recognition import (AmbiguityDraft, PendingResume, clarification_result,
     governed_aliases, pending_identity, prepare_ambiguities, selected_option)
 from .registries import PayloadContractRegistry, SlotDefinitionRegistry
@@ -275,6 +275,10 @@ class RawTurnPlanner:
                     'task_version': d.task_version} for h,d in datasets.items()],
                 'payload_types': [*PayloadContractRegistry.definitions, 'INHERIT'],
                 'value_schema': value_schema()}, output_model=SemanticTaskDraft)
+        draft, handle_repairs = repair_collection_handle_mentions(draft, parse=parse, handles=handles, candidates=candidates)
+        if handle_repairs:
+            logging.getLogger(__name__).info('V2 collection handle representation repaired',
+                extra={'message_id': request.message_id, 'handle_repairs': handle_repairs})
         draft,blockers,pending_operations,deferred=prepare_ambiguities(session,parse,draft,handles,candidates,SlotEditDraft)
         historical = tasks.get(draft.historical_task_handle)
         if draft.historical_task_handle and ('HISTORICAL' not in parse.reference_signals or historical is None):
@@ -530,7 +534,14 @@ class RawTurnPlanner:
                     raise RecognitionFailure('V2_TIME_POLICY_EVIDENCE_REQUIRED')
                 value['as_of'] = now.isoformat()
             if edit.operation not in {'CLEAR'}:
-                typed = TypeAdapter(SlotDefinitionRegistry.get(edit.slot_path).value_type).validate_python(value)
+                definition = SlotDefinitionRegistry.get(edit.slot_path)
+                checked_value = value
+                # TaskPatch accepts single-item ADD/REMOVE for set-valued slots.
+                # Validate the item as that collection without changing the edit;
+                # SET/REPLACE and all role/current-evidence checks remain strict.
+                if definition.cardinality == 'SET' and edit.operation in {'ADD', 'REMOVE'} and not isinstance(value, list):
+                    checked_value = [value]
+                typed = TypeAdapter(definition.value_type).validate_python(checked_value)
                 expected = {'metrics': 'MEASURE', 'dimensions': 'GROUP_BY'}
                 if edit.slot_path in expected and any(r.semantic_role != expected[edit.slot_path] for r in collect_bound_refs(typed)):
                     raise RecognitionFailure('V2_SLOT_ROLE_CONFLICT')
