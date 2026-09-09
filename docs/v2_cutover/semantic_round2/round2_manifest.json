@@ -1,0 +1,74 @@
+{
+  "baseline_commit": "4d12cf6dd11239e6f2e76f91f43bbdeed0bc2c2b",
+  "diagnostic_files": {
+    "tools/cutover/projection_round2.py": "d5c3357a61f3698b697e5bafc2740751990f5158969d2c92f36ec036b3bd6ad7",
+    "tests/test_v2_projection_round2.py": "97b1d5e5b64fc3f64a77a27a40c6c608628a64b411c2860bd8f9209389ffda75",
+    "tests/test_v2_context_followup_critical_slice.py": "5372ea6a7c51bb9f53a839ea8b45e29ee1f73e0dfb492a331e97817601f83061"
+  },
+  "diagnostic_code_hash": "1819fbd38382259a957412673360f2f24e82f6a569232a7e8c0c1b2f1d2f22ed",
+  "frozen_pins": {
+    "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+    "runtime_source_hash": "bde2f66fc3bb2462cdb7e8935d727278a49ddc12c9ee7c0274b137ab76b9485b",
+    "prompts": {
+      "PARSE": {
+        "version": "v2-current-recognition-v8",
+        "hash": "621522c249ef4ab58a08eba2e0a8140a40f9afcf21f0bff85cea05e3baa62412",
+        "line_count": 16,
+        "sentence_units": 19
+      },
+      "DRAFT": {
+        "version": "v2-current-recognition-v8",
+        "hash": "446b110d7b3411d585858c8e6919dafc7739c5152b5d3934127908e91ff1122d",
+        "line_count": 63,
+        "sentence_units": 63
+      },
+      "PROBE": {
+        "version": "v2-source-value-choice-v1",
+        "hash": "18c52183ff785de85c9c9afc2b906cdacfdd56b0cb852451b452387d32968fcf",
+        "line_count": 8,
+        "sentence_units": 10
+      }
+    },
+    "schema_hashes": {
+      "current_turn": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+      "semantic_draft_template": "306d5c5f8a9191a0923b100ef6d5ef4e0ff4fe1d98668e521dbe5b3b9fa86421",
+      "value_choice_template": "ae2cb6191e0bbf34e5fa39e11fc976414cf10c52df1d07a47bd820474aca0bf7"
+    },
+    "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "candidate_snapshot_hash": "d7668b20c8f611570829a6b4115d8c7dd5d19e4b051bc271e93810579276d007",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "as_of": "2026-09-09T09:00:00+08:00",
+    "model": "qwen3.7-max",
+    "thinking_mode": false,
+    "temperature": 0,
+    "retry_policy": {
+      "max_retries": 0
+    },
+    "blind_holdout_hash": "206dcc76c50852bb2fd810ab04e3a1c8131d88dad674d343b37f2b60285233d1"
+  },
+  "production_changes": 0,
+  "prompt_changes": 0,
+  "regex_added": 0,
+  "business_keywords_added": 0,
+  "schema_changes": 0,
+  "evaluator_changes": 0,
+  "new_architecture_components": 0,
+  "real_model_calls": 0,
+  "blind_calls": 0,
+  "production_writes": 0,
+  "previous_private_promoted": [
+    "PV81-010",
+    "PV81-016"
+  ],
+  "new_private_promoted": 0,
+  "remaining_private_read_for_debug": 0,
+  "inherited_full_agent_baseline_only": true,
+  "stop_after_round": true
+}

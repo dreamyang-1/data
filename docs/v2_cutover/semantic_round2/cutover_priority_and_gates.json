@@ -1,0 +1,90 @@
+{
+  "projection_stop_conditions_met": [
+    "Model role/explicitness misassertion originates in raw capture; no automatic role-to-marker conversion proven",
+    "Ten diagnostic continuations reach known query-shape/relationship boundary",
+    "No wrong TargetTask/state inheritance or unsafe accept observed in original13"
+  ],
+  "next_round": "TURN_RESOLUTION / CONTEXT FOLLOW-UP ROOT CLOSURE",
+  "next_round_started": false,
+  "ordered_candidates": [
+    {
+      "rank": 1,
+      "candidate": "TURN_RESOLUTION / EXPLICIT_SLOT_PRESERVATION",
+      "coverage_upper_bound": 12,
+      "severity": "P1",
+      "cutover_relevance": [
+        "FOLLOWUP_BLOCKER"
+      ],
+      "silent_risk": "POTENTIAL_NOT_PROVEN",
+      "next_action": "Causal-order audit from remaining-private aggregate and existing public controls; promote before any private case debugging"
+    },
+    {
+      "rank": 2,
+      "candidate": "TARGET_TASK / HISTORICAL_RETURN / PENDING ADMISSIBILITY",
+      "severity": "P1",
+      "cutover_relevance": [
+        "HISTORICAL_RETURN_BLOCKER",
+        "CLARIFICATION_BLOCKER"
+      ],
+      "coverage_upper_bound": null,
+      "next_action": "Close actual history evidence and live task/Pending safety coverage; controlled slice is not model proof"
+    },
+    {
+      "rank": 3,
+      "candidate": "SEMANTIC_QUERY_IR / V2_RECOGNITION_UNRESOLVED",
+      "coverage_upper_bound": 6,
+      "severity": "P1",
+      "cutover_relevance": [
+        "BASE_TASK_BLOCKER",
+        "FOLLOWUP_BLOCKER"
+      ],
+      "next_action": "Separate model omission, genuine user ambiguity and catalog dependency; no whole-IR rewrite"
+    },
+    {
+      "rank": 4,
+      "candidate": "Projection MODEL_ROLE / MENTION_BOUNDARY",
+      "coverage_upper_bound": 13,
+      "severity": "P1",
+      "cutover_relevance": [
+        "BASE_TASK_BLOCKER"
+      ],
+      "impact": "FIRST_TURN_ONLY",
+      "indirect_history_prefix_blocks": 5,
+      "next_action": "Park until high-impact context roots are closed; no next Projection round by default"
+    }
+  ],
+  "gates": [
+    {
+      "gate": "CONTEXT_FOLLOWUP_READY",
+      "status": "NOT_READY",
+      "missing": "Real recognition follow-up/target/slot roots and live safety; 8 controlled cases cannot close semantic model coverage"
+    },
+    {
+      "gate": "SEMANTIC_FREEZE_CANDIDATE",
+      "status": "NOT_READY",
+      "missing": "Critical semantic roots and safety convergence; maintain current pins without declaring a release candidate"
+    },
+    {
+      "gate": "BLIND_HOLDOUT",
+      "status": "SEALED_NOT_RUN",
+      "missing": "Semantic freeze candidate plus approved entry criteria"
+    },
+    {
+      "gate": "MODEL_BENCHMARK",
+      "status": "NOT_STARTED_FORBIDDEN_THIS_ROUND",
+      "missing": "Critical root convergence, frozen candidate, gated blind evaluation and Hard Safety"
+    },
+    {
+      "gate": "PLAN_ONLY_SHADOW",
+      "status": "NOT_STARTED_FORBIDDEN_THIS_ROUND",
+      "missing": "Evaluation gates, Dataset/DryPlan capability where applicable, scope-safe isolated execution"
+    },
+    {
+      "gate": "CANARY_CUTOVER",
+      "status": "NOT_READY",
+      "missing": "V1/V2 comparison, shadow evidence, publication/recovery evidence and final user approval"
+    }
+  ],
+  "V1_production_routing": "UNCHANGED",
+  "READY_FOR_USER_APPROVAL": false
+}

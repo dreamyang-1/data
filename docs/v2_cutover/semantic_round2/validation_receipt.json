@@ -1,0 +1,35 @@
+{
+  "round2": {
+    "status": "PASS",
+    "stage_status": "SEMANTIC_ROOT_CLOSURE_ROUND_2_COMPLETE",
+    "evidence_hash": "c531471b76872ba0f5569739b10a36f5135edeeb2094d40274faf15f3282a628",
+    "evidence_files": 11,
+    "parent_round1_calibration_harness": "PASS",
+    "production_changes": 0,
+    "model_calls": 0,
+    "private_or_blind_payload_reads": 0,
+    "production_writes": 0,
+    "full_agent_rerun": false
+  },
+  "engineering_tests": "test_delta.json",
+  "review": {
+    "production_source_changes": 0,
+    "raw_normalized_roles_identical": true,
+    "no_automatic_role_to_marker_conversion": true,
+    "true_explicit_unresolved_remains_rejected": true,
+    "blanket_demote_negative_control_demonstrates_silent_loss": true,
+    "original_frozen_captures_unchanged": true,
+    "B_reuses_exact_Round1_evidence": true,
+    "A_candidate_snapshot_frozen_but_role_offerings_may_change": true,
+    "Oracle_acceptance_not_Gold_pass": true,
+    "context_slice_is_controlled_runtime_not_live_model_accuracy": true,
+    "context_axes_observed_from_native_outputs": true,
+    "geographic_grounding_not_claimed": true,
+    "old_Gold_history_not_fabricated_or_relabelled": true,
+    "remaining_private_not_debugged": true,
+    "Blind_Holdout_untouched": true,
+    "full_regression_not_mechanically_repeated": true,
+    "next_round_not_started": true,
+    "owned_scripts_or_tests_still_running": 0
+  }
+}
