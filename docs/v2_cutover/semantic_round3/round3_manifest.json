@@ -1,0 +1,70 @@
+{
+  "stage": "SEMANTIC_ROOT_CLOSURE_ROUND_3_COMPLETE",
+  "baseline": "d01d305e23059d99d147aa4a5d2f1ff6022e02e1",
+  "frozen_pins": {
+    "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+    "runtime_source_hash": "bde2f66fc3bb2462cdb7e8935d727278a49ddc12c9ee7c0274b137ab76b9485b",
+    "prompts": {
+      "PARSE": {
+        "version": "v2-current-recognition-v8",
+        "hash": "621522c249ef4ab58a08eba2e0a8140a40f9afcf21f0bff85cea05e3baa62412",
+        "line_count": 16,
+        "sentence_units": 19
+      },
+      "DRAFT": {
+        "version": "v2-current-recognition-v8",
+        "hash": "446b110d7b3411d585858c8e6919dafc7739c5152b5d3934127908e91ff1122d",
+        "line_count": 63,
+        "sentence_units": 63
+      },
+      "PROBE": {
+        "version": "v2-source-value-choice-v1",
+        "hash": "18c52183ff785de85c9c9afc2b906cdacfdd56b0cb852451b452387d32968fcf",
+        "line_count": 8,
+        "sentence_units": 10
+      }
+    },
+    "schema_hashes": {
+      "current_turn": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+      "semantic_draft_template": "306d5c5f8a9191a0923b100ef6d5ef4e0ff4fe1d98668e521dbe5b3b9fa86421",
+      "value_choice_template": "ae2cb6191e0bbf34e5fa39e11fc976414cf10c52df1d07a47bd820474aca0bf7"
+    },
+    "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "candidate_snapshot_hash": "d7668b20c8f611570829a6b4115d8c7dd5d19e4b051bc271e93810579276d007",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "as_of": "2026-09-09T09:00:00+08:00",
+    "model": "qwen3.7-max",
+    "thinking_mode": false,
+    "temperature": 0,
+    "retry_policy": {
+      "max_retries": 0
+    },
+    "blind_holdout_hash": "206dcc76c50852bb2fd810ab04e3a1c8131d88dad674d343b37f2b60285233d1"
+  },
+  "diagnostic_files": {
+    "tools/cutover/context_round3.py": "bfa622aa4c8b03c4220ac2837bc55426bf56abf44c9281a8f2230c4ececea992",
+    "tools/cutover/context_round3_replay.py": "9157a9356e11f63e45be0c7188ae281b74f37bf4e0076ececc4afd3f1ccf162f",
+    "tools/cutover/context_round3_controls.py": "274d3fbbc3cf5535679fd8f962f681600457ab674f49a03e883fa358f2c6044d",
+    "tests/test_v2_context_round3.py": "4837357e85c638e354c8a724696365b47543dfd316aa7b421d3dc1d76573cb85"
+  },
+  "diagnostic_code_hash": "11ace142717dc691773751bf4d7b97cd7e687360302d89820741715cf0388bd4",
+  "production_changes": 0,
+  "prompt_changes": 0,
+  "schema_changes": 0,
+  "production_regex_added": 0,
+  "production_business_keywords_added": 0,
+  "real_model_calls": 0,
+  "production_writes": 0,
+  "blind_calls": 0,
+  "private_promoted_total": 4,
+  "private_remaining": 20,
+  "no_independent_context_model_in_current_schema": true,
+  "full_regression_not_rerun": true
+}

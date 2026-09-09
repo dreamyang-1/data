@@ -1,0 +1,23 @@
+{
+  "fields": [
+    "MODEL_RELATION",
+    "MODEL_TARGET_TASK",
+    "DETERMINISTIC_CONSTRAINT",
+    "FINAL_DECISION",
+    "OVERRIDE_DIRECTION",
+    "OVERRIDE_REASON",
+    "HARD_OR_SOFT"
+  ],
+  "provenance": [
+    "CURRENT_EXPLICIT",
+    "ACTIVE_TASK_INHERITED",
+    "HISTORICAL_TASK_INHERITED",
+    "PENDING_RESUME",
+    "CATALOG_DERIVED",
+    "DEFAULT"
+  ],
+  "current_runtime": "Parse/resolution/current slot provenance/structured edit trace available separately. No consolidated model-vs-constraint arbitration event.",
+  "this_round": "Offline decision trace in arbitration_coverage.json; diagnostic source explicit, no full sensitive text in permanent audit.",
+  "production_change": false,
+  "core_gate": "INCOMPLETE_OBSERVABILITY_AND_CONTEXT_SEMANTIC_DECISION_CONTRACT"
+}
