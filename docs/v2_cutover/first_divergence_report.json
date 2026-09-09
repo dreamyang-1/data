@@ -2793,5 +2793,11 @@
         "private_capture_hash": "5963b2b02c5ec77dcaf2267fcff696bc898d45647cdbf192d31650c9a2cb1cc6"
       }
     ]
+  },
+  "temporal_authority_stage": {
+    "baseline_commit": "42547ca85fcc9a2ad6f83260df444ada3ea81ddd",
+    "evidence": "temporal_authority/first_divergence.json",
+    "status": "THREE_EXECUTED_COUNTEREXAMPLES_FIXED; LEGACY_INITIAL_PATH_COVERED",
+    "recorded_original_results_preserved": 25
   }
 }

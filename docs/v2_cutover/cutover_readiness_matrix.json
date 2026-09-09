@@ -1,7 +1,7 @@
 {
-  "current_stage": "CATALOG_METRIC_BOUNDARY_AND_TEMPORAL_OBSERVATION",
+  "current_stage": "DETERMINISTIC_TEMPORAL_EDIT_AND_COMPARISON_AUTHORITY",
   "readiness": "NOT_READY",
-  "baseline_commit": "9d680ae096b9deafe42767d0d7952e0525be0c0a",
+  "baseline_commit": "42547ca85fcc9a2ad6f83260df444ada3ea81ddd",
   "production_acceptance_groups": {
     "P0": 8,
     "P1": 4
@@ -38,9 +38,10 @@
         "recorded_oracle/temporal_candidate_evidence.json",
         "governed_time/contract.json",
         "compound_mentions/contract.json",
-        "compound_mentions/comparison.json"
+        "compound_mentions/comparison.json",
+        "temporal_authority/contract.json"
       ],
-      "next_action": "Complete deterministic temporal component ownership and scoped source-value canonicalization; retain model operation/shape failures and Pending/Dataset/whole-plan evaluation gaps. Do not widen matching or lower acceptance."
+      "next_action": "Close source-value resolution with current scoped catalog and bounded read-only evidence; preserve real role/operation/shape ambiguity. Complete Pending/Dataset/whole-plan/Oracle evaluation and model comparison before shadow."
     },
     {
       "blocker_id": "EVALUATION-COVERAGE",
@@ -69,9 +70,10 @@
         "recorded_oracle/temporal_candidate_evidence.json",
         "governed_time/contract.json",
         "compound_mentions/contract.json",
-        "compound_mentions/comparison.json"
+        "compound_mentions/comparison.json",
+        "temporal_authority/contract.json"
       ],
-      "next_action": "Complete deterministic temporal component ownership and scoped source-value canonicalization; retain model operation/shape failures and Pending/Dataset/whole-plan evaluation gaps. Do not widen matching or lower acceptance."
+      "next_action": "Close source-value resolution with current scoped catalog and bounded read-only evidence; preserve real role/operation/shape ambiguity. Complete Pending/Dataset/whole-plan/Oracle evaluation and model comparison before shadow."
     },
     {
       "blocker_id": "PRODUCTION-PUBLICATION",

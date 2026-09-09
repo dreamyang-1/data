@@ -54,5 +54,12 @@
     "all_listed_targeted_axes_passed": true,
     "full_oracle_suite_complete": false,
     "production_cutover_pass": false
+  },
+  "temporal_authority_stage": {
+    "evidence": "temporal_authority/replay_receipts.json",
+    "exact_replays": 25,
+    "new_model_calls": 0,
+    "full_oracle_suite_complete": false,
+    "production_cutover_pass": false
   }
 }
