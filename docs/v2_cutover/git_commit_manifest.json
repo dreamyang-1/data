@@ -1,10 +1,10 @@
 {
-  "baseline_commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
-  "feature_branch": "cutover-source-evidence-20260909t052100z",
+  "baseline_commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
+  "feature_branch": "cutover-recorded-oracle-20260909t055600z",
   "final_commit": "Commit containing this manifest",
-  "planned_subject": "cutover: verify frozen source evidence and capture full evaluation turns",
+  "planned_subject": "cutover: replay recorded turns through native scope and plan contracts",
   "runtime_source_changed": false,
   "evidence": "closure_report.md and test_delta.json",
-  "draft_pr_base": "cutover-replacement-oracle-20260909t045212z",
-  "stage_baseline": "9696077296b29ee8eb9d381c60e376053d4cf035"
+  "draft_pr_base": "cutover-source-evidence-20260909t052100z",
+  "stage_baseline": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64"
 }

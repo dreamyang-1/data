@@ -1,5 +1,5 @@
 {
-  "baseline_commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
+  "baseline_commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
   "rollback": "Revert this feature commit to restore the previous evaluator and runner. Private read-only evidence is kept outside Git. No model/key, runtime code, public I/O, V1 route, native publication or production state was changed.",
   "native_publication_performed": false,
   "redis_mutation_performed": false,

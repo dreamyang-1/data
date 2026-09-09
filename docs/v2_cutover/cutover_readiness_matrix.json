@@ -1,7 +1,7 @@
 {
-  "current_stage": "FROZEN_SOURCE_EVIDENCE_AND_COMPLETE_PRIVATE_TURN_CAPTURE",
+  "current_stage": "RECORDED_ORACLE_AND_TEMPORAL_CANDIDATE_DIAGNOSIS",
   "readiness": "NOT_READY",
-  "baseline_commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
+  "baseline_commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
   "production_acceptance_groups": {
     "P0": 8,
     "P1": 4
@@ -33,9 +33,11 @@
         "model_benchmark_report.json",
         "task_context/comparison.json",
         "replacement_oracle/comparison.json",
-        "source_evidence/comparison.json"
+        "source_evidence/comparison.json",
+        "recorded_oracle/replay_receipts.json",
+        "recorded_oracle/temporal_candidate_evidence.json"
       ],
-      "next_action": "Use private full-turn captures for Oracle/candidate/whole-plan analysis; implement a governed bounded value-resolution path for proven short-name misses, without fabricated aliases or widening scope."
+      "next_action": "Close the proven governed metric-time-anchor and deterministic time-normalization gaps, then reuse these exact recorded controls and unchanged Gold for live validation; retain source-value and wider evaluation gaps."
     },
     {
       "blocker_id": "EVALUATION-COVERAGE",
@@ -59,9 +61,11 @@
         "../cutover/state_evaluation/transition_gold.jsonl",
         "transition_runner/live_final_evaluation.json",
         "oracle_evaluation_report.json",
-        "source_evidence/comparison.json"
+        "source_evidence/comparison.json",
+        "recorded_oracle/replay_receipts.json",
+        "recorded_oracle/temporal_candidate_evidence.json"
       ],
-      "next_action": "Use private full-turn captures for Oracle/candidate/whole-plan analysis; implement a governed bounded value-resolution path for proven short-name misses, without fabricated aliases or widening scope."
+      "next_action": "Close the proven governed metric-time-anchor and deterministic time-normalization gaps, then reuse these exact recorded controls and unchanged Gold for live validation; retain source-value and wider evaluation gaps."
     },
     {
       "blocker_id": "PRODUCTION-PUBLICATION",

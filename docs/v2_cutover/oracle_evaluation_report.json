@@ -1,5 +1,5 @@
 {
-  "status": "PARTIAL_ORACLE_BINDING_AND_STATE_CONTROLS_PASS_FULL_ORACLE_SUITE_OPEN",
+  "status": "RECORDED_REPLAY_AND_PARTIAL_OUTPUT_ORACLE_VERIFIED_FULL_ORACLE_SUITE_OPEN",
   "baseline_commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
   "source_test": "tests/test_v2_raw_turn_recognition.py",
   "verified_recorded_candidate": "replacement_oracle/recorded_candidate_evidence.json",
@@ -28,5 +28,17 @@
     "scope_mapping_hash_query_and_provenance_guards": "PASS",
     "actual_native_pin_binding_restore_finish_and_state_digest": "PASS",
     "model_gold_accuracy": "NOT_ESTABLISHED_BY_SCRIPTED_TESTS"
+  },
+  "latest_stage": {
+    "baseline_commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
+    "replays": 24,
+    "complete_success_result_equality": true,
+    "interventions": 4,
+    "interventions_producing_plan": 2,
+    "evidence": "recorded_oracle/replay_receipts.json",
+    "temporal_evidence": "recorded_oracle/temporal_candidate_evidence.json",
+    "method": "Intervene on independently reviewed model-output fields; run real pin/restore/TaskPatch/reducer/compiler. Later model outputs remain recorded, not newly generated under changed context.",
+    "model_accuracy_or_production_acceptance_proved": false,
+    "whole_oracle_mention_role_candidate_relation_suite": "NOT_COMPLETE"
   }
 }

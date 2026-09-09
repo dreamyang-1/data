@@ -2682,5 +2682,13 @@
       }
     ],
     "causal_limit": "The first rejecting boundary is observed. Empty exact source lookup is proven; selected field correctness and the correct short-name resolution are separate semantic questions. Joint model-output label errors do not reveal the model causal order."
+  },
+  "recorded_oracle_stage": {
+    "baseline_commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
+    "evidence": "recorded_oracle/replay_receipts.json",
+    "S81_012": "TaskPatch first rejects REMOVE/ADD markers versus REPLACE draft; correcting parser reference/operation evidence permits the existing dealer replacement.",
+    "S81_014": "TimeSpec first rejects non-IANA timezone; after timezone intervention role validation rejects entity-as-time-anchor. Current TIME_RANGE has zero offered TIME_FIELD candidates despite a uniquely mapped catalog metric anchor.",
+    "S81_017": "GroupedAggregate payload rejects empty group_by; scalar shape intervention accepts the originally selected historical task and metrics.",
+    "causal_limit": "These are measured rejecting boundaries and fixed-output counterfactuals, not unseen model reasoning or full model Oracle accuracy."
   }
 }
