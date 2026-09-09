@@ -1,10 +1,10 @@
 {
-  "baseline_commit": "c19e65544664395200d814300e27d330006ea9a1",
-  "feature_branch": "cutover-governed-time-20260909t062000z",
+  "baseline_commit": "9d680ae096b9deafe42767d0d7952e0525be0c0a",
+  "feature_branch": "cutover-compound-mention-20260909t064400z",
   "final_commit": "Commit containing this manifest",
-  "planned_subject": "cutover: normalize explicit time with governed metric anchors",
+  "planned_subject": "cutover: preserve exact catalog metric spans and observe time transitions",
   "runtime_source_changed": true,
   "evidence": "closure_report.md and test_delta.json",
-  "draft_pr_base": "cutover-recorded-oracle-20260909t055600z",
-  "stage_baseline": "c19e65544664395200d814300e27d330006ea9a1"
+  "draft_pr_base": "cutover-governed-time-20260909t062000z",
+  "stage_baseline": "9d680ae096b9deafe42767d0d7952e0525be0c0a"
 }

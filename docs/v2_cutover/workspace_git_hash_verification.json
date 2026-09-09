@@ -1,8 +1,8 @@
 {
   "status": "PASS_PRECOMMIT_ALIGNMENT",
-  "baseline_commit": "c19e65544664395200d814300e27d330006ea9a1",
-  "feature_branch": "cutover-governed-time-20260909t062000z",
-  "tracked_and_manifest_files": 1292,
+  "baseline_commit": "9d680ae096b9deafe42767d0d7952e0525be0c0a",
+  "feature_branch": "cutover-compound-mention-20260909t064400z",
+  "tracked_and_manifest_files": 1302,
   "unexpected_source_drift": 0,
   "normalization": "CRLF to LF only",
   "post_commit_gate": "Every mapped development file = repository file = Git blob; clean tree; original Oagnet HEAD/index preserved"

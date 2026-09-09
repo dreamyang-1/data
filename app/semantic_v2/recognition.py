@@ -17,6 +17,7 @@ from .catalog_paths import relationship_path, resolve_alias
 from .temporal_comparisons import ComparisonEditDraft, complete_comparison_patch
 from .source_value_recognition import SourceValueRequestDraft, source_filter_patch, hydrate_choice
 from .explicit_time import normalize_initial_assignment
+from .catalog_mentions import recover_metric_spans
 from .enums import CatalogType, SemanticRole
 from .pipeline import CurrentTurnParser, CurrentTurnSemanticParse, TurnResolver, collect_bound_refs
 from .pipeline import AuthorizedLogicalPlan
@@ -274,6 +275,12 @@ class RawTurnPlanner:
                 extra={'message_id': request.message_id, 'parse_repairs': repairs})
         parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
             text_ref=request.message_id, parsed=parsed)
+        parsed, catalog_spans = recover_metric_spans(session, parsed, text=request.question)
+        if catalog_spans:
+            logging.getLogger(__name__).info('V2 catalog metric span recovered',
+                extra={'message_id': request.message_id, 'catalog_span_trace': catalog_spans})
+            parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
+                text_ref=request.message_id, parsed=parsed)
         if current.pending and not parse.topic_shift_signals:
             option=selected_option(current.pending,request.question)
             if option is not None:

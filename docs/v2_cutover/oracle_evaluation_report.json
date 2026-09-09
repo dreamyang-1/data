@@ -47,5 +47,12 @@
     "downstream_model_regenerated": false,
     "model_accuracy_established": false,
     "production_cutover_pass": false
+  },
+  "compound_metric_stage": {
+    "evidence": "compound_mentions/targeted_observation_evidence.json",
+    "exact_live_result_replays": 3,
+    "all_listed_targeted_axes_passed": true,
+    "full_oracle_suite_complete": false,
+    "production_cutover_pass": false
   }
 }

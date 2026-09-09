@@ -1,7 +1,7 @@
 {
-  "current_stage": "GOVERNED_INITIAL_TIME_CONTRACT",
+  "current_stage": "CATALOG_METRIC_BOUNDARY_AND_TEMPORAL_OBSERVATION",
   "readiness": "NOT_READY",
-  "baseline_commit": "c19e65544664395200d814300e27d330006ea9a1",
+  "baseline_commit": "9d680ae096b9deafe42767d0d7952e0525be0c0a",
   "production_acceptance_groups": {
     "P0": 8,
     "P1": 4
@@ -36,9 +36,11 @@
         "source_evidence/comparison.json",
         "recorded_oracle/replay_receipts.json",
         "recorded_oracle/temporal_candidate_evidence.json",
-        "governed_time/contract.json"
+        "governed_time/contract.json",
+        "compound_mentions/contract.json",
+        "compound_mentions/comparison.json"
       ],
-      "next_action": "Preserve exact compound metric mentions using scoped catalog evidence, complete temporal component ownership, then rerun unchanged Gold. Source-value and evaluator coverage remain open."
+      "next_action": "Complete deterministic temporal component ownership and scoped source-value canonicalization; retain model operation/shape failures and Pending/Dataset/whole-plan evaluation gaps. Do not widen matching or lower acceptance."
     },
     {
       "blocker_id": "EVALUATION-COVERAGE",
@@ -65,9 +67,11 @@
         "source_evidence/comparison.json",
         "recorded_oracle/replay_receipts.json",
         "recorded_oracle/temporal_candidate_evidence.json",
-        "governed_time/contract.json"
+        "governed_time/contract.json",
+        "compound_mentions/contract.json",
+        "compound_mentions/comparison.json"
       ],
-      "next_action": "Preserve exact compound metric mentions using scoped catalog evidence, complete temporal component ownership, then rerun unchanged Gold. Source-value and evaluator coverage remain open."
+      "next_action": "Complete deterministic temporal component ownership and scoped source-value canonicalization; retain model operation/shape failures and Pending/Dataset/whole-plan evaluation gaps. Do not widen matching or lower acceptance."
     },
     {
       "blocker_id": "PRODUCTION-PUBLICATION",

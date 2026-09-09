@@ -214,5 +214,17 @@
     },
     "model_quality_improvement_claimed": false,
     "formal_model_winner_declared": false
+  },
+  "latest_raw_transition_stage": {
+    "evidence": "compound_mentions/live_evaluation.json",
+    "comparison": "compound_mentions/comparison.json",
+    "observations": {
+      "OK": 6,
+      "FAILED": 10,
+      "NOT_RUN": 4
+    },
+    "real_model_calls": 56,
+    "model_selection_complete": false,
+    "unchanged_default_model": "qwen3.7-max"
   }
 }
