@@ -2412,5 +2412,188 @@
       "evidence_level": "HIGH_CONFIDENCE",
       "reason": "The parse and draft choose GROUPED_AGGREGATE without requested grouping; contract rejection still needs exact replay, and task-operation correctness is separately unproven."
     }
-  ]
+  ],
+  "latest_task_context_stage": {
+    "baseline_commit": "a87df7d37756d160f93db2acf9b9de5af928f8a3",
+    "evidence": "task_context/comparison.json",
+    "proven_root_cause": {
+      "stage": "TURN_RESOLUTION",
+      "cases": [
+        "S81-003",
+        "S81-013"
+      ],
+      "before": "A lone REMOVE act and agreeing current REMOVE markers were ignored when duplicate followup/reference signals were empty. The task was treated as NEW_TASK.",
+      "after": "REMOVE/CLEAR dependency uses agreement of one destructive act with all current operation markers. Topic shift wins; mixed/conflicting/absent evidence does not create inheritance.",
+      "evidence_level": "PROVEN_BY_CAPTURE_AND_DETERMINISTIC_RED_GREEN"
+    },
+    "context_gap": {
+      "stage": "TARGET_TASK_CONTEXT",
+      "before": "All restored tasks and historical handles were exposed on ordinary continuation and complete new tasks; actual prior payload type was omitted.",
+      "after": "Current-task labels only on deterministic continuation, no old tasks for NEW_TASK, historical handles only on explicit historical return. Include restored payload type and clear barriers.",
+      "runtime_guard": "Retained; strengthened for explicit topic shift."
+    },
+    "current_triage": [
+      {
+        "case_id": "S81-001",
+        "status": "OK",
+        "reason": null,
+        "phase": "CURRENT",
+        "classification": "OBSERVED_SELECTED_AXES",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-002",
+        "status": "FAILED",
+        "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+        "phase": "CURRENT",
+        "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+        "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+      },
+      {
+        "case_id": "S81-003",
+        "status": "OK",
+        "reason": null,
+        "phase": "CURRENT",
+        "classification": "OBSERVED_SELECTED_AXES",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-004",
+        "status": "FAILED",
+        "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+        "phase": "HISTORY",
+        "classification": "MISSING_FROZEN_SOURCE_VALUES",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-005",
+        "status": "FAILED",
+        "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+        "phase": "HISTORY",
+        "classification": "MISSING_FROZEN_SOURCE_VALUES",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-006",
+        "status": "FAILED",
+        "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+        "phase": "HISTORY",
+        "classification": "MISSING_FROZEN_SOURCE_VALUES",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-007",
+        "status": "FAILED",
+        "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+        "phase": "HISTORY",
+        "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+        "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+      },
+      {
+        "case_id": "S81-008",
+        "status": "FAILED",
+        "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+        "phase": "HISTORY",
+        "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+        "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+      },
+      {
+        "case_id": "S81-009",
+        "status": "FAILED",
+        "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+        "phase": "HISTORY",
+        "classification": "MISSING_FROZEN_SOURCE_VALUES",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-010",
+        "status": "FAILED",
+        "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+        "phase": "HISTORY",
+        "classification": "MISSING_FROZEN_SOURCE_VALUES",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-011",
+        "status": "OK",
+        "reason": null,
+        "phase": "CURRENT",
+        "classification": "OBSERVED_SELECTED_AXES",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-012",
+        "status": "FAILED",
+        "reason": "V2_SLOT_OPERATION_CONFLICT",
+        "phase": "HISTORY",
+        "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+        "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+      },
+      {
+        "case_id": "S81-013",
+        "status": "OK",
+        "reason": null,
+        "phase": "CURRENT",
+        "classification": "OBSERVED_SELECTED_AXES",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-014",
+        "status": "FAILED",
+        "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+        "phase": "HISTORY",
+        "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+        "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+      },
+      {
+        "case_id": "S81-015",
+        "status": "FAILED",
+        "reason": "FROZEN_SOURCE_VALUE_OBSERVATION_REQUIRED",
+        "phase": "HISTORY",
+        "classification": "MISSING_FROZEN_SOURCE_VALUES",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-016",
+        "status": "NOT_RUN",
+        "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+        "phase": null,
+        "classification": "MISSING_ENTRY_FIXTURE",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-017",
+        "status": "FAILED",
+        "reason": "V2_CONTRACT_VALIDATION_FAILURE",
+        "phase": "CURRENT",
+        "classification": "OPEN_SEMANTIC_OR_REPRESENTATION_FAILURE",
+        "first_divergence": "UNKNOWN_NEEDS_CAPTURE_REPLAY"
+      },
+      {
+        "case_id": "S81-018",
+        "status": "NOT_RUN",
+        "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+        "phase": null,
+        "classification": "MISSING_ENTRY_FIXTURE",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-019",
+        "status": "NOT_RUN",
+        "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+        "phase": null,
+        "classification": "MISSING_ENTRY_FIXTURE",
+        "first_divergence": null
+      },
+      {
+        "case_id": "S81-020",
+        "status": "NOT_RUN",
+        "reason": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+        "phase": null,
+        "classification": "MISSING_ENTRY_FIXTURE",
+        "first_divergence": null
+      }
+    ],
+    "parser_role_caveat": "The retained 100-case role-purity diagnostic scores role hypotheses, not final canonical choices; additional hypotheses alone do not prove a final role or binding production defect."
+  }
 }

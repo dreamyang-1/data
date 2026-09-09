@@ -159,5 +159,14 @@
   "real_model_requests": 193,
   "source_SQL_executions": 0,
   "production_external_writes": 0,
-  "production_cutover_pass": false
+  "production_cutover_pass": false,
+  "latest_task_context_evidence": {
+    "path": "task_context/comparison.json",
+    "real_model_requests": 94,
+    "prompt_changes": 0,
+    "model_default_changed": false,
+    "formal_model_winner": null,
+    "parser_component_rerun": false,
+    "whole_plan_gate": "NOT_PASSED"
+  }
 }

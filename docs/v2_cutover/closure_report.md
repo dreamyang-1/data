@@ -1,113 +1,98 @@
-# V2 replacement readiness — current delivery
+# V2 replacement readiness — current task and destructive edits
 
-Current Stage: RAW_TRANSITION_EVIDENCE_AND_SCHEMA_GUARD.
-Baseline: `b42fdaf913e6e54d7de9bdb8a343183536703586` / Draft PR #42. Branch: `cutover-transition-runner-20260909t034400z`.
-Readiness: **NOT_READY**. No quality gate or production replacement is approved.
-The inherited production acceptance inventory remains 8 P0 / 4 P1 groups;
-the current gate matrix keeps Redis/native publication separate from offline work.
+Current Stage: CURRENT_TASK_CONTEXT_AND_DESTRUCTIVE_EDIT_P0.
+Baseline: `a87df7d37756d160f93db2acf9b9de5af928f8a3` / Draft PR #43. Branch: `cutover-task-context-20260909t042538z`.
+Final commit: the commit containing this report. **NOT_READY** for replacement.
+The inherited production acceptance groups remain 8 P0 / 4 P1; fixed code defects
+and those broader acceptance groups are different counts.
 
-The interrupted work was preserved and both existing model jobs were recovered
-from terminal receipts, without duplicate evaluation calls. Git was clean at
-the baseline; the only prior tracked development differences were recognition.py
-and its tests, plus the new runner and runner tests. PR #42 is open, draft and
-unmerged. All mapped tracked sources were compared before the new work.
+## Proven root cause and bounded fix
 
-## Root cause and changes
+The live REMOVE parse already supplied a single REMOVE dialogue act and current
+REMOVE markers, with empty followup/reference arrays. TurnResolver ignored the
+act/marker agreement and started a new task. REMOVE/CLEAR are not options in the
+followup_signals enum, so requiring a second signal was an avoidable dependency
+on redundant model output. Deterministic regressions reproduce the wrong target.
 
-The reusable opt-in runner exercises real RawTurnPlanner, catalog publication,
-scope pin, reducer and compiler code with the existing in-memory catalog store
-and FakeRedis. It verifies the exact frozen 81/[205] snapshot projection/hash.
-Dummy embeddings do not measure native vector recall. It performs no source SQL,
-native catalog publish, production state write or user-visible response change.
-Only the validated configured model transport can connect; budgets, access failures
-and missing histories cannot silently remove cases from denominators. Diagnostics
-record bounded schema field paths/codes. Raw failed model responses remain private.
+The resolver now recognizes dependency only when a single REMOVE/CLEAR act agrees
+with every current marker. It uses no missing execution slots or text regex.
+Conflicting acts, bare hints, absent markers and mixed SET/query operations do not
+gain inheritance. Explicit new-topic signals still win. With no current task the
+result is unresolved, not an invented default task. The frozen contract receives
+this minimal proven multi-turn P0 correction; V1 remains unchanged.
 
-The generation schema now offers historical task handles only with an explicit
-HISTORICAL signal; otherwise that field is null-only. The original runtime guard
-is unchanged. Live results demonstrate that the model still sometimes ignores
-the schema and is correctly rejected. This change is a generation constraint,
-not a completed target-task fix. Five positive/negative regressions verify scope
-offers, immutable base schema and retained runtime rejection.
+Before this, the semantic-edit model also received all restored task labels and
+historical handles during ordinary continuation and new tasks. It repeatedly
+copied a current handle into the historical selector, correctly triggering the
+runtime guard. The context now offers only deterministic current-task state for
+ordinary continuation, no old task state for complete new tasks, and scoped
+historical candidates only for an explicit historical return. Actual recorded
+payload type and clear barriers are included. Current-state labels omit the
+historical handle. Runtime rejection remains and now rejects conflicting explicit
+new-topic/history handles too. No model-selected identity, scope or plan is trusted.
 
-An independent v8 current-turn prompt experiment clarifies the existing mention
-and reference representation contract. Captured failures had an operation cue
-with no semantic role, or a literal negation cue in a mention-ID array. Assigning
-an invented role, discarding arbitrary mentions or guessing a target would be
-unsafe deterministic repairs. The four general contract lines do not add business
-keywords, regexes, new roles, defaults or weaker validation. The DRAFT instruction
-text is unchanged; its dynamic schema hash is recorded for every call.
+No prompt text, regex, model/key default, public request/response/SSE, native
+publication or cross-service source changed. The source change is confined to
+recognition.py and pipeline.py. Private evaluation artifacts are now gitignored.
 
-Before/after S81-001, S81-003 and S81-013 parse representations improved, but later
-task-handle failures remain. Contrast coverage includes the unchanged 100-case
-corpus and 145 focused tests. This is not a claim that v8 is a better final model
-policy: selected role purity decreased, and semantic regressions are recorded.
-Prompt changes are committed independently from the runner/schema changes.
+## Measured evidence, without changing denominators
 
-## Evaluation
+| Full 20-transition run | Observable plans | Failed | Not run | Actual model requests |
+| --- | ---: | ---: | ---: | ---: |
+| PR #43 baseline | 1 | 15 | 4 | 48 (previous delivery) |
+| Current task context | 2 | 14 | 4 | 48 |
+| Context plus REMOVE/CLEAR dependency | 4 | 12 | 4 | 46 |
 
-The original 35 failures were 30 ValueError and five ValidationError observations
-at current-turn representation validation, with no original raw responses. The
-previously completed ten captured replays prove span/reference problems for those
-captures; they do not retroactively prove the root cause of all 35. No repeat
-Identity/Redis audit, Gold recreation or duplicate evaluator was performed.
+All **94** current-stage model requests returned HTTP200. Prompt v8, Gold,
+catalog/hash, scope, model, thinking mode and current-turn schema stay the same.
+All attempts and failed histories are retained. Live generations vary; the red/
+green tests isolate the resolver defect instead of attributing every score change
+to code. S81-012 fails at different history/current stages across the two runs.
 
-| Measurement | Before v7 | Current v8 |
-| --- | ---: | ---: |
-| Accepted parser structures | 98/100 | 100/100 |
-| Selected mention/role recall | 80/89 | 79/89 |
-| Selected role purity | 74/89 | 70/89 |
-| Operation | 9/13 | 11/13 |
-| Query shape | 40/56 | 41/56 |
-| Turn relation | 67/72 | 67/72 |
+The final observed cases are S81-001 metric ADD (all three metrics retained),
+S81-003 metric REMOVE (only sales amount remains), S81-011 dimension ADD (hospital
+and city), and S81-013 dimension REMOVE (only city remains). Six cases still stop
+at missing frozen source-value observations. One Pending and three Dataset entry
+fixtures remain NOT_RUN. None are removed from denominators or called model bugs.
 
-These are unchanged selected-axis denominators, not full mention F1 or whole-plan
-accuracy. Current observed first-disagreement distribution is in
-`first_divergence_report.json`; joint-output inspection order is not model causal
-reasoning. There are 3 old-pass/new-fail labeled case-axis observations
-and 5 improvements. A single run per prompt does not prove causation.
+These are selected state/operation/target observations, **not** whole-plan exact
+match or complete hard-safety passes. Required unobserved safety stays
+NOT_EVALUATED. Source SQL and production external writes are both 0. No parser
+100-case rerun was needed because this stage changes task context/resolution,
+not the current-turn parser component; the earlier parser measurements retain
+their original timestamp and limitations.
 
-The initial raw transition run made 45 HTTP200 model requests: 16 FAILED, four
-NOT_RUN. The final run made 48 HTTP200 requests: 15 FAILED, one observed plan,
-four NOT_RUN. Both keep the full 20-case denominator. Six cases in each run stop
-because frozen source-value observations are absent. The Pending fixture and
-three Dataset entry fixtures are not implemented by this runner. Those are
-evaluation coverage gaps, not 10 model bugs. S81-011 observes dimension ADD and
-retained metrics; safety and complete whole-plan labels remain unmeasured.
-Failed history never becomes fabricated successful state. Region/time observer
-axes remain incomplete, and required safety observations stay NOT_EVALUATED.
+## Tests and review
 
-Total requests this stage: **193**, all HTTP200 (100 parser + 45 + 48 planner).
-Real source SQL: 0. Production writes: 0. Native publication: 0.
-The initial raw receipt called its storage mode `scope_mode`; its nested authorized
-scope was correctly EXPLICIT_DOMAINS. The runner now calls that metadata field
-`catalog_storage_mode`; the initial receipt is preserved with this correction note.
+Final focused/contract tests: **409 passed**. New tests: **17**. Full Agent:
+**2862 passed / 27 historical failures**; Oagnet **663 / 8**; SQL Translator
+**381 / 0**. Old-pass -> new-fail 0; collection errors 0; removed tests 0;
+Critical 160/160; clarification traces 89/89. No old expected outcome was relaxed.
 
-## Validation and review
+Six new context regressions failed before the context fix. Four valid destructive
+edit regressions demonstrated the resolver failure before its fix; one additional
+empty-state test initially lacked required identity fields, which was corrected.
+An existing adversarial test was adapted to obtain the same real prior handle
+out of band because new tasks no longer receive it; its exact guard expectation
+is unchanged. See test_delta.json. All initiated evaluation/test jobs are terminal.
 
-Focused: 145 passed. New regressions: 17. Agent: **2845 passed / 27 historical
-failures**; Oagnet: **663 / 8**; SQL Translator: **381 / 0**. All previous test-node
-outcomes unchanged; removed tests 0; collection errors 0; Critical 160/160;
-clarification traces 89/89. The previous stage's SQL loopback fluctuation remains
-in its historical evidence; this run has no such failure. All scripts are terminal.
+Self-review checked actual current pointer selection, scoped restore before
+context, recorded plan/version correspondence, topic-shift priority, unchanged
+runtime guards, historical subtree regressions, clear barriers and absent-task
+handling. Source and evidence are synced by explicit manifest and normalized
+SHA-256; user-owned Oagnet HEAD/index, private .env and unrelated files are preserved.
 
-Self-review checked exact scope/hash verification, no Gold label input, fail-closed
-history, bounded model budgets, network teardown, source-read denial, private
-diagnostics, fixed denominators and strict runtime target validation. The runner
-tests exercise the real scoped planner under scripted HTTP, including poison-label,
-unknown snapshot/scope, authentication, missing fixture and network-denial contrasts.
-No production I/O, routing, user-selected model/key or cross-service source changed.
+Catalog Gap: shape-specific endpoint/grain ambiguities and production publication.
+Evaluation Gap: singleton assignment representation, operation/shape conflicts,
+frozen entity values, complete Pending/Dataset observations, Oracle/candidate and
+whole-plan labels. Shadow Gap: full offline acceptance still missing. Redis and
+native publication do not halt available offline work.
 
-Catalog Gap: two relation endpoints and shape-specific metric grain facts remain;
-production publication is separate. Evaluation Gap: real semantic errors, frozen
-entity values, full state/safety/whole-plan labels, candidate/oracle and controlled
-model/Thinking comparisons. Shadow Gap: offline acceptance is not achieved.
-Next shortest path: close evidenced task-reference and operation/shape failures,
-extend the existing observation and candidate/Oracle coverage, then compare models
-under identical inputs. No cutover approval is requested while these gates fail.
+Next shortest path: diagnose the exact remaining assignment/operation cases using
+captured evidence, and extend existing evaluator/controlled value observations.
+Then complete controlled model comparisons and plan-only shadow once their gates
+pass. No production replacement approval is requested at this stage.
 
-New current evidence is concentrated under `docs/v2_cutover/`. Historical catalog,
-identity, Redis, Gold and evaluation files stay at their original referenced paths.
-Secrets, private snapshots, raw business records, logs and local .env are excluded.
-
-The independent runner/schema commit is `499d0550910759833fa57e1f3db766f18f0e1ae6`. Its v7-focused verification also passed 145 tests. One initial verification launch omitted PYTEST_DISABLE_PLUGIN_AUTOLOAD and stopped at duplicate plugin registration before collection; rerunning with the established offline environment passed. No source or expectation change was needed.
+Current evidence: task_context/comparison.json, first_divergence_report.json,
+semantic_architecture_audit.md and cutover_readiness_matrix.json. Previous evidence
+and the completed identity/Redis audits remain in their referenced original files.

@@ -34,3 +34,6 @@ _backups/
 /docs/phase25_1/closure_test_gate.json
 /docs/phase25_1/contract_gate.json
 /docs/phase25_1/final_test_gate.json
+
+# Private evaluation conversations, model captures and source observations.
+/.eval_private/

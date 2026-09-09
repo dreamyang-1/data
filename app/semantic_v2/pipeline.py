@@ -106,7 +106,14 @@ class TurnResolver:
     def resolve(parse: CurrentTurnParseResult, *, state, task_patch: TaskPatch,
                 semantic_resolution: SemanticResolutionContract, historical_task_id: str | None = None) -> TurnResolutionResult:
         from .models import ProceedDecision, TerminalDecision
-        dependency = bool(parse.reference_signals or parse.followup_signals)
+        acts = set(parse.dialogue_act_candidates)
+        hints = {marker.operation_hint for marker in parse.operation_markers}
+        # REMOVE/CLEAR are absent from followup_signals' enum. A single edit act
+        # agreed by every current operation marker already supplies dependency
+        # evidence; requiring another redundant signal wrongly starts a new task.
+        # Conflicting acts, mixed SET/query operations and bare hints do not.
+        destructive_edit = len(acts) == 1 and acts <= {DialogueAct.REMOVE, DialogueAct.CLEAR} and hints == acts
+        dependency = bool(parse.reference_signals or parse.followup_signals or destructive_edit)
         if parse.topic_shift_signals:
             act, relation, topic, task, dependency = (DialogueAct.NEW_TASK, 'SELF_CONTAINED',
                 'topic:' + parse.turn_id, 'task:' + parse.turn_id, False)

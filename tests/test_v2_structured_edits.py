@@ -212,6 +212,23 @@ async def test_invalid_filter_edits_fail_before_plan_or_state(catalog, fault, co
         return d
     op = 'REMOVE' if fault == 'missing' else 'CLEAR' if fault == 'clear_value' else 'ADD'
     steps = [initial(), filter_step('修改地区', op, scalar('江苏'), follow=fault != 'new_task', transform=corrupt)]
+    if fault == 'new_task':
+        # Preserve the same stale-handle attack even though a new-task context
+        # correctly stops offering the old task. The expected guard is unchanged.
+        from app.semantic_v2.state_machine import TaskState
+        from app.semantic_v2.structured_edits import structured_labels
+        from test_v2_authorized_catalog_bridge import IDENTITY, request
+        first = (await turns(planner(catalog, steps[:1])[0], steps[:1]))[0]
+        prior = TaskState.model_validate(next(iter(first.next_state.payload['tasks'].values())))
+        step = steps[1]
+        def attack(c):
+            assert c['tasks'] == []
+            return step[2]({**c, 'tasks': [structured_labels(prior)]})
+        engine, _ = planner(catalog, [(step[0], step[1], attack)])
+        with pytest.raises(ValueError, match=code):
+            await engine.run(request(question=step[0], message_id='turn1'), IDENTITY,
+                state=first.next_state, plans=(first.plan_state,))
+        return
     engine, _ = planner(catalog, steps)
     with pytest.raises(ValueError, match=code): await turns(engine, steps)
 

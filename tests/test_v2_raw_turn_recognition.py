@@ -275,7 +275,9 @@ async def test_generation_constraint_does_not_remove_runtime_history_guard(catal
     first=metric_step('销售额');next_step=metric_step('再加订单笔数','订单笔数','ADD',True)
     def bad_draft(context):
         value=next_step[2](context)
-        value['historical_task_handle']=context['tasks'][0]['task_handle']
+        # Attack with the known prior handle even if the current model context
+        # omits it. The runtime guard must remain effective independently.
+        value['historical_task_handle']='task:'+contract_digest({'task':'task:turn0'})[:24]
         return value
     steps=[first,(next_step[0],next_step[1],bad_draft)]
     engine,transport=planner(catalog,steps)
@@ -283,6 +285,132 @@ async def test_generation_constraint_does_not_remove_runtime_history_guard(catal
         await turns(engine,steps)
     schema=json.loads(transport.calls[-1]['messages'][0]['content'].split('JSON Schema:\n',1)[1])
     assert schema['properties']['historical_task_handle']=={'type':'null','default':None}
+
+
+@pytest.mark.asyncio
+async def test_followup_context_exposes_only_current_state_without_historical_handle(catalog):
+    steps=[metric_step('销售额'),metric_step('销售数量','销售数量'),
+        metric_step('再加订单笔数','订单笔数','ADD',True)]
+    engine,transport=planner(catalog,steps);results=await turns(engine,steps)
+    context=json.loads(transport.calls[-1]['messages'][1]['content'])
+    assert len(context['tasks'])==1
+    current=context['tasks'][0]
+    assert current['reference_kind']=='CURRENT_TASK' and 'task_handle' not in current
+    assert current['slot_labels']['metrics']==['销售数量']
+    assert current['payload_type']=='SCALAR_AGGREGATE'
+    assert {m['canonical_code'] for m in results[-1].plan['logical_plan']['payload']['measures']}=={'quantity','orders'}
+    assert results[-1].plan['logical_plan']['task_id']==results[-2].plan['logical_plan']['task_id']
+
+
+@pytest.mark.asyncio
+async def test_complete_new_task_has_no_inheritable_task_context(catalog):
+    steps=[filtered_step(),metric_step('订单笔数','订单笔数')]
+    engine,transport=planner(catalog,steps);results=await turns(engine,steps)
+    context=json.loads(transport.calls[-1]['messages'][1]['content'])
+    assert context['tasks']==[]
+    assert results[-1].plan['logical_plan']['payload']['filters'] is None
+    assert results[-1].plan['logical_plan']['task_id']!=results[0].plan['logical_plan']['task_id']
+
+
+@pytest.mark.asyncio
+async def test_historical_context_retains_scoped_handles_and_recorded_plan_shapes(catalog):
+    def historical(c):
+        assert len(c['tasks'])==2
+        assert all(t['reference_kind']=='HISTORICAL_CANDIDATE' and t['payload_type']=='SCALAR_AGGREGATE' for t in c['tasks'])
+        handle=next(t['task_handle'] for t in c['tasks'] if t['slot_labels']['metrics']==['销售额'])
+        return dict(payload_type='INHERIT',historical_task_handle=handle,edits=[edit('metrics',[binding(c,'订单笔数','MEASURE')],'ADD')])
+    text='回到销售额，再加订单笔数'
+    steps=[metric_step('销售额'),metric_step('销售数量','销售数量'),
+        (text,parse(text,[('订单笔数','MEASURE','metrics','ADD')],history=True),historical)]
+    results=await turns(planner(catalog,steps)[0],steps)
+    assert results[-1].plan['logical_plan']['task_id']==results[0].plan['logical_plan']['task_id']
+
+
+@pytest.mark.asyncio
+async def test_clear_barrier_remains_visible_in_current_task_context(catalog):
+    text='不限地区';clear=(text,parse(text,[(text,'FILTER_FIELD','filter_expression','CLEAR')],follow=True),
+        dict(payload_type='INHERIT',edits=[edit('filter_expression',None,'CLEAR')]))
+    steps=[filtered_step(),clear,metric_step('再加订单笔数','订单笔数','ADD',True)]
+    engine,transport=planner(catalog,steps);results=await turns(engine,steps)
+    context=json.loads(transport.calls[-1]['messages'][1]['content'])
+    assert 'filter_expression' in context['tasks'][0]['cleared_slots']
+    assert context['tasks'][0]['filter_targets']==[]
+    assert results[-1].plan['logical_plan']['payload']['filters'] is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('malicious_handle',[False,True])
+async def test_explicit_topic_shift_overrides_historical_offer(catalog,malicious_handle):
+    step=metric_step('订单笔数','订单笔数')
+    step[1].update(reference_signals=['HISTORICAL'],topic_shift_signals=['EXPLICIT_NEW_TASK'])
+    def draft(c):
+        assert c['tasks']==[]
+        value=step[2](c)
+        if malicious_handle:value['historical_task_handle']='task:'+contract_digest({'task':'task:turn0'})[:24]
+        return value
+    steps=[metric_step('销售额'),(step[0],step[1],draft)]
+    engine,transport=planner(catalog,steps)
+    if malicious_handle:
+        with pytest.raises(RecognitionFailure,match='V2_HISTORICAL_TARGET_NOT_OFFERED'):await turns(engine,steps)
+    else:
+        results=await turns(engine,steps)
+        assert results[-1].plan['logical_plan']['task_id']!=results[0].plan['logical_plan']['task_id']
+    schema=json.loads(transport.calls[-1]['messages'][0]['content'].split('JSON Schema:\n',1)[1])
+    assert schema['properties']['historical_task_handle']=={'type':'null','default':None}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('operation',['REMOVE','CLEAR'])
+async def test_agreed_destructive_edit_act_does_not_require_a_duplicate_followup_signal(catalog,operation):
+    if operation=='REMOVE':
+        first=metric_step('销售额');second=metric_step('再加订单笔数','订单笔数','ADD',True)
+        text='不要订单笔数'
+        parsed=parse(text,[('订单笔数','MEASURE','metrics','REMOVE')])
+        parsed['dialogue_act_candidates']=['REMOVE']
+        step=(text,parsed,lambda c:dict(payload_type='INHERIT',edits=[edit('metrics',binding(c,'订单笔数','MEASURE'),'REMOVE')]))
+        steps=[first,second,step]
+    else:
+        text='不限地区';parsed=parse(text,[(text,'FILTER_FIELD','filter_expression','CLEAR')])
+        parsed['dialogue_act_candidates']=['CLEAR']
+        step=(text,parsed,dict(payload_type='INHERIT',edits=[edit('filter_expression',None,'CLEAR')]))
+        steps=[filtered_step(),step,metric_step('再加订单笔数','订单笔数','ADD',True)]
+    engine,transport=planner(catalog,steps);results=await turns(engine,steps)
+    assert len({r.plan['logical_plan']['task_id'] for r in results})==1
+    assert 'task_handle' not in json.loads(transport.calls[3 if operation=='CLEAR' else 5]['messages'][1]['content'])['tasks'][0]
+    if operation=='REMOVE':assert [m['canonical_code'] for m in results[-1].plan['logical_plan']['payload']['measures']]==['amount']
+    else:
+        assert results[-1].plan['logical_plan']['payload']['filters'] is None
+        assert 'filter_expression' in next(iter(results[-1].next_state.payload['tasks'].values()))['clear_barriers']
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('acts,operations,topic_shift,has_history,expected',[
+    (['REMOVE'],['REMOVE'],False,True,'CURRENT_TASK'),
+    (['CLEAR'],['CLEAR'],False,True,'CURRENT_TASK'),
+    (['REMOVE','NEW_TASK'],['REMOVE'],False,True,'SELF_CONTAINED'),
+    (['REMOVE'],['SET'],False,True,'SELF_CONTAINED'),
+    ([],['REMOVE'],False,True,'SELF_CONTAINED'),
+    (['REMOVE'],['REMOVE','SET'],False,True,'SELF_CONTAINED'),
+    (['REMOVE'],[],False,True,'SELF_CONTAINED'),
+    (['REMOVE'],['REMOVE'],True,True,'SELF_CONTAINED'),
+    (['REMOVE'],['REMOVE'],False,False,'UNRESOLVED_REFERENCE')])
+async def test_destructive_act_dependency_requires_agreement_and_respects_new_task(catalog,acts,operations,topic_shift,has_history,expected):
+    from app.semantic_v2.pipeline import CurrentTurnSemanticParse,CurrentTurnParser,TurnResolver
+    from app.semantic_v2.state_machine import ConversationState
+    from app.semantic_v2.slot_reducer import TaskPatch
+    from app.semantic_v2.models import SemanticResolutionContract
+    first=metric_step('销售额');result=(await turns(planner(catalog,[first])[0],[first]))[0]
+    state=(ConversationState.model_validate(result.next_state.payload) if has_history else
+        ConversationState(state_version=0,**{k:result.next_state.payload[k] for k in ('conversation_id','tenant_id','user_id','application_id')}))
+    parsed=parse('订单笔数',[('订单笔数','MEASURE','metrics',None)])
+    parsed.update(dialogue_act_candidates=acts,topic_shift_signals=['EXPLICIT_NEW_TASK'] if topic_shift else [])
+    parsed['mentions'][0]['source_turn_id']='oracle-turn'
+    parsed['operation_markers']=[dict(mention_id='m0',slot_name='metrics',operation_hint=o) for o in operations]
+    checked=CurrentTurnParser.parse(text='订单笔数',turn_id='oracle-turn',text_ref='oracle-turn',parsed=CurrentTurnSemanticParse.model_validate(parsed))
+    resolution=TurnResolver.resolve(checked,state=state,task_patch=TaskPatch(base_task_version=0),semantic_resolution=SemanticResolutionContract(status='UNRESOLVED'))
+    assert resolution.referential_completeness.relation==expected
+    if expected=='CURRENT_TASK':assert resolution.target_task_id==result.plan['logical_plan']['task_id']
+    if expected=='UNRESOLVED_REFERENCE':assert resolution.decision.decision_type!='PROCEED'
 
 
 @pytest.mark.asyncio
