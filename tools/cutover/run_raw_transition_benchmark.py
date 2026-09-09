@@ -174,6 +174,12 @@ class ModelRecorder:
                     except (ValueError, TypeError, AttributeError):
                         receipt['receipt_decode_failed'] = True
                     return response
+                except httpx.TimeoutException:
+                    receipt['transport_error_type'] = 'MODEL_TIMEOUT'
+                    raise
+                except httpx.HTTPError:
+                    receipt['transport_error_type'] = 'MODEL_HTTP_ERROR'
+                    raise
                 finally:
                     MODEL_NETWORK.reset(token)
             async def aclose(self): pass
@@ -212,7 +218,8 @@ def failure_reason(exc):
 
 
 async def replay_turn(capture, case, catalog, raw_snapshot, *, expected_capture_hash,
-        oracle_outputs=None, source_observations=None, source_observations_hash=None):
+        oracle_outputs=None, source_observations=None, source_observations_hash=None, case_validator=None,
+        runtime_entry=False):
     """Replay one recorded turn in the same isolated pipeline, with no model HTTP.
 
     An Oracle intervention replaces only supplied model outputs; subsequent
@@ -221,7 +228,7 @@ async def replay_turn(capture, case, catalog, raw_snapshot, *, expected_capture_
     The caller owns the trusted private capture/hash and independently reviewed
     Oracle outputs. Model output cannot supply either authority input.
     """
-    validate_transitions([case], catalog)
+    (case_validator or validate_transitions)([case], catalog)
     if capture.get('format') != 'PRIVATE_RAW_TRANSITION_V1' or digest(capture) != expected_capture_hash:
         raise ValueError('RECORDED_CAPTURE_HASH_OR_FORMAT_INVALID')
     index = capture['turn_index'];utterances = [*case['history'], case['current_utterance']]
@@ -284,7 +291,8 @@ async def replay_turn(capture, case, catalog, raw_snapshot, *, expected_capture_
         try:
             # Same computation as run(), exposing the original ValidationError
             # before the normal bounded RecognitionFailure wrapper loses it.
-            result = await engine._run(request, TrustedIdentity(tenant_id='evaluation',user_id='evaluation'),
+            entry=engine.run if runtime_entry else engine._run
+            result = await entry(request, TrustedIdentity(tenant_id='evaluation',user_id='evaluation'),
                 state=ScopedArtifact.model_validate(before['state']) if before['state'] else None,
                 pending=ScopedArtifact.model_validate(before['pending']) if before['pending'] else None,
                 plans=tuple(ScopedArtifact.model_validate(p) for p in before['plans']))
@@ -313,8 +321,8 @@ async def replay_turn(capture, case, catalog, raw_snapshot, *, expected_capture_
 
 async def run(rows, catalog, raw_snapshot, settings, *, allow_model_calls=False,
         transport=None, max_calls=100, private_capture=None, progress=None,
-        source_observations=None, source_observations_hash=None):
-    validate_transitions(rows, catalog)
+        source_observations=None, source_observations_hash=None, harness=None):
+    (harness.validate_rows if harness is not None else validate_transitions)(rows, catalog)
     if not rows:
         raise ValueError('EMPTY_TRANSITION_CORPUS')
     if transport is not None and not isinstance(transport, httpx.MockTransport):
@@ -342,7 +350,10 @@ async def run(rows, catalog, raw_snapshot, settings, *, allow_model_calls=False,
                 stack.enter_context(patch.object(catalog_value_sources, 'observe_probe', replay.observe_probe))
             for row in rows:
                 record_start, call_start = len(records), len(model.calls)
-                case = {k:v for k,v in row.items() if k not in {'labels','safety_checks','catalog_evidence','business_evidence','missing_labels','review_method'}}
+                # Allowlist execution inputs. New Gold metadata and truth must
+                # never become a model context through a growing exclusion list.
+                case = {k:v for k,v in row.items() if k in {'case_id','history','current_utterance',
+                    'scope','catalog_ref','clock','database_id','knowledge_base_names','initial_pending','dataset'}}
                 prediction = {'case_id':case['case_id'], 'scope':catalog['scope'], 'catalog_ref':catalog['artifact_hash'],
                     'component':COMPONENT, 'mode':mode, 'status':'NOT_RUN', 'axes':{}, 'safety':{}}
                 predictions.append(prediction)
@@ -350,7 +361,7 @@ async def run(rows, catalog, raw_snapshot, settings, *, allow_model_calls=False,
                     if progress is not None:
                         progress(deepcopy({'prediction':prediction,'turns':records[record_start:],
                             'model_calls':model.calls[call_start:]}))
-                if case.get('initial_pending') or case.get('dataset') is not None:
+                if harness is None and (case.get('initial_pending') or case.get('dataset') is not None):
                     prediction['reason'] = 'FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED'
                     checkpoint()
                     continue
@@ -361,8 +372,22 @@ async def run(rows, catalog, raw_snapshot, settings, *, allow_model_calls=False,
                 planner = RawTurnPlanner(model, publication, clock=lambda:datetime.fromisoformat(case['clock']))
                 state, pending, plans, history = None, None, {}, []
                 utterances = [*case['history'], case['current_utterance']]
+                if harness is not None:
+                    try:
+                        initial = harness.initialize(case, publication)
+                    except Exception as exc:
+                        prediction.update(status='FAILED',reason=harness.fixture_failure(case,exc))
+                        checkpoint()
+                        continue
+                    if initial is not None:
+                        state,pending,plans,history = initial
+                        utterances = [case['current_utterance']]
                 for index, text in enumerate(utterances):
+                    logical_index = index if len(utterances)>1 or not history else len(case['history'])
+                    index = logical_index
                     model.begin_turn(case['case_id'], index)
+                    if harness is not None:
+                        harness.begin_turn(case['case_id'],index,state=state,pending=pending,plans=tuple(plans.values()))
                     record = {'case_id':case['case_id'], 'turn_index':index, 'phase':'HISTORY' if index < len(case['history']) else 'CURRENT'}
                     records.append(record)
                     result = None
@@ -413,7 +438,8 @@ async def run(rows, catalog, raw_snapshot, settings, *, allow_model_calls=False,
                 checkpoint()
     finally:
         await model.upstream.aclose()
-    report = evaluate_transitions(rows, predictions, catalog, component=COMPONENT, mode=mode)
+    report = (harness.build_report(rows,predictions,catalog,records,model.calls,mode) if harness is not None else
+              evaluate_transitions(rows, predictions, catalog, component=COMPONENT, mode=mode))
     report.update(model=settings.intent_model_name, thinking=settings.intent_model_enable_thinking,
         real_model_calls=len(model.calls) if transport is None else 0, model_transport_requests=len(model.calls),
         source_value_reads_denied=len(denied) + (sum(c['status']=='MISSING' for c in replay.calls) if replay else 0),

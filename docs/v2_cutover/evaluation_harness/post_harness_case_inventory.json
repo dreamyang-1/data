@@ -1,0 +1,4175 @@
+{
+  "evaluator": {
+    "evaluator_version": "runtime-evaluation-harness-v1",
+    "evaluator_git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+    "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+    "evaluator_files": {
+      "tools/cutover/harness_contract.py": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
+      "tools/cutover/harness_corpus.py": "6d3e6d5993387c6135f047b6821b47b1317e1b27a0ac4cbbdac0706f00ec6454",
+      "tools/cutover/harness_fixtures.py": "db3f29f10d10a764f2b51a4300427291a362165896a48019c2c8e21d220a8a7b",
+      "tools/cutover/harness_observation.py": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b",
+      "tools/cutover/harness_runtime.py": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+      "tools/cutover/harness_replay.py": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
+      "tools/cutover/harness_splits.py": "0e8bd22147b2072c427de4ba9657eef8a5671bf5f0e413fa7962691874abd90f",
+      "tools/cutover/harness_manifest.py": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
+      "tools/cutover/harness_safety.py": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
+      "tools/cutover/harness_cli.py": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+      "tools/cutover/harness_dryplan.py": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
+      "tools/cutover/harness_transport_replay.py": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
+      "tools/cutover/harness_replay_corpus.py": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
+      "tools/cutover/run_raw_transition_benchmark.py": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
+      "tools/cutover/transition_observations.py": "106460a9ba5ff70f383f11463df8cb5e362d374fdce82e8d6ca4121c65bde6ba",
+      "tools/cutover/frozen_source_values.py": "8209b7402e95cdfc1bdec563826f5bd94d999269a54b38081c047a52dcdfdd6a",
+      "tools/cutover/transition_evaluator.py": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2"
+    }
+  },
+  "cases": [
+    {
+      "case_id": "G81-001",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "7687223a2bd7f5a909399213ec2229b5e1a098ee3e9a227aa243495afd1593b8",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-002",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "FAIL"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "CATALOG_ERROR",
+        "stage": "CATALOG_GAP",
+        "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "185cd776bad56c2ba47734c9b10cbfefce3488fb85a0ea09866fd8b1bdec7fc3",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-003",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "aeaa248490a4c1d2d940fbf74959c21f8834077e18d30f310f68915f178a4e6a",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-004",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "FAIL"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "CATALOG_ERROR",
+        "stage": "CATALOG_GAP",
+        "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "1b34a8b8433a7d4439819d04288a6938bed2deda56d9d59b25d70df93dbae7ae",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-005",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "FAIL"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "9c5a141fad9757de0d0f9f0e7f6ce1258c952f333e9b9563111e351dbc087908",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-006",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "FAIL"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "f211ee1ecf54d474f865ade71ca2424e65013dac9e74735a0060e1afb83ab6eb",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-007",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "CATALOG_ERROR",
+        "stage": "CATALOG_GAP",
+        "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+      },
+      "first_divergence_stage": "CATALOG_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "3936cf9d1b3390cb4f7db19e2063007b59fae3b5dbae5348f4362757f75cf488",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-008",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "d757124749c9090a6180d3e667ffbcbee76c9f9b0537e899e55baafbaed5ad76",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-009",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "140734b647be7466c8ee5d9dc80efab2ee635713464e58cf812c74f047efae70",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-010",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "ee23a522414093743788c7f807cd65657d464b880ae81c8bcc1a5538f46404bb",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-011",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "FAIL"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "CATALOG_ERROR",
+        "stage": "CATALOG_GAP",
+        "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "0af527729f92edad33e269ef0f3588de6a76c03d5823314b60ca487133cef072",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-012",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "3503c635166c76de8405404e6da7a127fbb9abe1908ab817c859b32e6b9785df",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-013",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "FAIL"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "CATALOG_ERROR",
+        "stage": "CATALOG_GAP",
+        "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "92c3c0c35cd98ff982c0b2e4cd8990fd8fb9569be2833167373dbe7f7a001d7b",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-014",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "QUERY_SHAPE",
+        "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+      },
+      "first_divergence_stage": "QUERY_SHAPE",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "0c45f2cc8e25aaa75d8584d140aff3be3335ed0c6da9db0c220000949c7cf8e6",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-015",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "482a3fd7bc4c7d98df0360b46c3a79a1dca88872355bd80f3429f774de34133f",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-016",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "497d8b97dfa3fd2a093b1c4f483716f39f1cb03f24bd19655461bbf9bc0952ee",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-017",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "e5c5c01cf5682295967ce2db553b99ba2ed3732baee32c9adbe5f7b8ebd62494",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-018",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "a3ddc070252e82f56c33dd54e4a2608322a52f81a7dc8e704890145ba2ca786b",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-019",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "539410bd45d2c111b5ba2f1a315483fc3f9bd3a9c52a860acb602f017ac4da5d",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-020",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "6972a69eb16d12d2a748565276bf35d5030c640b555f49253a2cd6fed80a16ea",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-021",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "e3abf1d2dd3723cc5a0d281f058690e35d8b57abdcd5a74ffe3f7d94bcb9bf44",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-022",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "a7df847be178df3a532859f1d0f99d5fb1c286cba29652694c476dc04b7c21c2",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-023",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "4304c035d50ed5355852d8cf10e35b56e185b06cd4236f5bbac18a5f1c1d0017",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-024",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "b05c12e8ab6435ac1aebbccadfc7adb2b5ed6824b23f1cc41793ef1578a1b0ed",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-025",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "6d7c2705f04269d16b26e169c1b0a6885fc0f53e5f05557f4414017e0569c6a6",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-026",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "82282862eaf21f010e4afcce1e268c686a9b5e5c7e44fe11f846291448dfc251",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-027",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "dc7154880ba8cd6404ff8fe755d36941cdd752a281bb94f9cbcee06ecea6973c",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-028",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "28931511c5fc1e90e67b8373cdd5cff4cdaea57cd49c7ae93c80c2a1f8bf5cbf",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-029",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "FAIL"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "9146bf002c50df3432a3333f427f32b8ada80ef1ae30f4425fc0f6d31465d8c5",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-030",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "FAIL"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "c9cd3b2c87d0465b0868915c48e9c2c835ef9d48dc45dd08ca24032d279177d4",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-031",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "1ecca8e71bc1c0727d57b0f44fd9bd08223c1addf655d1dc3f4e1abcbfa3de84",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-032",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "42143aa953dab047e9ffa9ad435c0447af4cc011e6944e51573e9a4975188792",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-033",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "FAIL"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "e1e39bb3fc4074dfe2c402f70f148dbd3987f496b67b11df73d9b58104b68218",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-034",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "turn_relation": "PASS",
+        "mentions": "FAIL"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_ROLE",
+        "reason_code": "V2_RELATION_BINDING_ROLE_CONFLICT"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "83f81cda78e9831c30ede6f94d1640ee2e2198b4147f7e6bce7c6dc2689f1c1a",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-035",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "e4c146d4c979c68a1506aca6ac631b83e9aae5ecd40921186e74c77417f17441",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-036",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "f4383be519c3b5e757ebe57aa9e512b11c734d3fdfe8d175ac0539beb992e79d",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-037",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "d57fee988bbad99239d3377d868299c700368be1ca9a50487efe667065b6cba6",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-038",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "a1cd85eda1b913ad661224204f371909f08f7b26a1cc5b010555dfa29cf33348",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-039",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "d44e2c21383876d49e1f195edcc721ba4b3d5b783a11bd0206adb36003389129",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-040",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "7cb610ce3e3274e7099fa9c7e319c3fcd32d4f9065421f56a2c2aa06872bfac5",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-041",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "7a754e9ab75759de99df6b14cc4b61979e4051d844bd4cc69fcb88b8db9f32de",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-042",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "3bf1a3b471a086c16ff072b87c21bd3d50c8e73ca40d9c24d1537bcc5a1774c5",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-043",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "f58bd35cb77339560ee41722bf782e6e042c06e2a6e84b8ab57beb2416cdc5c3",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-044",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "e9177e69d7582d4db4892521467433112d44d1199b620e835408a4756ebdf425",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-045",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "2cb5f73ecf315c8b92c07e3cde5a453b7167e4612a68a4dcaf78e85c9dbcc375",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-046",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "19c2eb2e8c7a95b0d887edbead7515ac86212733537898819399b2ae94ed2a93",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-047",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "2fd64f2fa3c1e3f7b6ef3902edf3a5197de8fe923273957016b5c8bdab214313",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-048",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "ebdcb446f294797787a31b402cf69fa9b13cbf47fc739edf63d647c3900822de",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-049",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "mentions": "PASS",
+        "query_shape": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "856830aac94bba70f1cefb393883ba3409f40c3fe2bbf716bced8c8202ad683d",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-050",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "QUERY_SHAPE",
+        "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+      },
+      "first_divergence_stage": "QUERY_SHAPE",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "7c6db5f4e33389450eb609b934fb95252504a01214434d14e58be301e1d78a9c",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-051",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "QUERY_SHAPE",
+        "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+      },
+      "first_divergence_stage": "QUERY_SHAPE",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "a3468426f51b951d1a4ff2d2fefecb11ba5535f0995da9972f9de80103fd7e82",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-052",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "QUERY_SHAPE",
+        "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+      },
+      "first_divergence_stage": "QUERY_SHAPE",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "d7023a63d9741fa19a8526cb713a3365084580525e0d11978537e3f69d33f5e7",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-053",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_CONTRACT_VALIDATION_FAILURE"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "0208d7fbf672eb4f063bd47b30597760284bee5daf7a658ece47abf6bf0c3019",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-054",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "CANONICAL_BINDING",
+        "reason_code": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+      },
+      "first_divergence_stage": "CANONICAL_BINDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "d62308ebb12e33ab3ae4beb11f6f9d45491137cdc96ec5e46fc8bc4eedb79e6b",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-055",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "CANONICAL_BINDING",
+        "reason_code": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+      },
+      "first_divergence_stage": "CANONICAL_BINDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "0adef0be623ae42de2565883c2252ef2032f843d58dfdd06673f31a24c9d45be",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-056",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "CATALOG_ERROR",
+        "stage": "CATALOG_GAP",
+        "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+      },
+      "first_divergence_stage": "CATALOG_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "a582f2c0c0a5e932ad221e26bd4ea06457ddb637832daad009833f25931d4eec",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-057",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "QUERY_SHAPE",
+        "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+      },
+      "first_divergence_stage": "QUERY_SHAPE",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "7849babc636cfd87e2337a059074e587f0f18dd5bc1ce8be8525cd87eaedb574",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-058",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "ca3993277121433f591718d9081a9b6e986ab2b0aead80a42accb0f35ea8abe9",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-059",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "26c4e0813f98f3cc9d5bedba6723358536a82c16abaaa95b5e258334df705fed",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-060",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "fed04ddd07a3c435963c13e9c207addfef804730a7478ab4dbfad014fa8920c0",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-061",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "1922b5e7310ad06aa12418e000d8d6bb72a1bcbe8d4b48ccc6ecae80fe309535",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-062",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "CATALOG_ERROR",
+        "stage": "CATALOG_GAP",
+        "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+      },
+      "first_divergence_stage": "CATALOG_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "6dce9cacb11958047935bcc3f5331e123121123264f3dd07457172fd1947dbd2",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-063",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "CATALOG_ERROR",
+        "stage": "CATALOG_GAP",
+        "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+      },
+      "first_divergence_stage": "CATALOG_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "8425ad2412cd41ff371d7c3765fc582c637321fa4b4f02461a1b9abe37922608",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-064",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "CATALOG_ERROR",
+        "stage": "CATALOG_GAP",
+        "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+      },
+      "first_divergence_stage": "CATALOG_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "e469a40c5a83aaac564dc26e685b4a66c8cb130c13bbb49ec29a62ddd78e5965",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-065",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "CATALOG_ERROR",
+        "stage": "CATALOG_GAP",
+        "reason_code": "CATALOG_RELATIONSHIP_REQUIRED"
+      },
+      "first_divergence_stage": "CATALOG_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "5af70d58d2231de999a03c0e8a4fce1b301ff893cd8f585bf7a2018692c07bca",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-066",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "21c1686001384d7ec395c6411474fa9c0309b493d69b18763f8337e7b79da408",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-067",
+      "status": "BLOCKED",
+      "axis_results": {
+        "mentions": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "mentions"
+      ],
+      "error": {
+        "type": "MODEL_TIMEOUT",
+        "stage": "EXTERNAL_BLOCKER",
+        "reason_code": "V2_MODEL_TRANSPORT_FAILURE"
+      },
+      "first_divergence_stage": "EXTERNAL_BLOCKER",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "1bc8b21bbb8ad1c98bf24f1710df1b51d3d5f83e6d3102322cc5d70c194728e5",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-068",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "1b99a4a2dcf715c4ed5e5363525c53c2044c3c41476a8b52d6fc2c80abc9671e",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-069",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "2cc7722405e9900d5198aa0b91a99a2d3a31c06a1bf96476ae3388004930159a",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-070",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED",
+        "operation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation",
+        "operation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_BINDING_OUTSIDE_EDIT_EVIDENCE"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "63286a1cfb97b781a52a28243f4fa45197f9d7d456bd3569ae41c5d0faebb64e",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-071",
+      "status": "BLOCKED",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED",
+        "operation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation",
+        "operation"
+      ],
+      "error": {
+        "type": "MODEL_TIMEOUT",
+        "stage": "EXTERNAL_BLOCKER",
+        "reason_code": "V2_MODEL_TRANSPORT_FAILURE"
+      },
+      "first_divergence_stage": "EXTERNAL_BLOCKER",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "c61632712acdc55ac8c7df2f0a30c74a102db8c4b2243f185f4af100b3dcded8",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-072",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "operation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "9950f7059fb935d4f6382f01d9e1cc4ae1106b4d787387152c50ba07f4297e2a",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-073",
+      "status": "BLOCKED",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED",
+        "operation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation",
+        "operation"
+      ],
+      "error": {
+        "type": "MODEL_TIMEOUT",
+        "stage": "EXTERNAL_BLOCKER",
+        "reason_code": "V2_MODEL_TRANSPORT_FAILURE"
+      },
+      "first_divergence_stage": "EXTERNAL_BLOCKER",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "4b5f0a15adc2060627e55e0af911aefa6f355b0ebbdf01d3aad3a19013b7bc75",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-074",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "16d3c11ca65fb83dfd202357dc80c35e54886119b32b47a228384dd27c4c2988",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-075",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_FILTER_CURRENT_EVIDENCE_REQUIRED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "PENDING_RESPONSE",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "06288d2542426a6a2dbd45a4b97e5a4292e9f577310bce10d6f92601f4afa985",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-076",
+      "status": "BLOCKED",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation",
+        "scope_evidence"
+      ],
+      "error": {
+        "type": "FIXTURE_ERROR",
+        "stage": "FIXTURE_GAP",
+        "reason_code": "REFERENCED_HISTORICAL_TASK_NOT_IN_GOLD_HISTORY"
+      },
+      "first_divergence_stage": "FIXTURE_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "HISTORICAL_RETURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "c4cac72c2a37149973d8668214bbaf3bbf67de123d3bbcb6d5eafa8bdc680740",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-077",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "operation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "731542b5a9a0300cf8b71153e8ad806d7bdfc84e4478da991e5d86ba15d3d64e",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-078",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED",
+        "operation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation",
+        "operation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "cf3d7eadfb38e2183d637342ea85b60409f3785c2c458e480c49878c782bac51",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-079",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "operation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "ebdf20c6a899915b804a32f50e92bffea2a7f64dd98079d428faed9d4e369371",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-080",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED",
+        "operation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation",
+        "operation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "3e0cebc961e52a368a59eb4d416cdec34fca892479eba8f694bc1e2ad972f7f8",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-081",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "operation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "operation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_CATALOG_AMBIGUITY_NOT_PROVEN"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "82376273e8d6189e34c36d1b24b9e149657c8fba78c08cf12eb4e6884b0fb11b",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-082",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "FAIL",
+        "operation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "operation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "b5fc0c38b50ce776ee5c3bd1d78c5d0d388195182ef5ac66e8e07527b703b37f",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-083",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "operation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "9c98c46fdf5808e4819991c17ea0e98e58fbf4b027df3189b194b19ffddf8123",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-084",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED",
+        "operation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation",
+        "operation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TIME_NORMALIZATION",
+        "reason_code": "V2_TEMPORAL_BASE_REQUIRED"
+      },
+      "first_divergence_stage": "TIME_NORMALIZATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "30d5ae235f85afd6ef5d051181b4218c433c1cfcd55ef4e6fef2a2268369436b",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-085",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "QUERY_SHAPE",
+        "reason_code": "V2_QUERY_SHAPE_CONFLICT"
+      },
+      "first_divergence_stage": "QUERY_SHAPE",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "cf2a54d6ebe250acb80512fdd957a5e3696001883288fe71675efa147ecfbdcb",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-086",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "6e058e2da2da8e6b1ed200863dce71bb358a7d698b8a0fecebfeb66aa7c49539",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-087",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "2a28496e34d238c36cae77ee93dbab9a56d2bbe6698d318f5ee281b2f7ca643b",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-088",
+      "status": "BLOCKED",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation",
+        "scope_evidence"
+      ],
+      "error": {
+        "type": "FIXTURE_ERROR",
+        "stage": "FIXTURE_GAP",
+        "reason_code": "REFERENCED_HISTORICAL_TASK_NOT_IN_GOLD_HISTORY"
+      },
+      "first_divergence_stage": "FIXTURE_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "HISTORICAL_RETURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "0bb5b53416ff3618a912194ab2b3458cd883363caecea44b5c3cd2396bffa938",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-089",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "operation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "c676f10d6e20188b6cb8735e373d13ad7af7c581ab4ed674f35e1678220424c6",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-090",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TIME_NORMALIZATION",
+        "reason_code": "V2_TEMPORAL_BASE_REQUIRED"
+      },
+      "first_divergence_stage": "TIME_NORMALIZATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "TURN_ONLY",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "431b53fdfea20956d6e4ddf47e45b151f7feee8228587b4336e84d401dc09290",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-091",
+      "status": "BLOCKED",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "query_shape",
+        "scope_evidence"
+      ],
+      "error": {
+        "type": "FIXTURE_ERROR",
+        "stage": "FIXTURE_GAP",
+        "reason_code": "DATASET_PROOFS_ABSENT_FROM_ORIGINAL_GOLD"
+      },
+      "first_divergence_stage": "FIXTURE_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "DATASET_FOLLOWUP",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "f27e3b8b994834d5e3fe333fa06abea4224ebc0e610c62c2868ad8551a0b5170",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-092",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "mentions": "PASS"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "f6a0beb53bf5b61d12b54654b42c461cdd6222435982e776d7507b2be3c52892",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-093",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "5ce497cfa01e377de95a77ecfa852f3a7d95e6b66ac11d67a31eb8056236e9d1",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-094",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "FAIL"
+      },
+      "missing_axes": [],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_FIELD_ROLE_INVALID"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "d8b95c9455cc7339276ef3a15aaa3a309754764763ed06df32496f54d5eb10ac",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-095",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "3ed6123c8ce0bc56e1903e37079f4a84d056ef375778b1b9526e9c3c7368e1d2",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-096",
+      "status": "FAIL",
+      "axis_results": {
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_CONTRACT_VALIDATION_FAILURE"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "d8b95c9455cc7339276ef3a15aaa3a309754764763ed06df32496f54d5eb10ac",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-097",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "98b599785a51e2cde91e6da9598366502f23c75ecbbcffdb555aacbaf56e843f",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-098",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "mentions": "PASS"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "CANONICAL_BINDING",
+        "reason_code": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+      },
+      "first_divergence_stage": "CANONICAL_BINDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "1ba67ae34bf04fe15945cedd40f8baf6b611001769c3bbc5eeaf71af82b64464",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-099",
+      "status": "FAIL",
+      "axis_results": {
+        "query_shape": "NOT_OBSERVED",
+        "mentions": "PASS"
+      },
+      "missing_axes": [
+        "query_shape"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_RECOGNITION_UNRESOLVED"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "4910291208d729f2f41d1caa72133b0d8ba77b9feadc11a98e4f50f9579c9a66",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "G81-100",
+      "status": "PASS",
+      "axis_results": {
+        "query_shape": "PASS",
+        "mentions": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "a2951e8c95d72186a213c4719e9928c6d1594116af0a77673eb49759de1fa849",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-001",
+      "status": "PASS",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "canonical_metrics": "PASS",
+        "turn_relation": "PASS",
+        "target_task": "PASS",
+        "metric_operations": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "6f999c5044a8206b64a2fb00a89930116bd63d4e461689d24b585cb28baec259",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-002",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "turn_relation": "FAIL",
+        "target_task": "PASS",
+        "metric_operations": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "3490f6fb2061eac75ff976e6a70c016d6bc4bffbc7f6a8902dc8f2f478c7990e",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-003",
+      "status": "PASS",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "turn_relation": "PASS",
+        "target_task": "PASS",
+        "metric_operations": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "266e7ae9e9bff86c4b781349766c0c8cf2539f98504151e8d3ca2c760ef340fa",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-004",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "time_relation": "NOT_OBSERVED",
+        "time_grain": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "time_relation",
+        "time_grain",
+        "target_task",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "6c2972552bde2fc26eea264c5c027d129d6e04da51c2acb34c05059df0f8980e",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-005",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "time_relation": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "time_relation",
+        "turn_relation",
+        "target_task",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "cbb14710d1e81f3eeb48dc10c1a3f65772dc0f52062bedf711746d637d00c936",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-006",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "region_operations": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "target_task",
+        "region_operations",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "0805f996c590fe65fb8758e26fa895cd25ac473201ca6dc910732d7d72cfd813",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-007",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "region_operations": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "target_task",
+        "region_operations",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "96f56b77ac9807f91a7baf168dc62b15ab8c74e6bfa7bdac0b2f50f2d0b5bb3a",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-008",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "region_operations": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "target_task",
+        "region_operations",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "ca48b7bf14f5099ffcf9cec7be1c081a04bc161da0629a653a6efd79dec99613",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-009",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "turn_relation",
+        "target_task",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "06afa717354f7f156f94499d9bd4f699ff2b7918879805074c511ec60e040e35",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-010",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "region_values": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "region_values",
+        "turn_relation",
+        "target_task",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "994640efd1bdb73328e34834e03643bf1739a3e2f0d109453a54beff2166e223",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-011",
+      "status": "PASS",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "dimension_surfaces": "PASS",
+        "target_task": "PASS",
+        "dimension_operations": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "3c03a5d02c324d0853d900dbeb253d696303a5ccdeec9b42207174233e25821c",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-012",
+      "status": "FAIL",
+      "axis_results": {
+        "metric_surfaces": "NOT_OBSERVED",
+        "dimension_surfaces": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "dimension_operations": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "metric_surfaces",
+        "dimension_surfaces",
+        "target_task",
+        "dimension_operations",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "5be0f1d97772cb6e38b643c9c9e321128e1330117efc9a1036085ca4710f6dd4",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-013",
+      "status": "PASS",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "dimension_surfaces": "PASS",
+        "target_task": "PASS",
+        "dimension_operations": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "5698b9eba1c45bbca6d6ace3c099c15de35c7e3c6374ce0ae772485c277f9366",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-014",
+      "status": "PASS",
+      "axis_results": {
+        "metric_surfaces": "PASS",
+        "time_relation": "PASS",
+        "target_task": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "4e4ec02ea5ffc00498712f7ded137c3ad52ff2e3fa30c54bd5e94381362370fe",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-015",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "NOT_OBSERVED",
+        "target_task": "NOT_OBSERVED",
+        "metric_clarification_required": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "turn_relation",
+        "target_task",
+        "metric_clarification_required",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "wrong_inheritance"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "b8e63fc8b6743d70d5730955856616795c4f2780c8550d7fe3deb4332e34b50a",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-016",
+      "status": "FAIL",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "target_task": "NOT_OBSERVED",
+        "metric_surfaces": "NOT_OBSERVED",
+        "pending_action": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "target_task",
+        "metric_surfaces",
+        "pending_action",
+        "safety:pending_hijack",
+        "safety:wrong_inheritance"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "ENTITY_VALUE_GROUNDING",
+        "reason_code": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "pending_hijack",
+        "wrong_inheritance"
+      ],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "PENDING_RESPONSE",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "dd95d9abde96eef0b7c1fb9d30d778cd16f0a645ff48300f93a36f7c8807512e",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-017",
+      "status": "PASS",
+      "axis_results": {
+        "turn_relation": "PASS",
+        "target_task": "PASS",
+        "metric_surfaces": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "HISTORICAL_RETURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "61545651cc80b88239b4a80f5692c4ac74d39c2bfc0c32805d90f09d942d0219",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-018",
+      "status": "BLOCKED",
+      "axis_results": {
+        "dataset_route": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "dataset_route",
+        "scope_evidence",
+        "safety:unsafe_truncated_ranking"
+      ],
+      "error": {
+        "type": "IMPLEMENTATION_GAP",
+        "stage": "IMPLEMENTATION_GAP",
+        "reason_code": "V2_EXECUTED_DATASET_RECEIPT_ADAPTER_MISSING"
+      },
+      "first_divergence_stage": "IMPLEMENTATION_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "unsafe_truncated_ranking"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "DATASET_FOLLOWUP",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "32347cd83d4c724668eb3aec904b74358ce461a377c8dd9fe99e4a9413d70969",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-019",
+      "status": "BLOCKED",
+      "axis_results": {
+        "dataset_route": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "dataset_route",
+        "scope_evidence",
+        "safety:unsafe_truncated_ranking"
+      ],
+      "error": {
+        "type": "IMPLEMENTATION_GAP",
+        "stage": "IMPLEMENTATION_GAP",
+        "reason_code": "V2_EXECUTED_DATASET_RECEIPT_ADAPTER_MISSING"
+      },
+      "first_divergence_stage": "IMPLEMENTATION_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "unsafe_truncated_ranking"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "DATASET_FOLLOWUP",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "c5b740e9acd2e1740ebaed16f857ba2c25907a2d7f69266dbd7da81af0ef52cc",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "S81-020",
+      "status": "BLOCKED",
+      "axis_results": {
+        "dataset_route": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "dataset_route",
+        "scope_evidence",
+        "safety:unsafe_truncated_ranking"
+      ],
+      "error": {
+        "type": "IMPLEMENTATION_GAP",
+        "stage": "IMPLEMENTATION_GAP",
+        "reason_code": "V2_EXECUTED_DATASET_RECEIPT_ADAPTER_MISSING"
+      },
+      "first_divergence_stage": "IMPLEMENTATION_GAP",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [
+        "unsafe_truncated_ranking"
+      ],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "TRANSITION",
+      "entry_group": "DATASET_FOLLOWUP",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "8fa1699d3c270056d3dbf3496a1337a59df508688bc42c5a261fdde3da1fa427",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-001",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_RECOGNITION_UNRESOLVED"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "01f3c8dba95f92563c3ad027e32b0d534889002b227a89a93c0dc5f8fe82163d",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-002",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "ca69f871a7a7ac9f32aad864f8091b0351c04543fa4b29a1e08736eb934cd0d7",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-003",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "abfc34c74ab44908c0df060367666ee2fcf2895cf562391e11052a60b95dd8fd",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-004",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_RECOGNITION_UNRESOLVED"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "c16a7f3587e032e2ca596579fe69ff62dc83aa51f95a5b402b2a687d956bcb70",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-005",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "PASS",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "c78aeaa9b1f59fa751d7b2c2292a4edb1a183ada2006f22068473d8847ee5458",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-006",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "200443a64febbf9dc875b9abb5396d91e39ead5b1efe330f440ac690f33b0b88",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-007",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_ROLE",
+        "reason_code": "V2_RELATION_BINDING_ROLE_CONFLICT"
+      },
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "71df25da44a8f0645a1968dc814783ffc72e84954755b49cc3ba725ebca3f539",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-008",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "0a5673ba3e51ba66d38cd9226ec19b18718e868601b5f5a3329659eea4157714",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-009",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "canonical_metrics",
+        "turn_relation"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_PAYLOAD_WOULD_DROP_BINDING"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "6e40bd5109f67f41c590668480866ee7f0b876f30d8e4b375b0222a27aa089e6",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-010",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "7ce36f658a1b52caf828e8002db5d5b351ff4ec0f1ae2593b010b3861921da8e",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-011",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "e46704b1c98faa00c8156b3024761be626244f44b699d8a44157598967133744",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-012",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "c877c52ac2db0c4561ac0490777aa7e2e3a01d2b66225206e8d9ba63d4ed87a2",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-013",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_RECOGNITION_UNRESOLVED"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "ac2b251604dc52405ca439737bc1d2bfaf0f2dc2c78fc5eccc21794e990ac768",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-014",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "f1a758a2c2cbb9139de71dec6a22353d0903275081b34fee24b9ff533d440456",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-015",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "243cd81075c1bc74fb697c69183b547aeb752ec20390aa5a085fce3270c008e5",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-016",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_OPERATION_DROPPED"
+      },
+      "first_divergence_stage": "TASK_OPERATION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "4a78b52edd843a5ac89c6a087449a168ee28e71e249f680ca1154962287f6e34",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-017",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "e14d204238af2a24a42637aaf8b4aa5fcd901d7947452423bb48076c84bbb55d",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-018",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "0e8b363706fc003091373ae09c6e3eb8a18f301fe78dee2ded0d92096390441b",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-019",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_RECOGNITION_UNRESOLVED"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "e78bed10fbfc67a709d6bcc9a3b9c4f0e8d695ab68efa01ab0a8067bee8b0177",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-020",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "1427f83c8dacac4c6f4fad04b14342587c7a490be0194a9ee90d4f5bfbedc71a",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-021",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "canonical_metrics",
+        "turn_relation"
+      ],
+      "error": {
+        "type": "RUNTIME_ERROR",
+        "stage": "MENTION_BOUNDARY",
+        "reason_code": "CONTRACT_OR_HARNESS_FAILURE"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "0b55a0275673eff9b3777e7e550fff093b92e1dbab19689115cbe088fb2d5fcd",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-022",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "SEMANTIC_QUERY_IR",
+        "reason_code": "V2_RECOGNITION_UNRESOLVED"
+      },
+      "first_divergence_stage": "SEMANTIC_QUERY_IR",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "3947ed6c2ccba0bcb9a07548f3b35e867e897fbec6f4bbc67946603c885ac304",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-023",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "FAIL"
+      },
+      "missing_axes": [
+        "canonical_metrics"
+      ],
+      "error": {
+        "type": "MODEL_SEMANTIC_ERROR",
+        "stage": "TASK_OPERATION",
+        "reason_code": "V2_EXPLICIT_SLOT_DROPPED"
+      },
+      "first_divergence_stage": "TURN_RESOLUTION",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "253210ce54dc8a4d35760b3af9a165041d8658d7aee370de0d204ad2799f2d04",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    },
+    {
+      "case_id": "PV81-024",
+      "status": "FAIL",
+      "axis_results": {
+        "canonical_metrics": "NOT_OBSERVED",
+        "turn_relation": "NOT_OBSERVED"
+      },
+      "missing_axes": [
+        "canonical_metrics",
+        "turn_relation"
+      ],
+      "error": {
+        "type": "RUNTIME_ERROR",
+        "stage": "MENTION_BOUNDARY",
+        "reason_code": "CONTRACT_OR_HARNESS_FAILURE"
+      },
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": false,
+      "fully_evaluable": false,
+      "full_plan_gold": false,
+      "corpus": "PRIVATE_VALIDATION",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "label_coverage": "PARTIAL_SEMANTIC",
+      "scope_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "label_provenance_hash": "3d9e72783ad3d9a5345fcb4df2b73afc98aefae5f4a04165c27fad5c5415645b",
+      "root_certainty": "FIRST_OBSERVED_LABEL_DIVERGENCE_OR_REJECTION_PROVEN; INDEPENDENT_ROOT_REQUIRES_CAUSAL_CONFIRMATION"
+    }
+  ]
+}

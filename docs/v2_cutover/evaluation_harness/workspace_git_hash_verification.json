@@ -1,0 +1,9 @@
+{
+  "status": "PASS_PRECOMMIT_ALIGNMENT",
+  "source_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+  "stage_baseline_commit": "ec48f654d6bcaa48ed09d41d7aca4fcbaedcd82e",
+  "tracked_and_manifest_files": 1409,
+  "unexpected_source_drift": 0,
+  "normalization": "CRLF to LF only",
+  "final_gate": "After evidence commit: every mapped development file equals repository file and Git blob; working tree clean; original Oagnet HEAD/index unchanged."
+}
