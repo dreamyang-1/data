@@ -2,7 +2,7 @@
 from itertools import product
 from math import log2
 
-from pydantic import Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from . import models as m
 from .authorized_contract import contract_digest, validate_source_value_fields, SourceValueBindingEvidence
@@ -14,6 +14,14 @@ from .structured_edits import filter_targets
 
 
 class SourceValueRequestDraft(m.StrictModel):
+    # Export the same exclusive alternatives as field_or_reference; a
+    # Python-only validator is not visible to structured-output generation.
+    model_config = ConfigDict(json_schema_extra={'oneOf': [
+        {'required': ['field_binding_handles'], 'properties': {
+            'field_binding_handles': {'minItems': 1}, 'target_filter_handle': {'type': 'null'}}},
+        {'required': ['target_filter_handle'], 'properties': {
+            'field_binding_handles': {'maxItems': 0}, 'target_filter_handle': {'type': 'string'}}},
+    ]})
     request_id: m.Identifier
     mention_id: m.Identifier
     field_binding_handles: list[m.Identifier] = Field(default_factory=list, max_length=10)
