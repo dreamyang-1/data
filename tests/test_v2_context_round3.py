@@ -22,11 +22,20 @@ async def test_act_only_ablation_exposes_unconsumed_model_signal_without_changin
     with pytest.raises(RecognitionFailure,match='V2_PRIOR_PAYLOAD_IDENTITY_REQUIRED'):
         await engine.run(request(question=next_step[0],message_id='turn1'),IDENTITY,**kwargs)
     assert base.next_state.model_dump(mode='json')==before
-    other,_=planner(catalog,[next_step])
+    # Round 3's monkeypatch observes the legacy resolver seam. Round 5 Raw
+    # runtime consumes a joint proposal directly; do not pretend this old arm
+    # still intercepts production. Keep its original causal assertion here.
+    from app.semantic_v2.pipeline import TurnResolver
+    from app.semantic_v2.slot_reducer import TaskPatch
+    from app.semantic_v2.models import SemanticResolutionContract
+    surface=deepcopy(parsed)
+    for mention in surface['mentions']:mention['source_turn_id']='turn1'
+    p=CurrentTurnParser.parse(text=next_step[0],turn_id='turn1',text_ref='turn1',
+        parsed=CurrentTurnSemanticParse.model_validate(surface))
     with resolver_arm('A_MODEL_HARD') as decisions:
-        result=await other.run(request(question=next_step[0],message_id='turn1'),IDENTITY,**kwargs)
-    assert result.plan['logical_plan']['task_id']==base.plan['logical_plan']['task_id']
-    assert {m['canonical_code'] for m in result.plan['logical_plan']['payload']['measures']}=={'amount','orders'}
+        result=TurnResolver.resolve(p,state=ConversationState.model_validate(base.next_state.payload),
+            task_patch=TaskPatch(base_task_version=1),semantic_resolution=SemanticResolutionContract(status='UNRESOLVED'))
+    assert result.target_task_id==base.plan['logical_plan']['task_id']
     assert decisions[0]['CURRENT_HYBRID_TARGET_TASK']!=decisions[0]['MODEL_TARGET_TASK']
     assert base.next_state.model_dump(mode='json')==before
     # The patch is scoped to this context manager; production defaults persist.
@@ -129,12 +138,12 @@ async def test_pending_new_act_conflict_is_visible_and_parse_only_oracle_is_boun
     before=pending.next_state.model_dump(mode='json');engine,calls=planner(pending_catalog,[step])
     result=await engine.run(request(question=step[0],message_id='answer'),IDENTITY,
         state=pending.next_state,pending=pending.pending_state)
-    assert result.resolution['dialogue_act']==('NEW_TASK' if shift else 'ANSWER_CLARIFICATION')
-    assert (result.plan['logical_plan']['task_id']==pending.pending_state.payload['task_id']) is (not shift)
-    assert len(calls.calls)==(2 if shift else 1)
+    assert result.resolution['dialogue_act']=='NEW_TASK'
+    assert result.plan['logical_plan']['task_id']!=pending.pending_state.payload['task_id']
+    assert len(calls.calls)==2
     assert pending.next_state.model_dump(mode='json')==before
-    # Same ambiguous raw answer: this demonstrates field precedence, not proof
-    # that a real user intended NEW rather than the offered Pending answer.
+    # Authored joint NEW_TASK is independent of old shift flags. Exact option
+    # matching cannot veto it. This is a contract control, not model accuracy.
 
 
 @pytest.mark.asyncio
@@ -142,5 +151,5 @@ async def test_context_with_missing_active_task_fails_closed(catalog):
     step=metric_step('继续销售额','销售额','ADD',True)
     step[1]['dialogue_act_candidates']=['CONTINUE']
     engine,_=planner(catalog,[step])
-    with pytest.raises(RecognitionFailure,match='V2_TURN_REFERENCE_UNRESOLVED'):
+    with pytest.raises(RecognitionFailure,match='V2_CONTEXT_UNRESOLVED'):
         await engine.run(request(question=step[0],message_id='orphan'),IDENTITY)

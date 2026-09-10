@@ -49,7 +49,11 @@ async def test_typed_pending_resumes_or_rejects_contract_corruption(inputs,fault
         class Answer:
             async def complete(self,**kwargs):
                 assert kwargs['stage']=='v2_current_turn'
-                return kwargs['output_model'].model_validate({'reference_signals':['ELLIPSIS']})
+                ctx=kwargs['context']['task_context'];p=ctx['pending']
+                return kwargs['output_model'].model_validate({'reference_signals':['ELLIPSIS'],
+                    'context_proposal':dict(status='ACCEPTED',relation='ANSWER_CLARIFICATION',
+                        target_task_id=p['task_id'],task_version=p['task_version'],pending_id=p['pending_id'],
+                        state_version=ctx['state_version'])})
         engine=RawTurnPlanner(Answer(),publication,clock=lambda:datetime.fromisoformat(case['clock']))
         async def invoke():
             return await engine.run(request_for(case,message_id='answer'),TrustedIdentity(tenant_id='evaluation',user_id='evaluation'),

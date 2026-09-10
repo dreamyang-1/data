@@ -72,6 +72,12 @@ class RuntimeObserver:
 
         observe(TurnResolver,'resolve','TurnResolutionInput',static=True,
                 select=lambda a,k:{'parse':a[0],**k})
+        # Versioned Round 5 runtime seam: observe the actual validated proposal,
+        # without replacing it with the previous signal-derived resolver.
+        if hasattr(runtime, 'proposal_resolution'):
+            observe(runtime,'proposal_resolution','TurnResolutionInput',
+                select=lambda a,k:{'context_trace':a[0],'parse':a[1],'state':a[2],
+                    'task_patch':a[3],'semantic_resolution':a[4]})
         observe(CurrentTurnParser,'parse','CurrentTurnParseInput',static=True)
         observe(runtime.RawTurnPlanner,'_candidates','CandidateSet',static=True,
                 select=lambda a,k:{'parse':a[1]})

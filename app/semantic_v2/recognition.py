@@ -22,6 +22,8 @@ from .enums import CatalogType, SemanticRole
 from .pipeline import CurrentTurnParser, CurrentTurnSemanticParse, TurnResolver, collect_bound_refs
 from .pipeline import AuthorizedLogicalPlan
 from .recognition_client import RecognitionFailure
+from .context_contract import ContextAwareParse, proposal_schema, CONTRACT_VERSION
+from .context_proposal import discover_context, accept_proposal, proposal_resolution
 from .recognition_repairs import repair_model_parse, repair_collection_handle_mentions
 from .pending_recognition import (AmbiguityDraft, PendingResume, clarification_result,
     governed_aliases, pending_identity, prepare_ambiguities, selected_option)
@@ -157,10 +159,12 @@ class SemanticTaskDraft(m.StrictModel):
     ambiguities: list[AmbiguityDraft] = Field(default_factory=list,max_length=10)
 
 
-def semantic_task_schema(parse, tasks):
+def semantic_task_schema(parse, tasks, *, context_relation=None):
     """Expose only historical handles that the existing turn guard can accept."""
     schema = SemanticTaskDraft.model_json_schema()
-    allowed = sorted(tasks) if 'HISTORICAL' in parse.reference_signals and not parse.topic_shift_signals else []
+    historical = (context_relation == 'RETURN_TO_TOPIC' if context_relation is not None else
+        'HISTORICAL' in parse.reference_signals and not parse.topic_shift_signals)
+    allowed = sorted(tasks) if historical else []
     schema['properties']['historical_task_handle'] = ({
         'anyOf': [{'type':'string','enum':allowed}, {'type':'null'}], 'default':None}
         if allowed else {'type':'null','default':None})
@@ -176,6 +180,8 @@ class RecognizedPlan(m.StrictModel):
     plan_state: ScopedArtifact
     prompt_version: Literal['v2-current-recognition-v8'] = PROMPT_VERSION
     edit_trace: list[StructuredEditTrace] = Field(default_factory=list)
+    context_trace: JsonValue = None
+    context_contract_version: str = CONTRACT_VERSION
 
 
 def value_schema():
@@ -265,10 +271,17 @@ class RawTurnPlanner:
             previous_plans[previous.task_id] = previous
         if request.message_id in current.recent_turn_ids or any(v.current_turn_ref == request.message_id for t in current.tasks.values() for v in t.versions):
             raise RecognitionFailure('V2_MESSAGE_ALREADY_PLANNED')
-        parsed = await self.model.complete(stage='v2_current_turn', instruction=PARSE_PROMPT,
+        discovered = discover_context(session, state=state, plans=plans, pending=pending)
+        recognized = await self.model.complete(stage='v2_current_turn', instruction=PARSE_PROMPT,
             context={'question': request.question, 'turn_id': request.message_id,
-                'clock': now.isoformat(), 'slots': list(EDIT_SLOTS)}, output_model=CurrentTurnSemanticParse,
-            schema=current_turn_schema())
+                'clock': now.isoformat(), 'slots': list(EDIT_SLOTS),
+                'task_context': deepcopy(discovered.model_context)}, output_model=ContextAwareParse,
+            schema=proposal_schema(discovered.model_context, current_turn_schema()))
+        # Validate even injected transports: omission is not an old-rule fallback.
+        recognized = ContextAwareParse.model_validate(recognized.model_dump(mode='json'))
+        context_trace = accept_proposal(session, recognized.context_proposal, discovered,
+            state=state, question=request.question)
+        parsed = CurrentTurnSemanticParse.model_validate(recognized.model_dump(exclude={'context_proposal'}))
         parsed, repairs = repair_model_parse(parsed, text=request.question, turn_id=request.message_id)
         if repairs:
             logging.getLogger(__name__).info('V2 current-turn representation repaired',
@@ -281,33 +294,32 @@ class RawTurnPlanner:
                 extra={'message_id': request.message_id, 'catalog_span_trace': catalog_spans})
             parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
                 text_ref=request.message_id, parsed=parsed)
-        if current.pending and not parse.topic_shift_signals:
+        if context_trace['FINAL_RELATION'] == 'ANSWER_CLARIFICATION':
             option=selected_option(current.pending,request.question)
-            if option is not None:
-                return self._answer_pending(session,current,state,pending,option,parsed,parse,now)
-            if ('NEW_TASK' not in parse.dialogue_act_candidates and 'HISTORICAL' not in parse.reference_signals):
-                raise RecognitionFailure('V2_PENDING_ANSWER_EVIDENCE_REQUIRED')
+            return self._answer_pending(session,current,state,pending,option,parsed,parse,now)
         handles, candidates = self._candidates(session, parse)
         tasks = {'task:' + contract_digest({'task': t.task_id})[:24]: t for t in current.tasks.values()}
+        selected_tasks = {h:t for h,t in tasks.items() if t.task_id == context_trace['FINAL_TARGET']}
         datasets = {'dataset:' + contract_digest({'dataset': d.dataset_id})[:24]: d for d in current.datasets.values() if d.status == 'VALID'}
         draft = await self.model.complete(stage='v2_semantic_edits', instruction=DRAFT_PROMPT,
             context={'question': request.question, 'parse': parsed.model_dump(mode='json'), 'clock': now.isoformat(),
-                'catalog_candidates': candidates, 'tasks': self._task_context(parse, current, tasks, previous_plans),
+                'catalog_candidates': candidates, 'tasks': self._task_context(parse, current, selected_tasks, previous_plans,
+                    context_trace=context_trace),
                 'datasets': [{'dataset_handle': h, 'task_handle': next(h for h,t in tasks.items() if t.task_id == d.task_id),
                     'task_version': d.task_version} for h,d in datasets.items()],
                 'payload_types': [*PayloadContractRegistry.definitions, 'INHERIT'],
-                'value_schema': value_schema()}, output_model=SemanticTaskDraft, schema=semantic_task_schema(parse,tasks))
+                'value_schema': value_schema()}, output_model=SemanticTaskDraft,
+            schema=semantic_task_schema(parse, selected_tasks, context_relation=context_trace['FINAL_RELATION']))
         draft, handle_repairs = repair_collection_handle_mentions(draft, parse=parse, handles=handles, candidates=candidates)
         if handle_repairs:
             logging.getLogger(__name__).info('V2 collection handle representation repaired',
                 extra={'message_id': request.message_id, 'handle_repairs': handle_repairs})
         draft,blockers,pending_operations,deferred=prepare_ambiguities(session,parse,draft,handles,candidates,SlotEditDraft)
-        historical = tasks.get(draft.historical_task_handle)
-        if draft.historical_task_handle and (parse.topic_shift_signals or 'HISTORICAL' not in parse.reference_signals or historical is None):
+        historical = selected_tasks.get(draft.historical_task_handle)
+        if draft.historical_task_handle and (context_trace['FINAL_RELATION'] != 'RETURN_TO_TOPIC' or historical is None):
             raise RecognitionFailure('V2_HISTORICAL_TARGET_NOT_OFFERED')
-        skeleton = TurnResolver.resolve(parse, state=current, task_patch=TaskPatch(base_task_version=0),
-            semantic_resolution=m.SemanticResolutionContract(status='UNRESOLVED'),
-            historical_task_id=historical.task_id if historical else None)
+        skeleton = proposal_resolution(context_trace, parse, current, TaskPatch(base_task_version=0),
+            m.SemanticResolutionContract(status='UNRESOLVED'))
         if skeleton.decision.decision_type != 'PROCEED':
             raise RecognitionFailure('V2_TURN_REFERENCE_UNRESOLVED')
         target = current.tasks.get(skeleton.target_task_id)
@@ -376,6 +388,7 @@ class RawTurnPlanner:
             service_route=definition.allowed_service_routes[0], analysis_goals=sorted(definition.required_analysis_goals),
             task_version=version, delivery_spec=reduced.semantics.delivery_spec,
             versions=AuthorizedVersionMetadata(prompt_version=PROMPT_VERSION, policy_version='current-upstream-scope-v1',
+                current_turn_parser_version=CONTRACT_VERSION, turn_resolver_version='context-proposal-hard-v1',
                 adapter_version='legacy-capability-assessment-v1'))
         if target:
             next_state = apply_state_mutation(current, StateMutation(
@@ -400,7 +413,8 @@ class RawTurnPlanner:
                 expected_state_version=current.state_version, payload={'task': task, 'topic': topic})
         return RecognizedPlan(parse=parsed, resolution=resolution.model_dump(mode='json'),
             plan=plan.model_dump(mode='json'), next_state=session.seal(kind='CONVERSATION', payload=next_state),
-            plan_state=session.seal(kind='LAST_REQUEST', payload=plan.logical_plan), edit_trace=edit_trace)
+            plan_state=session.seal(kind='LAST_REQUEST', payload=plan.logical_plan), edit_trace=edit_trace,
+            context_trace=context_trace)
 
     @staticmethod
     def _check_semantic_coverage(payload, state):
@@ -428,14 +442,17 @@ class RawTurnPlanner:
 
 
     @classmethod
-    def _task_context(cls, parse, current, tasks, plans):
+    def _task_context(cls, parse, current, tasks, plans, *, context_trace=None):
         """Offer reference candidates separately from deterministically current state.
 
         These labels come from restored scope-checked artifacts, never the model.
         The later resolver and runtime handle guard remain authoritative.
         """
-        historical = 'HISTORICAL' in parse.reference_signals and not parse.topic_shift_signals
-        if historical:
+        historical = (context_trace['FINAL_RELATION'] == 'RETURN_TO_TOPIC' if context_trace else
+            'HISTORICAL' in parse.reference_signals and not parse.topic_shift_signals)
+        if context_trace is not None:
+            selected = {h:t for h,t in tasks.items() if t.task_id == context_trace['FINAL_TARGET']}
+        elif historical:
             selected = tasks
         else:
             reference = TurnResolver.resolve(parse, state=current, task_patch=TaskPatch(base_task_version=0),
@@ -733,13 +750,15 @@ class RawTurnPlanner:
             service_route=definition.allowed_service_routes[0],analysis_goals=sorted(definition.required_analysis_goals),
             task_version=active.version,delivery_spec=active.semantics.delivery_spec,
             versions=AuthorizedVersionMetadata(prompt_version=PROMPT_VERSION,policy_version='current-upstream-scope-v1',
+                current_turn_parser_version=CONTRACT_VERSION,turn_resolver_version='context-proposal-hard-v1',
                 adapter_version='legacy-capability-assessment-v1'))
         data=staged.model_dump(mode='json');data['tasks'][task.task_id]['status']='RESOLVED'
         version=next(v for v in data['tasks'][task.task_id]['versions'] if v['version']==active.version)
         version.update(status='RESOLVED',plan_id=plan.logical_plan.plan_id,current_turn_ref=parse.turn_id,current_turn_digest=parse.text_digest)
         return RecognizedPlan(parse=parsed,resolution=resolution.model_dump(mode='json'),plan=plan.model_dump(mode='json'),
             next_state=session.seal(kind='CONVERSATION',payload=ConversationState.model_validate(data)),
-            plan_state=session.seal(kind='LAST_REQUEST',payload=plan.logical_plan))
+            plan_state=session.seal(kind='LAST_REQUEST',payload=plan.logical_plan),
+            context_trace=getattr(session, '_context_proposal_proof', (None,None,None))[2])
 
     @staticmethod
     def _check_roles(slot, value):
