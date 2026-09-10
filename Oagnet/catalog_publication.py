@@ -118,6 +118,7 @@ class PinnedCatalog:
         self._value_observations = []
         self._empty_value_queries = set()
         self._value_probes = []
+        self._value_searches = []
 
     @property
     def snapshot(self):
@@ -240,9 +241,29 @@ class PinnedCatalog:
         self._value_probes.append((deepcopy(field), value, limit, observation['observation_hash']))
         return {**deepcopy(observation), 'catalog_pin':self.identity, 'attribute_record_id':attribute_record_id}
 
+    def search_entity_values(self, attribute_record_id, value, *, data_source_id=None, limit=8, require_implicit_policy=False):
+        """Small indexed discovery after an empty exact lookup, on this pin only."""
+        from catalog_value_candidates import observe_candidates
+        field = self.entity_value_source(attribute_record_id, data_source_id=data_source_id)
+        if (attribute_record_id, value) not in self._empty_value_queries:
+            raise CatalogEvidenceError('CATALOG_VALUE_PROBE_REQUIRES_EMPTY_EXACT_LOOKUP')
+        if require_implicit_policy and attribute_record_id not in self.entity_value_lookup_fields():
+            raise CatalogEvidenceError('CATALOG_VALUE_IMPLICIT_SEARCH_NOT_GOVERNED')
+        if len(self._value_searches) >= 3:
+            raise CatalogEvidenceError('CATALOG_VALUE_TARGETED_BUDGET_EXCEEDED')
+        observation = observe_candidates(self._manifest['scope'], field, value, limit)
+        self._check_active()
+        self._value_searches.append((deepcopy(field), value, limit, observation['observation_hash']))
+        return {**deepcopy(observation), 'catalog_pin': self.identity, 'attribute_record_id': attribute_record_id}
+
     def finish(self):
         self._check_active()
         scope = self._manifest["scope"]
+        if self._value_searches:
+            from catalog_value_candidates import observe_candidates
+            for field, value, limit, expected in self._value_searches:
+                if observe_candidates(scope, field, value, limit)['observation_hash'] != expected:
+                    raise CatalogEvidenceError('CATALOG_ENTITY_VALUES_CHANGED_DURING_READ')
         if self._value_probes:
             from catalog_value_sources import observe_probe
             for field, value, limit, expected in self._value_probes:

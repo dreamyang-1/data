@@ -1,0 +1,445 @@
+{
+  "attempts": [
+    {
+      "folder": "live-F-base",
+      "case_id": "LF51-F",
+      "turn_id": "5302e958a7ea50f787715e82",
+      "turn_index": 0,
+      "capture_hash": "310f6f9f6b2220f0a0c1bab424f064ecbdd91d64e213078b4b235606c0f48a18",
+      "input_valid": true,
+      "question": "查询上海销售额",
+      "first_divergence_stage": null,
+      "error": null,
+      "status": "PASS",
+      "downstream_effects": [],
+      "model_relation": "NEW_TASK",
+      "model_status": "ACCEPTED",
+      "target": null,
+      "state_unchanged": true,
+      "calls": 3,
+      "seconds": 17.219000000040978,
+      "input_tokens": 23547,
+      "output_tokens": 984,
+      "stage_seconds": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 8.546999999787658
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 6.718000000109896
+        },
+        {
+          "stage": "v2_source_value_choice",
+          "seconds": 1.75
+        }
+      ],
+      "semantic_runtime_hash": "00e1d3219988f2707ff570faec9425b31e1db1d8cfac914b164dfecdb0374bcf"
+    },
+    {
+      "folder": "live-healthy",
+      "case_id": "HC53-CDB",
+      "turn_id": "2bdc960a4cc1644ea259882f",
+      "turn_index": 1,
+      "capture_hash": "668153585167d6f0ff4a0b1ed7043ed8cf66df2cb244a541434fbd0fcdd2879e",
+      "input_valid": false,
+      "question": null,
+      "first_divergence_stage": "FIXTURE_GAP",
+      "error": "V2_CONTEXT_UNRESOLVED",
+      "status": "INVALID_INPUT",
+      "downstream_effects": [
+        "NO_ACCEPTED_CURRENT_PLAN"
+      ],
+      "model_relation": null,
+      "model_status": "UNRESOLVED",
+      "target": null,
+      "state_unchanged": true,
+      "calls": 1,
+      "seconds": 5.202999999979511,
+      "input_tokens": 3600,
+      "output_tokens": 229,
+      "stage_seconds": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 5.062000000150874
+        }
+      ],
+      "semantic_runtime_hash": "00e1d3219988f2707ff570faec9425b31e1db1d8cfac914b164dfecdb0374bcf"
+    },
+    {
+      "folder": "live-F-correction",
+      "case_id": "LF51-F",
+      "turn_id": "f50c957eaaea7419c28c7047",
+      "turn_index": 1,
+      "capture_hash": "be77cb3441082a985f06b50e62d1dca087f0c5b17860ee765c717a4dfcf3fe40",
+      "input_valid": true,
+      "question": "不是上海，是北京",
+      "first_divergence_stage": "SCHEMA_FAILURE",
+      "error": "V2_MODEL_OUTPUT_INVALID",
+      "status": "FAIL",
+      "downstream_effects": [
+        "NO_ACCEPTED_CURRENT_PLAN"
+      ],
+      "model_relation": "REPLACE",
+      "model_status": "ACCEPTED",
+      "target": "task:turn-5302e958a7ea50f787715e82",
+      "state_unchanged": true,
+      "calls": 2,
+      "seconds": 14.608999999938533,
+      "input_tokens": 24667,
+      "output_tokens": 841,
+      "stage_seconds": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 8.984000000171363
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 5.437000000150874
+        }
+      ],
+      "semantic_runtime_hash": "00e1d3219988f2707ff570faec9425b31e1db1d8cfac914b164dfecdb0374bcf"
+    },
+    {
+      "folder": "live-healthy-time",
+      "case_id": "HC53-B",
+      "turn_id": "db02b25c9ad415dfb1d941cb",
+      "turn_index": 1,
+      "capture_hash": "4df338b0a66ec428042c86df4a7f46ab5a30459ec6e83278e713fd6e526578d2",
+      "input_valid": false,
+      "question": null,
+      "first_divergence_stage": "FIXTURE_GAP",
+      "error": "V2_CONTEXT_UNRESOLVED",
+      "status": "INVALID_INPUT",
+      "downstream_effects": [
+        "NO_ACCEPTED_CURRENT_PLAN"
+      ],
+      "model_relation": null,
+      "model_status": "UNRESOLVED",
+      "target": null,
+      "state_unchanged": true,
+      "calls": 1,
+      "seconds": 5.937999999849126,
+      "input_tokens": 3597,
+      "output_tokens": 229,
+      "stage_seconds": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 5.7969999997876585
+        }
+      ],
+      "semantic_runtime_hash": "00e1d3219988f2707ff570faec9425b31e1db1d8cfac914b164dfecdb0374bcf"
+    },
+    {
+      "folder": "live-J",
+      "case_id": "LF51-J",
+      "turn_id": "cc217d4c0ae4185dda7b2d5f",
+      "turn_index": 0,
+      "capture_hash": "ba4216e78a9f357cafe646b58f11ddfe54a92e7fa7c2dd6a82d7e6952a1fdda9",
+      "input_valid": true,
+      "question": "江苏有哪些医院？",
+      "first_divergence_stage": "TASK_OPERATION",
+      "error": "V2_SLOT_OPERATION_CONFLICT",
+      "status": "FAIL",
+      "downstream_effects": [
+        "NO_ACCEPTED_CURRENT_PLAN"
+      ],
+      "model_relation": "NEW_TASK",
+      "model_status": "ACCEPTED",
+      "target": null,
+      "state_unchanged": true,
+      "calls": 3,
+      "seconds": 15.234999999869615,
+      "input_tokens": 31949,
+      "output_tokens": 843,
+      "stage_seconds": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 7.5310000001918525
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "seconds": 4.922000000020489
+        },
+        {
+          "stage": "v2_source_value_choice",
+          "seconds": 2.6100000001024455
+        }
+      ],
+      "semantic_runtime_hash": "00e1d3219988f2707ff570faec9425b31e1db1d8cfac914b164dfecdb0374bcf"
+    },
+    {
+      "folder": "live-healthy-new",
+      "case_id": "HC53-J",
+      "turn_id": "683fcce3e7bc139773da3d2a",
+      "turn_index": 1,
+      "capture_hash": "acce577ee996d10b791a722dfdbc6107e92dac930ca12cfcc2a9e6d0a23660da",
+      "input_valid": false,
+      "question": null,
+      "first_divergence_stage": "FIXTURE_GAP",
+      "error": "V2_CONTEXT_UNRESOLVED",
+      "status": "INVALID_INPUT",
+      "downstream_effects": [
+        "NO_ACCEPTED_CURRENT_PLAN"
+      ],
+      "model_relation": null,
+      "model_status": "UNRESOLVED",
+      "target": null,
+      "state_unchanged": true,
+      "calls": 1,
+      "seconds": 4.937000000150874,
+      "input_tokens": 3600,
+      "output_tokens": 229,
+      "stage_seconds": [
+        {
+          "stage": "v2_current_turn",
+          "seconds": 4.766000000061467
+        }
+      ],
+      "semantic_runtime_hash": "00e1d3219988f2707ff570faec9425b31e1db1d8cfac914b164dfecdb0374bcf"
+    }
+  ],
+  "model_calls": 11,
+  "valid_input_model_calls": 8,
+  "invalid_input_model_calls": 3,
+  "http_request_attempts": 6,
+  "valid_business_turns": 3,
+  "invalid_fixture_attempts": 3,
+  "original_cases": [
+    {
+      "case_id": "LF51-A",
+      "semantic_type": "FOLLOW_UP",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-B",
+      "semantic_type": "ADD",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-C",
+      "semantic_type": "REMOVE",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-D",
+      "semantic_type": "CLEAR",
+      "declared_turns": 3,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-E",
+      "semantic_type": "REPLACE_TIME",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-F",
+      "semantic_type": "CORRECTION",
+      "declared_turns": 2,
+      "current_live_turns": 2,
+      "status": "FAIL",
+      "retained_original_expected": true,
+      "first_divergence_stage": "SCHEMA_FAILURE"
+    },
+    {
+      "case_id": "LF51-G",
+      "semantic_type": "NEW_TASK",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-H",
+      "semantic_type": "HISTORICAL_RETURN",
+      "declared_turns": 3,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-I",
+      "semantic_type": "PENDING_RESPONSE",
+      "declared_turns": 1,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-J",
+      "semantic_type": "PENDING_NEW_TASK",
+      "declared_turns": 1,
+      "current_live_turns": 1,
+      "status": "FAIL",
+      "retained_original_expected": true,
+      "first_divergence_stage": "TASK_OPERATION"
+    },
+    {
+      "case_id": "LF51-K",
+      "semantic_type": "AMBIGUOUS",
+      "declared_turns": 4,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-L",
+      "semantic_type": "SELF_CONTAINED",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-A2",
+      "semantic_type": "FOLLOW_UP",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-A3",
+      "semantic_type": "FOLLOW_UP",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-B2",
+      "semantic_type": "ADD",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-C2",
+      "semantic_type": "REMOVE",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-D2",
+      "semantic_type": "CLEAR",
+      "declared_turns": 3,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-F2",
+      "semantic_type": "CORRECTION",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-G2",
+      "semantic_type": "NEW_TASK",
+      "declared_turns": 2,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    },
+    {
+      "case_id": "LF51-H2",
+      "semantic_type": "HISTORICAL_RETURN",
+      "declared_turns": 3,
+      "current_live_turns": 0,
+      "status": "NOT_RUN",
+      "retained_original_expected": true,
+      "first_divergence_stage": null
+    }
+  ],
+  "original_case_counts": {
+    "NOT_RUN": 18,
+    "FAIL": 2
+  },
+  "original_declared_turns": 44,
+  "original_unique_live_turns": 3,
+  "original_full_chain_executed": [
+    "LF51-F"
+  ],
+  "original_single_pending_current_executed": [
+    "LF51-J"
+  ],
+  "original_previously_blocked_cases_reached_final_turn": 1,
+  "original_previously_blocked_cases_now_passed": 0,
+  "prerequisite_queries": [
+    {
+      "case_id": "LF51-A",
+      "status": "NOT_RERUN",
+      "retained_evidence": "CATALOG_TIME_CONTRACT_GAP"
+    },
+    {
+      "case_id": "LF51-B",
+      "status": "NOT_RERUN",
+      "retained_evidence": "CATALOG_TIME_CONTRACT_GAP"
+    },
+    {
+      "case_id": "LF51-C",
+      "status": "NOT_RERUN",
+      "retained_evidence": "CATALOG_TIME_CONTRACT_GAP"
+    },
+    {
+      "case_id": "LF51-D",
+      "status": "NOT_RERUN",
+      "retained_evidence": "ROUND52_LIVE_PASS"
+    },
+    {
+      "case_id": "LF51-F",
+      "status": "PASS",
+      "retained_evidence": "CURRENT_LIVE_PLAN"
+    }
+  ],
+  "healthy_declared_cases": 10,
+  "healthy_valid_live_turns": 0,
+  "healthy_invalid_attempts": 3,
+  "healthy_pass": 0,
+  "healthy_semantic_fail": 0,
+  "healthy_not_run": 10,
+  "invalid_input_failure_attribution": "FIXTURE_GAP; NOT_CONTEXT_OR_MODEL_SEMANTIC_FAILURE",
+  "carried_round52_live_clear_evidence": "PASS_ON_PREVIOUS_REAL_CHAIN; NOT_NEW_ROUND53_COVERAGE",
+  "all_model_calls_counted": true,
+  "remaining_model_budget": 1,
+  "stopped_before_incomplete_normal_request": true,
+  "input_fixture_repaired": true,
+  "input_repair_live_rerun": false,
+  "production_context_changed": false
+}

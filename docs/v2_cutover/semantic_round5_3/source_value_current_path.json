@@ -1,0 +1,70 @@
+{
+  "contract": "SOURCE_VALUE_CURRENT_PATH",
+  "producer": "LLM v2_semantic_edits -> SemanticTaskDraft.source_value_requests",
+  "creation": "Current explicit FILTER_VALUE absent from static enum; model selects offered governed fields or one current filter target",
+  "structure": [
+    "request_id",
+    "mention_id",
+    "field_binding_handles XOR target_filter_handle"
+  ],
+  "consumer": "RawTurnPlanner._run -> source_filter_patch -> resolve_requests -> lookup_source_values -> select_probed_value",
+  "writeback": "choice_handles -> hydrate_choice -> _patch -> native reducer -> SourceValueBindingEvidence / TaskState / IR / Plan",
+  "candidate_origin": "Current Catalog Pin + governed physical mapping + read-only exact/probe/indexed targeted source observation",
+  "J_original": "Consumer invoked; used request IDs empty because Draft has no consuming filter. Guard rejects before source reads.",
+  "J_final_live": "Actual Draft now references request, Consumer obtains and selects the real province value, then malformed initial Filter ADD is rejected.",
+  "J_classification": "MODEL_OUTPUT_CONTRACT_DEFECT; NOT_MISSING_CONSUMER_OR_ROUTING",
+  "no_auto_filter_added": true,
+  "current_gate": "Request IDs consumed, current mentions/roles/owner/scope/mapping and final source revalidation required",
+  "retrieval": "Exact normalized lookup -> existing bounded probe; if incomplete, indexed parameterized prefix candidates -> model semantic selection -> exact revalidation",
+  "targeted_bound": 8,
+  "existing_probe_bound": 64,
+  "bound_reason": "Reuse existing exact-source small candidate budget; no case-specific numeric tuning",
+  "access_guard": "SHOW INDEX + EXPLAIN must prove range/ref/const access on an index whose first field is the selected column",
+  "candidate_completeness": "Complete for the directional query only, never for the full field; over 8 matches safely rejected",
+  "scope_checks": [
+    "semantic_model_id",
+    "business_domain_ids",
+    "catalog_pin",
+    "entity owner",
+    "attribute",
+    "physical mapping",
+    "database when supplied",
+    "implicit lookup policy"
+  ],
+  "finish_rechecks": [
+    "exact source values",
+    "original probe",
+    "targeted candidates",
+    "catalog authority",
+    "pin activation"
+  ],
+  "suffix_rules": 0,
+  "fuzzy_auto_binding": false,
+  "top1_auto_binding": false,
+  "new_llm_stage": false,
+  "new_index": false,
+  "final_source_read": {
+    "rows": [
+      {
+        "query_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+        "candidate_count": 1,
+        "targeted_latency_seconds": 0.31200000015087426,
+        "source_observation_unchanged": true,
+        "indexed_access_guard_passed": true
+      },
+      {
+        "query_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+        "candidate_count": 1,
+        "targeted_latency_seconds": 0.21899999980814755,
+        "source_observation_unchanged": true,
+        "indexed_access_guard_passed": true
+      }
+    ],
+    "candidate_source_selects": 2,
+    "business_plan_sql_executed": 0,
+    "writes": 0
+  },
+  "raw_source_records_in_git": false,
+  "source_observation_hash": "6644e32eaed4416bac7eb074973d69989559c1a13feee0f5faa7b3915b2b40fc",
+  "targeted_observation_hash": "35759abed0b218061c233cf3626e03dad8ae403c66b4eb90ff553eb794965cb5"
+}
