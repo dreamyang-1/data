@@ -3508,6 +3508,7 @@ class SQLTranslatorProd:
         parameters: Optional[Dict] = None,
         parameter_fingerprint: Optional[str] = None,
         require_consistent_snapshot: bool = False,
+        execution_timeout_ms: Optional[int] = None,
     ) -> Dict:
         """
         在指定数据源上执行 SQL
@@ -3517,11 +3518,17 @@ class SQLTranslatorProd:
         :param parameters: 内部参数化计划的标量值；公共调用保持 None
         :param parameter_fingerprint: SQL 模板与参数共同指纹，参数化执行必传
         :param require_consistent_snapshot: 内部执行必须先成功建立只读快照；公共旧调用默认不变
+        :param execution_timeout_ms: 可选的 MySQL SELECT 服务端超时；仅影响本次连接
         :return: 执行结果字典
         """
         try:
             if type(require_consistent_snapshot) is not bool:
                 raise ValueError('READ_ONLY_SNAPSHOT_MODE_INVALID')
+            if execution_timeout_ms is not None and (
+                type(execution_timeout_ms) is not int
+                or not 1 <= execution_timeout_ms <= 90_000
+            ):
+                raise ValueError('EXECUTION_TIMEOUT_INVALID')
             if parameters is not None or parameter_fingerprint is not None:
                 from bound_sql import validate_bound_sql, statement_fingerprint
                 if isinstance(parameters, dict):
@@ -3546,8 +3553,9 @@ class SQLTranslatorProd:
             }
 
         connection = None
+        business_query_submitted = False
         try:
-            connection = pymysql.connect(
+            connection_options = dict(
                 host=ds_config.get('host', '').split(':')[0],
                 port=int(ds_config.get('port') or 3306),
                 user=ds_config.get('username', ''),
@@ -3556,7 +3564,30 @@ class SQLTranslatorProd:
                 charset='utf8mb4',
                 cursorclass=DictCursor,
             )
+            if execution_timeout_ms is not None:
+                connection_options.update(
+                    connect_timeout=10,
+                    read_timeout=max(5, (execution_timeout_ms + 999) // 1000 + 5),
+                    write_timeout=10,
+                )
+            connection = pymysql.connect(**connection_options)
             with connection.cursor() as cursor:
+                timeout_verified = False
+                if execution_timeout_ms is not None:
+                    try:
+                        # The integer is range checked above. MySQL applies this
+                        # limit to SELECT execution on this connection only.
+                        cursor.execute(
+                            f"SET SESSION MAX_EXECUTION_TIME = {execution_timeout_ms}"
+                        )
+                        timeout_verified = True
+                    except Exception:
+                        return {
+                            'success': False,
+                            'error': 'A server-side SELECT timeout is required before query submission',
+                            'error_code': 'EXECUTION_TIMEOUT_REQUIRED',
+                            'retryable': False,
+                        }
                 # Establish an actual read-only consistent snapshot before the
                 # business query. If the source does not support this contract,
                 # the query may still succeed but no PASS evidence is emitted.
@@ -3579,9 +3610,11 @@ class SQLTranslatorProd:
                         'retryable': False,
                     }
                 if parameters is None:
+                    business_query_submitted = True
                     cursor.execute(sql)
                 else:
                     # PyMySQL binds against this connection's actual SQL mode.
+                    business_query_submitted = True
                     cursor.execute(sql, parameters)
                 result_data = cursor.fetchall()
                 columns = [desc[0] for desc in cursor.description] if cursor.description else []
@@ -3611,6 +3644,7 @@ class SQLTranslatorProd:
                     'columns': columns,
                     'row_count': len(result_data),
                     'error': None,
+                    'business_query_submitted': True,
                 }
                 integrity_verified = (
                     snapshot_verified
@@ -3656,6 +3690,8 @@ class SQLTranslatorProd:
                             'column_contract_valid': True,
                             'row_contract_valid': True,
                             'row_count_reconciled': True,
+                            **({'statement_timeout_enforced': True}
+                               if timeout_verified else {}),
                         },
                     })
                     if source_watermark:
@@ -3665,9 +3701,21 @@ class SQLTranslatorProd:
                         })
                 return result
         except Exception as e:
+            if business_query_submitted and (
+                getattr(e, 'args', (None,))[0] == 3024
+                or isinstance(e, TimeoutError)
+            ):
+                return {
+                    'success': False,
+                    'error': 'Bound SQL execution timed out',
+                    'error_code': 'SQL_EXECUTION_TIMEOUT',
+                    'retryable': False,
+                    'business_query_submitted': True,
+                }
             if parameters is not None:
                 return {'success': False, 'error': 'Bound SQL execution failed',
-                        'error_code': 'SQL_PARAMETER_EXECUTION_FAILED', 'retryable': False}
+                        'error_code': 'SQL_PARAMETER_EXECUTION_FAILED', 'retryable': False,
+                        'business_query_submitted': business_query_submitted}
             return {'success': False, 'error': f"数据库执行错误: {str(e)}"}
         finally:
             if connection:

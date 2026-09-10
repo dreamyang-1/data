@@ -1,0 +1,190 @@
+{
+  "status": "SCALAR_LIVE_READ_ONLY_E2E_PARTIAL",
+  "main_scalar_path_status": "COMPLETE",
+  "started_at": "2026-09-10T13:33:35.3660597+00:00",
+  "hard_deadline": "2026-09-10T15:33:35.3660597+00:00",
+  "baseline": {
+    "commit": "6bd9480f03d8e48f9f079847b63c3e2e89480281",
+    "branch": "v2-time-lowering-execution-prep-20260910t123352z",
+    "draft_pr": 68,
+    "pr_state": "OPEN_DRAFT_UNMERGED",
+    "parent_verification_sha256": "0db166cf64023d45070ecf9e2c625b4b5c55674a3e3a8c3ca47f8a2ed9918ccb"
+  },
+  "branch": "v2-scalar-live-e2e-20260910t133335z",
+  "release": {
+    "commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_10/evidence_index.json",
+    "draft_pr_base": "v2-time-lowering-execution-prep-20260910t123352z",
+    "auto_merge": false
+  },
+  "authorized_scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [205],
+    "scope_mode": "EXPLICIT_DOMAINS",
+    "data_source_id": 58
+  },
+  "preflight": {
+    "status": "PASS",
+    "server_family": "MYSQL",
+    "strict_read_only_snapshot": true,
+    "server_side_timeout_capability": "MAX_EXECUTION_TIME",
+    "required_physical_fields": 8,
+    "present_physical_fields": 8,
+    "sales_order_estimated_rows": 59019,
+    "metadata_and_source_checks": 6,
+    "business_selects_before_preflight_pass": 0,
+    "configuration_source": "E:/YouoAgent/.env + SQLTranslatorProd.RedisDSLLoader; credentials omitted",
+    "catalog_source": "FROZEN_CERTIFIED_SNAPSHOT_WITH_CURRENT_SNAPSHOT_DIGEST_MATCH",
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "candidate_retrieval": "FROZEN_SOURCE_VALUE_EVIDENCE; NOT_CURRENT_LIVE_VECTOR_QUALITY"
+  },
+  "transport_contract": {
+    "runner": "tools/cutover/scalar_live_e2e_round5_10.py",
+    "executor": "SQLTranslatorProd.execute_sql_on_data_source",
+    "adapter": "IsolatedExecutionAdapter.execute",
+    "store": "ISOLATED_IN_MEMORY_LIVE_READ_ONLY",
+    "strict_snapshot": true,
+    "server_side_timeout_ms": 30000,
+    "client_read_timeout_seconds": 35,
+    "single_statement_parameterized_select": true,
+    "public_http_route": false,
+    "production_persistence": false,
+    "v1_route_changed": false
+  },
+  "runtime_files": {
+    "DataAnalysis_Agent/app/semantic_v2/isolated_execution.py": "9c847a1b354e89c0b9ace46d09ef0f935796bbe30f043c413aef49e2aa435ff5",
+    "DataAnalysis_Agent/tools/cutover/scalar_live_e2e_round5_10.py": "dbcfd448dd6fa6577131bf3c7cec197a2e522252df231b8a15ba524146d54fc1",
+    "sql-translator/sql_translator_prod.py": "9e15f43f1bf0d5c5a8071fbb78a6c2fac8f2564ff166c526d09013682ce2bdb1"
+  },
+  "live_scalar_cases": {
+    "Q0": {
+      "utterance": "查询含税销售总额",
+      "recognition": "PASS_PLAN",
+      "typed_lowering": "PASS",
+      "execution": "SUCCEEDED",
+      "row_count": 1,
+      "value_type": "float",
+      "truncated": false,
+      "execution_seconds": 0.328,
+      "result_digest": "bfae74c7ba40dc28a6c095cb34ecff53c7bb73e7870099f3c812068334093032",
+      "sql_digest": "57d8fb10fa41bd2b96560f3f08ecd6bbb16501782668eb90e9fe78b7e841b9fc"
+    },
+    "Q1": {
+      "utterance": "查询去年江苏省订单笔数",
+      "recognition": "PASS_PLAN",
+      "typed_lowering": "PASS",
+      "execution": "SUCCEEDED",
+      "time_range": "2025-01-01T00:00:00+08:00/2026-01-01T00:00:00+08:00",
+      "storage_time_contract": "LOCAL_WALL_DATETIME/Asia/Shanghai/LEFT_CLOSED_RIGHT_OPEN",
+      "row_count": 1,
+      "value_type": "int",
+      "truncated": false,
+      "execution_seconds": 0.141,
+      "result_digest": "499a0e1a82c6e67ff7b8371f484945f2d56e31bd7f8fdce3a76cabb7fb8a9df8",
+      "sql_digest": "3c91626edc0d86e4a0a2f553c8cd1831a7123f91bacf48148b62b1e760c9f271"
+    },
+    "Q2": {
+      "utterance": "换今年",
+      "recognition": "PASS_PLAN",
+      "typed_lowering": "PASS",
+      "execution": "SUCCEEDED",
+      "task_continuity": "SAME_TASK_VERSION_1_TO_2",
+      "time_range": "2026-01-01T00:00:00+08:00/2027-01-01T00:00:00+08:00",
+      "row_count": 1,
+      "value_type": "int",
+      "truncated": false,
+      "execution_seconds": 0.094,
+      "result_digest": "cdda8f2029a75671b407bbc8934e5adf45ae230f076bbff518f877e99f3df06d",
+      "sql_digest": "0e797e25f89e09ab7d4c1e36ac363e3a0441dd66ebed06efa15e19c35316bbda"
+    }
+  },
+  "result_contract": {
+    "row_count_reconciled": true,
+    "one_scalar_row": true,
+    "snapshot_verified": true,
+    "timeout_enforced": true,
+    "null_zero_empty_distinguished": true,
+    "integer_counts_preserved": true,
+    "q0_serialization": "Decimal converted by existing executor to JSON numeric float",
+    "exact_monetary_decimal_precision": "UNPROVEN"
+  },
+  "state_continuity": {
+    "status": "PASS_ISOLATED_IN_MEMORY",
+    "q1_attempt_preserved": true,
+    "q1_dataset_preserved": true,
+    "q2_attempt_saved": true,
+    "q2_dataset_saved": true,
+    "latest_dataset_is_q2": true,
+    "q1_result_not_reused_for_q2": true,
+    "other_tasks_unchanged": true,
+    "production_redis_or_dataset_restore": "NOT_TESTED"
+  },
+  "independent_business_value_verification": {
+    "status": "BUSINESS_VALUE_INDEPENDENTLY_UNVERIFIED",
+    "attempts": 4,
+    "rejected_before_connection": 2,
+    "database_submissions": 2,
+    "retries": 0,
+    "control_flow_observation": "Both submitted results passed success/submission/equality assertions before a later receipt-serialization error",
+    "limitation": "Independent result/value digests were not durably saved; no re-query after budget exhaustion",
+    "budget_gate": "FAIL_4_ATTEMPTS_GT_2"
+  },
+  "safety_counts": {
+    "model_requests": 6,
+    "main_business_select_attempts": 3,
+    "main_business_selects_submitted": 3,
+    "independent_select_attempts": 4,
+    "independent_selects_submitted": 2,
+    "metadata_and_source_checks": 6,
+    "model_retries": 0,
+    "sql_writes": 0,
+    "production_state_writes": 0,
+    "catalog_writes": 0,
+    "configuration_changes": 0,
+    "service_restarts": 0,
+    "api_sse_ui_changes": 0,
+    "blind_access": 0
+  },
+  "tests": {
+    "affected_agent": {"passed": 266, "failed": 0, "collection_errors": 0},
+    "agent_full": {"passed": 3532, "failed": 27, "collection_errors": 0},
+    "sql_translator_full": {"passed": 396, "failed": 0, "collection_errors": 0},
+    "old_pass_to_new_fail": 0,
+    "new_agent_tests": 7,
+    "new_sql_translator_tests": 7,
+    "oagnet": "690 passed / 8 pre-existing failed; reused because source was not changed"
+  },
+  "gates": {
+    "SCALAR_LIVE_READ_ONLY_E2E": "PASS_MAIN_PATH",
+    "SCALAR_RESULT_CONTRACT": "PARTIAL_EXACT_MONETARY_DECIMAL_AND_INDEPENDENT_VALUE_RECEIPT_UNPROVEN",
+    "SCALAR_STATE_CONTINUITY": "PASS_ISOLATED_IN_MEMORY",
+    "READY_FOR_INTERNAL_DEMO_E2E_SMOKE": "PARTIAL_SCALAR_PATH_ONLY",
+    "CONTEXT_FOLLOWUP_READY": "NOT_READY_FULL_GATE",
+    "INTERNAL_DEMO_SEMANTIC_READY": "NO",
+    "READY_FOR_USER_APPROVAL": "NO"
+  },
+  "private_evidence": {
+    "root": ".eval_private/scalar-live-e2e-round5-10-20260910T133335Z",
+    "preflight.json": "aa6369867bed5abc3fd1980130adf7522e3544f00b2e72f71acb3c6c60b375f7",
+    "physical_preflight.json": "16d013bcd6f1c4ed6dfff99f072ec54caee131c2aa583000c26bd9d5e56661a1",
+    "candidate_freeze.json": "b65bfc52e528b7e7274d79ae126c60165d76e27355c6f1ce918c438ba47a2fe6",
+    "live-v1/result.json": "a888be05f0c8c6ea82d346237dfec49ca76e738bbe2d5e9dc4637957b1faf1d8",
+    "live-v1/q0.json": "a48f2f83af931c5568d5409a1d71563715d2986167e1584d18e08a4c89e59891",
+    "live-v1/q1.json": "13d9bb3061d6ec76282182c2c34a6e634dd5e34ef5ab9eb18c5cc16b469b5d99",
+    "live-v1/q2.json": "83d3a27310cb2dfb0fd97eb7be4bfd7549e05209379013f7c7e97655ac318c83",
+    "full-agent/aggregate.json": "93e162c73a9779baf0a806ee27fa155ec85833c2354b8f0011c62b601349c692",
+    "final-sql-translator.txt": "531c82fa1a6cebf8e861214d24ed77d63a444a3e0579bff2878e82f6edbbcd9f"
+  },
+  "changed_files": [
+    "app/semantic_v2/isolated_execution.py",
+    "tests/test_v2_isolated_execution.py",
+    "tools/cutover/scalar_live_e2e_round5_10.py",
+    "sql-translator/sql_translator_prod.py",
+    "sql-translator/test_required_execution_snapshot.py",
+    "docs/v2_cutover/semantic_round5_10/closure_report.md",
+    "docs/v2_cutover/semantic_round5_10/evidence_index.json"
+  ],
+  "production_semantic_changes": 0,
+  "prompt_changes": 0,
+  "model_schema_changes": 0,
+  "v1_production_routing_changed": false
+}
