@@ -1,9 +1,9 @@
-"""Opt-in typed execution preparation and TEST_ONLY lifecycle adapter.
+"""Opt-in typed execution preparation and isolated lifecycle adapter.
 
 No HTTP route, default transport, database configuration or production store.
 The injected transport uses the existing execute_sql_on_data_source protocol;
 its request/response binding is a trusted local adapter boundary, not a remote
-signed execution receipt. Synthetic results never become public ScopedArtifacts.
+signed execution receipt. Results never become public API or persistence artifacts.
 """
 from copy import deepcopy
 from dataclasses import asdict, dataclass
@@ -14,7 +14,8 @@ from typing import Callable
 
 from . import models as m
 from .asl2 import ASL2Lowering, lower_asl2, prove_asl2_result
-from .authorized_contract import AuthorizedScopeContext, contract_digest
+from .authorized_contract import (AuthorizedScopeContext, ScopedArtifact, contract_digest,
+                                  scoped_artifact_material)
 from .pipeline import AuthorizedLogicalPlan
 from .result_contract import completed_allowed
 from .state_machine import ConversationState, DatasetState, StateTransitionError
@@ -87,7 +88,8 @@ class TypedExecutionRequest:
     def executor_arguments(self):
         """Exact keyword protocol of SQLTranslatorProd.execute_sql_on_data_source."""
         return dict(sql=self.sql, parameters=deepcopy(self.parameters),
-                    parameter_fingerprint=self.parameter_fingerprint, require_consistent_snapshot=True)
+                    parameter_fingerprint=self.parameter_fingerprint, require_consistent_snapshot=True,
+                    execution_timeout_ms=30_000)
 
 
 @dataclass(frozen=True)
@@ -105,11 +107,12 @@ class IsolatedExecutionReceipt:
 
 
 class IsolatedExecutionStore:
-    """Only an in-memory test store. No production persistence/export adapter."""
-    provenance='TEST_ONLY'
+    """In-memory isolated store. No production persistence/export adapter."""
 
-    def __init__(self, context, state):
+    def __init__(self, context, state, *, provenance='TEST_ONLY'):
+        require(provenance in {'TEST_ONLY','LIVE_READ_ONLY'},'ISOLATED_EXECUTION_PROVENANCE_INVALID')
         self.context=context
+        self.provenance=provenance
         self._state=ConversationState.model_validate_json(state.model_dump_json())
         self._lock=RLock()
         self._messages={}
@@ -127,6 +130,20 @@ class IsolatedExecutionStore:
             for name in ('conversation_id','tenant_id','user_id','application_id'):
                 require(getattr(state,name)==getattr(self._state,name),'EXECUTION_STATE_IDENTITY_MISMATCH')
             self._state=ConversationState.model_validate_json(state.model_dump_json())
+
+    def scoped_state(self, previous):
+        """Seal the exact isolated state for another native V2 turn."""
+        previous=ScopedArtifact.model_validate(previous.model_dump(mode='json'))
+        require(previous.kind=='CONVERSATION' and previous.context==self.context,
+                'EXECUTION_STATE_ARTIFACT_MISMATCH')
+        before=ConversationState.model_validate(previous.payload)
+        current=self.state
+        for name in ('conversation_id','tenant_id','user_id','application_id'):
+            require(getattr(before,name)==getattr(current,name),'EXECUTION_STATE_IDENTITY_MISMATCH')
+        payload=current.model_dump(mode='json')
+        material=scoped_artifact_material(payload,previous.source_value_bindings)
+        return ScopedArtifact(kind='CONVERSATION',context=self.context,payload=payload,
+            source_value_bindings=previous.source_value_bindings,payload_digest=contract_digest(material))
 
 
 def _state_with_attempt(state, attempt, *, dataset_id=None):
@@ -148,12 +165,14 @@ def _response_matches(request, response):
         and response.get('prepared_fingerprint')==request.prepared_fingerprint
         and response.get('context_fingerprint')==request.context.fingerprint()
         and str(response.get('data_source_id'))==request.data_source_id
-        and response.get('provenance')=='TEST_ONLY')
+        and response.get('provenance')==request.provenance)
 
 
 def _validate_response(request, lowering, response):
     require(_response_matches(request,response), 'EXECUTION_RESULT_IDENTITY_MISMATCH')
     result=response.get('result',{})
+    if isinstance(result,dict) and result.get('error_code')=='SQL_EXECUTION_TIMEOUT':
+        raise TimeoutError('isolated read-only execution timeout')
     require(isinstance(result,dict) and result.get('success') is True,'EXECUTION_TRANSPORT_FAILURE')
     require(response.get('submitted') is True,'EXECUTION_SUBMISSION_UNPROVEN')
     rows,columns=result.get('data'),result.get('columns')
@@ -164,7 +183,9 @@ def _validate_response(request, lowering, response):
         and result.get('truncated',False) is False, 'EXECUTION_RESULT_COMPLETENESS_UNPROVEN')
     require(len(rows)==1 and lowering.result_contract.expected_cardinality.kind=='SCALAR',
             'EXECUTION_RESULT_GRAIN_MISMATCH')
-    required={'consistent_snapshot','read_only_transaction','column_contract_valid','row_contract_valid','row_count_reconciled'}
+    required={'consistent_snapshot','read_only_transaction','column_contract_valid','row_contract_valid',
+              'row_count_reconciled'}
+    if request.provenance=='LIVE_READ_ONLY':required.add('statement_timeout_enforced')
     checks=result.get('quality_checks',{})
     require(result.get('quality_status')=='PASS' and all(checks.get(k) is True for k in required)
         and isinstance(result.get('snapshot_id'),str) and bool(result['snapshot_id']),
@@ -184,7 +205,7 @@ def _validate_response(request, lowering, response):
 
 
 class IsolatedExecutionAdapter:
-    """No default transport. A caller must inject a bounded TEST_ONLY operation."""
+    """No default transport. A caller must inject a bounded isolated operation."""
     def __init__(self, *, transport: Callable, store: IsolatedExecutionStore, clock: Callable):
         require(type(store) is IsolatedExecutionStore and callable(transport),'ISOLATED_EXECUTION_ONLY')
         self.transport,self.store,self.clock=transport,store,clock
@@ -202,7 +223,7 @@ class IsolatedExecutionAdapter:
         parameter=sql.get('sql_parameter_contract',{})
         request=TypedExecutionRequest(identifier,prepared.fingerprint,current_context,plan.plan_id,plan.task_id,
             plan.task_version,message_id,str(sql['data_source_id']),sql['sql'],sql.get('sql_parameters'),
-            parameter.get('statement_fingerprint'))
+            parameter.get('statement_fingerprint'),self.store.provenance)
         store=self.store
         with store._lock:
             previous=store._messages.get(message_id)
@@ -216,10 +237,11 @@ class IsolatedExecutionAdapter:
                 and task.active_version==plan.task_version,'EXECUTION_STATE_VERSION_CONFLICT')
             version=next(v for v in task.versions if v.version==task.active_version)
             require(version.plan_id==plan.plan_id and task.status=='RESOLVED','EXECUTION_TASK_PLAN_MISMATCH')
-            attempt=m.ExecutionAttemptRecord(execution_id='isolated:'+identifier,task_id=plan.task_id,
+            namespace='isolated-live-read-only' if store.provenance=='LIVE_READ_ONLY' else 'isolated-test-only'
+            attempt=m.ExecutionAttemptRecord(execution_id=namespace+':'+identifier,task_id=plan.task_id,
                 task_version=plan.task_version,attempt_number=1+sum(a.task_id==plan.task_id and a.task_version==plan.task_version
                     for a in state.execution_attempts.values()),status='RUNNING',started_at=self.clock(),
-                execution_backend='SEMANTIC_QUERY',snapshot_id='test-only:pending:'+identifier,
+                execution_backend='SEMANTIC_QUERY',snapshot_id=namespace+':pending:'+identifier,
                 catalog_version=current_context.catalog_pin.catalog_version,
                 vector_index_version=current_context.catalog_pin.vector_index_version,
                 semantic_model_version=plan.snapshot_requirement.semantic_model_version,
@@ -229,7 +251,8 @@ class IsolatedExecutionAdapter:
             store.compare_and_swap(state.state_version,running)
             store._messages[message_id]=identifier
             stages=['PLAN_VALIDATED','INPUT_COMPILED','SUBMISSION_ATTEMPTED']
-            store._receipts[identifier]=IsolatedExecutionReceipt(identifier,'RUNNING',tuple(stages),attempt)
+            store._receipts[identifier]=IsolatedExecutionReceipt(identifier,'RUNNING',tuple(stages),attempt,
+                provenance=store.provenance)
         try:
             response=self.transport(request)
             if _response_matches(request,response) and response.get('submitted') is True:
@@ -244,13 +267,13 @@ class IsolatedExecutionAdapter:
                     evidence=contract_digest(sql)),result=result_proof)
             data=attempt.model_dump(mode='json')
             data.update(status='SUCCEEDED',completed_at=self.clock(),snapshot_id=result['snapshot_id'],
-                dataset_id='test-only-dataset:'+identifier,proof_chain=chain.model_dump(mode='json'))
+                dataset_id=namespace+'-dataset:'+identifier,proof_chain=chain.model_dump(mode='json'))
             terminal=m.ExecutionAttemptRecord.model_validate(data)
             with store._lock:
                 store.compare_and_swap(running.state_version,_state_with_attempt(running,terminal,dataset_id=terminal.dataset_id))
                 stages.append('SUCCESS_RECEIPT_SAVED')
                 receipt=IsolatedExecutionReceipt(identifier,'SUCCEEDED',tuple(stages),terminal,
-                    result_digest=result_digest)
+                    result_digest=result_digest,provenance=store.provenance)
                 store._receipts[identifier]=receipt
             return receipt
         except Exception as exc:
@@ -266,6 +289,7 @@ class IsolatedExecutionAdapter:
             with store._lock:
                 try:store.compare_and_swap(running.state_version,_state_with_attempt(running,terminal))
                 except StateTransitionError:pass  # Preserve newer state; never publish success.
-                receipt=IsolatedExecutionReceipt(identifier,'FAILED',tuple(stages),terminal,reason_code=reason)
+                receipt=IsolatedExecutionReceipt(identifier,'FAILED',tuple(stages),terminal,reason_code=reason,
+                    provenance=store.provenance)
                 store._receipts[identifier]=receipt
             return receipt

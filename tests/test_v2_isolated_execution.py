@@ -58,7 +58,7 @@ def fake_transport(monkeypatch,prepared,change=None):
             **request.executor_arguments())
         response=dict(request_fingerprint=request.fingerprint,prepared_fingerprint=request.prepared_fingerprint,
             context_fingerprint=request.context.fingerprint(),data_source_id=request.data_source_id,
-            provenance='TEST_ONLY',submitted=bool(cursor.bound),result=result)
+            provenance=request.provenance,submitted=bool(cursor.bound),result=result)
         if change:change(response)
         return response
     return Mock(side_effect=call),cursor,connection
@@ -76,7 +76,8 @@ def test_typed_preparation_native_execution_result_and_saved_attempt(monkeypatch
         'RESULT_VALIDATED','SUCCESS_RECEIPT_SAVED')
     assert receipt.provenance=='TEST_ONLY' and receipt.attempt.status=='SUCCEEDED'
     assert cursor.bound==[(prepared.sql_receipt['sql'],prepared.sql_receipt.get('sql_parameters'))]
-    assert connection.closed and cursor.executed[0]=='SET TRANSACTION READ ONLY'
+    assert connection.closed and cursor.executed[:2]==[
+        'SET SESSION MAX_EXECUTION_TIME = 30000','SET TRANSACTION READ ONLY']
     assert store.state.tasks[prepared.plan.task_id].last_dataset_id==receipt.attempt.dataset_id
     assert state.state_version==1 and state.tasks[prepared.plan.task_id].last_dataset_id is None
     again=adapter.execute(prepared,current_context=store.context,message_id='execute',expected_state_version=1)
@@ -231,5 +232,66 @@ def test_snapshot_failure_prevents_the_native_driver_business_query(monkeypatch,
         current_context=store.context,message_id='read-only',expected_state_version=1)
     assert receipt.status=='FAILED' and cursor.bound==[]
     assert 'EXECUTION_SUBMITTED' not in receipt.stages
-    assert cursor.executed==['SET TRANSACTION READ ONLY']
+    assert cursor.executed==['SET SESSION MAX_EXECUTION_TIME = 30000','SET TRANSACTION READ ONLY']
     assert store.state.datasets=={} and connection.closed and connection.rolled_back
+
+
+def test_live_read_only_provenance_is_explicit_and_requires_timeout_proof(monkeypatch,provider):
+    prepared=prepared_for(provider,True);state=state_for(prepared)
+    store=IsolatedExecutionStore(prepared.plan.permission_requirement,state,provenance='LIVE_READ_ONLY')
+    transport,_,_=fake_transport(monkeypatch,prepared)
+    receipt=IsolatedExecutionAdapter(transport=transport,store=store,clock=lambda:NOW).execute(prepared,
+        current_context=store.context,message_id='live-read-only',expected_state_version=1)
+    assert receipt.status=='SUCCEEDED' and receipt.provenance=='LIVE_READ_ONLY'
+    assert receipt.attempt.execution_id.startswith('isolated-live-read-only:')
+    assert receipt.attempt.dataset_id.startswith('isolated-live-read-only-dataset:')
+    request=transport.call_args.args[0]
+    assert request.provenance=='LIVE_READ_ONLY' and request.executor_arguments()['execution_timeout_ms']==30_000
+
+
+def test_live_read_only_response_without_timeout_proof_never_publishes_success(monkeypatch,provider):
+    prepared=prepared_for(provider);state=state_for(prepared)
+    store=IsolatedExecutionStore(prepared.plan.permission_requirement,state,provenance='LIVE_READ_ONLY')
+    def remove_timeout(response):response['result']['quality_checks'].pop('statement_timeout_enforced')
+    transport,_,_=fake_transport(monkeypatch,prepared,remove_timeout)
+    receipt=IsolatedExecutionAdapter(transport=transport,store=store,clock=lambda:NOW).execute(prepared,
+        current_context=store.context,message_id='live-read-only',expected_state_version=1)
+    assert receipt.status=='FAILED' and receipt.reason_code=='EXECUTION_RESULT_SNAPSHOT_UNPROVEN'
+    assert store.state.datasets=={}
+
+
+@pytest.mark.parametrize('provenance',['LIVE','PRODUCTION',''])
+def test_isolated_store_rejects_unrecognized_provenance(provider,provenance):
+    prepared=prepared_for(provider)
+    with pytest.raises(ValueError,match='ISOLATED_EXECUTION_PROVENANCE_INVALID'):
+        IsolatedExecutionStore(prepared.plan.permission_requirement,state_for(prepared),provenance=provenance)
+
+
+def test_isolated_execution_state_round_trips_through_scoped_artifact(monkeypatch,provider):
+    prepared=prepared_for(provider,True);state=state_for(prepared)
+    from app.semantic_v2.authorized_contract import ScopedArtifact,contract_digest,scoped_artifact_material
+    payload=state.model_dump(mode='json');previous=ScopedArtifact(kind='CONVERSATION',
+        context=prepared.plan.permission_requirement,payload=payload,
+        payload_digest=contract_digest(scoped_artifact_material(payload,())))
+    store=IsolatedExecutionStore(previous.context,state,provenance='LIVE_READ_ONLY')
+    transport,_,_=fake_transport(monkeypatch,prepared)
+    receipt=IsolatedExecutionAdapter(transport=transport,store=store,clock=lambda:NOW).execute(prepared,
+        current_context=store.context,message_id='live',expected_state_version=1)
+    sealed=store.scoped_state(previous)
+    assert receipt.status=='SUCCEEDED' and sealed.context==previous.context
+    restored=ConversationState.model_validate(sealed.payload)
+    assert restored.state_version==3 and restored.tasks[prepared.plan.task_id].last_dataset_id==receipt.attempt.dataset_id
+    assert scoped_artifact_material(sealed.payload,sealed.source_value_bindings)
+
+
+def test_scoped_state_rejects_another_scope(provider):
+    prepared=prepared_for(provider);state=state_for(prepared)
+    store=IsolatedExecutionStore(prepared.plan.permission_requirement,state,provenance='LIVE_READ_ONLY')
+    from app.semantic_v2.authorized_contract import ScopedArtifact,contract_digest,scoped_artifact_material
+    context=prepared.plan.permission_requirement.model_copy(deep=True)
+    data=context.model_dump(mode='json');data['authorized_scope']['semantic_model_id']=82
+    other=AuthorizedScopeContext.model_validate(data);payload=state.model_dump(mode='json')
+    artifact=ScopedArtifact(kind='CONVERSATION',context=other,payload=payload,
+        payload_digest=contract_digest(scoped_artifact_material(payload,())))
+    with pytest.raises(ValueError,match='EXECUTION_STATE_ARTIFACT_MISMATCH'):
+        store.scoped_state(artifact)
