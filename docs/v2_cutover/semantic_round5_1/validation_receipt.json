@@ -1,0 +1,37 @@
+{
+  "evidence_integrity": "PASS",
+  "readiness": "PARTIAL",
+  "baseline": "76da2d0818dafe851ed2b2dc345ec5cf972242fe",
+  "unchanged_baseline_tracked": 1566,
+  "production_changes": 0,
+  "model_calls": 20,
+  "sql_calls": 0,
+  "production_writes": 0,
+  "blind_access": 0,
+  "diagnostic_source_hashes": {
+    "tools/cutover/live_followup_round5_1.py": "852da333b0add61db0346bf14ca4f29a575d9a1ba4115f20735a255a1ddfa99d",
+    "tools/cutover/followup_readiness_evidence.py": "0e2f0aa1b707b3ee8c12d57aab080f69835394f939bcee85c84e958bf89cdb61",
+    "tests/test_round51_readiness_accounting.py": "300b32e708bd134dfdee5079a9c19baa1fce0fca769be53571332e09376fec8d"
+  },
+  "evidence_hashes": {
+    "closure_report.md": "c491f241bd2a3a108b8a0870a599f48a0a82433ad9d14b23fc9fe681afdb5116",
+    "live_case_inventory.json": "7fd9e207db5b58b9cd9653034149bd23fe7199746624cbaeb1b3c2c8216e8aa3",
+    "live_scenarios.json": "1f17629a1628609e047110673a76d969f7f230695361f9e907f17aa9b773a955",
+    "performance_receipt.json": "4df490848869fbee82744766783f391187abe823410c1444263cb931af31686d",
+    "round5_1_manifest.json": "a963300c58a02827ba5d7df0e2adef4355bfc97fcf8afaf4572da38589de5d87",
+    "test_delta.json": "b45818decdbab6d4aadb118f688f2b6baff70e036e7b28b0db8f98a77915823a",
+    "verify_round5_1.py": "6d5d37a0b02c82eab9f5206b55dc2fbb0cc9934e4cbdabfea02688bff26cb381"
+  },
+  "repeated_old_tests": 193,
+  "new_accounting_tests": 4,
+  "old_pass_to_new_fail": 0,
+  "collection_errors": 0,
+  "parent_pr_verification": {
+    "number": 59,
+    "html_url": "https://github.com/dreamyang-1/data/pull/59",
+    "state": "open",
+    "draft": true,
+    "merged_at": null
+  },
+  "no_production_completion_claim": true
+}
