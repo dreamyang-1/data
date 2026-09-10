@@ -89,7 +89,8 @@ class TypedExecutionRequest:
         """Exact keyword protocol of SQLTranslatorProd.execute_sql_on_data_source."""
         return dict(sql=self.sql, parameters=deepcopy(self.parameters),
                     parameter_fingerprint=self.parameter_fingerprint, require_consistent_snapshot=True,
-                    execution_timeout_ms=30_000)
+                    execution_timeout_ms=30_000,
+                    preserve_decimal=self.provenance=='LIVE_READ_ONLY')
 
 
 @dataclass(frozen=True)
@@ -197,11 +198,16 @@ def _validate_response(request, lowering, response):
         if output.semantic_ref.catalog_type=='METRIC':
             require(all(r.get(by_id[output.output_field_id]) is None or
                 (type(r[by_id[output.output_field_id]]) in (int,float,Decimal)
-                 and math.isfinite(r[by_id[output.output_field_id]])) for r in rows),
+                 and _finite_number(r[by_id[output.output_field_id]])) for r in rows),
                 'EXECUTION_RESULT_MEASURE_TYPE_MISMATCH')
     result_proof=prove_asl2_result(lowering,columns=columns,rows=rows,truncated=False,snapshot_id=result['snapshot_id'])
     require(completed_allowed(result_proof),'EXECUTION_RESULT_CONTRACT_FAILURE')
     return result, result_proof
+
+
+def _finite_number(value):
+    """Validate Decimal without converting it through binary float."""
+    return value.is_finite() if isinstance(value, Decimal) else math.isfinite(value)
 
 
 class IsolatedExecutionAdapter:

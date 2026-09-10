@@ -247,6 +247,7 @@ def test_live_read_only_provenance_is_explicit_and_requires_timeout_proof(monkey
     assert receipt.attempt.dataset_id.startswith('isolated-live-read-only-dataset:')
     request=transport.call_args.args[0]
     assert request.provenance=='LIVE_READ_ONLY' and request.executor_arguments()['execution_timeout_ms']==30_000
+    assert request.executor_arguments()['preserve_decimal'] is True
 
 
 def test_live_read_only_response_without_timeout_proof_never_publishes_success(monkeypatch,provider):
