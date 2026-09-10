@@ -330,7 +330,8 @@ class ScopedPlanSession:
         self.accept_catalog()
         return executable
 
-    def compile_asl2(self, *, sql_planner, **kwargs):
+    def compile_asl2(self, *, sql_planner, time_storage=None, time_evidence_digest=None,
+                     allow_test_time_storage=False, **kwargs):
         """Internal opt-in seam; existing raw/public routes still use compile.
 
         The trusted callback adapts AuthorizedSemanticScope to SQL Translator's
@@ -339,10 +340,16 @@ class ScopedPlanSession:
         """
         from .asl2 import lower_asl2
         executable = self._compile_logical(**kwargs)
-        lowering = lower_asl2(self, executable.logical_plan)
+        lowering = lower_asl2(self, executable.logical_plan, time_storage=time_storage,
+            time_evidence_digest=time_evidence_digest, allow_test_time_storage=allow_test_time_storage)
+        return lowering, self._plan_asl2(lowering, sql_planner)
+
+    def _plan_asl2(self, lowering, sql_planner):
+        """Same internal native planning/receipt checks for injected execution prep."""
+        self._check()
         if lowering.asl is None:
             self.accept_catalog()
-            return lowering, None
+            return None
         policy = {'ordering_contract': lowering.ordering_contract} if lowering.ordering_contract else {}
         if lowering.filter_contract:
             policy['filter_contract'] = lowering.filter_contract
@@ -379,7 +386,7 @@ class ScopedPlanSession:
         # A successful trusted SQL planner already called the original pin's
         # full finish; do not create a second, disconnected acceptance window.
         self._finished = True
-        return lowering, result
+        return result
 
     def _compile_logical(self, *, parsed, resolution, payload, service_route, analysis_goals,
                          task_version, versions: AuthorizedVersionMetadata, delivery_spec=None):
