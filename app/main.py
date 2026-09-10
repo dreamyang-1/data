@@ -17,7 +17,7 @@ from app.observability.langfuse_client import (
 )
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, *, isolated_chat_handler=None) -> FastAPI:
     effective_settings = settings or get_settings()
 
     @asynccontextmanager
@@ -34,6 +34,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             redis = getattr(app.state.container.sessions, "redis", None)
             if redis is not None:
                 await redis.aclose()
+            if isolated_chat_handler is not None and hasattr(isolated_chat_handler, "aclose"):
+                await isolated_chat_handler.aclose()
             await asyncio.to_thread(shutdown_langfuse)
 
     application = FastAPI(
@@ -41,6 +43,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+    # Explicit dependency seam for an isolated V2 application instance.  The
+    # production app is constructed without it and remains on the V1 workflow.
+    application.state.isolated_chat_handler = isolated_chat_handler
     application.include_router(router)
 
     @application.exception_handler(RequestValidationError)

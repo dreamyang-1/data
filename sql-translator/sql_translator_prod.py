@@ -3205,11 +3205,17 @@ class SQLTranslatorProd:
     # ======================== 数据源查询与执行 ========================
 
     @staticmethod
-    def _convert_types(obj):
-        """转换不可 JSON 序列化的类型"""
+    def _convert_types(obj, *, preserve_decimal: bool = False):
+        """转换不可 JSON 序列化的类型。
+
+        ``preserve_decimal`` 只供进程内、显式 opt-in 的 typed execution
+        adapter 使用。公共 V1/HTTP 调用保持原有 JSON number 行为；精确执行
+        链可在校验和持久化完成前保留数据库 Decimal，避免不可逆的 float
+        往返。
+        """
         from decimal import Decimal
         if isinstance(obj, Decimal):
-            return float(obj)
+            return obj if preserve_decimal else float(obj)
         elif isinstance(obj, datetime):
             return obj.strftime('%Y-%m-%d %H:%M:%S')
         elif isinstance(obj, date):
@@ -3217,9 +3223,15 @@ class SQLTranslatorProd:
         elif isinstance(obj, time):
             return obj.strftime('%H:%M:%S')
         elif isinstance(obj, dict):
-            return {k: SQLTranslatorProd._convert_types(v) for k, v in obj.items()}
+            return {
+                k: SQLTranslatorProd._convert_types(v, preserve_decimal=preserve_decimal)
+                for k, v in obj.items()
+            }
         elif isinstance(obj, list):
-            return [SQLTranslatorProd._convert_types(item) for item in obj]
+            return [
+                SQLTranslatorProd._convert_types(item, preserve_decimal=preserve_decimal)
+                for item in obj
+            ]
         return obj
 
     def fetch_data_source(self, model_id, data_source_id=None):
@@ -3509,6 +3521,7 @@ class SQLTranslatorProd:
         parameter_fingerprint: Optional[str] = None,
         require_consistent_snapshot: bool = False,
         execution_timeout_ms: Optional[int] = None,
+        preserve_decimal: bool = False,
     ) -> Dict:
         """
         在指定数据源上执行 SQL
@@ -3519,11 +3532,14 @@ class SQLTranslatorProd:
         :param parameter_fingerprint: SQL 模板与参数共同指纹，参数化执行必传
         :param require_consistent_snapshot: 内部执行必须先成功建立只读快照；公共旧调用默认不变
         :param execution_timeout_ms: 可选的 MySQL SELECT 服务端超时；仅影响本次连接
+        :param preserve_decimal: 内部 typed execution 可显式保留 Decimal；默认兼容旧输出
         :return: 执行结果字典
         """
         try:
             if type(require_consistent_snapshot) is not bool:
                 raise ValueError('READ_ONLY_SNAPSHOT_MODE_INVALID')
+            if type(preserve_decimal) is not bool:
+                raise ValueError('DECIMAL_PRESERVATION_MODE_INVALID')
             if execution_timeout_ms is not None and (
                 type(execution_timeout_ms) is not int
                 or not 1 <= execution_timeout_ms <= 90_000
@@ -3637,7 +3653,9 @@ class SQLTranslatorProd:
                         # The business result remains usable. Optional evidence
                         # that cannot be verified is omitted instead of guessed.
                         source_watermark = None
-                result_data = SQLTranslatorProd._convert_types(result_data)
+                result_data = SQLTranslatorProd._convert_types(
+                    result_data, preserve_decimal=preserve_decimal
+                )
                 result = {
                     'success': True,
                     'data': result_data,

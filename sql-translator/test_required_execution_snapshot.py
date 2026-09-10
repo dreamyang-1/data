@@ -1,4 +1,5 @@
 """Opt-in strict snapshot mode leaves the legacy executor contract unchanged."""
+from decimal import Decimal
 from unittest.mock import Mock
 
 import pytest
@@ -91,3 +92,39 @@ def test_server_timeout_reports_submitted_unknown_outcome_without_retry(monkeypa
     assert result=={'success':False,'error':'Bound SQL execution timed out',
         'error_code':'SQL_EXECUTION_TIMEOUT','retryable':False,'business_query_submitted':True}
     assert connection.closed
+
+
+def test_exact_decimal_preservation_is_explicit_and_default_output_remains_float(monkeypatch):
+    class Cursor(FakeCursor):
+        def fetchall(self):
+            return [{"order_id": "O-1", "amount": Decimal("9007199254740993.0100")}]
+
+    exact_connection = FakeConnection(Cursor())
+    legacy_connection = FakeConnection(Cursor())
+    connect = Mock(side_effect=[exact_connection, legacy_connection])
+    monkeypatch.setattr("sql_translator_prod.pymysql.connect", connect)
+    exact = SQLTranslatorProd.execute_sql_on_data_source(
+        "SELECT order_id, amount FROM orders",
+        {"db_type": "mysql"},
+        require_consistent_snapshot=True,
+        preserve_decimal=True,
+    )
+    legacy = SQLTranslatorProd.execute_sql_on_data_source(
+        "SELECT order_id, amount FROM orders",
+        {"db_type": "mysql"},
+        require_consistent_snapshot=True,
+    )
+    assert exact["data"][0]["amount"] == Decimal("9007199254740993.0100")
+    assert type(exact["data"][0]["amount"]) is Decimal
+    assert type(legacy["data"][0]["amount"]) is float
+
+
+@pytest.mark.parametrize("value", [None, 1, "true"])
+def test_invalid_decimal_preservation_mode_is_rejected_before_connect(monkeypatch, value):
+    connect = Mock(side_effect=AssertionError("No connection"))
+    monkeypatch.setattr("sql_translator_prod.pymysql.connect", connect)
+    result = SQLTranslatorProd.execute_sql_on_data_source(
+        "SELECT 1", {"db_type": "mysql"}, preserve_decimal=value
+    )
+    assert result["error_code"] == "SQL_SAFETY_REJECTED"
+    connect.assert_not_called()

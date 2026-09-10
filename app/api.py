@@ -189,15 +189,25 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
             ) as root_span:
                 try:
                     with progress_scope(trace_progress):
-                        result = await asyncio.wait_for(
-                            request.app.state.container.workflow.ainvoke(
-                                {"chat": chat, "identity": identity}
-                            ),
-                            timeout=(
-                                request.app.state.container.settings.request_timeout_seconds
-                            ),
+                        isolated_handler = getattr(
+                            request.app.state, "isolated_chat_handler", None
                         )
-                    response = result["response"]
+                        operation = (
+                            isolated_handler.handle(chat, identity)
+                            if isolated_handler is not None
+                            else request.app.state.container.workflow.ainvoke(
+                                {"chat": chat, "identity": identity}
+                            )
+                        )
+                        result = await asyncio.wait_for(
+                            operation,
+                            timeout=request.app.state.container.settings.request_timeout_seconds,
+                        )
+                    response = (
+                        result
+                        if isolated_handler is not None
+                        else result["response"]
+                    )
                     _record_extension_tool_spans(response)
                     root_span.update(output={
                         "status": response.status,
