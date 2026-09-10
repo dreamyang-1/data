@@ -280,6 +280,10 @@ class ScopedPlanSession:
                     raise ValueError('SCOPED_TASK_RESTORE_REQUIRED')
                 validate_authorized_refs(typed,self._snapshot,self.context,
                     tuple([*self._bindings.values(),*self._datasets.values(),*self._tasks.values()]))
+        from .context_proposal import validated_session_trace, proposal_resolution
+        context_trace = validated_session_trace(self, state)
+        if context_trace and (context_trace['FINAL_RELATION'] == 'ANSWER_CLARIFICATION') != (pending_option_id is not None):
+            raise ValueError('V2_CONTEXT_PENDING_PATH_MISMATCH')
         if pending_option_id is not None:
             from .pending_recognition import selected_option
             from .pipeline import TurnResolutionResult, TurnReferentialCompleteness
@@ -287,7 +291,8 @@ class ScopedPlanSession:
             from .slot_reducer import apply_task_patch, semantic_fingerprint
             pending = current.pending
             option = selected_option(pending, self._request.question)
-            if parse.topic_shift_signals or option is None or option.option_id != pending_option_id:
+            if ((context_trace is None and parse.topic_shift_signals)
+                    or option is None or option.option_id != pending_option_id):
                 raise ValueError('V2_PENDING_ANSWER_NOT_ADMISSIBLE')
             task = current.tasks[pending.task_id]
             active = next(v for v in task.versions if v.version == task.active_version)
@@ -307,6 +312,8 @@ class ScopedPlanSession:
                 target_task_id=task.task_id,target_topic_id=task.topic_id,task_patch=task_patch,
                 semantic_resolution=semantic_resolution,decision=ProceedDecision(),
                 referential_completeness=TurnReferentialCompleteness(relation='CURRENT_TASK',depends_on_history=True))
+        elif context_trace is not None:
+            resolution = proposal_resolution(context_trace, parse, current, task_patch, semantic_resolution)
         else:
             resolution = TurnResolver.resolve(parse, state=current, task_patch=task_patch,
                 semantic_resolution=semantic_resolution, historical_task_id=historical_task_id)

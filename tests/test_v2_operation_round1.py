@@ -239,7 +239,7 @@ async def test_cross_scope_operation_rejected_before_model_and_state_mutation(ca
 async def test_explicit_operation_is_not_an_exact_pending_answer(pending_catalog):
     pending,_=await ask(pending_catalog);saved=deepcopy(pending.next_state.model_dump(mode='json'))
     step=metric_step('不要销售额','销售额','REMOVE',True);engine,_=planner(pending_catalog,[step])
-    with pytest.raises(RecognitionFailure,match='V2_PENDING_ANSWER_EVIDENCE_REQUIRED'):
+    with pytest.raises(RecognitionFailure,match='V2_CONTEXT_UNRESOLVED'):
         await engine.run(request(question=step[0],message_id='remove'),IDENTITY,
                          state=pending.next_state,pending=pending.pending_state)
     assert pending.next_state.model_dump(mode='json')==saved

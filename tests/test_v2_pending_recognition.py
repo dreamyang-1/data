@@ -115,7 +115,7 @@ async def test_model_ambiguity_without_governed_aliases_is_not_user_question(cat
 @pytest.mark.parametrize('text',['第二季度销售额','1月份销售额','销售额和销售数量','不选第一个','11','重新查询销售额'])
 async def test_unmatched_answer_is_not_forced_or_asked_again(catalog,text):
     pending,_=await ask(catalog)
-    with pytest.raises(RecognitionFailure,match='V2_PENDING_ANSWER_EVIDENCE_REQUIRED'):
+    with pytest.raises(RecognitionFailure,match='V2_CONTEXT_UNRESOLVED'):
         await answer(catalog,pending,text)
 
 

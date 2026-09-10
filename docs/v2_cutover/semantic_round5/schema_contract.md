@@ -1,0 +1,11 @@
+# Joint Context Proposal Contract
+
+The production `ContextAwareParse` subclasses the existing current-turn parse and adds one required `context_proposal`. Existing current facts, mentions, operation markers, slot evidence and role hypotheses remain unchanged. No second parser/model call, state engine or authority object is introduced.
+
+The proposal has `status`, existing `relation`/DialogueAct names, nullable `target_task_id`, strict `state_version`, nullable strict `task_version`, and nullable `pending_id`. ACCEPTED NEW_TASK selects no old task; current relations select the active offered task; RETURN_TO_TOPIC selects an offered non-active task; ANSWER_CLARIFICATION requires the offered Pending. AMBIGUOUS and UNRESOLVED select no relation, target, task version or Pending. The JSON Schema exports the same cross-field predicates as Python. Membership is checked again in code; enum generation is not an authorization boundary.
+
+SCHEMA_REJECT_ROOT_CAUSE = **C: experimental Schema exporter / parser contract mismatch**. In actual R4L-011, the model emitted AMBIGUOUS plus a RETURN_TO_TOPIC hypothesis and null target. That can be represented with null relation; no new semantic primitive is needed. The response violated Python's existing consistency validator, but the model-visible v1 JSON Schema lacked that predicate. It is not evidence that the model violated the complete contract it was shown. Production exports the predicates without relaxing validation. The new live record emits AMBIGUOUS with null relation/target and reaches the formal terminal path. Exact artifact hashes and before/after proposal fields are in `round5_manifest.json`.
+
+PARSE_PROMPT and DRAFT_PROMPT string literals are unchanged. The new Schema field has seven generic explanatory sentences; these are part of effective model input, so effective request content did change. They specify the joint contract and contain no Gold examples, business words or confidence thresholds. Generation Schema and parser/resolver version tags are distinct from the unchanged Prompt version.
+
+Context proposals and their candidate snapshot are detached and frozen on session registration. Scope/state/version are revalidated before compiling the resolution. The model cannot mutate the selected proof after the first call. No TaskPatch/Reducer definition was changed.

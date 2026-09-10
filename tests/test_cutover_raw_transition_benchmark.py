@@ -99,7 +99,11 @@ async def test_missing_state_fixture_stays_unobserved_without_model_calls(inputs
 async def test_failed_history_stops_current_and_retains_bounded_schema_diagnostics(inputs):
     rows,catalog,raw,settings,_=inputs;captures=[]
     def invalid(req):
-        return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':json.dumps({'mentions':'sensitive-invalid-value'})}}]})
+        context=json.loads(json.loads(req.content)['messages'][1]['content'])
+        # Isolate the original malformed-mentions fault in the new joint schema.
+        return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':json.dumps({
+            'mentions':'sensitive-invalid-value','context_proposal':dict(status='ACCEPTED',relation='NEW_TASK',
+                target_task_id=None,task_version=None,pending_id=None,state_version=context['task_context']['state_version'])})}}]})
     result=await run(rows,catalog,raw,settings,transport=httpx.MockTransport(invalid),private_capture=captures.append)
     assert result['predictions'][0]['reason']=='HISTORY_PRECONDITION_FAILED'
     assert len(result['turns'])==len(result['model_calls'])==1

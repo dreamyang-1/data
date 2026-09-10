@@ -1,0 +1,17 @@
+{
+  "baseline_commit": "899b7b692f7ff06a8660fe99361ba39f8528b1f1",
+  "restored_production_files": [
+    "app/semantic_v2/catalog_bridge.py",
+    "app/semantic_v2/recognition.py"
+  ],
+  "introduced_production_files": [
+    "app/semantic_v2/context_contract.py",
+    "app/semantic_v2/context_proposal.py"
+  ],
+  "v1_routing_changed": false,
+  "data_migration_required": false,
+  "procedure": "Revert the single introducing commit in an isolated branch and validate affected tests; no reset/clean or bulk overlay",
+  "commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5/git_commit_manifest.json",
+  "workspace_restore": "Restore only explicit affected files from the reviewed rollback commit; keep .env, runtime and unrelated work",
+  "private_captures": "Retained locally, never copied to the Git repository"
+}

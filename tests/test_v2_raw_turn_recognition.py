@@ -73,6 +73,9 @@ class ScriptedTransport:
         assert context['question']==question
         if 'parse' not in context:
             data=deepcopy(parsed)
+            if 'task_context' in context:
+                from context_fixture_contract import fixture_proposal
+                data['context_proposal']=fixture_proposal(data,context)
             for mention in data.get('mentions',[]):mention['source_turn_id']=context['turn_id']
         else:
             data=draft(context) if callable(draft) else deepcopy(draft);self.next+=1
@@ -397,7 +400,7 @@ async def test_complete_new_task_has_no_inheritable_task_context(catalog):
 @pytest.mark.asyncio
 async def test_historical_context_retains_scoped_handles_and_recorded_plan_shapes(catalog):
     def historical(c):
-        assert len(c['tasks'])==2
+        assert len(c['tasks'])==1  # Joint first-stage proposal already selected the historical task.
         assert all(t['reference_kind']=='HISTORICAL_CANDIDATE' and t['payload_type']=='SCALAR_AGGREGATE' for t in c['tasks'])
         handle=next(t['task_handle'] for t in c['tasks'] if t['slot_labels']['metrics']==['销售额'])
         return dict(payload_type='INHERIT',historical_task_handle=handle,edits=[edit('metrics',[binding(c,'订单笔数','MEASURE')],'ADD')])
@@ -602,7 +605,7 @@ async def test_live_pending_never_silently_becomes_wrong_new_task(catalog,explic
         assert result.resolution['dialogue_act']=='NEW_TASK'
         assert result.next_state.payload['pending_records']['pending1']['status']=='SUSPENDED'
     else:
-        with pytest.raises(RecognitionFailure,match='V2_PENDING_ANSWER_EVIDENCE_REQUIRED'):await invoke()
+        with pytest.raises(RecognitionFailure,match='V2_CONTEXT_UNRESOLVED'):await invoke()
 
 
 @pytest.mark.asyncio

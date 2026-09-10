@@ -288,14 +288,24 @@ async def test_structured_state_context_has_labels_but_no_authority_identifiers(
 @pytest.mark.parametrize('wrong_task', [False, True])
 async def test_historical_edits_use_selected_task_subtrees_only(catalog, wrong_task):
     text = '回到销售额问题，地区换江苏'
+    foreign_handle = None
     def draft(c):
         return dict(payload_type='INHERIT', historical_task_handle=c['tasks'][0]['task_handle'],
             filter_edits=[dict(operation='REPLACE', evidence_mention_ids=['m0'], value=scalar('江苏'),
-                target_handle=target(c, task_index=1 if wrong_task else 0))])
+                target_handle=foreign_handle if wrong_task else target(c, task_index=0))])
     step = text, parse(text, [('江苏', 'FILTER_FIELD', 'filter_expression', 'REPLACE')], history=True), draft
     steps = [initial(), initial(), step]; engine, _ = planner(catalog, steps)
     if wrong_task:
-        with pytest.raises(ValueError, match='V2_FILTER_TARGET_NOT_CURRENT_TASK'): await turns(engine, steps)
+        bases=await turns(engine,steps[:2])
+        from app.semantic_v2.state_machine import TaskState
+        from app.semantic_v2.structured_edits import filter_targets
+        other=TaskState.model_validate(bases[-1].next_state.payload['tasks'][bases[-1].plan['logical_plan']['task_id']])
+        foreign_handle=next(iter(filter_targets(other)))
+        # This actually existed in another task. It is no longer exposed in the
+        # current draft, but a stale/malicious model reference must still reject.
+        with pytest.raises(ValueError, match='V2_FILTER_TARGET_NOT_CURRENT_TASK'):
+            await engine.run(request(question=text,message_id='turn2'),IDENTITY,
+                state=bases[-1].next_state,plans=tuple(b.plan_state for b in bases))
     else:
         first, second, last = await turns(engine, steps)
         assert last.plan['logical_plan']['task_id'] == first.plan['logical_plan']['task_id']
