@@ -1,0 +1,1567 @@
+{
+  "status": "V2_RECOVERY_AND_EXECUTION_PREPARATION_PARTIAL",
+  "as_of": "2026-09-10T12:10:18.018334+00:00",
+  "started_at": "2026-09-10T11:39:03Z",
+  "target_time": "2026-09-10T13:09:03Z",
+  "deadline": "2026-09-10T13:39:03Z",
+  "baseline": "7ab840df09c4b1e57bf0acf2bf180914a7db7c2c",
+  "baseline_pr": 66,
+  "branch": "v2-recovery-typed-execution-prep-20260910t113903z",
+  "development_workspace": "E:\\YouoAgent\\DataAnalysis_Agent",
+  "git_repository": "E:/yy",
+  "release": {
+    "commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_8/evidence_index.json",
+    "draft_pr_base": "semantic-fresh-query-closure-20260910t104402z",
+    "post_commit_receipt": ".eval_private\\recovery-round5-8-20260910T113903Z\\publication_receipt.json",
+    "auto_merge": false
+  },
+  "initial_tracked_files": 1673,
+  "initial_unexpected_drift": 0,
+  "changed_files": [
+    {
+      "path": "app/semantic_v2/context_contract.py",
+      "baseline_sha256": "b7086b43437c3cb2920efe7346d2c4d1afde1228385e2640d09676122c076934",
+      "final_sha256": "69902b6de236b95faf7ea7a46763c214a6c989781a0ffbd8d9729d71a4e79c43"
+    },
+    {
+      "path": "specs/semantic_v2/semantic_task_draft_v7.schema.json",
+      "baseline_sha256": "d5488afa3998419be298b5587cb9020f1ac12b7663d9ec33b70465b1104b670f",
+      "final_sha256": "545aac5deb93fd188b83cfcce2358c200c6f0f26ddd69c6a6ec07f6e80cbfeb2"
+    },
+    {
+      "path": "tools/cutover/round58_semantic_checks.py",
+      "baseline_sha256": null,
+      "final_sha256": "8310a125fef54de1ab946cac5a70b7e7296b7d10857f616d8d810b19124c8e48"
+    },
+    {
+      "path": "tools/cutover/round58_live_recheck.py",
+      "baseline_sha256": null,
+      "final_sha256": "1468aa10e2a4ae022da5a48a54c495203ab873cf298811fa14087d8c7b161c97"
+    },
+    {
+      "path": "tests/test_v2_historical_reference_round58.py",
+      "baseline_sha256": null,
+      "final_sha256": "5830330e694103db08d3afec2a0048529c0541bf44dd0eb5361e59ab19ba0b4b"
+    }
+  ],
+  "documentation_files": [
+    "docs/v2_cutover/semantic_round5_8/closure_report.md",
+    "docs/v2_cutover/semantic_round5_8/evidence_index.json"
+  ],
+  "live_runtime_hashes": {
+    "app/semantic_v2/__init__.py": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93",
+    "app/semantic_v2/asl2.py": "b4ab7978bc7b0575cad45db6eb549fa3ba164e0fb02e9691292b86fd88b76759",
+    "app/semantic_v2/authorized_contract.py": "43528e54bcedb8e0646b8ad634617150fe957a011ff4cc1cbca906e5a471751f",
+    "app/semantic_v2/catalog_bridge.py": "2c16a2d216254aca64296fe57bf447e5c9a24fa1aede18bb5a1cf585ac39f40e",
+    "app/semantic_v2/catalog_mentions.py": "61cba704b689d0e3924b4fc2ddc1899ebd38ce39a9955bffa2edb8f598f94271",
+    "app/semantic_v2/catalog_paths.py": "dfdd61935121196ac64efc60c0eb5030390dab80f7b80c0123855da2e9dd6d77",
+    "app/semantic_v2/catalog_plans.py": "d284963c5b851631b67810103486c2e15dd7e8a598f6c2961a63bb8bbb4b90c7",
+    "app/semantic_v2/clarification.py": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb",
+    "app/semantic_v2/context_contract.py": "69902b6de236b95faf7ea7a46763c214a6c989781a0ffbd8d9729d71a4e79c43",
+    "app/semantic_v2/context_proposal.py": "ad5d3d9d88de83f138dc59a868dd44936495eebeba0e2e79c015d2c125c50e84",
+    "app/semantic_v2/enums.py": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159",
+    "app/semantic_v2/explicit_time.py": "f9628794693b1a1dedc39c0cf4cff25c40d280c70267830f1351332c03cbca69",
+    "app/semantic_v2/filter_generation_schema.py": "b1d3d00d8f930bef587f9fb9904eb44e2a27ddc6d7279b8875705fa708b57187",
+    "app/semantic_v2/legacy_adapter.py": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f",
+    "app/semantic_v2/migration.py": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6",
+    "app/semantic_v2/models.py": "e23643d4f97abcb5391b1124fd5214da2f6d94077499ddcf9f102ea0e911af78",
+    "app/semantic_v2/pending_recognition.py": "93f3daf560ac574d41caeb08e79dfa09c4acef202bae6ad4243de619f13a6d5b",
+    "app/semantic_v2/pipeline.py": "56715d069f2deca374fa619473136b0bc9b3e57b93d5a383030719bc3392280b",
+    "app/semantic_v2/recognition.py": "0cda14e03e0cc1ae7a11375d29b8c3eb96a0dce647526f8d2ab0ec4d59cb48e7",
+    "app/semantic_v2/recognition_client.py": "ba5462734b9bacf48b59d7a6baba43246d63d739d1197f9daeff0ad457154ce4",
+    "app/semantic_v2/recognition_initialization.py": "6af76337adae514fb67f39965146474afbcccd5eef05f406906cc9b492a47f81",
+    "app/semantic_v2/recognition_repairs.py": "b92cf8d46bcaceced32c0593a9eec37f2a702a297510460280c5301055e2ad86",
+    "app/semantic_v2/registries.py": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7",
+    "app/semantic_v2/result_contract.py": "9189859325a15b8cc712294b312ec3ab21f39228a7be2db81c7a249bef029754",
+    "app/semantic_v2/schema.py": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad",
+    "app/semantic_v2/slot_reducer.py": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf",
+    "app/semantic_v2/source_value_binding.py": "9b03090dc22517080c7b5b3b05b9f63e44635b50a77a70f7cde25b36ec598e95",
+    "app/semantic_v2/source_value_probe.py": "55b4700f79776dea5569364b4ded2b0300b4e7ee99bc5c59808a3488dc5123fa",
+    "app/semantic_v2/source_value_recognition.py": "af68ff481d3d012af850cab6fc6f755eb3c6b57c1187154c365de819292ef149",
+    "app/semantic_v2/source_value_target.py": "d12675ecbb400b8d3bc7e8a1a9a7f8967e30fd597c4f4fa2e9495cd6db1f8a35",
+    "app/semantic_v2/state_machine.py": "f85d1157a44dd17c0e6a12d033460c6ae016282c1d8bb393228fcca61fcafa4f",
+    "app/semantic_v2/structured_edits.py": "9c69cde8fd173c54aa872283794c763a5fc15438f102d5ee979b5f22dda78eee",
+    "app/semantic_v2/temporal_comparisons.py": "624128af0ed814c3d686e00678727bb27cde5d1d3fadc4aa8e9ec01d8c9429dd",
+    "app/semantic_v2/trace_models.py": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5",
+    "app/semantic_v2/validators.py": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15"
+  },
+  "recovery_baseline": {
+    "observed_at": "2026-09-10T12:06:12.686285+00:00",
+    "changes": [
+      {
+        "file": ".env",
+        "changed_keys": [
+          "API_KEY",
+          "DASHSCOPE_API_KEY",
+          "LLM_API_KEY",
+          "LLM_MODEL_ID"
+        ]
+      },
+      {
+        "file": "New_Agent\\.env",
+        "changed_keys": [
+          "API_KEY"
+        ]
+      }
+    ],
+    "agent_configuration_unchanged_since_round57": true,
+    "current_configuration_unchanged_since_round58_start": true,
+    "roles": [
+      {
+        "provider": "DashScope OpenAI-compatible",
+        "endpoint": "dashscope.aliyuncs.com/compatible-mode/v1",
+        "key_reference": "DataAnalysis_Agent/.env:DATA_AGENT_INTENT_MODEL_API_KEY; value not exported",
+        "key_change": "UNCHANGED_FOR_AGENT",
+        "configuration_source": "Settings: OS env > Agent .env > New_Agent .env > workspace .env > code defaults",
+        "loaded": "Agent Settings constructed at service startup; per-role request success separately stated",
+        "role": "V2 CurrentTurn",
+        "caller": "app/semantic_v2/recognition_client.py",
+        "model": "qwen3.7-max",
+        "parameters": {
+          "temperature": 0,
+          "thinking": false,
+          "retry": 0,
+          "timeout": 60,
+          "parameter_source": "Isolated evaluation overrides retries/timeout only"
+        },
+        "verification": "Round57 24 HTTP200 + Round58 20 HTTP200 across two stages"
+      },
+      {
+        "provider": "DashScope OpenAI-compatible",
+        "endpoint": "dashscope.aliyuncs.com/compatible-mode/v1",
+        "key_reference": "DataAnalysis_Agent/.env:DATA_AGENT_INTENT_MODEL_API_KEY; value not exported",
+        "key_change": "UNCHANGED_FOR_AGENT",
+        "configuration_source": "Settings: OS env > Agent .env > New_Agent .env > workspace .env > code defaults",
+        "loaded": "Agent Settings constructed at service startup; per-role request success separately stated",
+        "role": "V2 SemanticEdits",
+        "caller": "app/semantic_v2/recognition_client.py",
+        "model": "qwen3.7-max",
+        "parameters": {
+          "temperature": 0,
+          "thinking": false,
+          "retry": 0,
+          "timeout": 60,
+          "parameter_source": "Isolated evaluation overrides retries/timeout only"
+        },
+        "verification": "Round57 24 HTTP200 + Round58 20 HTTP200 across two stages"
+      },
+      {
+        "provider": "DashScope OpenAI-compatible",
+        "endpoint": "dashscope.aliyuncs.com/compatible-mode/v1",
+        "key_reference": "DataAnalysis_Agent/.env:DATA_AGENT_INTENT_MODEL_API_KEY; value not exported",
+        "key_change": "UNCHANGED_FOR_AGENT",
+        "configuration_source": "Settings: OS env > Agent .env > New_Agent .env > workspace .env > code defaults",
+        "loaded": "Agent Settings constructed at service startup; per-role request success separately stated",
+        "role": "V1 Intent",
+        "caller": "app/intent/structured.py",
+        "model": "qwen3.7-max",
+        "parameters": {
+          "temperature": 0,
+          "thinking": false,
+          "retry": 1,
+          "timeout": 30.0
+        },
+        "verification": "Same settings code/config and post-recovery process launch; no new role-specific live request this round"
+      },
+      {
+        "provider": "DashScope OpenAI-compatible",
+        "endpoint": "dashscope.aliyuncs.com/compatible-mode/v1",
+        "key_reference": "DataAnalysis_Agent/.env:DATA_AGENT_INTENT_MODEL_API_KEY; value not exported",
+        "key_change": "UNCHANGED_FOR_AGENT",
+        "configuration_source": "Settings: OS env > Agent .env > New_Agent .env > workspace .env > code defaults",
+        "loaded": "Agent Settings constructed at service startup; per-role request success separately stated",
+        "role": "Analysis synthesis",
+        "caller": "app/analysis/synthesis.py",
+        "model": "qwen3.7-max",
+        "parameters": {
+          "temperature": 0,
+          "thinking": false,
+          "retry": 0,
+          "timeout": 8.0
+        },
+        "verification": "Same settings code/config and post-recovery process launch; no new role-specific live request this round"
+      },
+      {
+        "provider": "DashScope OpenAI-compatible",
+        "endpoint": "dashscope.aliyuncs.com/compatible-mode/v1",
+        "key_reference": "DataAnalysis_Agent/.env:DATA_AGENT_INTENT_MODEL_API_KEY; value not exported",
+        "key_change": "UNCHANGED_FOR_AGENT",
+        "configuration_source": "Settings: OS env > Agent .env > New_Agent .env > workspace .env > code defaults",
+        "loaded": "Agent Settings constructed at service startup; per-role request success separately stated",
+        "role": "Chat response",
+        "caller": "app/services/chat_responder.py",
+        "model": "qwen3.7-max",
+        "parameters": {
+          "temperature": 0.5,
+          "thinking": false,
+          "retry": 0,
+          "timeout": 8.0
+        },
+        "verification": "Same settings code/config and post-recovery process launch; no new role-specific live request this round"
+      },
+      {
+        "provider": "DashScope OpenAI-compatible",
+        "endpoint": "dashscope.aliyuncs.com/compatible-mode/v1",
+        "key_reference": "DataAnalysis_Agent/.env:DATA_AGENT_INTENT_MODEL_API_KEY; value not exported",
+        "key_change": "UNCHANGED_FOR_AGENT",
+        "configuration_source": "Settings: OS env > Agent .env > New_Agent .env > workspace .env > code defaults",
+        "loaded": "Agent Settings constructed at service startup; per-role request success separately stated",
+        "role": "Task DAG / Tool selector",
+        "caller": "app/planning/task_dag.py; app/services/tool_selector.py",
+        "model": "qwen3.7-max",
+        "parameters": {
+          "temperature": 0,
+          "thinking": false,
+          "dag_timeout": 15.0,
+          "tool_timeout": 30.0,
+          "tool_retry": 1
+        },
+        "verification": "Same settings code/config and post-recovery process launch; no new role-specific live request this round"
+      },
+      {
+        "role": "Oagnet ASL",
+        "caller": "Oagnet/agent.py:_get_chat_model",
+        "provider": "DashScope OpenAI-compatible",
+        "endpoint": "dashscope.aliyuncs.com/compatible-mode/v1",
+        "model": "qwen3.7-max",
+        "parameters": {
+          "temperature": 0,
+          "thinking": false,
+          "timeout": 45,
+          "retry": 0
+        },
+        "configuration_source": "Oagnet/config.py import-time constants; root .env override=False; OAGNET overrides absent in files/current parent env",
+        "key_reference": "workspace .env:DASHSCOPE_API_KEY; same as validated Agent key",
+        "key_change": "CHANGED",
+        "model_before": "qwen3.6-plus",
+        "model_after": "qwen3.7-max",
+        "endpoint_change": false,
+        "loaded": "New process after repair; recovery /agent/query HTTP200 verifies this active path"
+      },
+      {
+        "role": "Embedding",
+        "caller": "Oagnet/embedding.py:embed_query,embed_documents",
+        "provider": "DashScope OpenAI-compatible",
+        "endpoint": "dashscope.aliyuncs.com/compatible-mode/v1",
+        "model": "text-embedding-v4",
+        "dimensions": 1024,
+        "parameters": {
+          "timeout": 60,
+          "retry": 2
+        },
+        "configuration_source": "Oagnet/config.py import-time constants + lazy cached OpenAI client",
+        "key_reference": "workspace .env:DASHSCOPE_API_KEY",
+        "key_change": "CHANGED",
+        "model_change": false,
+        "endpoint_change": false,
+        "loaded": "Post-repair direct embedding smoke 1024 dimensions; new Oagnet process and vector health receipt",
+        "provider_revision": "UNKNOWN",
+        "gateway_project_or_model_route": "UNKNOWN_NO_PROVIDER_ATTESTATION"
+      },
+      {
+        "role": "SQL Translator",
+        "caller": "api_server_prod.py",
+        "model": null,
+        "configuration_source": "runtime_config.py",
+        "loaded": "Current service PID present",
+        "verification": "NOT_LLM_CONSUMER; no LLM config added"
+      },
+      {
+        "role": "Other legacy New_Agent",
+        "caller": "New_Agent/config.py; node/agent.py; long_memory/extractor.py",
+        "model": "Backend-supplied model; code fallback qwen3-max",
+        "configuration_source": "New_Agent .env changed API_KEY, but config.py also has a static API_KEY assignment",
+        "loaded": "NO_NEW_AGENT_PROCESS_IN_RECOVERY_LAUNCH",
+        "verification": "CURRENT_CONFIGURATION_UNVERIFIED; not on the active DataAnalysis->Oagnet->SQL path; not reconfigured"
+      }
+    ],
+    "services": [
+      {
+        "Service": "oagnet",
+        "ProcessId": 27968,
+        "Port": 8021,
+        "StartedAt": "2026-09-10T19:26:39.3792628+08:00",
+        "still_running": true,
+        "working_directory": "E:\\YouoAgent\\Oagnet",
+        "working_directory_evidence": "Recovered launch command WorkingDirectory and matching PID/creation time; not inferred from current shell",
+        "code_at_launch": "7ab840df09c4b1e57bf0acf2bf180914a7db7c2c"
+      },
+      {
+        "Service": "sql-translator",
+        "ProcessId": 26172,
+        "Port": 48000,
+        "StartedAt": "2026-09-10T19:26:39.6665664+08:00",
+        "still_running": true,
+        "working_directory": "E:\\YouoAgent\\sql-translator",
+        "working_directory_evidence": "Recovered launch command WorkingDirectory and matching PID/creation time; not inferred from current shell",
+        "code_at_launch": "7ab840df09c4b1e57bf0acf2bf180914a7db7c2c"
+      },
+      {
+        "Service": "data-analysis",
+        "ProcessId": 26572,
+        "Port": 8088,
+        "StartedAt": "2026-09-10T19:26:39.9362811+08:00",
+        "still_running": true,
+        "working_directory": "E:\\YouoAgent\\DataAnalysis_Agent",
+        "working_directory_evidence": "Recovered launch command WorkingDirectory and matching PID/creation time; not inferred from current shell",
+        "code_at_launch": "7ab840df09c4b1e57bf0acf2bf180914a7db7c2c"
+      }
+    ],
+    "reload": false,
+    "settings_cache": "app/config.py:get_settings lru_cache; app.main startup container; Oagnet module constants and embedding client cached",
+    "process_environment_model_variable_names_only": [],
+    "process_environment_boundary": "Current parent env and launch history checked; did not dump target process memory or claim all uncalled role requests succeeded",
+    "same_agent_oagnet_llm_embedding_key": true,
+    "new_key_gateway_project_revision": "UNKNOWN",
+    "embedding": {
+      "model": "text-embedding-v4",
+      "dimensions": 1024,
+      "key_only_local_change": true,
+      "endpoint_unchanged": true,
+      "query_preprocessing": "embedding.py passes text as received; prompt_build uses user_query; entity candidate API uses normalize_catalog_text",
+      "index_preprocessing": "Catalog/entity document serialization; normalized punctuation/whitespace for entity values; same baseline source hashes",
+      "numeric_normalization": "No explicit vector normalization in embed_query/embed_documents; Milvus COSINE index",
+      "build_evidence": "Existing collection health verifies four collection dimensions; CatalogPublication manifest binds embedding_contract/vector_index_version. Actual deployed collection build provider revision not exposed by recovery receipt.",
+      "status": "NO_LOCAL_MODEL_DIMENSION_OR_PREPROCESSING_CHANGE_PROVEN; FULL_SPACE_COMPATIBILITY_NOT_CERTIFIED",
+      "residual": "Same name/dimension cannot prove provider revision/project routing; no new index rebuilt or retrieval-accuracy claim",
+      "round57": "Frozen exact source observations; not a live embedding/search experiment"
+    },
+    "evidence_impact_matrix": [
+      {
+        "evidence": "A Offline unit/integration + recorded output",
+        "path": "Network-denied Python fixtures and frozen native state",
+        "dependency_on_repair": false,
+        "historical_validity": "VALID_WITH_ORIGINAL_SOURCE_HASHES",
+        "current_applicability": "Recheck affected semantic description, exact replay input equality; pure reducers unaffected by key",
+        "minimum_retest": "New scope of edits + one cumulative offline suite"
+      },
+      {
+        "evidence": "B Round57 live V2",
+        "path": "Agent RecognitionModelClient -> configured provider; frozen Catalog/source MemoryStore",
+        "dependency_on_repair": false,
+        "historical_validity": "24 HTTP200 retained; A3/C2/C3 semantic evidence valid",
+        "current_applicability": "Model/key/endpoint/parameters equal locally; description now v3 so old records are versioned historical evidence, not strict current generation",
+        "minimum_retest": "Focused new Live; all historical Gold not required"
+      },
+      {
+        "evidence": "C Live embedding/vector retrieval",
+        "path": "Oagnet embedding.py -> provider; Milvus search",
+        "dependency_on_repair": true,
+        "historical_validity": "Old key 401 is availability failure, not semantic FAIL",
+        "current_applicability": "Smoke + dimension/health only; live retrieval quality and index-build revision not certified",
+        "minimum_retest": "No index rebuild; provider/index attestation and scoped retrieval validation before relying on live ranking"
+      },
+      {
+        "evidence": "D Online Oagnet ASL",
+        "path": "Oagnet /agent/query -> qwen3.7-max",
+        "dependency_on_repair": true,
+        "historical_validity": "Old model/key are historical baseline; 401 isolated to this path",
+        "current_applicability": "Recovery one ASL HTTP200 16.525s; no additional call needed this round",
+        "minimum_retest": "Reuse successful recovery receipt, no SQL/E2E implication"
+      },
+      {
+        "evidence": "E HTTP/SSE/final execution",
+        "path": "V1 orchestrator -> Oagnet -> SQL adapters",
+        "dependency_on_repair": true,
+        "historical_validity": "Source routing/contracts unchanged",
+        "current_applicability": "Three-service health and ASL generation only; final SQL/result correctness UNVERIFIED",
+        "minimum_retest": "Future separately authorized isolated E2E, not this round"
+      }
+    ],
+    "recovery_receipt_reference": ".eval_private\\platform-model-recovery-20260910\\verification_receipt.json",
+    "secret_values_or_public_secret_hashes_exported": false
+  },
+  "final_service_health": {
+    "observed_at": "2026-09-10T12:07:13.766026+00:00",
+    "method": "GET_HEALTH_ONLY",
+    "checks": [
+      {
+        "service": "Oagnet",
+        "status": 200,
+        "seconds": 0.0319999999992433
+      },
+      {
+        "service": "SQL Translator",
+        "status": 200,
+        "seconds": 0.015000000001236913
+      },
+      {
+        "service": "Agent",
+        "status": 200,
+        "seconds": 0.07799999999951979
+      }
+    ],
+    "model_calls": 0,
+    "sql_execute": 0,
+    "not_E2E": true,
+    "prior_wrong_endpoint": "Agent /health is not defined; HTTPError retained in final_health.json. Correct native route /live used."
+  },
+  "semantic_validation": {
+    "evaluator_version": "healthy-slice-relation-operation-v2",
+    "new_live": [
+      {
+        "case_id": "R58-C3-GROUP",
+        "status": "PASS_ON_DECLARED_SEMANTIC_AXES",
+        "target": "task:turn-077c7232f1c6dcd659b1d79a",
+        "relation": "RETURN_TO_TOPIC",
+        "metrics": [
+          "order_count"
+        ],
+        "dimensions": [
+          "city"
+        ],
+        "regions": [
+          "江苏省"
+        ],
+        "year": 2025,
+        "current_reference_hypothesis_mentions": 1,
+        "reference_description_not_eliminated_from_mentions": true,
+        "prior_state_immutable": true,
+        "unrelated_tasks_unchanged": true,
+        "seconds": 13.25,
+        "stage_timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 9.42200000000048
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 3.3440000000009604
+          }
+        ],
+        "capture_sha256": "1e1c32e1be8bc1047057504ba0c8a72161820e214b9818a7c482334d46b230c7",
+        "whole_plan_gold": false
+      },
+      {
+        "case_id": "R58-C3-METRIC",
+        "status": "PASS_ON_DECLARED_SEMANTIC_AXES",
+        "target": "task:turn-077c7232f1c6dcd659b1d79a",
+        "relation": "RETURN_TO_TOPIC",
+        "metrics": [
+          "order_count",
+          "sales_total_quantity"
+        ],
+        "dimensions": [],
+        "regions": [
+          "江苏省"
+        ],
+        "year": 2025,
+        "current_reference_hypothesis_mentions": 1,
+        "reference_description_not_eliminated_from_mentions": true,
+        "prior_state_immutable": true,
+        "unrelated_tasks_unchanged": true,
+        "seconds": 13.593999999999141,
+        "stage_timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 9.92200000000048
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 3.25
+          }
+        ],
+        "capture_sha256": "0c09b4bb9986c12b4fc2ea7d717fc162ece95d8da73929ecd9cf3870365c2b2a",
+        "whole_plan_gold": false
+      },
+      {
+        "case_id": "R58-C3-TIME",
+        "status": "PASS_ON_DECLARED_SEMANTIC_AXES",
+        "target": "task:turn-077c7232f1c6dcd659b1d79a",
+        "relation": "RETURN_TO_TOPIC",
+        "metrics": [
+          "order_count"
+        ],
+        "dimensions": [],
+        "regions": [
+          "江苏省"
+        ],
+        "year": 2026,
+        "current_reference_hypothesis_mentions": 1,
+        "reference_description_not_eliminated_from_mentions": true,
+        "prior_state_immutable": true,
+        "unrelated_tasks_unchanged": true,
+        "seconds": 14.29700000000048,
+        "stage_timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 9.984000000000378
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 3.8430000000007567
+          }
+        ],
+        "capture_sha256": "ee1098dc06a6e5423c767359c4d587b908b6cce2a0a2ec77d618d225edf419b8",
+        "whole_plan_gold": false
+      },
+      {
+        "case_id": "R58-C3",
+        "status": "PASS_ON_DECLARED_SEMANTIC_AXES",
+        "target": "task:turn-077c7232f1c6dcd659b1d79a",
+        "relation": "RETURN_TO_TOPIC",
+        "metrics": [
+          "order_count"
+        ],
+        "dimensions": [],
+        "regions": [
+          "江苏省"
+        ],
+        "year": 2025,
+        "current_reference_hypothesis_mentions": 2,
+        "reference_description_not_eliminated_from_mentions": true,
+        "prior_state_immutable": true,
+        "unrelated_tasks_unchanged": true,
+        "seconds": 11.96900000000096,
+        "stage_timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 9.15599999999904
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 2.29700000000048
+          }
+        ],
+        "capture_sha256": "117d3bfcebd121fc4459697cc3e16a6688a08231ea37d0f74c93590258f58774",
+        "whole_plan_gold": false
+      },
+      {
+        "case_id": "R58-CLEAR-NEXT",
+        "status": "PASS_ON_DECLARED_SEMANTIC_AXES",
+        "target": "task:turn-R58-FRESH",
+        "relation": "MODIFY",
+        "metrics": [
+          "order_count"
+        ],
+        "dimensions": [],
+        "regions": [],
+        "year": 2026,
+        "current_reference_hypothesis_mentions": 0,
+        "reference_description_not_eliminated_from_mentions": null,
+        "prior_state_immutable": true,
+        "unrelated_tasks_unchanged": true,
+        "seconds": 11.343999999999141,
+        "stage_timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 7.781000000000859
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 3.2969999999986612
+          }
+        ],
+        "capture_sha256": "1a6f6be414d11e4156756930a3792e7f2e043478c0b5cd259541c68d011cea98",
+        "whole_plan_gold": false
+      },
+      {
+        "case_id": "R58-CLEAR",
+        "status": "PASS_ON_DECLARED_SEMANTIC_AXES",
+        "target": "task:turn-R58-FRESH",
+        "relation": "MODIFY",
+        "metrics": [
+          "order_count"
+        ],
+        "dimensions": [],
+        "regions": [],
+        "year": 2025,
+        "current_reference_hypothesis_mentions": 0,
+        "reference_description_not_eliminated_from_mentions": null,
+        "prior_state_immutable": true,
+        "unrelated_tasks_unchanged": true,
+        "seconds": 27.40600000000086,
+        "stage_timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 5.875
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 21.20299999999952
+          }
+        ],
+        "capture_sha256": "486aa07325fbe94588bab9a4473d7011e7584c551516e16701290b12ea5b18a0",
+        "whole_plan_gold": false
+      },
+      {
+        "case_id": "R58-FOLLOW",
+        "status": "PASS_ON_DECLARED_SEMANTIC_AXES",
+        "target": "task:turn-R58-FRESH",
+        "relation": "MODIFY",
+        "metrics": [
+          "order_count"
+        ],
+        "dimensions": [],
+        "regions": [
+          "江苏省"
+        ],
+        "year": 2026,
+        "current_reference_hypothesis_mentions": 0,
+        "reference_description_not_eliminated_from_mentions": null,
+        "prior_state_immutable": true,
+        "unrelated_tasks_unchanged": true,
+        "seconds": 10.843999999999141,
+        "stage_timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 7.2039999999997235
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 3.3439999999991414
+          }
+        ],
+        "capture_sha256": "d5a3f38286dfab34db106bd639a404ae0e5b58e417fad20df26f93b42a65a480",
+        "whole_plan_gold": false
+      },
+      {
+        "case_id": "R58-FRESH",
+        "status": "PASS_ON_DECLARED_SEMANTIC_AXES",
+        "target": "task:turn-R58-FRESH",
+        "relation": "NEW_TASK",
+        "metrics": [
+          "order_count"
+        ],
+        "dimensions": [],
+        "regions": [
+          "江苏省"
+        ],
+        "year": 2025,
+        "current_reference_hypothesis_mentions": 0,
+        "reference_description_not_eliminated_from_mentions": null,
+        "prior_state_immutable": true,
+        "unrelated_tasks_unchanged": true,
+        "seconds": 17.609999999998763,
+        "stage_timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 10.936999999999898
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 6.4539999999997235
+          }
+        ],
+        "capture_sha256": "b1e2e13b7f53a63fc877a0e2f5c15108742d260fc7b97657a5eb3d0570d7d5fc",
+        "whole_plan_gold": false
+      },
+      {
+        "case_id": "R58-NEW",
+        "status": "PASS_ON_DECLARED_SEMANTIC_AXES",
+        "target": "task:turn-R58-NEW",
+        "relation": "NEW_TASK",
+        "metrics": [
+          "sales_total_quantity"
+        ],
+        "dimensions": [],
+        "regions": [
+          "江苏省"
+        ],
+        "year": 2026,
+        "current_reference_hypothesis_mentions": 1,
+        "reference_description_not_eliminated_from_mentions": null,
+        "prior_state_immutable": true,
+        "unrelated_tasks_unchanged": true,
+        "seconds": 24.82799999999952,
+        "stage_timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 15.65599999999904
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 8.843999999999141
+          }
+        ],
+        "capture_sha256": "5206743737cbd3dd2c83a9de92bd53685dd501882cb08fffa49ca27e08737887",
+        "whole_plan_gold": false
+      },
+      {
+        "case_id": "R58-REMOVE",
+        "status": "PASS_ON_DECLARED_SEMANTIC_AXES",
+        "target": "task:turn-c8c010c9b2e5abd89e6058f6",
+        "relation": "REMOVE",
+        "metrics": [
+          "sales_total_quantity"
+        ],
+        "dimensions": [],
+        "regions": [
+          "江苏省"
+        ],
+        "year": 2025,
+        "current_reference_hypothesis_mentions": 0,
+        "reference_description_not_eliminated_from_mentions": null,
+        "prior_state_immutable": true,
+        "unrelated_tasks_unchanged": true,
+        "seconds": 10.59400000000096,
+        "stage_timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 7.343999999999141
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 2.8909999999996217
+          }
+        ],
+        "capture_sha256": "937469ec59524626c7f1515567ee40db85c915c5fafb8752adc1882d9080a330",
+        "whole_plan_gold": false
+      }
+    ],
+    "live_clear_contract": {
+      "status": "PASS_ON_DECLARED_AXES",
+      "evaluator_version": "healthy-slice-relation-operation-v2",
+      "relation_operation_separate": true,
+      "whole_plan_gold": false
+    },
+    "original_A3_contract": {
+      "status": "PASS_ON_DECLARED_AXES",
+      "evaluator_version": "healthy-slice-relation-operation-v2",
+      "relation_operation_separate": true,
+      "whole_plan_gold": false
+    },
+    "original_strict": {
+      "passed": 8,
+      "failed": 3,
+      "unchanged": true
+    },
+    "versioned_same_record": {
+      "passed": 9,
+      "failed": 2,
+      "case_changes": [
+        "HC55-A:2"
+      ],
+      "new_live": false,
+      "C2": "REGION_GRAIN_EXPECTATION_GAP; original strict still FAIL",
+      "C3": "Original capture remains FAIL"
+    },
+    "original_C3_new_live": "PASS_ON_DECLARED_AXES; original accepted historical prefix restored, not fresh three-turn chain",
+    "C3_generation_residual": "All four history captures still contain non-explicit role hypotheses for task descriptions; no current subject obligation or edit. Description request to omit all such mentions is not fully followed.",
+    "calls": 20,
+    "http200": 20,
+    "invalid_http": 0,
+    "oracle_included": false
+  },
+  "C2": {
+    "status": "REGION_GRAIN_EXPECTATION_GAP",
+    "city_definition": "City-level archive, child level of province",
+    "province_definition": "Provincial administrative archive",
+    "city_field": {
+      "table": "dim_city",
+      "column": "city_name",
+      "table_id": 2727,
+      "field_id": 35580
+    },
+    "province_field": {
+      "table": "dim_province",
+      "column": "province_name",
+      "table_id": 2726,
+      "field_id": 35573
+    },
+    "relation_evidence": [
+      {
+        "relation_code": "sales_order_belongs_to_hospital",
+        "relation_name": "归属采购医院",
+        "relation_type": "N:1",
+        "target_entity": "hospital",
+        "relation_semantic": "销售订单按订单中的医院标识归属实际采购医院。",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "sales_order.hospital_id",
+          "target_field": "hospital.hospital_id"
+        },
+        "description": "销售订单按订单中的医院标识归属实际采购医院。"
+      },
+      {
+        "relation_code": "hospital_located_in_province",
+        "relation_name": "所在",
+        "relation_type": "N:1",
+        "target_entity": "province",
+        "relation_semantic": "",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "hospital.province_id",
+          "target_field": "dim_province.province_id"
+        },
+        "description": ""
+      },
+      {
+        "relation_code": "hospital_located_in_city",
+        "relation_name": "所在",
+        "relation_type": "N:1",
+        "target_entity": "city",
+        "relation_semantic": "",
+        "relation_constraint": null,
+        "join_key": {
+          "source_field": "hospital.city_id",
+          "target_field": "dim_city.city_id"
+        },
+        "description": ""
+      }
+    ],
+    "decision": "NEW_TASK must not inherit old province grain by default. No catalog business rule proves city/province equivalence for Beijing; old expectation not rewritten; no source SQL run."
+  },
+  "lowering": {
+    "rows": [
+      {
+        "capture_key": "71ce0d55431c39cfad6a23ee",
+        "case_id": "HC55-A",
+        "turn_index": 0,
+        "logical_plan_hash": "23ba8ab33911df38fdfdf8506ec15cedf64943c52a485e404a0df856a0969d53",
+        "external_attempts": {
+          "model_attempts": 0,
+          "database_attempts": 0,
+          "network_attempts": 0,
+          "redis_attempts": 0
+        },
+        "sql_execute": 0,
+        "source_sql": 0,
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_TIME_STORAGE_TIMEZONE_UNPROVEN"
+        ],
+        "native_sql_planning_called": false
+      },
+      {
+        "capture_key": "c8c010c9b2e5abd89e6058f6",
+        "case_id": "HC55-B",
+        "turn_index": 0,
+        "logical_plan_hash": "eae5cb2041e931b4eed891a0693899aa9bd9c39062e44dda477875ebf8c00682",
+        "external_attempts": {
+          "model_attempts": 0,
+          "database_attempts": 0,
+          "network_attempts": 0,
+          "redis_attempts": 0
+        },
+        "sql_execute": 0,
+        "source_sql": 0,
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_TIME_STORAGE_TIMEZONE_UNPROVEN"
+        ],
+        "native_sql_planning_called": false
+      },
+      {
+        "capture_key": "7686528e9346457cc6a4bf09",
+        "case_id": "HC55-B",
+        "turn_index": 3,
+        "logical_plan_hash": "5de49626f80d5149dab50e138f12df2f2aafcf4b7dff4d6886d9b3ee4fd2927a",
+        "external_attempts": {
+          "model_attempts": 0,
+          "database_attempts": 0,
+          "network_attempts": 0,
+          "redis_attempts": 0
+        },
+        "sql_execute": 0,
+        "source_sql": 0,
+        "status": "UNSUPPORTED",
+        "blockers": [
+          "ASL2_TIME_STORAGE_TIMEZONE_UNPROVEN"
+        ],
+        "native_sql_planning_called": false
+      }
+    ],
+    "runtime_hashes": {
+      "app/semantic_v2/__init__.py": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93",
+      "app/semantic_v2/asl2.py": "b4ab7978bc7b0575cad45db6eb549fa3ba164e0fb02e9691292b86fd88b76759",
+      "app/semantic_v2/authorized_contract.py": "43528e54bcedb8e0646b8ad634617150fe957a011ff4cc1cbca906e5a471751f",
+      "app/semantic_v2/catalog_bridge.py": "2c16a2d216254aca64296fe57bf447e5c9a24fa1aede18bb5a1cf585ac39f40e",
+      "app/semantic_v2/catalog_mentions.py": "61cba704b689d0e3924b4fc2ddc1899ebd38ce39a9955bffa2edb8f598f94271",
+      "app/semantic_v2/catalog_paths.py": "dfdd61935121196ac64efc60c0eb5030390dab80f7b80c0123855da2e9dd6d77",
+      "app/semantic_v2/catalog_plans.py": "d284963c5b851631b67810103486c2e15dd7e8a598f6c2961a63bb8bbb4b90c7",
+      "app/semantic_v2/clarification.py": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb",
+      "app/semantic_v2/context_contract.py": "b7086b43437c3cb2920efe7346d2c4d1afde1228385e2640d09676122c076934",
+      "app/semantic_v2/context_proposal.py": "ad5d3d9d88de83f138dc59a868dd44936495eebeba0e2e79c015d2c125c50e84",
+      "app/semantic_v2/enums.py": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159",
+      "app/semantic_v2/explicit_time.py": "f9628794693b1a1dedc39c0cf4cff25c40d280c70267830f1351332c03cbca69",
+      "app/semantic_v2/filter_generation_schema.py": "b1d3d00d8f930bef587f9fb9904eb44e2a27ddc6d7279b8875705fa708b57187",
+      "app/semantic_v2/legacy_adapter.py": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f",
+      "app/semantic_v2/migration.py": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6",
+      "app/semantic_v2/models.py": "e23643d4f97abcb5391b1124fd5214da2f6d94077499ddcf9f102ea0e911af78",
+      "app/semantic_v2/pending_recognition.py": "93f3daf560ac574d41caeb08e79dfa09c4acef202bae6ad4243de619f13a6d5b",
+      "app/semantic_v2/pipeline.py": "56715d069f2deca374fa619473136b0bc9b3e57b93d5a383030719bc3392280b",
+      "app/semantic_v2/recognition.py": "0cda14e03e0cc1ae7a11375d29b8c3eb96a0dce647526f8d2ab0ec4d59cb48e7",
+      "app/semantic_v2/recognition_client.py": "ba5462734b9bacf48b59d7a6baba43246d63d739d1197f9daeff0ad457154ce4",
+      "app/semantic_v2/recognition_initialization.py": "6af76337adae514fb67f39965146474afbcccd5eef05f406906cc9b492a47f81",
+      "app/semantic_v2/recognition_repairs.py": "b92cf8d46bcaceced32c0593a9eec37f2a702a297510460280c5301055e2ad86",
+      "app/semantic_v2/registries.py": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7",
+      "app/semantic_v2/result_contract.py": "9189859325a15b8cc712294b312ec3ab21f39228a7be2db81c7a249bef029754",
+      "app/semantic_v2/schema.py": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad",
+      "app/semantic_v2/slot_reducer.py": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf",
+      "app/semantic_v2/source_value_binding.py": "9b03090dc22517080c7b5b3b05b9f63e44635b50a77a70f7cde25b36ec598e95",
+      "app/semantic_v2/source_value_probe.py": "55b4700f79776dea5569364b4ded2b0300b4e7ee99bc5c59808a3488dc5123fa",
+      "app/semantic_v2/source_value_recognition.py": "af68ff481d3d012af850cab6fc6f755eb3c6b57c1187154c365de819292ef149",
+      "app/semantic_v2/source_value_target.py": "d12675ecbb400b8d3bc7e8a1a9a7f8967e30fd597c4f4fa2e9495cd6db1f8a35",
+      "app/semantic_v2/state_machine.py": "f85d1157a44dd17c0e6a12d033460c6ae016282c1d8bb393228fcca61fcafa4f",
+      "app/semantic_v2/structured_edits.py": "9c69cde8fd173c54aa872283794c763a5fc15438f102d5ee979b5f22dda78eee",
+      "app/semantic_v2/temporal_comparisons.py": "624128af0ed814c3d686e00678727bb27cde5d1d3fadc4aa8e9ec01d8c9429dd",
+      "app/semantic_v2/trace_models.py": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5",
+      "app/semantic_v2/validators.py": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15"
+    },
+    "model_calls": 0,
+    "sql_calls": 0
+  },
+  "execution_adapter": {
+    "status": "NOT_IMPLEMENTED_TARGET_LOWERING_BLOCKED",
+    "reason": "ASL2_TIME_STORAGE_TIMEZONE_UNPROVEN",
+    "physical_evidence": {
+      "table": "sales_order",
+      "column": "created_date",
+      "table_id": 1880,
+      "field_id": 24400,
+      "type": "DATETIME",
+      "storage_timezone": null
+    },
+    "precise_boundary": "Only result-contract compilation and pre-lowering validation reached. No converted ASL/SQL means no formula/join/filter/time equivalence assertion.",
+    "comparison_axes": [
+      {
+        "axis": "COUNT(DISTINCT sales_order.order_key)",
+        "status": "INPUT_CATALOG_OR_STATE_VERIFIED; LOWERED_OUTPUT_NOT_PRODUCED"
+      },
+      {
+        "axis": "SUM(sales_order.quantity)",
+        "status": "INPUT_CATALOG_OR_STATE_VERIFIED; LOWERED_OUTPUT_NOT_PRODUCED"
+      },
+      {
+        "axis": "created_date half-open calendar year",
+        "status": "INPUT_CATALOG_OR_STATE_VERIFIED; LOWERED_OUTPUT_NOT_PRODUCED"
+      },
+      {
+        "axis": "province.province_name EQ source-verified 江苏省",
+        "status": "INPUT_CATALOG_OR_STATE_VERIFIED; LOWERED_OUTPUT_NOT_PRODUCED"
+      },
+      {
+        "axis": "AND/OR/NOT preservation",
+        "status": "INPUT_CATALOG_OR_STATE_VERIFIED; LOWERED_OUTPUT_NOT_PRODUCED"
+      },
+      {
+        "axis": "sales_order->hospital->province join keys",
+        "status": "INPUT_CATALOG_OR_STATE_VERIFIED; LOWERED_OUTPUT_NOT_PRODUCED"
+      },
+      {
+        "axis": "current scope and catalog pin",
+        "status": "INPUT_CATALOG_OR_STATE_VERIFIED; LOWERED_OUTPUT_NOT_PRODUCED"
+      },
+      {
+        "axis": "no explicit ranking, grouped dimension or delivery limit in selected scalar targets",
+        "status": "INPUT_CATALOG_OR_STATE_VERIFIED; LOWERED_OUTPUT_NOT_PRODUCED"
+      }
+    ],
+    "contract_tests": {
+      "unsupported_no_sql_submit": "Existing native test_time_range_requires_governed_storage_timezone, newly run full suite",
+      "scope_pin_plan_identity": "Existing lowering/native scope/result tests newly run; no new adapter interface",
+      "no_success_on_failure": "ExecutionAttemptRecord requires real complete proof chain; no execution transport invoked",
+      "bad_result_dataset_retry_state_isolation": "ADAPTER_PATH_NOT_REACHED; not passed off as verified adapter contracts"
+    },
+    "test_only_adapter_pass": false,
+    "real_SQL_correctness": "NOT_VERIFIED",
+    "E2E_recommendation": "NOT_READY_FOR_ISOLATED_EXECUTION; certify storage timezone/time lowering, then remaining output/relationship/transport/result contracts"
+  },
+  "tests": {
+    "agent": {
+      "full_run_counts": {
+        "passed": 3457,
+        "failed": 28
+      },
+      "final_observed_counts": {
+        "passed": 3461,
+        "failed": 27
+      },
+      "final_result_basis": "One full 24-batch run + exact generated-schema check + final new-test parametrization; not a second full run",
+      "focused_final_counts": {
+        "passed": 18
+      },
+      "previous_full_counts": {
+        "passed": 3266,
+        "failed": 27
+      },
+      "previous_affected_counts": {
+        "passed": 681
+      },
+      "old_pass_new_fail": 0,
+      "old_fail_new_pass_vs_previous_full": 0,
+      "baseline_head_schema_failure_fixed": 1,
+      "new_tests": 17,
+      "critical_passed": 160,
+      "context_slice_passed": 8,
+      "context_slice_turns": 18,
+      "collection_errors": [],
+      "failures": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]"
+      ]
+    },
+    "Oagnet": {
+      "counts": {
+        "passed": 690,
+        "failed": 8
+      },
+      "collection_errors": [],
+      "old_pass_new_fail": 0,
+      "failed_nodeids": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+      ],
+      "comparison": [
+        {
+          "receipt": {
+            "path": "docs/cutover/catalog_publication_candidate/final_Oagnet.json",
+            "sha256": "0f40d1c0d92ec78a7e79b218eaffccb45b5f5ad3d77c220a793f3c75cc5e0a92"
+          },
+          "old_counts": {
+            "passed": 649,
+            "failed": 8
+          },
+          "old_pass_new_fail": [],
+          "old_fail_remaining": [
+            "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+            "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+            "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+            "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+          ]
+        },
+        {
+          "receipt": {
+            "path": "docs/cutover/evaluation_gates/final_Oagnet.json",
+            "sha256": "816baabb67c02801fcfbb7934dc6147c52cb1247736ce0c3742d15aa015ce51f"
+          },
+          "old_counts": {
+            "passed": 663,
+            "failed": 8
+          },
+          "old_pass_new_fail": [],
+          "old_fail_remaining": [
+            "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+            "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+            "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+            "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+          ]
+        },
+        {
+          "receipt": {
+            "path": "docs/cutover/pinned_sql_catalog/final_Oagnet.json",
+            "sha256": "175e6c1f79859037c92234ad3623774dbdb4de34d90d7a612e135ebfa8c4d876"
+          },
+          "old_counts": {
+            "passed": 663,
+            "failed": 8
+          },
+          "old_pass_new_fail": [],
+          "old_fail_remaining": [
+            "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+            "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+            "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+            "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+          ]
+        },
+        {
+          "receipt": {
+            "path": "docs/cutover/v2_asl2/final_Oagnet.json",
+            "sha256": "779884a644f4e8eb1acd0ac1e798089ca557f47e5240a66c6dacf2c8d49d8c9d"
+          },
+          "old_counts": {
+            "passed": 663,
+            "failed": 8
+          },
+          "old_pass_new_fail": [],
+          "old_fail_remaining": [
+            "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+            "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+            "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+            "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+          ]
+        },
+        {
+          "receipt": {
+            "path": "docs/cutover/v2_bound_sql/final_Oagnet.json",
+            "sha256": "779884a644f4e8eb1acd0ac1e798089ca557f47e5240a66c6dacf2c8d49d8c9d"
+          },
+          "old_counts": {
+            "passed": 663,
+            "failed": 8
+          },
+          "old_pass_new_fail": [],
+          "old_fail_remaining": [
+            "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+            "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+            "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+            "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+          ]
+        },
+        {
+          "receipt": {
+            "path": "docs/cutover/v2_entity_value_sources/final_Oagnet.json",
+            "sha256": "35d45f899e27a4dd7de9ec9cc1de1ea6c47ed27f746cec49935dfda349207213"
+          },
+          "old_counts": {
+            "passed": 625,
+            "failed": 8
+          },
+          "old_pass_new_fail": [],
+          "old_fail_remaining": [
+            "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+            "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+            "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+            "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+          ]
+        },
+        {
+          "receipt": {
+            "path": "docs/cutover/v2_filters/final_Oagnet.json",
+            "sha256": "779884a644f4e8eb1acd0ac1e798089ca557f47e5240a66c6dacf2c8d49d8c9d"
+          },
+          "old_counts": {
+            "passed": 663,
+            "failed": 8
+          },
+          "old_pass_new_fail": [],
+          "old_fail_remaining": [
+            "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+            "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+            "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+            "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+          ]
+        },
+        {
+          "receipt": {
+            "path": "docs/cutover/v2_ranking/final_Oagnet.json",
+            "sha256": "779884a644f4e8eb1acd0ac1e798089ca557f47e5240a66c6dacf2c8d49d8c9d"
+          },
+          "old_counts": {
+            "passed": 663,
+            "failed": 8
+          },
+          "old_pass_new_fail": [],
+          "old_fail_remaining": [
+            "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+            "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+            "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+            "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+          ]
+        },
+        {
+          "receipt": {
+            "path": "docs/cutover/v2_source_value_binding/final_Oagnet.json",
+            "sha256": "8390255a0a713f4514f0db5080e85366d7b21faa202bc9bef4256a12da6bccca"
+          },
+          "old_counts": {
+            "passed": 633,
+            "failed": 8
+          },
+          "old_pass_new_fail": [],
+          "old_fail_remaining": [
+            "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+            "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+            "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+            "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+            "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique"
+          ]
+        }
+      ]
+    },
+    "sql_translator": {
+      "counts": {
+        "passed": 381
+      },
+      "collection_errors": [],
+      "old_pass_new_fail": 0
+    },
+    "test_executions": "All three suites newly run offline; no source SQL or live provider calls",
+    "intermediate": "First new fixture revision had a self-recursing test callback (5 passed/9 setup errors), corrected without production edits. Initial full Agent found 28 failed; one already failed at baseline HEAD and was a stale current export. Final expected-schema test unchanged and passes."
+  },
+  "performance": {
+    "model_calls": 20,
+    "embedding_calls": 0,
+    "http200": 20,
+    "http401": 0,
+    "http403": 0,
+    "timeout": 0,
+    "retry": 0,
+    "tokens": {
+      "prompt_tokens": 282670,
+      "completion_tokens": 7900,
+      "total_tokens": 290570
+    },
+    "v2_semantic_seconds": {
+      "count": 10,
+      "minimum": 10.59400000000096,
+      "maximum": 27.40600000000086,
+      "p95_observed": 27.40600000000086
+    },
+    "stages": [
+      {
+        "case_id": "R58-C3-GROUP",
+        "timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 9.42200000000048
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 3.3440000000009604
+          }
+        ]
+      },
+      {
+        "case_id": "R58-C3-METRIC",
+        "timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 9.92200000000048
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 3.25
+          }
+        ]
+      },
+      {
+        "case_id": "R58-C3-TIME",
+        "timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 9.984000000000378
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 3.8430000000007567
+          }
+        ]
+      },
+      {
+        "case_id": "R58-C3",
+        "timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 9.15599999999904
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 2.29700000000048
+          }
+        ]
+      },
+      {
+        "case_id": "R58-CLEAR-NEXT",
+        "timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 7.781000000000859
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 3.2969999999986612
+          }
+        ]
+      },
+      {
+        "case_id": "R58-CLEAR",
+        "timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 5.875
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 21.20299999999952
+          }
+        ]
+      },
+      {
+        "case_id": "R58-FOLLOW",
+        "timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 7.2039999999997235
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 3.3439999999991414
+          }
+        ]
+      },
+      {
+        "case_id": "R58-FRESH",
+        "timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 10.936999999999898
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 6.4539999999997235
+          }
+        ]
+      },
+      {
+        "case_id": "R58-NEW",
+        "timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 15.65599999999904
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 8.843999999999141
+          }
+        ]
+      },
+      {
+        "case_id": "R58-REMOVE",
+        "timings": [
+          {
+            "stage": "v2_current_turn",
+            "seconds": 7.343999999999141
+          },
+          {
+            "stage": "v2_semantic_edits",
+            "seconds": 2.8909999999996217
+          }
+        ]
+      }
+    ],
+    "oagnet_ASL": "Prior recovery receipt 16.525 seconds; NOT_MEASURED_THIS_ROUND",
+    "embedding": "Prior smoke length 1024; latency not recorded",
+    "local_lowering": "Executed before schema edit; no separate monotonic timing recorded",
+    "E2E": "NOT_MEASURED; no speedup claim"
+  },
+  "gates": {
+    "CONTEXT_FOLLOWUP_READY": "NOT_READY_FULL_GATE; observed focused axes pass",
+    "INTERNAL_DEMO_SEMANTIC_READY": "NO",
+    "READY_FOR_INTERNAL_DEMO_E2E_SMOKE": "NO",
+    "QUESTION_COMPLETION_CONTRACT_GAP": "OPEN_UNCHANGED",
+    "READY_FOR_USER_APPROVAL": false
+  },
+  "safety": {
+    "config_changes": 0,
+    "service_restarts": 0,
+    "V1_route_changed": false,
+    "API_SSE_UI_8088_changes": 0,
+    "business_SQL": 0,
+    "source_SQL": 0,
+    "production_state_writes": 0,
+    "Catalog_writes": 0,
+    "index_rebuilds": 0,
+    "Blind_access": 0,
+    "Benchmark": false,
+    "Shadow": false,
+    "Canary": false,
+    "semantic_regex_changes": 0,
+    "business_keyword_rules_added": 0,
+    "new_context_models": 0,
+    "model_weight_changes": 0,
+    "parse_and_draft_prompt_constants_changed": false,
+    "context_schema_description_changed": true,
+    "description_version": "v2-context-reference-intent-v3"
+  },
+  "current_pipeline_audit": {
+    "previous_report": "docs/v2_cutover/semantic_round5_7/results.json:platform_execution_chain_audit",
+    "identical_source_files": [
+      "app/api.py",
+      "app/dependencies.py",
+      "app/graph/workflow.py",
+      "app/adapters/http.py",
+      "app/domain/models.py"
+    ],
+    "route": "V1 DataAnalysisOrchestrator.handle; no V2 adapter connected",
+    "completed_question": "V1 production path only; V2 contract gap unchanged",
+    "running_vs_test_revision": "All three service PIDs retain baseline launch without reload. New context description is used only by isolated current tests/live; V1 public source unchanged."
+  },
+  "evidence_index": [
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/c3-oracle-receipt.json",
+      "sha256": "a70734c07a999afcbadd1c63abaa12b8ef551b184f935f12c88ff6effaf70409"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/c3-oracle-ORIGINAL.json",
+      "sha256": "4aa7b324b24129e6373e21aa43c3771d4a96639ffd9a0d5bcf1b28bd2675f81a"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/c3-oracle-REFERENCE_ONLY_PARSE.json",
+      "sha256": "1c0e73125cf480e8067057e308fad0ae10f7c26a4eda6efc7dc03a593af69b5c"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/lowering_receipt.json",
+      "sha256": "e8137963815436dab2dba7993d0b2d8723d537c619664e155d3bb9fac85d0eb7"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/semantic_validation.json",
+      "sha256": "a4f3453831c7af4aa4edd6eea4b16788df4807e752bde9bd8d1f35de3523355a"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/recovery_audit.json",
+      "sha256": "95ec0fd89c22d92f3bee37b2e731c15977835aefe44d7d0e8b68a07973b229d1"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/schema_refresh.json",
+      "sha256": "590a50f2f38f4bcc3595bc4ce70d8fee343a3a3e5408c4aec4097ce31def0e18"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/baseline-schema-node.json",
+      "sha256": "fc0fafa9332ba215d076751558f82b6fc8e4c12969b59d133b8990e9d56c9886"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/schema-final.json",
+      "sha256": "2971119aa117062dba25356943101cf3e6eaf081cf0b4a1d4a911261bef0535d"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/focused-final.json",
+      "sha256": "a9cd10f80e201da9c6d7a4e72b739c519bcd279a0ca69b56ba4612a9f1e86f1a"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/test_delta.json",
+      "sha256": "0a903e5fd39703d257c2db82776d725fc7a77d4c886dd12d82926ff517106a91"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/full-agent/aggregate.json",
+      "sha256": "daf4f7476e63934a97d2c79d8e14272a78873ce0eb454dd779649e8efebaf5cb"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/full-Oagnet/aggregate.json",
+      "sha256": "c0faf6bf01c38c2bc712c6f439cfa81081105f33cdc5fde063d7bdcd031fe06d"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/full-sql-translator/aggregate.json",
+      "sha256": "0a20e3c9022643b1e869573d9034e247de27430d4057d3f14c2b065a1ef0d1be"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/input_freeze.json",
+      "sha256": "57c14df680a4a6c9ca7a0518ec8b49e04268323ee2227ce0191ea0d433f53c84"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/result.json",
+      "sha256": "2c5c470dd5ba048b5b3ca8228270d992bcbc3f0ebccd683b9d8429f5e31e66d1"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/R58-C3-GROUP.json",
+      "sha256": "1e1c32e1be8bc1047057504ba0c8a72161820e214b9818a7c482334d46b230c7"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/R58-C3-METRIC.json",
+      "sha256": "0c09b4bb9986c12b4fc2ea7d717fc162ece95d8da73929ecd9cf3870365c2b2a"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/R58-C3-TIME.json",
+      "sha256": "ee1098dc06a6e5423c767359c4d587b908b6cce2a0a2ec77d618d225edf419b8"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/R58-C3.json",
+      "sha256": "117d3bfcebd121fc4459697cc3e16a6688a08231ea37d0f74c93590258f58774"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/R58-CLEAR-NEXT.json",
+      "sha256": "1a6f6be414d11e4156756930a3792e7f2e043478c0b5cd259541c68d011cea98"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/R58-CLEAR.json",
+      "sha256": "486aa07325fbe94588bab9a4473d7011e7584c551516e16701290b12ea5b18a0"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/R58-FOLLOW.json",
+      "sha256": "d5a3f38286dfab34db106bd639a404ae0e5b58e417fad20df26f93b42a65a480"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/R58-FRESH.json",
+      "sha256": "b1e2e13b7f53a63fc877a0e2f5c15108742d260fc7b97657a5eb3d0570d7d5fc"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/R58-NEW.json",
+      "sha256": "5206743737cbd3dd2c83a9de92bd53685dd501882cb08fffa49ca27e08737887"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/live-v1/R58-REMOVE.json",
+      "sha256": "937469ec59524626c7f1515567ee40db85c915c5fafb8752adc1882d9080a330"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/final_health.json",
+      "sha256": "b9b8d365ac09b732976058186c5c50ef6e5386788566821333c675ba941eaf9a"
+    },
+    {
+      "path": ".eval_private/recovery-round5-8-20260910T113903Z/final_health_corrected.json",
+      "sha256": "572ac9f31254e100d9d3b8959dece72cbd841f6a675467247bca893114e748a3"
+    },
+    {
+      "path": ".eval_private/round58_oracle.py",
+      "sha256": "035e43c69ce7bd5d8952efa48360a6610de586c16d7d309307ad0d51af234603"
+    },
+    {
+      "path": ".eval_private/round58_evaluate.py",
+      "sha256": "9f69c34e3413c1795069ba5809b8d67a729de9d5dad5a243141b78397aae24d1"
+    },
+    {
+      "path": ".eval_private/round58_lowering.py",
+      "sha256": "8dcfea306a48457f02f4ae809c4b97fa02e7456222d2e929a51f20e6c31a2a94"
+    },
+    {
+      "path": ".eval_private/round58_regression.py",
+      "sha256": "c8448b82eb25ce20963d49da8586206b17a2238b213df1e2b6b2625ec48f5a2c"
+    }
+  ]
+}
