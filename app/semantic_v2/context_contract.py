@@ -8,7 +8,7 @@ from .models import StrictModel, Identifier
 from .pipeline import CurrentTurnSemanticParse
 
 CONTRACT_VERSION = 'v2-context-proposal-v1'
-SEMANTIC_DESCRIPTION_VERSION = 'v2-context-reference-intent-v2'
+SEMANTIC_DESCRIPTION_VERSION = 'v2-context-reference-intent-v3'
 RELATIONS = ('NEW_TASK', 'CONTINUE', 'MODIFY', 'ADD', 'REPLACE', 'REMOVE',
              'CLEAR', 'CORRECT', 'DRILL_DOWN', 'RETURN_TO_TOPIC', 'ANSWER_CLARIFICATION')
 
@@ -51,7 +51,13 @@ class ContextAwareParse(CurrentTurnSemanticParse):
         'an offered non-active task; NEW_TASK inherits nothing; ANSWER_CLARIFICATION selects the offered Pending. '
         'AMBIGUOUS means genuinely indistinguishable references; UNRESOLVED means insufficient reference evidence. '
         'Both select no relation or target. Missing execution slots do not decide relation. '
-        'Copy current state/version identifiers; current mentions and edits must come only from the current turn.'))
+        'Copy current state/version identifiers; current mentions and edits must come only from the current turn. '
+        'Distinguish a description used only to identify an offered task from a current business requirement: '
+        'represent reference-only content through reference_signals and context_proposal, without declaring it '
+        'as a current business mention, explicit slot or operation marker. '
+        'A return may also request changes: retain the actual current additions, replacements, removals or '
+        'clears as business mentions, explicit slots and operation markers; apply them to the referenced task. '
+        'RETURN_TO_TOPIC does not imply that all content is reference-only or that all slots are inherited.'))
 
 
 def proposal_schema(context, current_schema):

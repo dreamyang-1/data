@@ -350,6 +350,34 @@
     },
     "SourceValueRequestDraft": {
       "additionalProperties": false,
+      "oneOf": [
+        {
+          "properties": {
+            "field_binding_handles": {
+              "minItems": 1
+            },
+            "target_filter_handle": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "field_binding_handles"
+          ]
+        },
+        {
+          "properties": {
+            "field_binding_handles": {
+              "maxItems": 0
+            },
+            "target_filter_handle": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "target_filter_handle"
+          ]
+        }
+      ],
       "properties": {
         "request_id": {
           "maxLength": 256,
