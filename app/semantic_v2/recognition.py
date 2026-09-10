@@ -25,6 +25,7 @@ from .recognition_client import RecognitionFailure
 from .context_contract import ContextAwareParse, proposal_schema, CONTRACT_VERSION
 from .context_proposal import discover_context, accept_proposal, proposal_resolution
 from .recognition_repairs import repair_model_parse, repair_collection_handle_mentions
+from .recognition_initialization import initial_assignments, initial_time_assignment, source_field_schema, align_filter_deletions
 from .pending_recognition import (AmbiguityDraft, PendingResume, clarification_result,
     governed_aliases, pending_identity, prepare_ambiguities, selected_option)
 from .registries import PayloadContractRegistry, SlotDefinitionRegistry
@@ -159,7 +160,7 @@ class SemanticTaskDraft(m.StrictModel):
     ambiguities: list[AmbiguityDraft] = Field(default_factory=list,max_length=10)
 
 
-def semantic_task_schema(parse, tasks, *, context_relation=None):
+def semantic_task_schema(parse, tasks, *, context_relation=None, candidates=None):
     """Expose only historical handles that the existing turn guard can accept."""
     schema = SemanticTaskDraft.model_json_schema()
     historical = (context_relation == 'RETURN_TO_TOPIC' if context_relation is not None else
@@ -168,7 +169,8 @@ def semantic_task_schema(parse, tasks, *, context_relation=None):
     schema['properties']['historical_task_handle'] = ({
         'anyOf': [{'type':'string','enum':allowed}, {'type':'null'}], 'default':None}
         if allowed else {'type':'null','default':None})
-    return schema
+    return source_field_schema(schema,candidates,initial_range=(context_relation=='NEW_TASK'
+        and any('TIME_RANGE' in mention.candidate_roles for mention in parse.mentions))) if candidates is not None else schema
 
 
 class RecognizedPlan(m.StrictModel):
@@ -309,7 +311,7 @@ class RawTurnPlanner:
                     'task_version': d.task_version} for h,d in datasets.items()],
                 'payload_types': [*PayloadContractRegistry.definitions, 'INHERIT'],
                 'value_schema': value_schema()}, output_model=SemanticTaskDraft,
-            schema=semantic_task_schema(parse, selected_tasks, context_relation=context_trace['FINAL_RELATION']))
+            schema=semantic_task_schema(parse, selected_tasks, context_relation=context_trace['FINAL_RELATION'],candidates=candidates))
         draft, handle_repairs = repair_collection_handle_mentions(draft, parse=parse, handles=handles, candidates=candidates)
         if handle_repairs:
             logging.getLogger(__name__).info('V2 collection handle representation repaired',
@@ -540,6 +542,13 @@ class RawTurnPlanner:
 
     @staticmethod
     def _patch(session, parse, draft, handles, base, now, *, deferred=(), prior=None, target=None):
+        draft, initialization_trace = initial_assignments(parse,draft,base=base,target=target,
+            prior=prior or m.TaskSemanticState(),edit_model=SlotEditDraft,handles=handles)
+        draft, deletion_trace = align_filter_deletions(parse,draft,base=base,target=target)
+        initialization_trace.extend(deletion_trace)
+        if initialization_trace:
+            logging.getLogger(__name__).info('V2 current edit representation',
+                extra={'message_id':session._request.message_id,'initialization_trace':initialization_trace})
         markers = {(m.slot_name, m.operation_hint, m.mention_id) for m in parse.operation_markers}
         ids = {m.mention_id for m in parse.mentions}
         operations = []
@@ -652,8 +661,16 @@ class RawTurnPlanner:
             return value
         temporal_edits = normalize_component_edits(parse, draft.temporal_edits,
             prior or m.TaskSemanticState(), now, hydrate)
+        initial_time = None
+        if temporal_edits and target is None and base == 0 and (prior is None or prior == m.TaskSemanticState()):
+            metric_patch = TaskPatch.compile([op for op in operations if op.slot_path == 'metrics'],base_task_version=base)
+            metrics = apply_task_patch(prior or m.TaskSemanticState(),metric_patch).semantics.metrics
+            initial_time = initial_time_assignment(session,parse,temporal_edits,metrics,now,hydrate)
+            temporal_edits = []
         extra, traces = lower_edits(prior or m.TaskSemanticState(), target, draft.filter_edits,
             temporal_edits, hydrate, base, now, comparison_edit=bool(draft.comparison_edits))
+        if initial_time is not None:
+            extra.append(initial_time)
         extra.extend(relation_ops)
         for op in extra:
             typed = TypeAdapter(SlotDefinitionRegistry.get(op.slot_path).value_type).validate_python(op.new_value)

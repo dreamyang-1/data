@@ -1,0 +1,52 @@
+{
+  "baseline": "bc5bc3f418c374f3f155403550649b23c64ce4e5",
+  "baseline_tracked_files": 1581,
+  "originally_modified_files": [
+    "app/semantic_v2/recognition.py"
+  ],
+  "new_files": [
+    "app/semantic_v2/recognition_initialization.py",
+    "docs/v2_cutover/semantic_round5_2/causal_receipt.json",
+    "docs/v2_cutover/semantic_round5_2/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/closure_report.md",
+    "docs/v2_cutover/semantic_round5_2/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/live_recheck.json",
+    "docs/v2_cutover/semantic_round5_2/performance_receipt.json",
+    "docs/v2_cutover/semantic_round5_2/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/root_clusters.json",
+    "docs/v2_cutover/semantic_round5_2/round5_2_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/test_delta.json",
+    "docs/v2_cutover/semantic_round5_2/validation_receipt.json",
+    "docs/v2_cutover/semantic_round5_2/verify_round5_2.py",
+    "docs/v2_cutover/semantic_round5_2/workspace_git_hash_verification.json",
+    "tests/test_v2_initialization_round52.py",
+    "tools/cutover/round52_live_recheck.py",
+    "tools/cutover/round52_recorded_causes.py"
+  ],
+  "final_tracked_files_expected": 1598,
+  "hash_mode": "SHA256 normalized CRLF to LF; committed blobs verified after commit",
+  "synchronized_payload_hashes": {
+    "app/semantic_v2/recognition.py": "d92164bd9b1b4961433c95a643018583c3e0d765917a384e4a8d991964a3c4bc",
+    "app/semantic_v2/recognition_initialization.py": "360d0a635ff8ec11e3d8d12d18dfc7cb04a9ecb434d05bf86f10bf8ef80ccdf9",
+    "docs/v2_cutover/semantic_round5_2/causal_receipt.json": "06616e32ae00c0c43da657141343c50ec05819e7e0d9043fb3e6c2e7f8590130",
+    "docs/v2_cutover/semantic_round5_2/closure_report.md": "668154f9c0e03b96c92b112ab422c3fbf7c0404a6c3b1a51b81975b815106b9d",
+    "docs/v2_cutover/semantic_round5_2/live_recheck.json": "580105a8c5a75f86a253e8b738db7af75453f16183169b2cf7fa6d95936d92ea",
+    "docs/v2_cutover/semantic_round5_2/performance_receipt.json": "c176cd7b85e3a8c00a8aa8cec45093c8558569f8d42472aa2e3cce9d808a6776",
+    "docs/v2_cutover/semantic_round5_2/root_clusters.json": "bf947f613151c251a4b88b0a027c6be2eee9975d53894aa01ee1d7e4ab07c799",
+    "docs/v2_cutover/semantic_round5_2/round5_2_manifest.json": "b06831f9a146eb6306d1bf8e472047874c05330227d76e249e13c7097db82ffd",
+    "docs/v2_cutover/semantic_round5_2/test_delta.json": "de7cc8b15977fbc61e77d34b2d076d5c2385785eb6125a4fd12aa84247ada940",
+    "docs/v2_cutover/semantic_round5_2/validation_receipt.json": "21c2d073d77b2add00e0e746d3616962dcf0a30f6b55b1fe1039b64716a5925e",
+    "docs/v2_cutover/semantic_round5_2/verify_round5_2.py": "29f24ebbbfa591bfa643555aaa325e73f18491778492ba769b5480aefee3609a",
+    "tests/test_v2_initialization_round52.py": "a041f83ddbd096c4de3bcee750002f2ddff5a1f6b5a7f44b3d7656203a373957",
+    "tools/cutover/round52_live_recheck.py": "54075fbaabccd3757bf3fa83a2b0c2cb4a495c75d503b08b64cdba2711d6e2da",
+    "tools/cutover/round52_recorded_causes.py": "3991e4a430d878ecd271ae83f2e73fb06621d3f52594bb51d8eb8852ccb6dcac"
+  },
+  "manifest_files": [
+    "docs/v2_cutover/semantic_round5_2/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/workspace_git_hash_verification.json"
+  ],
+  "unexpected_source_drift": 0,
+  "credentials_env_private_not_synchronized": true
+}
