@@ -3507,6 +3507,7 @@ class SQLTranslatorProd:
         *,
         parameters: Optional[Dict] = None,
         parameter_fingerprint: Optional[str] = None,
+        require_consistent_snapshot: bool = False,
     ) -> Dict:
         """
         在指定数据源上执行 SQL
@@ -3515,9 +3516,12 @@ class SQLTranslatorProd:
         :param ds_config: 数据源配置（host/port/user/password/database）
         :param parameters: 内部参数化计划的标量值；公共调用保持 None
         :param parameter_fingerprint: SQL 模板与参数共同指纹，参数化执行必传
+        :param require_consistent_snapshot: 内部执行必须先成功建立只读快照；公共旧调用默认不变
         :return: 执行结果字典
         """
         try:
+            if type(require_consistent_snapshot) is not bool:
+                raise ValueError('READ_ONLY_SNAPSHOT_MODE_INVALID')
             if parameters is not None or parameter_fingerprint is not None:
                 from bound_sql import validate_bound_sql, statement_fingerprint
                 if isinstance(parameters, dict):
@@ -3567,6 +3571,13 @@ class SQLTranslatorProd:
                     snapshot_verified = isinstance(snapshot_time, datetime)
                 except Exception:
                     connection.rollback()
+                if require_consistent_snapshot and not snapshot_verified:
+                    return {
+                        'success': False,
+                        'error': 'A verified read-only snapshot is required before query submission',
+                        'error_code': 'READ_ONLY_SNAPSHOT_REQUIRED',
+                        'retryable': False,
+                    }
                 if parameters is None:
                     cursor.execute(sql)
                 else:

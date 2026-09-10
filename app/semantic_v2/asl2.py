@@ -37,9 +37,11 @@ class ASL2Lowering:
     display_labels: tuple[tuple[str, str | None], ...] = ()
     ordering_contract: dict | None = None
     filter_contract: dict | None = None
+    time_storage_receipt: dict | None = None
+    compilation_fingerprint: str | None = None
 
     def __post_init__(self):
-        for name in ('asl', 'result_contract', 'output_bindings', 'ordering_contract', 'filter_contract'):
+        for name in ('asl', 'result_contract', 'output_bindings', 'ordering_contract', 'filter_contract', 'time_storage_receipt'):
             object.__setattr__(self, name, m.freeze_contract(getattr(self, name)))
 
 
@@ -223,7 +225,7 @@ class _Compiler:
                     ties_policy=rank.ties_policy, limit=rank.limit)
 
 
-def lower_asl2(session, plan):
+def lower_asl2(session, plan, *, time_storage=None, time_evidence_digest=None, allow_test_time_storage=False):
     """Use the same live scoped session before catalog acceptance, never history."""
     session._check()
     _require(isinstance(plan, AuthorizedLogicalPlan), 'ASL2_CURRENT_AUTHORIZED_PLAN_REQUIRED')
@@ -239,7 +241,7 @@ def lower_asl2(session, plan):
     if kind not in {'SCALAR_AGGREGATE','GROUPED_AGGREGATE','DETAIL_ROWS','RANKING'}:
         blockers.append('ASL2_PAYLOAD_' + kind + '_UNSUPPORTED')
     time = getattr(plan.payload, 'time', None)
-    if time and time.range is not None:
+    if time and time.range is not None and time_storage is None:
         blockers.append('ASL2_TIME_STORAGE_TIMEZONE_UNPROVEN')
     if time and (time.grain != 'NONE' or time.comparison is not None
                  or time.missing_period_policy != 'LEAVE_MISSING' or time.include_incomplete_period):
@@ -251,12 +253,24 @@ def lower_asl2(session, plan):
     try:
         compiler = _Compiler(session,plan,contract)
         asl, bindings, cap = compiler.build()
+        time_receipt = None
+        if time and time.range is not None:
+            from .time_storage import bounded_time_predicates
+            predicates, time_receipt = bounded_time_predicates(session, plan, compiler.field(time.anchor),
+                time_storage, time_evidence_digest, allow_test_only=allow_test_time_storage)
+            previous = compiler.filter_tree(plan.payload.filters)
+            expression = dict(operator='AND', children=[previous, predicates]) if previous else predicates
+            compiler.filter_contract = dict(contract='pinned-filter-tree-v1',
+                semantic_fingerprint=plan.semantic_fingerprint, expression=expression)
+            asl['filters'] = []
         ordering = compiler.ranking(asl, bindings)
         labels = {o.output_field_id:o.display_label for o in contract.required_outputs}
         labels.update({p.output_field_id:p.display_label for p in plan.payload.projection_spec.items if p.display_label is not None})
         return ASL2Lowering('SUPPORTED_PLAN_ONLY',plan.semantic_fingerprint,asl,contract,bindings,
             implicit_row_cap=cap,display_labels=tuple(labels.items()),ordering_contract=ordering,
-            filter_contract=compiler.filter_contract)
+            filter_contract=compiler.filter_contract, time_storage_receipt=time_receipt,
+            compilation_fingerprint=contract_digest(dict(plan=plan.model_dump(mode='json'),
+                time_evidence_digest=time_evidence_digest if time_receipt else None)))
     except ASL2Unsupported as exc:
         return ASL2Lowering('UNSUPPORTED',plan.semantic_fingerprint,None,contract,blockers=(str(exc),))
 
