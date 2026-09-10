@@ -4,6 +4,7 @@ These adapters cannot choose a task, field, entity value, or inherited value.
 Existing evidence/binding/operation validators consume their output unchanged.
 """
 from types import SimpleNamespace
+from copy import deepcopy
 
 from pydantic import TypeAdapter
 
@@ -11,6 +12,19 @@ from . import models as m
 from .explicit_time import metric_anchor,normalize_initial_assignment
 from .recognition_client import RecognitionFailure
 from .structured_edits import filter_targets
+
+
+def collection_set_schema(schema, task_schema):
+    """Export the existing metric/dimension SET array contract, not JsonValue."""
+    handle = deepcopy(task_schema['$defs']['BoundSemanticRef']['anyOf'][0])
+    rules = []
+    for slot in ('metrics', 'dimensions'):
+        value = deepcopy(task_schema['properties'][slot])
+        value['items'] = handle
+        rules.append({'if': {'properties': {'slot_path': {'const': slot}, 'operation': {'const': 'SET'}}},
+            'then': {'required': ['value'], 'properties': {'value': value}}})
+    schema['$defs']['SlotEditDraft'].setdefault('allOf', []).extend(rules)
+    return schema
 
 
 def align_filter_deletions(parse,draft,*,base,target):

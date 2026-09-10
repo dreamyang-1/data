@@ -25,7 +25,8 @@ from .recognition_client import RecognitionFailure
 from .context_contract import ContextAwareParse, proposal_schema, CONTRACT_VERSION
 from .context_proposal import discover_context, accept_proposal, proposal_resolution
 from .recognition_repairs import repair_model_parse, repair_collection_handle_mentions
-from .recognition_initialization import initial_assignments, initial_time_assignment, source_field_schema, align_filter_deletions
+from .recognition_initialization import (initial_assignments, initial_time_assignment, source_field_schema,
+    align_filter_deletions, collection_set_schema)
 from .pending_recognition import (AmbiguityDraft, PendingResume, clarification_result,
     governed_aliases, pending_identity, prepare_ambiguities, selected_option)
 from .registries import PayloadContractRegistry, SlotDefinitionRegistry
@@ -165,6 +166,7 @@ def semantic_task_schema(parse, tasks, *, context_relation=None, candidates=None
     schema = SemanticTaskDraft.model_json_schema()
     from .filter_generation_schema import filter_operation_schema
     schema = filter_operation_schema(schema, value_schema())
+    schema = collection_set_schema(schema, value_schema())
     from .source_value_target import source_target_schema
     schema = source_target_schema(schema, parse, tasks)
     historical = (context_relation == 'RETURN_TO_TOPIC' if context_relation is not None else
