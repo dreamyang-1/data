@@ -23,6 +23,7 @@
     "docs/v2_cutover/semantic_round5_12/test_delta.json",
     "docs/v2_cutover/semantic_round5_12/change_manifest.json",
     "docs/v2_cutover/semantic_round5_12/evidence_index.json",
+    "docs/v2_cutover/semantic_round5_12/git_commit_manifest.json",
     "docs/v2_cutover/semantic_round5_12/closure_report.md"
   ],
   "excluded": [".env", ".eval_private", "logs", "cache", "credentials", "business results", "Redis values"],

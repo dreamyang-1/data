@@ -2,6 +2,12 @@
   "status": "LIMITED_SCALAR_DEPLOYMENT_PREPARATION_PARTIAL",
   "baseline": "6b3a6e91e06ee5897a44ca2fd5d28532ecb68a79",
   "branch": "v2-limited-scalar-deployment-ready-20260910T164141Z",
+  "release": {
+    "candidate_code_commit": "f700b624536b448607e70c5ed54679e6e10c82a2",
+    "draft_pr": 71,
+    "draft_pr_url": "https://github.com/dreamyang-1/data/pull/71",
+    "final_evidence_commit": "resolve via git_commit_manifest.json"
+  },
   "recovery": {
     "interrupted_remote_compaction_was_business_failure": false,
     "recovered_uncommitted_files": 9,

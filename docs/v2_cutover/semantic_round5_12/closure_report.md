@@ -8,7 +8,7 @@ Round 5.11 的隔离标量链已收口成启动时可选择的候选 Runtime、�
 
 ## 恢复与版本边界
 
-本任务从远程上下文压缩失败后恢复。恢复时 Git 分支为 `v2-limited-scalar-deployment-ready-20260910T164141Z`，HEAD 仍是 Round 5.11 基线 `6b3a6e91e06ee5897a44ca2fd5d28532ecb68a79` / Draft PR #70；版本仓干净，9个中断前文件只存在于开发目录，没有本轮 commit、push 或 PR，也没有 Round 5.12/pytest 子进程。恢复没有撤销或重写这些修改，检查点见 [recovery_checkpoint.md](recovery_checkpoint.md)。最终提交和堆叠 Draft PR 由发布后的 Git 回执定位。
+本任务从远程上下文压缩失败后恢复。恢复时 Git 分支为 `v2-limited-scalar-deployment-ready-20260910T164141Z`，HEAD 仍是 Round 5.11 基线 `6b3a6e91e06ee5897a44ca2fd5d28532ecb68a79` / Draft PR #70；版本仓干净，9个中断前文件只存在于开发目录，没有本轮 commit、push 或 PR，也没有 Round 5.12/pytest 子进程。恢复没有撤销或重写这些修改，检查点见 [recovery_checkpoint.md](recovery_checkpoint.md)。候选代码提交为 `f700b624536b448607e70c5ed54679e6e10c82a2`；堆叠 Draft PR 为 [#71](https://github.com/dreamyang-1/data/pull/71)，base/head已核对。最终证据提交按 [git_commit_manifest.json](git_commit_manifest.json) 的命令解析。
 
 ## 启动接线
 
