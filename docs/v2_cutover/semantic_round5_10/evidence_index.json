@@ -1,5 +1,5 @@
 {
-  "status": "SCALAR_LIVE_READ_ONLY_E2E_PARTIAL",
+  "status": "V2_SCALAR_LIVE_READ_ONLY_E2E_PARTIAL",
   "main_scalar_path_status": "COMPLETE",
   "started_at": "2026-09-10T13:33:35.3660597+00:00",
   "hard_deadline": "2026-09-10T15:33:35.3660597+00:00",

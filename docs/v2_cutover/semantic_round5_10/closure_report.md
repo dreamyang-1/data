@@ -1,6 +1,6 @@
 # Round 5.10 — Scalar Live Read-only E2E
 
-**SCALAR_LIVE_READ_ONLY_E2E_PARTIAL**
+**V2_SCALAR_LIVE_READ_ONLY_E2E_PARTIAL**
 
 真实 V2 标量主链已经闭合：三条指定请求均经过实际 Recognition、原生 typed lowering、数据源 58 的真实只读 MySQL 执行、结果合同校验及隔离状态保存。Q1→Q2 使用同一会话中的真实 Q1 执行后状态，任务版本从 1 变为 2，并重新查询 2026 年数据，没有复用 Q1 结果。最终状态仍为 PARTIAL，因为独立核对发生了 4 次尝试，超过上限 2；其中前两次被本地参数合同在连接前拒绝，后两次实际执行并通过内存断言，但结果摘要未在后续序列化错误前持久化。因此正式结论保留 `BUSINESS_VALUE_INDEPENDENTLY_UNVERIFIED`。
 
