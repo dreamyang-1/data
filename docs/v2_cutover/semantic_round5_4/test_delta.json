@@ -1,0 +1,111 @@
+{
+  "baseline_selected_passed": 563,
+  "final_unique_passed": 604,
+  "final_failed": 0,
+  "new_tests": 41,
+  "new_test_nodeids": [
+    "tests/test_round54_plan_checks.py::test_complete_subtree_removal_checks_the_native_clear_barrier",
+    "tests/test_round54_plan_checks.py::test_injected_wrong_plan_or_missing_observation_cannot_pass[extra_grouping]",
+    "tests/test_round54_plan_checks.py::test_injected_wrong_plan_or_missing_observation_cannot_pass[extra_metric]",
+    "tests/test_round54_plan_checks.py::test_injected_wrong_plan_or_missing_observation_cannot_pass[lost_barrier]",
+    "tests/test_round54_plan_checks.py::test_injected_wrong_plan_or_missing_observation_cannot_pass[missing_ir]",
+    "tests/test_round54_plan_checks.py::test_injected_wrong_plan_or_missing_observation_cannot_pass[state_mutation]",
+    "tests/test_round54_plan_checks.py::test_injected_wrong_plan_or_missing_observation_cannot_pass[wider_scope]",
+    "tests/test_round54_plan_checks.py::test_injected_wrong_plan_or_missing_observation_cannot_pass[wrong_relation]",
+    "tests/test_round54_plan_checks.py::test_injected_wrong_plan_or_missing_observation_cannot_pass[wrong_target]",
+    "tests/test_round54_plan_checks.py::test_injected_wrong_plan_or_missing_observation_cannot_pass[wrong_year]",
+    "tests/test_round54_preflight.py::test_actual_entry_preflight_failure_precedes_provider_construction",
+    "tests/test_round54_preflight.py::test_agent_settings_are_captured_before_foreign_fixture_environment",
+    "tests/test_round54_preflight.py::test_bad_input_never_becomes_a_live_request[different_text]",
+    "tests/test_round54_preflight.py::test_bad_input_never_becomes_a_live_request[empty]",
+    "tests/test_round54_preflight.py::test_bad_input_never_becomes_a_live_request[missing_model]",
+    "tests/test_round54_preflight.py::test_bad_input_never_becomes_a_live_request[question_marks]",
+    "tests/test_round54_preflight.py::test_bad_input_never_becomes_a_live_request[replacement]",
+    "tests/test_round54_preflight.py::test_bad_input_never_becomes_a_live_request[utf8]",
+    "tests/test_round54_preflight.py::test_bad_input_never_becomes_a_live_request[wider_scope]",
+    "tests/test_round54_preflight.py::test_reviewed_fixture_roundtrip_and_counts",
+    "tests/test_v2_filter_generation_contract.py::test_actual_runtime_keeps_native_binding_and_rejection[None]",
+    "tests/test_v2_filter_generation_contract.py::test_actual_runtime_keeps_native_binding_and_rejection[bare_value]",
+    "tests/test_v2_filter_generation_contract.py::test_actual_runtime_keeps_native_binding_and_rejection[dataset_scope]",
+    "tests/test_v2_filter_generation_contract.py::test_generation_rejects_incomplete_or_noncurrent_new_predicates[authority]",
+    "tests/test_v2_filter_generation_contract.py::test_generation_rejects_incomplete_or_noncurrent_new_predicates[bare_value]",
+    "tests/test_v2_filter_generation_contract.py::test_generation_rejects_incomplete_or_noncurrent_new_predicates[dataset_scope]",
+    "tests/test_v2_filter_generation_contract.py::test_generation_rejects_incomplete_or_noncurrent_new_predicates[missing_operator]",
+    "tests/test_v2_filter_generation_contract.py::test_generation_rejects_incomplete_or_noncurrent_new_predicates[nonexplicit]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[ADD-None-operand0-True]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[ADD-current-operand1-True]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[ADD-current-operand11-False]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[CLEAR-current-None-True]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[CLEAR-current-operand7-False]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[REMOVE-None-None-False]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[REMOVE-current-None-True]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[REMOVE-current-operand4-True]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[REPLACE-None-operand8-False]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[REPLACE-current-operand10-False]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[REPLACE-current-operand2-True]",
+    "tests/test_v2_filter_generation_contract.py::test_operand_alternatives_preserve_operations[REPLACE-current-operand3-True]",
+    "tests/test_v2_filter_generation_contract.py::test_schema_preserves_alias_predicates_and_is_stable"
+  ],
+  "old_pass_new_fail": [],
+  "old_fail_new_pass": [],
+  "collection_errors": 0,
+  "receipts": [
+    {
+      "file": "affected-agent.json",
+      "sha256": "f6a30795a28b20f42fc4c9a2e2d094771c0b8e0c885ff90b1a8f05079a50e3a5",
+      "counts": {
+        "passed": 425
+      },
+      "collection_errors": 0
+    },
+    {
+      "file": "context.json",
+      "sha256": "bfaba8bb4a5d8aa07186054a4d73b5087e639d2d5ef2f2a62766793a82420c9a",
+      "counts": {
+        "passed": 8
+      },
+      "collection_errors": 0
+    },
+    {
+      "file": "critical.json",
+      "sha256": "8c96ba2ce587e1bfc45952300450545cf36f2e3f2b7fc1b7cded75254f6acf23",
+      "counts": {
+        "passed": 160
+      },
+      "collection_errors": 0
+    },
+    {
+      "file": "evaluation-final.json",
+      "sha256": "44e2371e4e6b5af8f1ade352ecc6a529088a4907f2b505031d2868d886c12081",
+      "counts": {
+        "passed": 20
+      },
+      "collection_errors": 0
+    }
+  ],
+  "focused": {
+    "passed": 124
+  },
+  "context": {
+    "passed": 8,
+    "turns": 18
+  },
+  "critical": {
+    "passed": 160
+  },
+  "target": {
+    "cases": 15,
+    "preserved": 15,
+    "source_hash": "cef45a1bfec81b9814b395e30c38167487682f429b6a1eb0bf16ece0fb7b9d19"
+  },
+  "agent_full_regression": "NOT_RUN: healthy live core gate did not pass",
+  "oagnet_full_regression": "NOT_RUN: no source change and healthy live core gate did not pass",
+  "sql_translator_regression": "NOT_RUN: no source change and healthy live core gate did not pass",
+  "inherited_agent_full_baseline": {
+    "passed": 3266,
+    "failed": 27,
+    "rerun_this_round": false
+  },
+  "real_model_calls_in_tests": 0,
+  "production_writes": 0
+}

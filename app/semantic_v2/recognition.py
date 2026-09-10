@@ -163,6 +163,8 @@ class SemanticTaskDraft(m.StrictModel):
 def semantic_task_schema(parse, tasks, *, context_relation=None, candidates=None):
     """Expose only historical handles that the existing turn guard can accept."""
     schema = SemanticTaskDraft.model_json_schema()
+    from .filter_generation_schema import filter_operation_schema
+    schema = filter_operation_schema(schema, value_schema())
     historical = (context_relation == 'RETURN_TO_TOPIC' if context_relation is not None else
         'HISTORICAL' in parse.reference_signals and not parse.topic_shift_signals)
     allowed = sorted(tasks) if historical else []
