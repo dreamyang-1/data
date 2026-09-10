@@ -1,0 +1,17 @@
+{
+  "status": "PASS_WITH_SAME_PREEXISTING_FAILURES",
+  "focused_final": {"passed": 31, "failed": 0, "collection_errors": 0, "receipt": "included in affected_final"},
+  "affected_final": {"passed": 239, "failed": 0, "collection_errors": 0},
+  "agent_full": {"passed": 3563, "failed": 27, "collection_errors": 0, "collected": 3590},
+  "round_5_11_baseline": {"passed": 3552, "failed": 27, "collection_errors": 0, "collected": 3579},
+  "new_tests": 11,
+  "same_failure_nodeids": true,
+  "old_pass_to_new_fail": 0,
+  "old_failure_to_new_pass": 0,
+  "missing_baseline_nodes": 0,
+  "old_test_expectation_changes": 0,
+  "real_model_calls": 0,
+  "business_sql_calls": 0,
+  "oagnet": "reused 690 passed / 8 pre-existing failed; source and consumed contract unchanged",
+  "sql_translator": "reused 400 passed / 0 failed; source and consumed contract unchanged"
+}

@@ -633,15 +633,21 @@ async def chat_stream(
     # first SSE byte is sent HTTP status is necessarily 200, so a known reuse
     # conflict must be detected before committing the stream.
     try:
-        fingerprint = DataAnalysisOrchestrator._request_fingerprint(payload, identity)
-        await request.app.state.container.sessions.get_response(
-            identity.tenant_id,
-            identity.user_id,
-            payload.application_id,
-            payload.conversation_id,
-            payload.message_id,
-            fingerprint,
-        )
+        isolated_handler = getattr(request.app.state, "isolated_chat_handler", None)
+        if isolated_handler is not None and hasattr(
+            isolated_handler, "check_message_conflict"
+        ):
+            await isolated_handler.check_message_conflict(payload, identity)
+        else:
+            fingerprint = DataAnalysisOrchestrator._request_fingerprint(payload, identity)
+            await request.app.state.container.sessions.get_response(
+                identity.tenant_id,
+                identity.user_id,
+                payload.application_id,
+                payload.conversation_id,
+                payload.message_id,
+                fingerprint,
+            )
     except MessageIdReuseConflictError as exc:
         raise HTTPException(
             status_code=409,
