@@ -8,6 +8,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SERVICE_BUNDLE_ROOT = (
+    PROJECT_ROOT
+    if (PROJECT_ROOT / "Oagnet").is_dir() and (PROJECT_ROOT / "sql-translator").is_dir()
+    else PROJECT_ROOT.parent
+)
 PLATFORM_ENV = PROJECT_ROOT.parent / ".env"
 SHARED_PROJECT_ENV = PROJECT_ROOT.parent / "New_Agent" / ".env"
 
@@ -25,6 +30,9 @@ class Settings(BaseSettings):
     adapter_mode: Literal["mock", "http"] = "mock"
     redis_url: str | None = None
     session_store_mode: Literal["memory", "redis"] = "redis"
+    # The public service stays on V1 unless an operator selects the bounded
+    # candidate at process startup.  Request content can never change this.
+    runtime_mode: Literal["V1", "V2_LIMITED_SCALAR"] = "V1"
     # v2 separates fingerprint-aware idempotency records from pre-upgrade Redis
     # values that cannot prove which request payload produced a cached response.
     session_key_prefix: str = "youo:data-analysis:v2"
@@ -36,6 +44,32 @@ class Settings(BaseSettings):
     # Keep the idempotency record at least as long as the pending conversation.
     # Session stores enforce max(response_cache_ttl, session_ttl) as a second guard.
     response_cache_ttl_seconds: int = Field(default=7200, ge=300, le=86400)
+    # V2 limited-scalar deployment settings are deliberately separate from the
+    # V1 session namespace.  Empty identity/pins are valid while runtime_mode is
+    # V1 and are rejected by the V2 builder before it opens any dependency.
+    limited_scalar_store_namespace: str = ""
+    limited_scalar_deployment_id: str = ""
+    limited_scalar_session_ttl_seconds: int = Field(default=86400, ge=300, le=604800)
+    limited_scalar_idempotency_ttl_seconds: int = Field(default=604800, ge=300, le=2592000)
+    limited_scalar_running_review_seconds: int = Field(default=300, ge=30, le=86400)
+    limited_scalar_max_messages_per_session: int = Field(default=100, ge=1, le=1000)
+    limited_scalar_max_envelope_bytes: int = Field(default=4 * 1024 * 1024, ge=65536, le=32 * 1024 * 1024)
+    limited_scalar_semantic_model_id: int = Field(default=81, strict=True, gt=0)
+    limited_scalar_business_domain_ids: list[int] = Field(default_factory=lambda: [205])
+    limited_scalar_data_source_id: int = Field(default=58, strict=True, gt=0)
+    limited_scalar_catalog_version: str = ""
+    limited_scalar_vector_index_version: str = ""
+    limited_scalar_catalog_target_identity_hash: str = ""
+    limited_scalar_oagnet_root: Path = SERVICE_BUNDLE_ROOT / "Oagnet"
+    limited_scalar_sql_translator_root: Path = SERVICE_BUNDLE_ROOT / "sql-translator"
+    limited_scalar_oagnet_source_digest: str = ""
+    limited_scalar_sql_source_digest: str = ""
+    limited_scalar_time_field_canonical_id: str = ""
+    limited_scalar_time_field_mapping: str = "sales_order.created_date"
+    limited_scalar_time_field_id: int = Field(default=24400, strict=True, gt=0)
+    limited_scalar_time_table_id: int = Field(default=1880, strict=True, gt=0)
+    limited_scalar_time_storage_timezone: str = "Asia/Shanghai"
+    limited_scalar_time_evidence_version: str = "round59-user-declaration-beijing-v1"
     allow_missing_trusted_identity_headers: bool = False
     require_trusted_application_header: bool = False
     max_clarification_rounds: int = Field(default=3, ge=1, le=10)

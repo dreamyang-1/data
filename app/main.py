@@ -17,12 +17,20 @@ from app.observability.langfuse_client import (
 )
 
 
-def create_app(settings: Settings | None = None, *, isolated_chat_handler=None) -> FastAPI:
+def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
+               limited_scalar_external=None) -> FastAPI:
     effective_settings = settings or get_settings()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.container = build_container(effective_settings)
+        handler = isolated_chat_handler
+        if handler is None and effective_settings.runtime_mode == "V2_LIMITED_SCALAR":
+            from app.semantic_v2.limited_scalar_runtime import build_limited_scalar_handler
+            handler = build_limited_scalar_handler(
+                effective_settings, external=limited_scalar_external
+            )
+        app.state.isolated_chat_handler = handler
         configure_langfuse(effective_settings)
         if app.state.container.dataset_cleaner is not None:
             app.state.container.dataset_cleaner.start()
@@ -34,8 +42,8 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None) 
             redis = getattr(app.state.container.sessions, "redis", None)
             if redis is not None:
                 await redis.aclose()
-            if isolated_chat_handler is not None and hasattr(isolated_chat_handler, "aclose"):
-                await isolated_chat_handler.aclose()
+            if handler is not None and hasattr(handler, "aclose"):
+                await handler.aclose()
             await asyncio.to_thread(shutdown_langfuse)
 
     application = FastAPI(
@@ -133,6 +141,15 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None) 
                     "knowledge_service": bool(knowledge_ok),
                 }
             )
+        if effective_settings.runtime_mode == "V2_LIMITED_SCALAR":
+            handler = getattr(application.state, "isolated_chat_handler", None)
+            if handler is None or not hasattr(handler, "readiness"):
+                checks["v2_limited_scalar_runtime"] = False
+            else:
+                try:
+                    checks.update(await handler.readiness())
+                except Exception:
+                    checks["v2_limited_scalar_runtime"] = False
         # Query contract is a core readiness dependency in HTTP mode. Metadata
         # and knowledge are separately reported as optional/degraded features so
         # an outage does not remove basic metric-query capacity from the gateway.
@@ -154,6 +171,7 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None) 
             content={
                 "status": "READY" if is_ready else "NOT_READY",
                 "adapter_mode": effective_settings.adapter_mode,
+                "runtime_mode": effective_settings.runtime_mode,
                 "intent_classifier": (
                     "STRUCTURED_MODEL"
                     if effective_settings.intent_model_enabled
