@@ -60,6 +60,14 @@ def filter_targets(task):
         for path, node in _nodes(state.filter_expression)}
 
 
+def validate_current_filter(expression):
+    """Both edit channels accept only current user predicates, recursively."""
+    for _, node in _nodes(expression):
+        if isinstance(node, (m.Predicate, m.AliasedPredicate)) and (
+                node.source != 'USER_EXPLICIT' or node.scope != 'CURRENT_TASK'):
+            raise RecognitionFailure('V2_FILTER_CURRENT_EVIDENCE_REQUIRED')
+
+
 def _labels(value):
     """History is transient model context, not a source of new binding authority."""
     if isinstance(value, m.BoundSemanticRef):
@@ -126,8 +134,7 @@ def filter_edits(prior, task, edits, hydrate):
             if edit.operation != 'ADD' or edit.value is None:
                 raise RecognitionFailure('V2_FILTER_TARGET_REQUIRED')
             predicate = TypeAdapter(m.AliasedPredicate | m.Predicate).validate_python(hydrate(edit.value, edit.evidence_mention_ids))
-            if predicate.source != 'USER_EXPLICIT' or predicate.scope != 'CURRENT_TASK':
-                raise RecognitionFailure('V2_FILTER_CURRENT_EVIDENCE_REQUIRED')
+            validate_current_filter(predicate)
             additions.append(predicate)
             continue
         if edit.target_handle not in targets:
