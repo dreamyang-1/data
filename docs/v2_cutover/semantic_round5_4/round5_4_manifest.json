@@ -1,0 +1,73 @@
+{
+  "stage": "ROUND_5_4_FILTER_OPERATION_CLOSURE_PARTIAL",
+  "baseline": "116ffe06d12812f849ba60eaa644df17cbc89f8a",
+  "branch": "semantic-filter-round5-4-20260910t063432z",
+  "base_pr": 62,
+  "base_branch": "semantic-grounding-round5-3-20260910t052350z",
+  "started_at": "2026-09-10T06:34:32Z",
+  "hard_stop_at": "2026-09-10T08:34:32Z",
+  "model": "qwen3.7-max",
+  "clock": "2026-09-09T09:00:00+08:00",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ]
+  },
+  "model_calls": 12,
+  "provider_http200": 8,
+  "provider_http401": 4,
+  "production_files": [
+    "app/semantic_v2/filter_generation_schema.py",
+    "app/semantic_v2/recognition.py"
+  ],
+  "oagnet_production_files": [],
+  "prompt_changed": false,
+  "schema_changed": "GENERATION_VIEW_ONLY_EXISTING_OPERAND_CONTRACT",
+  "runtime_schema_primitive_added": false,
+  "context_changed": false,
+  "grounding_architecture_changed": false,
+  "reducer_changed": false,
+  "validator_relaxed": false,
+  "business_keyword_added": false,
+  "V1_changed": false,
+  "UI_changed": false,
+  "API_SSE_changed": false,
+  "port8088_changed": false,
+  "model_config_file_changed": false,
+  "model_changed": false,
+  "blind_accessed": false,
+  "business_sql_executed": 0,
+  "production_writes": 0,
+  "catalog_writes": 0,
+  "index_rebuild": 0,
+  "read_only_catalog_metadata_audit": true,
+  "gates": {
+    "QUESTION_COMPLETION_CONTRACT_GAP": "OPEN_UNCHANGED",
+    "CONTEXT_ATTACHMENT_CORE_READY": "PASS_ON_IMPLEMENTED_CONTRACT",
+    "CONTEXT_FOLLOWUP_READY": "NOT_READY",
+    "READY_FOR_V2_READ_ONLY_E2E_SMOKE": "NO"
+  },
+  "formal_model_benchmark": false,
+  "E2E_started": false,
+  "next_round_started": false,
+  "source_hashes": {
+    "app/semantic_v2/filter_generation_schema.py": "3a48a1dcc4641315c460526a6c39ec32179f29375060cf04039a0d734689466e",
+    "app/semantic_v2/recognition.py": "313a87427cbd554cc279c32ef5ac847608187dbf29dcb15207e2ef991bc4aa6e",
+    "tools/cutover/round54_healthy_fixture.py": "1631e903678c94a8bda113d6b2f88ceb031ecc5b9d32fa3c66acc475c7c45e98",
+    "tools/cutover/round54_live_slice.py": "19625bf7e9bf194601c0aa0dae756470190065c220ec24cfdaca688934ffbf56",
+    "tools/cutover/round54_plan_checks.py": "3fc8ce0cb7c4ef33175e49537259b92cc9d3680b40720728eecb498a6de1dd25"
+  },
+  "private_receipt_hashes": {
+    "baseline.json": "93cc1074661fc0ea7d4267741f905f389966f5e382d6925dd4c7e85552700e20",
+    "oracle_receipt.json": "40fab90bbc3c9b92348e0bbb7ab574088af26888ea56e74675dea2c233024812",
+    "oracle_final_receipt.json": "e80e60d2d5b6a9315374f03664691a0b9175a6419a4a01fed3b47a236ceca94c",
+    "recorded-final\\receipt.json": "aacf679e129ec912d007b182a0dddfc613c1cd7888cdfcb0d141535e998aecd3",
+    "live_A_causal_receipt.json": "217ad6745d34fe78fc34eb263f4cecb216b82fa243a8b77e58b747cce3a643f8",
+    "accepted_plan_checks.json": "9c35dd3c1ab4e9bcb83ea19c45f0c5eacfeb79f416718f95c67e321a535e91d9",
+    "live-1\\result.json": "bf81356940c88f9934f376c71bc61347b9b4836dd9bb52b3df1e47c63fa1a644",
+    "live-2\\result.json": "f92f6bb755ca3d160c12dbbce02ce0df36da02205e616246d081b7df0a8241da",
+    "config_isolation_audit.json": "c08705bc5595c29150d5ec912be9938f54f2cd3e951d9715aa88a1117c67cda8"
+  },
+  "final_commit_resolution": "git log --format=%H -1 -- docs/v2_cutover/semantic_round5_4/git_commit_manifest.json"
+}

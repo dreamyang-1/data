@@ -1,0 +1,105 @@
+{
+  "original_cases": [
+    {
+      "case_id": "LF51-J",
+      "first_reject": "V2_SLOT_OPERATION_CONFLICT",
+      "origin": "Producer omitted predicate field/operator/source/scope; emitted operand only",
+      "classification": [
+        "C",
+        "F",
+        "G"
+      ],
+      "engine_cause": "FilterEditDraft exports unrestricted JsonValue while native ADD/new requires current explicit Predicate",
+      "oracle": "only filter_edits[0].value -> full Predicate; same source evidence and model choice",
+      "next_divergence": "CATALOG_RELATIONSHIP_REQUIRED",
+      "full_oracle_plan": false
+    },
+    {
+      "case_id": "LF51-B",
+      "first_reject": "V2_SLOT_OPERATION_CONFLICT",
+      "origin": "Producer emitted CURRENT_DATASET on new task condition",
+      "classification": [
+        "C",
+        "G"
+      ],
+      "oracle": "only filter_edits[0].value.scope -> CURRENT_TASK",
+      "next_divergence": "CATALOG_METRIC_TIME_ANCHOR_MISSING",
+      "full_oracle_plan": false
+    }
+  ],
+  "causal_receipts": [
+    {
+      "case_id": "J",
+      "capture_hash": "ba4216e78a9f357cafe646b58f11ddfe54a92e7fa7c2dd6a82d7e6952a1fdda9",
+      "original_schema_accepts_invalid_edit": true,
+      "changed_artifact": "filter_edits[0].value",
+      "original_error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "next_divergence": {
+        "type": "RecognitionFailure",
+        "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+      },
+      "filter_patch_observed": true,
+      "same_grounding_observations": true,
+      "model_calls": 0,
+      "source_sql_calls": 0,
+      "oracle_is_live_or_gold_pass": false
+    },
+    {
+      "case_id": "B",
+      "capture_hash": "e05f8dfa05c4beb947d5dfaa11cbbbfd2a49059484e3dab2acc1234c2dcbe4cd",
+      "original_schema_accepts_invalid_edit": true,
+      "changed_artifact": "filter_edits[0].value",
+      "original_error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "next_divergence": {
+        "type": "RecognitionFailure",
+        "reason": "CATALOG_METRIC_TIME_ANCHOR_MISSING"
+      },
+      "filter_patch_observed": false,
+      "same_grounding_observations": true,
+      "model_calls": 0,
+      "source_sql_calls": 0,
+      "oracle_is_live_or_gold_pass": false
+    }
+  ],
+  "new_live_causal": {
+    "capture_hash": "4f26f8bf6e76d53e5f65fe6fd13c00d7b13a610a382c4c1308a9a1525ce3538f",
+    "original_errors": [
+      "SOURCE_VALUE_FILTER_FIELD_MISMATCH"
+    ],
+    "original_error": {
+      "type": "ValueError",
+      "reason": "CONTRACT_OR_HARNESS_FAILURE"
+    },
+    "oracle_error": null,
+    "oracle_plan": true,
+    "artifact": "SourceValueRequestDraft field/target selector ONLY",
+    "filter_operation_unchanged": true,
+    "context_unchanged": true,
+    "source_snapshot_unchanged": true,
+    "grounding_field_changed": true,
+    "not_filter_operation_only_oracle": true,
+    "causal_classification": "SOURCE_FIELD_SELECTION_CONTRADICTS_CURRENT_FILTER_TARGET",
+    "model_calls": 0,
+    "sql_calls": 0,
+    "production_writes": 0,
+    "oracle_is_live_or_gold_pass": false
+  },
+  "statuses": {
+    "filter_generation_export": "CLOSED_ON_EXPORTED_STRUCTURAL_CONTRACT",
+    "runtime_adapter_defect": "NOT_PROVEN",
+    "schema_representation_incapacity": "NOT_PROVEN",
+    "full_filter_operation_root": "NOT_FULLY_CLOSED",
+    "original_case_live_success": "NOT_REMEASURED_AFTER_EXPORT_CHANGE",
+    "next_root": "SourceValueRequest field selection versus the current filter target"
+  },
+  "intervention_limits": "J/B are filter-only Oracle; A changes source selector and field grounding, explicitly not a filter-only Oracle",
+  "production_repairs": "Export existing operand alternatives; no repairing invalid model operands, guessing EQ or changing field",
+  "model_semantic_errors_can_remain": true,
+  "model_passes_from_oracle": 0
+}
