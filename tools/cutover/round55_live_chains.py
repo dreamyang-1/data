@@ -113,8 +113,10 @@ async def run(args):
         model_config = ConfigDict(extra='forbid', strict=True)
         ok: bool
     smoke_count = 0
-    if args.prior_output:
-        successful = [native.read(p / 'provider_smoke.json') for p in args.prior_output if (p / 'provider_smoke.json').exists()]
+    smoke_receipt = getattr(args, 'smoke_receipt', None)
+    if args.prior_output or smoke_receipt:
+        successful = ([native.read(smoke_receipt)] if smoke_receipt else
+            [native.read(p / 'provider_smoke.json') for p in args.prior_output if (p / 'provider_smoke.json').exists()])
         assert len(successful) == 1 and successful[0]['calls'][0]['status'] == 200
         assert successful[0]['outputs'][0]['output'] == {'ok': True}
         if successful[0].get('configuration_hash'):
@@ -172,6 +174,8 @@ async def run(args):
                 if independent: assert before == dict(state=None, pending=None, plans=[], history=[])
                 chain = []; status = 'NOT_RUN'; blocked = None
                 for i, text in enumerate(case['utterances']):
+                    if getattr(args, 'checkpoint_only', False) and i > 0:
+                        status = 'CHECKPOINT_PLAN'; break
                     key = digest(([conversation] if independent else []) + [case['initial_pending'], case['utterances'][:i + 1]])[:24]
                     if key not in cache:
                         if provider_blocked:
@@ -249,4 +253,6 @@ if __name__ == '__main__':
     parser.add_argument('--allow-model-calls', action='store_true', required=True)
     parser.add_argument('--preflight-only', action='store_true')
     parser.add_argument('--independent-sessions', action='store_true')
+    parser.add_argument('--checkpoint-only', action='store_true')
+    parser.add_argument('--smoke-receipt', type=Path)
     asyncio.run(run(parser.parse_args()))

@@ -32,7 +32,7 @@ from .pending_recognition import (AmbiguityDraft, PendingResume, clarification_r
 from .registries import PayloadContractRegistry, SlotDefinitionRegistry
 from .slot_reducer import TaskPatch, apply_task_patch
 from .structured_edits import (FilterEditDraft, TemporalEditDraft, StructuredEditTrace,
-    structured_labels, lower_edits)
+    structured_labels, lower_edits, validate_current_filter)
 from .state_machine import (ConversationState, PointerUpdates, StateEvent, StateMutation,
     PendingClarification, PendingPatch, TaskState, TaskVersion, TopicState, apply_state_event, apply_state_mutation)
 
@@ -165,7 +165,7 @@ def semantic_task_schema(parse, tasks, *, context_relation=None, candidates=None
     """Expose only historical handles that the existing turn guard can accept."""
     schema = SemanticTaskDraft.model_json_schema()
     from .filter_generation_schema import filter_operation_schema
-    schema = filter_operation_schema(schema, value_schema())
+    schema = filter_operation_schema(schema, value_schema(), parse, context_relation=context_relation)
     schema = collection_set_schema(schema, value_schema())
     from .source_value_target import source_target_schema
     schema = source_target_schema(schema, parse, tasks)
@@ -638,6 +638,8 @@ class RawTurnPlanner:
                     value = checked_value = [value]
                     singleton_replacement = True
                 typed = TypeAdapter(definition.value_type).validate_python(checked_value)
+                if edit.slot_path == 'filter_expression':
+                    validate_current_filter(typed)
                 expected = {'metrics': 'MEASURE', 'dimensions': 'GROUP_BY'}
                 if edit.slot_path in expected and any(r.semantic_role != expected[edit.slot_path] for r in collect_bound_refs(typed)):
                     raise RecognitionFailure('V2_SLOT_ROLE_CONFLICT')
