@@ -80,6 +80,8 @@ async def resolve_requests(session, parse, draft, handles, target, model):
             if implicit and mid != mention.mention_id:
                 raise RecognitionFailure('V2_SOURCE_VALUE_FIELD_MENTION_MISMATCH')
             fields.append((attribute, implicit))
+        from .source_value_target import validate_requested_fields
+        validate_requested_fields(draft, request, fields, target, session)
         for attribute, implicit in fields:
             removable = removal_targets(session, draft, request, target, attribute, mention.surface)
             if removable:

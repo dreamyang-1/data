@@ -1,0 +1,65 @@
+{
+  "QUESTION_COMPLETION_CONTRACT_GAP": "OPEN_UNCHANGED",
+  "CONTEXT_ATTACHMENT_CORE_READY": "PASS_ON_IMPLEMENTED_CONTRACT",
+  "CONTEXT_FOLLOWUP_READY": "NOT_READY",
+  "INTERNAL_DEMO_SEMANTIC_READY": "NO",
+  "READY_FOR_INTERNAL_DEMO_E2E_SMOKE": "NO",
+  "READY_FOR_V2_READ_ONLY_E2E_SMOKE": "NO",
+  "relation_errors": {
+    "errors": 1,
+    "observed_turns": 8
+  },
+  "target_proposal_errors": {
+    "errors": 1,
+    "observed_turns": 8
+  },
+  "accepted_wrong_target": 0,
+  "accepted_wrong_inheritance": 0,
+  "wrong_silent_plan": {
+    "violations": 0,
+    "accepted_plans_checked": 6
+  },
+  "scope_expansion": {
+    "violations": 0,
+    "accepted_plans_checked": 6
+  },
+  "wrong_field_binding_accepted": 0,
+  "wrong_source_value_binding_accepted": 0,
+  "catalog_id_fabrication_observed": 0,
+  "clear_resurrection": {
+    "violations": 0,
+    "live_chains": 1
+  },
+  "remove_resurrection": {
+    "violations": 0,
+    "live_chains": 1
+  },
+  "primary_failures": {
+    "TASK_OPERATION": 1,
+    "TURN_RESOLUTION": 1
+  },
+  "downstream_source_field_mismatch": 1,
+  "pending_hijack": "NOT_EVALUATED_THIS_SLICE",
+  "no_claim": "Not all semantic axes or possible silent errors certified",
+  "production_changed": {
+    "prompt": false,
+    "context": false,
+    "reducer": false,
+    "validator_relaxed": false,
+    "grounding_architecture": false,
+    "business_keyword": false,
+    "permission_framework": false,
+    "V1": false,
+    "UI": false,
+    "API_SSE": false,
+    "port8088": false
+  },
+  "business_sql_executed": 0,
+  "production_writes": 0,
+  "blind_access": 0,
+  "next_priority": [
+    "METRICS_SET_GENERATION_REPRESENTATION",
+    "SELF_CONTAINED_NEW_TASK_MODEL_RELATION",
+    "FULL_LIVE_CHAIN_AND_HISTORICAL_RETURN_COVERAGE"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "baseline_commit": "67f2c8022d1014ee4f6dc3af17f677d12baa93ca",
+  "parent_draft_pr": 63,
+  "base_branch": "semantic-filter-round5-4-20260910t063432z",
+  "feature_branch": "semantic-field-alignment-round5-5-20260910t072433z",
+  "title": "semantic: constrain source values to current filter field identity",
+  "final_commit": {
+    "resolution": "Commit introducing this manifest",
+    "command": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_5/git_commit_manifest.json"
+  },
+  "publication": {
+    "remote": "https://github.com/dreamyang-1/data",
+    "head": "semantic-field-alignment-round5-5-20260910t072433z",
+    "base": "semantic-filter-round5-4-20260910t063432z",
+    "draft": true,
+    "auto_merge": false,
+    "receipt": "Post-publication receipt outside committed tree"
+  }
+}

@@ -165,6 +165,8 @@ def semantic_task_schema(parse, tasks, *, context_relation=None, candidates=None
     schema = SemanticTaskDraft.model_json_schema()
     from .filter_generation_schema import filter_operation_schema
     schema = filter_operation_schema(schema, value_schema())
+    from .source_value_target import source_target_schema
+    schema = source_target_schema(schema, parse, tasks)
     historical = (context_relation == 'RETURN_TO_TOPIC' if context_relation is not None else
         'HISTORICAL' in parse.reference_signals and not parse.topic_shift_signals)
     allowed = sorted(tasks) if historical else []

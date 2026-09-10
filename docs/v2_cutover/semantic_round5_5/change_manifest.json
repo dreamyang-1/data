@@ -1,0 +1,145 @@
+{
+  "baseline": "67f2c8022d1014ee4f6dc3af17f677d12baa93ca",
+  "branch": "semantic-field-alignment-round5-5-20260910t072433z",
+  "files": [
+    {
+      "path": "app/semantic_v2/recognition.py",
+      "action": "MODIFY",
+      "sha256": "83ffdc1226442babb6bf372e72c3d70d201a0f800d3de12fc05e791fce4baa2d",
+      "previous_sha256": "313a87427cbd554cc279c32ef5ac847608187dbf29dcb15207e2ef991bc4aa6e"
+    },
+    {
+      "path": "app/semantic_v2/source_value_recognition.py",
+      "action": "MODIFY",
+      "sha256": "af68ff481d3d012af850cab6fc6f755eb3c6b57c1187154c365de819292ef149",
+      "previous_sha256": "216c085ab6fb89f3c2d4f2ec7e85e4c4e39fd2999b8223040baebb6edd89e16c"
+    },
+    {
+      "path": "app/semantic_v2/source_value_target.py",
+      "action": "ADD",
+      "sha256": "d12675ecbb400b8d3bc7e8a1a9a7f8967e30fd597c4f4fa2e9495cd6db1f8a35",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/accepted_plan_checks.json",
+      "action": "ADD",
+      "sha256": "ae792e304a059baaff6da96fb72361ebbe216273c17f00cf13373ea56408d7d6",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/catalog_boundary_audit.json",
+      "action": "ADD",
+      "sha256": "5dabbe5f3c26690737fc3560d067c016ef0a66587351f83e5b41342b34b41d80",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/catalog_healthy_fixture.json",
+      "action": "ADD",
+      "sha256": "180d20d9106636eed4547e65a573059eb8d6fa5e5022f8a4a1943619b5a8e941",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/closure_report.md",
+      "action": "ADD",
+      "sha256": "bfe585576aff3878ec16fdf336f660b8192a1db17f3bf6bc554df9584735c6bd",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/current_source_value_filter_alignment_path.md",
+      "action": "ADD",
+      "sha256": "1981d88f1e6a1bbbbed060ca436aa46aa4b36bbeae2ab5d47693acba7f090ee3",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/live_chain_matrix.json",
+      "action": "ADD",
+      "sha256": "1837f7551e4d8151083086974949eec223e1e282017087d72eb715ea13789fe4",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/live_turn_inventory.json",
+      "action": "ADD",
+      "sha256": "a3d7c0090084dc532dc971426c3406b8d76323c3a3e1268d993fc5ac4893f314",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/performance_receipt.json",
+      "action": "ADD",
+      "sha256": "ba7f086b1e76f1aeb34f28b4207642ed98c146d9081a839bb5ba2bcf104bb807",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/root_cause_receipt.json",
+      "action": "ADD",
+      "sha256": "c9d6f3b53381201e9e4fb89276bca3926def6c7cc56f8a43dbb3bc9372fabe7c",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/round5_5_manifest.json",
+      "action": "ADD",
+      "sha256": "2b11a1188d1491aaf95fedc8e54e3badbf485cfc3a2dd0e1b598b5301137a86a",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/safety_and_gates.json",
+      "action": "ADD",
+      "sha256": "c58f745395b6729bb49019a5fe4c4c29af2286ea6ac7c6bd1a633e061f906eef",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/test_delta.json",
+      "action": "ADD",
+      "sha256": "527ce59464946a139565757abb1c2e78c3ed133f0d64bf6dc7fde083865c7f4b",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/validation_receipt.json",
+      "action": "ADD",
+      "sha256": "36b79451653e57886e6b582bedae6e1043c4eb80091717fb7fc3e6fb773d1198",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_5/verify_round5_5.py",
+      "action": "ADD",
+      "sha256": "813a55a15b748191e06d72c0f6329aaac29449d257535886a6c2b4cc7e474768",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/test_round55_preflight.py",
+      "action": "ADD",
+      "sha256": "5f703987e972ede7b6966f596a4e878ceb563ec7e84f18bcab127a6b3d4e785d",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/test_v2_source_target_alignment.py",
+      "action": "ADD",
+      "sha256": "47675a1be0bd2e971cbd380522e15b436257e083327e8bae2f4ad4fb863daa79",
+      "previous_sha256": null
+    },
+    {
+      "path": "tools/cutover/round55_healthy_fixture.py",
+      "action": "ADD",
+      "sha256": "6d44282f36dd34df9045b47684fd2d3f6e90fd42170a82a2fe59d42714d03595",
+      "previous_sha256": null
+    },
+    {
+      "path": "tools/cutover/round55_live_chains.py",
+      "action": "ADD",
+      "sha256": "6e7f809dea055d5cee6624cf13529197d8ad27dc9b1d8027918d41ccea721c8b",
+      "previous_sha256": null
+    }
+  ],
+  "commit_sealed_manifest_files": [
+    "docs/v2_cutover/semantic_round5_5/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_5/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_5/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round5_5/workspace_git_hash_verification.json"
+  ],
+  "production_files": [
+    "app/semantic_v2/recognition.py",
+    "app/semantic_v2/source_value_recognition.py",
+    "app/semantic_v2/source_value_target.py"
+  ],
+  "hash_mode": "SHA256 normalized CRLF to LF",
+  "env_private_secrets_included": false
+}
