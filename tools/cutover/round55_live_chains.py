@@ -29,6 +29,9 @@ def freeze_sources(evidence):
 
 
 async def run(args):
+    independent = getattr(args, 'independent_sessions', False)
+    if independent:
+        assert not args.seed and not args.prior_output, 'FRESH_CHAIN_MUST_NOT_RESTORE_PRIOR_RECEIPTS'
     # Capture Agent settings before Oagnet's legacy module import loads the
     # workspace-root .env API_KEY. Never re-read provider settings after
     # fixture construction; the evaluation must use the Agent's configured key.
@@ -81,7 +84,8 @@ async def run(args):
     selected = [c for c in definitions if not args.case or c['case_id'] in args.case]
     if args.case and len(selected) != len(args.case): raise ValueError('INVALID_TEST_INPUT:CASE_ID')
     prior_calls = sum(len(native.read(p / 'result.json')['calls']) + native.read(p / 'result.json').get('smoke_calls', 0) for p in args.prior_output)
-    if args.max_model_calls < 2 or prior_calls + args.max_model_calls > min(24, args.total_budget):
+    limit = 36 if independent else 24
+    if args.max_model_calls < 2 or prior_calls + args.max_model_calls > min(limit, args.total_budget):
         raise ValueError('LIVE_MODEL_BUDGET_EXCEEDED')
     args.output.mkdir(parents=True, exist_ok=False)
     native.write(args.output / 'preflight.json', receipt)
@@ -89,7 +93,8 @@ async def run(args):
         runtime_hashes=runtime_hashes, source_hashes=source_hashes, catalog_read_hash=sha256(args.current_catalog.read_bytes()).hexdigest(),
         model='qwen3.7-max', thinking=False, temperature=0, retry=0,
         current_budget=args.max_model_calls, prior_calls=prior_calls, total_budget=args.total_budget,
-        scope=native.SCOPE, clock=native.CLOCK, prefix_reuse='ACTUAL_EXECUTED_RECEIPT; NOT_NEW_LIVE_TURN'))
+        scope=native.SCOPE, clock=native.CLOCK, independent_fresh_sessions=independent,
+        prefix_reuse='NONE' if independent else 'ACTUAL_EXECUTED_RECEIPT; NOT_NEW_LIVE_TURN'))
     denied = []; rows = []; records = []; cache = {}; reused = []
     if seed:
         cache[digest([False, [RECORDED_BASE]])[:24]] = seed
@@ -147,8 +152,10 @@ async def run(args):
             import catalog_value_sources
             stack.enter_context(patch.object(catalog_value_sources, 'observe', source.observe))
             stack.enter_context(patch.object(catalog_value_sources, 'observe_probe', source.observe_probe))
-            initial, pending_receipt = native.declared_pending(publication)
-            native.write(args.output / 'pending_precondition.json', dict(receipt=pending_receipt, before=initial))
+            initial = None
+            if any(c['initial_pending'] for c in selected):
+                initial, pending_receipt = native.declared_pending(publication)
+                native.write(args.output / 'pending_precondition.json', dict(receipt=pending_receipt, before=initial))
             observer = stack.enter_context(native.RuntimeObserver())
             traces = []
             class Trace(native.logging.Handler):
@@ -160,10 +167,12 @@ async def run(args):
             engine = native.RawTurnPlanner(model, publication, clock=lambda: datetime.fromisoformat(native.CLOCK))
             provider_blocked = False
             for case in selected:
+                conversation = ('round56-fresh-' + args.output.name + '-' + case['case_id']) if independent else native.CONVERSATION
                 before = deepcopy(initial) if case['initial_pending'] else dict(state=None, pending=None, plans=[], history=[])
+                if independent: assert before == dict(state=None, pending=None, plans=[], history=[])
                 chain = []; status = 'NOT_RUN'; blocked = None
                 for i, text in enumerate(case['utterances']):
-                    key = digest([case['initial_pending'], case['utterances'][:i + 1]])[:24]
+                    key = digest(([conversation] if independent else []) + [case['initial_pending'], case['utterances'][:i + 1]])[:24]
                     if key not in cache:
                         if provider_blocked:
                             status = 'NOT_RUN_PROVIDER'; blocked = 'PROVIDER_AUTHENTICATION_REJECTED'; break
@@ -173,7 +182,7 @@ async def run(args):
                         assert sha256(args.fixture.read_bytes()).hexdigest() == receipt['fixture_sha256']
                         assert text == next(c for c in definitions if c['case_id'] == case['case_id'])['utterances'][i]
                         req = native.ChatRequest(**case['scope'], application_id='isolated-evaluation',
-                            conversation_id=native.CONVERSATION, message_id='turn-' + key, question=text)
+                            conversation_id=conversation, message_id='turn-' + key, question=text)
                         req.model_dump_json()
                         model.begin_turn(case['case_id'], i); observer.begin_turn(case['case_id'], i)
                         traces.clear(); call_start = len(model.calls); source_start = len(source.calls); timings = []
@@ -193,7 +202,7 @@ async def run(args):
                                 context_trace=getattr(exc, 'context_trace', None))
                         finally: model.complete = original
                         assert (state.model_dump(mode='json') if state else None) == before['state']
-                        item = dict(case_id=case['case_id'], turn_id=key, turn_index=i, question=text, before=deepcopy(before),
+                        item = dict(case_id=case['case_id'], turn_id=key, turn_index=i, question=text, conversation_id=conversation, before=deepcopy(before),
                             result=result.model_dump(mode='json') if result else None, error=error,
                             events=deepcopy(observer.active['events']), traces=deepcopy(traces),
                             outputs=deepcopy(model.outputs), exchanges=deepcopy(model.exchanges),
@@ -239,4 +248,5 @@ if __name__ == '__main__':
     parser.add_argument('--total-budget', type=int, default=20)
     parser.add_argument('--allow-model-calls', action='store_true', required=True)
     parser.add_argument('--preflight-only', action='store_true')
+    parser.add_argument('--independent-sessions', action='store_true')
     asyncio.run(run(parser.parse_args()))
