@@ -21,6 +21,25 @@
 
 13 条 NOT_COMPARABLE 保持：RB50-03, 08, 09, 33, 34, 35, 41, 42, 45, 47, 48, 49, 50。当前 5 条 V2 PASS 保持：RB50-02, 04, 06, 39, 46。
 
+## 指令要求的唯一失败分类
+
+每个原失败 Case 只出现在一个分类中：
+
+| 分类 | 数量 | Case |
+|---|---:|---|
+| `FIXED_BY_SOURCE_VALUE` | 0 | — |
+| `FIXED_BY_TASK_PUBLICATION` | 0 | — |
+| `FIXED_BY_TASK_RESOLUTION` | 0 | — |
+| `FIXED_BY_MODEL_NORMALIZATION` | 0 | — |
+| `CASCADE_RECOVERED` | 0 | — |
+| `STILL_FAIL_SOURCE_VALUE` | 6 | RB50-10, 12, 25, 27, 29, 37 |
+| `STILL_FAIL_CONTEXT` | 14 | RB50-13, 14, 17, 18, 19, 20, 21, 22, 24, 26, 28, 30, 31, 38 |
+| `STILL_FAIL_MODEL` | 8 | RB50-01, 07, 11, 15, 16, 40, 43, 44 |
+| `STILL_FAIL_CANONICAL` | 4 | RB50-05, 23, 32, 36 |
+| `EVALUATION_BLOCKED` | 13 | RB50-03, 08, 09, 33, 34, 35, 41, 42, 45, 47, 48, 49, 50 |
+
+`EVALUATION_BLOCKED` 是冻结 Benchmark 中原本的 NOT_COMPARABLE 集合，不进入 32 个失败的分母。`STILL_FAIL_CONTEXT` 包含 11 个 unresolved downstream Case 和 3 个已产出但任务/上下文不符的 PLAN；它不等于 14 个独立 Task Resolver Bug。
+
 ## 根因簇与优先级
 
 ### P0 — 模型 role 与后续 Source Value 使用不一致

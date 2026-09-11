@@ -14,6 +14,17 @@
 
 这些结论来自原始模型产物、现有 handle registry、parse 的显式 slot/operation evidence 和拒绝边界，不来自具体商品、地区、医院、品牌名称或 Case ID。
 
+候选版本在 37 条共同可评分 Case 中的错误族聚类如下。Case 数是最终结果的主错误，不与 102 轮事件数混用：
+
+| Error family | Case count | First divergence | Shared root cause |
+|---|---:|---|---|
+| `V2_SOURCE_VALUE_CURRENT_MENTION_REQUIRED` | 2 | SOURCE_VALUE_RESOLUTION / CURRENT_EVIDENCE_VALIDATION | Parse 没有提供请求所需的当前 `FILTER_VALUE` role，或请求 pointer 未能由当前值证据闭合 |
+| `V2_BINDING_OUTSIDE_EDIT_EVIDENCE` | 3 | EDIT_EVIDENCE_VALIDATION | binding 被用于目标 slot，但对应 edit evidence 没有声明同一语义用途；Ranking 样本还暴露后续 Query Shape 缺口 |
+| `V2_SOURCE_VALUE_REQUEST_NOT_APPLIED` | 3 | SOURCE_VALUE_RESOLUTION / REQUEST_CONSUMPTION | Source Value request 没有进入完整 Filter edit，或存在不能安全覆盖的竞争 operation |
+| `V2_PAYLOAD_WOULD_DROP_SEMANTICS` | 1 | TASK_PUBLICATION / CANONICAL_PAYLOAD_VALIDATION | 上游已声明的显式语义仍未进入最终 payload，发布 Guard 正确拒绝 |
+
+其余失败在本轮的 Source Value P0 修复之后才分类，不把 downstream `V2_CONTEXT_UNRESOLVED` 误算为同一个根因。
+
 ## 最小生产修改
 
 | 修改 | 目的 | 确定性条件 | 失败方式 |
