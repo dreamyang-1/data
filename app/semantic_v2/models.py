@@ -1110,6 +1110,10 @@ class ChatPayload(StrictModel):
 
 
 class MetricQueryPayloadBase(BasePayload):
+    # An explicit query subject disambiguates metrics whose governed source
+    # dependency contains more than one entity.  It is semantic input to the
+    # plan, not a grouping dimension or a presentation-only label.
+    subject: BoundSemanticRef | None = None
     measures: list[BoundSemanticRef] = Field(min_length=1, max_length=50)
     time: TimeSpec | None = None
     group_by: list[BoundSemanticRef] = Field(default_factory=list, max_length=50)

@@ -543,14 +543,16 @@ async def chat(
     identity = trusted_identity(request, payload)
     require_application_namespace(request, payload.application_id)
     external_conversation_id = payload.conversation_id
-    is_regeneration = payload.regenerate
-    if not is_regeneration:
-        await _collect_business_question(request, payload)
-    else:
-        await _collect_revised_business_question(request, payload)
-    if is_regeneration:
-        payload, external_conversation_id, _ = _prepare_regeneration(payload)
-    await bind_chat_spreadsheet(request, payload, identity)
+    isolated_handler = getattr(request.app.state, "isolated_chat_handler", None)
+    if isolated_handler is None:
+        is_regeneration = payload.regenerate
+        if not is_regeneration:
+            await _collect_business_question(request, payload)
+        else:
+            await _collect_revised_business_question(request, payload)
+        if is_regeneration:
+            payload, external_conversation_id, _ = _prepare_regeneration(payload)
+        await bind_chat_spreadsheet(request, payload, identity)
     response = await invoke(request, payload, identity)
     response.conversation_id = external_conversation_id
     return response
@@ -621,19 +623,20 @@ async def chat_stream(
     require_application_namespace(request, payload.application_id)
     external_conversation_id = payload.conversation_id
     external_message_id = payload.message_id
-    is_regeneration = payload.regenerate
-    if not is_regeneration:
-        await _collect_business_question(request, payload)
-    else:
-        await _collect_revised_business_question(request, payload)
-    if is_regeneration:
-        payload, external_conversation_id, external_message_id = _prepare_regeneration(payload)
-    await bind_chat_spreadsheet(request, payload, identity)
+    isolated_handler = getattr(request.app.state, "isolated_chat_handler", None)
+    if isolated_handler is None:
+        is_regeneration = payload.regenerate
+        if not is_regeneration:
+            await _collect_business_question(request, payload)
+        else:
+            await _collect_revised_business_question(request, payload)
+        if is_regeneration:
+            payload, external_conversation_id, external_message_id = _prepare_regeneration(payload)
+        await bind_chat_spreadsheet(request, payload, identity)
     # Preserve the most important pre-stream idempotency guarantee.  Once the
     # first SSE byte is sent HTTP status is necessarily 200, so a known reuse
     # conflict must be detected before committing the stream.
     try:
-        isolated_handler = getattr(request.app.state, "isolated_chat_handler", None)
         if isolated_handler is not None and hasattr(
             isolated_handler, "check_message_conflict"
         ):

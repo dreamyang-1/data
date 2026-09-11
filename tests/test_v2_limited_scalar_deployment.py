@@ -1,5 +1,8 @@
 import json
 from datetime import timedelta
+from pathlib import Path
+import sys
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 import pytest
@@ -11,7 +14,11 @@ from app.semantic_v2.limited_scalar_runtime import (
     LimitedScalarExternalDependencies,
     OAGNET_RUNTIME_FILES,
     SQL_RUNTIME_FILES,
+    _build_external_dependencies,
     build_limited_scalar_handler,
+    _import_runtime_module,
+    data_source_target_identity,
+    data_source_target_digest,
     source_bundle_digest,
     validate_limited_scalar_settings,
 )
@@ -21,6 +28,18 @@ from app.semantic_v2.state_machine import ConversationState, StateTransitionErro
 from test_v2_authorized_catalog_bridge import IDENTITY, request
 from test_v2_asl2_lowering import provider
 from test_v2_persisted_scalar_api import NOW, planned_artifacts, prepared_for
+
+
+TEST_SOURCE_TARGET = {
+    "id": 58,
+    "semantic_model_id": 81,
+    "db_type": "mysql",
+    "host": "db.internal",
+    "port": 3306,
+    "db_name": "analytics",
+    "db_schema": "analytics",
+    "username": "readonly_agent",
+}
 
 
 class DeploymentRedis:
@@ -95,6 +114,9 @@ def candidate_settings(provider, **updates):
         "limited_scalar_sql_source_digest": source_bundle_digest(
             project / "sql-translator", SQL_RUNTIME_FILES
         ),
+        "limited_scalar_data_source_target_digest": data_source_target_digest(
+            TEST_SOURCE_TARGET
+        ),
         "limited_scalar_time_field_canonical_id": "sm81_bd205:attr:sales_order.created_date",
     }
     values.update(updates)
@@ -112,6 +134,7 @@ def dependencies(provider, redis, transport, model=None):
         sql_planner=lambda *args, **kwargs: None,
         transport=transport,
         redis=redis,
+        data_source_target_digest=data_source_target_digest(TEST_SOURCE_TARGET),
     )
 
 
@@ -191,6 +214,155 @@ def test_candidate_requires_exact_time_anchor_pin(provider):
         validate_limited_scalar_settings(settings)
 
 
+def test_data_source_target_identity_excludes_password_and_detects_connection_drift():
+    one = {**TEST_SOURCE_TARGET, "password": "first-secret"}
+    same = {**TEST_SOURCE_TARGET, "password": "rotated-secret"}
+    moved = {**TEST_SOURCE_TARGET, "host": "other.internal"}
+    assert data_source_target_digest(one) == data_source_target_digest(same)
+    assert data_source_target_digest(one) != data_source_target_digest(moved)
+    assert "password" not in data_source_target_identity(one)
+    with pytest.raises(RuntimeError, match="TARGET_INVALID"):
+        data_source_target_identity({**TEST_SOURCE_TARGET, "username": ""})
+
+
+def test_runtime_source_manifest_includes_direct_transitive_dependencies():
+    assert "dimension_scope.py" in OAGNET_RUNTIME_FILES
+    assert "runtime_config.py" in SQL_RUNTIME_FILES
+
+
+def test_runtime_module_origin_rejects_preloaded_same_name_from_wrong_root(tmp_path, monkeypatch):
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    first.mkdir()
+    second.mkdir()
+    (first / "round513_origin_probe.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (second / "round513_origin_probe.py").write_text("VALUE = 2\n", encoding="utf-8")
+    monkeypatch.syspath_prepend(str(first))
+    module = _import_runtime_module("round513_origin_probe", first)
+    assert module.VALUE == 1
+    with pytest.raises(RuntimeError, match="RUNTIME_MODULE_ORIGIN_MISMATCH"):
+        _import_runtime_module("round513_origin_probe", second)
+    sys.modules.pop("round513_origin_probe", None)
+
+
+def test_external_builder_keeps_session_redis_separate_from_sql_registry(monkeypatch):
+    import app.semantic_v2.limited_scalar_runtime as runtime
+
+    translator_constructor_args = []
+
+    class FakeTranslator:
+        def __init__(self, *args, **kwargs):
+            translator_constructor_args.append((args, kwargs))
+
+        def fetch_data_source(self, semantic_model_id, data_source_id):
+            assert (semantic_model_id, data_source_id) == ("81", "58")
+            return {**TEST_SOURCE_TARGET, "password": "never-exposed"}
+
+    class FakeCatalogStore:
+        catalog_target_identity = {"kind": "test"}
+
+    modules = {
+        "catalog_publication": SimpleNamespace(
+            CatalogPublication=lambda store, registry: (store, registry)
+        ),
+        "catalog_registry": SimpleNamespace(
+            RedisCatalogReleaseRegistry=lambda identity: identity
+        ),
+        "catalog_store": SimpleNamespace(
+            open_catalog_store=lambda **kwargs: FakeCatalogStore()
+        ),
+        "pinned_catalog": SimpleNamespace(translate_pinned_catalog=lambda *args, **kwargs: None),
+        "semantic_scope": SimpleNamespace(RequestScope=object),
+        "sql_translator_prod": SimpleNamespace(SQLTranslatorProd=FakeTranslator),
+    }
+    for name, module in modules.items():
+        module.__file__ = str(Path("/verified-runtime") / f"{name}.py")
+    fake_session_redis = object()
+    monkeypatch.setattr(runtime, "_prepend_runtime_roots", lambda settings: None)
+    monkeypatch.setattr(runtime, "_import_runtime_module", lambda name, root: modules[name])
+    monkeypatch.setattr(runtime, "RecognitionModelClient", lambda settings: object())
+    monkeypatch.setattr(
+        runtime.Redis,
+        "from_url",
+        lambda *args, **kwargs: fake_session_redis,
+    )
+    settings = Settings().model_copy(update={
+        "limited_scalar_catalog_target_identity_hash": "target",
+        "limited_scalar_data_source_target_digest": data_source_target_digest(
+            TEST_SOURCE_TARGET
+        ),
+        "limited_scalar_semantic_model_id": 81,
+        "limited_scalar_data_source_id": 58,
+        "redis_url": "redis://session-store.invalid:6379/3",
+    })
+
+    external = _build_external_dependencies(settings)
+
+    assert translator_constructor_args == [((), {})]
+    assert external.redis is fake_session_redis
+    assert external.data_source_target_digest == data_source_target_digest(TEST_SOURCE_TARGET)
+
+
+def test_candidate_rejects_wrong_data_source_target_before_catalog_or_sql(provider):
+    redis = DeploymentRedis()
+    settings = candidate_settings(provider)
+
+    async def forbidden(_request):
+        raise AssertionError("target mismatch must fail before SQL")
+
+    external = dependencies(provider, redis, forbidden)
+    external = LimitedScalarExternalDependencies(
+        **{
+            **external.__dict__,
+            "data_source_target_digest": data_source_target_digest(
+                {**TEST_SOURCE_TARGET, "db_name": "wrong"}
+            ),
+        }
+    )
+    with pytest.raises(RuntimeError, match="DATA_SOURCE_TARGET_MISMATCH"):
+        build_limited_scalar_handler(settings, external=external)
+
+
+@pytest.mark.asyncio
+async def test_readiness_rechecks_catalog_with_short_cache(provider):
+    class Publication:
+        def __init__(self, wrapped):
+            self.wrapped = wrapped
+            self.calls = 0
+            self.fail = False
+
+        def pin(self, *args, **kwargs):
+            self.calls += 1
+            if self.fail:
+                raise RuntimeError("catalog unavailable")
+            return self.wrapped.pin(*args, **kwargs)
+
+    redis = DeploymentRedis()
+    publication = Publication(provider[0])
+
+    async def forbidden(_request):
+        raise AssertionError
+
+    settings = candidate_settings(
+        provider,
+        limited_scalar_readiness_cache_seconds=1,
+        limited_scalar_readiness_timeout_seconds=2,
+    )
+    external = dependencies(provider, redis, forbidden)
+    external = LimitedScalarExternalDependencies(
+        **{**external.__dict__, "publication": publication}
+    )
+    handler = build_limited_scalar_handler(settings, external=external)
+    first = await handler.readiness()
+    second = await handler.readiness()
+    assert first == second and first["v2_limited_scalar_catalog_pin"] is True
+    assert publication.calls == 2  # startup pin plus one cached probe
+    publication.fail = True
+    handler._readiness_cached_at = 0
+    failed = await handler.readiness()
+    assert failed["v2_limited_scalar_catalog_pin"] is False
+
+
 def test_explicit_mode_builds_native_handler_without_model_or_sql(provider):
     redis = DeploymentRedis()
 
@@ -235,9 +407,24 @@ async def test_stable_namespace_survives_new_store_instance_and_replay_is_idempo
     chat = request()
     first = await handler.handle(chat, IDENTITY)
     second_store = deployment_store(redis)
+    restored_before_replay = await second_store.load(
+        prepared.plan.permission_requirement, handler._identity(chat, IDENTITY)
+    )
+    restored_state = ConversationState.model_validate(
+        restored_before_replay.state.payload
+    )
+    restored_task = restored_state.tasks[prepared.plan.task_id]
+    assert restored_task.active_version == prepared.plan.task_version
     handler.store = second_store
     repeated = await handler.handle(chat, IDENTITY)
     assert first.status == "COMPLETED" and repeated == first and len(calls) == 1
+    restored_after_replay = await second_store.load(
+        prepared.plan.permission_requirement, handler._identity(chat, IDENTITY)
+    )
+    replay_state = ConversationState.model_validate(
+        restored_after_replay.state.payload
+    )
+    assert replay_state.tasks[prepared.plan.task_id].active_version == restored_task.active_version
     assert len(redis.values) == 2  # one atomic envelope and one idempotency guard
 
 

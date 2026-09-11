@@ -90,6 +90,42 @@ async def test_empty_filter_and_source_consumption_use_native_compiler(catalog,o
 
 
 @pytest.mark.asyncio
+async def test_provider_whole_filter_add_on_empty_new_task_uses_structured_channel(catalog):
+    """Repair a provider's conditional-schema miss without changing semantics."""
+    text,parsed,original=source_step()
+    parsed['operation_markers'][0]['operation_hint']='ADD'
+    def draft(context):
+        value=original(context)
+        value['edits'][-1]['operation']='ADD'
+        return value
+    result=(await turns(planner(catalog,[(text,parsed,draft)])[0],[(text,parsed,draft)]))[0]
+    assert len(values(result))==1
+    assert result.next_state.source_value_bindings
+
+
+@pytest.mark.asyncio
+async def test_whole_filter_add_repair_does_not_apply_to_existing_task(catalog):
+    first=source_step()
+    second=source_edit('鍖椾含','ADD')
+    text,parsed,original=second
+    def draft(context):
+        value=original(context)
+        structured=value['filter_edits'].pop()
+        value['edits']=[dict(slot_path='filter_expression',operation='ADD',
+            evidence_mention_ids=structured['evidence_mention_ids'],value=structured['value'])]
+        return value
+    steps=[first,(text,parsed,draft)]
+    engine,_=planner(catalog,steps)
+    initial=(await turns(engine,[first]))[0]
+    with pytest.raises(ValueError):
+        await engine.run(
+            __import__('test_v2_raw_turn_recognition').request(question=text,message_id='turn1'),
+            __import__('test_v2_raw_turn_recognition').IDENTITY,
+            state=initial.next_state,plans=[initial.plan_state],
+        )
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize('operator',['AND','OR','NOT'])
 async def test_initial_boolean_filter_is_not_flattened_by_generation(catalog,operator):
     text,parsed,original=source_step()

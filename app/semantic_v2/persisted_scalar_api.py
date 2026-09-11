@@ -7,11 +7,13 @@ remain unchanged.
 """
 from __future__ import annotations
 
+import asyncio
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime, time, timezone
 from decimal import Decimal
 import json
+import logging
 import math
 import re
 from typing import Awaitable, Callable, Literal
@@ -19,12 +21,16 @@ from uuid import uuid4
 
 from app.domain.models import (
     AgentResponse,
+    AnalysisProcessStep,
     ChatRequest,
+    CanonicalAnalysisRequest,
+    DataQueryResult,
     EvidenceItem,
     PrimaryIntent,
     ReliabilityReport,
     TrustedIdentity,
 )
+from app.services.progress import emit_progress
 from app.stores import MessageIdReuseConflictError
 
 from . import models as m
@@ -44,6 +50,7 @@ from .isolated_execution import (
     proof,
     require,
 )
+from .completed_question import CompletedQuestionDisplay
 from .state_machine import ConversationState, StateTransitionError
 
 
@@ -53,6 +60,11 @@ DEPLOYMENT_SESSION_SCHEMA = "limited-scalar-session-v1"
 ISOLATED_PREFIX_PATTERN = re.compile(
     r"^[A-Za-z0-9:_-]+:isolated:round5-11:[A-Za-z0-9][A-Za-z0-9_-]{7,127}$"
 )
+logger = logging.getLogger(__name__)
+
+
+def _enum_status(value) -> str:
+    return str(getattr(value, "value", value))
 DEPLOYMENT_PREFIX_PATTERN = re.compile(
     r"^[A-Za-z0-9:_-]+:v2-limited-scalar:[A-Za-z0-9][A-Za-z0-9_-]{2,63}$"
 )
@@ -180,6 +192,8 @@ class PersistedScalarPlan:
     next_state: ScopedArtifact
     plan_state: ScopedArtifact
     prepared: PreparedExecution
+    display: CompletedQuestionDisplay | None = None
+    canonical_request: CanonicalAnalysisRequest | None = None
 
 
 @dataclass(frozen=True)
@@ -527,6 +541,7 @@ return 1
             **record,
             "status": "UNKNOWN",
             "execution_stage": "EXECUTION_OUTCOME_UNKNOWN",
+            "last_confirmed_execution_stage": record.get("execution_stage"),
             "unknown_reason": reason_code,
             "last_observed_at": observed_at.isoformat(),
         }
@@ -552,17 +567,25 @@ class PersistedScalarApiHandler:
         planner: Callable[[ChatRequest, TrustedIdentity, ScopedArtifact | None,
                            tuple[ScopedArtifact, ...]], Awaitable[PersistedScalarPlan]],
         transport: Callable[[TypedExecutionRequest], Awaitable[dict]],
+        canonical_query: Callable[
+            [CanonicalAnalysisRequest, TrustedIdentity], Awaitable[DataQueryResult]
+        ] | None = None,
         clock: Callable[[], datetime],
         running_review_seconds: int = 300,
+        cancellation_cleanup_seconds: float = 2.0,
     ):
         self.store = store
         self.context_resolver = context_resolver
         self.planner = planner
         self.transport = transport
+        self.canonical_query = canonical_query
         self.clock = clock
         require(30 <= running_review_seconds <= 86400,
                 "RUNNING_REVIEW_WINDOW_INVALID")
+        require(0.1 <= cancellation_cleanup_seconds <= 10,
+                "CANCELLATION_CLEANUP_WINDOW_INVALID")
         self.running_review_seconds = running_review_seconds
+        self.cancellation_cleanup_seconds = cancellation_cleanup_seconds
 
     @staticmethod
     def _identity(chat, identity):
@@ -581,7 +604,16 @@ class PersistedScalarApiHandler:
             "user_id": identity.user_id,
         })
 
-    def _response(self, chat, *, status, answer, error_code=None, evidence=(), dataset_id=None):
+    def _response(self, chat, *, status, answer, error_code=None, evidence=(),
+                  dataset_id=None, display: CompletedQuestionDisplay | None = None):
+        analysis_process = []
+        if display is not None:
+            analysis_process.append(AnalysisProcessStep(
+                stage="UNDERSTANDING",
+                status="COMPLETED",
+                title="理解问题",
+                summary=display.public_message,
+            ))
         return AgentResponse(
             request_id=uuid4(),
             conversation_id=chat.conversation_id,
@@ -591,6 +623,7 @@ class PersistedScalarApiHandler:
             intent_source="V2_TYPED_SEMANTIC_RUNTIME",
             answer=answer,
             evidence=list(evidence),
+            analysis_process=analysis_process,
             reliability=ReliabilityReport(
                 level="HIGH" if status == "COMPLETED" else "FAIL",
                 score=1 if status == "COMPLETED" else 0,
@@ -608,7 +641,62 @@ class PersistedScalarApiHandler:
             business_domain_selection_mode=("EXPLICIT" if chat.business_domain_ids else "AUTO"),
         )
 
-    def _success_response(self, chat, prepared, result, artifact, terminal):
+    @staticmethod
+    def _unsupported_features(chat: ChatRequest) -> tuple[str, ...]:
+        enabled = []
+        for name, active in (
+            ("regenerate", bool(chat.regenerate)),
+            ("original_question", bool(chat.original_question)),
+            ("refresh_request_id", bool(chat.refresh_request_id)),
+            ("replaces_message_id", bool(chat.replaces_message_id)),
+            ("history", bool(chat.history)),
+            ("longterm_memory", bool(chat.use_longterm_memory)),
+            ("tools", bool(chat.tools)),
+            ("skills", bool(chat.skills)),
+            ("mcp", bool(chat.mcp)),
+            ("web_search", bool(chat.web_search)),
+            ("temp_files", bool(chat.temp_file_paths)),
+            ("dataset", bool(chat.dataset_id)),
+            ("dag_resume", bool(chat.dag_resume_token or chat.task_answers)),
+            ("dependency_constraints", bool(chat.dependency_constraints)),
+            ("department", bool(chat.department.strip())),
+        ):
+            if active:
+                enabled.append(name)
+        return tuple(enabled)
+
+    async def _emit_display(self, display: CompletedQuestionDisplay | None) -> None:
+        if display is None:
+            return
+        await emit_progress(
+            "INTENT_RECOGNITION",
+            "COMPLETED",
+            display.public_message,
+            task_id=display.task_id,
+            task_version=display.task_version,
+            plan_id=display.plan_id,
+            semantic_fingerprint=display.semantic_fingerprint,
+            completed_question_digest=display.display_digest,
+        )
+
+    async def _emit_cached_display(self, response: AgentResponse) -> None:
+        step = next(
+            (
+                item for item in response.analysis_process
+                if item.stage == "UNDERSTANDING"
+                and item.summary.startswith("本轮理解：")
+            ),
+            None,
+        )
+        if step is not None:
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "COMPLETED",
+                step.summary,
+                replayed=True,
+            )
+
+    def _success_response(self, chat, prepared, result, artifact, terminal, display=None):
         columns = result["columns"]
         values = result["data"][0]
         rendered = "；".join(f"{column}：{values[column]}" for column in columns)
@@ -625,6 +713,10 @@ class PersistedScalarApiHandler:
                 "data_as_of": result.get("data_as_of"),
                 "quality_status": result.get("quality_status"),
                 "result_fingerprint": artifact.payload_digest,
+                "semantic_fingerprint": prepared.plan.semantic_fingerprint,
+                "completed_question_digest": (
+                    display.display_digest if display is not None else None
+                ),
             },
         )
         return self._response(
@@ -633,9 +725,88 @@ class PersistedScalarApiHandler:
             answer=rendered,
             evidence=[evidence],
             dataset_id=terminal.dataset_id,
+            display=display,
         )
 
+    async def _record_cancelled_request(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        context: AuthorizedScopeContext,
+        fingerprint: str,
+        display: CompletedQuestionDisplay | None,
+    ) -> None:
+        """Bounded cancellation cleanup; never waits for the business query."""
+
+        async def cleanup() -> None:
+            state_identity = self._identity(chat, identity)
+            current = await self.store.load(context, state_identity)
+            record = current.message(chat.message_id)
+            if record is None or record.get("request_fingerprint") != fingerprint:
+                return
+            if record.get("status") in {"SUCCEEDED", "FAILED", "UNKNOWN", "REVIEW_REQUIRED"}:
+                return
+            if record.get("execution_stage") != "PRE_SUBMISSION_RESERVED":
+                await self.store.mark_unknown(
+                    current,
+                    message_id=chat.message_id,
+                    request_fingerprint=fingerprint,
+                    reason_code="EXECUTION_REQUEST_CANCELLED_OUTCOME_UNKNOWN",
+                    context=context,
+                    state_identity=state_identity,
+                    observed_at=self.clock(),
+                )
+                return
+            state_artifact = current.state
+            if state_artifact is None:
+                raise ValueError("PERSISTED_SESSION_STATE_MISSING")
+            state = ConversationState.model_validate(state_artifact.payload)
+            attempt = state.execution_attempts.get(str(record.get("execution_id")))
+            if attempt is None or _enum_status(attempt.status) != "RUNNING":
+                raise ValueError("PERSISTED_EXECUTION_ATTEMPT_MISSING")
+            data = attempt.model_dump(mode="json")
+            data.update(status="CANCELLED", completed_at=self.clock())
+            cancelled = m.ExecutionAttemptRecord.model_validate(data)
+            terminal_state = _state_with_attempt(state, cancelled)
+            response = self._response(
+                chat,
+                status="CANCELLED",
+                error_code="EXECUTION_CANCELLED_BEFORE_SUBMISSION",
+                answer="请求已在查询提交前取消，本轮没有提交业务查询。",
+                display=display,
+            )
+            await self.store.finish(
+                current,
+                terminal_state=_seal_state(state_artifact, terminal_state),
+                message_id=chat.message_id,
+                request_fingerprint=fingerprint,
+                response=response,
+                result=None,
+                context=context,
+                state_identity=state_identity,
+                status="FAILED",
+            )
+
+        try:
+            await asyncio.wait_for(
+                asyncio.shield(cleanup()),
+                timeout=self.cancellation_cleanup_seconds,
+            )
+        except Exception as exc:
+            logger.error(
+                "bounded V2 cancellation state cleanup failed",
+                extra={"error_type": type(exc).__name__},
+            )
+
     async def handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
+        unsupported = self._unsupported_features(chat)
+        if unsupported:
+            return self._response(
+                chat,
+                status="SAFE_FALLBACK",
+                error_code="EXECUTION_REQUEST_FEATURE_UNSUPPORTED",
+                answer="当前限定 V2 执行模式尚不支持该请求中启用的附加能力。",
+            )
         try:
             context = self.context_resolver(chat, identity)
         except ValueError as exc:
@@ -652,7 +823,9 @@ class PersistedScalarApiHandler:
             if prior["request_fingerprint"] != fingerprint:
                 raise MessageIdReuseConflictError(chat.message_id)
             if prior["status"] in {"SUCCEEDED", "FAILED"} and prior.get("response"):
-                return AgentResponse.model_validate(prior["response"])
+                response = AgentResponse.model_validate(prior["response"])
+                await self._emit_cached_display(response)
+                return response
             code = "EXECUTION_OUTCOME_PENDING_REVIEW"
             started = prior.get("started_at")
             if prior.get("status") in {"UNKNOWN", "REVIEW_REQUIRED"}:
@@ -693,10 +866,28 @@ class PersistedScalarApiHandler:
                 ),
                 "EXECUTION_PREPARATION_IDENTITY_MISMATCH",
             )
+            if self.canonical_query is not None:
+                require(planned.canonical_request is not None,
+                        "V2_CANONICAL_REQUEST_REQUIRED")
+                require(planned.display is not None,
+                        "V2_COMPLETED_QUESTION_REQUIRED")
+                from .canonical_execution_bridge import (
+                    validate_canonical_analysis_request,
+                )
+                validate_canonical_analysis_request(
+                    actual=planned.canonical_request,
+                    chat=chat,
+                    identity=identity,
+                    plan=prepared.plan,
+                    display=planned.display,
+                )
         except ValueError as exc:
             code = str(exc) if str(exc).startswith(("EXECUTION_", "ASL2_", "V2_")) else "V2_SCALAR_PLANNING_FAILED"
             return self._response(chat, status="SAFE_FALLBACK", error_code=code,
                                   answer="当前请求尚不在已验证的 V2 标量执行能力范围内。")
+
+        display = planned.display
+        await self._emit_display(display)
 
         plan, low, sql = prepared.plan, prepared.lowering, prepared.sql_receipt
         request_id = contract_digest([context.fingerprint(), chat.message_id, prepared.fingerprint])
@@ -740,6 +931,11 @@ class PersistedScalarApiHandler:
                 state_identity=state_identity,
                 started_at=attempt.started_at,
             )
+        except asyncio.CancelledError:
+            await self._record_cancelled_request(
+                chat, identity, context, fingerprint, display
+            )
+            raise
         except (StateTransitionError, ValueError) as exc:
             if isinstance(exc, ValueError) and str(exc) in {
                 "PERSISTED_SESSION_MESSAGE_LIMIT_REACHED",
@@ -770,7 +966,23 @@ class PersistedScalarApiHandler:
                     context=context, state_identity=state_identity,
                     observed_at=self.clock(),
                 )
-            response = await self.transport(execution_request)
+            canonical_outcome = None
+            if self.canonical_query is not None:
+                require(planned.canonical_request is not None,
+                        "V2_CANONICAL_REQUEST_REQUIRED")
+                canonical_outcome = await self.canonical_query(
+                    planned.canonical_request, identity
+                )
+                from .canonical_execution_bridge import validate_canonical_query_result
+                result, result_proof, actual_asl_digest, actual_sql_digest = (
+                    validate_canonical_query_result(
+                        prepared=prepared,
+                        request=planned.canonical_request,
+                        outcome=canonical_outcome,
+                    )
+                )
+            else:
+                response = await self.transport(execution_request)
             if self.store.namespace_mode == "STABLE_DEPLOYMENT":
                 running_snapshot = await self.store.mark_stage(
                     running_snapshot, message_id=chat.message_id,
@@ -778,15 +990,35 @@ class PersistedScalarApiHandler:
                     context=context, state_identity=state_identity,
                     observed_at=self.clock(),
                 )
-            result, result_proof = _validate_response(execution_request, low, response)
+            if canonical_outcome is None:
+                result, result_proof = _validate_response(
+                    execution_request, low, response
+                )
+                actual_asl_digest = contract_digest(low.asl)
+                actual_sql_digest = contract_digest({
+                    "sql": execution_request.sql,
+                    "parameters": execution_request.parameters,
+                })
             result_artifact = seal_exact_result(context, result)
             chain = m.ProofChain(
                 plan=proof("current_authorized_plan", "current_task_version",
                            evidence=prepared.fingerprint),
-                asl=proof("native_typed_lowering", "typed_scalar_features_supported",
-                          evidence=low.compilation_fingerprint),
-                sql_plan=proof("native_pinned_sql_validation", "scope_pin_projection_parameters",
-                               evidence=contract_digest(sql)),
+                asl=proof(
+                    "canonical_request_asl_contract",
+                    "oagnet_asl_metric_filter_time_match",
+                    evidence=actual_asl_digest,
+                ) if canonical_outcome is not None else proof(
+                    "native_typed_lowering", "typed_scalar_features_supported",
+                    evidence=low.compilation_fingerprint,
+                ),
+                sql_plan=proof(
+                    "existing_sql_translator_read_only_result",
+                    "original_query_adapter_validated",
+                    evidence=actual_sql_digest,
+                ) if canonical_outcome is not None else proof(
+                    "native_pinned_sql_validation", "scope_pin_projection_parameters",
+                    evidence=contract_digest(sql),
+                ),
                 result=result_proof,
             )
             data = attempt.model_dump(mode="json")
@@ -796,12 +1028,14 @@ class PersistedScalarApiHandler:
                 snapshot_id=result["snapshot_id"],
                 dataset_id="isolated-live-read-only-dataset:" + request_id,
                 proof_chain=chain.model_dump(mode="json"),
+                asl_digest=actual_asl_digest,
+                sql_digest=actual_sql_digest,
             )
             terminal = m.ExecutionAttemptRecord.model_validate(data)
             terminal_state = _state_with_attempt(running, terminal, dataset_id=terminal.dataset_id)
             terminal_artifact = _seal_state(running_artifact, terminal_state)
             api_response = self._success_response(
-                chat, prepared, result, result_artifact, terminal
+                chat, prepared, result, result_artifact, terminal, display
             )
             if self.store.namespace_mode == "STABLE_DEPLOYMENT":
                 running_snapshot = await self.store.mark_stage(
@@ -822,6 +1056,11 @@ class PersistedScalarApiHandler:
                 status="SUCCEEDED",
             )
             return api_response
+        except asyncio.CancelledError:
+            await self._record_cancelled_request(
+                chat, identity, context, fingerprint, display
+            )
+            raise
         except Exception as exc:
             reason = (
                 "EXECUTION_TIMEOUT_OUTCOME_UNKNOWN" if isinstance(exc, TimeoutError)
@@ -843,6 +1082,7 @@ class PersistedScalarApiHandler:
                 status="SAFE_FALLBACK",
                 error_code=reason,
                 answer="查询执行未能形成可验证结果，本轮未发布成功数据集。",
+                display=display,
             )
             outcome_unknown = (
                 self.store.namespace_mode == "STABLE_DEPLOYMENT"
@@ -873,6 +1113,7 @@ class PersistedScalarApiHandler:
                         else reason
                     ),
                     answer="查询可能已经提交，但尚无可发布的结果回执，需要运维核对；系统不会自动重复执行。",
+                    display=display,
                 )
             try:
                 await self.store.finish(
@@ -892,6 +1133,7 @@ class PersistedScalarApiHandler:
                     status="SAFE_FALLBACK",
                     error_code="EXECUTION_RECEIPT_STATE_CONFLICT",
                     answer="查询可能已经提交，但状态发生并发变化，未发布成功结果。",
+                    display=display,
                 )
             return fallback
 
@@ -902,6 +1144,8 @@ class PersistedScalarApiHandler:
     ) -> None:
         """Read-only pre-stream check for an existing V2 idempotency claim."""
 
+        if self._unsupported_features(chat):
+            return
         try:
             context = self.context_resolver(chat, identity)
         except ValueError:

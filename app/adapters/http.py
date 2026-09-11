@@ -21,6 +21,7 @@ from app.analysis.contracts import (
 from app.domain.models import ExplorationQueryRequirements
 from app.config import Settings
 from app.domain.models import (
+    AnalysisOperator,
     CanonicalAnalysisRequest,
     DataQueryResult,
     Dataset,
@@ -597,6 +598,39 @@ class HttpDataRetrievalAdapter:
         # Cache only validated query plans. Results are never cached, so every
         # request still reads current business data from the SQL service.
         self._asl_plan_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+
+    @staticmethod
+    def _apply_v2_scalar_shape_contract(
+        asl_query: str,
+        request: CanonicalAnalysisRequest,
+    ) -> str:
+        """Make an already-authorized V2 scalar shape explicit to Oagnet."""
+
+        marker = "V2_QUERY_SHAPE=SCALAR_AGGREGATE"
+        if marker not in request.assumptions:
+            return asl_query
+        if (
+            request.primary_intent != PrimaryIntent.METRIC_QUERY
+            or request.dimensions
+            or any(
+                operator in request.operators
+                for operator in (
+                    AnalysisOperator.TOP_N,
+                    AnalysisOperator.BOTTOM_N,
+                    AnalysisOperator.SORT,
+                    AnalysisOperator.TIME_BUCKET,
+                )
+            )
+        ):
+            raise AdapterError(
+                "V2_QUERY_SHAPE_CONTRACT_INVALID",
+                "V2 scalar marker conflicts with the canonical request",
+            )
+        return (
+            asl_query
+            + "\n调用方已根据最终授权任务确定这是单行汇总查询，不按任何业务对象拆分；"
+              "ASL dimensions 必须为空，不得因缺少分组字段而返回歧义。"
+        )
 
     async def health(self) -> bool:
         # Only the ASL generation and SQL execution routes are core query
@@ -1219,6 +1253,7 @@ class HttpDataRetrievalAdapter:
             semantic_query = self._detail_semantic_query(request, semantic_query)
         asl_query = semantic_query
         retrieval_query = semantic_query
+        asl_query = self._apply_v2_scalar_shape_contract(asl_query, request)
         if request.filters:
             asl_query += (
                 "\n调用方已确认的强制筛选条件："
