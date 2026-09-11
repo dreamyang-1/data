@@ -277,6 +277,17 @@
         "projection_spec": {
           "$ref": "#/$defs/ProjectionSpec"
         },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "measures": {
           "items": {
             "$ref": "#/$defs/BoundSemanticRef"
@@ -894,6 +905,17 @@
         },
         "projection_spec": {
           "$ref": "#/$defs/ProjectionSpec"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "measures": {
           "items": {
@@ -1896,6 +1918,17 @@
         "projection_spec": {
           "$ref": "#/$defs/ProjectionSpec"
         },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "measures": {
           "items": {
             "$ref": "#/$defs/BoundSemanticRef"
@@ -1980,6 +2013,17 @@
         },
         "projection_spec": {
           "$ref": "#/$defs/ProjectionSpec"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "measures": {
           "items": {
@@ -2740,6 +2784,17 @@
         "projection_spec": {
           "$ref": "#/$defs/ProjectionSpec"
         },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "measures": {
           "items": {
             "$ref": "#/$defs/BoundSemanticRef"
@@ -3175,6 +3230,17 @@
         "projection_spec": {
           "$ref": "#/$defs/ProjectionSpec"
         },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "measures": {
           "items": {
             "$ref": "#/$defs/BoundSemanticRef"
@@ -3254,6 +3320,17 @@
         },
         "projection_spec": {
           "$ref": "#/$defs/ProjectionSpec"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "measures": {
           "items": {
@@ -3917,6 +3994,17 @@
         },
         "projection_spec": {
           "$ref": "#/$defs/ProjectionSpec"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundSemanticRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "measures": {
           "items": {

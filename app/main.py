@@ -28,16 +28,21 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
         if handler is None and effective_settings.runtime_mode == "V2_LIMITED_SCALAR":
             from app.semantic_v2.limited_scalar_runtime import build_limited_scalar_handler
             handler = build_limited_scalar_handler(
-                effective_settings, external=limited_scalar_external
+                effective_settings,
+                external=limited_scalar_external,
+                query_adapter=app.state.container.adapters.query,
             )
         app.state.isolated_chat_handler = handler
         configure_langfuse(effective_settings)
-        if app.state.container.dataset_cleaner is not None:
+        dataset_cleaner_started = bool(
+            handler is None and app.state.container.dataset_cleaner is not None
+        )
+        if dataset_cleaner_started:
             app.state.container.dataset_cleaner.start()
         try:
             yield
         finally:
-            if app.state.container.dataset_cleaner is not None:
+            if dataset_cleaner_started:
                 await app.state.container.dataset_cleaner.stop()
             redis = getattr(app.state.container.sessions, "redis", None)
             if redis is not None:

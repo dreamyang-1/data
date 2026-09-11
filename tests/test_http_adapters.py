@@ -40,6 +40,33 @@ class ContractClient:
         return next(self.results)
 
 
+def test_v2_scalar_shape_contract_is_bounded_to_consistent_canonical_requests():
+    request = CanonicalAnalysisRequest(
+        conversation_id="v2-scalar-shape",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询订单笔数和销售总数量",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        operators=[AnalysisOperator.AGGREGATE],
+        metrics=[MetricRef(input="订单笔数", metric_id="81:order_count")],
+        assumptions=["V2_QUERY_SHAPE=SCALAR_AGGREGATE"],
+    )
+
+    rendered = HttpDataRetrievalAdapter._apply_v2_scalar_shape_contract(
+        request.original_question, request
+    )
+    assert "ASL dimensions 必须为空" in rendered
+    assert HttpDataRetrievalAdapter._apply_v2_scalar_shape_contract(
+        request.original_question,
+        request.model_copy(update={"assumptions": []}),
+    ) == request.original_question
+    with pytest.raises(AdapterError, match="V2 scalar marker conflicts"):
+        HttpDataRetrievalAdapter._apply_v2_scalar_shape_contract(
+            request.original_question,
+            request.model_copy(update={"dimensions": ["省份"]}),
+        )
+
+
 def test_filter_recall_anchors_full_hospital_name_to_published_name_role():
     req = CanonicalAnalysisRequest(
         conversation_id="hospital-name-recall",

@@ -7,14 +7,15 @@ present.  It never reads evaluation captures or constructs synthetic tasks.
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from hashlib import sha256
 import importlib
 import json
 from pathlib import Path
 import sys
-from typing import Any
+import time
+from typing import Any, Awaitable, Callable
 from urllib.parse import unquote, urlparse
 
 from redis.asyncio import Redis
@@ -24,6 +25,8 @@ from app.domain.models import ChatRequest, TrustedIdentity
 
 from .authorized_contract import contract_digest
 from .catalog_bridge import ScopedPlanSession
+from .completed_question import build_completed_question_display
+from .canonical_execution_bridge import build_canonical_analysis_request
 from .isolated_execution import TypedExecutionRequest, prepare_execution
 from .persisted_scalar_api import (
     PersistedScalarApiHandler,
@@ -33,17 +36,19 @@ from .persisted_scalar_api import (
 from .pipeline import AuthorizedLogicalPlan
 from .recognition import RawTurnPlanner
 from .recognition_client import RecognitionModelClient
+from .state_machine import ConversationState
 from .time_storage import TimeStorageContract
 
 
 OAGNET_RUNTIME_FILES = (
     "catalog_generation.py", "catalog_publication.py", "catalog_registry.py",
     "catalog_release.py", "catalog_store.py", "catalog_value_candidates.py",
-    "catalog_value_sources.py", "config.py", "mysql_tool.py", "vector_store.py",
+    "catalog_value_sources.py", "config.py", "dimension_scope.py", "mysql_tool.py",
+    "vector_store.py",
 )
 SQL_RUNTIME_FILES = (
     "bound_sql.py", "pinned_catalog.py", "semantic_scope.py",
-    "sql_translator_prod.py",
+    "runtime_config.py", "sql_translator_prod.py",
 )
 
 
@@ -56,6 +61,38 @@ def source_bundle_digest(root: Path, names: tuple[str, ...]) -> str:
             raise RuntimeError(f"LIMITED_SCALAR_RUNTIME_MODULE_MISSING:{name}")
         payload.append({"path": name, "sha256": sha256(path.read_bytes()).hexdigest()})
     return contract_digest(payload)
+
+
+def data_source_target_identity(source: dict[str, Any]) -> dict[str, Any]:
+    """Return the connection-affecting identity without any credential secret."""
+
+    raw_host = str(source.get("host") or "").strip()
+    material = {
+        "data_source_id": str(source.get("id") or "").strip(),
+        "semantic_model_id": str(source.get("semantic_model_id") or "").strip(),
+        "driver": str(source.get("db_type") or "").strip().casefold(),
+        "host": raw_host.split(":", 1)[0].strip().casefold(),
+        # Match SQLTranslatorProd exactly: a null/zero-ish source value uses
+        # the executor's MySQL default rather than becoming an invalid target.
+        "port": source.get("port") or 3306,
+        "database": str(source.get("db_name") or "").strip(),
+        "schema": str(source.get("db_schema") or "").strip(),
+        "account": str(source.get("username") or "").strip(),
+    }
+    try:
+        material["port"] = int(material["port"])
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("LIMITED_SCALAR_DATA_SOURCE_TARGET_INVALID:port") from exc
+    required = ("data_source_id", "semantic_model_id", "driver", "host", "database", "account")
+    missing = [name for name in required if not material[name]]
+    if missing or not 1 <= material["port"] <= 65535:
+        suffix = ",".join(missing or ["port"])
+        raise RuntimeError("LIMITED_SCALAR_DATA_SOURCE_TARGET_INVALID:" + suffix)
+    return material
+
+
+def data_source_target_digest(source: dict[str, Any]) -> str:
+    return contract_digest(data_source_target_identity(source))
 
 
 def validate_limited_scalar_settings(settings: Settings) -> dict[str, Any]:
@@ -81,6 +118,7 @@ def validate_limited_scalar_settings(settings: Settings) -> dict[str, Any]:
         "catalog_target_identity_hash": settings.limited_scalar_catalog_target_identity_hash,
         "oagnet_source_digest": settings.limited_scalar_oagnet_source_digest,
         "sql_source_digest": settings.limited_scalar_sql_source_digest,
+        "data_source_target_digest": settings.limited_scalar_data_source_target_digest,
         "time_field_canonical_id": settings.limited_scalar_time_field_canonical_id,
         "time_field_mapping": settings.limited_scalar_time_field_mapping,
         "time_evidence_version": settings.limited_scalar_time_evidence_version,
@@ -106,6 +144,7 @@ def validate_limited_scalar_settings(settings: Settings) -> dict[str, Any]:
         "vector_index_version": settings.limited_scalar_vector_index_version,
         "oagnet_source_digest": oagnet_digest,
         "sql_source_digest": sql_digest,
+        "data_source_target_digest": settings.limited_scalar_data_source_target_digest,
     }
 
 
@@ -115,6 +154,17 @@ def _prepend_runtime_roots(settings: Settings) -> None:
         value = str(Path(root).resolve())
         if value not in sys.path:
             sys.path.insert(0, value)
+
+
+def _import_runtime_module(name: str, root: Path):
+    expected = (Path(root).resolve() / f"{name}.py").resolve()
+    if not expected.is_file():
+        raise RuntimeError(f"LIMITED_SCALAR_RUNTIME_MODULE_MISSING:{name}.py")
+    module = importlib.import_module(name)
+    actual_file = getattr(module, "__file__", None)
+    if actual_file is None or Path(actual_file).resolve() != expected:
+        raise RuntimeError(f"LIMITED_SCALAR_RUNTIME_MODULE_ORIGIN_MISMATCH:{name}")
+    return module
 
 
 def _redis_connection_config(settings: Settings) -> dict[str, Any]:
@@ -144,34 +194,68 @@ class LimitedScalarExternalDependencies:
     sql_planner: Any
     transport: Any
     redis: Any
+    data_source_target_digest: str = ""
+    module_origins: dict[str, str] = field(default_factory=dict)
 
 
 class LimitedScalarRuntimeHandler(PersistedScalarApiHandler):
-    def __init__(self, *args, startup_receipt: dict, **kwargs):
+    def __init__(self, *args, startup_receipt: dict,
+                 readiness_probe: Callable[[], Awaitable[dict[str, bool]]],
+                 readiness_cache_seconds: float, readiness_timeout_seconds: float,
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self.startup_receipt = startup_receipt
+        self._readiness_probe = readiness_probe
+        self._readiness_cache_seconds = readiness_cache_seconds
+        self._readiness_timeout_seconds = readiness_timeout_seconds
+        self._readiness_cached_at = 0.0
+        self._readiness_cached: dict[str, bool] | None = None
+        self._readiness_lock = asyncio.Lock()
 
     async def readiness(self) -> dict[str, bool]:
-        try:
-            redis_ready = bool(await self.store.redis.ping())
-        except Exception:
-            redis_ready = False
-        return {
-            "v2_limited_scalar_redis": redis_ready,
-            "v2_limited_scalar_catalog_pin": bool(self.startup_receipt.get("catalog_pin_verified")),
-            "v2_limited_scalar_runtime_sources": bool(self.startup_receipt.get("source_pins_verified")),
-            "v2_limited_scalar_read_only_transport": bool(self.startup_receipt.get("transport_verified")),
-        }
+        now = time.monotonic()
+        if (self._readiness_cached is not None
+                and now - self._readiness_cached_at < self._readiness_cache_seconds):
+            return dict(self._readiness_cached)
+        async with self._readiness_lock:
+            now = time.monotonic()
+            if (self._readiness_cached is not None
+                    and now - self._readiness_cached_at < self._readiness_cache_seconds):
+                return dict(self._readiness_cached)
+            try:
+                checks = await asyncio.wait_for(
+                    self._readiness_probe(), timeout=self._readiness_timeout_seconds
+                )
+            except Exception:
+                checks = {
+                    "v2_limited_scalar_redis": False,
+                    "v2_limited_scalar_catalog_pin": False,
+                    "v2_limited_scalar_data_source_target": False,
+                    "v2_limited_scalar_runtime_sources": False,
+                    "v2_limited_scalar_read_only_transport": False,
+                }
+            self._readiness_cached = {name: bool(value) for name, value in checks.items()}
+            self._readiness_cached_at = time.monotonic()
+            return dict(self._readiness_cached)
 
 
 def _build_external_dependencies(settings: Settings) -> LimitedScalarExternalDependencies:
     _prepend_runtime_roots(settings)
-    CatalogPublication = importlib.import_module("catalog_publication").CatalogPublication
-    RedisCatalogReleaseRegistry = importlib.import_module("catalog_registry").RedisCatalogReleaseRegistry
-    open_catalog_store = importlib.import_module("catalog_store").open_catalog_store
-    translate_pinned_catalog = importlib.import_module("pinned_catalog").translate_pinned_catalog
-    RequestScope = importlib.import_module("semantic_scope").RequestScope
-    SQLTranslatorProd = importlib.import_module("sql_translator_prod").SQLTranslatorProd
+    roots = {
+        "catalog_publication": settings.limited_scalar_oagnet_root,
+        "catalog_registry": settings.limited_scalar_oagnet_root,
+        "catalog_store": settings.limited_scalar_oagnet_root,
+        "pinned_catalog": settings.limited_scalar_sql_translator_root,
+        "semantic_scope": settings.limited_scalar_sql_translator_root,
+        "sql_translator_prod": settings.limited_scalar_sql_translator_root,
+    }
+    modules = {name: _import_runtime_module(name, root) for name, root in roots.items()}
+    CatalogPublication = modules["catalog_publication"].CatalogPublication
+    RedisCatalogReleaseRegistry = modules["catalog_registry"].RedisCatalogReleaseRegistry
+    open_catalog_store = modules["catalog_store"].open_catalog_store
+    translate_pinned_catalog = modules["pinned_catalog"].translate_pinned_catalog
+    RequestScope = modules["semantic_scope"].RequestScope
+    SQLTranslatorProd = modules["sql_translator_prod"].SQLTranslatorProd
 
     store = open_catalog_store(
         initialize=False,
@@ -181,8 +265,10 @@ def _build_external_dependencies(settings: Settings) -> LimitedScalarExternalDep
         store,
         RedisCatalogReleaseRegistry(store.catalog_target_identity),
     )
-    redis_config = _redis_connection_config(settings)
-    translator = SQLTranslatorProd(redis_config)
+    # SQLTranslatorProd owns the semantic registry connection contract.  The
+    # Agent Redis URL is the V2 session store and can legitimately use another
+    # database; using it here would read the wrong registry namespace.
+    translator = SQLTranslatorProd()
     source = translator.fetch_data_source(
         str(settings.limited_scalar_semantic_model_id),
         str(settings.limited_scalar_data_source_id),
@@ -191,6 +277,9 @@ def _build_external_dependencies(settings: Settings) -> LimitedScalarExternalDep
             or str(source.get("id")) != str(settings.limited_scalar_data_source_id)
             or str(source.get("semantic_model_id")) != str(settings.limited_scalar_semantic_model_id)):
         raise RuntimeError("LIMITED_SCALAR_DATA_SOURCE_SCOPE_MISMATCH")
+    target_digest = data_source_target_digest(source)
+    if target_digest != settings.limited_scalar_data_source_target_digest:
+        raise RuntimeError("LIMITED_SCALAR_DATA_SOURCE_TARGET_MISMATCH")
 
     def sql_planner(pin, scope, asl, **policy):
         request_scope = RequestScope.from_request({
@@ -227,6 +316,11 @@ def _build_external_dependencies(settings: Settings) -> LimitedScalarExternalDep
         transport=transport,
         redis=Redis.from_url(settings.effective_redis_url(), decode_responses=True,
                              socket_connect_timeout=10, socket_timeout=35),
+        data_source_target_digest=target_digest,
+        module_origins={
+            name: str(Path(module.__file__).resolve())
+            for name, module in modules.items()
+        },
     )
 
 
@@ -234,10 +328,13 @@ def build_limited_scalar_handler(
     settings: Settings,
     *,
     external: LimitedScalarExternalDependencies | None = None,
+    query_adapter: Any | None = None,
 ) -> LimitedScalarRuntimeHandler:
     receipt = validate_limited_scalar_settings(settings)
     dependencies = external or _build_external_dependencies(settings)
     expected_scope = receipt["scope"]
+    if dependencies.data_source_target_digest != receipt["data_source_target_digest"]:
+        raise RuntimeError("LIMITED_SCALAR_DATA_SOURCE_TARGET_MISMATCH")
 
     # Pin and finish once at startup.  This checks metadata/index identity but
     # neither executes a business query nor writes a session key.
@@ -251,6 +348,43 @@ def build_limited_scalar_handler(
                 != settings.limited_scalar_catalog_target_identity_hash):
         raise RuntimeError("LIMITED_SCALAR_CATALOG_PIN_MISMATCH")
     pin.finish()
+
+    async def readiness_probe() -> dict[str, bool]:
+        try:
+            redis_ready = bool(await dependencies.redis.ping())
+        except Exception:
+            redis_ready = False
+
+        def verify_catalog() -> bool:
+            current = dependencies.publication.pin(
+                expected_scope["semantic_model_id"], expected_scope["business_domain_ids"]
+            )
+            try:
+                current_identity = current.identity
+                return bool(
+                    current_identity.get("catalog_version") == receipt["catalog_version"]
+                    and current_identity.get("vector_index_version") == receipt["vector_index_version"]
+                    and current_identity.get("target_identity_hash")
+                        == settings.limited_scalar_catalog_target_identity_hash
+                )
+            finally:
+                current.finish()
+
+        try:
+            catalog_ready = bool(await asyncio.to_thread(verify_catalog))
+        except Exception:
+            catalog_ready = False
+        return {
+            "v2_limited_scalar_redis": redis_ready,
+            "v2_limited_scalar_catalog_pin": catalog_ready,
+            "v2_limited_scalar_data_source_target": (
+                dependencies.data_source_target_digest == receipt["data_source_target_digest"]
+            ),
+            "v2_limited_scalar_runtime_sources": bool(
+                receipt["oagnet_source_digest"] and receipt["sql_source_digest"]
+            ),
+            "v2_limited_scalar_read_only_transport": True,
+        }
 
     engine = RawTurnPlanner(dependencies.model, dependencies.publication,
                             clock=lambda: datetime.now(timezone.utc).astimezone())
@@ -273,6 +407,10 @@ def build_limited_scalar_handler(
 
     async def planner(chat, identity, state, plans):
         require_scope(chat)
+        previous_state = (
+            ConversationState.model_validate(state.payload)
+            if state is not None else None
+        )
         result = await engine.run(chat, identity, state=state, plans=plans)
         if result.plan is None:
             raise ValueError("V2_PLAN_REQUIRED")
@@ -321,7 +459,40 @@ def build_limited_scalar_handler(
         if str(prepared.sql_receipt.get("data_source_id")) != str(
                 settings.limited_scalar_data_source_id):
             raise ValueError("EXECUTION_SCOPE_PIN_MISMATCH")
-        return PersistedScalarPlan(result.next_state, result.plan_state, prepared)
+        next_state = ConversationState.model_validate(result.next_state.payload)
+        display = build_completed_question_display(
+            message_id=chat.message_id,
+            plan=plan,
+            previous_state=previous_state,
+            next_state=next_state,
+            context_trace=result.context_trace,
+        )
+        canonical_request = build_canonical_analysis_request(
+            chat=chat,
+            identity=identity,
+            plan=plan,
+            display=display,
+        )
+        return PersistedScalarPlan(
+            result.next_state,
+            result.plan_state,
+            prepared,
+            display,
+            canonical_request,
+        )
+
+    async def canonical_query(request, identity):
+        if query_adapter is None:
+            raise ValueError("V2_CANONICAL_QUERY_ADAPTER_REQUIRED")
+        domains = list(request.business_domain_ids)
+        if len(domains) > 1:
+            raise ValueError("EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED")
+        return await query_adapter.query(
+            request,
+            identity,
+            semantic_model_id=request.semantic_model_id,
+            business_domain_id=(domains[0] if domains else None),
+        )
 
     store = RedisScalarSessionStore(
         dependencies.redis,
@@ -338,6 +509,8 @@ def build_limited_scalar_handler(
         "catalog_pin_verified": True,
         "source_pins_verified": True,
         "transport_verified": True,
+        "data_source_target_verified": True,
+        "runtime_module_origins_verified": external is None,
         "business_sql_executed": False,
         "store_schema": store.schema_version,
         "store_namespace_mode": store.namespace_mode,
@@ -347,7 +520,12 @@ def build_limited_scalar_handler(
         context_resolver=context_resolver,
         planner=planner,
         transport=dependencies.transport,
+        canonical_query=(canonical_query if query_adapter is not None else None),
         clock=lambda: datetime.now(timezone.utc).astimezone(),
         running_review_seconds=settings.limited_scalar_running_review_seconds,
+        cancellation_cleanup_seconds=settings.limited_scalar_cancellation_cleanup_seconds,
         startup_receipt=startup_receipt,
+        readiness_probe=readiness_probe,
+        readiness_cache_seconds=settings.limited_scalar_readiness_cache_seconds,
+        readiness_timeout_seconds=settings.limited_scalar_readiness_timeout_seconds,
     )

@@ -215,7 +215,8 @@ def materialize_payload(kind, state):
     if kind == 'SCALAR_AGGREGATE' and state.time_spec and state.time_spec.grain != 'NONE':
         raise RecognitionFailure('V2_TIME_GRAIN_SCALAR_CONFLICT')
     common = dict(filters=state.filter_expression, projection_spec=state.projection_spec)
-    aggregate = dict(**common, measures=state.metrics, group_by=state.dimensions, time=state.time_spec)
+    aggregate = dict(**common, subject=state.subject, measures=state.metrics,
+        group_by=state.dimensions, time=state.time_spec)
     classes = {'SCALAR_AGGREGATE': m.ScalarAggregatePayload, 'GROUPED_AGGREGATE': m.GroupedAggregatePayload,
         'TIME_SERIES': m.TimeSeriesPayload, 'COMPARISON': m.ComparisonPayload, 'RANKING': m.RankingPayload}
     if kind in classes:
@@ -426,13 +427,19 @@ class RawTurnPlanner:
 
     @staticmethod
     def _check_semantic_coverage(payload, state):
-        for slot, field in [('metrics','measures'), ('dimensions','group_by'), ('filter_expression','filters'),
+        for slot, field in [('subject','subject'), ('metrics','measures'), ('dimensions','group_by'), ('filter_expression','filters'),
                 ('time_spec','time'), ('projection_spec','projection_spec'), ('ranking_spec','ranking'), ('comparison_spec','comparison'),
                 ('relationship_spec','relationship_spec')]:
             value = getattr(state,slot)
             if value == getattr(m.TaskSemanticState(),slot):
                 continue
-            if hasattr(payload,field) and getattr(payload,field) == value:
+            payload_value = getattr(payload,field) if hasattr(payload,field) else None
+            # Entity-list and relationship payloads name their semantic subject
+            # ``source_entity``.  Aggregate payloads use the explicit ``subject``
+            # field.  Both are the same governed TaskSemanticState slot.
+            if slot == 'subject' and payload_value is None and hasattr(payload,'source_entity'):
+                payload_value = payload.source_entity
+            if payload_value == value:
                 continue
             if payload.payload_type in {'METRIC_DEFINITION','METADATA','LINEAGE'} and slot in {'metrics','dimensions','projection_spec'}:
                 continue

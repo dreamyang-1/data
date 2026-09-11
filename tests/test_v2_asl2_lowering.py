@@ -218,3 +218,34 @@ def test_multiple_catalog_subjects_require_evidence_instead_of_list_order(provid
     session=current(provider)
     lowering,result=session.compile_asl2(sql_planner=lambda *a:pytest.fail('Primary subject guessed'),**args(session,payload(session)))
     assert lowering.asl is None and lowering.blockers==('ASL2_SUBJECT_OWNERSHIP_UNRESOLVED',)
+
+
+def test_explicit_subject_disambiguates_only_a_declared_metric_owner(provider):
+    data=provider[1];doc=data['documents'][0]
+    other=deepcopy(doc['entities'][0]);other.update(entity_id='99',entity_code='other_orders')
+    doc['entities'].append(other)
+    doc['metrics'][0]['source_dependency']['bind_entity']=['orders','other_orders']
+    seal(data)
+    provider[0].publish(81,[205],embed_fn=embed,publication_id='fixture-explicit-owner',
+                        producer_revision='fixture',embedding_contract='fixture')
+    session=current(provider)
+    selected=payload(session)
+    selected.subject=bind(session,'ENTITY','orders','SUBJECT_ENTITY')
+    plan=session._compile_logical(**args(session,selected)).logical_plan
+    lowering=lower_asl2(session,plan)
+    assert lowering.status=='SUPPORTED_PLAN_ONLY'
+    assert lowering.asl['subject']=={'entity':'orders'}
+
+
+def test_explicit_subject_outside_metric_dependencies_is_rejected(provider):
+    data=provider[1];doc=data['documents'][0]
+    other=deepcopy(doc['entities'][0]);other.update(entity_id='99',entity_code='other_orders')
+    doc['entities'].append(other);seal(data)
+    provider[0].publish(81,[205],embed_fn=embed,publication_id='fixture-wrong-owner',
+                        producer_revision='fixture',embedding_contract='fixture')
+    session=current(provider)
+    selected=payload(session)
+    selected.subject=bind(session,'ENTITY','other_orders','SUBJECT_ENTITY')
+    plan=session._compile_logical(**args(session,selected)).logical_plan
+    lowering=lower_asl2(session,plan)
+    assert lowering.blockers==('ASL2_SUBJECT_OWNERSHIP_MISMATCH',)

@@ -55,11 +55,18 @@ class _Compiler:
             owners = [set(_row(session, o.semantic_ref).get('source_dependency', {}).get('bind_entity', []))
                       for o in contract.required_outputs if isinstance(o.semantic_ref, m.BoundSemanticRef)
                       and o.semantic_ref.catalog_type == 'METRIC']
-            common = set.intersection(*owners) if owners else set()
-            candidates = session.candidates(CatalogType.ENTITY)
-            found = [session._rows[c['candidate_id']].metadata for c in candidates if c['canonical_code'] in common]
-            _require(len(found) == 1, 'ASL2_SUBJECT_OWNERSHIP_UNRESOLVED')
-            self.subject = found[0]
+            if payload.subject is not None:
+                selected = _row(session, payload.subject)
+                _require(payload.subject.catalog_type == CatalogType.ENTITY
+                         and all(selected.get('entity_code') in owner for owner in owners),
+                         'ASL2_SUBJECT_OWNERSHIP_MISMATCH')
+                self.subject = selected
+            else:
+                common = set.intersection(*owners) if owners else set()
+                candidates = session.candidates(CatalogType.ENTITY)
+                found = [session._rows[c['candidate_id']].metadata for c in candidates if c['canonical_code'] in common]
+                _require(len(found) == 1, 'ASL2_SUBJECT_OWNERSHIP_UNRESOLVED')
+                self.subject = found[0]
 
     def dimension_binding(self, ref):
         row = _row(self.session, ref)

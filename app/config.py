@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     limited_scalar_sql_translator_root: Path = SERVICE_BUNDLE_ROOT / "sql-translator"
     limited_scalar_oagnet_source_digest: str = ""
     limited_scalar_sql_source_digest: str = ""
+    # Non-secret fingerprint of the approved execution target (driver, host,
+    # port, database, schema and account identity).  The password is excluded.
+    limited_scalar_data_source_target_digest: str = ""
+    limited_scalar_readiness_cache_seconds: float = Field(default=5, ge=1, le=30)
+    limited_scalar_readiness_timeout_seconds: float = Field(default=5, ge=1, le=15)
+    limited_scalar_cancellation_cleanup_seconds: float = Field(default=2, ge=0.1, le=10)
     limited_scalar_time_field_canonical_id: str = ""
     limited_scalar_time_field_mapping: str = "sales_order.created_date"
     limited_scalar_time_field_id: int = Field(default=24400, strict=True, gt=0)

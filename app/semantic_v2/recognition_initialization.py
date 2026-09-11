@@ -11,7 +11,7 @@ from pydantic import TypeAdapter
 from . import models as m
 from .explicit_time import metric_anchor,normalize_initial_assignment
 from .recognition_client import RecognitionFailure
-from .structured_edits import filter_targets
+from .structured_edits import FilterEditDraft, filter_targets
 
 
 def collection_set_schema(schema, task_schema):
@@ -81,7 +81,36 @@ Multiple initial additions become ONE SET; separate SETs would drop members.
         return (slot not in marked and all(edit.evidence_mention_ids
             and set(edit.evidence_mention_ids)<=explicit.get(slot,set()) & declared
             and own_handles(edit.value,set(edit.evidence_mention_ids)) for edit in edits))
-    edits=list(draft.edits);traces=[]
+    edits=list(draft.edits);filters=list(draft.filter_edits);traces=[]
+    # Some structured-output providers validate the object shape but do not
+    # enforce the exported conditional which reserves whole-filter ADD for the
+    # structured channel.  Relocate only the exact, already-declared operation
+    # on a completely empty new task.  The predicate, source-value handles,
+    # current mention evidence and operation are unchanged; the native initial
+    # assignment below remains the sole ADD-to-empty lowering authority.
+    whole_adds=[edit for edit in edits
+        if edit.slot_path=='filter_expression' and edit.operation=='ADD']
+    def declared_whole_add(edit):
+        evidence=set(edit.evidence_mention_ids)
+        return (evidence
+            and evidence <= explicit.get('filter_expression',set()) & declared
+            and own_handles(edit.value,evidence)
+            and evidence <= {marker.mention_id for marker in parse.operation_markers
+                if marker.slot_name=='filter_expression' and marker.operation_hint=='ADD'})
+    if (whole_adds and not filters
+            and all(edit.value is not None
+                and isinstance(edit.value,dict)
+                and edit.value.get('node_type') in {'PREDICATE','ALIASED_PREDICATE'}
+                and edit.value.get('source')=='USER_EXPLICIT'
+                and edit.value.get('scope')=='CURRENT_TASK'
+                for edit in whole_adds)
+            and all(declared_whole_add(edit) for edit in whole_adds)):
+        filters=[FilterEditDraft(operation='ADD',target_handle=None,
+            evidence_mention_ids=edit.evidence_mention_ids,value=edit.value)
+            for edit in whole_adds]
+        edits=[edit for edit in edits if edit not in whole_adds]
+        traces.append(dict(slot='filter_expression',source_operation='ADD',operation='ADD',
+            reason='EMPTY_NEW_TASK_STRUCTURED_FILTER_CHANNEL',operand_count=len(filters)))
     for slot in ('metrics','dimensions'):
         selected=[edit for edit in edits if edit.slot_path==slot]
         if not selected or any(edit.operation!='ADD' for edit in selected) or not justified(slot,selected):
@@ -94,7 +123,6 @@ Multiple initial additions become ONE SET; separate SETs would drop members.
         position=edits.index(selected[0]);edits=[edit for edit in edits if edit.slot_path!=slot]
         edits.insert(position,replacement);traces.append(dict(slot=slot,source_operation='ADD',operation='SET',
             reason='EMPTY_NEW_TASK_CURRENT_EXPLICIT_ASSIGNMENT',operand_count=len(values)))
-    filters=list(draft.filter_edits)
     if (filters and not any(edit.slot_path=='filter_expression' for edit in edits)
             and all(edit.operation=='ADD' and edit.target_handle is None and edit.value is not None for edit in filters)
             and all(isinstance(edit.value,dict) and edit.value.get('source')=='USER_EXPLICIT'
