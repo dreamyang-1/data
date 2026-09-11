@@ -79,6 +79,26 @@ async def test_reference_description_and_current_edit_are_separate(context_catal
 
 
 @pytest.mark.asyncio
+async def test_duplicate_historical_task_description_is_not_reapplied_as_current_edits(context_catalog):
+    text = '返回刚才销售额任务'
+    reference = (text, parse(text, [
+        ('销售额', 'MEASURE', 'metrics', None),
+    ], history=True), lambda c: dict(payload_type='INHERIT',
+        historical_task_handle=next(t['task_handle'] for t in c['tasks'] if t['filter_targets'])))
+    steps = [initial('去年上海销售额'), metric_step('订单笔数', '订单笔数'), reference]
+    engine, transport = planner(context_catalog, steps)
+    results, _ = await observed(engine, steps)
+    first, unrelated, returned = results
+    assert returned.resolution['dialogue_act'] == 'RETURN_TO_TOPIC'
+    assert returned.plan['logical_plan']['task_id'] == first.plan['logical_plan']['task_id']
+    assert active(returned)[1]['semantics'] == active(first)[1]['semantics']
+    assert returned.next_state.payload['tasks'][unrelated.plan['logical_plan']['task_id']] == \
+        unrelated.next_state.payload['tasks'][unrelated.plan['logical_plan']['task_id']]
+    current = json.loads(transport.calls[-1]['messages'][1]['content'])['parse']
+    assert current['mentions'] == [] and current['explicit_slot_mentions'] == {}
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize('explicit,operation', [(True, None), (False, None), (True, 'REPLACE'), (False, 'REPLACE')])
 async def test_historical_relation_never_waives_unconsumed_explicit_subject(context_catalog, explicit, operation):
     steps = [initial('去年上海销售额'), metric_step('订单笔数', '订单笔数'), historical_step('unconsumed_subject')]

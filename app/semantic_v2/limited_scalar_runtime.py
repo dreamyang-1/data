@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from copy import deepcopy
 from hashlib import sha256
 import importlib
 import json
@@ -17,6 +18,7 @@ import sys
 import time
 from typing import Any, Awaitable, Callable
 from urllib.parse import unquote, urlparse
+from uuid import uuid5, NAMESPACE_URL
 
 from redis.asyncio import Redis
 
@@ -167,6 +169,173 @@ def _import_runtime_module(name: str, root: Path):
     return module
 
 
+def _catalog_where_matches(metadata: dict[str, Any], where: dict[str, Any]) -> bool:
+    if "$and" in where:
+        values = where["$and"]
+        return isinstance(values, list) and all(
+            _catalog_where_matches(metadata, value) for value in values
+        )
+    if "$or" in where:
+        values = where["$or"]
+        return isinstance(values, list) and any(
+            _catalog_where_matches(metadata, value) for value in values
+        )
+    for key, expected in where.items():
+        actual = metadata.get(key)
+        if isinstance(expected, dict):
+            if set(expected) != {"$in"} or not isinstance(
+                expected["$in"], (list, tuple, set)
+            ):
+                raise RuntimeError("LIMITED_SCALAR_CATALOG_FILTER_UNSUPPORTED")
+            if actual not in expected["$in"]:
+                return False
+        elif actual != expected:
+            return False
+    return True
+
+
+class _ProcessMemoryCatalogStore:
+    """Exact catalog lookup for the internal trial; it has no vector writes."""
+
+    embedding_dim = 2
+
+    def __init__(self, target_identity: dict[str, Any], search_result_type: type):
+        self.catalog_target_identity = deepcopy(target_identity)
+        self._search_result_type = search_result_type
+        self._records: dict[str, Any] = {}
+
+    def add(self, records) -> None:
+        for record in records:
+            if record.id in self._records:
+                raise RuntimeError("LIMITED_SCALAR_CATALOG_RECORD_DUPLICATE")
+            self._records[record.id] = deepcopy(record)
+
+    def _rows(self, where: dict[str, Any]):
+        return [
+            deepcopy(record)
+            for record in self._records.values()
+            if _catalog_where_matches(record.metadata, where)
+        ]
+
+    def get_catalog_inventory(self, where: dict[str, Any]):
+        return self._rows(where)
+
+    def get_by_where(self, where: dict[str, Any]):
+        return [
+            self._search_result_type(
+                record.id, 1.0, record.text, deepcopy(record.metadata)
+            )
+            for record in self._rows(where)
+        ]
+
+    find_exact = get_by_where
+
+    def search(self, *_args, **_kwargs):
+        # V2 context binding uses exact governed candidates. The retained
+        # downstream Oagnet adapter continues to own existing vector retrieval.
+        raise RuntimeError("LIMITED_SCALAR_CONTEXT_VECTOR_SEARCH_UNSUPPORTED")
+
+
+class _ProcessMemoryCatalogRegistry:
+    """Process-local activation state with deterministic restart identity."""
+
+    def __init__(self, target_identity: dict[str, Any], deployment_id: str,
+                 digest_fn: Callable[[Any], str]):
+        self.target_identity_hash = digest_fn(target_identity)
+        self._deployment_id = deployment_id
+        self._digest = digest_fn
+        self._active: dict | None = None
+        self._manifest: dict | None = None
+
+    def active(self, _scope):
+        return deepcopy(self._active)
+
+    def reserve(self, manifest) -> None:
+        if self._manifest is not None:
+            raise RuntimeError("LIMITED_SCALAR_CATALOG_ALREADY_RESERVED")
+        self._manifest = deepcopy(manifest)
+
+    def manifest(self, scope, version):
+        value = self._manifest
+        if (value is None or value.get("scope") != scope
+                or value.get("vector_index_version") != version):
+            raise RuntimeError("LIMITED_SCALAR_CATALOG_MANIFEST_MISMATCH")
+        return deepcopy(value)
+
+    def activate_verified(self, manifest, expected_active):
+        if expected_active != self._active or manifest != self._manifest:
+            raise RuntimeError("LIMITED_SCALAR_CATALOG_ACTIVATION_CONFLICT")
+        activation_id = uuid5(
+            NAMESPACE_URL,
+            self._digest({
+                "deployment_id": self._deployment_id,
+                "vector_index_version": manifest["vector_index_version"],
+            }),
+        ).hex
+        self._active = {
+            "state": "PUBLISHED",
+            "vector_index_version": manifest["vector_index_version"],
+            "activation_id": activation_id,
+        }
+        return deepcopy(self._active)
+
+
+def _open_live_read_only_catalog(settings: Settings, modules: dict[str, Any]):
+    """Pin current catalog authority without writing Redis or Milvus.
+
+    This is deliberately limited to the internal context replacement trial.
+    The snapshot is captured again by every pin/finish through Oagnet's existing
+    publication checks, so an authority change fails the request closed.
+    """
+
+    capture = modules["catalog_publication"].capture_catalog
+    snapshot = capture(
+        settings.limited_scalar_semantic_model_id,
+        settings.limited_scalar_business_domain_ids,
+    )
+    expected_scope = {
+        "semantic_model_id": settings.limited_scalar_semantic_model_id,
+        "business_domain_ids": list(settings.limited_scalar_business_domain_ids),
+        "scope_mode": "EXPLICIT_DOMAINS",
+    }
+    if (snapshot.get("scope") != expected_scope
+            or snapshot.get("catalog_version")
+                != settings.limited_scalar_catalog_version):
+        raise RuntimeError("LIMITED_SCALAR_CATALOG_PIN_MISMATCH")
+    target_identity = {
+        "backend": "process-memory-read-only-catalog",
+        "source_identity_hash": snapshot.get("source_identity_hash"),
+        "scope": expected_scope,
+    }
+    digest_fn = modules["catalog_publication"].digest
+    store = _ProcessMemoryCatalogStore(
+        target_identity,
+        modules["vector_store"].SearchResult,
+    )
+    registry = _ProcessMemoryCatalogRegistry(
+        target_identity,
+        settings.limited_scalar_deployment_id,
+        digest_fn,
+    )
+    if registry.target_identity_hash != settings.limited_scalar_catalog_target_identity_hash:
+        raise RuntimeError("LIMITED_SCALAR_CATALOG_TARGET_MISMATCH")
+    publication = modules["catalog_publication"].CatalogPublication(
+        store, registry, capture
+    )
+    receipt = publication.publish(
+        expected_scope["semantic_model_id"],
+        expected_scope["business_domain_ids"],
+        embed_fn=lambda texts: [[0.1, 0.2] for _ in texts],
+        publication_id="internal-context-replacement-trial",
+        producer_revision=settings.limited_scalar_oagnet_source_digest,
+        embedding_contract="process-memory-exact-catalog-v1",
+        expected_catalog_version=settings.limited_scalar_catalog_version,
+    )
+    if receipt.get("vector_index_version") != settings.limited_scalar_vector_index_version:
+        raise RuntimeError("LIMITED_SCALAR_CATALOG_PIN_MISMATCH")
+    return publication
+
+
 def _redis_connection_config(settings: Settings) -> dict[str, Any]:
     parsed = urlparse(settings.effective_redis_url() or "")
     if parsed.scheme not in {"redis", "rediss"} or not parsed.hostname:
@@ -248,6 +417,7 @@ def _build_external_dependencies(settings: Settings) -> LimitedScalarExternalDep
         "pinned_catalog": settings.limited_scalar_sql_translator_root,
         "semantic_scope": settings.limited_scalar_sql_translator_root,
         "sql_translator_prod": settings.limited_scalar_sql_translator_root,
+        "vector_store": settings.limited_scalar_oagnet_root,
     }
     modules = {name: _import_runtime_module(name, root) for name, root in roots.items()}
     CatalogPublication = modules["catalog_publication"].CatalogPublication
@@ -257,14 +427,17 @@ def _build_external_dependencies(settings: Settings) -> LimitedScalarExternalDep
     RequestScope = modules["semantic_scope"].RequestScope
     SQLTranslatorProd = modules["sql_translator_prod"].SQLTranslatorProd
 
-    store = open_catalog_store(
-        initialize=False,
-        expected_target_identity_hash=settings.limited_scalar_catalog_target_identity_hash,
-    )
-    publication = CatalogPublication(
-        store,
-        RedisCatalogReleaseRegistry(store.catalog_target_identity),
-    )
+    if settings.limited_scalar_catalog_access == "LIVE_READ_ONLY_SNAPSHOT":
+        publication = _open_live_read_only_catalog(settings, modules)
+    else:
+        store = open_catalog_store(
+            initialize=False,
+            expected_target_identity_hash=settings.limited_scalar_catalog_target_identity_hash,
+        )
+        publication = CatalogPublication(
+            store,
+            RedisCatalogReleaseRegistry(store.catalog_target_identity),
+        )
     # SQLTranslatorProd owns the semantic registry connection contract.  The
     # Agent Redis URL is the V2 session store and can legitimately use another
     # database; using it here would read the wrong registry namespace.

@@ -54,12 +54,21 @@ class Settings(BaseSettings):
     limited_scalar_running_review_seconds: int = Field(default=300, ge=30, le=86400)
     limited_scalar_max_messages_per_session: int = Field(default=100, ge=1, le=1000)
     limited_scalar_max_envelope_bytes: int = Field(default=4 * 1024 * 1024, ge=65536, le=32 * 1024 * 1024)
-    limited_scalar_semantic_model_id: int = Field(default=81, strict=True, gt=0)
+    # BaseSettings reads scalar environment variables as text. Keep the
+    # positive-integer constraint while allowing the normal ``KEY=81``
+    # deployment representation. ChatRequest enforces request strictness.
+    limited_scalar_semantic_model_id: int = Field(default=81, gt=0)
     limited_scalar_business_domain_ids: list[int] = Field(default_factory=lambda: [205])
-    limited_scalar_data_source_id: int = Field(default=58, strict=True, gt=0)
+    limited_scalar_data_source_id: int = Field(default=58, gt=0)
     limited_scalar_catalog_version: str = ""
     limited_scalar_vector_index_version: str = ""
     limited_scalar_catalog_target_identity_hash: str = ""
+    # The internal 8088 context trial may pin a fresh authoritative catalog
+    # snapshot in process memory.  It never creates or changes a Milvus
+    # collection.  The normal deployment path continues to require PUBLISHED.
+    limited_scalar_catalog_access: Literal[
+        "PUBLISHED", "LIVE_READ_ONLY_SNAPSHOT"
+    ] = "PUBLISHED"
     limited_scalar_oagnet_root: Path = SERVICE_BUNDLE_ROOT / "Oagnet"
     limited_scalar_sql_translator_root: Path = SERVICE_BUNDLE_ROOT / "sql-translator"
     limited_scalar_oagnet_source_digest: str = ""
@@ -72,8 +81,8 @@ class Settings(BaseSettings):
     limited_scalar_cancellation_cleanup_seconds: float = Field(default=2, ge=0.1, le=10)
     limited_scalar_time_field_canonical_id: str = ""
     limited_scalar_time_field_mapping: str = "sales_order.created_date"
-    limited_scalar_time_field_id: int = Field(default=24400, strict=True, gt=0)
-    limited_scalar_time_table_id: int = Field(default=1880, strict=True, gt=0)
+    limited_scalar_time_field_id: int = Field(default=24400, gt=0)
+    limited_scalar_time_table_id: int = Field(default=1880, gt=0)
     limited_scalar_time_storage_timezone: str = "Asia/Shanghai"
     limited_scalar_time_evidence_version: str = "round59-user-declaration-beijing-v1"
     allow_missing_trusted_identity_headers: bool = False

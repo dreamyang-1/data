@@ -24,7 +24,8 @@ from .pipeline import AuthorizedLogicalPlan
 from .recognition_client import RecognitionFailure
 from .context_contract import ContextAwareParse, proposal_schema, CONTRACT_VERSION
 from .context_proposal import discover_context, accept_proposal, proposal_resolution
-from .recognition_repairs import repair_model_parse, repair_collection_handle_mentions
+from .recognition_repairs import (repair_model_parse, repair_collection_handle_mentions,
+    repair_pure_historical_reference)
 from .recognition_initialization import (initial_assignments, initial_time_assignment, source_field_schema,
     align_filter_deletions, collection_set_schema)
 from .pending_recognition import (AmbiguityDraft, PendingResume, clarification_result,
@@ -291,6 +292,11 @@ class RawTurnPlanner:
         context_trace = accept_proposal(session, recognized.context_proposal, discovered,
             state=state, question=request.question)
         parsed = CurrentTurnSemanticParse.model_validate(recognized.model_dump(exclude={'context_proposal'}))
+        parsed, reference_repairs = repair_pure_historical_reference(parsed,
+            context_trace=context_trace, task_context=discovered.model_context)
+        if reference_repairs:
+            logging.getLogger(__name__).info('V2 historical reference representation repaired',
+                extra={'message_id': request.message_id, 'parse_repairs': reference_repairs})
         parsed, repairs = repair_model_parse(parsed, text=request.question, turn_id=request.message_id)
         if repairs:
             logging.getLogger(__name__).info('V2 current-turn representation repaired',

@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from datetime import timedelta
 from pathlib import Path
 import sys
@@ -15,6 +16,10 @@ from app.semantic_v2.limited_scalar_runtime import (
     OAGNET_RUNTIME_FILES,
     SQL_RUNTIME_FILES,
     _build_external_dependencies,
+    _catalog_where_matches,
+    _open_live_read_only_catalog,
+    _ProcessMemoryCatalogRegistry,
+    _ProcessMemoryCatalogStore,
     build_limited_scalar_handler,
     _import_runtime_module,
     data_source_target_identity,
@@ -198,9 +203,12 @@ def valid_transport(prepared, calls):
 
 
 def test_default_runtime_remains_v1_and_candidate_config_fails_closed(provider):
-    assert Settings().runtime_mode == "V1"
-    broken = Settings().model_copy(update={
+    defaults = Settings(_env_file=None)
+    assert defaults.runtime_mode == "V1"
+    assert defaults.limited_scalar_catalog_access == "PUBLISHED"
+    broken = defaults.model_copy(update={
         "runtime_mode": "V2_LIMITED_SCALAR",
+        "redis_url": "redis://127.0.0.1:6379/3",
         "intent_model_api_key": SecretStr("fake"),
         "intent_model_max_retries": 0,
     })
@@ -212,6 +220,22 @@ def test_candidate_requires_exact_time_anchor_pin(provider):
     settings = candidate_settings(provider, limited_scalar_time_field_canonical_id="")
     with pytest.raises(RuntimeError, match="time_field_canonical_id"):
         validate_limited_scalar_settings(settings)
+
+
+def test_limited_scalar_numeric_settings_load_from_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DATA_AGENT_LIMITED_SCALAR_SEMANTIC_MODEL_ID", "81")
+    monkeypatch.setenv("DATA_AGENT_LIMITED_SCALAR_DATA_SOURCE_ID", "58")
+    monkeypatch.setenv("DATA_AGENT_LIMITED_SCALAR_TIME_FIELD_ID", "24400")
+    monkeypatch.setenv("DATA_AGENT_LIMITED_SCALAR_TIME_TABLE_ID", "1880")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.limited_scalar_semantic_model_id == 81
+    assert settings.limited_scalar_data_source_id == 58
+    assert settings.limited_scalar_time_field_id == 24400
+    assert settings.limited_scalar_time_table_id == 1880
 
 
 def test_data_source_target_identity_excludes_password_and_detects_connection_drift():
@@ -274,6 +298,7 @@ def test_external_builder_keeps_session_redis_separate_from_sql_registry(monkeyp
         "pinned_catalog": SimpleNamespace(translate_pinned_catalog=lambda *args, **kwargs: None),
         "semantic_scope": SimpleNamespace(RequestScope=object),
         "sql_translator_prod": SimpleNamespace(SQLTranslatorProd=FakeTranslator),
+        "vector_store": SimpleNamespace(SearchResult=object),
     }
     for name, module in modules.items():
         module.__file__ = str(Path("/verified-runtime") / f"{name}.py")
@@ -287,6 +312,7 @@ def test_external_builder_keeps_session_redis_separate_from_sql_registry(monkeyp
         lambda *args, **kwargs: fake_session_redis,
     )
     settings = Settings().model_copy(update={
+        "limited_scalar_catalog_access": "PUBLISHED",
         "limited_scalar_catalog_target_identity_hash": "target",
         "limited_scalar_data_source_target_digest": data_source_target_digest(
             TEST_SOURCE_TARGET
@@ -301,6 +327,89 @@ def test_external_builder_keeps_session_redis_separate_from_sql_registry(monkeyp
     assert translator_constructor_args == [((), {})]
     assert external.redis is fake_session_redis
     assert external.data_source_target_digest == data_source_target_digest(TEST_SOURCE_TARGET)
+
+
+def test_process_memory_catalog_filter_is_exact_and_rejects_unknown_operators():
+    metadata = {"type": "metric", "semantic_model_id": 81, "business_domain_id": 205}
+    assert _catalog_where_matches(metadata, {
+        "$and": [
+            {"semantic_model_id": 81},
+            {"type": {"$in": ["metric", "entity"]}},
+        ]
+    })
+    assert not _catalog_where_matches(metadata, {"type": {"$in": ["entity"]}})
+    with pytest.raises(RuntimeError, match="CATALOG_FILTER_UNSUPPORTED"):
+        _catalog_where_matches(metadata, {"type": {"$ne": "entity"}})
+
+
+def test_live_read_only_catalog_uses_current_authority_without_external_store_writes():
+    import catalog_publication
+    from test_catalog_publication import authority
+    from vector_store import SearchResult
+
+    snapshot = authority()
+    capture_calls = []
+
+    def capture(model, domains):
+        capture_calls.append((model, list(domains)))
+        return deepcopy(snapshot)
+
+    module = SimpleNamespace(
+        CatalogPublication=catalog_publication.CatalogPublication,
+        capture_catalog=capture,
+        digest=catalog_publication.digest,
+    )
+    modules = {
+        "catalog_publication": module,
+        "vector_store": SimpleNamespace(SearchResult=SearchResult),
+    }
+    scope = snapshot["scope"]
+    target = {
+        "backend": "process-memory-read-only-catalog",
+        "source_identity_hash": snapshot["source_identity_hash"],
+        "scope": scope,
+    }
+    seed_settings = Settings().model_copy(update={
+        "limited_scalar_deployment_id": "context-trial-test",
+        "limited_scalar_catalog_version": snapshot["catalog_version"],
+        "limited_scalar_oagnet_source_digest": "a" * 64,
+    })
+    store = _ProcessMemoryCatalogStore(target, SearchResult)
+    registry = _ProcessMemoryCatalogRegistry(
+        target, seed_settings.limited_scalar_deployment_id, catalog_publication.digest
+    )
+    seed = catalog_publication.CatalogPublication(store, registry, capture)
+    receipt = seed.publish(
+        81, [205], embed_fn=lambda texts: [[0.1, 0.2] for _ in texts],
+        publication_id="internal-context-replacement-trial",
+        producer_revision=seed_settings.limited_scalar_oagnet_source_digest,
+        embedding_contract="process-memory-exact-catalog-v1",
+        expected_catalog_version=snapshot["catalog_version"],
+    )
+    settings = seed_settings.model_copy(update={
+        "limited_scalar_catalog_access": "LIVE_READ_ONLY_SNAPSHOT",
+        "limited_scalar_catalog_target_identity_hash": registry.target_identity_hash,
+        "limited_scalar_vector_index_version": receipt["vector_index_version"],
+    })
+
+    first = _open_live_read_only_catalog(settings, modules)
+    second = _open_live_read_only_catalog(settings, modules)
+    first_pin = first.pin(81, [205])
+    second_pin = second.pin(81, [205])
+    first_identity = first_pin.identity
+    second_identity = second_pin.identity
+    rows = first_pin.get_by_where({"type": {"$in": ["metric", "entity"]}})
+    first_pin.finish()
+    second_pin.finish()
+
+    assert rows
+    assert first_identity == second_identity
+    assert first_identity["catalog_version"] == snapshot["catalog_version"]
+    assert first_identity["target_identity_hash"] == registry.target_identity_hash
+    assert all(call == (81, [205]) for call in capture_calls)
+    assert len(capture_calls) >= 10  # every construction/pin/finish rechecks authority
+    with pytest.raises(RuntimeError, match="CONTEXT_VECTOR_SEARCH_UNSUPPORTED"):
+        first.store.search([0.1, 0.2])
 
 
 def test_candidate_rejects_wrong_data_source_target_before_catalog_or_sql(provider):

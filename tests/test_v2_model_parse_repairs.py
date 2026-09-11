@@ -2,7 +2,8 @@ import json
 from pathlib import Path
 import pytest
 from app.semantic_v2.pipeline import CurrentTurnSemanticParse, CurrentTurnParser
-from app.semantic_v2.recognition_repairs import repair_model_parse, repair_collection_handle_mentions
+from app.semantic_v2.recognition_repairs import (repair_model_parse, repair_collection_handle_mentions,
+    repair_pure_historical_reference)
 from app.semantic_v2.enums import SemanticRole
 
 
@@ -118,6 +119,53 @@ def test_repeated_time_token_cannot_select_an_occurrence():
     with pytest.raises(ValueError):validate(text,result)
 
 
+def historical_reference_parse(*, extra_operation=False, new_value=False):
+    text = '返回刚才江苏订单'
+    value = CurrentTurnSemanticParse.model_validate({
+        'mentions': [
+            {'mention_id': 'jiangsu', 'surface': '北京' if new_value else '江苏',
+             'normalized_surface': '北京市' if new_value else '江苏省', 'start_char': 4, 'end_char': 6,
+             'candidate_roles': ['FILTER_VALUE'], 'explicit': True, 'source_turn_id': 'turn'},
+            {'mention_id': 'orders', 'surface': '订单', 'normalized_surface': '订单',
+             'start_char': 6, 'end_char': 8, 'candidate_roles': ['SUBJECT_ENTITY'],
+             'explicit': True, 'source_turn_id': 'turn'},
+        ],
+        'dialogue_act_candidates': ['RETURN_TO_TOPIC'],
+        'operation_markers': ([{'mention_id': 'jiangsu', 'operation_hint': 'REPLACE',
+            'slot_name': 'filter_expression'}] if extra_operation else []),
+        'reference_signals': ['HISTORICAL'],
+        'explicit_slot_mentions': {'subject': ['orders'], 'filter_expression': ['jiangsu']},
+        'query_shape_prediction': 'SCALAR_AGGREGATE',
+    })
+    context = {'candidate_tasks': [{
+        'task_id': 'task:old', 'metrics': [{'name': '订单笔数'}], 'dimensions': [],
+        'subject': None, 'filters': {'field_ref': {'name': '省份名称'},
+            'value': {'ref': {'name': '江苏省'}}}, 'time': {'anchor': {'name': '订单日期'}},
+    }]}
+    trace = {'FINAL_RELATION': 'RETURN_TO_TOPIC', 'FINAL_TARGET': 'task:old'}
+    return value, trace, context
+
+
+def test_validated_pure_historical_description_removes_duplicate_task_mentions_only():
+    value, trace, context = historical_reference_parse()
+    repaired, repairs = repair_pure_historical_reference(value,
+        context_trace=trace, task_context=context)
+    assert value.mentions and value.explicit_slot_mentions
+    assert repaired.mentions == [] and repaired.explicit_slot_mentions == {}
+    assert repairs[0]['reason_code'] == 'VALIDATED_HISTORICAL_TASK_DESCRIPTION_ONLY'
+
+
+@pytest.mark.parametrize('change', ['operation', 'new_value', 'wrong_target', 'modify_relation'])
+def test_historical_description_repair_preserves_current_or_unverified_evidence(change):
+    value, trace, context = historical_reference_parse(
+        extra_operation=change == 'operation', new_value=change == 'new_value')
+    if change == 'wrong_target': trace['FINAL_TARGET'] = 'task:missing'
+    if change == 'modify_relation': trace['FINAL_RELATION'] = 'MODIFY'
+    repaired, repairs = repair_pure_historical_reference(value,
+        context_trace=trace, task_context=context)
+    assert repairs == [] and repaired.model_dump() == value.model_dump()
+
+
 def test_generation_schema_closes_slots_without_changing_frozen_models():
     from app.semantic_v2.recognition import current_turn_schema,EDIT_SLOTS
     from app.semantic_v2.registries import SlotDefinitionRegistry
@@ -191,7 +239,7 @@ def test_collection_handle_repair_keeps_identity_role_operation_and_evidence(slo
     assert '销售数量' not in json.dumps(trace,ensure_ascii=False) and '城市' not in json.dumps(trace,ensure_ascii=False)
 
 
-@pytest.mark.parametrize('fault',['repeated_surface','catalog_collision','alias_only','outside_evidence','unresolved',
+@pytest.mark.parametrize('fault',['repeated_surface','catalog_collision','outside_evidence','unresolved',
     'foreign_handle','wrong_role','authority_fields','missing_correct_handle','different_identity'])
 def test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence(fault):
     from copy import deepcopy
@@ -200,8 +248,6 @@ def test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence(f
     if fault=='catalog_collision':
         candidates.append({**candidates[1],'binding_handle':'collision'})
         handles['collision']=('different-identity','MEASURE','m1')
-    if fault=='alias_only':
-        for c in candidates:c['name']='另一名称';c['aliases']=['销售数量']
     if fault=='outside_evidence':draft.edits[0].evidence_mention_ids=['m2']
     if fault=='unresolved':draft.unresolved_mention_ids=['m1']
     if fault=='foreign_handle':draft.edits[0].value={'binding_handle':'not-offered'}
@@ -212,3 +258,26 @@ def test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence(f
     original=deepcopy(draft.model_dump(mode='json'))
     repaired,trace=repair_collection_handle_mentions(draft,parse=parsed,handles=handles,candidates=candidates)
     assert repaired.model_dump(mode='json')==original and not trace
+
+def test_collection_handle_repair_accepts_one_exact_governed_synonym() -> None:
+    draft, parsed, handles, candidates = collection_fixture()
+    surface = parsed.mentions[1].surface
+    for candidate in candidates:
+        candidate['name'] = 'canonical display name'
+        candidate['aliases'] = [surface]
+
+    repaired, trace = repair_collection_handle_mentions(
+        draft, parse=parsed, handles=handles, candidates=candidates
+    )
+
+    assert repaired.edits[0].value['binding_handle'] == 'correct'
+    assert len(trace) == 1
+
+
+def test_catalog_alias_storage_is_split_without_fuzzy_matching() -> None:
+    from app.semantic_v2.pending_recognition import governed_aliases
+
+    assert governed_aliases({
+        'type': 'metric',
+        'synonyms': 'first alias, second alias，third alias; fourth alias',
+    }) == ['first alias', 'second alias', 'third alias', 'fourth alias']

@@ -38,10 +38,15 @@ class RecognizedClarification(m.StrictModel):
 
 
 def governed_aliases(metadata):
-    """Accept governed list terms or one literal term; never guess separators."""
+    """Read governed alias terms using the catalog's stored-list convention."""
     raw=metadata.get('entity_alias' if metadata.get('type')=='entity' else 'synonyms',[])
-    if isinstance(raw,str):return [raw] if raw else []
-    return list(dict.fromkeys(x for x in raw if isinstance(x,str) and x)) if isinstance(raw,list) else []
+    if isinstance(raw,str):
+        values=[raw]
+        for separator in (',', '，', ';', '；', '\n'):
+            values=[part for value in values for part in value.split(separator)]
+        raw=values
+    return list(dict.fromkeys(x.strip() for x in raw
+        if isinstance(x,str) and x.strip())) if isinstance(raw,list) else []
 
 
 def selected_option(pending, text):
