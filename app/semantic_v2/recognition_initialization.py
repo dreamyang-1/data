@@ -172,7 +172,7 @@ subject to the existing time and binding contracts.
         presence='PRESENT',evidence_mention_ids=evidence)
 
 
-def source_field_schema(schema,candidates,*,initial_range=False):
+def source_field_schema(schema,candidates,*,parse=None,initial_range=False):
     """Source lookup accepts ATTRIBUTE fields, unlike general FILTER_FIELD refs.
 
 Narrow generation to eligible handles; do not remove a selected invalid handle
@@ -183,6 +183,14 @@ or convert a dimension to an attribute at consumption time.
     field=schema['$defs']['SourceValueRequestDraft']['properties']['field_binding_handles']
     if handles:field['items']={'type':'string','enum':handles}
     else:field['maxItems']=0
+    requests=schema['properties']['source_value_requests']
+    mention_ids=sorted({mention.mention_id for mention in getattr(parse,'mentions',())
+        if mention.explicit and 'FILTER_VALUE' in mention.candidate_roles})
+    if mention_ids:
+        schema['$defs']['SourceValueRequestDraft']['properties']['mention_id']={
+            'type':'string','enum':mention_ids}
+    else:
+        requests['maxItems']=0
     if initial_range and not any(c['role']=='TIME_FIELD' for c in candidates):
         # A bare time range offers no anchor handle. Offer the supported initial
         # component representation instead of asking for an invented reference.
@@ -191,5 +199,5 @@ or convert a dimension to an attribute at consumption time.
         schema['properties']['temporal_edits']['description']=(
             'Initial current time: supply RANGE/SET (and GRAIN/SET only if explicitly requested). '
             'The runtime verifies the metric Catalog time anchor; do not invent an anchor handle.')
-    schema['$comment']='v2-semantic-initialization-generation-v2'
+    schema['$comment']='v2-semantic-initialization-generation-v3'
     return schema

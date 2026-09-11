@@ -176,7 +176,7 @@ def semantic_task_schema(parse, tasks, *, context_relation=None, candidates=None
     schema['properties']['historical_task_handle'] = ({
         'anyOf': [{'type':'string','enum':allowed}, {'type':'null'}], 'default':None}
         if allowed else {'type':'null','default':None})
-    return source_field_schema(schema,candidates,initial_range=(context_relation=='NEW_TASK'
+    return source_field_schema(schema,candidates,parse=parse,initial_range=(context_relation=='NEW_TASK'
         and any('TIME_RANGE' in mention.candidate_roles for mention in parse.mentions))) if candidates is not None else schema
 
 

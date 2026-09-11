@@ -170,6 +170,12 @@ def hydrate_choice(value, handles, session):
 
 
 async def source_filter_patch(planner, session, parse, draft, handles, base, now, *, deferred, prior, target):
+    from .source_value_repairs import align_source_value_requests
+    draft, repairs = align_source_value_requests(parse, draft, handles, base=base, target=target)
+    if repairs:
+        import logging
+        logging.getLogger(__name__).info('V2 current source-value representation repaired',
+            extra={'message_id': session._request.message_id, 'source_value_repairs': repairs})
     variants = await resolve_requests(session, parse, draft, handles, target, planner.model)
     patches, labels = {}, {}
     last_rejected = None
