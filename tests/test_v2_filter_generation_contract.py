@@ -75,7 +75,7 @@ async def test_actual_runtime_keeps_native_binding_and_rejection(source_catalog,
         return output
     steps = [(text, parsed, draft)]; engine, transport = planner(source_catalog, steps)
     if fault:
-        with pytest.raises(ValueError, match='V2_SLOT_OPERATION_CONFLICT'):
+        with pytest.raises(ValueError, match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
             await turns(engine, steps)
     else:
         result = (await turns(engine, steps))[0]

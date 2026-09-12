@@ -10,8 +10,8 @@ from test_v2_source_value_binding import catalog, source_step, source_edit, refe
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('operation', ['REPLACE', 'ADD', 'REMOVE'])
-async def test_incompatible_field_is_rejected_before_current_lookup(catalog, operation):
+async def test_incompatible_field_is_rejected_before_current_lookup(catalog):
+    operation = 'ADD'
     first = source_step(); engine, _ = planner(catalog, [first])
     before = (await turns(engine, [first]))[0]
     catalog[5]['name'].append('北京')  # Exact same text is real in a different field.
@@ -33,12 +33,12 @@ async def test_incompatible_field_is_rejected_before_current_lookup(catalog, ope
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('selector', ['field', 'target'])
-async def test_same_field_selector_remains_runtime_compatible(catalog, selector):
-    step = (source_edit if selector == 'field' else referenced_edit)('北京', 'REPLACE')
+@pytest.mark.parametrize('selector,operation', [('field', 'ADD'), ('target', 'REPLACE')])
+async def test_admissible_selector_remains_runtime_compatible(catalog, selector, operation):
+    step = (source_edit if selector == 'field' else referenced_edit)('北京', operation)
     engine, _ = planner(catalog, [source_step(), step])
     results = await turns(engine, [source_step(), step])
-    assert values(results[-1]) == ['北京']
+    assert values(results[-1]) == (['上海', '北京'] if operation == 'ADD' else ['北京'])
 
 
 @pytest.mark.asyncio

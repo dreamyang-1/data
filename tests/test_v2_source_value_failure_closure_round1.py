@@ -28,40 +28,28 @@ def omit_initial_filter(*, operation='SET', wrong_request_mention=None):
 
 
 @pytest.mark.asyncio
-async def test_exact_current_add_request_initializes_omitted_filter(catalog, caplog):
+async def test_exact_current_add_request_without_filter_is_rejected_at_schema_boundary(catalog):
     step = omit_initial_filter(operation='ADD')
-    with caplog.at_level('INFO', logger='app.semantic_v2.source_value_recognition'):
-        result = (await turns(planner(catalog, [step])[0], [step]))[0]
-    assert values(result) == ['上海']
-    assert result.next_state.source_value_bindings
-    traces = [record.source_value_repairs for record in caplog.records
-        if hasattr(record, 'source_value_repairs')]
-    assert traces and traces[0][-1]['reason_code'] == 'CURRENT_SOURCE_REQUEST_INITIAL_FILTER'
-    assert traces[0][-1]['operation'] == 'ADD'
+    with pytest.raises(ValueError, match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
+        await turns(planner(catalog, [step])[0], [step])
 
 
 @pytest.mark.asyncio
 async def test_omitted_set_filter_stays_rejected_without_model_operand(catalog):
     step = omit_initial_filter(operation='SET')
-    with pytest.raises(ValueError, match='V2_SOURCE_VALUE_REQUEST_NOT_APPLIED'):
+    with pytest.raises(ValueError, match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
         await turns(planner(catalog, [step])[0], [step])
 
 
 @pytest.mark.asyncio
-async def test_request_pointer_uses_same_current_identity_as_field_and_edit(catalog, caplog):
+async def test_wrong_request_pointer_is_rejected_at_schema_boundary(catalog):
     step = omit_initial_filter(wrong_request_mention='m1')
-    with caplog.at_level('INFO', logger='app.semantic_v2.source_value_recognition'):
-        result = (await turns(planner(catalog, [step])[0], [step]))[0]
-    assert values(result) == ['上海']
-    traces = [record.source_value_repairs for record in caplog.records
-        if hasattr(record, 'source_value_repairs')]
-    pointer = next(item for item in traces[0]
-        if item['reason_code'] == 'CURRENT_SOURCE_REQUEST_MENTION_IDENTITY')
-    assert pointer['from_mention_id'] == 'm1' and pointer['to_mention_id'] == 'm0'
+    with pytest.raises(ValueError, match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
+        await turns(planner(catalog, [step])[0], [step])
 
 
 @pytest.mark.asyncio
-async def test_omitted_add_repairs_copied_request_pointer_from_exact_field_identity(catalog):
+async def test_omitted_add_with_wrong_request_pointer_is_rejected_at_schema_boundary(catalog):
     step = omit_initial_filter(operation='ADD', wrong_request_mention='m1')
 
     def without_filter(context):
@@ -70,9 +58,9 @@ async def test_omitted_add_repairs_copied_request_pointer_from_exact_field_ident
             if edit['slot_path'] != 'filter_expression']
         return value
 
-    result = (await turns(planner(catalog, [(step[0], step[1], without_filter)])[0],
-        [(step[0], step[1], without_filter)]))[0]
-    assert values(result) == ['上海']
+    with pytest.raises(ValueError, match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
+        await turns(planner(catalog, [(step[0], step[1], without_filter)])[0],
+            [(step[0], step[1], without_filter)])
 
 
 def test_field_handle_rebind_preserves_catalog_identity_and_current_evidence():
