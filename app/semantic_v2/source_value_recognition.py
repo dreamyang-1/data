@@ -280,7 +280,8 @@ def hydrate_choice(value, handles, session):
             else proof.field_ref.model_dump(mode='json'))
 
 
-async def source_filter_patch(planner, session, parse, draft, handles, base, now, *, deferred, prior, target):
+async def source_filter_patch(planner, session, parse, draft, handles, base, now, *, deferred, prior, target,
+                              deterministic_evidence=()):
     from .source_value_repairs import align_source_value_requests
     draft, repairs = align_source_value_requests(parse, draft, handles, base=base, target=target)
     if repairs:
@@ -294,7 +295,8 @@ async def source_filter_patch(planner, session, parse, draft, handles, base, now
         selected = choice_handles(handles, choices)
         try:
             patch, traces = planner._patch(session, parse, draft, selected, base, now,
-                deferred=deferred, prior=prior, target=target)
+                deferred=deferred, prior=prior, target=target,
+                deterministic_evidence=deterministic_evidence)
             reduced = apply_task_patch(prior, patch, clear_barriers=target.clear_barriers if target else [])
             validate_source_value_fields(reduced.semantics, tuple(session._bindings.values()))
         except (ValueError, RecognitionFailure) as exc:

@@ -87,7 +87,7 @@ def planner(catalog,steps):
     settings=Settings(_env_file=None,intent_model_base_url='https://model.invalid/v1',
         intent_model_api_key='test-only-key',intent_model_name='existing-configured-model',intent_model_max_retries=0)
     client=RecognitionModelClient(settings,httpx.MockTransport(transport))
-    return RawTurnPlanner(client,catalog[0],clock=lambda:NOW),transport
+    return RawTurnPlanner(client,catalog[0],clock=lambda:NOW,deterministic_grounding=False),transport
 
 
 async def turns(engine,steps):
