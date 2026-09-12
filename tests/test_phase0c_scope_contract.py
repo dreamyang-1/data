@@ -436,6 +436,22 @@ def test_model_wide_query_can_narrow_without_changing_authorization():
     assert request.business_domain_ids == []
 
 
+def test_pure_v1_omitted_domain_contract_ignores_department_metadata():
+    current = chat(department='ORG_ADMIN')
+    request = canonical(current)
+    request.resolved_business_domain_ids = [205]
+    bind_authorized_scope(request, current.authorized_semantic_scope)
+
+    assert current.business_domain_ids == []
+    assert current.authorized_semantic_scope.scope_mode == 'MODEL_WIDE'
+    assert request.business_domain_selection_mode == 'MODEL_WIDE'
+    assert request.business_domain_ids == []
+    assert request.resolved_business_domain_ids == [205]
+    assert DataAnalysisOrchestrator._effective_query_business_domain_id(
+        request, current
+    ) == 205
+
+
 @pytest.mark.asyncio
 async def test_validated_semantic_recall_rejects_different_database_scope():
     from app.services.validated_query_recall import ValidatedQueryExample, ValidatedQueryRecall

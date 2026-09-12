@@ -1,0 +1,31 @@
+{
+  "status": "MODEL_WIDE_SCOPE_CONTRACT_COMPLETE",
+  "baseline_commit": "6b43ce691a54988eecddd1d297ed5ced9b2047be",
+  "production_files": [
+    "app/semantic_v2/context_v1_execution.py",
+    "app/semantic_v2/catalog_bridge.py",
+    "app/semantic_v2/recognition.py",
+    "app/semantic_v2/authorized_contract.py"
+  ],
+  "test_files": [
+    "tests/test_v2_context_v1_execution_bridge.py",
+    "tests/test_phase0c_scope_contract.py",
+    "tests/test_v2_authorized_catalog_bridge.py"
+  ],
+  "documentation_files": [
+    "docs/v2_cutover/context_v1_scope_contract/validation_report.md",
+    "docs/v2_cutover/context_v1_scope_contract/test_delta.json",
+    "docs/v2_cutover/context_v1_scope_contract/change_manifest.json"
+  ],
+  "excluded": [
+    "app/api.py",
+    ".env",
+    ".eval_private",
+    "logs",
+    "Oagnet",
+    "SQL Translator",
+    "Java platform"
+  ],
+  "deployment": "NOT_RUN",
+  "java_auto_fill_205": "NOT_PRESENT_NOT_DEPLOYED"
+}

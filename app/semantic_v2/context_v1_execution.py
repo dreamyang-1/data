@@ -144,6 +144,7 @@ def validate_context_v1_settings(settings: Settings) -> dict[str, Any]:
         not domains
         or any(type(value) is not int or value <= 0 for value in domains)
         or len(domains) != len(set(domains))
+        or len(domains) != 1
     ):
         raise RuntimeError("V2_CONTEXT_V1_EXPLICIT_SCOPE_REQUIRED")
     required = {
@@ -173,6 +174,37 @@ def validate_context_v1_settings(settings: Settings) -> dict[str, Any]:
         "catalog_version": settings.limited_scalar_catalog_version,
         "vector_index_version": settings.limited_scalar_vector_index_version,
         "oagnet_source_digest": actual_digest,
+    }
+
+
+def _resolve_context_v1_request_scope(
+    chat: ChatRequest,
+    deployment_scope: dict[str, Any],
+) -> dict[str, Any]:
+    """Resolve ingress scope without changing the caller's selection mode.
+
+    The deployment domain list is the reviewed set currently owned by the
+    semantic model. An omitted request list therefore selects MODEL_WIDE and
+    resolves to that set; it is not rewritten into an explicit-domain grant.
+    Legacy transport metadata such as ``department`` is deliberately absent
+    from this decision.
+    """
+    expected_model = deployment_scope["semantic_model_id"]
+    model_domains = list(deployment_scope["business_domain_ids"])
+    requested = list(chat.business_domain_ids)
+    if (
+        chat.semantic_model_id != expected_model
+        or len(requested) > 1
+        or any(domain not in model_domains for domain in requested)
+    ):
+        raise ValueError("V2_CONTEXT_V1_SCOPE_PIN_MISMATCH")
+    return {
+        "semantic_model_id": expected_model,
+        "requested_business_domain_ids": requested,
+        "resolved_business_domain_ids": requested or model_domains,
+        "selection_mode": (
+            "EXPLICIT_DOMAINS" if requested else "MODEL_WIDE"
+        ),
     }
 
 
@@ -561,32 +593,41 @@ def build_context_v1_execution_handler(
         expected_scope["semantic_model_id"],
         expected_scope["business_domain_ids"],
     )
-    identity = pin.identity
-    if (
-        identity.get("catalog_version") != receipt["catalog_version"]
-        or identity.get("vector_index_version") != receipt["vector_index_version"]
-        or identity.get("target_identity_hash")
-            != settings.limited_scalar_catalog_target_identity_hash
-    ):
-        raise RuntimeError("V2_CONTEXT_V1_CATALOG_PIN_MISMATCH")
-    pin.finish()
-
-    def require_scope(chat: ChatRequest) -> None:
+    try:
+        catalog_identity = pin.identity
         if (
-            chat.semantic_model_id != expected_scope["semantic_model_id"]
-            or list(chat.business_domain_ids)
-                != expected_scope["business_domain_ids"]
+            catalog_identity.get("catalog_version") != receipt["catalog_version"]
+            or catalog_identity.get("vector_index_version")
+                != receipt["vector_index_version"]
+            or catalog_identity.get("target_identity_hash")
+                != settings.limited_scalar_catalog_target_identity_hash
         ):
-            raise ValueError("V2_CONTEXT_V1_SCOPE_PIN_MISMATCH")
+            raise RuntimeError("V2_CONTEXT_V1_CATALOG_PIN_MISMATCH")
+    finally:
+        pin.finish()
+    model_wide_domains = list(expected_scope["business_domain_ids"])
+
+    def require_scope(chat: ChatRequest) -> dict[str, Any]:
+        return _resolve_context_v1_request_scope(chat, expected_scope)
 
     def context_resolver(chat: ChatRequest, trusted: TrustedIdentity):
-        require_scope(chat)
-        session = ScopedPlanSession(chat, trusted, dependencies.publication)
+        resolved_scope = require_scope(chat)
+        session = ScopedPlanSession(
+            chat,
+            trusted,
+            dependencies.publication,
+            resolved_business_domain_ids=resolved_scope[
+                "resolved_business_domain_ids"
+            ],
+        )
         context = session.context
         if (
-            context.catalog_pin.catalog_version != receipt["catalog_version"]
+            context.catalog_pin.catalog_version
+                != catalog_identity["catalog_version"]
             or context.catalog_pin.vector_index_version
-                != receipt["vector_index_version"]
+                != catalog_identity["vector_index_version"]
+            or context.catalog_pin.target_identity_hash
+                != catalog_identity["target_identity_hash"]
         ):
             raise ValueError("V2_CONTEXT_V1_SCOPE_PIN_MISMATCH")
         session.accept_catalog()
@@ -599,7 +640,7 @@ def build_context_v1_execution_handler(
     )
 
     async def context_planner(chat, trusted, state, plans, pending):
-        require_scope(chat)
+        resolved_scope = require_scope(chat)
         previous = ConversationState.model_validate(state.payload) if state else None
         result = await engine.run(
             chat,
@@ -608,6 +649,9 @@ def build_context_v1_execution_handler(
             plans=plans,
             pending=pending,
             allow_standalone_new_task_passthrough=True,
+            resolved_business_domain_ids=resolved_scope[
+                "resolved_business_domain_ids"
+            ],
         )
         if isinstance(result, RecognizedStandaloneNewTask):
             logger.info(
@@ -634,7 +678,14 @@ def build_context_v1_execution_handler(
                 clarification_trace=result.trace,
                 bridge_route="V2_USER_AMBIGUITY",
             )
-        session = ScopedPlanSession(chat, trusted, dependencies.publication)
+        session = ScopedPlanSession(
+            chat,
+            trusted,
+            dependencies.publication,
+            resolved_business_domain_ids=resolved_scope[
+                "resolved_business_domain_ids"
+            ],
+        )
         session.restore(result.next_state, kind="CONVERSATION")
         plan = AuthorizedLogicalPlan.model_validate(
             session.restore(result.plan_state, kind="LAST_REQUEST")
@@ -673,13 +724,13 @@ def build_context_v1_execution_handler(
             )
             try:
                 current_identity = current.identity
-                return bool(
-                    current_identity.get("catalog_version")
-                        == receipt["catalog_version"]
-                    and current_identity.get("vector_index_version")
-                        == receipt["vector_index_version"]
-                    and current_identity.get("target_identity_hash")
-                        == settings.limited_scalar_catalog_target_identity_hash
+                return all(
+                    current_identity.get(field) == catalog_identity.get(field)
+                    for field in (
+                        "catalog_version",
+                        "vector_index_version",
+                        "target_identity_hash",
+                    )
                 )
             finally:
                 current.finish()
@@ -716,6 +767,22 @@ def build_context_v1_execution_handler(
         "store_schema": store.schema_version,
         "store_namespace_mode": store.namespace_mode,
         "runtime_module_origins_verified": external is None,
+        "scope_contract": {
+            "model_wide": {
+                "selection_mode": "MODEL_WIDE",
+                "requested_business_domain_ids": [],
+                "resolved_business_domain_ids": model_wide_domains,
+            },
+            "explicit": {
+                "selection_mode": "EXPLICIT_DOMAINS",
+                "requested_business_domain_ids": list(
+                    expected_scope["business_domain_ids"]
+                ),
+                "resolved_business_domain_ids": list(
+                    expected_scope["business_domain_ids"]
+                ),
+            },
+        },
     }
     return V2ContextV1ExecutionBridge(
         store=store,

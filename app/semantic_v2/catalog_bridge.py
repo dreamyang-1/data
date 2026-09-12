@@ -55,17 +55,36 @@ RECORD_TYPES = {
 
 
 class ScopedPlanSession:
-    def __init__(self, request: ChatRequest, identity: TrustedIdentity, catalog: CatalogProvider):
+    def __init__(
+        self,
+        request: ChatRequest,
+        identity: TrustedIdentity,
+        catalog: CatalogProvider,
+        *,
+        resolved_business_domain_ids=None,
+    ):
         # Revalidate copies: mutated request objects/history cannot mint scope.
         self._request = ChatRequest.model_validate(request.model_dump())
         self._identity = TrustedIdentity.model_validate(identity.model_dump())
         scope = self._request.authorized_semantic_scope
         if len(scope.business_domain_ids) > 1:
             raise ValueError('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED')
-        self._pin = catalog.pin(scope.semantic_model_id, scope.business_domain_ids)
+        if resolved_business_domain_ids is None:
+            resolved_domains = scope.business_domain_ids
+        else:
+            values = list(resolved_business_domain_ids)
+            if (any(type(value) is not int or value <= 0 for value in values)
+                    or len(values) != len(set(values)) or len(values) > 1):
+                raise ValueError('REQUEST_SCOPE_INVALID')
+            resolved_domains = tuple(sorted(values))
+            if scope.business_domain_ids and resolved_domains != scope.business_domain_ids:
+                raise ValueError('CATALOG_SCOPE_MISMATCH')
+        self._resolved_business_domain_ids = resolved_domains
+        self._pin = catalog.pin(scope.semantic_model_id, resolved_domains)
         receipt = self._pin.identity
         expected = {'semantic_model_id': scope.semantic_model_id,
-            'business_domain_ids': list(scope.business_domain_ids), 'scope_mode': scope.scope_mode}
+            'business_domain_ids': list(resolved_domains),
+            'scope_mode': 'EXPLICIT_DOMAINS' if resolved_domains else 'MODEL_WIDE'}
         if receipt.get('scope') != expected:
             raise ValueError('CATALOG_SCOPE_MISMATCH')
         self._context = AuthorizedScopeContext(authorized_scope=scope,
@@ -73,7 +92,7 @@ class ScopedPlanSession:
                 'tenant': self._identity.tenant_id, 'user': self._identity.user_id}),
             catalog_pin=CatalogPinIdentity.model_validate({k: receipt[k] for k in CatalogPinIdentity.model_fields}))
         self._snapshot = SnapshotContext(semantic_model_id=str(scope.semantic_model_id),
-            business_domain_ids=[str(d) for d in scope.business_domain_ids],
+            business_domain_ids=[str(d) for d in resolved_domains],
             database_id=str(scope.database_id) if scope.database_id is not None else None,
             knowledge_base_names=list(scope.knowledge_base_names),
             catalog_version=receipt['catalog_version'], semantic_model_version=receipt['catalog_version'],

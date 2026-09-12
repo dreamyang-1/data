@@ -76,6 +76,28 @@ def test_current_scope_compiles_without_database_or_invented_acl(provider,domain
         plan.payload.measures.clear()
 
 
+def test_model_wide_authorization_uses_reviewed_resolved_catalog_scope(provider):
+    current = ScopedPlanSession(
+        request([]),
+        IDENTITY,
+        provider[0],
+        resolved_business_domain_ids=[205],
+    )
+    result = compile_plan(current)
+
+    assert current.context.authorized_scope.scope_mode == 'MODEL_WIDE'
+    assert current.context.authorized_scope.business_domain_ids == ()
+    assert result.logical_plan.snapshot_requirement.business_domain_ids == ['205']
+    assert (
+        result.logical_plan.permission_requirement.authorized_scope.scope_mode
+        == 'MODEL_WIDE'
+    )
+    assert (
+        result.logical_plan.permission_requirement.authorized_scope.business_domain_ids
+        == ()
+    )
+
+
 def test_model_owned_global_dimension_does_not_invent_shared_domain_grant(provider):
     current=session(provider,request([]))
     metric=measure(current)

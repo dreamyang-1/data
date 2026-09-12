@@ -15,6 +15,7 @@ from app.semantic_v2.context_v1_execution import (
     ContextV1ExternalDependencies,
     ResolvedContextTurn,
     V2ContextV1ExecutionBridge,
+    _resolve_context_v1_request_scope,
     _standalone_execution_display,
     build_context_v1_execution_handler,
     validate_context_v1_settings,
@@ -24,6 +25,7 @@ from app.semantic_v2.persisted_scalar_api import RedisScalarSessionStore
 from app.semantic_v2.recognition_client import RecognitionFailure
 from app.semantic_v2.state_machine import ConversationState
 from test_v2_authorized_catalog_bridge import IDENTITY, provider, request
+from test_catalog_publication import authority, publish, reseal, system
 from test_v2_limited_scalar_deployment import DeploymentRedis, candidate_settings
 from test_v2_persisted_scalar_api import NOW
 from app.semantic_v2.catalog_bridge import ScopedPlanSession
@@ -47,6 +49,21 @@ def response(chat, answer="V1 result"):
         requested_business_domain_ids=list(chat.business_domain_ids),
         business_domain_selection_mode="EXPLICIT",
     )
+
+
+@pytest.fixture
+def context_scope_provider():
+    service, store, registry, redis, _captures, overrides = system()
+    model_wide = authority((), model=81)
+    model_wide["documents"] = [
+        document
+        for document in model_wide["documents"]
+        if document["business_domain"]["id"] == 205
+    ]
+    overrides[(81, tuple())] = reseal(model_wide)
+    publish(service, model=81, domains=[205])
+    publish(service, model=81, domains=[])
+    return service, store, registry, redis, overrides
 
 
 def state_artifact(context, chat, version):
@@ -99,9 +116,11 @@ async def _ready():
     }
 
 
-def test_new_runtime_mode_is_opt_in_and_builder_has_no_v2_execution_transport(provider):
+def test_new_runtime_mode_is_opt_in_and_builder_has_no_v2_execution_transport(
+    context_scope_provider,
+):
     assert Settings(_env_file=None).model_copy(update={"runtime_mode": "V1"}).runtime_mode == "V1"
-    settings = candidate_settings(provider).model_copy(update={
+    settings = candidate_settings(context_scope_provider).model_copy(update={
         "runtime_mode": "V2_CONTEXT_V1_EXECUTION",
     })
     receipt = validate_context_v1_settings(settings)
@@ -118,7 +137,7 @@ def test_new_runtime_mode_is_opt_in_and_builder_has_no_v2_execution_transport(pr
         settings,
         v1_workflow=Workflow(),
         external=ContextV1ExternalDependencies(
-            publication=provider[0],
+            publication=context_scope_provider[0],
             model=NoCallModel(),
             redis=DeploymentRedis(),
         ),
@@ -127,6 +146,110 @@ def test_new_runtime_mode_is_opt_in_and_builder_has_no_v2_execution_transport(pr
     assert receipt["runtime_mode"] == "V2_CONTEXT_V1_EXECUTION"
     assert handler.startup_receipt["v2_limited_scalar_used_for_execution"] is False
     assert ":v2-context-v1-execution:" in handler.store.prefix
+
+
+def _scope_contract_handler(context_scope_provider):
+    settings = candidate_settings(context_scope_provider).model_copy(update={
+        "runtime_mode": "V2_CONTEXT_V1_EXECUTION",
+    })
+
+    class NoCallModel:
+        async def complete(self, **kwargs):
+            raise AssertionError("scope validation must not call the model")
+
+    class Workflow:
+        async def ainvoke(self, value):
+            raise AssertionError("scope validation must not call V1")
+
+    handler = build_context_v1_execution_handler(
+        settings,
+        v1_workflow=Workflow(),
+        external=ContextV1ExternalDependencies(
+            publication=context_scope_provider[0],
+            model=NoCallModel(),
+            redis=DeploymentRedis(),
+        ),
+    )
+    return settings, handler
+
+
+def test_scope_contract_a_omitted_domains_are_model_wide_and_resolve_to_205(
+    context_scope_provider,
+):
+    settings, handler = _scope_contract_handler(context_scope_provider)
+    chat = request(domains=())
+
+    resolved = _resolve_context_v1_request_scope(
+        chat,
+        {
+            "semantic_model_id": settings.limited_scalar_semantic_model_id,
+            "business_domain_ids": settings.limited_scalar_business_domain_ids,
+        },
+    )
+    context = handler.context_resolver(chat, IDENTITY)
+
+    assert resolved == {
+        "semantic_model_id": 81,
+        "requested_business_domain_ids": [],
+        "resolved_business_domain_ids": [205],
+        "selection_mode": "MODEL_WIDE",
+    }
+    assert context.authorized_scope.scope_mode == "MODEL_WIDE"
+    assert context.authorized_scope.business_domain_ids == ()
+    assert handler.startup_receipt["scope_contract"]["model_wide"] == {
+        "selection_mode": "MODEL_WIDE",
+        "requested_business_domain_ids": [],
+        "resolved_business_domain_ids": [205],
+    }
+
+
+def test_scope_contract_b_explicit_205_remains_explicit(context_scope_provider):
+    settings, handler = _scope_contract_handler(context_scope_provider)
+    chat = request(domains=(205,))
+
+    resolved = _resolve_context_v1_request_scope(
+        chat,
+        {
+            "semantic_model_id": settings.limited_scalar_semantic_model_id,
+            "business_domain_ids": settings.limited_scalar_business_domain_ids,
+        },
+    )
+    context = handler.context_resolver(chat, IDENTITY)
+
+    assert resolved["selection_mode"] == "EXPLICIT_DOMAINS"
+    assert resolved["resolved_business_domain_ids"] == [205]
+    assert context.authorized_scope.scope_mode == "EXPLICIT_DOMAINS"
+    assert context.authorized_scope.business_domain_ids == (205,)
+
+
+def test_scope_contract_c_explicit_foreign_domain_fails_closed(
+    context_scope_provider,
+):
+    _settings, handler = _scope_contract_handler(context_scope_provider)
+
+    with pytest.raises(ValueError, match="V2_CONTEXT_V1_SCOPE_PIN_MISMATCH"):
+        handler.context_resolver(request(domains=(999,)), IDENTITY)
+
+
+def test_scope_contract_d_department_is_not_a_business_domain(
+    context_scope_provider,
+):
+    settings, handler = _scope_contract_handler(context_scope_provider)
+    chat = request(domains=(), department="ORG_ADMIN")
+
+    resolved = _resolve_context_v1_request_scope(
+        chat,
+        {
+            "semantic_model_id": settings.limited_scalar_semantic_model_id,
+            "business_domain_ids": settings.limited_scalar_business_domain_ids,
+        },
+    )
+    context = handler.context_resolver(chat, IDENTITY)
+
+    assert resolved["selection_mode"] == "MODEL_WIDE"
+    assert resolved["resolved_business_domain_ids"] == [205]
+    assert context.authorized_scope.scope_mode == "MODEL_WIDE"
+    assert context.authorized_scope.business_domain_ids == ()
 
 
 @pytest.mark.asyncio
