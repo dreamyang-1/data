@@ -25,6 +25,7 @@ import catalog_value_sources
 
 NOW = datetime.fromisoformat("2026-09-09T09:00:00+08:00")
 DEALER = "国药控股演示经销商"
+SECOND_PRODUCT = "紫杉醇释放冠脉球囊导管"
 
 
 @pytest.fixture
@@ -38,6 +39,8 @@ def sprint_catalog(entity_catalog):
              formula="SUM(quantity)"),
         dict(metric_code="orders", metric_name="订单笔数", business_domain=205,
              formula="COUNT(order_id)"),
+        dict(metric_code="department_count", metric_name="科室总数量", business_domain=205,
+             formula="COUNT(DISTINCT department_id)"),
     ])
     document["entities"].append(dict(entity_id=208, entity_code="dealer",
         entity_name="经销商", entity_alias=["经销单位"], business_domain=205,
@@ -64,6 +67,7 @@ def sprint_catalog(entity_catalog):
         mapping_column="created_date", field_id=4, data_type="datetime", vectorization=0,
         is_main_attribute=0))
     business["dealer_name"] = [DEALER]
+    business["product_name"].append(SECOND_PRODUCT)
     snapshot["physical_catalog"]["entity_value_sources"] = catalog_value_sources.capture_value_sources({
         "semantic_model_id": 81, "business_domain_ids": [205], "scope_mode": "EXPLICIT_DOMAINS"})
     entity_catalog[4][(81, (205,))] = reseal(snapshot)
@@ -221,6 +225,17 @@ def test_unique_longest_governed_metric_term_without_fuzzy_matching():
                           catalog_type="METRIC") is None
 
 
+def test_unique_short_metric_surface_requires_one_catalog_completion():
+    candidates = [dict(binding_handle="department-count", mention_id="m1", role="MEASURE",
+        catalog_type="METRIC", name="科室总数量", code="department_count", aliases=[])]
+    assert _unique_handle(candidates, "m1", "MEASURE", "科室",
+                          catalog_type="METRIC") == "department-count"
+    candidates.append(dict(binding_handle="department-orders", mention_id="m1", role="MEASURE",
+        catalog_type="METRIC", name="科室订单数", code="department_orders", aliases=[]))
+    assert _unique_handle(candidates, "m1", "MEASURE", "科室",
+                          catalog_type="METRIC") is None
+
+
 def test_entity_term_containment_is_not_a_deterministic_identity_match():
     candidates = [dict(binding_handle="product", mention_id="m1", role="SUBJECT_ENTITY",
         catalog_type="ENTITY", name="商品", code="product", aliases=["货品"])]
@@ -273,6 +288,50 @@ async def test_specific_entity_replacement_falls_back_instead_of_retaining_old_f
         await planner.run(request(question=text, message_id="replace-1"), IDENTITY,
             state=first_result.next_state, plans=(first_result.plan_state,))
     assert transport.semantic_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_exact_existing_entity_filter_replacement_skips_semantic_edits(sprint_catalog):
+    first = scalar_step(PRODUCT, "产品")
+    text = f"那{SECOND_PRODUCT}呢"
+    parsed = parse(text, [(SECOND_PRODUCT, "FILTER_VALUE", "filter_expression", "REPLACE")],
+        follow=True, shape="SCALAR_AGGREGATE")
+    results, transport = await run_steps(sprint_catalog, [first, (text, parsed, {"payload_type": "INHERIT"})])
+    assert transport.semantic_calls == 0
+    assert filter_values(results[-1]) == [SECOND_PRODUCT]
+    assert results[0].plan["logical_plan"]["task_id"] == results[-1].plan["logical_plan"]["task_id"]
+
+
+@pytest.mark.asyncio
+async def test_clear_removes_only_unique_non_subject_filter(sprint_catalog):
+    text = f"查询{PRODUCT}在{PROVINCE}的销售额"
+    parsed = parse(text, [(PRODUCT, "SUBJECT_ENTITY", "subject", "SET"),
+                          (PROVINCE, "FILTER_VALUE", "filter_expression", "SET"),
+                          ("销售额", "MEASURE", "metrics", "SET")], shape="SCALAR_AGGREGATE")
+    clear_text = "那全国整体呢"
+    clear = parse(clear_text, [("全国整体", "FILTER_VALUE", "filter_expression", "CLEAR")],
+        follow=True, shape="SCALAR_AGGREGATE")
+    results, transport = await run_steps(sprint_catalog, [
+        (text, parsed, {"payload_type": "SCALAR_AGGREGATE"}),
+        (clear_text, clear, {"payload_type": "INHERIT"}),
+    ])
+    assert transport.semantic_calls == 0
+    assert set(filter_values(results[0])) == {PRODUCT, PROVINCE}
+    assert filter_values(results[-1]) == [PRODUCT]
+
+
+@pytest.mark.asyncio
+async def test_unique_catalog_count_metric_completes_short_measure_surface(sprint_catalog):
+    text = f"查询{HOSPITAL}的科室数量"
+    parsed = parse(text, [(HOSPITAL, "SUBJECT_ENTITY", "subject", "SET"),
+                          ("科室", "MEASURE", "metrics", "SET")], shape="SCALAR_AGGREGATE")
+    result, transport = await run_steps(sprint_catalog, [
+        (text, parsed, {"payload_type": "SCALAR_AGGREGATE"}),
+    ])
+    assert transport.semantic_calls == 0
+    assert result[0].plan["logical_plan"]["payload"]["measures"][0]["canonical_code"] == \
+        "department_count"
+    assert filter_values(result[0]) == [HOSPITAL]
 
 
 @pytest.mark.asyncio

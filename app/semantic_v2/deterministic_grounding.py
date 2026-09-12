@@ -10,10 +10,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 
+from . import models as m
 from .authorized_contract import contract_digest
 from .enums import CatalogType
 from .pending_recognition import governed_aliases
 from .recognition_client import RecognitionFailure
+from .structured_edits import filter_targets
 
 
 SUPPORTED_SHAPES = {
@@ -73,6 +75,16 @@ def _unique_handle(candidates: list[dict], mention_id: str, role: str, surface: 
               for row in rows]
     best = max((score for _, score in scored), default=0)
     matched = {row["binding_handle"] for row, score in scored if score == best and score > 0}
+    if not matched and allow_contained and len(_text(surface)) >= 2:
+        # Short noun phrases such as ``科室`` can denote a uniquely offered
+        # governed count metric such as ``科室总数量``.  Accept this direction
+        # only when the complete candidate set proves one handle; competing
+        # metrics keep the model path and its ambiguity handling.
+        normalized = _text(surface)
+        matched = {row["binding_handle"] for row in rows
+            if any(normalized in _text(value) for value in
+                {row.get("name"), row.get("code"), *row.get("aliases", ())}
+                if isinstance(value, str) and value.strip())}
     return next(iter(matched)) if len(matched) == 1 else None
 
 
@@ -151,6 +163,52 @@ def _dimension_entity_handle(session, handles: dict, mention_id: str,
     return _add_handle(handles, mention_id, "SUBJECT_ENTITY", entities[0]["candidate_id"])
 
 
+def _filter_attribute(session, node) -> dict | None:
+    if not isinstance(node, m.Predicate) or node.field_ref.catalog_type != "ATTRIBUTE":
+        return None
+    eligible = set(session._pin.entity_value_lookup_fields())
+    found = [candidate for candidate in session.candidates(CatalogType.ATTRIBUTE)
+        if candidate["candidate_id"] in eligible and
+        str(session._rows[candidate["candidate_id"]].metadata.get("catalog_logical_id")) ==
+        str(node.field_ref.canonical_id)]
+    return found[0] if len(found) == 1 else None
+
+
+def _replacement_filter_target(session, target, surface: str) -> tuple[str, dict] | None:
+    matched = []
+    for target_handle, (_, node) in filter_targets(target).items():
+        attribute = _filter_attribute(session, node)
+        if attribute is None:
+            continue
+        values = session.lookup_source_values(attribute["candidate_id"], surface, implicit=True)
+        exact = [value for value in values if value.get("display_name") == surface]
+        selected = exact or values
+        if len(selected) > 1:
+            return None
+        if len(selected) == 1:
+            matched.append((target_handle, attribute))
+    return matched[0] if len(matched) == 1 else None
+
+
+def _clear_filter_target(session, target) -> str | None:
+    state = next(version.semantics for version in target.versions
+                 if version.version == target.active_version)
+    subject_code = state.subject.canonical_code if state.subject is not None else None
+    eligible = []
+    for target_handle, (_, node) in filter_targets(target).items():
+        attribute = _filter_attribute(session, node)
+        if attribute is None:
+            continue
+        owner = session._rows[attribute["candidate_id"]].metadata.get("parent")
+        # A concrete subject is represented by its main-attribute predicate.
+        # A generic "unbounded" edit must not erase that identity.  It may
+        # clear the sole additional predicate only; zero/multiple choices fall
+        # back to the existing model and target-selection guards.
+        if subject_code is None or owner != subject_code:
+            eligible.append(target_handle)
+    return eligible[0] if len(eligible) == 1 else None
+
+
 def _limit(surface: str) -> int | None:
     compact = "".join(surface.split()).casefold()
     matched = re.fullmatch(r"(?:排名)?前([1-9][0-9]{0,3})|top([1-9][0-9]{0,3})", compact)
@@ -185,6 +243,7 @@ def build_deterministic_grounding(*, session, parse, candidates: list[dict], han
 
     mentions = {mention.mention_id: mention for mention in parse.mentions}
     edits: list[dict] = []
+    filter_edits: list[dict] = []
     temporal_edits: list[dict] = []
     source_requests: list[dict] = []
     derived: set[tuple[str, str]] = set()
@@ -262,26 +321,51 @@ def build_deterministic_grounding(*, session, parse, candidates: list[dict], han
 
         filter_ids = ids_for("filter_expression")
         if filter_ids:
-            if relation != "NEW_TASK" or len(filter_ids) != 1:
+            if len(filter_ids) != 1:
                 return None
             mention_id = filter_ids[0]
             mention = mentions[mention_id]
-            if "FILTER_VALUE" not in map(str, mention.candidate_roles):
+            operation = _operation(parse, "filter_expression", filter_ids)
+            if operation is None:
                 return None
-            source_attributes = source_attributes or _eligible_source_attributes(session, mention.surface)
-            matches = _source_matches(session, source_attributes, mention.surface)
-            if len(matches) != 1:
-                return None
-            attribute, _ = matches[0]
-            field_handle = _add_handle(handles, mention_id, "FILTER_FIELD", attribute["candidate_id"])
-            request_id = "deterministic-source:" + contract_digest([parse.turn_id, mention_id])[:24]
-            source_requests.append(dict(request_id=request_id, mention_id=mention_id,
-                                        field_binding_handles=[field_handle]))
-            predicate = dict(node_type="PREDICATE",
-                field_ref={"value_field_request_id": request_id}, operator="EQ",
-                value={"value_request_id": request_id}, source="USER_EXPLICIT",
-                mention_ids=[mention_id], scope="CURRENT_TASK", validation_status="UNKNOWN")
-            add_edit("filter_expression", filter_ids, predicate)
+            if relation == "NEW_TASK":
+                if operation != "SET" or "FILTER_VALUE" not in map(str, mention.candidate_roles):
+                    return None
+                source_attributes = source_attributes or _eligible_source_attributes(session, mention.surface)
+                matches = _source_matches(session, source_attributes, mention.surface)
+                if len(matches) != 1:
+                    return None
+                attribute, _ = matches[0]
+                field_handle = _add_handle(handles, mention_id, "FILTER_FIELD", attribute["candidate_id"])
+                request_id = "deterministic-source:" + contract_digest([parse.turn_id, mention_id])[:24]
+                source_requests.append(dict(request_id=request_id, mention_id=mention_id,
+                                            field_binding_handles=[field_handle]))
+                predicate = dict(node_type="PREDICATE",
+                    field_ref={"value_field_request_id": request_id}, operator="EQ",
+                    value={"value_request_id": request_id}, source="USER_EXPLICIT",
+                    mention_ids=[mention_id], scope="CURRENT_TASK", validation_status="UNKNOWN")
+                add_edit("filter_expression", filter_ids, predicate)
+            else:
+                target = current.tasks[context_trace["FINAL_TARGET"]]
+                if operation == "REPLACE" and "FILTER_VALUE" in map(str, mention.candidate_roles):
+                    matched = _replacement_filter_target(session, target, mention.surface)
+                    if matched is None:
+                        return None
+                    target_handle, _ = matched
+                    request_id = "deterministic-source:" + contract_digest([parse.turn_id, mention_id])[:24]
+                    source_requests.append(dict(request_id=request_id, mention_id=mention_id,
+                                                target_filter_handle=target_handle))
+                    filter_edits.append(dict(operation="REPLACE", target_handle=target_handle,
+                        evidence_mention_ids=filter_ids, value={"value_request_id": request_id}))
+                elif operation == "CLEAR":
+                    target_handle = _clear_filter_target(session, target)
+                    if target_handle is None:
+                        return None
+                    filter_edits.append(dict(operation="CLEAR", target_handle=target_handle,
+                        evidence_mention_ids=filter_ids, value=None))
+                else:
+                    return None
+                covered.update(("filter_expression", item) for item in filter_ids)
 
         time_ids = ids_for("time_spec")
         if time_ids:
@@ -344,10 +428,11 @@ def build_deterministic_grounding(*, session, parse, candidates: list[dict], han
             return None
         if relation == "NEW_TASK" and shape in {"METADATA_LOOKUP", "DETAIL_ROWS"} and not subject_ids:
             return None
-        if not edits and not temporal_edits:
+        if not edits and not filter_edits and not temporal_edits:
             return None
         payload = "INHERIT" if relation != "NEW_TASK" else SUPPORTED_SHAPES[shape]
-        return DeterministicGrounding(draft=dict(edits=edits, temporal_edits=temporal_edits,
+        return DeterministicGrounding(draft=dict(edits=edits, filter_edits=filter_edits,
+            temporal_edits=temporal_edits,
             source_value_requests=source_requests, payload_type=payload),
             derived_evidence=frozenset(derived),
             reason_codes=("CURRENT_TURN_CATALOG_EXACT", "SOURCE_VALUE_EXACT" if source_requests else "CATALOG_EXACT"))
