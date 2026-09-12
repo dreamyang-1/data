@@ -32,7 +32,9 @@ class Settings(BaseSettings):
     session_store_mode: Literal["memory", "redis"] = "redis"
     # The public service stays on V1 unless an operator selects the bounded
     # candidate at process startup.  Request content can never change this.
-    runtime_mode: Literal["V1", "V2_LIMITED_SCALAR"] = "V1"
+    runtime_mode: Literal[
+        "V1", "V2_LIMITED_SCALAR", "V2_CONTEXT_V1_EXECUTION"
+    ] = "V1"
     # v2 separates fingerprint-aware idempotency records from pre-upgrade Redis
     # values that cannot prove which request payload produced a cached response.
     session_key_prefix: str = "youo:data-analysis:v2"

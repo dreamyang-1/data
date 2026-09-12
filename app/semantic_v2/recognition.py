@@ -195,6 +195,26 @@ class RecognizedPlan(m.StrictModel):
     context_contract_version: str = CONTRACT_VERSION
 
 
+class RecognizedStandaloneNewTask(m.StrictModel):
+    """Validated context-only handoff for a self-contained V1 business query.
+
+    Full V2 planning is attempted first.  This result is emitted only when an
+    explicitly enabled bridge has already established a self-contained
+    ``NEW_TASK`` and a later V2 semantic representation stage cannot finish.
+    It carries a conversation barrier rather than a fabricated Task/Plan so a
+    later elliptical turn cannot attach to an older active task.
+    """
+
+    parse: CurrentTurnSemanticParse
+    context_trace: JsonValue
+    completed_question: str
+    next_state: ScopedArtifact
+    fallback_reason: str
+    execution_route: Literal['V1_EXECUTION_FALLBACK_NEW_TASK'] = (
+        'V1_EXECUTION_FALLBACK_NEW_TASK'
+    )
+
+
 def value_schema():
     """Existing task types with opaque handles in place of bound authority."""
     schema = m.TaskSemanticState.model_json_schema()
@@ -257,13 +277,56 @@ class RawTurnPlanner:
         self.clock = clock or (lambda: datetime.now(ZoneInfo('Asia/Shanghai')))
         self.deterministic_grounding = deterministic_grounding
 
-    async def run(self, request, identity, *, state=None, plans=(), pending=None):
+    async def run(
+        self,
+        request,
+        identity,
+        *,
+        state=None,
+        plans=(),
+        pending=None,
+        allow_standalone_new_task_passthrough=False,
+    ):
+        fallback = []
         try:
-            return await self._run(request, identity, state=state, plans=plans, pending=pending)
+            return await self._run(
+                request,
+                identity,
+                state=state,
+                plans=plans,
+                pending=pending,
+                allow_standalone_new_task_passthrough=(
+                    allow_standalone_new_task_passthrough
+                ),
+                standalone_new_task_fallback=fallback,
+            )
         except ValidationError:
-            raise RecognitionFailure('V2_CONTRACT_VALIDATION_FAILURE') from None
+            failure = RecognitionFailure('V2_CONTRACT_VALIDATION_FAILURE')
+            if fallback and self._standalone_fallback_allows(failure):
+                return self._materialize_standalone_fallback(
+                    fallback[0], failure
+                )
+            raise failure from None
+        except RecognitionFailure as exc:
+            if fallback and self._standalone_fallback_allows(exc):
+                return self._materialize_standalone_fallback(fallback[0], exc)
+            raise
+        except ValueError as exc:
+            if fallback and self._standalone_fallback_allows(exc):
+                return self._materialize_standalone_fallback(fallback[0], exc)
+            raise
 
-    async def _run(self, request, identity, *, state=None, plans=(), pending=None):
+    async def _run(
+        self,
+        request,
+        identity,
+        *,
+        state=None,
+        plans=(),
+        pending=None,
+        allow_standalone_new_task_passthrough=False,
+        standalone_new_task_fallback=None,
+    ):
         session = ScopedPlanSession(request, identity, self.catalog)
         request = session._request
         now = self.clock()
@@ -312,6 +375,17 @@ class RawTurnPlanner:
                 extra={'message_id': request.message_id, 'catalog_span_trace': catalog_spans})
             parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
                 text_ref=request.message_id, parsed=parsed)
+        if allow_standalone_new_task_passthrough and self._is_standalone_new_task(
+            parse, context_trace
+        ):
+            barrier = self._standalone_new_task_barrier(current, request.message_id)
+            standalone_new_task_fallback.append({
+                'session': session,
+                'parse': parsed,
+                'context_trace': context_trace,
+                'completed_question': request.question,
+                'barrier': barrier,
+            })
         if context_trace['FINAL_RELATION'] == 'ANSWER_CLARIFICATION':
             option=selected_option(current.pending,request.question)
             return self._answer_pending(session,current,state,pending,option,parsed,parse,now)
@@ -447,6 +521,53 @@ class RawTurnPlanner:
             plan=plan.model_dump(mode='json'), next_state=session.seal(kind='CONVERSATION', payload=next_state),
             plan_state=session.seal(kind='LAST_REQUEST', payload=plan.logical_plan), edit_trace=edit_trace,
             context_trace=context_trace)
+
+    @staticmethod
+    def _is_standalone_new_task(parse, context_trace):
+        """Use accepted semantic evidence, never query-shape or keyword rules."""
+        acts = {str(getattr(value, 'value', value)) for value in parse.dialogue_act_candidates}
+        operations = {str(marker.operation_hint) for marker in parse.operation_markers}
+        return (
+            context_trace['FINAL_STATUS'] == 'ACCEPTED'
+            and context_trace['FINAL_RELATION'] == 'NEW_TASK'
+            and context_trace['FINAL_TARGET'] is None
+            and not parse.reference_signals
+            and not parse.followup_signals
+            and not (acts - {'NEW_TASK'})
+            and not (operations - {'SET'})
+        )
+
+    @staticmethod
+    def _standalone_fallback_allows(failure):
+        reason = str(failure).upper()
+        return not any(token in reason for token in ('AMBIGUITY', 'PENDING'))
+
+    @staticmethod
+    def _materialize_standalone_fallback(candidate, failure):
+        session = candidate['session']
+        if not session._finished:
+            session.accept_catalog()
+        return RecognizedStandaloneNewTask(
+            parse=candidate['parse'],
+            context_trace=candidate['context_trace'],
+            completed_question=candidate['completed_question'],
+            next_state=session.seal(
+                kind='CONVERSATION', payload=candidate['barrier']
+            ),
+            fallback_reason=str(failure),
+        )
+
+    @staticmethod
+    def _standalone_new_task_barrier(current, message_id):
+        """Advance V2 context without inventing semantics for a V1-only task."""
+        data = current.model_dump(mode='python')
+        data['state_version'] = current.state_version + 1
+        data['active_topic_id'] = None
+        data['recent_turn_ids'] = [*current.recent_turn_ids, message_id][-100:]
+        for pending in data['pending_records'].values():
+            if pending['status'] == 'ACTIVE':
+                pending['status'] = 'SUSPENDED'
+        return ConversationState.model_validate(data)
 
     @staticmethod
     def _check_semantic_coverage(payload, state):

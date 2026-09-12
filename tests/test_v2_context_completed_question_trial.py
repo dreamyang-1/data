@@ -235,6 +235,67 @@ def test_completed_question_uses_final_state_for_add_remove_clear_time_and_boole
     assert "不再应用已清除的筛选条件" in cleared_display.completed_question
 
 
+def test_completed_question_uses_natural_v1_wording_for_exact_entity_value(provider):
+    prepared = prepared_for(provider)
+    state_artifact, plan_artifact = planned_artifacts(prepared)
+    previous = ConversationState.model_validate(state_artifact.payload)
+    plan = AuthorizedLogicalPlan.model_validate(plan_artifact.payload)
+    original = previous.tasks[plan.task_id].versions[0].semantics
+    metric = original.metrics[0]
+    province = metric.model_copy(update={
+        "catalog_type": CatalogType.ATTRIBUTE,
+        "semantic_role": SemanticRole.FILTER_FIELD,
+        "canonical_id": metric.canonical_id + ":province",
+        "canonical_code": "province_name",
+        "display_name": "省份名称",
+    })
+    province_value = province.model_copy(update={
+        "catalog_type": CatalogType.ENTITY_VALUE,
+        "semantic_role": SemanticRole.FILTER_VALUE,
+        "canonical_id": "source-value:jiangsu",
+        "canonical_code": "source-value:jiangsu",
+        "display_name": "江苏省",
+    })
+    time_anchor = province.model_copy(update={
+        "semantic_role": SemanticRole.TIME_FIELD,
+        "canonical_id": metric.canonical_id + ":created-date",
+        "canonical_code": "created_date",
+        "display_name": "订单日期",
+    })
+    semantics = original.model_copy(update={
+        "filter_expression": m.Predicate(
+            field_ref=province,
+            operator="EQ",
+            value=m.EntityValueRef(ref=province_value),
+            source="CURRENT_EXPLICIT",
+            scope="CURRENT_TASK",
+        ),
+        "time_spec": m.TimeSpec(
+            anchor=time_anchor,
+            range=m.TimeRange(
+                start=datetime.fromisoformat("2026-01-01T00:00:00+08:00"),
+                end_exclusive=datetime.fromisoformat("2027-01-01T00:00:00+08:00"),
+            ),
+            grain="NONE",
+            timezone="Asia/Shanghai",
+            source="USER_EXPLICIT",
+            as_of=NOW,
+        ),
+    })
+    next_state = _state_with_semantics(previous, plan, semantics)
+    next_plan = _plan_with_semantics(plan, semantics)
+
+    display = build_completed_question_display(
+        message_id="message-2",
+        plan=next_plan,
+        previous_state=previous,
+        next_state=next_state,
+        context_trace={"FINAL_RELATION": "MODIFY"},
+    )
+
+    assert display.completed_question == f"查询2026年江苏省{metric.display_name}。"
+
+
 def test_completed_question_rejects_subject_drift(provider):
     prepared = prepared_for(provider)
     state_artifact, plan_artifact = planned_artifacts(prepared)

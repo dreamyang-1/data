@@ -18,7 +18,7 @@ from app.observability.langfuse_client import (
 
 
 def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
-               limited_scalar_external=None) -> FastAPI:
+               limited_scalar_external=None, context_v1_external=None) -> FastAPI:
     effective_settings = settings or get_settings()
 
     @asynccontextmanager
@@ -31,6 +31,18 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
                 effective_settings,
                 external=limited_scalar_external,
                 query_adapter=app.state.container.adapters.query,
+            )
+        elif (
+            handler is None
+            and effective_settings.runtime_mode == "V2_CONTEXT_V1_EXECUTION"
+        ):
+            from app.semantic_v2.context_v1_execution import (
+                build_context_v1_execution_handler,
+            )
+            handler = build_context_v1_execution_handler(
+                effective_settings,
+                v1_workflow=app.state.container.workflow,
+                external=context_v1_external,
             )
         app.state.isolated_chat_handler = handler
         configure_langfuse(effective_settings)
@@ -146,15 +158,25 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
                     "knowledge_service": bool(knowledge_ok),
                 }
             )
-        if effective_settings.runtime_mode == "V2_LIMITED_SCALAR":
+        if effective_settings.runtime_mode in {
+            "V2_LIMITED_SCALAR", "V2_CONTEXT_V1_EXECUTION"
+        }:
             handler = getattr(application.state, "isolated_chat_handler", None)
             if handler is None or not hasattr(handler, "readiness"):
-                checks["v2_limited_scalar_runtime"] = False
+                checks[
+                    "v2_limited_scalar_runtime"
+                    if effective_settings.runtime_mode == "V2_LIMITED_SCALAR"
+                    else "v2_context_v1_execution_runtime"
+                ] = False
             else:
                 try:
                     checks.update(await handler.readiness())
                 except Exception:
-                    checks["v2_limited_scalar_runtime"] = False
+                    checks[
+                        "v2_limited_scalar_runtime"
+                        if effective_settings.runtime_mode == "V2_LIMITED_SCALAR"
+                        else "v2_context_v1_execution_runtime"
+                    ] = False
         # Query contract is a core readiness dependency in HTTP mode. Metadata
         # and knowledge are separately reported as optional/degraded features so
         # an outage does not remove basic metric-query capacity from the gateway.
