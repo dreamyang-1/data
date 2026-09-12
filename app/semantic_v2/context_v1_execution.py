@@ -20,6 +20,7 @@ from redis.asyncio import Redis
 from app.config import Settings
 from app.domain.models import (
     AgentResponse,
+    AnalysisProcessStep,
     ChatRequest,
     PrimaryIntent,
     TrustedIdentity,
@@ -67,6 +68,64 @@ class ResolvedContextTurn:
     clarification_trace: Any = None
     display: CompletedQuestionDisplay | None = None
     bridge_route: str = "V2_RESOLVED_COMPLETED_QUESTION"
+
+
+def _standalone_execution_display(
+    question: str,
+    display: CompletedQuestionDisplay,
+) -> CompletedQuestionDisplay:
+    """Keep a resolved standalone request byte-for-byte compatible with V1."""
+    if display.relation != "NEW_TASK":
+        return display
+    material = display.model_dump(mode="python", exclude={"display_digest"})
+    material["completed_question"] = question
+    updated = CompletedQuestionDisplay(
+        **material,
+        display_digest=contract_digest(material),
+    )
+    if len(updated.public_message) > 500:
+        raise ValueError("V2_COMPLETED_QUESTION_DISPLAY_TOO_LONG")
+    return updated
+
+
+def _completed_question_step(resolved: ResolvedContextTurn) -> AnalysisProcessStep | None:
+    if not resolved.completed_question:
+        return None
+    summary = (
+        resolved.display.public_message
+        if resolved.display is not None
+        else "补全后的完整问题：" + resolved.completed_question
+    )
+    if len(summary) > 500:
+        return None
+    return AnalysisProcessStep(
+        stage="QUESTION_REWRITE",
+        status="COMPLETED",
+        title="补全后的完整问题",
+        summary=summary,
+    )
+
+
+def _attach_completed_question(
+    response: AgentResponse,
+    resolved: ResolvedContextTurn,
+) -> AgentResponse:
+    """Expose exactly the question already sent to V1 in the original response."""
+    step = _completed_question_step(resolved)
+    if step is None:
+        return response
+    steps = list(response.analysis_process)
+    index = next(
+        (position for position, item in enumerate(steps)
+         if item.stage == "QUESTION_REWRITE"),
+        None,
+    )
+    if index is None:
+        steps.insert(0, step)
+    else:
+        steps[index] = step
+    response.analysis_process = steps[:20]
+    return response
 
 
 def validate_context_v1_settings(settings: Settings) -> dict[str, Any]:
@@ -393,12 +452,16 @@ class V2ContextV1ExecutionBridge:
                 )
             if not resolved.completed_question:
                 raise ValueError("V2_COMPLETED_QUESTION_REQUIRED")
-            if resolved.display is not None:
+            progress = _completed_question_step(resolved)
+            if progress is not None:
                 await emit_progress(
                     "INTENT_RECOGNITION",
                     "COMPLETED",
-                    resolved.display.public_message,
-                    completed_question_digest=resolved.display.display_digest,
+                    progress.summary,
+                    completed_question_digest=(
+                        resolved.display.display_digest
+                        if resolved.display is not None else None
+                    ),
                 )
             running = await self.store.begin_context(
                 snapshot,
@@ -419,6 +482,7 @@ class V2ContextV1ExecutionBridge:
             execution_chat._completed_question_execution = True
             try:
                 response = await self.v1_executor(execution_chat, identity)
+                response = _attach_completed_question(response, resolved)
             except Exception:
                 try:
                     await self.store.mark_unknown(
@@ -584,6 +648,7 @@ def build_context_v1_execution_handler(
             next_state=next_state,
             context_trace=result.context_trace,
         )
+        display = _standalone_execution_display(chat.question, display)
         return ResolvedContextTurn(
             completed_question=display.completed_question,
             next_state=result.next_state,

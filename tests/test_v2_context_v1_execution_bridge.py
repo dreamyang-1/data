@@ -15,9 +15,11 @@ from app.semantic_v2.context_v1_execution import (
     ContextV1ExternalDependencies,
     ResolvedContextTurn,
     V2ContextV1ExecutionBridge,
+    _standalone_execution_display,
     build_context_v1_execution_handler,
     validate_context_v1_settings,
 )
+from app.semantic_v2.completed_question import CompletedQuestionDisplay
 from app.semantic_v2.persisted_scalar_api import RedisScalarSessionStore
 from app.semantic_v2.recognition_client import RecognitionFailure
 from app.semantic_v2.state_machine import ConversationState
@@ -160,6 +162,8 @@ async def test_resolved_context_passes_only_completed_question_to_v1(
     result = await handler.handle(chat, IDENTITY)
 
     assert result.answer == "V1 result"
+    assert result.analysis_process[0].title == "补全后的完整问题"
+    assert completed in result.analysis_process[0].summary
     assert len(calls) == 1
     assert calls[0].question == completed
     assert calls[0].history == []
@@ -169,6 +173,27 @@ async def test_resolved_context_passes_only_completed_question_to_v1(
     assert calls[0].model_dump(
         mode="json", exclude={"question", "history"}
     ) == chat.model_dump(mode="json", exclude={"question", "history"})
+
+
+def test_resolved_standalone_execution_keeps_original_question_for_v1():
+    display = CompletedQuestionDisplay(
+        message_id="message",
+        task_id="task:message",
+        task_version=1,
+        plan_id="plan:message",
+        semantic_fingerprint="semantic:message",
+        relation="NEW_TASK",
+        understanding="识别为独立新任务。",
+        completed_question="查询筛选条件为省份名称等于江苏省的订单笔数。",
+        display_digest="old-digest",
+    )
+    original = "查询去年江苏省订单笔数"
+
+    updated = _standalone_execution_display(original, display)
+
+    assert updated.completed_question == original
+    assert updated.display_digest != display.display_digest
+    assert original in updated.public_message
 
 
 @pytest.mark.asyncio

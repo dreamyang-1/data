@@ -102,6 +102,26 @@ def _filter_text(expression) -> str:
     return f"{label}{_FILTER_OPERATORS.get(operator, operator)}{_scalar_value(expression.value)}"
 
 
+def _compact_filter_qualifier(expression) -> str:
+    """Render exact entity values in the wording the existing V1 parser accepts.
+
+    The detailed filter expression remains available in ``understanding`` and
+    for compound/non-entity predicates.  This compact form changes no field,
+    operator or value; it only avoids feeding internal contract labels such as
+    ``筛选条件为...等于...`` back through V1's natural-language boundary.
+    """
+    if not isinstance(expression, m.Predicate):
+        return ""
+    operator = _enum_value(expression.operator)
+    if operator == "EQ" and isinstance(expression.value, m.EntityValueRef):
+        return expression.value.ref.display_name
+    if operator == "IN" and isinstance(expression.value, m.ListValue):
+        values = expression.value.values
+        if values and all(isinstance(value, m.EntityValueRef) for value in values):
+            return _join_names([value.ref.display_name for value in values])
+    return ""
+
+
 def _time_text(spec: m.TimeSpec | None) -> str:
     if spec is None:
         return ""
@@ -209,17 +229,25 @@ def _completed_question(semantics: m.TaskSemanticState, *, cleared_filter: bool)
     metrics = _join_names(_ref_names(semantics.metrics))
     subject = semantics.subject.display_name if semantics.subject is not None else ""
     target = metrics or subject or "当前对象"
-    qualifiers: list[str] = []
+    leading_qualifiers: list[str] = []
+    trailing_qualifiers: list[str] = []
     time_text = _time_text(semantics.time_spec)
     if time_text:
-        qualifiers.append(time_text)
-    filter_text = _filter_text(semantics.filter_expression)
-    if filter_text:
-        qualifiers.append("筛选条件为" + filter_text)
+        leading_qualifiers.append(time_text)
+    compact_filter = _compact_filter_qualifier(semantics.filter_expression)
+    if compact_filter:
+        leading_qualifiers.append(compact_filter)
+    else:
+        filter_text = _filter_text(semantics.filter_expression)
+        if filter_text:
+            trailing_qualifiers.append("筛选条件为" + filter_text)
     if semantics.dimensions:
-        qualifiers.append("按" + _join_names(_ref_names(semantics.dimensions)) + "分组")
-    prefix = "、".join(qualifiers)
-    text = f"查询{prefix + '的' if prefix else ''}{target}"
+        trailing_qualifiers.append(
+            "按" + _join_names(_ref_names(semantics.dimensions)) + "分组"
+        )
+    text = f"查询{''.join(leading_qualifiers)}{target}"
+    if trailing_qualifiers:
+        text += "，" + "，".join(trailing_qualifiers)
     if cleared_filter and semantics.filter_expression is None:
         text += "，不再应用已清除的筛选条件"
     return text + "。"
