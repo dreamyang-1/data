@@ -5,9 +5,11 @@ from math import log2
 from pydantic import ConfigDict, Field, model_validator
 
 from . import models as m
-from .authorized_contract import contract_digest, validate_source_value_fields, SourceValueBindingEvidence
+from .authorized_contract import (CatalogBindingEvidence, contract_digest,
+    validate_source_value_fields, SourceValueBindingEvidence)
 from .recognition_client import RecognitionFailure
 from .enums import CatalogType
+from .pipeline import collect_bound_refs
 from .slot_reducer import TaskPatch, apply_task_patch, semantic_fingerprint
 from .state_machine import PendingBlocker
 from .structured_edits import filter_targets
@@ -32,6 +34,115 @@ class SourceValueRequestDraft(m.StrictModel):
         if bool(self.field_binding_handles) == (self.target_filter_handle is not None):
             raise ValueError('source value requires offered fields or one current filter target')
         return self
+
+
+def preserve_new_task_entity_instance(session, parse, patch, *, base, target):
+    """Keep one exact current entity instance from collapsing to its entity type.
+
+    The model-selected subject supplies only the entity *type*.  A different
+    current-turn surface may be an instance, but it becomes a filter only when
+    the pinned catalog exposes one governed main attribute and an exact source
+    lookup proves one value.  Generic type names, grouping mentions, restored
+    tasks, fuzzy matches and unproved values are never promoted here.
+    """
+    if target is not None or base != 0:
+        return patch, []
+    tentative = apply_task_patch(m.TaskSemanticState(), patch).semantics
+    subject = tentative.subject
+    if subject is None or subject.catalog_type != 'ENTITY':
+        return patch, []
+    proof = session._bindings.get(contract_digest(subject.model_dump(mode='json')))
+    if not isinstance(proof, CatalogBindingEvidence):
+        raise RecognitionFailure('V2_EXPLICIT_ENTITY_INSTANCE_SUBJECT_EVIDENCE_REQUIRED')
+    entity = session._rows.get(proof.record_id)
+    if entity is None or entity.metadata.get('type') != 'entity':
+        raise RecognitionFailure('V2_EXPLICIT_ENTITY_INSTANCE_SUBJECT_EVIDENCE_REQUIRED')
+    metadata = entity.metadata
+    mentions = {mention.mention_id: mention for mention in parse.mentions}
+    source_prefix = session._request.message_id + ':'
+    source_ids = [value.removeprefix(source_prefix) for value in subject.source_mention_ids
+                  if value.startswith(source_prefix)]
+    if len(source_ids) != 1 or source_ids[0] not in mentions:
+        return patch, []
+    mention = mentions[source_ids[0]]
+    if (not mention.explicit or mention.source_turn_id != parse.turn_id
+            or mention.mention_id not in parse.explicit_slot_mentions.get('subject', ())
+            or 'SUBJECT_ENTITY' not in mention.candidate_roles
+            or 'GROUP_BY' in mention.candidate_roles):
+        return patch, []
+
+    from .pending_recognition import governed_aliases
+    generic_terms = {metadata.get('entity_name'), metadata.get('entity_code'),
+                     subject.display_name, subject.canonical_code, *governed_aliases(metadata)}
+    normalized = mention.normalized_surface.strip().casefold()
+    if normalized in {value.strip().casefold() for value in generic_terms
+                      if isinstance(value, str) and value.strip()}:
+        return patch, []
+
+    declared = [value for value in metadata.get('attributes', ())
+                if isinstance(value, dict) and value.get('is_main_attribute') is True]
+    eligible = set(session._pin.entity_value_lookup_fields())
+    attributes = []
+    for candidate in session.candidates(CatalogType.ATTRIBUTE):
+        row = session._rows[candidate['candidate_id']].metadata
+        if (candidate['candidate_id'] in eligible and row.get('parent') == metadata.get('entity_code')
+                and row.get('business_domain_id') == metadata.get('business_domain_id')
+                and any(str(row.get('attribute_id')) == str(item.get('attribute_id'))
+                        and row.get('attr_code') == item.get('attr_code')
+                        and row.get('field_mapping') == item.get('field_mapping') for item in declared)):
+            attributes.append(candidate['candidate_id'])
+    if len(attributes) != 1:
+        reason = ('V2_EXPLICIT_ENTITY_INSTANCE_FIELD_AMBIGUOUS' if len(attributes) > 1
+                  else 'V2_EXPLICIT_ENTITY_INSTANCE_FIELD_UNPROVEN')
+        raise RecognitionFailure(reason)
+    attribute = attributes[0]
+
+    source_id = source_prefix + mention.mention_id
+    existing = [ref for ref in collect_bound_refs(tentative.filter_expression)
+                if ref.semantic_role == 'FILTER_VALUE' and source_id in ref.source_mention_ids]
+    for ref in existing:
+        binding = session._bindings.get(contract_digest(ref.model_dump(mode='json')))
+        if isinstance(binding, SourceValueBindingEvidence) and binding.attribute_record_id == attribute:
+            return patch, []
+
+    candidates = session.lookup_source_values(attribute, mention.surface, implicit=True)
+    exact = [candidate for candidate in candidates if candidate.get('display_name') == mention.surface]
+    selected = exact or candidates
+    if len(selected) != 1:
+        reason = ('V2_EXPLICIT_ENTITY_INSTANCE_AMBIGUOUS' if selected
+                  else 'V2_EXPLICIT_ENTITY_INSTANCE_UNPROVEN')
+        raise RecognitionFailure(reason)
+    value_ref = session.bind(selected[0]['candidate_id'], 'FILTER_VALUE', (source_id,))
+    field_ref = session.bind(attribute, 'FILTER_FIELD', (source_id,))
+    predicate = m.Predicate(field_ref=field_ref, operator='EQ', value=m.EntityValueRef(ref=value_ref),
+        source='USER_EXPLICIT', mention_ids=[mention.mention_id], scope='CURRENT_TASK',
+        validation_status='UNKNOWN')
+    expression = (m.BooleanFilterGroup(operator='AND',
+        children=[tentative.filter_expression, predicate]) if tentative.filter_expression else predicate)
+
+    all_operations = [operation
+        for name in ('clears', 'removes', 'replacements', 'sets', 'adds', 'inherit_requests')
+        for operation in getattr(patch, name)]
+    filter_operations = [operation for operation in all_operations
+                         if operation.slot_path == 'filter_expression']
+    operations = [operation for operation in all_operations
+                  if operation.slot_path != 'filter_expression']
+    evidence = sorted({mention.mention_id, *(mention_id
+        for operation in filter_operations for mention_id in operation.evidence_mention_ids)})
+    operations.append(m.SlotOperation(operation_id='catalog:entity-instance:' + mention.mention_id,
+        slot_path='filter_expression', operation='SET', new_value=expression.model_dump(mode='json'),
+        source='CURRENT_EXPLICIT', reason_code='CURRENT_EXACT_ENTITY_INSTANCE',
+        base_task_version=base, presence='PRESENT', evidence_mention_ids=evidence))
+    result = TaskPatch.compile(operations, base_task_version=base)
+    reduced = apply_task_patch(m.TaskSemanticState(), result).semantics
+    validate_source_value_fields(reduced, tuple(session._bindings.values()))
+    from .structured_edits import StructuredEditTrace
+    trace = StructuredEditTrace(slot_path='filter_expression', operation='SET',
+        target='entity-instance:' + mention.mention_id,
+        evidence_mention_ids=[mention.mention_id],
+        before_digest=semantic_fingerprint(tentative.filter_expression),
+        after_digest=semantic_fingerprint(expression), lowered_operation='REPLACE')
+    return result, [trace]
 
 
 async def resolve_requests(session, parse, draft, handles, target, model):

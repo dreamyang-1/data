@@ -1,0 +1,35 @@
+{
+  "status": "PASS_WITH_TARGET_REPLAY_EVIDENCE_GAP",
+  "targeted": {
+    "file": "tests/test_v2_entity_instance_preservation_round23.py",
+    "passed": 12,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "affected_regression": {
+    "passed": 219,
+    "failed": 0,
+    "collection_errors": 0,
+    "includes": [
+      "entity instance preservation",
+      "source value binding and probe",
+      "source value failure closure",
+      "canonical execution bridge",
+      "completed question API trial",
+      "context follow-up critical slice",
+      "raw turn recognition"
+    ]
+  },
+  "offline_rb50_37_replay": {
+    "status": "SAFE_BLOCKED_MISSING_FROZEN_INSTANCE_PROOF",
+    "recorded_model_responses": 2,
+    "new_model_calls": 0,
+    "task_published": false,
+    "semantic_broadening_prevented": true
+  },
+  "old_test_expectation_changes": 0,
+  "core50_runs": 0,
+  "v1_runs": 0,
+  "sql_calls": 0,
+  "production_writes": 0
+}

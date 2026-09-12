@@ -15,7 +15,8 @@ from .catalog_bridge import RECORD_TYPES, ScopedPlanSession
 from .catalog_plans import (RelationshipEditDraft, relationship, complete_catalog_defaults, cardinality)
 from .catalog_paths import relationship_path, resolve_alias
 from .temporal_comparisons import ComparisonEditDraft, complete_comparison_patch
-from .source_value_recognition import SourceValueRequestDraft, source_filter_patch, hydrate_choice
+from .source_value_recognition import (SourceValueRequestDraft, source_filter_patch, hydrate_choice,
+    preserve_new_task_entity_instance)
 from .explicit_time import normalize_initial_assignment, normalize_component_edits, normalize_comparison_edits
 from .catalog_mentions import recover_metric_spans
 from .enums import CatalogType, SemanticRole
@@ -344,6 +345,10 @@ class RawTurnPlanner:
             deferred=deferred, prior=prior, target=target)
         blockers.extend(source_blockers)
         pending_operations.update(source_operations)
+        if not blockers:
+            patch, entity_instance_trace = preserve_new_task_entity_instance(
+                session, parse, patch, base=base, target=target)
+            edit_trace.extend(entity_instance_trace)
         if prior.filter_expression:
             for edit in draft.edits:
                 if edit.slot_path == 'filter_expression':
