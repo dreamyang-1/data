@@ -255,9 +255,12 @@ class Client:
 @pytest.mark.asyncio
 @pytest.mark.parametrize('domains', [[], [205], [205,206]])
 async def test_real_oagnet_adapter_transmits_and_confirms_exact_domain_set(domains):
-    client = Client(generated(domains))
+    execution_domains = [205] if not domains else domains
+    client = Client(generated(execution_domains))
     adapter = HttpDataRetrievalAdapter(Settings(env='test'), client)
     request = canonical(chat(business_domain_ids=domains))
+    if not domains:
+        request.resolved_business_domain_ids = execution_domains
     if len(domains)>1:
         with pytest.raises(AdapterError) as failure:
             await adapter.discover_metrics(request, IDENTITY, semantic_model_id=81,
@@ -265,9 +268,9 @@ async def test_real_oagnet_adapter_transmits_and_confirms_exact_domain_set(domai
         assert failure.value.code == 'EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED'
         assert client.calls == []
     else:
-        discovery = await adapter.discover_metrics(request, IDENTITY, semantic_model_id=81, business_domain_id=domains[0] if domains else None)
+        discovery = await adapter.discover_metrics(request, IDENTITY, semantic_model_id=81, business_domain_id=execution_domains[0])
         assert discovery.metrics[0].metric_id == '81:sales_amount'
-        assert client.calls[0][1]['business_domain_ids'] == domains
+        assert client.calls[0][1]['business_domain_ids'] == execution_domains
 
 
 @pytest.mark.parametrize('tamper', ['echo_model', 'echo_domains', 'resolved_domain', 'metric_model', 'metric_domain'])
@@ -361,12 +364,13 @@ async def test_model_wide_execution_and_asl_cache_respect_knowledge_scope():
     from test_http_adapters import StubClient, request
     translated = {'success':True,'sql':'SELECT SUM(amount) AS sales_amount'}
     executed = {'success':True,'sql':translated['sql'],'data':[{'销售额':100}], 'columns':['销售额'],'row_count':1}
-    client = StubClient([generated([]),translated,executed,translated,executed,generated([]),translated,executed])
+    client = StubClient([generated([205]),translated,executed,translated,executed,generated([205]),translated,executed])
     adapter = HttpDataRetrievalAdapter(Settings(env='test',asl_plan_cache_ttl_seconds=300,asl_plan_cache_max_items=8),client)
     for knowledge in [['a'],['a'],['b']]:
         req = request()
         bind_authorized_scope(req, chat(knowledge_base_names=knowledge).authorized_semantic_scope)
-        result = await adapter.query(req, IDENTITY, semantic_model_id=81, business_domain_id=None)
+        req.resolved_business_domain_ids = [205]
+        result = await adapter.query(req, IDENTITY, semantic_model_id=81, business_domain_id=205)
         assert result.dataset.row_count == 1
     paths = [call[1] for call in client.calls]
     assert paths.count('/agent/query') == 2
