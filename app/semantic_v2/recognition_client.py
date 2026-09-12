@@ -5,10 +5,24 @@ import asyncio
 import json
 
 import httpx
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError, ValidationError
+from referencing.exceptions import Unresolvable
 
 
 class RecognitionFailure(ValueError):
     """Bounded system reason; never convert transport/parser errors to slot asks."""
+
+
+def _validate_exact_dynamic_schema(instance, schema) -> None:
+    """Fail closed on the exact schema issued for this model invocation."""
+    try:
+        Draft202012Validator.check_schema(schema)
+        Draft202012Validator(schema).validate(instance)
+    except (SchemaError, Unresolvable):
+        raise RecognitionFailure('V2_MODEL_DYNAMIC_SCHEMA_INVALID') from None
+    except ValidationError:
+        raise RecognitionFailure('V2_MODEL_DYNAMIC_SCHEMA_VIOLATION') from None
 
 
 class RecognitionModelClient:
@@ -19,7 +33,7 @@ class RecognitionModelClient:
     async def complete(self, *, stage, instruction, context, output_model, schema=None):
         if not self.settings.intent_model_api_key:
             raise RecognitionFailure('V2_MODEL_NOT_CONFIGURED')
-        schema = schema or output_model.model_json_schema()
+        schema = output_model.model_json_schema() if schema is None else schema
         response_format = ({'type': 'json_schema', 'json_schema': {
             'name': stage, 'strict': True, 'schema': schema}}
             if self.settings.intent_model_response_format == 'json_schema'
@@ -58,6 +72,11 @@ class RecognitionModelClient:
             content = choice['message'].get('content')
             if not isinstance(content, str) or not content or len(content) > 128_000:
                 raise RecognitionFailure('V2_MODEL_OUTPUT_INVALID')
+            try:
+                raw_output = json.loads(content)
+            except (json.JSONDecodeError, TypeError):
+                raise RecognitionFailure('V2_MODEL_OUTPUT_INVALID') from None
+            _validate_exact_dynamic_schema(raw_output, schema)
             return output_model.model_validate_json(content)
         except RecognitionFailure:
             raise

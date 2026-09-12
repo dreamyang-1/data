@@ -30,7 +30,7 @@ async def test_orphan_source_request_is_producer_contract_failure_not_missing_co
         draft['edits'] = [e for e in draft['edits'] if e['slot_path'] != 'filter_expression']
         return draft
     planner, choices = engine(catalog, [(step[0], step[1], orphan)])
-    with pytest.raises(ValueError, match='V2_SOURCE_VALUE_REQUEST_NOT_APPLIED'):
+    with pytest.raises(ValueError, match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
         await turns(planner, [(step[0], step[1], orphan)])
     assert choices == [] and catalog[0][6] == [] and catalog[1] == []
 

@@ -71,10 +71,14 @@ def source_step(value='上海', *, field='城市', explicit=False):
 def source_edit(value, operation):
     text=operation+value
     def draft(c):
-        field=binding(c,'城市','FILTER_FIELD',kind='ATTRIBUTE')
+        selected=target(c,'城市')
+        request=(dict(request_id='value',mention_id='m0',target_filter_handle=selected)
+            if operation in {'REPLACE','REMOVE'} else
+            dict(request_id='value',mention_id='m0',field_binding_handles=[
+                binding(c,'城市','FILTER_FIELD',kind='ATTRIBUTE')['binding_handle']]))
         return dict(payload_type='INHERIT',
-            source_value_requests=[dict(request_id='value',mention_id='m0',field_binding_handles=[field['binding_handle']])],
-            filter_edits=[dict(operation=operation,target_handle=target(c,'城市'),
+            source_value_requests=[request],
+            filter_edits=[dict(operation=operation,target_handle=selected,
                 evidence_mention_ids=['m0'],value={'value_request_id':'value'})])
     return text,parse(text,[(value,'FILTER_VALUE','filter_expression',operation)],follow=True),draft
 
@@ -375,7 +379,7 @@ async def test_model_cannot_choose_unoffered_source_field(catalog):
         result=step[2](c);result['source_value_requests'][0]['field_binding_handles']=['foreign:field']
         return result
     engine,_=planner(catalog,[(step[0],step[1],draft)])
-    with pytest.raises(ValueError,match='SOURCE_VALUE_FIELD_NOT_OFFERED'):
+    with pytest.raises(ValueError,match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
         await engine.run(request(question=step[0]),IDENTITY)
     assert not catalog[6]
 

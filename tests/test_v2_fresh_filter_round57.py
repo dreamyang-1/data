@@ -90,17 +90,16 @@ async def test_empty_filter_and_source_consumption_use_native_compiler(catalog,o
 
 
 @pytest.mark.asyncio
-async def test_provider_whole_filter_add_on_empty_new_task_uses_structured_channel(catalog):
-    """Repair a provider's conditional-schema miss without changing semantics."""
+async def test_provider_whole_filter_add_schema_miss_is_rejected_before_repair(catalog):
+    """An output that misses the issued conditional schema cannot enter repair."""
     text,parsed,original=source_step()
     parsed['operation_markers'][0]['operation_hint']='ADD'
     def draft(context):
         value=original(context)
         value['edits'][-1]['operation']='ADD'
         return value
-    result=(await turns(planner(catalog,[(text,parsed,draft)])[0],[(text,parsed,draft)]))[0]
-    assert len(values(result))==1
-    assert result.next_state.source_value_bindings
+    with pytest.raises(ValueError,match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
+        await turns(planner(catalog,[(text,parsed,draft)])[0],[(text,parsed,draft)])
 
 
 @pytest.mark.asyncio

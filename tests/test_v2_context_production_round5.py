@@ -6,6 +6,7 @@ from pydantic import ValidationError
 
 from app.semantic_v2.context_contract import ContextProposal, ContextAwareParse, proposal_schema
 from app.semantic_v2.recognition import current_turn_schema
+from app.semantic_v2.recognition_client import RecognitionFailure
 from app.semantic_v2.context_proposal import ContextProposalFailure, discover_context
 from app.semantic_v2.catalog_bridge import ScopedPlanSession
 from app.semantic_v2.authorized_contract import contract_digest
@@ -104,9 +105,16 @@ async def test_runtime_hard_veto_is_traced_and_never_falls_back(catalog,fault,re
         p.update({'target_task_id':'task:forged'} if fault=='target' else {'task_version':99} if fault=='version' else {'state_version':99})
         return p
     last[1]['context_proposal']=bad;engine,transport=planner(catalog,[last])
-    with pytest.raises(ContextProposalFailure) as error:
-        await engine.run(request(question=last[0],message_id='bad'),IDENTITY,state=base.next_state,plans=(base.plan_state,))
-    assert reason in error.value.context_trace['OVERRIDE_REASON'] and len(transport.calls)==1
+    if fault == 'target':
+        with pytest.raises(RecognitionFailure, match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
+            await engine.run(request(question=last[0],message_id='bad'),IDENTITY,
+                state=base.next_state,plans=(base.plan_state,))
+    else:
+        with pytest.raises(ContextProposalFailure) as error:
+            await engine.run(request(question=last[0],message_id='bad'),IDENTITY,
+                state=base.next_state,plans=(base.plan_state,))
+        assert reason in error.value.context_trace['OVERRIDE_REASON']
+    assert len(transport.calls)==1
 
 
 @pytest.mark.asyncio
@@ -135,10 +143,9 @@ async def test_existing_but_unoffered_task_cannot_be_selected(catalog):
         return proposal(relation='RETURN_TO_TOPIC',target_task_id=identifier,task_version=1,
             state_version=c['task_context']['state_version'])
     last[1]['context_proposal']=omitted;engine,transport=planner(catalog,[last])
-    with pytest.raises(ContextProposalFailure) as error:
+    with pytest.raises(RecognitionFailure, match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
         await engine.run(request(question=last[0],message_id='omitted'),IDENTITY,state=bases[-1].next_state,
             plans=tuple(b.plan_state for b in bases))
-    assert 'CANDIDATE_MEMBERSHIP' in error.value.context_trace['OVERRIDE_REASON']
     assert len(transport.calls)==1
 
 

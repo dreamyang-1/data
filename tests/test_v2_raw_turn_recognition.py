@@ -206,11 +206,12 @@ async def test_single_item_collection_edit_matches_array_and_preserves_other_sta
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('operation',['SET','REPLACE'])
-async def test_assignment_still_requires_the_complete_collection(catalog,operation):
+@pytest.mark.parametrize('operation,reason',[('SET','V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'),
+    ('REPLACE','V2_CONTRACT_VALIDATION_FAILURE')])
+async def test_assignment_still_requires_the_complete_collection(catalog,operation,reason):
     step=metric_step('销售额',operation=operation)
     bad=(step[0],step[1],lambda c:dict(payload_type='SCALAR_AGGREGATE',edits=[edit('metrics',binding(c,'销售额','MEASURE'),operation)]))
-    with pytest.raises(RecognitionFailure,match='V2_CONTRACT_VALIDATION_FAILURE'):
+    with pytest.raises(RecognitionFailure,match=reason):
         await turns(planner(catalog,[bad])[0],[bad])
 
 
@@ -288,7 +289,7 @@ async def test_singleton_set_is_not_inferred_to_be_a_followup_replace(catalog):
     text='订单笔数';parsed=parse(text,[(text,'MEASURE','metrics','SET')],follow=True)
     step=(text,parsed,lambda c:dict(payload_type='INHERIT',edits=[edit('metrics',binding(c,'订单笔数','MEASURE'),'SET')]))
     steps=[metric_step('销售额'),step]
-    with pytest.raises(RecognitionFailure,match='V2_CONTRACT_VALIDATION_FAILURE'):await turns(planner(catalog,steps)[0],steps)
+    with pytest.raises(RecognitionFailure,match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):await turns(planner(catalog,steps)[0],steps)
 
 
 @pytest.mark.asyncio
@@ -356,7 +357,7 @@ def test_semantic_generation_schema_exposes_only_admissible_history(historical,h
 
 
 @pytest.mark.asyncio
-async def test_generation_constraint_does_not_remove_runtime_history_guard(catalog):
+async def test_generation_constraint_rejects_unoffered_history_before_runtime(catalog):
     first=metric_step('销售额');next_step=metric_step('再加订单笔数','订单笔数','ADD',True)
     def bad_draft(context):
         value=next_step[2](context)
@@ -366,7 +367,7 @@ async def test_generation_constraint_does_not_remove_runtime_history_guard(catal
         return value
     steps=[first,(next_step[0],next_step[1],bad_draft)]
     engine,transport=planner(catalog,steps)
-    with pytest.raises(RecognitionFailure,match='V2_HISTORICAL_TARGET_NOT_OFFERED'):
+    with pytest.raises(RecognitionFailure,match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
         await turns(engine,steps)
     schema=json.loads(transport.calls[-1]['messages'][0]['content'].split('JSON Schema:\n',1)[1])
     assert schema['properties']['historical_task_handle']=={'type':'null','default':None}
@@ -436,7 +437,7 @@ async def test_explicit_topic_shift_overrides_historical_offer(catalog,malicious
     steps=[metric_step('销售额'),(step[0],step[1],draft)]
     engine,transport=planner(catalog,steps)
     if malicious_handle:
-        with pytest.raises(RecognitionFailure,match='V2_HISTORICAL_TARGET_NOT_OFFERED'):await turns(engine,steps)
+        with pytest.raises(RecognitionFailure,match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):await turns(engine,steps)
     else:
         results=await turns(engine,steps)
         assert results[-1].plan['logical_plan']['task_id']!=results[0].plan['logical_plan']['task_id']
@@ -510,10 +511,10 @@ async def test_field_lineage_does_not_require_metric(catalog):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize('fault,code',[
-    ('operation','V2_SLOT_OPERATION_CONFLICT'),('evidence','V2_EDIT_EVIDENCE_NOT_CURRENT'),
-    ('handle','V2_BINDING_HANDLE_NOT_OFFERED'),('authority','V2_MODEL_AUTHORITY_FIELD_FORBIDDEN'),
+    ('operation','V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'),('evidence','V2_EDIT_EVIDENCE_NOT_CURRENT'),
+    ('handle','V2_BINDING_HANDLE_NOT_OFFERED'),('authority','V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'),
     ('dropped','V2_EXPLICIT_OPERATION_DROPPED'),('unresolved','V2_RECOGNITION_UNRESOLVED'),
-    ('shape','V2_QUERY_SHAPE_CONFLICT'),('history','V2_HISTORICAL_TARGET_NOT_OFFERED')])
+    ('shape','V2_QUERY_SHAPE_CONFLICT'),('history','V2_MODEL_DYNAMIC_SCHEMA_VIOLATION')])
 async def test_model_output_cannot_bypass_deterministic_guards(catalog,fault,code):
     text,parsed,base=metric_step('销售额')
     if fault=='shape':parsed['query_shape_prediction']='RANKING'
