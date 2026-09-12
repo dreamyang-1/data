@@ -543,7 +543,7 @@ def build_context_v1_execution_handler(
             state=state,
             plans=plans,
             pending=pending,
-            v1_passthrough_new_task_shapes=("RELATION_LIST",),
+            allow_standalone_new_task_passthrough=True,
         )
         if isinstance(result, RecognizedStandaloneNewTask):
             logger.info(
@@ -551,11 +551,12 @@ def build_context_v1_execution_handler(
                 extra={
                     "message_id": chat.message_id,
                     "bridge_route": result.execution_route,
+                    "v2_best_effort_failure": result.fallback_reason,
                 },
             )
             return ResolvedContextTurn(
                 completed_question=result.completed_question,
-                next_state=None,
+                next_state=result.next_state,
                 plan_state=None,
                 bridge_route=result.execution_route,
             )

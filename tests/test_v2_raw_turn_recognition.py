@@ -111,7 +111,7 @@ async def test_raw_input_reaches_model_catalog_and_plan(catalog):
 
 
 @pytest.mark.asyncio
-async def test_explicit_relation_list_new_task_can_stop_after_context_for_v1(catalog):
+async def test_standalone_new_task_uses_v1_only_after_best_effort_plan_fails(catalog):
     text = '查询产品合作的经销商名单'
     step = (
         text,
@@ -120,23 +120,154 @@ async def test_explicit_relation_list_new_task_can_stop_after_context_for_v1(cat
             [('产品', 'SUBJECT_ENTITY', 'subject', 'SET')],
             shape='RELATION_LIST',
         ),
-        lambda _context: (_ for _ in ()).throw(
-            AssertionError('context-only handoff must not call SemanticEdits')
-        ),
+        {},
     )
     engine, transport = planner(catalog, [step])
 
     result = await engine.run(
         request(question=text, message_id='relation-new-task'),
         IDENTITY,
-        v1_passthrough_new_task_shapes=('RELATION_LIST',),
+        allow_standalone_new_task_passthrough=True,
     )
 
     assert isinstance(result, RecognizedStandaloneNewTask)
     assert result.completed_question == text
     assert result.context_trace['FINAL_RELATION'] == 'NEW_TASK'
     assert result.execution_route == 'V1_EXECUTION_FALLBACK_NEW_TASK'
-    assert len(transport.calls) == 1
+    assert result.fallback_reason == 'V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'
+    assert result.next_state.payload['active_topic_id'] is None
+    assert result.next_state.payload['state_version'] == 1
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_standalone_new_task_passthrough_is_not_query_shape_specific(catalog):
+    text = '查询销售额'
+    step = (text, parse(text, [], shape='SCALAR_AGGREGATE'), {})
+    engine, transport = planner(catalog, [step])
+
+    result = await engine.run(
+        request(question=text, message_id='scalar-new-task'),
+        IDENTITY,
+        allow_standalone_new_task_passthrough=True,
+    )
+
+    assert isinstance(result, RecognizedStandaloneNewTask)
+    assert result.completed_question == text
+    assert result.parse.query_shape_prediction == 'SCALAR_AGGREGATE'
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_successful_standalone_new_task_keeps_v2_state_and_plan(catalog):
+    steps = [metric_step('查询销售额')]
+    engine, transport = planner(catalog, steps)
+
+    result = await engine.run(
+        request(question=steps[0][0], message_id='planned-new-task'),
+        IDENTITY,
+        allow_standalone_new_task_passthrough=True,
+    )
+
+    assert not isinstance(result, RecognizedStandaloneNewTask)
+    assert result.next_state.payload['active_topic_id'] is not None
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_failed_followup_never_uses_standalone_passthrough(catalog):
+    first = metric_step('查询销售额')
+    engine, transport = planner(catalog, [first])
+    initial = await engine.run(
+        request(question=first[0], message_id='followup-base'),
+        IDENTITY,
+        allow_standalone_new_task_passthrough=True,
+    )
+    text = '那订单笔数呢'
+    transport.steps.append((
+        text,
+        parse(text, [('订单笔数', 'MEASURE', 'metrics', 'REPLACE')], follow=True),
+        {},
+    ))
+
+    with pytest.raises(RecognitionFailure, match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
+        await engine.run(
+            request(question=text, message_id='failed-followup'),
+            IDENTITY,
+            state=initial.next_state,
+            plans=(initial.plan_state,),
+            allow_standalone_new_task_passthrough=True,
+        )
+
+    assert len(transport.calls) == 4
+
+
+@pytest.mark.asyncio
+async def test_contextual_edit_markers_never_use_new_task_passthrough(catalog):
+    text = '再加订单笔数'
+    parsed = parse(
+        text,
+        [('订单笔数', 'MEASURE', 'metrics', 'ADD')],
+        shape='SCALAR_AGGREGATE',
+    )
+    parsed['dialogue_act_candidates'] = ['NEW_TASK']
+    engine, transport = planner(catalog, [(text, parsed, {})])
+
+    with pytest.raises(RecognitionFailure, match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
+        await engine.run(
+            request(question=text, message_id='misclassified-add'),
+            IDENTITY,
+            allow_standalone_new_task_passthrough=True,
+        )
+
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_passthrough_new_task_creates_barrier_against_older_context(catalog):
+    first = metric_step('查询销售额')
+    engine, transport = planner(catalog, [first])
+    initial = await engine.run(
+        request(question=first[0], message_id='barrier-base'),
+        IDENTITY,
+        allow_standalone_new_task_passthrough=True,
+    )
+    independent = '查询订单笔数'
+    transport.steps.append((
+        independent,
+        parse(
+            independent,
+            [('订单笔数', 'MEASURE', 'metrics', 'SET')],
+            shape='SCALAR_AGGREGATE',
+        ),
+        {},
+    ))
+
+    fallback = await engine.run(
+        request(question=independent, message_id='barrier-new-task'),
+        IDENTITY,
+        state=initial.next_state,
+        plans=(initial.plan_state,),
+        allow_standalone_new_task_passthrough=True,
+    )
+
+    assert isinstance(fallback, RecognizedStandaloneNewTask)
+    assert fallback.next_state.payload['state_version'] == 2
+    assert fallback.next_state.payload['active_topic_id'] is None
+    assert set(fallback.next_state.payload['tasks']) == set(initial.next_state.payload['tasks'])
+
+    followup = '换今年'
+    transport.steps.append((followup, parse(followup, [], follow=True), {}))
+    with pytest.raises(RecognitionFailure, match='V2_CONTEXT_UNRESOLVED'):
+        await engine.run(
+            request(question=followup, message_id='barrier-followup'),
+            IDENTITY,
+            state=fallback.next_state,
+            plans=(initial.plan_state,),
+            allow_standalone_new_task_passthrough=True,
+        )
+
+    assert len(transport.calls) == 5
 
 
 @pytest.mark.asyncio
