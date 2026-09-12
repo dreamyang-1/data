@@ -599,7 +599,12 @@ class PersistedScalarApiHandler:
     @staticmethod
     def _fingerprint(chat, identity):
         return contract_digest({
-            "chat": chat.model_dump(mode="json"),
+            # department/history are legacy transport fields.  They have no
+            # authority or semantic effect in this runtime, so equivalent
+            # platform envelopes must keep the same idempotency identity.
+            "chat": chat.model_dump(
+                mode="json", exclude={"department", "history"}
+            ),
             "tenant_id": identity.tenant_id,
             "user_id": identity.user_id,
         })
@@ -649,7 +654,6 @@ class PersistedScalarApiHandler:
             ("original_question", bool(chat.original_question)),
             ("refresh_request_id", bool(chat.refresh_request_id)),
             ("replaces_message_id", bool(chat.replaces_message_id)),
-            ("history", bool(chat.history)),
             ("longterm_memory", bool(chat.use_longterm_memory)),
             ("tools", bool(chat.tools)),
             ("skills", bool(chat.skills)),
@@ -659,11 +663,26 @@ class PersistedScalarApiHandler:
             ("dataset", bool(chat.dataset_id)),
             ("dag_resume", bool(chat.dag_resume_token or chat.task_answers)),
             ("dependency_constraints", bool(chat.dependency_constraints)),
-            ("department", bool(chat.department.strip())),
         ):
             if active:
                 enabled.append(name)
         return tuple(enabled)
+
+    @staticmethod
+    def _normalize_legacy_department(chat: ChatRequest) -> ChatRequest:
+        """Consume department only when it exactly repeats authorized domains."""
+
+        raw = chat.department.strip()
+        if not raw:
+            return chat
+        parts = [part.strip() for part in raw.split(",")]
+        if (
+            any(not re.fullmatch(r"[1-9][0-9]*", part) for part in parts)
+            or tuple(sorted({int(part) for part in parts}))
+            != tuple(chat.business_domain_ids)
+        ):
+            raise ValueError("V2_BUSINESS_DOMAIN_CONFLICT")
+        return chat.model_copy(update={"department": ""})
 
     async def _emit_display(self, display: CompletedQuestionDisplay | None) -> None:
         if display is None:
@@ -799,6 +818,15 @@ class PersistedScalarApiHandler:
             )
 
     async def handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
+        try:
+            chat = self._normalize_legacy_department(chat)
+        except ValueError:
+            return self._response(
+                chat,
+                status="SAFE_FALLBACK",
+                error_code="V2_BUSINESS_DOMAIN_CONFLICT",
+                answer="兼容业务域字段与本次正式授权范围不一致，已拒绝执行。",
+            )
         unsupported = self._unsupported_features(chat)
         if unsupported:
             return self._response(
@@ -816,8 +844,19 @@ class PersistedScalarApiHandler:
                 answer="当前请求不在已配置的限定标量授权范围内。",
             )
         state_identity = self._identity(chat, identity)
-        fingerprint = self._fingerprint(chat, identity)
         snapshot = await self.store.load(context, state_identity)
+        if chat.history and snapshot.state is None:
+            return self._response(
+                chat,
+                status="SAFE_FALLBACK",
+                error_code="V2_HISTORY_STATE_REQUIRED",
+                answer="当前会话没有可恢复的 V2 任务状态，不能仅依据兼容历史字段继续执行。",
+            )
+        # Persisted V2 state is the sole context source.  Never inject the
+        # platform's presentation history into Recognition.
+        if chat.history:
+            chat = chat.model_copy(update={"history": []})
+        fingerprint = self._fingerprint(chat, identity)
         prior = snapshot.message(chat.message_id)
         if prior is not None:
             if prior["request_fingerprint"] != fingerprint:
