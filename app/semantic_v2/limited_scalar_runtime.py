@@ -97,6 +97,14 @@ def data_source_target_digest(source: dict[str, Any]) -> str:
     return contract_digest(data_source_target_identity(source))
 
 
+def _limited_scalar_payload(payload):
+    """Reject non-scalar plans before scalar-only lowering reads their fields."""
+
+    if getattr(payload, "payload_type", None) != "SCALAR_AGGREGATE":
+        raise ValueError("EXECUTION_PAYLOAD_UNSUPPORTED")
+    return payload
+
+
 def validate_limited_scalar_settings(settings: Settings) -> dict[str, Any]:
     if settings.runtime_mode != "V2_LIMITED_SCALAR":
         raise RuntimeError("LIMITED_SCALAR_RUNTIME_NOT_SELECTED")
@@ -592,8 +600,9 @@ def build_limited_scalar_handler(
         plan = AuthorizedLogicalPlan.model_validate(
             session.restore(result.plan_state, kind="LAST_REQUEST")
         )
+        payload = _limited_scalar_payload(plan.payload)
         options = {}
-        if plan.payload.time is not None:
+        if payload.time is not None:
             physical = session._pin.snapshot.get("physical_catalog", {})
             fields = [
                 field
@@ -605,7 +614,7 @@ def build_limited_scalar_handler(
             ]
             if len(fields) != 1:
                 raise ValueError("ASL2_TIME_PHYSICAL_EVIDENCE_MISMATCH")
-            if (plan.payload.time.anchor.canonical_id
+            if (payload.time.anchor.canonical_id
                     != settings.limited_scalar_time_field_canonical_id):
                 raise ValueError("ASL2_TIME_EVIDENCE_SCOPE_FIELD_MISMATCH")
             evidence = TimeStorageContract(
@@ -622,7 +631,7 @@ def build_limited_scalar_handler(
                 storage_timezone=settings.limited_scalar_time_storage_timezone,
                 storage_semantics="LOCAL_WALL_DATETIME",
                 fractional_seconds_precision=0,
-                applicability=plan.payload.time.range,
+                applicability=payload.time.range,
             )
             options = {"time_storage": evidence,
                        "time_evidence_digest": evidence.fingerprint}
