@@ -195,6 +195,22 @@ class RecognizedPlan(m.StrictModel):
     context_contract_version: str = CONTRACT_VERSION
 
 
+class RecognizedStandaloneNewTask(m.StrictModel):
+    """Validated context-only handoff for a self-contained V1 business query.
+
+    This result deliberately has no TaskState or LogicalPlan.  It is emitted
+    only when the caller explicitly opts one query shape into the existing V1
+    execution boundary.
+    """
+
+    parse: CurrentTurnSemanticParse
+    context_trace: JsonValue
+    completed_question: str
+    execution_route: Literal['V1_EXECUTION_FALLBACK_NEW_TASK'] = (
+        'V1_EXECUTION_FALLBACK_NEW_TASK'
+    )
+
+
 def value_schema():
     """Existing task types with opaque handles in place of bound authority."""
     schema = m.TaskSemanticState.model_json_schema()
@@ -257,13 +273,38 @@ class RawTurnPlanner:
         self.clock = clock or (lambda: datetime.now(ZoneInfo('Asia/Shanghai')))
         self.deterministic_grounding = deterministic_grounding
 
-    async def run(self, request, identity, *, state=None, plans=(), pending=None):
+    async def run(
+        self,
+        request,
+        identity,
+        *,
+        state=None,
+        plans=(),
+        pending=None,
+        v1_passthrough_new_task_shapes=(),
+    ):
         try:
-            return await self._run(request, identity, state=state, plans=plans, pending=pending)
+            return await self._run(
+                request,
+                identity,
+                state=state,
+                plans=plans,
+                pending=pending,
+                v1_passthrough_new_task_shapes=v1_passthrough_new_task_shapes,
+            )
         except ValidationError:
             raise RecognitionFailure('V2_CONTRACT_VALIDATION_FAILURE') from None
 
-    async def _run(self, request, identity, *, state=None, plans=(), pending=None):
+    async def _run(
+        self,
+        request,
+        identity,
+        *,
+        state=None,
+        plans=(),
+        pending=None,
+        v1_passthrough_new_task_shapes=(),
+    ):
         session = ScopedPlanSession(request, identity, self.catalog)
         request = session._request
         now = self.clock()
@@ -312,6 +353,28 @@ class RawTurnPlanner:
                 extra={'message_id': request.message_id, 'catalog_span_trace': catalog_spans})
             parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
                 text_ref=request.message_id, parsed=parsed)
+        passthrough_shapes = {
+            str(getattr(value, 'value', value))
+            for value in v1_passthrough_new_task_shapes
+        }
+        predicted_shape = (
+            str(getattr(parse.query_shape_prediction, 'value', parse.query_shape_prediction))
+            if parse.query_shape_prediction is not None else None
+        )
+        if (
+            context_trace['FINAL_STATUS'] == 'ACCEPTED'
+            and context_trace['FINAL_RELATION'] == 'NEW_TASK'
+            and context_trace['FINAL_TARGET'] is None
+            and predicted_shape in passthrough_shapes
+            and not parse.reference_signals
+            and not parse.followup_signals
+            and bool(parse.mentions)
+        ):
+            return RecognizedStandaloneNewTask(
+                parse=parsed,
+                context_trace=context_trace,
+                completed_question=request.question,
+            )
         if context_trace['FINAL_RELATION'] == 'ANSWER_CLARIFICATION':
             option=selected_option(current.pending,request.question)
             return self._answer_pending(session,current,state,pending,option,parsed,parse,now)

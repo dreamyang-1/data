@@ -51,6 +51,7 @@ from .isolated_execution import (
     require,
 )
 from .completed_question import CompletedQuestionDisplay
+from .pipeline import AuthorizedLogicalPlan
 from .state_machine import ConversationState, StateTransitionError
 
 
@@ -67,6 +68,9 @@ def _enum_status(value) -> str:
     return str(getattr(value, "value", value))
 DEPLOYMENT_PREFIX_PATTERN = re.compile(
     r"^[A-Za-z0-9:_-]+:v2-limited-scalar:[A-Za-z0-9][A-Za-z0-9_-]{2,63}$"
+)
+CONTEXT_V1_PREFIX_PATTERN = re.compile(
+    r"^[A-Za-z0-9:_-]+:v2-context-v1-execution:[A-Za-z0-9][A-Za-z0-9_-]{2,63}$"
 )
 
 
@@ -287,7 +291,10 @@ return 1
             require(300 <= ttl_seconds <= 86400, "ISOLATED_REDIS_TTL_INVALID")
         else:
             require(
-                bool(DEPLOYMENT_PREFIX_PATTERN.fullmatch(normalized))
+                bool(
+                    DEPLOYMENT_PREFIX_PATTERN.fullmatch(normalized)
+                    or CONTEXT_V1_PREFIX_PATTERN.fullmatch(normalized)
+                )
                 and normalized.endswith(":" + deployment_id)
                 and ":isolated:" not in normalized
                 and normalized != production_prefix.rstrip(":"),
@@ -466,6 +473,142 @@ return 1
             if int(result) != 1:
                 raise StateTransitionError("persisted scalar session changed concurrently")
             return self._snapshot(previous.key, value, context, state_identity)
+        return await self._publish(previous, value, context, state_identity)
+
+    async def begin_context(
+        self,
+        previous: PersistedSessionSnapshot,
+        *,
+        planned_state: ScopedArtifact | None,
+        plan_state: ScopedArtifact | None,
+        pending_state: ScopedArtifact | None,
+        message_id: str,
+        request_fingerprint: str,
+        context: AuthorizedScopeContext,
+        state_identity: dict,
+        bridge_route: str,
+        started_at: datetime,
+    ) -> PersistedSessionSnapshot:
+        """Reserve one V2-context/V1-execution turn without an execution attempt.
+
+        The persisted envelope and Redis CAS scripts are unchanged.  No V2 SQL
+        attempt or Dataset is fabricated for a request executed by the V1 chain.
+        """
+
+        require(previous.message(message_id) is None,
+                "PERSISTED_MESSAGE_ALREADY_RESERVED")
+        value = deepcopy(previous.envelope)
+        if planned_state is not None:
+            planned_state = ScopedArtifact.model_validate(
+                planned_state.model_dump(mode="json")
+            )
+            require(
+                planned_state.kind == "CONVERSATION"
+                and planned_state.context == context,
+                "PERSISTED_SESSION_SCOPE_MISMATCH",
+            )
+            planned = ConversationState.model_validate(planned_state.payload)
+            require(
+                planned.state_version == previous.state_version + 1,
+                "PERSISTED_PLANNED_STATE_VERSION_MISMATCH",
+            )
+            value["state_version"] = planned.state_version
+            value["state"] = planned_state.model_dump(mode="json")
+        else:
+            require(plan_state is None and pending_state is None,
+                    "PERSISTED_CONTEXT_ARTIFACTS_REQUIRE_STATE")
+        if plan_state is not None:
+            plan_state = ScopedArtifact.model_validate(
+                plan_state.model_dump(mode="json")
+            )
+            require(plan_state.kind == "LAST_REQUEST" and plan_state.context == context,
+                    "PERSISTED_PLAN_SCOPE_MISMATCH")
+            plan = AuthorizedLogicalPlan.model_validate(plan_state.payload)
+            value["plans"][plan.task_id] = plan_state.model_dump(mode="json")
+        if pending_state is not None:
+            pending_state = ScopedArtifact.model_validate(
+                pending_state.model_dump(mode="json")
+            )
+            require(pending_state.kind == "PENDING" and pending_state.context == context,
+                    "PERSISTED_PENDING_SCOPE_MISMATCH")
+        value["messages"][message_id] = {
+            "request_fingerprint": request_fingerprint,
+            "status": "RUNNING",
+            "execution_stage": "V2_CONTEXT_RESOLVED",
+            "bridge_route": bridge_route,
+            "started_at": started_at.isoformat(),
+            "pending_state": (
+                pending_state.model_dump(mode="json")
+                if pending_state is not None else None
+            ),
+        }
+        if self.namespace_mode == "STABLE_DEPLOYMENT":
+            value["revision"] = previous.revision + 1
+            encoded = json.dumps(
+                value, ensure_ascii=False, sort_keys=True,
+                separators=(",", ":"), allow_nan=False,
+            )
+            require(len(value.get("messages", {})) <= self.max_messages,
+                    "PERSISTED_SESSION_MESSAGE_LIMIT_REACHED")
+            require(len(encoded.encode("utf-8")) <= self.max_envelope_bytes,
+                    "PERSISTED_SESSION_SIZE_LIMIT_REACHED")
+            guard_key = self._guard_key(previous.key, message_id)
+            guard = json.dumps({
+                "schema_version": "limited-scalar-message-guard-v1",
+                "request_fingerprint": request_fingerprint,
+                "state_key": previous.key,
+                "reserved_at": started_at.isoformat(),
+            }, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            result = await self.redis.eval(
+                self._BEGIN_CAS,
+                2,
+                previous.key,
+                guard_key,
+                previous.revision,
+                encoded,
+                self.ttl_seconds,
+                guard,
+                self.idempotency_ttl_seconds,
+            )
+            if int(result) == -1:
+                raise ValueError("PERSISTED_MESSAGE_ALREADY_RESERVED")
+            if int(result) != 1:
+                raise StateTransitionError(
+                    "persisted scalar session changed concurrently"
+                )
+            return self._snapshot(previous.key, value, context, state_identity)
+        return await self._publish(previous, value, context, state_identity)
+
+    async def finish_context(
+        self,
+        previous: PersistedSessionSnapshot,
+        *,
+        message_id: str,
+        request_fingerprint: str,
+        response: AgentResponse,
+        context: AuthorizedScopeContext,
+        state_identity: dict,
+        v1_execution_called: bool,
+    ) -> PersistedSessionSnapshot:
+        record = previous.message(message_id)
+        require(
+            record is not None
+            and record.get("status") == "RUNNING"
+            and record.get("request_fingerprint") == request_fingerprint,
+            "PERSISTED_MESSAGE_RESERVATION_MISMATCH",
+        )
+        value = deepcopy(previous.envelope)
+        value["messages"][message_id] = {
+            **record,
+            "status": "SUCCEEDED",
+            "execution_stage": (
+                "V1_EXECUTION_RESPONSE_SAVED"
+                if v1_execution_called else "V2_CONTEXT_RESPONSE_SAVED"
+            ),
+            "v1_execution_called": v1_execution_called,
+            "response": response.model_dump(mode="json"),
+            "result": None,
+        }
         return await self._publish(previous, value, context, state_identity)
 
     async def mark_stage(self, previous, *, message_id, request_fingerprint,

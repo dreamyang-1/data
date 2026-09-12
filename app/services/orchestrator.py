@@ -506,7 +506,10 @@ class DataAnalysisOrchestrator:
             independent_chat = raw_request.primary_intent == PrimaryIntent.CHAT
             dag_pending = (
                 None
-                if chat._is_regeneration_execution
+                if (
+                    chat._is_regeneration_execution
+                    or chat._completed_question_execution
+                )
                 else await self.sessions.get_dag_pending(
                     identity.tenant_id,
                     identity.user_id,
@@ -2586,6 +2589,10 @@ class DataAnalysisOrchestrator:
     async def _handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
         preserve_merged_question = False
         recalled_task_frame = False
+        restore_legacy_semantic_context = not (
+            chat._is_regeneration_execution
+            or chat._completed_question_execution
+        )
         admission_question, _ = QuestionRewriter._normalize_polite_word_order(
             chat.question
         )
@@ -2599,7 +2606,7 @@ class DataAnalysisOrchestrator:
         )
         pending = (
             None
-            if chat._is_regeneration_execution
+            if not restore_legacy_semantic_context
             else await self.sessions.get_pending(
                 identity.tenant_id,
                 identity.user_id,
@@ -2662,7 +2669,7 @@ class DataAnalysisOrchestrator:
             chat = chat.model_copy(update={'history': []})
         previous_for_rewrite = (
             None
-            if standalone_complete_business or chat._is_regeneration_execution
+            if standalone_complete_business or not restore_legacy_semantic_context
             else pending.request if pending else await self.sessions.get_task_frame(
                 identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id
             )
@@ -2672,7 +2679,7 @@ class DataAnalysisOrchestrator:
         # “补充上一轮” can restore authoritative metric IDs, grain, filters and
         # time semantics instead of treating the provisional parse as history.
         completed_before_pending = None
-        if pending is not None and not chat._is_regeneration_execution:
+        if pending is not None and restore_legacy_semantic_context:
             completed_before_pending = await self.sessions.get_last_request(
                 identity.tenant_id,
                 identity.user_id,
@@ -2685,7 +2692,7 @@ class DataAnalysisOrchestrator:
             ):
                 completed_before_pending = None
         if (
-            not chat._is_regeneration_execution
+            restore_legacy_semantic_context
             and (pending is None or requires_prior_task_resolution(chat.question))
             and not standalone_complete_business
             and recalls_prior_task(chat.question)
@@ -2729,7 +2736,7 @@ class DataAnalysisOrchestrator:
             previous_for_rewrite = None
             chat = chat.model_copy(update={'history': []})
         if (
-            not chat._is_regeneration_execution
+            restore_legacy_semantic_context
             and not independent_chat
             and previous_for_rewrite is None
             and pending is None
@@ -2738,7 +2745,7 @@ class DataAnalysisOrchestrator:
                 identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id
             )
         elif (
-            not chat._is_regeneration_execution
+            restore_legacy_semantic_context
             and pending is None
             and not independent_chat
             and not recalled_task_frame
@@ -3311,6 +3318,7 @@ class DataAnalysisOrchestrator:
             count_context = previous_for_rewrite
             if (
                 count_context is None
+                and restore_legacy_semantic_context
                 and not re.search(
                     r"切换话题|换个话题|另一个问题|重新开始|不看(?:之前|上面)",
                     chat.question,
@@ -3375,7 +3383,11 @@ class DataAnalysisOrchestrator:
             )
         )
         relationship_scope_context = previous_for_rewrite
-        if relationship_projection_followup and relationship_scope_context is None:
+        if (
+            relationship_projection_followup
+            and relationship_scope_context is None
+            and restore_legacy_semantic_context
+        ):
             relationship_scope_context = await self.sessions.get_last_request(
                 identity.tenant_id,
                 identity.user_id,
@@ -3441,7 +3453,11 @@ class DataAnalysisOrchestrator:
             )
         )
         metric_scope_context = previous_for_rewrite
-        if metric_only_followup and metric_scope_context is None:
+        if (
+            metric_only_followup
+            and metric_scope_context is None
+            and restore_legacy_semantic_context
+        ):
             metric_scope_context = await self.sessions.get_last_request(
                 identity.tenant_id,
                 identity.user_id,
@@ -3673,7 +3689,11 @@ class DataAnalysisOrchestrator:
                 or sort_scope_context is not None
             )
         )
-        if sort_only_turn and sort_scope_context is None:
+        if (
+            sort_only_turn
+            and sort_scope_context is None
+            and restore_legacy_semantic_context
+        ):
             sort_scope_context = await self.sessions.get_last_request(
                 identity.tenant_id,
                 identity.user_id,
@@ -3869,7 +3889,11 @@ class DataAnalysisOrchestrator:
             re.sub(r"\s+", "", chat.question).lower(),
         ))
         limit_scope_context = previous_for_rewrite
-        if limit_only_turn and limit_scope_context is None:
+        if (
+            limit_only_turn
+            and limit_scope_context is None
+            and restore_legacy_semantic_context
+        ):
             limit_scope_context = await self.sessions.get_last_request(
                 identity.tenant_id,
                 identity.user_id,
@@ -6458,6 +6482,8 @@ class DataAnalysisOrchestrator:
         selections even when each intermediate result contains only one row.
         """
 
+        if chat._completed_question_execution:
+            return
         compact = re.sub(r"\s+", "", chat.question)
         if not re.search(
             r"这(?:两|2)个省份?.{0,12}(?:加起来|合计|总共|一共)", compact

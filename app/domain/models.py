@@ -628,6 +628,11 @@ class ChatRequest(StrictModel):
     _bypass_repeat_query_cache: bool = PrivateAttr(default=False)
     _is_regeneration_execution: bool = PrivateAttr(default=False)
     _regeneration_mode: str = PrivateAttr(default="NONE")
+    # Set only by the opt-in V2-context/V1-execution bridge after V2 has
+    # produced a standalone completed question.  V1 still owns business
+    # planning and execution, but must not merge its own Pending/TaskFrame
+    # state into an already resolved question a second time.
+    _completed_question_execution: bool = PrivateAttr(default=False)
     conversation_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=4000)

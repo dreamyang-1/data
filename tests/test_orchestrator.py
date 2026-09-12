@@ -51,6 +51,53 @@ def service() -> DataAnalysisOrchestrator:
 
 
 @pytest.mark.asyncio
+async def test_completed_question_execution_does_not_restore_v1_semantic_context():
+    class ContextReadTrapStore(InMemorySessionStore):
+        async def get_pending(self, *args, **kwargs):
+            raise AssertionError("completed question must not restore V1 Pending")
+
+        async def get_dag_pending(self, *args, **kwargs):
+            raise AssertionError("completed question must not restore V1 DAG state")
+
+        async def get_task_frame(self, *args, **kwargs):
+            raise AssertionError("completed question must not restore V1 TaskFrame")
+
+        async def get_last_request(self, *args, **kwargs):
+            raise AssertionError("completed question must not restore V1 LastRequest")
+
+        async def get_recent_task_frames(self, *args, **kwargs):
+            raise AssertionError("completed question must not restore V1 task history")
+
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(
+            _env_file=None,
+            env="test",
+            adapter_mode="mock",
+            intent_model_enabled=False,
+        ),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=build_mock_adapters(),
+        sessions=ContextReadTrapStore(),
+    )
+    chat = ChatRequest(
+        semantic_model_id=81,
+        application_id="app1",
+        conversation_id="v2-completed-question",
+        message_id="v2-completed-question-1",
+        question="查询本月销售额",
+        history=[],
+    )
+    chat._completed_question_execution = True
+
+    response = await agent.handle(
+        chat,
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+    )
+
+    assert response.status == "COMPLETED"
+
+
+@pytest.mark.asyncio
 async def test_regeneration_replaces_stale_continuation_state_in_original_scope():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")

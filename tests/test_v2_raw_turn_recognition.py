@@ -11,7 +11,7 @@ import pytest
 
 from app.config import Settings
 from app.semantic_v2.authorized_contract import ScopedArtifact, contract_digest
-from app.semantic_v2.recognition import RawTurnPlanner
+from app.semantic_v2.recognition import RawTurnPlanner, RecognizedStandaloneNewTask
 from app.semantic_v2.recognition_client import RecognitionFailure, RecognitionModelClient
 from test_v2_authorized_catalog_bridge import IDENTITY, request, authority, publish, reseal, system
 
@@ -108,6 +108,35 @@ async def test_raw_input_reaches_model_catalog_and_plan(catalog):
     assert all(c['model']=='existing-configured-model' and c['temperature']==0 for c in transport.calls)
     assert 'tasks' not in json.loads(transport.calls[0]['messages'][1]['content'])
     assert result.next_state.context.authorized_scope.business_domain_ids==(205,)
+
+
+@pytest.mark.asyncio
+async def test_explicit_relation_list_new_task_can_stop_after_context_for_v1(catalog):
+    text = '查询产品合作的经销商名单'
+    step = (
+        text,
+        parse(
+            text,
+            [('产品', 'SUBJECT_ENTITY', 'subject', 'SET')],
+            shape='RELATION_LIST',
+        ),
+        lambda _context: (_ for _ in ()).throw(
+            AssertionError('context-only handoff must not call SemanticEdits')
+        ),
+    )
+    engine, transport = planner(catalog, [step])
+
+    result = await engine.run(
+        request(question=text, message_id='relation-new-task'),
+        IDENTITY,
+        v1_passthrough_new_task_shapes=('RELATION_LIST',),
+    )
+
+    assert isinstance(result, RecognizedStandaloneNewTask)
+    assert result.completed_question == text
+    assert result.context_trace['FINAL_RELATION'] == 'NEW_TASK'
+    assert result.execution_route == 'V1_EXECUTION_FALLBACK_NEW_TASK'
+    assert len(transport.calls) == 1
 
 
 @pytest.mark.asyncio
