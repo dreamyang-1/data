@@ -600,6 +600,69 @@ class HttpDataRetrievalAdapter:
         self._asl_plan_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 
     @staticmethod
+    def _materialize_oagent_execution_scope(
+        request: CanonicalAnalysisRequest,
+        business_domain_id: int | None,
+    ) -> dict[str, int | list[int] | None]:
+        """Build Oagent's execution scope without changing request authorization."""
+
+        scope = request.authorized_semantic_scope
+        requested_domains = list(request.business_domain_ids)
+        resolved_domains = list(request.resolved_business_domain_ids)
+
+        if scope is None:
+            # Isolated adapter utilities do not represent a public request and
+            # retain their legacy payload shape. Public orchestration always
+            # binds AuthorizedSemanticScope before this boundary.
+            return {
+                "business_domain_id": business_domain_id,
+                "business_domain_ids": requested_domains,
+            }
+        if tuple(requested_domains) != scope.business_domain_ids:
+            raise AdapterError(
+                "REQUEST_SCOPE_INVALID",
+                "Canonical requested scope differs from backend authorization",
+            )
+        if requested_domains:
+            if resolved_domains and resolved_domains != requested_domains:
+                raise AdapterError(
+                    "REQUEST_SCOPE_INVALID",
+                    "Resolved execution scope differs from explicit authorization",
+                )
+            resolved_domains = requested_domains
+        elif not resolved_domains:
+            raise AdapterError(
+                "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
+                "MODEL_WIDE request has no resolved Oagent execution domain",
+            )
+
+        if (
+            not resolved_domains
+            or any(type(domain) is not int or domain <= 0 for domain in resolved_domains)
+            or len(resolved_domains) != len(set(resolved_domains))
+        ):
+            raise AdapterError(
+                "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
+                "Oagent execution scope is empty or invalid",
+            )
+        if len(resolved_domains) > 1:
+            raise AdapterError(
+                "OAGENT_MULTI_DOMAIN_CONTRACT_UNSUPPORTED",
+                "Oagent /agent/query does not support multiple execution domains",
+            )
+
+        execution_domain = resolved_domains[0]
+        if business_domain_id is not None and business_domain_id != execution_domain:
+            raise AdapterError(
+                "REQUEST_SCOPE_INVALID",
+                "Legacy execution domain conflicts with resolved scope",
+            )
+        return {
+            "business_domain_id": execution_domain,
+            "business_domain_ids": [execution_domain],
+        }
+
+    @staticmethod
     def _apply_v2_scalar_shape_contract(
         asl_query: str,
         request: CanonicalAnalysisRequest,
@@ -742,6 +805,9 @@ class HttpDataRetrievalAdapter:
             return MetricDiscovery(metrics=[])
         self._enforce_bound_scope(request, semantic_model_id, business_domain_id)
         self._require_supported_retrieval_scope(request)
+        oagent_execution_scope = self._materialize_oagent_execution_scope(
+            request, business_domain_id
+        )
         query = request.rewritten_question or request.original_question
         discovery_request = request
         if (
@@ -780,8 +846,7 @@ class HttpDataRetrievalAdapter:
                 "query": query,
                 "retrieval_query": query,
                 "semantic_model_id": semantic_model_id,
-                "business_domain_id": business_domain_id,
-                "business_domain_ids": list(request.business_domain_ids),
+                **oagent_execution_scope,
                 "metric_ids": [],
                 "metricless_projection": False,
                 "intent_asl_contract": intent_asl_contract,
@@ -797,7 +862,11 @@ class HttpDataRetrievalAdapter:
         )
         if generated.get("success") is not True:
             return MetricDiscovery(metrics=[])
-        self._confirm_generated_scope(request, generated, business_domain_id)
+        self._confirm_generated_scope(
+            request,
+            generated,
+            oagent_execution_scope["business_domain_id"],
+        )
         raw_asl = generated.get("result")
         evidence = generated.get("semantic_evidence")
         if not isinstance(raw_asl, str) or not isinstance(evidence, dict):
@@ -908,6 +977,9 @@ class HttpDataRetrievalAdapter:
             return MetricDiscovery(metrics=[])
         self._enforce_bound_scope(request, semantic_model_id, business_domain_id)
         self._require_supported_retrieval_scope(request)
+        oagent_execution_scope = self._materialize_oagent_execution_scope(
+            request, business_domain_id
+        )
         query = request.rewritten_question or request.original_question
         generated = await self.client.post(
             self.settings.asl_generator_base_url,
@@ -916,8 +988,7 @@ class HttpDataRetrievalAdapter:
                 "query": query,
                 "retrieval_query": query,
                 "semantic_model_id": semantic_model_id,
-                "business_domain_id": business_domain_id,
-                "business_domain_ids": list(request.business_domain_ids),
+                **oagent_execution_scope,
                 "metric_ids": [],
                 "metricless_projection": True,
                 "intent_asl_contract": None,
@@ -933,7 +1004,11 @@ class HttpDataRetrievalAdapter:
         )
         if generated.get("success") is not True:
             return MetricDiscovery(metrics=[])
-        self._confirm_generated_scope(request, generated, business_domain_id)
+        self._confirm_generated_scope(
+            request,
+            generated,
+            oagent_execution_scope["business_domain_id"],
+        )
         raw_asl = generated.get("result")
         evidence = generated.get("semantic_evidence")
         if not isinstance(raw_asl, str) or not isinstance(evidence, dict):
@@ -1185,6 +1260,9 @@ class HttpDataRetrievalAdapter:
 
         self._enforce_bound_scope(request, semantic_model_id, business_domain_id)
         self._require_supported_retrieval_scope(request)
+        oagent_execution_scope = self._materialize_oagent_execution_scope(
+            request, business_domain_id
+        )
         metric_definitions = await self._current_metric_definitions(request, identity)
         metric_definition_fingerprints = [
             hashlib.sha256(json.dumps(
@@ -1741,8 +1819,8 @@ class HttpDataRetrievalAdapter:
                 "query": asl_query,
                 "retrieval_query": retrieval_query,
                 "semantic_model_id": semantic_model_id,
-                "business_domain_id": business_domain_id,
-                "business_domain_ids": list(request.business_domain_ids),
+                "business_domain_id": oagent_execution_scope["business_domain_id"],
+                "business_domain_ids": oagent_execution_scope["business_domain_ids"],
                 # Query-plan visibility can differ by caller. Keep cache reuse
                 # within the same trusted identity and application boundary.
                 "tenant_id": identity.tenant_id,
@@ -1781,8 +1859,7 @@ class HttpDataRetrievalAdapter:
                     "query": asl_query,
                     "retrieval_query": retrieval_query,
                     "semantic_model_id": semantic_model_id,
-                    "business_domain_id": business_domain_id,
-                    "business_domain_ids": list(request.business_domain_ids),
+                    **oagent_execution_scope,
                     "metric_ids": [
                         metric.metric_id
                         for metric in request.metrics
@@ -1817,7 +1894,11 @@ class HttpDataRetrievalAdapter:
             )
             if generated.get("success") is not True:
                 raise AdapterError("ASL_GENERATION_FAILED", "ASL generator rejected request")
-            self._confirm_generated_scope(request, generated, business_domain_id)
+            self._confirm_generated_scope(
+                request,
+                generated,
+                oagent_execution_scope["business_domain_id"],
+            )
             contract_acknowledged = (
                 "asl_validation" in generated or "asl_contract" in generated
             )
