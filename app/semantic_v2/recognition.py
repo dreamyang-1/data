@@ -23,6 +23,7 @@ from .enums import CatalogType, SemanticRole
 from .pipeline import CurrentTurnParser, CurrentTurnSemanticParse, TurnResolver, collect_bound_refs
 from .pipeline import AuthorizedLogicalPlan
 from .recognition_client import RecognitionFailure
+from .deterministic_grounding import can_publish_from_deterministic_grounding
 from .context_contract import ContextAwareParse, proposal_schema, CONTRACT_VERSION
 from .context_proposal import discover_context, accept_proposal, proposal_resolution
 from .recognition_repairs import (repair_model_parse, repair_collection_handle_mentions,
@@ -250,10 +251,11 @@ def materialize_payload(kind, state):
 
 
 class RawTurnPlanner:
-    def __init__(self, model_client, catalog, *, clock=None):
+    def __init__(self, model_client, catalog, *, clock=None, deterministic_grounding=True):
         self.model = model_client
         self.catalog = catalog
         self.clock = clock or (lambda: datetime.now(ZoneInfo('Asia/Shanghai')))
+        self.deterministic_grounding = deterministic_grounding
 
     async def run(self, request, identity, *, state=None, plans=(), pending=None):
         try:
@@ -317,15 +319,24 @@ class RawTurnPlanner:
         tasks = {'task:' + contract_digest({'task': t.task_id})[:24]: t for t in current.tasks.values()}
         selected_tasks = {h:t for h,t in tasks.items() if t.task_id == context_trace['FINAL_TARGET']}
         datasets = {'dataset:' + contract_digest({'dataset': d.dataset_id})[:24]: d for d in current.datasets.values() if d.status == 'VALID'}
-        draft = await self.model.complete(stage='v2_semantic_edits', instruction=DRAFT_PROMPT,
-            context={'question': request.question, 'parse': parsed.model_dump(mode='json'), 'clock': now.isoformat(),
-                'catalog_candidates': candidates, 'tasks': self._task_context(parse, current, selected_tasks, previous_plans,
-                    context_trace=context_trace),
-                'datasets': [{'dataset_handle': h, 'task_handle': next(h for h,t in tasks.items() if t.task_id == d.task_id),
-                    'task_version': d.task_version} for h,d in datasets.items()],
-                'payload_types': [*PayloadContractRegistry.definitions, 'INHERIT'],
-                'value_schema': value_schema()}, output_model=SemanticTaskDraft,
-            schema=semantic_task_schema(parse, selected_tasks, context_relation=context_trace['FINAL_RELATION'],candidates=candidates))
+        grounded = (can_publish_from_deterministic_grounding(session=session, parse=parse, candidates=candidates,
+            handles=handles, context_trace=context_trace, current=current, pending=pending, now=now)
+            if self.deterministic_grounding else None)
+        if grounded is not None:
+            draft = SemanticTaskDraft.model_validate(grounded.draft)
+            logging.getLogger(__name__).info('V2 deterministic semantic grounding accepted', extra={
+                'message_id': request.message_id, 'reason_codes': grounded.reason_codes,
+                'semantic_edits_model_call_avoided': True})
+        else:
+            draft = await self.model.complete(stage='v2_semantic_edits', instruction=DRAFT_PROMPT,
+                context={'question': request.question, 'parse': parsed.model_dump(mode='json'), 'clock': now.isoformat(),
+                    'catalog_candidates': candidates, 'tasks': self._task_context(parse, current, selected_tasks, previous_plans,
+                        context_trace=context_trace),
+                    'datasets': [{'dataset_handle': h, 'task_handle': next(h for h,t in tasks.items() if t.task_id == d.task_id),
+                        'task_version': d.task_version} for h,d in datasets.items()],
+                    'payload_types': [*PayloadContractRegistry.definitions, 'INHERIT'],
+                    'value_schema': value_schema()}, output_model=SemanticTaskDraft,
+                schema=semantic_task_schema(parse, selected_tasks, context_relation=context_trace['FINAL_RELATION'],candidates=candidates))
         draft, handle_repairs = repair_collection_handle_mentions(draft, parse=parse, handles=handles, candidates=candidates)
         if handle_repairs:
             logging.getLogger(__name__).info('V2 collection handle representation repaired',
@@ -342,7 +353,8 @@ class RawTurnPlanner:
         base = target.active_version if target else 0
         prior = next(v.semantics for v in target.versions if v.version == base) if target else m.TaskSemanticState()
         patch, edit_trace, source_blockers, source_operations = await source_filter_patch(self, session, parse, draft, handles, base, now,
-            deferred=deferred, prior=prior, target=target)
+            deferred=deferred, prior=prior, target=target,
+            deterministic_evidence=grounded.derived_evidence if grounded is not None else ())
         blockers.extend(source_blockers)
         pending_operations.update(source_operations)
         if not blockers:
@@ -565,7 +577,8 @@ class RawTurnPlanner:
         return value
 
     @staticmethod
-    def _patch(session, parse, draft, handles, base, now, *, deferred=(), prior=None, target=None):
+    def _patch(session, parse, draft, handles, base, now, *, deferred=(), prior=None, target=None,
+               deterministic_evidence=()):
         draft, initialization_trace = initial_assignments(parse,draft,base=base,target=target,
             prior=prior or m.TaskSemanticState(),edit_model=SlotEditDraft,handles=handles)
         draft, deletion_trace = align_filter_deletions(parse,draft,base=base,target=target)
@@ -591,7 +604,10 @@ class RawTurnPlanner:
             if not set(edit.evidence_mention_ids) <= ids:
                 raise RecognitionFailure('V2_EDIT_EVIDENCE_NOT_CURRENT')
             matching = {(slot, edit.operation, i) for i in edit.evidence_mention_ids} & markers
-            if not matching and (edit.operation != 'SET' or not set(edit.evidence_mention_ids) <= set(parse.explicit_slot_mentions.get(slot, []))):
+            assignment_evidence = set(edit.evidence_mention_ids) <= (
+                set(parse.explicit_slot_mentions.get(slot, [])) |
+                {mention_id for path, mention_id in deterministic_evidence if path == slot})
+            if not matching and (edit.operation != 'SET' or not assignment_evidence):
                 raise RecognitionFailure('V2_SLOT_OPERATION_CONFLICT')
             used_markers.update(matching)
             covered_mentions.update((slot, i) for i in edit.evidence_mention_ids)
@@ -622,7 +638,10 @@ class RawTurnPlanner:
             if not set(edit.evidence_mention_ids) <= ids:
                 raise RecognitionFailure('V2_EDIT_EVIDENCE_NOT_CURRENT')
             matching = {(edit.slot_path, edit.operation, i) for i in edit.evidence_mention_ids} & markers
-            if not matching and (edit.operation != 'SET' or not set(edit.evidence_mention_ids) <= set(parse.explicit_slot_mentions.get(edit.slot_path, []))):
+            assignment_evidence = set(edit.evidence_mention_ids) <= (
+                set(parse.explicit_slot_mentions.get(edit.slot_path, [])) |
+                {mention_id for path, mention_id in deterministic_evidence if path == edit.slot_path})
+            if not matching and (edit.operation != 'SET' or not assignment_evidence):
                 raise RecognitionFailure('V2_SLOT_OPERATION_CONFLICT')
             used_markers.update(matching)
             covered_mentions.update((edit.slot_path,i) for i in edit.evidence_mention_ids)
@@ -667,7 +686,9 @@ class RawTurnPlanner:
                     raise RecognitionFailure('V2_BINDING_OUTSIDE_EDIT_EVIDENCE')
             operations.append(m.SlotOperation(operation_id='operation:' + str(index), slot_path=edit.slot_path,
                 operation=edit.operation, new_value=value, source='CURRENT_EXPLICIT',
-                reason_code=normalization_reason or ('CURRENT_TURN_SINGLETON_REPLACEMENT' if singleton_replacement else 'CURRENT_TURN_EVIDENCE'),
+                reason_code=normalization_reason or ('CURRENT_TURN_SINGLETON_REPLACEMENT' if singleton_replacement
+                    else 'CURRENT_DETERMINISTIC_GROUNDING' if any((edit.slot_path, mention_id) in deterministic_evidence
+                        for mention_id in edit.evidence_mention_ids) else 'CURRENT_TURN_EVIDENCE'),
                 base_task_version=base, presence='EXPLICITLY_CLEARED' if edit.operation == 'CLEAR' else 'PRESENT',
                 evidence_mention_ids=edit.evidence_mention_ids))
         def hydrate(value, evidence):
