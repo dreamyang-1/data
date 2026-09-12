@@ -146,8 +146,11 @@ def validate_authorized_refs(value, snapshot: SnapshotContext, context: Authoriz
     pin = context.catalog_pin
     if len(scope.business_domain_ids) > 1:
         raise ValueError('EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED')
+    requested_domains = [str(d) for d in scope.business_domain_ids]
     if (snapshot.semantic_model_id != str(scope.semantic_model_id)
-            or snapshot.business_domain_ids != [str(d) for d in scope.business_domain_ids]
+            or (requested_domains and snapshot.business_domain_ids != requested_domains)
+            or any(not d.isascii() or not d.isdecimal() or int(d) <= 0
+                   or str(int(d)) != d for d in snapshot.business_domain_ids)
             or snapshot.database_id != (str(scope.database_id) if scope.database_id is not None else None)
             or snapshot.knowledge_base_names != list(scope.knowledge_base_names)
             or snapshot.catalog_version != pin.catalog_version
@@ -163,8 +166,9 @@ def validate_authorized_refs(value, snapshot: SnapshotContext, context: Authoriz
         # It never changes the current explicit domain grant.
         if (ref.semantic_model_id != str(scope.semantic_model_id) or ref.catalog_version != pin.catalog_version
                 or any(not d.isascii() or not d.isdecimal() or int(d) <= 0 or str(int(d)) != d for d in ref.business_domain_ids)
-                or (scope.business_domain_ids and (not ref.business_domain_ids
-                    or not set(ref.business_domain_ids) <= set(snapshot.business_domain_ids)))):
+                or (scope.business_domain_ids and not ref.business_domain_ids)
+                or (snapshot.business_domain_ids and ref.business_domain_ids
+                    and not set(ref.business_domain_ids) <= set(snapshot.business_domain_ids))):
             raise ValueError('PLAN_VALIDATION_FAILURE: bound reference outside current scope')
         if not any(isinstance(item, (CatalogBindingEvidence, SourceValueBindingEvidence)) and item.ref == ref for item in evidence):
             raise ValueError('PLAN_VALIDATION_FAILURE: pinned catalog membership required')

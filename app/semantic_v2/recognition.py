@@ -286,6 +286,7 @@ class RawTurnPlanner:
         plans=(),
         pending=None,
         allow_standalone_new_task_passthrough=False,
+        resolved_business_domain_ids=None,
     ):
         fallback = []
         try:
@@ -299,6 +300,7 @@ class RawTurnPlanner:
                     allow_standalone_new_task_passthrough
                 ),
                 standalone_new_task_fallback=fallback,
+                resolved_business_domain_ids=resolved_business_domain_ids,
             )
         except ValidationError:
             failure = RecognitionFailure('V2_CONTRACT_VALIDATION_FAILURE')
@@ -326,8 +328,14 @@ class RawTurnPlanner:
         pending=None,
         allow_standalone_new_task_passthrough=False,
         standalone_new_task_fallback=None,
+        resolved_business_domain_ids=None,
     ):
-        session = ScopedPlanSession(request, identity, self.catalog)
+        session = ScopedPlanSession(
+            request,
+            identity,
+            self.catalog,
+            resolved_business_domain_ids=resolved_business_domain_ids,
+        )
         request = session._request
         now = self.clock()
         if now.tzinfo is None or now.utcoffset() is None:
