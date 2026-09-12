@@ -7,12 +7,13 @@ import pytest
 from pydantic import SecretStr
 
 from app.config import Settings
-from app.domain.models import AgentResponse, PrimaryIntent
+from app.domain.models import AgentResponse, EvidenceItem, PrimaryIntent
 from app.main import create_app
 from app.semantic_v2.authorized_contract import ScopedArtifact, contract_digest
 from app.semantic_v2.context_proposal import ContextProposalFailure
 from app.semantic_v2.context_v1_execution import (
     ContextV1ExternalDependencies,
+    ExecutionAnchorUpdate,
     ResolvedContextTurn,
     V2ContextV1ExecutionBridge,
     _resolve_context_v1_request_scope,
@@ -20,6 +21,9 @@ from app.semantic_v2.context_v1_execution import (
     build_context_v1_execution_handler,
     validate_context_v1_settings,
 )
+from app.semantic_v2.enums import DialogueAct, SemanticRole
+from app.semantic_v2.models import Mention
+from app.semantic_v2.pipeline import CurrentTurnSemanticParse, OperationMarker
 from app.semantic_v2.completed_question import CompletedQuestionDisplay
 from app.semantic_v2.persisted_scalar_api import RedisScalarSessionStore
 from app.semantic_v2.recognition_client import RecognitionFailure
@@ -48,6 +52,62 @@ def response(chat, answer="V1 result"):
         semantic_model_id=chat.semantic_model_id,
         requested_business_domain_ids=list(chat.business_domain_ids),
         business_domain_selection_mode="EXPLICIT",
+    )
+
+
+def executed_response(chat, answer="V1 result"):
+    result = response(chat, answer)
+    result.evidence = [EvidenceItem(
+        evidence_id="query-result:" + chat.message_id,
+        kind="QUERY_RESULT",
+        source_ref="data-source:58",
+        payload={"row_count": 1},
+    )]
+    return result
+
+
+def time_parse(question, message_id, surface, operation="REPLACE", followup=True):
+    start = question.index(surface)
+    mention_id = "time:" + message_id
+    return CurrentTurnSemanticParse(
+        mentions=[Mention(
+            mention_id=mention_id,
+            surface=surface,
+            normalized_surface=surface,
+            start_char=start,
+            end_char=start + len(surface),
+            candidate_roles=[SemanticRole.TIME_RANGE],
+            source_turn_id=message_id,
+        )],
+        dialogue_act_candidates=[
+            DialogueAct.REPLACE if followup else DialogueAct.NEW_TASK
+        ],
+        operation_markers=[OperationMarker(
+            mention_id=mention_id,
+            operation_hint=operation,
+            slot_name="time_spec",
+        )],
+        reference_signals=["ELLIPSIS"] if followup else [],
+        followup_signals=["MODIFY"] if followup else [],
+        temporal_expressions=[mention_id],
+        explicit_slot_mentions={"time_spec": [mention_id]},
+    )
+
+
+def unresolved_with_parse(parsed):
+    failure = ContextProposalFailure({
+        "FINAL_STATUS": "UNRESOLVED",
+        "FINAL_RELATION": None,
+        "FINAL_TARGET": None,
+    })
+    failure.current_turn_parse = parsed
+    return failure
+
+
+def redis_envelope(redis):
+    return next(
+        value for value in (json.loads(raw) for raw in redis.values.values())
+        if isinstance(value, dict) and "messages" in value
     )
 
 
@@ -281,7 +341,7 @@ async def test_resolved_context_passes_only_completed_question_to_v1(
         calls.append(current)
         return response(current)
 
-    handler, context, _redis = make_handler(provider, planner, v1)
+    handler, context, redis = make_handler(provider, planner, v1)
     result = await handler.handle(chat, IDENTITY)
 
     assert result.answer == "V1 result"
@@ -296,6 +356,7 @@ async def test_resolved_context_passes_only_completed_question_to_v1(
     assert calls[0].model_dump(
         mode="json", exclude={"question", "history"}
     ) == chat.model_dump(mode="json", exclude={"question", "history"})
+    assert redis_envelope(redis)["messages"][chat.message_id]["execution_anchor"] is None
 
 
 def test_resolved_standalone_execution_keeps_original_question_for_v1():
@@ -349,6 +410,188 @@ async def test_complex_standalone_new_task_fallback_reuses_v1_without_v2_plan(pr
     assert envelope["messages"]["complex"]["bridge_route"] == (
         "V1_EXECUTION_FALLBACK_NEW_TASK"
     )
+
+
+@pytest.mark.asyncio
+async def test_successful_fallback_builds_anchor_and_time_followup_preserves_opaque_base(
+    provider,
+):
+    first = request(
+        conversation_id="execution-anchor-a-b-f",
+        message_id="anchor-first",
+        question="查询空心纤维血液透析器产品合作的经销商名单。",
+    )
+    followup = request(
+        conversation_id=first.conversation_id,
+        message_id="anchor-followup",
+        question="换今年",
+    )
+    calls = []
+
+    async def planner(current, identity, state, plans, pending):
+        if current.message_id == first.message_id:
+            initial_parse = CurrentTurnSemanticParse(
+                dialogue_act_candidates=[DialogueAct.NEW_TASK]
+            )
+            return ResolvedContextTurn(
+                completed_question=current.question,
+                next_state=state_artifact(context, current, 1),
+                plan_state=None,
+                bridge_route="V1_EXECUTION_FALLBACK_NEW_TASK",
+                anchor_update=ExecutionAnchorUpdate(
+                    previous=None,
+                    current_parse=initial_parse,
+                    time_context=None,
+                    resolved_business_domain_ids=(205,),
+                ),
+            )
+        raise unresolved_with_parse(
+            time_parse(current.question, current.message_id, "今年")
+        )
+
+    async def v1(current, identity):
+        calls.append(current)
+        return executed_response(current)
+
+    handler, context, redis = make_handler(provider, planner, v1)
+    first_result = await handler.handle(first, IDENTITY)
+    first_envelope = redis_envelope(redis)
+    first_anchor = first_envelope["messages"][first.message_id]["execution_anchor"]
+
+    assert first_result.status == "COMPLETED"
+    assert calls[0].question == first.question
+    assert first_anchor["provenance"] == "V1_EXECUTION_ANCHOR"
+    assert first_anchor["completeness"] == "PARTIAL"
+    assert first_anchor["evidence_mode"] == "EXECUTION_BACKED"
+    assert first_anchor["original_question"] == first.question
+    assert first_anchor["actual_execution_question"] == first.question
+    assert first_anchor["resolved_business_domain_ids"] == [205]
+    assert first_envelope["state"]["payload"]["active_topic_id"] is None
+
+    followup_result = await handler.handle(followup, IDENTITY)
+    expected = "查询2026年空心纤维血液透析器产品合作的经销商名单。"
+    envelope = redis_envelope(redis)
+    record = envelope["messages"][followup.message_id]
+
+    assert followup_result.status == "COMPLETED"
+    assert calls[1].question == expected
+    assert calls[1].history == []
+    assert expected in followup_result.analysis_process[0].summary
+    assert record["bridge_route"] == "V1_EXECUTION_ANCHOR_FOLLOWUP"
+    assert record["execution_anchor"]["parent_anchor_id"] == first_anchor["anchor_id"]
+    assert record["execution_anchor"]["revision"] == 2
+    assert record["execution_anchor"]["time_context"]["applied_text"] == "2026年"
+    assert envelope["state_version"] == 2
+
+
+@pytest.mark.asyncio
+async def test_failed_newer_fallback_invalidates_older_anchor_and_never_inherits_it(
+    provider,
+):
+    chats = [
+        request(conversation_id="anchor-order", message_id="old-success",
+                question="查询旧的复杂关系问题。"),
+        request(conversation_id="anchor-order", message_id="new-failure",
+                question="查询新的复杂关系问题。"),
+        request(conversation_id="anchor-order", message_id="short-followup",
+                question="换今年"),
+    ]
+    v1_calls = []
+
+    async def planner(current, identity, state, plans, pending):
+        if current.message_id == chats[2].message_id:
+            raise unresolved_with_parse(
+                time_parse(current.question, current.message_id, "今年")
+            )
+        version = 1 if state is None else (
+            ConversationState.model_validate(state.payload).state_version + 1
+        )
+        return ResolvedContextTurn(
+            completed_question=current.question,
+            next_state=state_artifact(context, current, version),
+            plan_state=None,
+            bridge_route="V1_EXECUTION_FALLBACK_NEW_TASK",
+            anchor_update=ExecutionAnchorUpdate(
+                previous=None,
+                current_parse=CurrentTurnSemanticParse(
+                    dialogue_act_candidates=[DialogueAct.NEW_TASK]
+                ),
+                time_context=None,
+                resolved_business_domain_ids=(205,),
+            ),
+        )
+
+    async def v1(current, identity):
+        v1_calls.append(current.question)
+        if current.message_id == chats[1].message_id:
+            failed = response(current)
+            failed.status = "SAFE_FALLBACK"
+            failed.error_code = "V1_EXECUTION_FAILED"
+            return failed
+        return executed_response(current)
+
+    handler, context, redis = make_handler(provider, planner, v1)
+    assert (await handler.handle(chats[0], IDENTITY)).status == "COMPLETED"
+    assert (await handler.handle(chats[1], IDENTITY)).status == "SAFE_FALLBACK"
+    result = await handler.handle(chats[2], IDENTITY)
+    envelope = redis_envelope(redis)
+
+    assert result.status == "SAFE_FALLBACK"
+    assert result.error_code == "V2_CONTEXT_UNRESOLVED"
+    assert v1_calls == [chats[0].question, chats[1].question]
+    assert envelope["messages"][chats[1].message_id]["execution_anchor"] is None
+    assert envelope["messages"][chats[2].message_id]["v1_execution_called"] is False
+
+
+@pytest.mark.asyncio
+async def test_current_explicit_time_replaces_execution_anchor_time(provider):
+    first = request(
+        conversation_id="anchor-current-explicit",
+        message_id="anchor-2025",
+        question="查询2025年空心纤维血液透析器产品合作的经销商名单。",
+    )
+    followup = request(
+        conversation_id=first.conversation_id,
+        message_id="anchor-2026",
+        question="换今年",
+    )
+    calls = []
+
+    async def planner(current, identity, state, plans, pending):
+        if current.message_id == first.message_id:
+            initial_parse = time_parse(
+                current.question, current.message_id, "2025年",
+                operation="SET", followup=False,
+            )
+            return ResolvedContextTurn(
+                completed_question=current.question,
+                next_state=state_artifact(context, current, 1),
+                plan_state=None,
+                bridge_route="V1_EXECUTION_FALLBACK_NEW_TASK",
+                anchor_update=ExecutionAnchorUpdate(
+                    previous=None,
+                    current_parse=initial_parse,
+                    time_context=None,
+                    resolved_business_domain_ids=(205,),
+                ),
+            )
+        raise unresolved_with_parse(
+            time_parse(current.question, current.message_id, "今年")
+        )
+
+    async def v1(current, identity):
+        calls.append(current.question)
+        return executed_response(current)
+
+    handler, context, _redis = make_handler(provider, planner, v1)
+    await handler.handle(first, IDENTITY)
+    result = await handler.handle(followup, IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert calls == [
+        first.question,
+        "查询2026年空心纤维血液透析器产品合作的经销商名单。",
+    ]
 
 
 @pytest.mark.asyncio

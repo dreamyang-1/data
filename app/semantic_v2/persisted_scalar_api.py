@@ -536,6 +536,7 @@ return 1
             "status": "RUNNING",
             "execution_stage": "V2_CONTEXT_RESOLVED",
             "bridge_route": bridge_route,
+            "context_sequence": previous.revision + 1,
             "started_at": started_at.isoformat(),
             "pending_state": (
                 pending_state.model_dump(mode="json")
@@ -589,6 +590,7 @@ return 1
         context: AuthorizedScopeContext,
         state_identity: dict,
         v1_execution_called: bool,
+        execution_anchor: dict | None = None,
     ) -> PersistedSessionSnapshot:
         record = previous.message(message_id)
         require(
@@ -608,6 +610,7 @@ return 1
             "v1_execution_called": v1_execution_called,
             "response": response.model_dump(mode="json"),
             "result": None,
+            "execution_anchor": execution_anchor,
         }
         return await self._publish(previous, value, context, state_identity)
 

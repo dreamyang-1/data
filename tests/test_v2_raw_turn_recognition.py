@@ -11,6 +11,8 @@ import pytest
 
 from app.config import Settings
 from app.semantic_v2.authorized_contract import ScopedArtifact, contract_digest
+from app.semantic_v2.context_proposal import ContextProposalFailure
+from app.semantic_v2.pipeline import CurrentTurnSemanticParse
 from app.semantic_v2.recognition import RawTurnPlanner, RecognizedStandaloneNewTask
 from app.semantic_v2.recognition_client import RecognitionFailure, RecognitionModelClient
 from test_v2_authorized_catalog_bridge import IDENTITY, request, authority, publish, reseal, system
@@ -258,7 +260,7 @@ async def test_passthrough_new_task_creates_barrier_against_older_context(catalo
 
     followup = '换今年'
     transport.steps.append((followup, parse(followup, [], follow=True), {}))
-    with pytest.raises(RecognitionFailure, match='V2_CONTEXT_UNRESOLVED'):
+    with pytest.raises(ContextProposalFailure, match='V2_CONTEXT_UNRESOLVED') as caught:
         await engine.run(
             request(question=followup, message_id='barrier-followup'),
             IDENTITY,
@@ -267,6 +269,8 @@ async def test_passthrough_new_task_creates_barrier_against_older_context(catalo
             allow_standalone_new_task_passthrough=True,
         )
 
+    assert isinstance(caught.value.current_turn_parse, CurrentTurnSemanticParse)
+    assert caught.value.current_turn_parse.reference_signals == ['ELLIPSIS']
     assert len(transport.calls) == 5
 
 
