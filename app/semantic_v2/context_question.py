@@ -56,6 +56,32 @@ _FILTER_FAMILIES = {
     ),
 }
 
+_CONTEXT_REFERENCE_SURFACES = {
+    "REGION": (
+        "该省份", "这个省份", "那个省份", "本省",
+        "该地区", "这个地区", "那个地区", "当地",
+        "该城市", "这个城市", "那个城市",
+    ),
+    "COMMERCIAL_PRODUCT": (
+        "该产品", "这个产品", "那个产品",
+        "该商品", "这个商品", "那个商品",
+    ),
+    "HOSPITAL": (
+        "该医院", "这个医院", "那个医院", "这家医院", "那家医院",
+    ),
+    "PARTNER": (
+        "该经销商", "这个经销商", "那个经销商",
+        "该供应商", "这个供应商", "那个供应商",
+    ),
+}
+
+_CONTEXT_FAMILY_LABELS = {
+    "REGION": "地区",
+    "COMMERCIAL_PRODUCT": "产品",
+    "HOSPITAL": "医院",
+    "PARTNER": "合作方",
+}
+
 
 ContextValueResolver = Callable[
     [str, str], Awaitable[SemanticFilterBinding | None]
@@ -70,6 +96,17 @@ class ContextQuestionResolution:
     operation: str
     slot: str
     understanding: str
+
+
+@dataclass(frozen=True)
+class ContextReferenceResolution:
+    """A full current question after resolving explicit contextual references."""
+
+    completed_question: str | None
+    next_state: ScopedArtifact | None
+    understanding: str | None = None
+    clarification_question: str | None = None
+    referenced_families: tuple[str, ...] = ()
 
 
 def _text(value: object) -> str:
@@ -192,6 +229,7 @@ def build_context_question(
     parse,
     v1_request: CanonicalAnalysisRequest | None,
     catalog_version: str | None,
+    original_question: str | None = None,
 ) -> m.ContextQuestionState:
     request = v1_request
     time = None
@@ -205,7 +243,7 @@ def build_context_question(
                 evidence_source="V1_SUCCESSFUL_QUERY_EVIDENCE",
             )
     return m.ContextQuestionState(
-        original_question=chat.question,
+        original_question=original_question or chat.question,
         execution_question=chat.question,
         primary_intent=(
             str(getattr(request.primary_intent, "value", request.primary_intent))
@@ -279,7 +317,7 @@ def publish_context_task(
     )
 
 
-def _active_context_version(state: ConversationState):
+def _active_task_version(state: ConversationState):
     topic = state.topics.get(state.active_topic_id)
     if topic is None or topic.active_task_id is None:
         return None
@@ -289,9 +327,51 @@ def _active_context_version(state: ConversationState):
     version = next(
         (item for item in task.versions if item.version == task.active_version), None
     )
-    if version is None or version.context_question is None:
+    if version is None:
         return None
     return task, version
+
+
+def _active_context_version(state: ConversationState):
+    active = _active_task_version(state)
+    if active is None or active[1].context_question is None:
+        return None
+    return active
+
+
+def _structured_filter_surfaces(version, family: str) -> list[str]:
+    expression = version.semantics.filter_expression
+    if expression is None:
+        return []
+    raw = expression.model_dump(mode="json")
+    result: list[str] = []
+
+    def visit(value):
+        if isinstance(value, dict):
+            if value.get("node_type") in {"PREDICATE", "ALIASED_PREDICATE"}:
+                field = value.get("field_ref") or value.get("field") or {}
+                if semantic_filter_family(
+                    field.get("canonical_code"), field.get("display_name")
+                ) == family:
+                    operand = value.get("value") or {}
+                    if operand.get("value_type") == "ENTITY_REF":
+                        surface = str(
+                            (operand.get("ref") or {}).get("display_name") or ""
+                        ).strip()
+                        if surface:
+                            result.append(surface)
+                    elif operand.get("value_type") == "STRING":
+                        surface = str(operand.get("value") or "").strip()
+                        if surface:
+                            result.append(surface)
+            for child in value.values():
+                visit(child)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child)
+
+    visit(raw)
+    return list(dict.fromkeys(result))
 
 
 def has_active_context_question(state_artifact: ScopedArtifact | None) -> bool:
@@ -317,6 +397,105 @@ def is_contextual_ellipsis(question: str) -> bool:
 
 def is_contextual_short_edit(question: str) -> bool:
     return _TIME_ONLY.fullmatch(question) is not None or is_contextual_ellipsis(question)
+
+
+def _referenced_families(question: str) -> dict[str, tuple[str, ...]]:
+    return {
+        family: tuple(surface for surface in surfaces if surface in question)
+        for family, surfaces in _CONTEXT_REFERENCE_SURFACES.items()
+        if any(surface in question for surface in surfaces)
+    }
+
+
+def resolve_context_references(
+    *,
+    chat: ChatRequest,
+    identity: TrustedIdentity,
+    state_artifact: ScopedArtifact | None,
+    catalog,
+    resolved_business_domain_ids,
+) -> ContextReferenceResolution | None:
+    """Complete explicit pronouns from one uniquely evidenced prior slot.
+
+    This path changes only user-visible language.  It does not create an
+    executable V2 predicate or reuse V1 scope.  The completed question is sent
+    through the original V1 chain, which resolves all current semantics again.
+    """
+    references = _referenced_families(chat.question)
+    if not references or state_artifact is None:
+        return None
+    session = ScopedPlanSession(
+        chat,
+        identity,
+        catalog,
+        resolved_business_domain_ids=resolved_business_domain_ids,
+    )
+    state = ConversationState.model_validate(
+        session.restore(
+            state_artifact, kind="CONVERSATION", defer_source_values=True
+        )
+    )
+    active = _active_task_version(state)
+    if active is None:
+        return None
+    _, version = active
+    frame = version.context_question
+    replacements: dict[str, str] = {}
+    for family, markers in references.items():
+        candidates = (
+            list(dict.fromkeys(
+                item.surface for item in frame.filters
+                if item.semantic_family == family and item.surface.strip()
+            ))
+            if frame is not None
+            else _structured_filter_surfaces(version, family)
+        )
+        if len(candidates) != 1:
+            label = _CONTEXT_FAMILY_LABELS[family]
+            return ContextReferenceResolution(
+                completed_question=None,
+                next_state=None,
+                clarification_question=(
+                    f"上一任务中的{label}条件无法唯一确定，请补充完整的{label}。"
+                ),
+                referenced_families=tuple(references),
+            )
+        for marker in markers:
+            replacements[marker] = candidates[0]
+
+    completed = chat.question
+    for marker in sorted(replacements, key=len, reverse=True):
+        completed = completed.replace(marker, replacements[marker])
+    if completed == chat.question:
+        return None
+
+    # The current sentence becomes the new active task.  A barrier prevents a
+    # later failure from silently reactivating the older task that supplied the
+    # pronoun.  A context task is published only after V1 returns real query
+    # evidence for this completed sentence.
+    data = state.model_dump(mode="python")
+    data["state_version"] = state.state_version + 1
+    data["active_topic_id"] = None
+    data["recent_turn_ids"] = [
+        *state.recent_turn_ids, chat.message_id
+    ][-100:]
+    for pending in data["pending_records"].values():
+        if pending["status"] == "ACTIVE":
+            pending["status"] = "SUSPENDED"
+    barrier = ConversationState.model_validate(data)
+    session.accept_catalog()
+    next_state = session.seal(kind="CONVERSATION", payload=barrier)
+    labels = "、".join(
+        _CONTEXT_FAMILY_LABELS[family] for family in references
+    )
+    return ContextReferenceResolution(
+        completed_question=completed,
+        next_state=next_state,
+        understanding=(
+            f"沿用上一轮已确认的{labels}条件，保留本轮明确提出的其他语义。"
+        ),
+        referenced_families=tuple(references),
+    )
 
 
 def _calendar_label(value, surface: str, now: datetime) -> str:

@@ -58,6 +58,7 @@ domain is hard-coded.
 - Affected context, rewrite, Scope, Oagent-contract, and orchestrator tests:
   290 passed, 0 failed, 0 collection errors.
 - Git HEAD baseline full suite: 3702 passed, 106 existing failed, 0 collection
-  errors. Candidate full-suite comparison and live validation are recorded when
-  complete.
-
+  errors.
+- Product-replacement candidate full suite: 3705 passed, the same 106 existing
+  failures, 0 collection errors. The exact failed-node set is unchanged and
+  `old-pass -> new-fail = 0`.

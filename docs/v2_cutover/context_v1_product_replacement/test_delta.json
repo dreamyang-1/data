@@ -1,5 +1,5 @@
 {
-  "status": "OFFLINE_AFFECTED_PASS_LIVE_PENDING",
+  "status": "OFFLINE_FULL_PASS_LIVE_PENDING",
   "baseline_head": "63bfc9c89e7521fc8d72294c026bb4f60fecb309",
   "focused": {
     "passed": 95,
@@ -16,8 +16,14 @@
     "existing_failed": 106,
     "collection_errors": 0
   },
-  "full_candidate": null,
-  "old_pass_to_new_fail": null,
+  "full_candidate": {
+    "passed": 3705,
+    "existing_failed": 106,
+    "collection_errors": 0
+  },
+  "same_failed_node_set": true,
+  "failed_node_set_sha256": "0b581332a1fb516f10d9f745c135d2e604f6363e4024e922868881021e1f126e",
+  "old_pass_to_new_fail": 0,
   "external_calls": {
     "model": 0,
     "benchmark": 0,

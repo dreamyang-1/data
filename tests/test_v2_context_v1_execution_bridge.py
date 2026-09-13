@@ -32,6 +32,7 @@ from app.semantic_v2.context_question import (
     _replace_filter,
     canonical_matches_execution,
     is_contextual_ellipsis,
+    resolve_context_references,
 )
 from app.semantic_v2.models import ContextQuestionFilter, ContextQuestionState
 from app.semantic_v2.current_catalog import CurrentAuthorizedCatalog
@@ -606,6 +607,166 @@ async def test_successful_v1_fallback_context_task_supports_time_replace(provide
 
 
 @pytest.mark.asyncio
+async def test_full_contextual_question_resolves_unique_region_reference(provider):
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return CanonicalAnalysisRequest(
+            request_id=execution_responses[-1].request_id,
+            conversation_id=chat.conversation_id,
+            application_id=chat.application_id,
+            tenant_id=IDENTITY.tenant_id,
+            user_id=IDENTITY.user_id,
+            original_question=chat.question,
+            primary_intent=PrimaryIntent.METRIC_QUERY,
+            semantic_model_id=chat.semantic_model_id,
+            business_domain_ids=list(chat.business_domain_ids),
+            resolved_business_domain_ids=[205],
+            source_dataset_id=execution_responses[-1].dataset_id,
+            metrics=[],
+            filters=[
+                {"field": "省份名称", "operator": "EQ", "value": "山西省"}
+            ],
+            semantic_filter_bindings=[SemanticFilterBinding(
+                filter_index=0,
+                input_value="山西省",
+                canonical_value="山西省",
+                canonical_name="省份名称",
+                attribute_code="province_name",
+                score=1.0,
+                business_domain_id=205,
+            )],
+        )
+
+    bridge = handler(
+        provider, redis, v1, v1_context_reader=read_context
+    )
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "full-region-reference"
+    first = request(
+        question="山西省的经销商有哪些？",
+        message_id="region-reference-first",
+        conversation_id=conversation_id,
+        business_domain_ids=[],
+    )
+    await bridge.handle(first, IDENTITY)
+    del bridge._resolve
+
+    followup = request(
+        question="按月统计该省份的含税销售总额。",
+        message_id="region-reference-followup",
+        conversation_id=conversation_id,
+        business_domain_ids=[],
+    )
+    result = await bridge.handle(followup, IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == "按月统计山西省的含税销售总额。"
+    assert executions[-1].history == []
+    snapshot = await bridge.store.load(followup, IDENTITY)
+    assert snapshot.message(followup.message_id)["bridge_route"] == (
+        "V2_CONTEXT_REFERENCE_COMPLETED"
+    )
+    state = ConversationState.model_validate(snapshot.state.payload)
+    assert state.state_version == 2
+    assert len(state.tasks) == 2
+    active = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    frame = active.versions[-1].context_question
+    assert frame.original_question == followup.question
+    assert frame.execution_question == "按月统计山西省的含税销售总额。"
+    assert [(item.surface, item.semantic_family) for item in frame.filters] == [
+        ("山西省", "REGION")
+    ]
+
+
+@pytest.mark.asyncio
+async def test_full_contextual_reference_requires_one_prior_slot_per_family(provider):
+    redis = DeploymentRedis()
+    calls = 0
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        nonlocal calls
+        calls += 1
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return CanonicalAnalysisRequest(
+            request_id=execution_responses[-1].request_id,
+            conversation_id=chat.conversation_id,
+            application_id=chat.application_id,
+            tenant_id=IDENTITY.tenant_id,
+            user_id=IDENTITY.user_id,
+            original_question=chat.question,
+            primary_intent=PrimaryIntent.DETAIL_QUERY,
+            semantic_model_id=chat.semantic_model_id,
+            business_domain_ids=list(chat.business_domain_ids),
+            source_dataset_id=execution_responses[-1].dataset_id,
+            filters=[
+                {"field": "省份名称", "operator": "EQ", "value": "山西省"},
+                {"field": "省份名称", "operator": "EQ", "value": "陕西省"},
+            ],
+            semantic_filter_bindings=[
+                SemanticFilterBinding(
+                    filter_index=index,
+                    input_value=value,
+                    canonical_value=value,
+                    canonical_name="省份名称",
+                    attribute_code="province_name",
+                    score=1.0,
+                    business_domain_id=205,
+                )
+                for index, value in enumerate(("山西省", "陕西省"))
+            ],
+        )
+
+    bridge = handler(
+        provider, redis, v1, v1_context_reader=read_context
+    )
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "ambiguous-region-reference"
+    first = request(
+        question="山西省和陕西省的经销商有哪些？",
+        message_id="ambiguous-region-first",
+        conversation_id=conversation_id,
+    )
+    await bridge.handle(first, IDENTITY)
+    del bridge._resolve
+
+    result = await bridge.handle(request(
+        question="按月统计该省份的含税销售总额。",
+        message_id="ambiguous-region-followup",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "NEEDS_CLARIFICATION"
+    assert result.answer == "上一任务中的地区条件无法唯一确定，请补充完整的地区。"
+    assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_explicit_current_region_is_not_replaced_by_prior_reference(provider):
+    chat = request(question="按月统计北京市的含税销售总额。")
+    assert resolve_context_references(
+        chat=chat,
+        identity=IDENTITY,
+        state_artifact=None,
+        catalog=provider[0],
+        resolved_business_domain_ids=[205],
+    ) is None
+
+
+@pytest.mark.asyncio
 async def test_failed_v1_fallback_keeps_barrier_without_context_task(provider):
     redis = DeploymentRedis()
 
@@ -1015,6 +1176,52 @@ async def test_live_bridge_runs_real_v2_new_task_and_followup_state(
     topic = state.topics[state.active_topic_id]
     task = state.tasks[topic.active_task_id]
     assert task.active_version == 3
+
+
+@pytest.mark.asyncio
+async def test_full_reference_can_use_unique_filter_from_structured_v2_task(
+    context_catalog,
+):
+    steps = context_case(4)
+    scripted, transport = scripted_planner(context_catalog, steps)
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:structured-reference",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "structured-region-reference"
+    await bridge.handle(request(
+        question=steps[0][0],
+        message_id="structured-reference-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    result = await bridge.handle(request(
+        question="按月统计该省份的含税销售总额。",
+        message_id="structured-reference-followup",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == "按月统计上海的含税销售总额。"
+    # Only the first, fully structured turn invokes CurrentTurn and
+    # SemanticEdits. The deterministic reference completion invokes neither.
+    assert len(transport.calls) == 2
 
 
 @pytest.mark.asyncio

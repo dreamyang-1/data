@@ -48,6 +48,7 @@ from .context_question import (
     is_contextual_short_edit,
     publish_context_task,
     resolve_context_question_followup,
+    resolve_context_references,
 )
 from .context_state_store import ContextStateSnapshot, RedisContextStateStore
 from .current_catalog import CurrentAuthorizedCatalog
@@ -83,6 +84,8 @@ class ResolvedContextTurn:
     understanding: str | None = None
     standalone_parse: Any = None
     fallback_reason: str | None = None
+    publish_context_from_v1: bool = False
+    source_question: str | None = None
 
 
 def _standalone_execution_display(
@@ -479,6 +482,39 @@ class V2ContextV1ExecutionBridge:
                 ),
                 provenance,
             )
+        reference_resolution = resolve_context_references(
+            chat=chat,
+            identity=identity,
+            state_artifact=state,
+            catalog=catalog,
+            resolved_business_domain_ids=resolved_business_domain_ids,
+        )
+        if reference_resolution is not None:
+            if reference_resolution.clarification_question is not None:
+                return (
+                    ResolvedContextTurn(
+                        completed_question=None,
+                        next_state=None,
+                        plan_state=None,
+                        clarification_question=(
+                            reference_resolution.clarification_question
+                        ),
+                        bridge_route="V2_CONTEXT_REFERENCE_AMBIGUOUS",
+                    ),
+                    provenance,
+                )
+            return (
+                ResolvedContextTurn(
+                    completed_question=reference_resolution.completed_question,
+                    next_state=reference_resolution.next_state,
+                    plan_state=None,
+                    bridge_route="V2_CONTEXT_REFERENCE_COMPLETED",
+                    understanding=reference_resolution.understanding,
+                    publish_context_from_v1=True,
+                    source_question=chat.question,
+                ),
+                provenance,
+            )
         engine = RawTurnPlanner(
             self.model, self.catalog if catalog is None else catalog, clock=self.clock
         )
@@ -500,6 +536,8 @@ class V2ContextV1ExecutionBridge:
                     bridge_route=result.execution_route,
                     standalone_parse=result.parse,
                     fallback_reason=result.fallback_reason,
+                    publish_context_from_v1=True,
+                    source_question=chat.question,
                 ),
                 provenance,
             )
@@ -705,7 +743,10 @@ class V2ContextV1ExecutionBridge:
             response = _attach_completed_question(response, resolved)
             final_state = None
             if (
-                resolved.bridge_route == "V1_EXECUTION_FALLBACK_NEW_TASK"
+                (
+                    resolved.publish_context_from_v1
+                    or resolved.bridge_route == "V1_EXECUTION_FALLBACK_NEW_TASK"
+                )
                 and resolved.next_state is not None
                 and response.status == "COMPLETED"
                 and response.error_code is None
@@ -733,6 +774,9 @@ class V2ContextV1ExecutionBridge:
                     parse=resolved.standalone_parse,
                     v1_request=v1_request,
                     catalog_version=(provenance or {}).get("catalog_version"),
+                    original_question=(
+                        resolved.source_question or execution_chat.question
+                    ),
                 )
                 final_state = publish_context_task(
                     resolved.next_state,
