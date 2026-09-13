@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime
 from uuid import uuid4
 
@@ -13,11 +14,13 @@ from app.semantic_v2.authorized_contract import ScopedArtifact, contract_digest
 from app.semantic_v2.context_proposal import ContextProposalFailure
 from app.semantic_v2.context_v1_execution import (
     ContextV1ExternalDependencies,
+    ExecutionAnchorEditFailure,
     ExecutionAnchorUpdate,
     ResolvedContextTurn,
     V2ContextV1ExecutionBridge,
     _resolve_context_v1_request_scope,
     _standalone_execution_display,
+    _validated_time_context,
     build_context_v1_execution_handler,
     validate_context_v1_settings,
 )
@@ -445,9 +448,12 @@ async def test_successful_fallback_builds_anchor_and_time_followup_preserves_opa
                     resolved_business_domain_ids=(205,),
                 ),
             )
-        raise unresolved_with_parse(
-            time_parse(current.question, current.message_id, "今年")
-        )
+        # This is the structure observed by the isolated CurrentTurn-only
+        # diagnostic for the real platform utterance. The anchor boundary must
+        # recover the time-only delta without adding business semantics.
+        raise unresolved_with_parse(CurrentTurnSemanticParse(
+            dialogue_act_candidates=[DialogueAct.CHAT]
+        ))
 
     async def v1(current, identity):
         calls.append(current)
@@ -592,6 +598,180 @@ async def test_current_explicit_time_replaces_execution_anchor_time(provider):
         first.question,
         "查询2026年空心纤维血液透析器产品合作的经销商名单。",
     ]
+
+
+@pytest.mark.parametrize(("question", "applied_text"), [
+    ("换今年", "2026年"),
+    ("改成今年", "2026年"),
+    ("看今年", "2026年"),
+    ("换2026年", "2026年"),
+    ("改成去年", "2025年"),
+    ("看上个月", "上个月"),
+    ("换成第一季度", "第一季度"),
+])
+def test_execution_anchor_recovers_generic_time_only_effective_delta(
+    question,
+    applied_text,
+):
+    parsed = CurrentTurnSemanticParse(
+        dialogue_act_candidates=[DialogueAct.CHAT],
+        explicit_slot_mentions={slot: [] for slot in (
+            "subject", "metrics", "dimensions", "projection_spec",
+            "filter_expression", "time_spec", "ranking_spec",
+            "comparison_spec", "delivery_spec", "relationship_spec",
+        )},
+    )
+
+    _parse, context = _validated_time_context(
+        parsed,
+        question=question,
+        message_id="time-only",
+        now=NOW,
+        require_followup=True,
+        context_relation="UNRESOLVED",
+    )
+
+    assert context.applied_text == applied_text
+    assert context.operation == "REPLACE"
+
+
+def test_execution_anchor_coalesces_auxiliary_time_marker_by_effective_slot(caplog):
+    question = "换今年"
+    parsed = CurrentTurnSemanticParse(
+        mentions=[
+            Mention(
+                mention_id="operation-cue",
+                surface="换",
+                normalized_surface="换",
+                start_char=0,
+                end_char=1,
+                candidate_roles=[SemanticRole.TIME_FIELD],
+                source_turn_id="auxiliary",
+            ),
+            Mention(
+                mention_id="time-value",
+                surface="今年",
+                normalized_surface="今年",
+                start_char=1,
+                end_char=3,
+                candidate_roles=[SemanticRole.TIME_RANGE],
+                source_turn_id="auxiliary",
+            ),
+        ],
+        dialogue_act_candidates=[DialogueAct.MODIFY],
+        operation_markers=[
+            OperationMarker(
+                mention_id="operation-cue",
+                operation_hint="REPLACE",
+                slot_name="time_spec",
+            ),
+            OperationMarker(
+                mention_id="time-value",
+                operation_hint="SET",
+                slot_name="time_spec",
+            ),
+        ],
+        followup_signals=["MODIFY"],
+        temporal_expressions=["time-value"],
+        explicit_slot_mentions={"time_spec": ["time-value"]},
+    )
+
+    with caplog.at_level(logging.INFO):
+        _parse, context = _validated_time_context(
+            parsed,
+            question=question,
+            message_id="auxiliary",
+            now=NOW,
+            require_followup=True,
+            context_relation="UNRESOLVED",
+        )
+
+    assert context.applied_text == "2026年"
+    diagnostic = next(
+        record.anchor_edit_diagnostic
+        for record in caplog.records
+        if hasattr(record, "anchor_edit_diagnostic")
+    )
+    assert diagnostic["effective_edited_slots"] == ["time_spec"]
+    assert diagnostic["auxiliary_parse_signal"] == "AUXILIARY_PARSE_SIGNAL_ONLY"
+
+
+def test_execution_anchor_rejects_time_plus_metric_effective_delta():
+    question = "换今年，再看订单笔数"
+    parsed = time_parse(question, "mixed", "今年")
+    metric_start = question.index("订单笔数")
+    parsed.mentions.append(Mention(
+        mention_id="metric",
+        surface="订单笔数",
+        normalized_surface="订单笔数",
+        start_char=metric_start,
+        end_char=metric_start + len("订单笔数"),
+        candidate_roles=[SemanticRole.MEASURE],
+        source_turn_id="mixed",
+    ))
+    parsed.operation_markers.append(OperationMarker(
+        mention_id="metric",
+        operation_hint="SET",
+        slot_name="metrics",
+    ))
+    parsed.explicit_slot_mentions["metrics"] = ["metric"]
+
+    with pytest.raises(ExecutionAnchorEditFailure) as captured:
+        _validated_time_context(
+            parsed,
+            question=question,
+            message_id="mixed",
+            now=NOW,
+            require_followup=True,
+        )
+
+    assert str(captured.value) == "V2_EXECUTION_ANCHOR_EDIT_UNSUPPORTED"
+    assert captured.value.reason_code == "MULTIPLE_EFFECTIVE_SLOT_EDITS"
+    assert captured.value.diagnostic["effective_edited_slots"] == [
+        "metrics", "time_spec",
+    ]
+
+
+@pytest.mark.parametrize("question", [
+    "换成上海",
+    "查另外一个产品今年的",
+    "重新查销售额",
+    "换今年，再看订单笔数",
+])
+def test_execution_anchor_empty_model_parse_does_not_guess_mixed_or_non_time_edit(
+    question,
+):
+    parsed = CurrentTurnSemanticParse(
+        dialogue_act_candidates=[DialogueAct.CHAT]
+    )
+
+    with pytest.raises(ExecutionAnchorEditFailure) as captured:
+        _validated_time_context(
+            parsed,
+            question=question,
+            message_id="unsafe-surface",
+            now=NOW,
+            require_followup=True,
+        )
+
+    assert str(captured.value) == "V2_EXECUTION_ANCHOR_EDIT_UNSUPPORTED"
+    assert captured.value.reason_code == "TIME_MENTION_MISSING"
+
+
+def test_execution_anchor_topic_shift_rejects_even_with_valid_time():
+    parsed = time_parse("换今年", "topic-shift", "今年")
+    parsed.topic_shift_signals = ["EXPLICIT_NEW_TASK"]
+
+    with pytest.raises(ExecutionAnchorEditFailure) as captured:
+        _validated_time_context(
+            parsed,
+            question="换今年",
+            message_id="topic-shift",
+            now=NOW,
+            require_followup=True,
+        )
+
+    assert captured.value.reason_code == "TOPIC_SHIFT"
 
 
 @pytest.mark.asyncio

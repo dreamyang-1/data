@@ -1,0 +1,30 @@
+{
+  "status": "OFFLINE_GATE_PASS_RUNTIME_PENDING",
+  "production_files": [
+    "app/semantic_v2/context_v1_execution.py"
+  ],
+  "test_files": [
+    "tests/test_v2_context_v1_execution_bridge.py"
+  ],
+  "evidence_files": [
+    "docs/v2_cutover/execution_anchor_time_edit/validation_report.md",
+    "docs/v2_cutover/execution_anchor_time_edit/test_delta.json",
+    "docs/v2_cutover/execution_anchor_time_edit/change_manifest.json"
+  ],
+  "private_evidence": [
+    ".eval_private/execution-anchor-time-edit-20260913/current_turn_diagnostic.json"
+  ],
+  "excluded_changes": [
+    "Java/platform",
+    "Catalog publication",
+    "MODEL_WIDE Scope",
+    "V2 Query Shape",
+    "Recognition Prompt",
+    "V1 Intent",
+    "MultiQuestionPlanner",
+    "Oagent",
+    "SQL Translator",
+    "Redis schema",
+    "Session architecture"
+  ]
+}

@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import logging
 from pathlib import Path
+import re
 import time
 from typing import Any, Awaitable, Callable, Literal
 from uuid import uuid4
@@ -53,6 +54,31 @@ from .state_machine import ConversationState, StateTransitionError
 
 
 logger = logging.getLogger(__name__)
+
+
+class ExecutionAnchorEditFailure(RecognitionFailure):
+    """Public-compatible rejection with content-free internal diagnostics."""
+
+    def __init__(
+        self,
+        reason_code: str,
+        diagnostic: dict[str, Any],
+        *,
+        public_code: str = "V2_EXECUTION_ANCHOR_EDIT_UNSUPPORTED",
+    ):
+        self.reason_code = reason_code
+        self.diagnostic = {**diagnostic, "reason_code": reason_code}
+        super().__init__(public_code)
+
+
+_TIME_EDIT_AUXILIARY = re.compile(
+    r"(?:请|麻烦)?(?:帮我)?(?:再)?"
+    r"(?:换|改|调整|设置|设|看|查|查询|查看)"
+    r"(?:成|为|到)?(?:一下|看看)?(?:呢|吧)?"
+)
+_TIME_EDIT_PUNCTUATION = re.compile(r"[\s，,。.!！?？;；：:]+")
+_MAX_TIME_EDIT_QUESTION_LENGTH = 120
+_MAX_TIME_EXPRESSION_LENGTH = 40
 
 
 @dataclass(frozen=True)
@@ -189,6 +215,109 @@ def _enum_text(value: Any) -> str:
     return str(getattr(value, "value", value))
 
 
+def _anchor_edit_diagnostic(
+    parsed,
+    *,
+    context_relation: str | None,
+) -> dict[str, Any]:
+    explicit_slots = sorted(
+        slot
+        for slot, mention_ids in parsed.explicit_slot_mentions.items()
+        if mention_ids
+    )
+    marker_slots = sorted({marker.slot_name for marker in parsed.operation_markers})
+    return {
+        "context_relation": context_relation,
+        "mention_roles": [
+            sorted({_enum_text(role) for role in mention.candidate_roles})
+            for mention in parsed.mentions
+        ],
+        "marker_slots": marker_slots,
+        "operation_hints": sorted({
+            _enum_text(marker.operation_hint)
+            for marker in parsed.operation_markers
+        }),
+        "explicit_slots": explicit_slots,
+        "effective_edited_slots": sorted(set(explicit_slots) | set(marker_slots)),
+        "dialogue_acts": sorted({
+            _enum_text(value) for value in parsed.dialogue_act_candidates
+        }),
+        "topic_shift": bool(parsed.topic_shift_signals),
+        "time_mention_count": 0,
+        "time_evidence_source": None,
+        "resolved_time_kind": None,
+        "resolved_time_value": None,
+    }
+
+
+def _reject_anchor_edit(
+    reason_code: str,
+    diagnostic: dict[str, Any],
+    *,
+    public_code: str = "V2_EXECUTION_ANCHOR_EDIT_UNSUPPORTED",
+) -> None:
+    raise ExecutionAnchorEditFailure(
+        reason_code,
+        diagnostic,
+        public_code=public_code,
+    )
+
+
+def _surface_time_only_context(
+    question: str,
+    now: datetime,
+) -> tuple[str, Any, str] | None:
+    """Recover one bounded natural-calendar expression from a time-only edit.
+
+    This is a representation fallback for an execution-backed opaque anchor.
+    It reuses the governed whole-expression calendar parser and accepts only a
+    short utterance whose remaining text is generic edit/query grammar.  No
+    metric, entity, dimension, filter, relation or catalog vocabulary is
+    classified here.
+    """
+
+    text = question.strip()
+    if not text or len(text) > _MAX_TIME_EDIT_QUESTION_LENGTH:
+        return None
+    candidates: list[tuple[int, int, str, Any]] = []
+    for start in range(len(text)):
+        stop = min(len(text), start + _MAX_TIME_EXPRESSION_LENGTH)
+        for end in range(start + 1, stop + 1):
+            surface = text[start:end].strip()
+            if not surface or _TIME_EDIT_PUNCTUATION.search(surface):
+                continue
+            try:
+                normalized = normalize_range(surface, now)
+            except (RecognitionFailure, ValueError):
+                continue
+            candidates.append((start, end, surface, normalized))
+    if not candidates:
+        return None
+    maximal = [
+        candidate
+        for candidate in candidates
+        if not any(
+            other[0] <= candidate[0]
+            and candidate[1] <= other[1]
+            and (other[0], other[1]) != (candidate[0], candidate[1])
+            for other in candidates
+        )
+    ]
+    spans = {(start, end) for start, end, _surface, _value in maximal}
+    if len(spans) != 1:
+        return None
+    start, end = next(iter(spans))
+    surface, normalized = next(
+        (surface, value)
+        for candidate_start, candidate_end, surface, value in maximal
+        if (candidate_start, candidate_end) == (start, end)
+    )
+    auxiliary = _TIME_EDIT_PUNCTUATION.sub("", text[:start] + text[end:])
+    if auxiliary and _TIME_EDIT_AUXILIARY.fullmatch(auxiliary) is None:
+        return None
+    return surface, normalized, auxiliary
+
+
 def _validated_time_context(
     raw_parse: CurrentTurnSemanticParse,
     *,
@@ -196,8 +325,9 @@ def _validated_time_context(
     message_id: str,
     now: datetime,
     require_followup: bool,
+    context_relation: str | None = None,
 ) -> tuple[CurrentTurnSemanticParse, ExecutionAnchorTimeContext]:
-    """Accept one explicit current time edit without interpreting opaque text."""
+    """Accept a time-only effective delta without relying on raw object count."""
 
     parsed = CurrentTurnSemanticParse.model_validate(
         raw_parse.model_dump(mode="json")
@@ -213,46 +343,111 @@ def _validated_time_context(
         text_ref=message_id,
         parsed=parsed,
     )
-    time_slot_ids = set(validated.explicit_slot_mentions.get("time_spec", []))
-    time_ids = set(validated.temporal_expressions) & time_slot_ids
-    markers = [
-        marker for marker in validated.operation_markers
-        if marker.slot_name == "time_spec" and marker.mention_id in time_ids
-    ]
-    other_slots = set(validated.explicit_slot_mentions) - {"time_spec"}
-    other_markers = [
-        marker for marker in validated.operation_markers
-        if marker.slot_name != "time_spec"
-    ]
-    if len(time_ids) != 1 or len(markers) != 1:
-        raise RecognitionFailure("V2_EXECUTION_ANCHOR_EDIT_UNSUPPORTED")
-    if require_followup and (
-        other_slots
-        or other_markers
-        or any(mention.mention_id not in time_ids for mention in validated.mentions)
-        or validated.topic_shift_signals
-    ):
-        raise RecognitionFailure("V2_EXECUTION_ANCHOR_EDIT_UNSUPPORTED")
-    marker = markers[0]
-    operation = _enum_text(marker.operation_hint)
-    if operation not in ({"REPLACE"} if require_followup else {"SET", "REPLACE"}):
-        raise RecognitionFailure("V2_EXECUTION_ANCHOR_TIME_OPERATION_REQUIRED")
-    if require_followup:
-        acts = {_enum_text(value) for value in validated.dialogue_act_candidates}
-        dependency_evidence = bool(
-            validated.reference_signals
-            or validated.followup_signals
-            or acts & {"CONTINUE", "MODIFY", "REPLACE"}
-        )
-        if not dependency_evidence:
-            raise RecognitionFailure("V2_EXECUTION_ANCHOR_REFERENCE_REQUIRED")
-    mention = next(
-        item for item in validated.mentions if item.mention_id in time_ids
+    diagnostic = _anchor_edit_diagnostic(
+        validated,
+        context_relation=context_relation,
     )
-    roles = {_enum_text(value) for value in mention.candidate_roles}
-    if not roles & {"TIME_RANGE", "TIME_FIELD"}:
-        raise RecognitionFailure("V2_EXECUTION_ANCHOR_TIME_EVIDENCE_REQUIRED")
-    normalized = normalize_range(mention.surface, now)
+    effective_slots = set(diagnostic["effective_edited_slots"])
+    non_time_slots = effective_slots - {"time_spec"}
+    if validated.topic_shift_signals:
+        _reject_anchor_edit("TOPIC_SHIFT", diagnostic)
+    acts = set(diagnostic["dialogue_acts"])
+    if require_followup and acts & {"NEW_TASK", "SWITCH_TOPIC", "RETURN_TO_TOPIC"}:
+        _reject_anchor_edit("TOPIC_SHIFT", diagnostic)
+    if non_time_slots:
+        reason = (
+            "MULTIPLE_EFFECTIVE_SLOT_EDITS"
+            if "time_spec" in effective_slots else "NON_TIME_SLOT_EDIT"
+        )
+        _reject_anchor_edit(reason, diagnostic)
+
+    time_slot_ids = set(validated.explicit_slot_mentions.get("time_spec", []))
+    temporal_ids = set(validated.temporal_expressions)
+    time_marker_ids = {
+        marker.mention_id
+        for marker in validated.operation_markers
+        if marker.slot_name == "time_spec"
+    }
+    time_ids = time_slot_ids | temporal_ids | time_marker_ids
+    time_mentions = [
+        mention
+        for mention in validated.mentions
+        if mention.mention_id in time_ids
+        and {_enum_text(role) for role in mention.candidate_roles}
+            & {"TIME_RANGE", "TIME_FIELD"}
+    ]
+    diagnostic["time_mention_count"] = len(time_mentions)
+    resolved_time_mentions = []
+    unresolved_time_mentions = []
+    for mention in time_mentions:
+        try:
+            resolved_time_mentions.append(
+                (mention, normalize_range(mention.surface, now))
+            )
+        except (RecognitionFailure, ValueError):
+            unresolved_time_mentions.append(mention)
+    time_operations = {
+        _enum_text(marker.operation_hint)
+        for marker in validated.operation_markers
+        if marker.slot_name == "time_spec"
+    }
+    if time_operations - {"SET", "REPLACE"}:
+        _reject_anchor_edit(
+            "UNSUPPORTED_OPERATION",
+            diagnostic,
+            public_code="V2_EXECUTION_ANCHOR_TIME_OPERATION_REQUIRED",
+        )
+
+    surface_evidence = _surface_time_only_context(question, now) if require_followup else None
+    if require_followup and surface_evidence is None:
+        reason = "TIME_MENTION_MISSING" if not time_mentions else "TIME_VALUE_UNRESOLVED"
+        if time_mentions and not (time_slot_ids or time_marker_ids):
+            reason = "TIME_SLOT_MISSING"
+        _reject_anchor_edit(reason, diagnostic)
+
+    if surface_evidence is not None:
+        surface, normalized, auxiliary = surface_evidence
+        diagnostic["time_evidence_source"] = (
+            "MODEL_PARSE_AND_TIME_ONLY_SURFACE"
+            if time_mentions else "DETERMINISTIC_TIME_ONLY_SURFACE_RECOVERY"
+        )
+        if auxiliary and not time_mentions:
+            diagnostic["auxiliary_parse_signal"] = "AUXILIARY_PARSE_SIGNAL_ONLY"
+        elif unresolved_time_mentions:
+            diagnostic["auxiliary_parse_signal"] = "AUXILIARY_PARSE_SIGNAL_ONLY"
+    else:
+        if not time_mentions:
+            _reject_anchor_edit("TIME_MENTION_MISSING", diagnostic)
+        if unresolved_time_mentions:
+            _reject_anchor_edit("TIME_VALUE_UNRESOLVED", diagnostic)
+        normalized_values = resolved_time_mentions
+        ranges = {
+            (value.start, value.end_exclusive)
+            for _mention, value in normalized_values
+        }
+        if len(ranges) != 1:
+            _reject_anchor_edit("TIME_MENTION_AMBIGUOUS", diagnostic)
+        mention, normalized = max(
+            normalized_values,
+            key=lambda pair: len(pair[0].surface),
+        )
+        surface = mention.surface
+        diagnostic["time_evidence_source"] = "MODEL_PARSE"
+
+    if resolved_time_mentions:
+        parsed_ranges = {
+            (parsed_value.start, parsed_value.end_exclusive)
+            for _mention, parsed_value in resolved_time_mentions
+        }
+        parsed_ranges.add((normalized.start, normalized.end_exclusive))
+        if len(parsed_ranges) != 1:
+            _reject_anchor_edit("TIME_MENTION_AMBIGUOUS", diagnostic)
+
+    operation = (
+        "REPLACE"
+        if require_followup or "REPLACE" in time_operations
+        else "SET"
+    )
     local_start = normalized.start.astimezone(now.tzinfo)
     local_end = normalized.end_exclusive.astimezone(now.tzinfo)
     if (
@@ -262,9 +457,24 @@ def _validated_time_context(
     ):
         applied_text = f"{local_start.year}年"
     else:
-        applied_text = mention.surface
+        applied_text = surface
+    diagnostic.update({
+        "effective_edited_slots": ["time_spec"],
+        "effective_operation": operation,
+        "resolved_time_kind": "RANGE",
+        "resolved_time_value": {
+            "start": normalized.start.isoformat(),
+            "end_exclusive": normalized.end_exclusive.isoformat(),
+        },
+        "decision": "ACCEPT",
+    })
+    if require_followup:
+        logger.info(
+            "V2 execution-backed anchor time edit accepted",
+            extra={"anchor_edit_diagnostic": diagnostic},
+        )
     return parsed, ExecutionAnchorTimeContext(
-        surface=mention.surface,
+        surface=surface,
         applied_text=applied_text,
         start=normalized.start,
         end_exclusive=normalized.end_exclusive,
@@ -344,6 +554,8 @@ def _resolve_execution_anchor_followup(
     raw_parse: CurrentTurnSemanticParse,
     context: AuthorizedScopeContext,
     now: datetime,
+    *,
+    context_relation: str | None = None,
 ) -> ResolvedContextTurn:
     if (
         anchor.scope_fingerprint != context.fingerprint()
@@ -357,6 +569,7 @@ def _resolve_execution_anchor_followup(
         message_id=chat.message_id,
         now=now,
         require_followup=True,
+        context_relation=context_relation,
     )
     completed = _apply_time_to_opaque_question(anchor, time_context)
     next_state = _advance_opaque_anchor_state(
@@ -829,9 +1042,22 @@ class V2ContextV1ExecutionBridge:
                             CurrentTurnSemanticParse.model_validate(raw_parse),
                             context,
                             self.clock(),
+                            context_relation=(
+                                exc.context_trace.get("FINAL_RELATION")
+                                or exc.context_status
+                            ),
                         )
                     except (RecognitionFailure, ValueError) as anchor_exc:
                         anchor_failure = anchor_exc
+                        diagnostic = getattr(anchor_exc, "diagnostic", None)
+                        if diagnostic is not None:
+                            logger.info(
+                                "V2 execution-backed anchor edit rejected",
+                                extra={
+                                    "message_id": chat.message_id,
+                                    "anchor_edit_diagnostic": diagnostic,
+                                },
+                            )
                 if resolved is not None:
                     logger.info(
                         "V2 context resolved a constrained execution-backed followup",
