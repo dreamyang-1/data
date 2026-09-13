@@ -722,6 +722,122 @@ async def test_successful_fallback_builds_anchor_and_time_followup_preserves_opa
 
 
 @pytest.mark.asyncio
+async def test_demo_catalog_refresh_reseals_opaque_anchor_for_same_conversation(
+    provider,
+):
+    first = request(
+        conversation_id="catalog-refresh-anchor",
+        message_id="catalog-refresh-first",
+        question="\u67e5\u8be2product distributors",
+    )
+    followup = request(
+        conversation_id=first.conversation_id,
+        message_id="catalog-refresh-followup",
+        question="\u6362\u4eca\u5e74",
+    )
+    service, _catalog_store, _registry, _catalog_redis, overrides = provider
+    initial_session = ScopedPlanSession(first, IDENTITY, service)
+    initial_context = initial_session.context
+    initial_session.accept_catalog()
+    redis = DeploymentRedis()
+    store = RedisScalarSessionStore(
+        redis,
+        prefix="youo:data-analysis:v2-context-v1-execution:test-demo",
+        deployment_id="test-demo",
+        ttl_seconds=3600,
+        idempotency_ttl_seconds=7200,
+    )
+    calls = []
+
+    async def first_planner(current, identity, state, plans, pending):
+        return ResolvedContextTurn(
+            completed_question=current.question,
+            next_state=state_artifact(initial_context, current, 1),
+            plan_state=None,
+            bridge_route="V1_EXECUTION_FALLBACK_NEW_TASK",
+            anchor_update=ExecutionAnchorUpdate(
+                previous=None,
+                current_parse=CurrentTurnSemanticParse(
+                    dialogue_act_candidates=[DialogueAct.NEW_TASK]
+                ),
+                time_context=None,
+                resolved_business_domain_ids=(205,),
+            ),
+        )
+
+    async def v1(current, identity):
+        calls.append(current.question)
+        return executed_response(current)
+
+    first_handler = V2ContextV1ExecutionBridge(
+        store=store,
+        context_resolver=lambda chat, identity: initial_context,
+        context_planner=first_planner,
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+        readiness_probe=lambda: _ready(),
+        demo_mode=True,
+    )
+    assert (await first_handler.handle(first, IDENTITY)).status == "COMPLETED"
+
+    changed = authority()
+    changed["documents"][0]["metrics"][0]["format_rule"] = "#,##0."
+    overrides[(81, (205,))] = reseal(changed)
+    publish(service, "release-2", model=81, domains=[205])
+    current_session = ScopedPlanSession(followup, IDENTITY, service)
+    current_context = current_session.context
+    current_session.accept_catalog()
+    assert current_context.fingerprint() != initial_context.fingerprint()
+
+    class RefreshedRuntime:
+        retired_identities = (
+            initial_context.catalog_pin.model_dump(mode="json"),
+        )
+
+        async def ensure_current(self, chat=None, identity=None):
+            return None
+
+    async def followup_planner(current, identity, state, plans, pending):
+        raise unresolved_with_parse(
+            time_parse(current.question, current.message_id, "\u4eca\u5e74")
+        )
+
+    refreshed_handler = V2ContextV1ExecutionBridge(
+        store=store,
+        context_resolver=lambda chat, identity: current_context,
+        context_planner=followup_planner,
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+        readiness_probe=lambda: _ready(),
+        demo_mode=True,
+        catalog_runtime=RefreshedRuntime(),
+    )
+    result = await refreshed_handler.handle(followup, IDENTITY)
+    envelopes = [json.loads(raw) for raw in redis.values.values()]
+    migrated = next(
+        item
+        for item in envelopes
+        if followup.message_id in item.get("messages", {})
+    )
+
+    assert result.status == "COMPLETED"
+    assert calls == [
+        first.question,
+        "\u67e5\u8be22026\u5e74product distributors",
+    ]
+    assert migrated["context_fingerprint"] == current_context.fingerprint()
+    assert migrated["state_version"] == 2
+    assert migrated["messages"][first.message_id]["execution_anchor"][
+        "scope_fingerprint"
+    ] == current_context.fingerprint()
+    assert migrated["messages"][followup.message_id]["bridge_route"] == (
+        "V1_EXECUTION_ANCHOR_FOLLOWUP"
+    )
+
+
+@pytest.mark.asyncio
 async def test_demo_mode_reuses_successful_model_wide_execution_envelope(provider):
     first = request(
         domains=(),

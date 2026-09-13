@@ -33,7 +33,12 @@ from app.domain.models import (
 from app.services.progress import emit_progress, progress_scope
 from app.stores import MessageIdReuseConflictError
 
-from .authorized_contract import AuthorizedScopeContext, ScopedArtifact, contract_digest
+from .authorized_contract import (
+    AuthorizedScopeContext,
+    CatalogPinIdentity,
+    ScopedArtifact,
+    contract_digest,
+)
 from .catalog_bridge import ScopedPlanSession
 from .completed_question import CompletedQuestionDisplay, build_completed_question_display
 from .context_proposal import ContextProposalFailure
@@ -134,6 +139,7 @@ class DemoCatalogAutoRefresh:
         self._active_publication = initial.frozen_publication
         self._lock = asyncio.Lock()
         self._refresh_count = 0
+        self._retired_identities: list[dict[str, Any]] = []
         self._failed_authority_version: str | None = None
         self._failed_at = 0.0
         self._failure_retry_seconds = 5.0
@@ -151,6 +157,10 @@ class DemoCatalogAutoRefresh:
     @property
     def refresh_count(self) -> int:
         return self._refresh_count
+
+    @property
+    def retired_identities(self) -> tuple[dict[str, Any], ...]:
+        return tuple(deepcopy(item) for item in reversed(self._retired_identities))
 
     def status(self) -> dict[str, Any]:
         decision = self._last_decision
@@ -283,6 +293,10 @@ class DemoCatalogAutoRefresh:
 
             # Assignment happens only after publish, complete inventory
             # verification and pin.finish all succeeded inside the factory.
+            retired = deepcopy(self._generation.identity)
+            if retired not in self._retired_identities:
+                self._retired_identities.append(retired)
+                self._retired_identities = self._retired_identities[-8:]
             self._generation = generation
             self._active_publication = generation.frozen_publication
             self._refresh_count += 1
@@ -378,6 +392,165 @@ class DemoExecutionEnvelope(semantic_models.StrictModel):
         min_length=1
     )
     created_at: AwareDatetime
+
+
+def _reseal_execution_anchor(
+    anchor: ExecutionBackedContextAnchor,
+    *,
+    context: AuthorizedScopeContext,
+    parent_anchor_id: str | None,
+) -> ExecutionBackedContextAnchor:
+    data = anchor.model_dump(mode="json")
+    data["parent_anchor_id"] = parent_anchor_id
+    data["scope_fingerprint"] = context.fingerprint()
+    material = {
+        key: value
+        for key, value in data.items()
+        if key not in {
+            "schema_version",
+            "anchor_id",
+            "provenance",
+            "completeness",
+            "evidence_mode",
+        }
+    }
+    data["anchor_id"] = "execution-anchor:" + contract_digest(material)[:32]
+    return ExecutionBackedContextAnchor.model_validate(data)
+
+
+def _reseal_demo_execution_envelope(
+    envelope: DemoExecutionEnvelope,
+    *,
+    context: AuthorizedScopeContext,
+    state_identity: dict[str, str],
+) -> DemoExecutionEnvelope:
+    data = envelope.model_dump(mode="json")
+    data["scope_fingerprint"] = context.fingerprint()
+    data["identity_fingerprint"] = _execution_identity_fingerprint(
+        context, state_identity
+    )
+    material = {
+        key: value
+        for key, value in data.items()
+        if key not in {"schema_version", "envelope_id", "provenance"}
+    }
+    data["envelope_id"] = (
+        "demo-execution-envelope:" + contract_digest(material)[:32]
+    )
+    return DemoExecutionEnvelope.model_validate(data)
+
+
+def _reseal_opaque_catalog_context(
+    snapshot,
+    *,
+    previous_context: AuthorizedScopeContext,
+    context: AuthorizedScopeContext,
+    state_identity: dict[str, str],
+) -> dict[str, Any] | None:
+    """Re-seal only opaque, execution-backed state after a safe refresh.
+
+    Structured tasks, plans, pending work, datasets, attempts and source-value
+    evidence remain pinned to their original Catalog generation and are never
+    migrated by this demo continuity path.
+    """
+
+    if snapshot.state is None or snapshot.plans:
+        return None
+    state_artifact = ScopedArtifact.model_validate(snapshot.state)
+    if (
+        state_artifact.context != previous_context
+        or state_artifact.source_value_bindings
+    ):
+        return None
+    state = ConversationState.model_validate(state_artifact.payload)
+    if (
+        state.active_topic_id is not None
+        or state.topic_stack
+        or state.topics
+        or state.tasks
+        or state.pending_records
+        or state.datasets
+        or state.execution_attempts
+    ):
+        return None
+
+    value = deepcopy(snapshot.envelope)
+    messages = value.get("messages", {})
+    if not isinstance(messages, dict):
+        return None
+    current_old: ExecutionBackedContextAnchor | None = None
+    current_new: ExecutionBackedContextAnchor | None = None
+    for _message_id, record in sorted(
+        messages.items(),
+        key=lambda item: (
+            item[1].get("context_sequence", -1)
+            if isinstance(item[1], dict)
+            else -1
+        ),
+    ):
+        if not isinstance(record, dict):
+            return None
+        route = record.get("bridge_route")
+        raw_anchor = record.get("execution_anchor")
+        if route == "V1_EXECUTION_FALLBACK_NEW_TASK":
+            if raw_anchor is None:
+                current_old = None
+                current_new = None
+                continue
+            old_anchor = ExecutionBackedContextAnchor.model_validate(raw_anchor)
+            if (
+                old_anchor.scope_fingerprint != previous_context.fingerprint()
+                or old_anchor.parent_anchor_id is not None
+            ):
+                return None
+            new_anchor = _reseal_execution_anchor(
+                old_anchor,
+                context=context,
+                parent_anchor_id=None,
+            )
+            current_old, current_new = old_anchor, new_anchor
+            record["execution_anchor"] = new_anchor.model_dump(mode="json")
+        elif route == "V1_EXECUTION_ANCHOR_FOLLOWUP" and raw_anchor is not None:
+            old_anchor = ExecutionBackedContextAnchor.model_validate(raw_anchor)
+            if (
+                current_old is None
+                or current_new is None
+                or old_anchor.scope_fingerprint != previous_context.fingerprint()
+                or old_anchor.parent_anchor_id != current_old.anchor_id
+            ):
+                return None
+            new_anchor = _reseal_execution_anchor(
+                old_anchor,
+                context=context,
+                parent_anchor_id=current_new.anchor_id,
+            )
+            current_old, current_new = old_anchor, new_anchor
+            record["execution_anchor"] = new_anchor.model_dump(mode="json")
+
+        raw_execution = record.get("demo_execution_envelope")
+        if raw_execution is not None:
+            execution = DemoExecutionEnvelope.model_validate(raw_execution)
+            if execution.scope_fingerprint != previous_context.fingerprint():
+                return None
+            record["demo_execution_envelope"] = _reseal_demo_execution_envelope(
+                execution,
+                context=context,
+                state_identity=state_identity,
+            ).model_dump(mode="json")
+
+    if current_new is None:
+        return None
+    payload = state.model_dump(mode="json")
+    resealed_state = ScopedArtifact(
+        kind="CONVERSATION",
+        context=context,
+        payload=payload,
+        payload_digest=contract_digest(payload),
+    )
+    value["context_fingerprint"] = context.fingerprint()
+    value["state_identity"] = dict(state_identity)
+    value["state"] = resealed_state.model_dump(mode="json")
+    return value
 
 
 @dataclass(frozen=True)
@@ -1197,6 +1370,57 @@ class V2ContextV1ExecutionBridge:
             return None
         return await self.catalog_runtime.ensure_current(chat, identity)
 
+    async def _load_context_snapshot(
+        self,
+        context: AuthorizedScopeContext,
+        state_identity: dict[str, str],
+    ):
+        snapshot = await self.store.load(context, state_identity)
+        if (
+            self.catalog_runtime is None
+            or snapshot.state is not None
+            or snapshot.plans
+            or snapshot.envelope.get("messages")
+        ):
+            return snapshot
+        for identity in self.catalog_runtime.retired_identities:
+            previous_context = context.model_copy(
+                update={
+                    "catalog_pin": CatalogPinIdentity.model_validate(identity)
+                }
+            )
+            previous = await self.store.load(previous_context, state_identity)
+            resealed = _reseal_opaque_catalog_context(
+                previous,
+                previous_context=previous_context,
+                context=context,
+                state_identity=state_identity,
+            )
+            if resealed is None:
+                continue
+            installed = await self.store.install_catalog_resealed_context(
+                envelope=resealed,
+                context=context,
+                state_identity=state_identity,
+            )
+            if installed.state is not None:
+                logger.warning(
+                    "CATALOG_CONTEXT_RESEALED previous=%s current=%s",
+                    previous_context.catalog_pin.catalog_version,
+                    context.catalog_pin.catalog_version,
+                    extra={
+                        "catalog_context_resealed": True,
+                        "catalog_version_previous": (
+                            previous_context.catalog_pin.catalog_version
+                        ),
+                        "catalog_version_current": (
+                            context.catalog_pin.catalog_version
+                        ),
+                    },
+                )
+                return installed
+        return snapshot
+
     @staticmethod
     def _identity(chat: ChatRequest, identity: TrustedIdentity) -> dict[str, str]:
         return {
@@ -1532,7 +1756,9 @@ class V2ContextV1ExecutionBridge:
     ) -> None:
         await self._ensure_catalog_runtime(chat, identity)
         context = self.context_resolver(chat, identity)
-        snapshot = await self.store.load(context, self._identity(chat, identity))
+        snapshot = await self._load_context_snapshot(
+            context, self._identity(chat, identity)
+        )
         fingerprint = self._fingerprint(chat, identity)
         prior = snapshot.message(chat.message_id)
         if prior is not None and prior.get("request_fingerprint") != fingerprint:
@@ -1553,7 +1779,7 @@ class V2ContextV1ExecutionBridge:
             asyncio.Lock(),
         )
         async with lock:
-            snapshot = await self.store.load(context, state_identity)
+            snapshot = await self._load_context_snapshot(context, state_identity)
             cached = await self._cached_or_conflict(snapshot, chat, fingerprint)
             if cached is not None:
                 return cached

@@ -65,6 +65,12 @@ class DeploymentRedis:
         if self.fail_call == self.calls:
             return 0
         if key_count == 1:
+            if len(args) == 3:
+                key, encoded, _ttl = args
+                if key in self.values:
+                    return 0
+                self.values[key] = encoded
+                return 1
             key, expected, encoded, _ttl = args
             current = json.loads(self.values[key]).get("revision", 0) if key in self.values else 0
             if current != int(expected):
