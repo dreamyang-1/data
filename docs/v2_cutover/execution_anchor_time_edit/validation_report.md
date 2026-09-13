@@ -29,4 +29,16 @@
 - 修改后同一集合：314 passed。
 - old-pass → new-fail：0；collection errors：0；新增 14 项。
 - 语法编译：PASS。
-- 运行态：等待仅重启 8088 后的真实平台新会话两轮验收。
+- 运行态 Anchor Gate：PASS；后续 V1 execution contract 出现新的独立失败，详见下节。
+
+## 真实平台运行态
+
+只重启 DataAnalysis 8088；最终 PID 为 28612，`/live=UP`、`/ready=READY`、runtime 为 `V2_CONTEXT_V1_EXECUTION`，Catalog pin、Redis 与 V1 Bridge 均通过。Oagent PID 27968、SQL Translator PID 26172 未重启。
+
+新会话首问经 `/agent_chat/stream` 到达 8088，Scope 为 semantic model 81、requested domains `[]`、MODEL_WIDE resolved `[205]`。请求走 `V1_EXECUTION_FALLBACK_NEW_TASK`，V1 执行成功，返回 data source 58 的 `QUERY_RESULT`（22 行），并建立 revision 1 的 `V1_EXECUTION_ANCHOR / PARTIAL`。
+
+同会话真实追问“换今年”已找到该 Anchor。修复后的校验只应用 `time_spec REPLACE → 2026`，Bridge route 为 `V1_EXECUTION_ANCHOR_FOLLOWUP`，送入 V1 的 completed question 为：
+
+`查询2026年空心纤维血液透析器产品合作的经销商名单。`
+
+复杂商品、合作关系和名单语义保持不变，V1 确已调用。随后产生新的第一失败：`OAGENT_EXECUTION_SCOPE_UNRESOLVED`。`HttpDataRetrievalAdapter._materialize_oagent_execution_scope` 在 Oagent HTTP 调用前发现该轮 Canonical 的 MODEL_WIDE `resolved_business_domain_ids` 为空并 fail closed；因此追问没有到达 Oagent、SQL Translator 或 DB，页面没有返回查询结果。本轮按停止条件不修该下游合同。

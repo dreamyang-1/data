@@ -25,5 +25,13 @@
     "state_writes": 0
   },
   "benchmark_runs": 0,
-  "runtime_validation": "PENDING_8088_RESTART_AND_REAL_PLATFORM_NEW_CONVERSATION"
+  "runtime_validation": {
+    "anchor_time_edit": "PASS_REAL_PLATFORM",
+    "first_turn": "COMPLETED_QUERY_RESULT_22_ROWS_ANCHOR_CREATED",
+    "followup_completed_question": "PASS",
+    "first_downstream_failure": "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
+    "oagent_reached_on_followup": false,
+    "sql_translator_reached_on_followup": false,
+    "db_reached_on_followup": false
+  }
 }
