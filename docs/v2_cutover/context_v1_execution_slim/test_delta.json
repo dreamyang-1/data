@@ -60,5 +60,29 @@
     "explicit_205_physical_tables": 14,
     "explicit_205_catalog_records": 290,
     "code_changes_after_failure": 0
+  },
+  "model_wide_catalog_fix": {
+    "requested_business_domain_ids": [],
+    "resolved_business_domain_ids": [
+      205
+    ],
+    "request_contract_preserved_for_v1": true,
+    "targeted": {
+      "passed": 22,
+      "failed": 0,
+      "collection_errors": 0
+    },
+    "affected_comparable": {
+      "passed": 594,
+      "existing_failed": 1,
+      "collection_errors": 0,
+      "old_pass_to_new_fail": 0,
+      "same_baseline_failure": "tests/test_v2_operation_round1.py::test_rejected_mixed_patch_leaves_state_barriers_versions_and_message_unchanged[slot_conflict]"
+    },
+    "authority_probe": {
+      "status": "PASS",
+      "catalog_records": 290
+    },
+    "live_revalidation": "PENDING_8088_RESTART_AND_REAL_PLATFORM_REQUEST"
   }
 }

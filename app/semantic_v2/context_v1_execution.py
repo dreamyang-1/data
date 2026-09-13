@@ -151,6 +151,7 @@ def _revalidate_context_artifacts(
     state: ScopedArtifact | None,
     plans: tuple[ScopedArtifact, ...],
     pending: ScopedArtifact | None,
+    resolved_business_domain_ids=None,
 ) -> tuple[
     ScopedArtifact | None,
     tuple[ScopedArtifact, ...],
@@ -162,7 +163,12 @@ def _revalidate_context_artifacts(
     This reuses the stable conversation state only after every stored binding
     is found in the current request catalog. Missing or changed bindings fail.
     """
-    session = ScopedPlanSession(chat, identity, catalog)
+    session = ScopedPlanSession(
+        chat,
+        identity,
+        catalog,
+        resolved_business_domain_ids=resolved_business_domain_ids,
+    )
     provenance = session.context.catalog_pin.model_dump(mode="json")
     artifacts = (state, *plans, pending)
     if state is None:
@@ -389,6 +395,9 @@ class V2ContextV1ExecutionBridge:
         snapshot: ContextStateSnapshot,
         catalog,
     ) -> tuple[ResolvedContextTurn, dict[str, Any]]:
+        resolved_business_domain_ids = getattr(
+            catalog, "resolved_business_domain_ids", None
+        )
         state, plans, pending, provenance = _revalidate_context_artifacts(
             chat,
             identity,
@@ -396,6 +405,7 @@ class V2ContextV1ExecutionBridge:
             state=snapshot.state,
             plans=snapshot.plans,
             pending=snapshot.pending,
+            resolved_business_domain_ids=resolved_business_domain_ids,
         )
         previous = (
             ConversationState.model_validate(state.payload)
@@ -412,6 +422,7 @@ class V2ContextV1ExecutionBridge:
             plans=plans,
             pending=pending,
             allow_standalone_new_task_passthrough=True,
+            resolved_business_domain_ids=resolved_business_domain_ids,
         )
         if isinstance(result, RecognizedStandaloneNewTask):
             return (

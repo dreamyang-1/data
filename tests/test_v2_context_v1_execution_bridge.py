@@ -26,6 +26,7 @@ from app.semantic_v2.authorized_contract import (
 )
 from app.semantic_v2.catalog_bridge import ScopedPlanSession
 from app.semantic_v2.context_state_store import RedisContextStateStore
+from app.semantic_v2.current_catalog import CurrentAuthorizedCatalog
 from app.semantic_v2.context_v1_execution import (
     ResolvedContextTurn,
     V2ContextV1ExecutionBridge,
@@ -298,6 +299,96 @@ def test_stable_key_has_no_catalog_publication_or_vector_input():
     assert "catalog" not in json.dumps(store.identity(chat, IDENTITY)).lower()
     assert "vector" not in json.dumps(store.identity(chat, IDENTITY)).lower()
     assert "publication" not in json.dumps(store.identity(chat, IDENTITY)).lower()
+
+
+def _current_catalog_with_fake_authority(*, model_domains):
+    calls = []
+
+    class Release:
+        @staticmethod
+        def catalog_scope(semantic_model_id, business_domain_ids=()):
+            domains = list(business_domain_ids)
+            return {
+                "semantic_model_id": semantic_model_id,
+                "business_domain_ids": domains,
+                "scope_mode": "EXPLICIT_DOMAINS" if domains else "MODEL_WIDE",
+            }
+
+        @classmethod
+        def capture_catalog(cls, semantic_model_id, business_domain_ids=()):
+            domains = tuple(business_domain_ids)
+            calls.append((semantic_model_id, domains))
+            return {
+                "scope": cls.catalog_scope(semantic_model_id, domains),
+                "catalog_version": "current-version",
+                "source_identity_hash": "current-source",
+                "physical_catalog": {"tables": []},
+            }
+
+    class Generation:
+        @staticmethod
+        def build_catalog_records(_snapshot, _embed):
+            return [], {"complete": True}
+
+    class Mysql:
+        @staticmethod
+        def get_business_domains(semantic_model_id):
+            assert semantic_model_id == 81
+            return [{"id": value} for value in model_domains]
+
+    catalog = object.__new__(CurrentAuthorizedCatalog)
+    catalog._modules = {
+        "catalog_release": Release,
+        "catalog_generation": Generation,
+        "mysql_tool": Mysql,
+    }
+    return catalog, calls
+
+
+def test_model_wide_current_catalog_materializes_authorized_model_domain_only():
+    catalog, calls = _current_catalog_with_fake_authority(model_domains=[205])
+
+    current = catalog.for_request(81, ())
+
+    assert calls == [(81, (205,))]
+    assert current.requested_business_domain_ids == ()
+    assert current.resolved_business_domain_ids == (205,)
+    assert current._snapshot["scope"] == {
+        "semantic_model_id": 81,
+        "business_domain_ids": [205],
+        "scope_mode": "EXPLICIT_DOMAINS",
+    }
+
+
+def test_explicit_current_catalog_scope_is_not_rematerialized():
+    catalog, calls = _current_catalog_with_fake_authority(model_domains=[999])
+
+    current = catalog.for_request(81, (205,))
+
+    assert calls == [(81, (205,))]
+    assert current.requested_business_domain_ids == (205,)
+    assert current.resolved_business_domain_ids == (205,)
+
+
+def test_model_wide_context_session_uses_resolved_catalog_without_changing_request(
+    provider,
+):
+    chat = request([], question="查询去年江苏省订单笔数", message_id="model-wide")
+
+    state, plans, pending, provenance = _revalidate_context_artifacts(
+        chat,
+        IDENTITY,
+        provider[0],
+        state=None,
+        plans=(),
+        pending=None,
+        resolved_business_domain_ids=(205,),
+    )
+
+    assert state is None and plans == () and pending is None
+    assert chat.business_domain_ids == []
+    assert chat.authorized_semantic_scope.scope_mode == "MODEL_WIDE"
+    assert provenance["catalog_version"]
 
 
 @pytest.mark.asyncio

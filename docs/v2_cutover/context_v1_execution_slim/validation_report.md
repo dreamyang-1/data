@@ -86,3 +86,33 @@ capture, which explains why `/ready` remained READY while the request failed.
 Per the freeze instruction, no code was changed after this finding. The first
 demo group is `BLOCKED_BEFORE_V2_CONTEXT`; Catalog metadata mutation and the
 second group were not started.
+
+## MODEL_WIDE current-Catalog capture closure
+
+The request-scoped Catalog reader now preserves the requested MODEL_WIDE
+contract while resolving the current model's authorized domains solely for
+physical Catalog capture and V2 binding validation. In the current environment,
+semantic model 81 resolves to `[205]`; the original `ChatRequest` remains
+`business_domain_ids=[]`, so V1 still receives and processes its established
+MODEL_WIDE request contract.
+
+The resolved domain set is also passed to `ScopedPlanSession` and
+`RawTurnPlanner` so their per-request Catalog provenance matches the materialized
+Catalog. It is not written into the conversation identity or V1 request. Models
+with no valid domain, duplicate/invalid identifiers, or more than one domain
+remain fail closed because the existing physical Catalog capture only supports
+one resolved domain safely.
+
+Verification after this minimal correction:
+
+- Bridge test file: **22 passed / 0 failed**.
+- Comparable affected set: **594 passed / 1 existing failed**.
+- The single failure is the same baseline `slot_conflict` node with the same
+  reason-code expectation difference; old-pass to new-fail remains **0**.
+- A read-only capture against the current authority preserved requested domains
+  `[]`, resolved `[205]`, and successfully built **290** Catalog records.
+- Model, Benchmark, business SQL, production write, Oagent, SQL Translator and
+  Java/platform changes remained **0**.
+
+The earlier live failure above remains the historical first attempt. A new 8088
+process must load this correction before real-platform retesting.

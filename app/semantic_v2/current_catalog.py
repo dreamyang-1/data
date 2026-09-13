@@ -275,7 +275,22 @@ class CurrentAuthorizedCatalog:
         }
 
     def for_request(self, semantic_model_id: int, business_domain_ids=()):
-        domains = tuple(business_domain_ids)
+        requested_domains = tuple(business_domain_ids)
+        domains = requested_domains
+        if not domains:
+            rows = self._modules["mysql_tool"].get_business_domains(
+                semantic_model_id
+            )
+            values = [row.get("id") for row in rows]
+            if (
+                not values
+                or any(type(value) is not int or value <= 0 for value in values)
+                or len(values) != len(set(values))
+            ):
+                raise ValueError("CURRENT_CATALOG_MODEL_WIDE_DOMAIN_INVALID")
+            domains = tuple(sorted(values))
+            if len(domains) != 1:
+                raise ValueError("CURRENT_CATALOG_MODEL_WIDE_MULTI_DOMAIN_UNSUPPORTED")
         snapshot = self._modules["catalog_release"].capture_catalog(
             semantic_model_id, domains
         )
@@ -291,19 +306,32 @@ class CurrentAuthorizedCatalog:
             snapshot=snapshot,
             records=records,
             modules=self._modules,
+            requested_business_domain_ids=requested_domains,
+            resolved_business_domain_ids=domains,
         )
 
     def pin(self, semantic_model_id: int, business_domain_ids=()):
-        return self.for_request(semantic_model_id, business_domain_ids).pin(
-            semantic_model_id, business_domain_ids
+        current = self.for_request(semantic_model_id, business_domain_ids)
+        return current.pin(
+            semantic_model_id, current.resolved_business_domain_ids
         )
 
 
 class _CurrentCatalogSnapshotProvider:
-    def __init__(self, *, snapshot, records, modules):
+    def __init__(
+        self,
+        *,
+        snapshot,
+        records,
+        modules,
+        requested_business_domain_ids=(),
+        resolved_business_domain_ids=(),
+    ):
         self._snapshot = deepcopy(snapshot)
         self._records = deepcopy(records)
         self._modules = modules
+        self.requested_business_domain_ids = tuple(requested_business_domain_ids)
+        self.resolved_business_domain_ids = tuple(resolved_business_domain_ids)
 
     def pin(self, semantic_model_id: int, business_domain_ids=()):
         expected = self._modules["catalog_release"].catalog_scope(
