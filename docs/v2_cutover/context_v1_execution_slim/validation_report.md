@@ -116,3 +116,32 @@ Verification after this minimal correction:
 
 The earlier live failure above remains the historical first attempt. A new 8088
 process must load this correction before real-platform retesting.
+
+## Post-fix real-platform result
+
+8088 restarted as PID 25288 in `V2_CONTEXT_V1_EXECUTION` mode. `/live` and
+`/ready` returned HTTP 200, while the existing Oagent and SQL Translator
+processes remained unchanged.
+
+The real platform first turn, `查询去年江苏省订单笔数`, reached
+`/agent_chat/stream` and completed through V1, Oagent and data source 58. The
+MODEL_WIDE current-Catalog capture resolved `[205]`; the previous
+`CATALOG_PHYSICAL_MODEL_MISMATCH` did not recur. The response was persisted as
+`V1_EXECUTION_RESPONSE_SAVED` with `QUERY_RESULT` and Oagent ASL evidence.
+
+This first turn took `V1_EXECUTION_FALLBACK_NEW_TASK`. Its safe context barrier
+advanced state version to 1 but deliberately contained no Task. The real
+same-conversation follow-up `换今年` read the same Redis state key, then returned
+`V2_CONTEXT_UNRESOLVED`. It was persisted as a V2-only safe fallback;
+`v1_execution_called=false`, with no Oagent or SQL evidence. Therefore:
+
+- MODEL_WIDE Catalog capture correction: **PASS_LIVE**.
+- Stable conversation identity across the two requests: **PASS_LIVE**.
+- First-turn V1/Oagent/DB execution: **PASS_LIVE**.
+- First-group context continuity: **FAIL_NO_PUBLISHED_V2_TASK**.
+- First failure stage: **V2_CONTEXT**, before completed-question generation.
+
+Per the instruction to stop architecture changes after the comparable suite and
+avoid adding more fallback/anchor compatibility, no Bridge code was changed for
+this result. Catalog metadata mutation and the second relation-query group were
+not started because the first group did not pass.

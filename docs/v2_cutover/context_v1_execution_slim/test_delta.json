@@ -83,6 +83,31 @@
       "status": "PASS",
       "catalog_records": 290
     },
-    "live_revalidation": "PENDING_8088_RESTART_AND_REAL_PLATFORM_REQUEST"
+    "live_revalidation": {
+      "runtime_pid": 25288,
+      "runtime_mode": "V2_CONTEXT_V1_EXECUTION",
+      "live_http_status": 200,
+      "ready_http_status": 200,
+      "same_conversation_state_key": true,
+      "first_turn": {
+        "status": "COMPLETED",
+        "bridge_route": "V1_EXECUTION_FALLBACK_NEW_TASK",
+        "state_version": 1,
+        "task_count": 0,
+        "v1_execution_called": true,
+        "oagent_evidence": true,
+        "query_result_evidence": true
+      },
+      "followup": {
+        "status": "SAFE_FALLBACK",
+        "error_code": "V2_CONTEXT_UNRESOLVED",
+        "v1_execution_called": false,
+        "oagent_evidence": false,
+        "query_result_evidence": false
+      },
+      "catalog_fix": "PASS_LIVE",
+      "first_group": "FAIL_NO_PUBLISHED_V2_TASK",
+      "code_changes_after_live_result": 0
+    }
   }
 }
