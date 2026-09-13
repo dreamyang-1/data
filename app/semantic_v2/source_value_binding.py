@@ -23,8 +23,14 @@ def lookup_values(session, attribute_id, text, *, implicit=False):
     if receipt is None:
         receipt = session._pin.lookup_entity_values(attribute_id, text,
             data_source_id=data_source, require_implicit_policy=implicit)
+    # Source receipts describe the physical Catalog snapshot used for this
+    # request. A MODEL_WIDE authorization may have been safely materialized to
+    # one reviewed domain for that snapshot; authorization and receipt identity
+    # therefore remain separate contracts.
+    resolved_domains = tuple(session._resolved_business_domain_ids)
     expected_scope = dict(semantic_model_id=scope.semantic_model_id,
-        business_domain_ids=list(scope.business_domain_ids), scope_mode=scope.scope_mode)
+        business_domain_ids=list(resolved_domains),
+        scope_mode='EXPLICIT_DOMAINS' if resolved_domains else 'MODEL_WIDE')
     field = receipt.get('field', {})
     if (receipt.get('source') != 'VERIFIED_SOURCE_EXACT_LOOKUP'
             or receipt.get('match_mode') != 'EXACT_NORMALIZED'

@@ -1,0 +1,24 @@
+{
+  "baseline_head": "d896a84",
+  "production_files": [
+    "app/semantic_v2/source_value_binding.py"
+  ],
+  "test_files": [
+    "tests/test_v2_source_value_binding.py",
+    "tests/test_v2_deterministic_grounding_demo_accuracy.py"
+  ],
+  "documentation_files": [
+    "docs/v2_cutover/context_v1_basic_task_publication/validation_report.md",
+    "docs/v2_cutover/context_v1_basic_task_publication/test_delta.json",
+    "docs/v2_cutover/context_v1_basic_task_publication/change_manifest.json"
+  ],
+  "excluded": [
+    ".env",
+    "logs",
+    "cache",
+    "credentials",
+    "private model exchanges",
+    "source value receipts",
+    "business query results"
+  ]
+}

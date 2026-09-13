@@ -1,0 +1,33 @@
+{
+  "status": "V2_BASIC_NEW_TASK_PUBLICATION_OFFLINE_PASS",
+  "targeted": {
+    "passed": 7,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "affected": {
+    "passed": 659,
+    "existing_failed": 1,
+    "collection_errors": 0,
+    "baseline_comparable_nodes": 595,
+    "old_pass_to_new_fail": 0,
+    "same_baseline_failure": "tests/test_v2_operation_round1.py::test_rejected_mixed_patch_leaves_state_barriers_versions_and_message_unchanged[slot_conflict]"
+  },
+  "diagnostic_calls": {
+    "current_turn": 1,
+    "semantic_edits": 0,
+    "retry": 0,
+    "post_fix_model_calls": 0,
+    "sql": 0,
+    "production_writes": 0
+  },
+  "first_divergence": "SOURCE_VALUE_RECEIPT_SCOPE_VALIDATION",
+  "fallback_reason": "V2_SOURCE_VALUE_RECEIPT_MISMATCH",
+  "private_hashes": {
+    "current_trace.json": "e124854f8a270816d8b2bebb05672595bc9c84156d54fce59bf85ab531e6aeec",
+    "raw_model_exchanges.json": "5baedf92a2a5707281ffa21ccd39de560b93415f9db142f977e49dcf24dbdd70",
+    "receipt_comparison.json": "f090eb273f3b4ced3ccb5fa97abadd830dce71ab03fa7e9e058d440e6920603b",
+    "post_fix_replay.json": "58718cc819895bef76be73f73e6dda5f2e440fed859ad7147ef256e1bc07a1e7",
+    "affected_junit.xml": "c7225ceed4861dc20a9f27d27523330035d691fcda0973a0d85a505ab86a69ed"
+  }
+}

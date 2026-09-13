@@ -9,7 +9,12 @@ import pytest
 
 from app.config import Settings
 from app.semantic_v2.deterministic_grounding import build_deterministic_grounding, _unique_handle
-from app.semantic_v2.pipeline import CurrentTurnParser, CurrentTurnSemanticParse
+from app.semantic_v2.completed_question import build_completed_question_display
+from app.semantic_v2.pipeline import (
+    AuthorizedLogicalPlan,
+    CurrentTurnParser,
+    CurrentTurnSemanticParse,
+)
 from app.semantic_v2.recognition import RawTurnPlanner
 from app.semantic_v2.recognition_client import RecognitionFailure, RecognitionModelClient
 from app.semantic_v2.state_machine import ConversationState
@@ -37,8 +42,9 @@ def sprint_catalog(entity_catalog):
     document["metrics"].extend([
         dict(metric_code="quantity", metric_name="销售数量", business_domain=205,
              formula="SUM(quantity)"),
-        dict(metric_code="orders", metric_name="订单笔数", business_domain=205,
-             formula="COUNT(order_id)"),
+        dict(metric_code="order_count", metric_name="订单笔数", business_domain=205,
+             formula="COUNT(order_id)",
+             time_caliber={"time_anchor": "hospitals.created_date"}),
         dict(metric_code="department_count", metric_name="科室总数量", business_domain=205,
              formula="COUNT(DISTINCT department_id)"),
     ])
@@ -68,6 +74,7 @@ def sprint_catalog(entity_catalog):
         is_main_attribute=0))
     business["dealer_name"] = [DEALER]
     business["product_name"].append(SECOND_PRODUCT)
+    business["province_name"].append("江苏省")
     snapshot["physical_catalog"]["entity_value_sources"] = catalog_value_sources.capture_value_sources({
         "semantic_model_id": 81, "business_domain_ids": [205], "scope_mode": "EXPLICIT_DOMAINS"})
     entity_catalog[4][(81, (205,))] = reseal(snapshot)
@@ -384,3 +391,102 @@ async def test_time_followup_and_metric_add_keep_existing_task(sprint_catalog):
         "amount", "quantity"}
     assert results[0].plan["logical_plan"]["payload"]["time"]["range"] != \
         results[1].plan["logical_plan"]["payload"]["time"]["range"]
+
+
+@pytest.mark.asyncio
+async def test_model_wide_basic_new_task_publishes_state_and_time_followup_reuses_it(
+    sprint_catalog,
+):
+    first_text = "查询去年江苏省订单笔数"
+    second_text = "换今年"
+    steps = [
+        (
+            first_text,
+            parse(
+                first_text,
+                [
+                    ("去年", "TIME_RANGE", "time_spec", "SET"),
+                    ("江苏省", "FILTER_VALUE", "filter_expression", "SET"),
+                    ("订单笔数", "MEASURE", "metrics", "SET"),
+                ],
+                shape="SCALAR_AGGREGATE",
+            ),
+            {"payload_type": "SCALAR_AGGREGATE"},
+        ),
+        (
+            second_text,
+            parse(
+                second_text,
+                [("今年", "TIME_RANGE", "time_spec", "REPLACE")],
+                follow=True,
+                shape="SCALAR_AGGREGATE",
+            ),
+            {"payload_type": "INHERIT"},
+        ),
+    ]
+    planner, transport = engine(sprint_catalog, steps)
+    state = None
+    plans = {}
+    results = []
+
+    for index, step in enumerate(steps):
+        result = await planner.run(
+            request(
+                [],
+                question=step[0],
+                message_id=f"model-wide-basic-{index}",
+                conversation_id="model-wide-basic",
+            ),
+            IDENTITY,
+            state=state,
+            plans=tuple(plans.values()),
+            allow_standalone_new_task_passthrough=True,
+            resolved_business_domain_ids=(205,),
+        )
+        state = result.next_state
+        plan = AuthorizedLogicalPlan.model_validate(result.plan["logical_plan"])
+        plans[plan.task_id] = result.plan_state
+        results.append((result, plan))
+
+    first, first_plan = results[0]
+    second, second_plan = results[1]
+    first_state = ConversationState.model_validate(first.next_state.payload)
+    second_state = ConversationState.model_validate(second.next_state.payload)
+    first_task = first_state.tasks[first_plan.task_id]
+    second_task = second_state.tasks[second_plan.task_id]
+    first_semantics = first_task.versions[-1].semantics
+    second_semantics = second_task.versions[-1].semantics
+    first_completed = build_completed_question_display(
+        message_id="model-wide-basic-0",
+        plan=first_plan,
+        previous_state=None,
+        next_state=first_state,
+        context_trace=first.context_trace,
+    )
+    completed = build_completed_question_display(
+        message_id="model-wide-basic-1",
+        plan=second_plan,
+        previous_state=first_state,
+        next_state=second_state,
+        context_trace=second.context_trace,
+    )
+
+    assert type(first).__name__ == "RecognizedPlan"
+    assert first.context_trace["FINAL_RELATION"] == "NEW_TASK"
+    assert first_task.active_version == 1
+    assert first_semantics.metrics[0].canonical_code == "order_count"
+    assert first_semantics.filter_expression.value.ref.display_name == "江苏省"
+    assert first_completed.completed_question == "查询2025年江苏省订单笔数。"
+    assert first_plan.payload.time.range != second_plan.payload.time.range
+    assert first_plan.task_id == second_plan.task_id
+    assert second_task.active_version == 2
+    assert second.context_trace["FINAL_RELATION"] in {
+        "CONTINUE",
+        "FOLLOW_UP",
+        "MODIFY",
+    }
+    assert second.parse.operation_markers[0].operation_hint == "REPLACE"
+    assert second_semantics.metrics == first_semantics.metrics
+    assert second_semantics.filter_expression == first_semantics.filter_expression
+    assert completed.completed_question == "查询2026年江苏省订单笔数。"
+    assert transport.semantic_calls == 0
