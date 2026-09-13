@@ -29,9 +29,11 @@ from app.semantic_v2.authorized_contract import (
 from app.semantic_v2.catalog_bridge import ScopedPlanSession
 from app.semantic_v2.context_state_store import RedisContextStateStore
 from app.semantic_v2.context_question import (
+    _replace_filter,
     canonical_matches_execution,
     is_contextual_ellipsis,
 )
+from app.semantic_v2.models import ContextQuestionFilter, ContextQuestionState
 from app.semantic_v2.current_catalog import CurrentAuthorizedCatalog
 from app.semantic_v2.context_v1_execution import (
     ResolvedContextTurn,
@@ -190,6 +192,34 @@ def test_v1_context_evidence_requires_the_exact_v1_retrieval_request(request_cha
 
     assert canonical_matches_execution(
         candidate, chat=chat, identity=IDENTITY
+    ) is False
+
+
+def test_v1_context_evidence_accepts_output_dataset_from_the_exact_execution():
+    chat = request(business_domain_ids=[])
+    response_for_execution = query_response(chat)
+    candidate = v1_context(chat, filter_value="空心纤维血液透析器").model_copy(
+        update={
+            "request_id": response_for_execution.request_id,
+            "resolved_business_domain_ids": [205],
+            "business_domain_selection_mode": "MODEL_WIDE",
+            "source_dataset_id": response_for_execution.dataset_id,
+        }
+    )
+
+    assert canonical_matches_execution(
+        candidate,
+        chat=chat,
+        identity=IDENTITY,
+        response=response_for_execution,
+    ) is True
+
+    unrelated = response_for_execution.model_copy(update={"request_id": uuid4()})
+    assert canonical_matches_execution(
+        candidate,
+        chat=chat,
+        identity=IDENTITY,
+        response=unrelated,
     ) is False
 
 
@@ -372,6 +402,167 @@ async def test_successful_v1_fallback_publishes_context_task_and_replaces_produc
     assert updated_frame.filters[0].attribute_code == "parent_brand"
     assert updated_frame.last_edit.operation == "REPLACE"
     assert updated_frame.last_edit.slot == "filter_expression"
+
+
+@pytest.mark.asyncio
+async def test_product_replacement_selects_product_from_multiple_filter_families(
+    provider,
+):
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+    first_question = "查询上海地区空心纤维血液透析器产品合作的经销商名单。"
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return CanonicalAnalysisRequest(
+            request_id=execution_responses[-1].request_id,
+            conversation_id=chat.conversation_id,
+            application_id=chat.application_id,
+            tenant_id=IDENTITY.tenant_id,
+            user_id=IDENTITY.user_id,
+            original_question=chat.question,
+            primary_intent=PrimaryIntent.DETAIL_QUERY,
+            semantic_model_id=chat.semantic_model_id,
+            business_domain_ids=list(chat.business_domain_ids),
+            resolved_business_domain_ids=[205],
+            source_dataset_id=execution_responses[-1].dataset_id,
+            entity="经销商",
+            fields=["经销商名称"],
+            filters=[
+                {"field": "省份名称", "operator": "EQ", "value": "上海"},
+                {
+                    "field": "商品名称",
+                    "operator": "EQ",
+                    "value": "空心纤维血液透析器",
+                },
+            ],
+            semantic_filter_bindings=[
+                SemanticFilterBinding(
+                    filter_index=0,
+                    input_value="上海",
+                    canonical_value="上海",
+                    canonical_name="省份名称",
+                    attribute_code="province_name",
+                    score=1.0,
+                    business_domain_id=205,
+                ),
+                SemanticFilterBinding(
+                    filter_index=1,
+                    input_value="空心纤维血液透析器",
+                    canonical_value="空心纤维血液透析器",
+                    canonical_name="商品名称",
+                    attribute_code="product_name",
+                    score=1.0,
+                    business_domain_id=205,
+                ),
+            ],
+        )
+
+    resolver_calls = []
+
+    async def resolve_value(_chat, _identity, surface, expected_family):
+        resolver_calls.append((surface, expected_family))
+        if surface != "费森尤斯" or expected_family != "COMMERCIAL_PRODUCT":
+            return None
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name="母厂牌",
+            attribute_code="parent_brand",
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    bridge = handler(
+        provider,
+        redis,
+        v1,
+        v1_context_reader=read_context,
+        v1_context_value_resolver=resolve_value,
+    )
+    install_fallback_resolution(bridge, provider)
+    first = request(
+        question=first_question,
+        message_id="multi-filter-first",
+        conversation_id="multi-filter-conversation",
+        business_domain_ids=[],
+    )
+    await bridge.handle(first, IDENTITY)
+    del bridge._resolve
+
+    result = await bridge.handle(
+        request(
+            question="费森尤斯呢",
+            message_id="multi-filter-followup",
+            conversation_id=first.conversation_id,
+            business_domain_ids=[],
+        ),
+        IDENTITY,
+    )
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == "查询上海地区费森尤斯产品合作的经销商名单。"
+    assert ("费森尤斯", "REGION") in resolver_calls
+    assert ("费森尤斯", "COMMERCIAL_PRODUCT") in resolver_calls
+    snapshot = await bridge.store.load(first, IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    frame = task.versions[-1].context_question
+    assert [(item.surface, item.semantic_family) for item in frame.filters] == [
+        ("上海", "REGION"),
+        ("费森尤斯", "COMMERCIAL_PRODUCT"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_filter_replacement_remains_blocked_when_value_matches_two_families():
+    frame = ContextQuestionState(
+        original_question="查询上海地区旧商品合作的经销商名单。",
+        execution_question="查询上海地区旧商品合作的经销商名单。",
+        filters=[
+            ContextQuestionFilter(
+                surface="上海",
+                canonical_value="上海",
+                canonical_name="省份名称",
+                attribute_code="province_name",
+                semantic_family="REGION",
+                evidence_source="V1_SUCCESSFUL_QUERY_EVIDENCE",
+            ),
+            ContextQuestionFilter(
+                surface="旧商品",
+                canonical_value="旧商品",
+                canonical_name="商品名称",
+                attribute_code="product_name",
+                semantic_family="COMMERCIAL_PRODUCT",
+                evidence_source="V1_SUCCESSFUL_QUERY_EVIDENCE",
+            ),
+        ],
+        source_message_id="ambiguous-first",
+    )
+
+    async def ambiguous_resolver(surface, expected_family):
+        field = {
+            "REGION": ("省份名称", "province_name"),
+            "COMMERCIAL_PRODUCT": ("商品名称", "product_name"),
+        }[expected_family]
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name=field[0],
+            attribute_code=field[1],
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    assert await _replace_filter(frame, "同名值呢", ambiguous_resolver) is None
 
 
 @pytest.mark.asyncio

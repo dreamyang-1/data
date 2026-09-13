@@ -1,0 +1,27 @@
+{
+  "status": "OFFLINE_AFFECTED_PASS_LIVE_PENDING",
+  "baseline_head": "63bfc9c89e7521fc8d72294c026bb4f60fecb309",
+  "focused": {
+    "passed": 95,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "affected": {
+    "passed": 290,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "full_baseline": {
+    "passed": 3702,
+    "existing_failed": 106,
+    "collection_errors": 0
+  },
+  "full_candidate": null,
+  "old_pass_to_new_fail": null,
+  "external_calls": {
+    "model": 0,
+    "benchmark": 0,
+    "business_sql": 0,
+    "production_writes": 0
+  }
+}

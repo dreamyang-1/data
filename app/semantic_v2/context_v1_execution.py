@@ -717,7 +717,10 @@ class V2ContextV1ExecutionBridge:
                         execution_chat, identity
                     )
                     if canonical_matches_execution(
-                        candidate, chat=execution_chat, identity=identity
+                        candidate,
+                        chat=execution_chat,
+                        identity=identity,
+                        response=response,
                     ):
                         v1_request = candidate
                     else:

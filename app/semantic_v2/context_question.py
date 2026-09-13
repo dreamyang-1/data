@@ -14,6 +14,7 @@ import re
 from typing import Awaitable, Callable
 
 from app.domain.models import (
+    AgentResponse,
     CanonicalAnalysisRequest,
     ChatRequest,
     SemanticFilterBinding,
@@ -149,8 +150,27 @@ def canonical_matches_execution(
     *,
     chat: ChatRequest,
     identity: TrustedIdentity,
+    response: AgentResponse | None = None,
 ) -> bool:
     """Accept V1 evidence only for the exact trusted request just executed."""
+    dataset_matches = bool(
+        request is not None and request.source_dataset_id == chat.dataset_id
+    )
+    if (
+        not dataset_matches
+        and request is not None
+        and chat.dataset_id is None
+        and response is not None
+    ):
+        # A successful database execution attaches its newly-created output
+        # Dataset to the persisted Canonical request.  Prove that mutation with
+        # both identifiers from the exact response instead of rejecting useful
+        # semantic evidence merely because the caller had no input Dataset.
+        dataset_matches = bool(
+            response.dataset_id is not None
+            and request.source_dataset_id == response.dataset_id
+            and request.request_id == response.request_id
+        )
     return bool(
         request is not None
         and request.tenant_id == identity.tenant_id
@@ -161,7 +181,7 @@ def canonical_matches_execution(
         and request.business_domain_ids == chat.business_domain_ids
         and request.database_id == chat.database_id
         and request.knowledge_base_names == chat.knowledge_base_names
-        and request.source_dataset_id == chat.dataset_id
+        and dataset_matches
         and request.original_question == chat.question
     )
 
@@ -355,25 +375,36 @@ async def _replace_filter(
         if frame.execution_question.count(item.surface) == 1
         and item.semantic_family != "OTHER"
     ]
-    if len(editable) != 1:
+    if not editable or resolve_value is None:
         return None
-    previous = editable[0]
-    if resolve_value is None:
+
+    # Resolve the new surface against each distinct editable semantic family
+    # before choosing a prior slot.  A question may legitimately retain both a
+    # region and a product filter; the replacement value identifies which one
+    # changes.  More than one matching family, or more than one prior slot in
+    # the matching family, remains ambiguous and must not be guessed.
+    resolved_families: list[tuple[str, SemanticFilterBinding]] = []
+    for family in dict.fromkeys(item.semantic_family for item in editable):
+        binding = await resolve_value(surface, family)
+        if binding is None:
+            continue
+        if semantic_filter_family(binding.attribute_code, binding.canonical_name) != family:
+            continue
+        resolved_families.append((family, binding))
+    if len(resolved_families) != 1:
         return None
-    binding = await resolve_value(surface, previous.semantic_family)
-    if binding is None:
+    family, binding = resolved_families[0]
+    prior_slots = [item for item in editable if item.semantic_family == family]
+    if len(prior_slots) != 1:
         return None
-    if semantic_filter_family(binding.attribute_code, binding.canonical_name) != (
-        previous.semantic_family
-    ):
-        return None
+    previous = prior_slots[0]
     completed = frame.execution_question.replace(previous.surface, surface, 1)
     replacement = m.ContextQuestionFilter(
         surface=surface,
         canonical_value=binding.canonical_value,
         canonical_name=binding.canonical_name,
         attribute_code=binding.attribute_code,
-        semantic_family=previous.semantic_family,
+        semantic_family=family,
         evidence_source="CURRENT_EXPLICIT_SURFACE",
     )
     filters = [replacement if item == previous else item for item in frame.filters]
