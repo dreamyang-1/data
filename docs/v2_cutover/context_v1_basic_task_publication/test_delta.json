@@ -1,5 +1,5 @@
 {
-  "status": "V2_BASIC_NEW_TASK_PUBLICATION_LIVE_PASS_DOWNSTREAM_PARTIAL",
+  "status": "V2_BASIC_NEW_TASK_AND_FOLLOWUP_EXECUTION_COMPLETE",
   "targeted": {
     "passed": 7,
     "failed": 0,
@@ -50,12 +50,46 @@
       "completed_question": "查询2026年江苏省订单笔数。",
       "v1_execution": "REACHED",
       "oagent": "REACHED",
-      "sql_translation": "NOT_REACHED",
-      "db_execution": "NOT_REACHED",
-      "page_result": "SAFE_FALLBACK",
-      "first_failure_stage": "OAGNET_ASL_RESPONSE_AMBIGUITY_VALIDATION",
-      "adapter_error_code": "ASL_AMBIGUOUS"
+      "sql_translation": "REACHED",
+      "db_execution": "REACHED",
+      "page_result": "COMPLETED",
+      "first_failure_stage": null,
+      "adapter_error_code": null
     },
-    "production_code_changes_after_live_failure": 0
+    "production_code_changes_after_live_failure": 1,
+    "oagent_pid": 28896,
+    "data_analysis_pid_unchanged": 35348,
+    "sql_translator_pid_unchanged": 26172,
+    "changed_service": "Oagnet"
+  },
+  "oagent_downstream_closure": {
+    "baseline": {
+      "passed": 697,
+      "existing_failed": 1,
+      "collection_errors": 0
+    },
+    "candidate": {
+      "passed": 701,
+      "existing_failed": 1,
+      "collection_errors": 0
+    },
+    "affected": {
+      "passed": 107,
+      "existing_failed": 1,
+      "collection_errors": 0
+    },
+    "old_pass_to_new_fail": 0,
+    "new_tests": 4,
+    "same_existing_failure": "Oagnet/tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+    "diagnostic_oagent_calls": 4,
+    "diagnostic_sql_calls": 0,
+    "diagnostic_db_calls": 0
+  },
+  "downstream_private_hashes": {
+    "oagnet_baseline_full.xml": "6dbdcb94249e438f30109672e51065feff4781e1994da289321278de93dbcc5f",
+    "oagnet_candidate_final_full.xml": "422544a0f377cff37b90c9363d0a4d987dd62d087226551b518a0c6ffbe186ba",
+    "oagnet_test_delta.json": "148a9b5ebd9ca5002b51ce95c2c01a9a097ffeb97206cd9e5ad30ddc04997e04",
+    "live_utf8_first.json": "76f0af1365d60d952468b4306aac8d0502661d7b038a7b05c679364226be8403",
+    "live_utf8_followup.json": "561c5cfc12a783f0d01c22e0c38b87508cc3dc126e826568cc4f5377111cb0aa"
   }
 }

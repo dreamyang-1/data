@@ -1,14 +1,17 @@
 {
   "baseline_head": "d896a84",
   "production_files": [
-    "app/semantic_v2/source_value_binding.py"
+    "app/semantic_v2/source_value_binding.py",
+    "Oagnet/agent.py"
   ],
   "test_files": [
     "tests/test_v2_source_value_binding.py",
-    "tests/test_v2_deterministic_grounding_demo_accuracy.py"
+    "tests/test_v2_deterministic_grounding_demo_accuracy.py",
+    "Oagnet/tests/test_intent_asl_contract.py"
   ],
   "documentation_files": [
     "docs/v2_cutover/context_v1_basic_task_publication/validation_report.md",
+    "docs/v2_cutover/context_v1_basic_task_publication/asl_ambiguity_solution.md",
     "docs/v2_cutover/context_v1_basic_task_publication/test_delta.json",
     "docs/v2_cutover/context_v1_basic_task_publication/change_manifest.json"
   ],
@@ -20,5 +23,7 @@
     "private model exchanges",
     "source value receipts",
     "business query results"
-  ]
+  ],
+  "downstream_baseline_head": "4ea01f4e2d52ad83bae73e6645a418a5451fd0a8",
+  "downstream_root_cause": "OAGENT_CONTRACT_REPAIR_LEAVES_STALE_SAME_FIELD_AMBIGUITY"
 }

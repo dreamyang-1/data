@@ -1534,6 +1534,57 @@ def _ambiguity_mentions_filter(
     return field_match and (not require_value or value_match)
 
 
+def _clear_resolved_contract_filter_ambiguities(
+    ast: dict,
+    *,
+    semantic_field: str,
+    resolved_field: str,
+    value,
+    candidate_fields: set[str] | None = None,
+) -> int:
+    """Remove only filter warnings made stale by an exact contract binding.
+
+    The ASL model can emit a warning that a semantic field was not recalled and
+    still return an otherwise repairable draft.  Once the caller-owned filter
+    has been mapped to one published field and the complete predicate has been
+    installed, a warning about that same field is no longer actionable.  Other
+    filter warnings remain blocking, including every warning produced while the
+    field mapping is not unique.
+    """
+
+    ambiguities = ast.get("ambiguity")
+    if not isinstance(ambiguities, list):
+        return 0
+    fields = {
+        str(semantic_field or "").strip(),
+        str(resolved_field or "").strip(),
+        *(candidate_fields or set()),
+    }
+    # A fully-qualified physical field is authoritative evidence.  Its short
+    # column alias is useful for model warnings such as ``province_name was not
+    # found``, but generic aliases such as ``name`` must not clear an unrelated
+    # warning merely because they occur in ordinary prose.
+    for field in tuple(fields):
+        short_name = str(field).rsplit(".", 1)[-1].strip()
+        if "_" in short_name or len(short_name) >= 6:
+            fields.add(short_name)
+    retained = [
+        item
+        for item in ambiguities
+        if not _ambiguity_mentions_filter(
+            item,
+            semantic_field,
+            value,
+            {field for field in fields if field},
+            require_value=False,
+        )
+    ]
+    removed = len(ambiguities) - len(retained)
+    if removed:
+        ast["ambiguity"] = retained
+    return removed
+
+
 def _related_entity_distances(
     field: str,
     knowledge: dict,
@@ -5660,6 +5711,14 @@ def _repair_contract_filter(
             matching.append(item)
     if len(matching) == 1:
         matching[0]["operator"] = expected_operator
+        if len(candidates) == 1:
+            _clear_resolved_contract_filter_ambiguities(
+                ast,
+                semantic_field=str(expected.get("field") or ""),
+                resolved_field=str(matching[0].get("field") or ""),
+                value=expected_value,
+                candidate_fields=set(candidates),
+            )
         return None
 
     if len(candidates) != 1:
@@ -5700,38 +5759,23 @@ def _repair_contract_filter(
         "operator": expected_operator,
         "value": expected_value,
     })
-    ambiguities = ast.get("ambiguity")
-    if isinstance(ambiguities, list):
-        expected_values = (
-            list(expected_value)
-            if isinstance(expected_value, list)
-            else [expected_value]
-        )
-        value_tokens = {
-            str(value or "").strip().strip("%").casefold()
-            for value in expected_values
-            if str(value or "").strip().strip("%")
-        }
-        ambiguities[:] = [
-            item for item in ambiguities
-            if not (
-                isinstance(item, dict)
-                and item.get("type") == "filter"
-                and any(
-                    token in json.dumps(
-                        item, ensure_ascii=False, default=str
-                    ).casefold()
-                    for token in value_tokens
-                )
-            )
-        ]
-    return {
+    cleared_ambiguities = _clear_resolved_contract_filter_ambiguities(
+        ast,
+        semantic_field=str(expected.get("field") or ""),
+        resolved_field=resolved,
+        value=expected_value,
+        candidate_fields=set(candidates),
+    )
+    repair = {
         "type": "ADD_REQUIRED_NEGATIVE_FILTER" if negative else "ADD_REQUIRED_FILTER",
         "semantic_label": expected.get("field"),
         "resolved_field": resolved,
         "operator": expected_operator,
         "source": "RECALLED_SEMANTIC_METADATA",
     }
+    if cleared_ambiguities:
+        repair["cleared_stale_ambiguities"] = cleared_ambiguities
+    return repair
 
 
 def _apply_intent_asl_contract(
