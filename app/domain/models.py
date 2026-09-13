@@ -633,6 +633,11 @@ class ChatRequest(StrictModel):
     # planning and execution, but must not merge its own Pending/TaskFrame
     # state into an already resolved question a second time.
     _completed_question_execution: bool = PrivateAttr(default=False)
+    # Populated only by the demo V2-context bridge from a same-conversation,
+    # execution-backed envelope.  Transport JSON cannot set private attrs.
+    _demo_execution_resolved_business_domain_ids: tuple[int, ...] = PrivateAttr(
+        default_factory=tuple
+    )
     conversation_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=4000)
@@ -1293,6 +1298,11 @@ class ClarificationDecisionTrace(StrictModel):
 
 
 class AgentResponse(StrictModel):
+    # Internal-only diagnostic passed from the V1 execution workflow to the
+    # opt-in context bridge.  It is deliberately excluded from API payloads so
+    # demo presentation can react to a precise upstream failure without
+    # exposing dependency details to the browser.
+    _upstream_error_code: str | None = PrivateAttr(default=None)
     error_code: str | None = None
     clarification_decision_traces: list[ClarificationDecisionTrace] = Field(default_factory=list)
     request_id: UUID

@@ -11,10 +11,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import logging
 from pathlib import Path
+import re
 import time
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, Literal
 from uuid import uuid4
 
+from pydantic import AwareDatetime, Field
 from redis.asyncio import Redis
 
 from app.config import Settings
@@ -22,16 +24,19 @@ from app.domain.models import (
     AgentResponse,
     AnalysisProcessStep,
     ChatRequest,
+    DependencyConstraint,
     PrimaryIntent,
+    ReliabilityReport,
     TrustedIdentity,
 )
-from app.services.progress import emit_progress
+from app.services.progress import emit_progress, progress_scope
 from app.stores import MessageIdReuseConflictError
 
 from .authorized_contract import AuthorizedScopeContext, ScopedArtifact, contract_digest
 from .catalog_bridge import ScopedPlanSession
 from .completed_question import CompletedQuestionDisplay, build_completed_question_display
 from .context_proposal import ContextProposalFailure
+from .explicit_time import normalize_range
 from .limited_scalar_runtime import (
     OAGNET_RUNTIME_FILES,
     _import_runtime_module,
@@ -40,14 +45,45 @@ from .limited_scalar_runtime import (
     source_bundle_digest,
 )
 from .pending_recognition import RecognizedClarification
+from .pipeline import CurrentTurnParser, CurrentTurnSemanticParse
 from .persisted_scalar_api import RedisScalarSessionStore
 from .pipeline import AuthorizedLogicalPlan
 from .recognition import RawTurnPlanner, RecognizedStandaloneNewTask
 from .recognition_client import RecognitionFailure, RecognitionModelClient
+from .recognition_repairs import repair_model_parse
+from . import models as semantic_models
 from .state_machine import ConversationState, StateTransitionError
 
 
 logger = logging.getLogger(__name__)
+
+
+_DEMO_RETRY_WITHOUT_TIME_CODES = frozenset({"ASL_TIME_ANCHOR_MISSING"})
+
+
+class ExecutionAnchorEditFailure(RecognitionFailure):
+    """Public-compatible rejection with content-free internal diagnostics."""
+
+    def __init__(
+        self,
+        reason_code: str,
+        diagnostic: dict[str, Any],
+        *,
+        public_code: str = "V2_EXECUTION_ANCHOR_EDIT_UNSUPPORTED",
+    ):
+        self.reason_code = reason_code
+        self.diagnostic = {**diagnostic, "reason_code": reason_code}
+        super().__init__(public_code)
+
+
+_TIME_EDIT_AUXILIARY = re.compile(
+    r"(?:请|麻烦)?(?:帮我)?(?:再)?"
+    r"(?:换|改|调整|设置|设|看|查|查询|查看)"
+    r"(?:成|为|到)?(?:一下|看看)?(?:呢|吧)?"
+)
+_TIME_EDIT_PUNCTUATION = re.compile(r"[\s，,。.!！?？;；：:]+")
+_MAX_TIME_EDIT_QUESTION_LENGTH = 120
+_MAX_TIME_EXPRESSION_LENGTH = 40
 
 
 @dataclass(frozen=True)
@@ -56,6 +92,88 @@ class ContextV1ExternalDependencies:
     model: Any
     redis: Any
     module_origins: dict[str, str] = field(default_factory=dict)
+
+
+class ExecutionAnchorTimeContext(semantic_models.StrictModel):
+    """A current-turn calendar value applied to an opaque execution base."""
+
+    surface: str = Field(min_length=1, max_length=1000)
+    applied_text: str = Field(min_length=1, max_length=100)
+    start: AwareDatetime
+    end_exclusive: AwareDatetime
+    operation: Literal["SET", "REPLACE"]
+    source: Literal["CURRENT_EXPLICIT_TIME"] = "CURRENT_EXPLICIT_TIME"
+
+
+class ExecutionBackedContextAnchor(semantic_models.StrictModel):
+    """Minimal context continuity after a successful V1-only execution.
+
+    The opaque question remains authoritative for unstructured clauses. V1
+    output only proves that the exact execution question ran successfully; it
+    never becomes a replacement semantic truth source.
+    """
+
+    schema_version: Literal["v1-execution-anchor-v1"] = "v1-execution-anchor-v1"
+    anchor_id: semantic_models.Identifier
+    parent_anchor_id: semantic_models.Identifier | None = None
+    source_message_id: semantic_models.Identifier
+    provenance: Literal["V1_EXECUTION_ANCHOR"] = "V1_EXECUTION_ANCHOR"
+    completeness: Literal["PARTIAL"] = "PARTIAL"
+    evidence_mode: Literal["EXECUTION_BACKED"] = "EXECUTION_BACKED"
+    original_question: str = Field(min_length=1, max_length=10000)
+    opaque_base_question: str = Field(min_length=1, max_length=10000)
+    actual_execution_question: str = Field(min_length=1, max_length=10000)
+    semantic_model_id: int = Field(strict=True, gt=0)
+    requested_business_domain_ids: tuple[int, ...] = ()
+    resolved_business_domain_ids: tuple[int, ...] = Field(min_length=1)
+    scope_fingerprint: semantic_models.Identifier
+    state_version: int = Field(strict=True, ge=1)
+    revision: int = Field(strict=True, ge=1)
+    time_context: ExecutionAnchorTimeContext | None = None
+    confirmed_semantics: dict[str, list[str]] = Field(default_factory=dict)
+    current_turn_evidence_digest: semantic_models.Identifier
+    v1_response_request_id: semantic_models.Identifier
+    execution_evidence_refs: tuple[semantic_models.Identifier, ...] = Field(min_length=1)
+    created_at: AwareDatetime
+
+
+class DemoExecutionEnvelope(semantic_models.StrictModel):
+    """Execution environment proven by one successful V1 query.
+
+    This is deliberately separate from the semantic anchor.  It carries no
+    reconstructed business meaning and cannot be supplied through the public
+    request model.  Tool declarations are represented only by a digest so
+    secrets in tool headers are never copied into the persisted envelope.
+    """
+
+    schema_version: Literal["demo-execution-envelope-v1"] = (
+        "demo-execution-envelope-v1"
+    )
+    envelope_id: semantic_models.Identifier
+    source_message_id: semantic_models.Identifier
+    provenance: Literal["V1_SUCCESSFUL_EXECUTION"] = "V1_SUCCESSFUL_EXECUTION"
+    semantic_model_id: int = Field(strict=True, gt=0)
+    requested_business_domain_ids: tuple[int, ...] = ()
+    resolved_business_domain_ids: tuple[int, ...] = Field(min_length=1)
+    database_id: int | None = Field(default=None, strict=True, gt=0)
+    knowledge_base_names: tuple[str, ...] = ()
+    dataset_id: str | None = Field(default=None, min_length=1, max_length=128)
+    dependency_constraints: tuple[DependencyConstraint, ...] = ()
+    extension_contract_digest: semantic_models.Identifier
+    scope_fingerprint: semantic_models.Identifier
+    identity_fingerprint: semantic_models.Identifier
+    execution_evidence_refs: tuple[semantic_models.Identifier, ...] = Field(
+        min_length=1
+    )
+    created_at: AwareDatetime
+
+
+@dataclass(frozen=True)
+class ExecutionAnchorUpdate:
+    previous: ExecutionBackedContextAnchor | None
+    current_parse: CurrentTurnSemanticParse
+    time_context: ExecutionAnchorTimeContext | None
+    resolved_business_domain_ids: tuple[int, ...]
 
 
 @dataclass(frozen=True)
@@ -68,6 +186,7 @@ class ResolvedContextTurn:
     clarification_trace: Any = None
     display: CompletedQuestionDisplay | None = None
     bridge_route: str = "V2_RESOLVED_COMPLETED_QUESTION"
+    anchor_update: ExecutionAnchorUpdate | None = None
 
 
 def _standalone_execution_display(
@@ -126,6 +245,535 @@ def _attach_completed_question(
         steps[index] = step
     response.analysis_process = steps[:20]
     return response
+
+
+def _enum_text(value: Any) -> str:
+    return str(getattr(value, "value", value))
+
+
+def _anchor_edit_diagnostic(
+    parsed,
+    *,
+    context_relation: str | None,
+) -> dict[str, Any]:
+    explicit_slots = sorted(
+        slot
+        for slot, mention_ids in parsed.explicit_slot_mentions.items()
+        if mention_ids
+    )
+    marker_slots = sorted({marker.slot_name for marker in parsed.operation_markers})
+    return {
+        "context_relation": context_relation,
+        "mention_roles": [
+            sorted({_enum_text(role) for role in mention.candidate_roles})
+            for mention in parsed.mentions
+        ],
+        "marker_slots": marker_slots,
+        "operation_hints": sorted({
+            _enum_text(marker.operation_hint)
+            for marker in parsed.operation_markers
+        }),
+        "explicit_slots": explicit_slots,
+        "effective_edited_slots": sorted(set(explicit_slots) | set(marker_slots)),
+        "dialogue_acts": sorted({
+            _enum_text(value) for value in parsed.dialogue_act_candidates
+        }),
+        "topic_shift": bool(parsed.topic_shift_signals),
+        "time_mention_count": 0,
+        "time_evidence_source": None,
+        "resolved_time_kind": None,
+        "resolved_time_value": None,
+    }
+
+
+def _reject_anchor_edit(
+    reason_code: str,
+    diagnostic: dict[str, Any],
+    *,
+    public_code: str = "V2_EXECUTION_ANCHOR_EDIT_UNSUPPORTED",
+) -> None:
+    raise ExecutionAnchorEditFailure(
+        reason_code,
+        diagnostic,
+        public_code=public_code,
+    )
+
+
+def _surface_time_only_context(
+    question: str,
+    now: datetime,
+) -> tuple[str, Any, str] | None:
+    """Recover one bounded natural-calendar expression from a time-only edit.
+
+    This is a representation fallback for an execution-backed opaque anchor.
+    It reuses the governed whole-expression calendar parser and accepts only a
+    short utterance whose remaining text is generic edit/query grammar.  No
+    metric, entity, dimension, filter, relation or catalog vocabulary is
+    classified here.
+    """
+
+    text = question.strip()
+    if not text or len(text) > _MAX_TIME_EDIT_QUESTION_LENGTH:
+        return None
+    candidates: list[tuple[int, int, str, Any]] = []
+    for start in range(len(text)):
+        stop = min(len(text), start + _MAX_TIME_EXPRESSION_LENGTH)
+        for end in range(start + 1, stop + 1):
+            surface = text[start:end].strip()
+            if not surface or _TIME_EDIT_PUNCTUATION.search(surface):
+                continue
+            try:
+                normalized = normalize_range(surface, now)
+            except (RecognitionFailure, ValueError):
+                continue
+            candidates.append((start, end, surface, normalized))
+    if not candidates:
+        return None
+    maximal = [
+        candidate
+        for candidate in candidates
+        if not any(
+            other[0] <= candidate[0]
+            and candidate[1] <= other[1]
+            and (other[0], other[1]) != (candidate[0], candidate[1])
+            for other in candidates
+        )
+    ]
+    spans = {(start, end) for start, end, _surface, _value in maximal}
+    if len(spans) != 1:
+        return None
+    start, end = next(iter(spans))
+    surface, normalized = next(
+        (surface, value)
+        for candidate_start, candidate_end, surface, value in maximal
+        if (candidate_start, candidate_end) == (start, end)
+    )
+    auxiliary = _TIME_EDIT_PUNCTUATION.sub("", text[:start] + text[end:])
+    if auxiliary and _TIME_EDIT_AUXILIARY.fullmatch(auxiliary) is None:
+        return None
+    return surface, normalized, auxiliary
+
+
+def _validated_time_context(
+    raw_parse: CurrentTurnSemanticParse,
+    *,
+    question: str,
+    message_id: str,
+    now: datetime,
+    require_followup: bool,
+    context_relation: str | None = None,
+) -> tuple[CurrentTurnSemanticParse, ExecutionAnchorTimeContext]:
+    """Accept a time-only effective delta without relying on raw object count."""
+
+    parsed = CurrentTurnSemanticParse.model_validate(
+        raw_parse.model_dump(mode="json")
+    )
+    parsed, _repairs = repair_model_parse(
+        parsed,
+        text=question,
+        turn_id=message_id,
+    )
+    validated = CurrentTurnParser.parse(
+        text=question,
+        turn_id=message_id,
+        text_ref=message_id,
+        parsed=parsed,
+    )
+    diagnostic = _anchor_edit_diagnostic(
+        validated,
+        context_relation=context_relation,
+    )
+    effective_slots = set(diagnostic["effective_edited_slots"])
+    non_time_slots = effective_slots - {"time_spec"}
+    if validated.topic_shift_signals:
+        _reject_anchor_edit("TOPIC_SHIFT", diagnostic)
+    acts = set(diagnostic["dialogue_acts"])
+    if require_followup and acts & {"NEW_TASK", "SWITCH_TOPIC", "RETURN_TO_TOPIC"}:
+        _reject_anchor_edit("TOPIC_SHIFT", diagnostic)
+    if non_time_slots:
+        reason = (
+            "MULTIPLE_EFFECTIVE_SLOT_EDITS"
+            if "time_spec" in effective_slots else "NON_TIME_SLOT_EDIT"
+        )
+        _reject_anchor_edit(reason, diagnostic)
+
+    time_slot_ids = set(validated.explicit_slot_mentions.get("time_spec", []))
+    temporal_ids = set(validated.temporal_expressions)
+    time_marker_ids = {
+        marker.mention_id
+        for marker in validated.operation_markers
+        if marker.slot_name == "time_spec"
+    }
+    time_ids = time_slot_ids | temporal_ids | time_marker_ids
+    time_mentions = [
+        mention
+        for mention in validated.mentions
+        if mention.mention_id in time_ids
+        and {_enum_text(role) for role in mention.candidate_roles}
+            & {"TIME_RANGE", "TIME_FIELD"}
+    ]
+    diagnostic["time_mention_count"] = len(time_mentions)
+    resolved_time_mentions = []
+    unresolved_time_mentions = []
+    for mention in time_mentions:
+        try:
+            resolved_time_mentions.append(
+                (mention, normalize_range(mention.surface, now))
+            )
+        except (RecognitionFailure, ValueError):
+            unresolved_time_mentions.append(mention)
+    time_operations = {
+        _enum_text(marker.operation_hint)
+        for marker in validated.operation_markers
+        if marker.slot_name == "time_spec"
+    }
+    if time_operations - {"SET", "REPLACE"}:
+        _reject_anchor_edit(
+            "UNSUPPORTED_OPERATION",
+            diagnostic,
+            public_code="V2_EXECUTION_ANCHOR_TIME_OPERATION_REQUIRED",
+        )
+
+    surface_evidence = _surface_time_only_context(question, now) if require_followup else None
+    if require_followup and surface_evidence is None:
+        reason = "TIME_MENTION_MISSING" if not time_mentions else "TIME_VALUE_UNRESOLVED"
+        if time_mentions and not (time_slot_ids or time_marker_ids):
+            reason = "TIME_SLOT_MISSING"
+        _reject_anchor_edit(reason, diagnostic)
+
+    if surface_evidence is not None:
+        surface, normalized, auxiliary = surface_evidence
+        diagnostic["time_evidence_source"] = (
+            "MODEL_PARSE_AND_TIME_ONLY_SURFACE"
+            if time_mentions else "DETERMINISTIC_TIME_ONLY_SURFACE_RECOVERY"
+        )
+        if auxiliary and not time_mentions:
+            diagnostic["auxiliary_parse_signal"] = "AUXILIARY_PARSE_SIGNAL_ONLY"
+        elif unresolved_time_mentions:
+            diagnostic["auxiliary_parse_signal"] = "AUXILIARY_PARSE_SIGNAL_ONLY"
+    else:
+        if not time_mentions:
+            _reject_anchor_edit("TIME_MENTION_MISSING", diagnostic)
+        if unresolved_time_mentions:
+            _reject_anchor_edit("TIME_VALUE_UNRESOLVED", diagnostic)
+        normalized_values = resolved_time_mentions
+        ranges = {
+            (value.start, value.end_exclusive)
+            for _mention, value in normalized_values
+        }
+        if len(ranges) != 1:
+            _reject_anchor_edit("TIME_MENTION_AMBIGUOUS", diagnostic)
+        mention, normalized = max(
+            normalized_values,
+            key=lambda pair: len(pair[0].surface),
+        )
+        surface = mention.surface
+        diagnostic["time_evidence_source"] = "MODEL_PARSE"
+
+    if resolved_time_mentions:
+        parsed_ranges = {
+            (parsed_value.start, parsed_value.end_exclusive)
+            for _mention, parsed_value in resolved_time_mentions
+        }
+        parsed_ranges.add((normalized.start, normalized.end_exclusive))
+        if len(parsed_ranges) != 1:
+            _reject_anchor_edit("TIME_MENTION_AMBIGUOUS", diagnostic)
+
+    operation = (
+        "REPLACE"
+        if require_followup or "REPLACE" in time_operations
+        else "SET"
+    )
+    local_start = normalized.start.astimezone(now.tzinfo)
+    local_end = normalized.end_exclusive.astimezone(now.tzinfo)
+    if (
+        local_start.month == local_start.day == 1
+        and local_end.month == local_end.day == 1
+        and local_end.year == local_start.year + 1
+    ):
+        applied_text = f"{local_start.year}年"
+    else:
+        applied_text = surface
+    diagnostic.update({
+        "effective_edited_slots": ["time_spec"],
+        "effective_operation": operation,
+        "resolved_time_kind": "RANGE",
+        "resolved_time_value": {
+            "start": normalized.start.isoformat(),
+            "end_exclusive": normalized.end_exclusive.isoformat(),
+        },
+        "decision": "ACCEPT",
+    })
+    if require_followup:
+        logger.info(
+            "V2 execution-backed anchor time edit accepted",
+            extra={"anchor_edit_diagnostic": diagnostic},
+        )
+    return parsed, ExecutionAnchorTimeContext(
+        surface=surface,
+        applied_text=applied_text,
+        start=normalized.start,
+        end_exclusive=normalized.end_exclusive,
+        operation=operation,
+    )
+
+
+def _initial_anchor_time_context(
+    raw_parse: CurrentTurnSemanticParse,
+    *,
+    question: str,
+    message_id: str,
+    now: datetime,
+) -> ExecutionAnchorTimeContext | None:
+    if not raw_parse.temporal_expressions:
+        return None
+    try:
+        _parsed, context = _validated_time_context(
+            raw_parse,
+            question=question,
+            message_id=message_id,
+            now=now,
+            require_followup=False,
+        )
+    except (RecognitionFailure, ValueError):
+        # A successful V1 execution still proves the opaque base. Uncertain V2
+        # slot hypotheses are retained only by digest and never promoted.
+        return None
+    return context
+
+
+def _apply_time_to_opaque_question(
+    anchor: ExecutionBackedContextAnchor,
+    time_context: ExecutionAnchorTimeContext,
+) -> str:
+    question = anchor.actual_execution_question
+    prior = anchor.time_context
+    if prior is not None:
+        for old in (prior.applied_text, prior.surface):
+            if old and old in question:
+                return question.replace(old, time_context.applied_text, 1)
+        raise RecognitionFailure("V2_EXECUTION_ANCHOR_PRIOR_TIME_NOT_LOCATABLE")
+    if question.startswith("查询"):
+        return "查询" + time_context.applied_text + question[len("查询"):]
+    return time_context.applied_text + question
+
+
+def _advance_opaque_anchor_state(
+    state: ScopedArtifact,
+    *,
+    message_id: str,
+    context: AuthorizedScopeContext,
+) -> ScopedArtifact:
+    current = ConversationState.model_validate(state.payload)
+    if current.active_topic_id is not None:
+        raise RecognitionFailure("V2_EXECUTION_ANCHOR_NOT_CURRENT")
+    data = current.model_dump(mode="python")
+    data["state_version"] = current.state_version + 1
+    data["recent_turn_ids"] = [
+        *current.recent_turn_ids,
+        message_id,
+    ][-100:]
+    updated = ConversationState.model_validate(data)
+    payload = updated.model_dump(mode="json")
+    return ScopedArtifact(
+        kind="CONVERSATION",
+        context=context,
+        payload=payload,
+        payload_digest=contract_digest(payload),
+    )
+
+
+def _resolve_execution_anchor_followup(
+    chat: ChatRequest,
+    state: ScopedArtifact,
+    anchor: ExecutionBackedContextAnchor,
+    raw_parse: CurrentTurnSemanticParse,
+    context: AuthorizedScopeContext,
+    now: datetime,
+    *,
+    context_relation: str | None = None,
+) -> ResolvedContextTurn:
+    if (
+        anchor.scope_fingerprint != context.fingerprint()
+        or anchor.semantic_model_id != chat.semantic_model_id
+        or anchor.requested_business_domain_ids != tuple(chat.business_domain_ids)
+    ):
+        raise RecognitionFailure("V2_EXECUTION_ANCHOR_SCOPE_MISMATCH")
+    parsed, time_context = _validated_time_context(
+        raw_parse,
+        question=chat.question,
+        message_id=chat.message_id,
+        now=now,
+        require_followup=True,
+        context_relation=context_relation,
+    )
+    completed = _apply_time_to_opaque_question(anchor, time_context)
+    next_state = _advance_opaque_anchor_state(
+        state,
+        message_id=chat.message_id,
+        context=context,
+    )
+    semantic_fingerprint = contract_digest({
+        "anchor_id": anchor.anchor_id,
+        "operation": time_context.operation,
+        "slot": "time_spec",
+        "time": time_context.model_dump(mode="json"),
+        "completed_question": completed,
+    })
+    display_material = {
+        "source": "V1_EXECUTION_ANCHOR_PARTIAL",
+        "message_id": chat.message_id,
+        "task_id": anchor.anchor_id,
+        "task_version": anchor.revision + 1,
+        "plan_id": "execution-anchor:" + semantic_fingerprint[:24],
+        "semantic_fingerprint": semantic_fingerprint,
+        "relation": "MODIFY",
+        "understanding": "基于上一轮成功执行的问题，仅替换当前明确指定的时间。",
+        "completed_question": completed,
+    }
+    display = CompletedQuestionDisplay(
+        **display_material,
+        display_digest=contract_digest(display_material),
+    )
+    return ResolvedContextTurn(
+        completed_question=completed,
+        next_state=next_state,
+        plan_state=None,
+        display=display,
+        bridge_route="V1_EXECUTION_ANCHOR_FOLLOWUP",
+        anchor_update=ExecutionAnchorUpdate(
+            previous=anchor,
+            current_parse=parsed,
+            time_context=time_context,
+            resolved_business_domain_ids=anchor.resolved_business_domain_ids,
+        ),
+    )
+
+
+def _execution_evidence_refs(response: AgentResponse) -> tuple[str, ...]:
+    refs = tuple(sorted({
+        f"{item.kind}:{item.source_ref}"
+        for item in response.evidence
+        if item.kind and item.source_ref
+    }))
+    if not any(item.kind == "QUERY_RESULT" for item in response.evidence):
+        return ()
+    return refs
+
+
+def _execution_extension_digest(chat: ChatRequest) -> str:
+    """Hash extension inputs without persisting tool or MCP credentials."""
+
+    return contract_digest({
+        "tools": chat.model_dump(mode="json", include={"tools"})["tools"],
+        "skills": chat.model_dump(mode="json", include={"skills"})["skills"],
+        "mcp": chat.model_dump(mode="json", include={"mcp"})["mcp"],
+        "web_search": chat.web_search,
+    })
+
+
+def _execution_identity_fingerprint(
+    context: AuthorizedScopeContext,
+    state_identity: dict[str, str],
+) -> str:
+    return contract_digest({
+        "context": context.fingerprint(),
+        "identity": state_identity,
+    })
+
+
+def _finalize_demo_execution_envelope(
+    update: ExecutionAnchorUpdate,
+    *,
+    chat: ChatRequest,
+    response: AgentResponse,
+    context: AuthorizedScopeContext,
+    state_identity: dict[str, str],
+    now: datetime,
+) -> DemoExecutionEnvelope | None:
+    evidence_refs = _execution_evidence_refs(response)
+    if response.status != "COMPLETED" or response.error_code or not evidence_refs:
+        return None
+    material = {
+        "source_message_id": chat.message_id,
+        "semantic_model_id": chat.semantic_model_id,
+        "requested_business_domain_ids": list(chat.business_domain_ids),
+        "resolved_business_domain_ids": list(update.resolved_business_domain_ids),
+        "database_id": chat.database_id,
+        "knowledge_base_names": list(chat.knowledge_base_names),
+        "dataset_id": chat.dataset_id,
+        "dependency_constraints": [
+            item.model_dump(mode="json") for item in chat.dependency_constraints
+        ],
+        "extension_contract_digest": _execution_extension_digest(chat),
+        "scope_fingerprint": context.fingerprint(),
+        "identity_fingerprint": _execution_identity_fingerprint(
+            context, state_identity
+        ),
+        "execution_evidence_refs": list(evidence_refs),
+        "created_at": now.isoformat(),
+    }
+    return DemoExecutionEnvelope(
+        **material,
+        envelope_id="demo-execution-envelope:" + contract_digest(material)[:32],
+    )
+
+
+def _finalize_execution_anchor(
+    update: ExecutionAnchorUpdate,
+    *,
+    chat: ChatRequest,
+    completed_question: str,
+    response: AgentResponse,
+    context: AuthorizedScopeContext,
+    state_version: int,
+    now: datetime,
+) -> ExecutionBackedContextAnchor | None:
+    evidence_refs = _execution_evidence_refs(response)
+    if response.status != "COMPLETED" or response.error_code or not evidence_refs:
+        return None
+    previous = update.previous
+    original_question = previous.original_question if previous else chat.question
+    opaque_base = previous.opaque_base_question if previous else chat.question
+    revision = previous.revision + 1 if previous else 1
+    parent_anchor_id = previous.anchor_id if previous else None
+    time_context = (
+        update.time_context
+        if update.time_context is not None
+        else _initial_anchor_time_context(
+            update.current_parse,
+            question=chat.question,
+            message_id=chat.message_id,
+            now=now,
+        )
+    )
+    material = {
+        "parent_anchor_id": parent_anchor_id,
+        "source_message_id": chat.message_id,
+        "original_question": original_question,
+        "opaque_base_question": opaque_base,
+        "actual_execution_question": completed_question,
+        "semantic_model_id": chat.semantic_model_id,
+        "requested_business_domain_ids": list(chat.business_domain_ids),
+        "resolved_business_domain_ids": list(update.resolved_business_domain_ids),
+        "scope_fingerprint": context.fingerprint(),
+        "state_version": state_version,
+        "revision": revision,
+        "time_context": time_context.model_dump(mode="json") if time_context else None,
+        "confirmed_semantics": {
+            "time": [time_context.applied_text] if time_context else [],
+        },
+        "current_turn_evidence_digest": contract_digest(
+            update.current_parse.model_dump(mode="json")
+        ),
+        "v1_response_request_id": str(response.request_id),
+        "execution_evidence_refs": list(evidence_refs),
+        "created_at": now.isoformat(),
+    }
+    return ExecutionBackedContextAnchor(
+        **material,
+        anchor_id="execution-anchor:" + contract_digest(material)[:32],
+    )
 
 
 def validate_context_v1_settings(settings: Settings) -> dict[str, Any]:
@@ -271,6 +919,7 @@ class V2ContextV1ExecutionBridge:
         clock: Callable[[], datetime],
         startup_receipt: dict[str, Any],
         readiness_probe: Callable[[], Awaitable[dict[str, bool]]],
+        demo_mode: bool = False,
     ):
         self.store = store
         self.context_resolver = context_resolver
@@ -278,6 +927,7 @@ class V2ContextV1ExecutionBridge:
         self.v1_executor = v1_executor
         self.clock = clock
         self.startup_receipt = startup_receipt
+        self.demo_mode = demo_mode
         self._readiness_probe = readiness_probe
         self._locks: dict[str, asyncio.Lock] = {}
         self._readiness_lock = asyncio.Lock()
@@ -319,6 +969,243 @@ class V2ContextV1ExecutionBridge:
             if isinstance(artifact.payload, dict) and artifact.payload.get("pending_id") == active.pending_id:
                 return artifact
         raise ValueError("PERSISTED_PENDING_RESUME_MISSING")
+
+    @staticmethod
+    def _execution_anchor(
+        snapshot,
+        context: AuthorizedScopeContext,
+    ) -> ExecutionBackedContextAnchor | None:
+        """Return only the newest successful opaque-task anchor.
+
+        A newer fallback NEW_TASK without a successful execution anchor clears
+        the candidate. This preserves the existing barrier and prevents a
+        short turn from attaching to an older task.
+        """
+
+        if snapshot.state is None:
+            return None
+        state = ConversationState.model_validate(snapshot.state.payload)
+        if state.active_topic_id is not None:
+            return None
+        current: ExecutionBackedContextAnchor | None = None
+        records = sorted(
+            snapshot.envelope.get("messages", {}).values(),
+            key=lambda item: (
+                item.get("context_sequence", -1)
+                if isinstance(item, dict) else -1
+            ),
+        )
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            route = record.get("bridge_route")
+            raw = record.get("execution_anchor")
+            if route == "V1_EXECUTION_FALLBACK_NEW_TASK":
+                current = (
+                    ExecutionBackedContextAnchor.model_validate(raw)
+                    if raw is not None else None
+                )
+            elif route == "V1_EXECUTION_ANCHOR_FOLLOWUP" and raw is not None:
+                candidate = ExecutionBackedContextAnchor.model_validate(raw)
+                if current is None or candidate.parent_anchor_id != current.anchor_id:
+                    raise ValueError("V1_EXECUTION_ANCHOR_CHAIN_MISMATCH")
+                current = candidate
+        if current is not None and current.scope_fingerprint != context.fingerprint():
+            raise ValueError("V1_EXECUTION_ANCHOR_SCOPE_MISMATCH")
+        return current
+
+    @staticmethod
+    def _demo_execution_envelope(
+        snapshot,
+        context: AuthorizedScopeContext,
+        state_identity: dict[str, str],
+        anchor: ExecutionBackedContextAnchor,
+    ) -> DemoExecutionEnvelope | None:
+        """Return the envelope paired with the newest execution-backed anchor."""
+
+        current: DemoExecutionEnvelope | None = None
+        records = sorted(
+            snapshot.envelope.get("messages", {}).values(),
+            key=lambda item: (
+                item.get("context_sequence", -1)
+                if isinstance(item, dict) else -1
+            ),
+        )
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            route = record.get("bridge_route")
+            raw = record.get("demo_execution_envelope")
+            if route == "V1_EXECUTION_FALLBACK_NEW_TASK":
+                current = (
+                    DemoExecutionEnvelope.model_validate(raw)
+                    if raw is not None else None
+                )
+            elif route == "V1_EXECUTION_ANCHOR_FOLLOWUP" and raw is not None:
+                current = DemoExecutionEnvelope.model_validate(raw)
+        if current is None:
+            return None
+        expected_identity = _execution_identity_fingerprint(context, state_identity)
+        if (
+            current.scope_fingerprint != context.fingerprint()
+            or current.identity_fingerprint != expected_identity
+            or current.semantic_model_id != context.authorized_scope.semantic_model_id
+            or current.source_message_id != anchor.source_message_id
+        ):
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_SCOPE_MISMATCH")
+        return current
+
+    @staticmethod
+    def _apply_demo_execution_envelope(
+        chat: ChatRequest,
+        envelope: DemoExecutionEnvelope,
+    ) -> ChatRequest:
+        if tuple(chat.business_domain_ids) != envelope.requested_business_domain_ids:
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_REQUEST_SCOPE_MISMATCH")
+        if (
+            chat.database_id != envelope.database_id
+            or tuple(chat.knowledge_base_names) != envelope.knowledge_base_names
+        ):
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_REQUEST_SCOPE_MISMATCH")
+        if chat.dataset_id not in {None, envelope.dataset_id}:
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_DATASET_MISMATCH")
+        current_constraint_values = tuple(
+            item.model_dump(mode="json") for item in chat.dependency_constraints
+        )
+        envelope_constraint_values = tuple(
+            item.model_dump(mode="json")
+            for item in envelope.dependency_constraints
+        )
+        if (
+            current_constraint_values
+            and current_constraint_values != envelope_constraint_values
+        ):
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_DEPENDENCY_MISMATCH")
+        if _execution_extension_digest(chat) != envelope.extension_contract_digest:
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_EXTENSION_MISMATCH")
+
+        execution_chat = chat.model_copy(update={
+            "database_id": envelope.database_id,
+            "knowledge_base_names": list(envelope.knowledge_base_names),
+            "dataset_id": envelope.dataset_id,
+            "dependency_constraints": list(envelope.dependency_constraints),
+        })
+        execution_chat._demo_execution_resolved_business_domain_ids = (
+            envelope.resolved_business_domain_ids
+        )
+        return execution_chat
+
+    @staticmethod
+    def _demo_fallback_response(
+        *,
+        chat: ChatRequest,
+        resolved: ResolvedContextTurn,
+        previous: AgentResponse,
+        now: datetime,
+    ) -> AgentResponse:
+        fallback = previous.model_copy(deep=True, update={
+            "request_id": uuid4(),
+            "conversation_id": chat.conversation_id,
+            "status": "COMPLETED",
+            "error_code": None,
+            "answer": previous.answer,
+            "evidence": [],
+            "dataset_id": None,
+            "dataset_ids": [],
+            "result_file_url": None,
+            "chart_specs": [],
+            "semantic_model_id": chat.semantic_model_id,
+            "database_id": chat.database_id,
+            "requested_business_domain_ids": list(chat.business_domain_ids),
+            "business_domain_selection_mode": (
+                "EXPLICIT" if chat.business_domain_ids else "AUTO"
+            ),
+            "created_at": now,
+            "reliability": ReliabilityReport(
+                level="DEGRADED",
+                score=0,
+                gates={"demo_fallback": True, "new_query_result": False},
+                warnings=[
+                    "DEMO_FALLBACK_PREVIOUS_RESULT; no current QUERY_RESULT evidence"
+                ],
+            ),
+            "analysis_process": [],
+        })
+        fallback = _attach_completed_question(fallback, resolved)
+        return fallback
+
+    @staticmethod
+    def _demo_failure_code(response: AgentResponse) -> str | None:
+        return response._upstream_error_code or response.error_code
+
+    @staticmethod
+    def _demo_question_without_time(
+        resolved: ResolvedContextTurn,
+    ) -> str | None:
+        update = resolved.anchor_update
+        if update is None or update.time_context is None:
+            return None
+        question = resolved.completed_question or ""
+        for value in dict.fromkeys((
+            update.time_context.applied_text,
+            update.time_context.surface,
+        )):
+            if value and value in question:
+                candidate = question.replace(value, "", 1)
+                candidate = re.sub(r"^查询[，,、\s]+", "查询", candidate)
+                candidate = re.sub(r"[，,、\s]+([。！？])", r"\1", candidate)
+                candidate = re.sub(r"[，,、]{2,}", "，", candidate).strip()
+                if candidate and candidate != question:
+                    return candidate
+        return None
+
+    @staticmethod
+    def _demo_retry_request(chat: ChatRequest, question: str) -> ChatRequest:
+        retry = chat.model_copy(update={
+            "message_id": (
+                "demo-no-time-"
+                + contract_digest({
+                    "message_id": chat.message_id,
+                    "question": question,
+                })[:32]
+            ),
+            "question": question,
+            "history": [],
+        })
+        retry._completed_question_execution = True
+        retry._demo_execution_resolved_business_domain_ids = (
+            chat._demo_execution_resolved_business_domain_ids
+        )
+        return retry
+
+    @staticmethod
+    def _demo_retry_response(response: AgentResponse) -> AgentResponse:
+        reliability = response.reliability or ReliabilityReport(
+            level="DEGRADED", score=0, gates={}, warnings=[]
+        )
+        response.reliability = reliability.model_copy(update={
+            "level": "DEGRADED",
+            "gates": {
+                **reliability.gates,
+                "demo_fallback": True,
+                "demo_retry_without_time": True,
+            },
+        })
+        return response
+
+    @staticmethod
+    def _envelope_source_response(
+        snapshot,
+        envelope: DemoExecutionEnvelope,
+    ) -> AgentResponse | None:
+        record = snapshot.message(envelope.source_message_id)
+        if not isinstance(record, dict) or record.get("status") != "SUCCEEDED":
+            return None
+        raw = record.get("response")
+        if raw is None:
+            return None
+        response = AgentResponse.model_validate(raw)
+        return response if _execution_evidence_refs(response) else None
 
     @staticmethod
     def _terminal_response(
@@ -426,13 +1313,57 @@ class V2ContextV1ExecutionBridge:
                     pending,
                 )
             except ContextProposalFailure as exc:
-                anchor = any(
-                    isinstance(record, dict)
-                    and record.get("bridge_route")
-                        == "V1_EXECUTION_FALLBACK_NEW_TASK"
-                    for record in snapshot.envelope.get("messages", {}).values()
-                )
-                if anchor and exc.context_status != "AMBIGUOUS":
+                anchor = self._execution_anchor(snapshot, context)
+                raw_parse = getattr(exc, "current_turn_parse", None)
+                resolved = None
+                anchor_failure = None
+                if (
+                    anchor is not None
+                    and snapshot.state is not None
+                    and raw_parse is not None
+                    and exc.context_status != "AMBIGUOUS"
+                ):
+                    try:
+                        resolved = _resolve_execution_anchor_followup(
+                            context_chat,
+                            snapshot.state,
+                            anchor,
+                            CurrentTurnSemanticParse.model_validate(raw_parse),
+                            context,
+                            self.clock(),
+                            context_relation=(
+                                exc.context_trace.get("FINAL_RELATION")
+                                or exc.context_status
+                            ),
+                        )
+                    except (RecognitionFailure, ValueError) as anchor_exc:
+                        anchor_failure = anchor_exc
+                        diagnostic = getattr(anchor_exc, "diagnostic", None)
+                        if diagnostic is not None:
+                            logger.info(
+                                "V2 execution-backed anchor edit rejected",
+                                extra={
+                                    "message_id": chat.message_id,
+                                    "anchor_edit_diagnostic": diagnostic,
+                                },
+                            )
+                if resolved is not None:
+                    logger.info(
+                        "V2 context resolved a constrained execution-backed followup",
+                        extra={
+                            "message_id": chat.message_id,
+                            "anchor_id": anchor.anchor_id if anchor else None,
+                            "bridge_route": resolved.bridge_route,
+                        },
+                    )
+                elif anchor is not None and anchor_failure is not None:
+                    response = self._terminal_response(
+                        chat,
+                        status="NEEDS_CLARIFICATION",
+                        error_code=str(anchor_failure),
+                        answer="当前修改无法在上一轮执行问题上安全补全，请提供完整问题。",
+                    )
+                elif anchor is not None and exc.context_status != "AMBIGUOUS":
                     response = self._terminal_response(
                         chat,
                         status="SAFE_FALLBACK",
@@ -453,11 +1384,12 @@ class V2ContextV1ExecutionBridge:
                         error_code="V2_CONTEXT_UNRESOLVED",
                         answer="当前追问无法安全确定所引用的任务，请补充完整问题。",
                     )
-                return await self._save_context_response(
-                    snapshot, chat, identity, context, fingerprint,
-                    ResolvedContextTurn(None, None, None), response,
-                    v1_execution_called=False,
-                )
+                if resolved is None:
+                    return await self._save_context_response(
+                        snapshot, chat, identity, context, fingerprint,
+                        ResolvedContextTurn(None, None, None), response,
+                        v1_execution_called=False,
+                    )
             except RecognitionFailure as exc:
                 response = self._terminal_response(
                     chat,
@@ -512,10 +1444,103 @@ class V2ContextV1ExecutionBridge:
                 "history": [],
             })
             execution_chat._completed_question_execution = True
+            reused_envelope = None
+            previous_demo_response = None
+            if (
+                self.demo_mode
+                and resolved.bridge_route == "V1_EXECUTION_ANCHOR_FOLLOWUP"
+                and resolved.anchor_update is not None
+                and resolved.anchor_update.previous is not None
+            ):
+                reused_envelope = self._demo_execution_envelope(
+                    snapshot,
+                    context,
+                    state_identity,
+                    resolved.anchor_update.previous,
+                )
+                if reused_envelope is not None:
+                    execution_chat = self._apply_demo_execution_envelope(
+                        execution_chat, reused_envelope
+                    )
+                    execution_chat.question = resolved.completed_question
+                    execution_chat.history = []
+                    execution_chat._completed_question_execution = True
+                    previous_demo_response = self._envelope_source_response(
+                        snapshot, reused_envelope
+                    )
+                    logger.info(
+                        "demo execution envelope reused",
+                        extra={
+                            "message_id": chat.message_id,
+                            "source_message_id": reused_envelope.source_message_id,
+                            "resolved_business_domain_ids": list(
+                                reused_envelope.resolved_business_domain_ids
+                            ),
+                        },
+                    )
+            demo_fallback = False
+            demo_fallback_reason = None
+            demo_fallback_source = None
+            hide_demo_execution_progress = bool(
+                self.demo_mode
+                and reused_envelope is not None
+                and previous_demo_response is not None
+            )
             try:
-                response = await self.v1_executor(execution_chat, identity)
+                if hide_demo_execution_progress:
+                    with progress_scope(lambda _event: None):
+                        response = await self.v1_executor(execution_chat, identity)
+                else:
+                    response = await self.v1_executor(execution_chat, identity)
                 response = _attach_completed_question(response, resolved)
-            except Exception:
+                if (
+                    hide_demo_execution_progress
+                    and (response.status != "COMPLETED" or response.error_code)
+                ):
+                    failure_code = self._demo_failure_code(response)
+                    retry_question = self._demo_question_without_time(resolved)
+                    if (
+                        failure_code in _DEMO_RETRY_WITHOUT_TIME_CODES
+                        and retry_question is not None
+                    ):
+                        demo_fallback_reason = failure_code
+                        retry_chat = self._demo_retry_request(
+                            execution_chat, retry_question
+                        )
+                        try:
+                            with progress_scope(lambda _event: None):
+                                retry_response = await self.v1_executor(
+                                    retry_chat, identity
+                                )
+                        except Exception as retry_exc:
+                            logger.warning(
+                                "demo retry without time raised",
+                                extra={
+                                    "message_id": chat.message_id,
+                                    "demo_fallback_reason": failure_code,
+                                    "retry_error": type(retry_exc).__name__,
+                                },
+                            )
+                            retry_response = None
+                        if (
+                            retry_response is not None
+                            and retry_response.status == "COMPLETED"
+                            and not retry_response.error_code
+                            and _execution_evidence_refs(retry_response)
+                        ):
+                            response = self._demo_retry_response(retry_response)
+                            response = _attach_completed_question(response, resolved)
+                            demo_fallback_source = "RETRY_WITHOUT_TIME"
+                        else:
+                            response = self._demo_fallback_response(
+                                chat=chat,
+                                resolved=resolved,
+                                previous=previous_demo_response,
+                                now=self.clock(),
+                            )
+                            demo_fallback_source = "PRIOR_SUCCESSFUL_RESULT"
+                        demo_fallback = True
+            except Exception as exc:
                 try:
                     await self.store.mark_unknown(
                         running,
@@ -529,6 +1554,44 @@ class V2ContextV1ExecutionBridge:
                 except (StateTransitionError, ValueError):
                     pass
                 raise
+            if demo_fallback:
+                logger.warning(
+                    "demo query fallback completed",
+                    extra={
+                        "message_id": chat.message_id,
+                        "source_message_id": reused_envelope.source_message_id,
+                        "demo_fallback": True,
+                        "demo_fallback_reason": demo_fallback_reason,
+                        "demo_fallback_source": demo_fallback_source,
+                    },
+                )
+            execution_anchor = (
+                _finalize_execution_anchor(
+                    resolved.anchor_update,
+                    chat=chat,
+                    completed_question=resolved.completed_question,
+                    response=response,
+                    context=context,
+                    state_version=running.state_version,
+                    now=self.clock(),
+                )
+                if resolved.anchor_update is not None and not demo_fallback else None
+            )
+            demo_execution_envelope = (
+                _finalize_demo_execution_envelope(
+                    resolved.anchor_update,
+                    chat=execution_chat,
+                    response=response,
+                    context=context,
+                    state_identity=state_identity,
+                    now=self.clock(),
+                )
+                if (
+                    self.demo_mode
+                    and resolved.anchor_update is not None
+                    and not demo_fallback
+                ) else None
+            )
             await self.store.finish_context(
                 running,
                 message_id=chat.message_id,
@@ -537,6 +1600,21 @@ class V2ContextV1ExecutionBridge:
                 context=context,
                 state_identity=state_identity,
                 v1_execution_called=True,
+                execution_anchor=(
+                    execution_anchor.model_dump(mode="json")
+                    if execution_anchor is not None else None
+                ),
+                demo_execution_envelope=(
+                    demo_execution_envelope.model_dump(mode="json")
+                    if demo_execution_envelope is not None else None
+                ),
+                reused_demo_execution_envelope_id=(
+                    reused_envelope.envelope_id
+                    if reused_envelope is not None else None
+                ),
+                demo_fallback=demo_fallback,
+                demo_fallback_reason=demo_fallback_reason,
+                demo_fallback_source=demo_fallback_source,
             )
             return response
 
@@ -667,6 +1745,14 @@ def build_context_v1_execution_handler(
                 next_state=result.next_state,
                 plan_state=None,
                 bridge_route=result.execution_route,
+                anchor_update=ExecutionAnchorUpdate(
+                    previous=None,
+                    current_parse=result.parse,
+                    time_context=None,
+                    resolved_business_domain_ids=tuple(
+                        resolved_scope["resolved_business_domain_ids"]
+                    ),
+                ),
             )
         if isinstance(result, RecognizedClarification):
             return ResolvedContextTurn(
@@ -761,6 +1847,7 @@ def build_context_v1_execution_handler(
     )
     startup_receipt = {
         **receipt,
+        "demo_mode": settings.demo_mode,
         "catalog_pin_verified": True,
         "v1_execution_bridge_enabled": True,
         "v2_limited_scalar_used_for_execution": False,
@@ -792,4 +1879,5 @@ def build_context_v1_execution_handler(
         clock=lambda: datetime.now(timezone.utc).astimezone(),
         startup_receipt=startup_receipt,
         readiness_probe=readiness_probe,
+        demo_mode=settings.demo_mode,
     )

@@ -25,7 +25,8 @@ from .pipeline import AuthorizedLogicalPlan
 from .recognition_client import RecognitionFailure
 from .deterministic_grounding import can_publish_from_deterministic_grounding
 from .context_contract import ContextAwareParse, proposal_schema, CONTRACT_VERSION
-from .context_proposal import discover_context, accept_proposal, proposal_resolution
+from .context_proposal import (ContextProposalFailure, discover_context,
+    accept_proposal, proposal_resolution)
 from .recognition_repairs import (repair_model_parse, repair_collection_handle_mentions,
     repair_pure_historical_reference)
 from .recognition_initialization import (initial_assignments, initial_time_assignment, source_field_schema,
@@ -363,9 +364,17 @@ class RawTurnPlanner:
             schema=proposal_schema(discovered.model_context, current_turn_schema()))
         # Validate even injected transports: omission is not an old-rule fallback.
         recognized = ContextAwareParse.model_validate(recognized.model_dump(mode='json'))
-        context_trace = accept_proposal(session, recognized.context_proposal, discovered,
-            state=state, question=request.question)
         parsed = CurrentTurnSemanticParse.model_validate(recognized.model_dump(exclude={'context_proposal'}))
+        try:
+            context_trace = accept_proposal(session, recognized.context_proposal, discovered,
+                state=state, question=request.question)
+        except ContextProposalFailure as exc:
+            # The context bridge may have a scope-bound, execution-backed opaque
+            # anchor which is deliberately absent from ConversationState. Keep
+            # the already generated current-turn semantic evidence available so
+            # that bridge validation does not make a second model call.
+            exc.current_turn_parse = parsed
+            raise
         parsed, reference_repairs = repair_pure_historical_reference(parsed,
             context_trace=context_trace, task_context=discovered.model_context)
         if reference_repairs:

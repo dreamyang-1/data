@@ -32,6 +32,7 @@ from app.intent import RuleBasedIntentClassifier
 from app.api import _prepare_regeneration
 from app.services import DataAnalysisOrchestrator
 from app.services.orchestrator import SEMANTIC_QUERY_RETRY_CODES
+from app.services.question_rewriter import QuestionRewriter
 from app.stores import InMemorySessionStore
 from app.stores.long_memory import (
     InMemoryLongTermMemoryStore,
@@ -68,6 +69,10 @@ async def test_completed_question_execution_does_not_restore_v1_semantic_context
         async def get_recent_task_frames(self, *args, **kwargs):
             raise AssertionError("completed question must not restore V1 task history")
 
+    class RewriteTrap(QuestionRewriter):
+        async def rewrite(self, *args, **kwargs):
+            raise AssertionError("completed question must not be rewritten by V1")
+
     agent = DataAnalysisOrchestrator(
         settings=Settings(
             _env_file=None,
@@ -78,6 +83,7 @@ async def test_completed_question_execution_does_not_restore_v1_semantic_context
         classifier=RuleBasedIntentClassifier(),
         adapters=build_mock_adapters(),
         sessions=ContextReadTrapStore(),
+        question_rewriter=RewriteTrap(None),
     )
     chat = ChatRequest(
         semantic_model_id=81,
@@ -95,6 +101,58 @@ async def test_completed_question_execution_does_not_restore_v1_semantic_context
     )
 
     assert response.status == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_completed_question_execution_pins_all_v1_question_contracts():
+    class CompletionChangingClassifier(RuleBasedIntentClassifier):
+        async def classify(self, question, identity, conversation_id):
+            request = super().classify(question, identity, conversation_id)
+            request.rewritten_question = (
+                "查询2026-01-01至2026-12-31期间销售过2026年"
+                "空心纤维血液透析器产品的经销商名单"
+            )
+            request.assumptions.append("MODEL_QUESTION_COMPLETION_APPLIED")
+            return request
+
+    sessions = InMemorySessionStore()
+    question = "查询2026年空心纤维血液透析器产品合作的经销商名单。"
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(
+            _env_file=None,
+            env="test",
+            adapter_mode="mock",
+            intent_model_enabled=False,
+        ),
+        classifier=CompletionChangingClassifier(),
+        adapters=build_mock_adapters(),
+        sessions=sessions,
+    )
+    chat = ChatRequest(
+        semantic_model_id=81,
+        application_id="app1",
+        conversation_id="v2-completed-question-pinned",
+        message_id="v2-completed-question-pinned-1",
+        question=question,
+        history=[],
+    )
+    chat._completed_question_execution = True
+
+    response = await agent.handle(
+        chat,
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+    )
+    frame = await sessions.get_task_frame("t1", "u1", "app1", chat.conversation_id)
+
+    assert response.status == "COMPLETED"
+    assert frame is not None
+    assert frame.original_question == question
+    assert frame.rewritten_question == question
+    assert "2026年空心纤维血液透析器产品" in frame.rewritten_question
+    assert "销售过2026年空心纤维血液透析器产品" not in frame.rewritten_question
+    assert "MODEL_QUESTION_COMPLETION_APPLIED" not in frame.assumptions
+    assert "V2_COMPLETED_QUESTION_PRESERVED" in frame.assumptions
+    assert "EXECUTION_QUERY_SOURCE=V2_COMPLETED_QUESTION" in frame.assumptions
 
 
 @pytest.mark.asyncio
