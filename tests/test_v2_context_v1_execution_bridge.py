@@ -1,3 +1,5 @@
+import asyncio
+from copy import deepcopy
 import json
 import logging
 from datetime import datetime
@@ -20,6 +22,7 @@ from app.semantic_v2.authorized_contract import ScopedArtifact, contract_digest
 from app.semantic_v2.context_proposal import ContextProposalFailure
 from app.semantic_v2.context_v1_execution import (
     ContextV1ExternalDependencies,
+    DemoCatalogAutoRefresh,
     ExecutionAnchorEditFailure,
     ExecutionAnchorUpdate,
     ResolvedContextTurn,
@@ -35,6 +38,7 @@ from app.semantic_v2.models import Mention
 from app.semantic_v2.pipeline import CurrentTurnSemanticParse, OperationMarker
 from app.semantic_v2.completed_question import CompletedQuestionDisplay
 from app.semantic_v2.persisted_scalar_api import RedisScalarSessionStore
+from app.semantic_v2.limited_scalar_runtime import LiveReadOnlyCatalogGeneration
 from app.semantic_v2.recognition_client import RecognitionFailure
 from app.semantic_v2.state_machine import ConversationState
 from app.services.authorized_scope import bind_authorized_scope
@@ -204,6 +208,193 @@ async def _ready():
     }
 
 
+class _CatalogMarker:
+    def __init__(self, version):
+        self.version = version
+
+    def pin(self, *_args, **_kwargs):
+        return self.version
+
+
+def _catalog_generation(version, *, source="source-a", scope=None):
+    scope = scope or {
+        "semantic_model_id": 81,
+        "business_domain_ids": [205],
+        "scope_mode": "EXPLICIT_DOMAINS",
+    }
+    return LiveReadOnlyCatalogGeneration(
+        publication=_CatalogMarker("live:" + version),
+        frozen_publication=_CatalogMarker("frozen:" + version),
+        snapshot={
+            "scope": deepcopy(scope),
+            "source_identity_hash": source,
+            "catalog_version": version,
+        },
+        identity={
+            "catalog_version": version,
+            "vector_index_version": "vector:" + version,
+            "target_identity_hash": "target-a",
+        },
+    )
+
+
+def _demo_catalog_runtime(authority, refresh, *, initial_version="v1"):
+    return DemoCatalogAutoRefresh(
+        initial=_catalog_generation(initial_version),
+        capture=lambda: deepcopy(authority),
+        refresh=refresh,
+        expected_scope={
+            "semantic_model_id": 81,
+            "business_domain_ids": [205],
+            "scope_mode": "EXPLICIT_DOMAINS",
+        },
+    )
+
+
+@pytest.mark.asyncio
+async def test_demo_catalog_consistent_authority_does_not_refresh():
+    authority = _catalog_generation("v1").snapshot
+    refresh_calls = 0
+
+    def refresh():
+        nonlocal refresh_calls
+        refresh_calls += 1
+        return _catalog_generation("v1")
+
+    runtime = _demo_catalog_runtime(authority, refresh)
+    decision = await runtime.ensure_current(request(), IDENTITY)
+
+    assert decision.refreshed is False
+    assert decision.demo_catalog_fallback is False
+    assert refresh_calls == 0
+    assert runtime.pin(81, [205]) == "frozen:v1"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "metadata_change", ["format_rule", "synonym", "application_scene"]
+)
+async def test_demo_catalog_metadata_drift_refreshes_and_activates_new_generation(
+    metadata_change,
+):
+    authority = {
+        **_catalog_generation("v2").snapshot,
+        "metadata_change": metadata_change,
+    }
+    refresh_calls = 0
+
+    def refresh():
+        nonlocal refresh_calls
+        refresh_calls += 1
+        return _catalog_generation("v2")
+
+    runtime = _demo_catalog_runtime(authority, refresh)
+    decision = await runtime.ensure_current(request(), IDENTITY)
+
+    assert decision.refreshed is True
+    assert decision.catalog_version_used == "v2"
+    assert refresh_calls == 1
+    assert runtime.pin(81, [205]) == "frozen:v2"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("authority_update", "error"),
+    [
+        ({"source_identity_hash": "source-b"}, "SOURCE_IDENTITY_CHANGED"),
+        (
+            {
+                "scope": {
+                    "semantic_model_id": 81,
+                    "business_domain_ids": [206],
+                    "scope_mode": "EXPLICIT_DOMAINS",
+                }
+            },
+            "SCOPE_CHANGED",
+        ),
+    ],
+)
+async def test_demo_catalog_never_refreshes_or_falls_back_across_authority_boundary(
+    authority_update,
+    error,
+):
+    authority = {**_catalog_generation("v2").snapshot, **authority_update}
+    refresh_calls = 0
+
+    def refresh():
+        nonlocal refresh_calls
+        refresh_calls += 1
+        return _catalog_generation("v2")
+
+    runtime = _demo_catalog_runtime(authority, refresh)
+    with pytest.raises(RuntimeError, match=error):
+        await runtime.ensure_current(request(), IDENTITY)
+
+    assert refresh_calls == 0
+    assert runtime.status()["demo_catalog_fallback"] is False
+
+
+@pytest.mark.asyncio
+async def test_demo_catalog_refresh_failure_keeps_marked_last_known_good():
+    authority = _catalog_generation("v2").snapshot
+
+    def refresh():
+        raise RuntimeError("CATALOG_GENERATION_FAILED")
+
+    runtime = _demo_catalog_runtime(authority, refresh)
+    decision = await runtime.ensure_current(request(), IDENTITY)
+
+    assert decision.demo_catalog_fallback is True
+    assert decision.catalog_refresh_failure == "CATALOG_GENERATION_FAILED"
+    assert decision.catalog_version_used == "v1"
+    assert runtime.pin(81, [205]) == "frozen:v1"
+    assert runtime.status() == {
+        "catalog_runtime_policy": "AUTO_REFRESH",
+        "catalog_version_used": "v1",
+        "catalog_refresh_count": 0,
+        "demo_catalog_fallback": True,
+        "catalog_refresh_failure": "CATALOG_GENERATION_FAILED",
+    }
+
+
+@pytest.mark.asyncio
+async def test_demo_catalog_concurrent_drift_uses_one_refresh():
+    authority = _catalog_generation("v2").snapshot
+    refresh_calls = 0
+
+    def refresh():
+        nonlocal refresh_calls
+        refresh_calls += 1
+        return _catalog_generation("v2")
+
+    runtime = _demo_catalog_runtime(authority, refresh)
+    decisions = await asyncio.gather(
+        *(runtime.ensure_current(request(), IDENTITY) for _ in range(10))
+    )
+
+    assert refresh_calls == 1
+    assert runtime.refresh_count == 1
+    assert sum(decision.refreshed for decision in decisions) == 1
+
+
+@pytest.mark.asyncio
+async def test_demo_catalog_rejects_unauthorized_request_before_refresh():
+    authority = _catalog_generation("v2").snapshot
+    refresh_calls = 0
+
+    def refresh():
+        nonlocal refresh_calls
+        refresh_calls += 1
+        return _catalog_generation("v2")
+
+    runtime = _demo_catalog_runtime(authority, refresh)
+    unauthorized = request(domains=(999,))
+
+    with pytest.raises(ValueError, match="SCOPE_PIN_MISMATCH"):
+        await runtime.ensure_current(unauthorized, IDENTITY)
+    assert refresh_calls == 0
+
+
 def test_new_runtime_mode_is_opt_in_and_builder_has_no_v2_execution_transport(
     context_scope_provider,
 ):
@@ -235,6 +426,8 @@ def test_new_runtime_mode_is_opt_in_and_builder_has_no_v2_execution_transport(
 
     assert receipt["runtime_mode"] == "V2_CONTEXT_V1_EXECUTION"
     assert handler.startup_receipt["v2_limited_scalar_used_for_execution"] is False
+    assert handler.startup_receipt["catalog_runtime_policy"] == "STRICT_PIN"
+    assert handler.catalog_runtime is None
     assert ":v2-context-v1-execution:" in handler.store.prefix
 
 

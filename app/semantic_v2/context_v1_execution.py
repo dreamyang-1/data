@@ -7,6 +7,7 @@ module never creates an ASL, lowers SQL, or calls a database transport.
 from __future__ import annotations
 
 import asyncio
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import logging
@@ -38,7 +39,9 @@ from .completed_question import CompletedQuestionDisplay, build_completed_questi
 from .context_proposal import ContextProposalFailure
 from .explicit_time import normalize_range
 from .limited_scalar_runtime import (
+    LiveReadOnlyCatalogGeneration,
     OAGNET_RUNTIME_FILES,
+    _build_live_read_only_catalog_generation,
     _import_runtime_module,
     _open_live_read_only_catalog,
     _prepend_runtime_roots,
@@ -92,6 +95,215 @@ class ContextV1ExternalDependencies:
     model: Any
     redis: Any
     module_origins: dict[str, str] = field(default_factory=dict)
+    catalog_runtime: Any | None = None
+
+
+@dataclass(frozen=True)
+class CatalogRuntimeDecision:
+    catalog_version_used: str
+    refreshed: bool = False
+    demo_catalog_fallback: bool = False
+    catalog_refresh_failure: str | None = None
+
+
+class DemoCatalogAutoRefresh:
+    """Single-flight, process-local Catalog refresh for the demo bridge.
+
+    Every request first captures the current authority. A content change with
+    the same source identity and exact model/domain scope builds a complete new
+    process-memory generation before the publication reference is swapped.
+    Strict deployments never construct this coordinator.
+    """
+
+    def __init__(
+        self,
+        *,
+        initial: LiveReadOnlyCatalogGeneration,
+        capture: Callable[[], dict[str, Any]],
+        refresh: Callable[[], LiveReadOnlyCatalogGeneration],
+        expected_scope: dict[str, Any],
+    ):
+        self._capture = capture
+        self._refresh = refresh
+        self._expected_scope = deepcopy(expected_scope)
+        self._source_identity_hash = initial.snapshot.get("source_identity_hash")
+        self._target_identity_hash = initial.identity.get("target_identity_hash")
+        self._generation = initial
+        # Request pins use an immutable, fully verified snapshot. Authority is
+        # compared immediately before request handling by ``ensure_current``.
+        self._active_publication = initial.frozen_publication
+        self._lock = asyncio.Lock()
+        self._refresh_count = 0
+        self._failed_authority_version: str | None = None
+        self._failed_at = 0.0
+        self._failure_retry_seconds = 5.0
+        self._last_decision = CatalogRuntimeDecision(
+            catalog_version_used=initial.identity["catalog_version"]
+        )
+
+    def pin(self, *args, **kwargs):
+        return self._active_publication.pin(*args, **kwargs)
+
+    @property
+    def current_identity(self) -> dict[str, Any]:
+        return deepcopy(self._generation.identity)
+
+    @property
+    def refresh_count(self) -> int:
+        return self._refresh_count
+
+    def status(self) -> dict[str, Any]:
+        decision = self._last_decision
+        return {
+            "catalog_runtime_policy": "AUTO_REFRESH",
+            "catalog_version_used": decision.catalog_version_used,
+            "catalog_refresh_count": self._refresh_count,
+            "demo_catalog_fallback": decision.demo_catalog_fallback,
+            "catalog_refresh_failure": decision.catalog_refresh_failure,
+        }
+
+    def _validate_request(
+        self,
+        chat: ChatRequest | None,
+        identity: TrustedIdentity | None,
+    ) -> None:
+        if chat is None:
+            return
+        allowed_domains = self._expected_scope["business_domain_ids"]
+        requested = list(chat.business_domain_ids)
+        if (
+            chat.semantic_model_id != self._expected_scope["semantic_model_id"]
+            or len(requested) > 1
+            or any(domain not in allowed_domains for domain in requested)
+        ):
+            raise ValueError("V2_CONTEXT_V1_SCOPE_PIN_MISMATCH")
+        if identity is None or not identity.tenant_id or not identity.user_id:
+            raise ValueError("TRUSTED_IDENTITY_REQUIRED")
+
+    def _validate_snapshot(self, snapshot: dict[str, Any]) -> None:
+        if snapshot.get("scope") != self._expected_scope:
+            raise RuntimeError("DEMO_CATALOG_SCOPE_CHANGED")
+        if snapshot.get("source_identity_hash") != self._source_identity_hash:
+            raise RuntimeError("DEMO_CATALOG_SOURCE_IDENTITY_CHANGED")
+        version = snapshot.get("catalog_version")
+        if not isinstance(version, str) or not version:
+            raise RuntimeError("DEMO_CATALOG_VERSION_MISSING")
+
+    @staticmethod
+    def _failure_reason(exc: Exception) -> str:
+        value = str(exc).strip().splitlines()[0] if str(exc).strip() else type(exc).__name__
+        return value[:160]
+
+    async def ensure_current(
+        self,
+        chat: ChatRequest | None = None,
+        identity: TrustedIdentity | None = None,
+    ) -> CatalogRuntimeDecision:
+        self._validate_request(chat, identity)
+        snapshot = await asyncio.to_thread(self._capture)
+        self._validate_snapshot(snapshot)
+        current_version = snapshot["catalog_version"]
+        if current_version == self._generation.identity["catalog_version"]:
+            decision = CatalogRuntimeDecision(catalog_version_used=current_version)
+            self._last_decision = decision
+            return decision
+        if (
+            current_version == self._failed_authority_version
+            and time.monotonic() - self._failed_at < self._failure_retry_seconds
+            and self._last_decision.demo_catalog_fallback
+        ):
+            return self._last_decision
+
+        logger.warning(
+            "CATALOG_DRIFT_DETECTED previous=%s current=%s policy=AUTO_REFRESH",
+            self._generation.identity["catalog_version"],
+            current_version,
+            extra={
+                "catalog_version_previous": self._generation.identity[
+                    "catalog_version"
+                ],
+                "catalog_version_current": current_version,
+                "catalog_runtime_policy": "AUTO_REFRESH",
+            },
+        )
+        async with self._lock:
+            # Another waiter may already have installed this generation.
+            snapshot = await asyncio.to_thread(self._capture)
+            self._validate_snapshot(snapshot)
+            current_version = snapshot["catalog_version"]
+            if current_version == self._generation.identity["catalog_version"]:
+                decision = CatalogRuntimeDecision(
+                    catalog_version_used=current_version
+                )
+                self._last_decision = decision
+                return decision
+            if (
+                current_version == self._failed_authority_version
+                and time.monotonic() - self._failed_at
+                < self._failure_retry_seconds
+                and self._last_decision.demo_catalog_fallback
+            ):
+                return self._last_decision
+            try:
+                generation = await asyncio.to_thread(self._refresh)
+                self._validate_snapshot(generation.snapshot)
+                if (
+                    generation.identity.get("catalog_version") != current_version
+                    or generation.identity.get("target_identity_hash")
+                    != self._target_identity_hash
+                ):
+                    raise RuntimeError("DEMO_CATALOG_REFRESH_IDENTITY_MISMATCH")
+            except Exception as exc:
+                # The initial generation is the last known good Catalog. It is
+                # safe only because the fresh capture above proved unchanged
+                # source identity and unchanged exact scope.
+                reason = self._failure_reason(exc)
+                decision = CatalogRuntimeDecision(
+                    catalog_version_used=self._generation.identity[
+                        "catalog_version"
+                    ],
+                    demo_catalog_fallback=True,
+                    catalog_refresh_failure=reason,
+                )
+                self._last_decision = decision
+                self._failed_authority_version = current_version
+                self._failed_at = time.monotonic()
+                logger.warning(
+                    "AUTO_REFRESH_FAILED demo_catalog_fallback=true "
+                    "reason=%s catalog_version_used=%s",
+                    reason,
+                    decision.catalog_version_used,
+                    extra={
+                        "demo_catalog_fallback": True,
+                        "catalog_refresh_failure": reason,
+                        "catalog_version_used": decision.catalog_version_used,
+                    },
+                )
+                return decision
+
+            # Assignment happens only after publish, complete inventory
+            # verification and pin.finish all succeeded inside the factory.
+            self._generation = generation
+            self._active_publication = generation.frozen_publication
+            self._refresh_count += 1
+            self._failed_authority_version = None
+            self._failed_at = 0.0
+            decision = CatalogRuntimeDecision(
+                catalog_version_used=generation.identity["catalog_version"],
+                refreshed=True,
+            )
+            self._last_decision = decision
+            logger.warning(
+                "AUTO_REFRESH_SUCCEEDED catalog_version_used=%s refresh_count=%s",
+                decision.catalog_version_used,
+                self._refresh_count,
+                extra={
+                    "catalog_auto_refresh": True,
+                    "catalog_version_used": decision.catalog_version_used,
+                    "catalog_refresh_count": self._refresh_count,
+                },
+            )
+            return decision
 
 
 class ExecutionAnchorTimeContext(semantic_models.StrictModel):
@@ -867,7 +1079,46 @@ def _build_context_dependencies(settings: Settings) -> ContextV1ExternalDependen
     modules = {
         name: _import_runtime_module(name, root) for name, root in roots.items()
     }
-    if settings.limited_scalar_catalog_access == "LIVE_READ_ONLY_SNAPSHOT":
+    catalog_runtime = None
+    if (
+        settings.limited_scalar_catalog_access == "LIVE_READ_ONLY_SNAPSHOT"
+        and settings.demo_mode
+    ):
+        initial = _build_live_read_only_catalog_generation(
+            settings,
+            modules,
+            enforce_config_versions=False,
+        )
+        expected_scope = {
+            "semantic_model_id": settings.limited_scalar_semantic_model_id,
+            "business_domain_ids": list(
+                settings.limited_scalar_business_domain_ids
+            ),
+            "scope_mode": "EXPLICIT_DOMAINS",
+        }
+        capture_catalog = modules["catalog_publication"].capture_catalog
+
+        def capture_current():
+            return capture_catalog(
+                expected_scope["semantic_model_id"],
+                expected_scope["business_domain_ids"],
+            )
+
+        def refresh_current():
+            return _build_live_read_only_catalog_generation(
+                settings,
+                modules,
+                enforce_config_versions=False,
+            )
+
+        catalog_runtime = DemoCatalogAutoRefresh(
+            initial=initial,
+            capture=capture_current,
+            refresh=refresh_current,
+            expected_scope=expected_scope,
+        )
+        publication = catalog_runtime
+    elif settings.limited_scalar_catalog_access == "LIVE_READ_ONLY_SNAPSHOT":
         publication = _open_live_read_only_catalog(settings, modules)
     else:
         store = modules["catalog_store"].open_catalog_store(
@@ -895,6 +1146,7 @@ def _build_context_dependencies(settings: Settings) -> ContextV1ExternalDependen
             name: str(Path(module.__file__).resolve())
             for name, module in modules.items()
         },
+        catalog_runtime=catalog_runtime,
     )
 
 
@@ -920,6 +1172,7 @@ class V2ContextV1ExecutionBridge:
         startup_receipt: dict[str, Any],
         readiness_probe: Callable[[], Awaitable[dict[str, bool]]],
         demo_mode: bool = False,
+        catalog_runtime: DemoCatalogAutoRefresh | None = None,
     ):
         self.store = store
         self.context_resolver = context_resolver
@@ -928,11 +1181,21 @@ class V2ContextV1ExecutionBridge:
         self.clock = clock
         self.startup_receipt = startup_receipt
         self.demo_mode = demo_mode
+        self.catalog_runtime = catalog_runtime
         self._readiness_probe = readiness_probe
         self._locks: dict[str, asyncio.Lock] = {}
         self._readiness_lock = asyncio.Lock()
         self._readiness_cache: dict[str, bool] | None = None
         self._readiness_cached_at = 0.0
+
+    async def _ensure_catalog_runtime(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+    ) -> CatalogRuntimeDecision | None:
+        if self.catalog_runtime is None:
+            return None
+        return await self.catalog_runtime.ensure_current(chat, identity)
 
     @staticmethod
     def _identity(chat: ChatRequest, identity: TrustedIdentity) -> dict[str, str]:
@@ -1267,6 +1530,7 @@ class V2ContextV1ExecutionBridge:
     async def check_message_conflict(
         self, chat: ChatRequest, identity: TrustedIdentity
     ) -> None:
+        await self._ensure_catalog_runtime(chat, identity)
         context = self.context_resolver(chat, identity)
         snapshot = await self.store.load(context, self._identity(chat, identity))
         fingerprint = self._fingerprint(chat, identity)
@@ -1280,6 +1544,7 @@ class V2ContextV1ExecutionBridge:
     async def handle(
         self, chat: ChatRequest, identity: TrustedIdentity
     ) -> AgentResponse:
+        await self._ensure_catalog_runtime(chat, identity)
         context = self.context_resolver(chat, identity)
         state_identity = self._identity(chat, identity)
         fingerprint = self._fingerprint(chat, identity)
@@ -1673,12 +1938,24 @@ def build_context_v1_execution_handler(
     )
     try:
         catalog_identity = pin.identity
-        if (
-            catalog_identity.get("catalog_version") != receipt["catalog_version"]
-            or catalog_identity.get("vector_index_version")
-                != receipt["vector_index_version"]
-            or catalog_identity.get("target_identity_hash")
-                != settings.limited_scalar_catalog_target_identity_hash
+        expected_catalog_identity = (
+            dependencies.catalog_runtime.current_identity
+            if dependencies.catalog_runtime is not None
+            else {
+                "catalog_version": receipt["catalog_version"],
+                "vector_index_version": receipt["vector_index_version"],
+                "target_identity_hash": (
+                    settings.limited_scalar_catalog_target_identity_hash
+                ),
+            }
+        )
+        if any(
+            catalog_identity.get(field) != expected_catalog_identity.get(field)
+            for field in (
+                "catalog_version",
+                "vector_index_version",
+                "target_identity_hash",
+            )
         ):
             raise RuntimeError("V2_CONTEXT_V1_CATALOG_PIN_MISMATCH")
     finally:
@@ -1699,13 +1976,18 @@ def build_context_v1_execution_handler(
             ],
         )
         context = session.context
+        active_identity = (
+            dependencies.catalog_runtime.current_identity
+            if dependencies.catalog_runtime is not None
+            else catalog_identity
+        )
         if (
             context.catalog_pin.catalog_version
-                != catalog_identity["catalog_version"]
+                != active_identity["catalog_version"]
             or context.catalog_pin.vector_index_version
-                != catalog_identity["vector_index_version"]
+                != active_identity["vector_index_version"]
             or context.catalog_pin.target_identity_hash
-                != catalog_identity["target_identity_hash"]
+                != active_identity["target_identity_hash"]
         ):
             raise ValueError("V2_CONTEXT_V1_SCOPE_PIN_MISMATCH")
         session.accept_catalog()
@@ -1804,6 +2086,11 @@ def build_context_v1_execution_handler(
             redis_ready = False
 
         def verify_catalog():
+            expected_identity = (
+                dependencies.catalog_runtime.current_identity
+                if dependencies.catalog_runtime is not None
+                else catalog_identity
+            )
             current = dependencies.publication.pin(
                 expected_scope["semantic_model_id"],
                 expected_scope["business_domain_ids"],
@@ -1811,7 +2098,7 @@ def build_context_v1_execution_handler(
             try:
                 current_identity = current.identity
                 return all(
-                    current_identity.get(field) == catalog_identity.get(field)
+                    current_identity.get(field) == expected_identity.get(field)
                     for field in (
                         "catalog_version",
                         "vector_index_version",
@@ -1822,12 +2109,17 @@ def build_context_v1_execution_handler(
                 current.finish()
 
         try:
+            if dependencies.catalog_runtime is not None:
+                await dependencies.catalog_runtime.ensure_current()
             catalog_ready = bool(await asyncio.to_thread(verify_catalog))
         except Exception:
             catalog_ready = False
         return {
             "v2_context_v1_redis": redis_ready,
             "v2_context_v1_catalog_pin": catalog_ready,
+            "v2_context_v1_catalog_auto_refresh": bool(
+                dependencies.catalog_runtime is not None
+            ) if settings.demo_mode else True,
             "v1_execution_bridge": True,
             "v2_execution_transport_disabled": True,
         }
@@ -1848,6 +2140,13 @@ def build_context_v1_execution_handler(
     startup_receipt = {
         **receipt,
         "demo_mode": settings.demo_mode,
+        "catalog_runtime_policy": (
+            "AUTO_REFRESH"
+            if dependencies.catalog_runtime is not None
+            else "STRICT_PIN"
+        ),
+        "active_catalog_version": catalog_identity["catalog_version"],
+        "active_vector_index_version": catalog_identity["vector_index_version"],
         "catalog_pin_verified": True,
         "v1_execution_bridge_enabled": True,
         "v2_limited_scalar_used_for_execution": False,
@@ -1880,4 +2179,5 @@ def build_context_v1_execution_handler(
         startup_receipt=startup_receipt,
         readiness_probe=readiness_probe,
         demo_mode=settings.demo_mode,
+        catalog_runtime=dependencies.catalog_runtime,
     )

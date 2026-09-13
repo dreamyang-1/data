@@ -15,6 +15,7 @@ from app.semantic_v2.limited_scalar_runtime import (
     LimitedScalarExternalDependencies,
     OAGNET_RUNTIME_FILES,
     SQL_RUNTIME_FILES,
+    _build_live_read_only_catalog_generation,
     _build_external_dependencies,
     _catalog_where_matches,
     _open_live_read_only_catalog,
@@ -410,6 +411,105 @@ def test_live_read_only_catalog_uses_current_authority_without_external_store_wr
     assert len(capture_calls) >= 10  # every construction/pin/finish rechecks authority
     with pytest.raises(RuntimeError, match="CONTEXT_VECTOR_SEARCH_UNSUPPORTED"):
         first.store.search([0.1, 0.2])
+
+
+def test_demo_generation_can_adopt_new_content_but_not_a_new_source_identity():
+    import catalog_publication
+    from test_catalog_publication import authority, reseal
+    from vector_store import SearchResult
+
+    initial = authority()
+    current = deepcopy(initial)
+    current["documents"][0]["metrics"][0]["format_rule"] = "#,##0."
+    current = reseal(current)
+
+    def capture(_model, _domains):
+        return deepcopy(current)
+
+    modules = {
+        "catalog_publication": SimpleNamespace(
+            CatalogPublication=catalog_publication.CatalogPublication,
+            capture_catalog=capture,
+            digest=catalog_publication.digest,
+        ),
+        "vector_store": SimpleNamespace(SearchResult=SearchResult),
+    }
+    target = {
+        "backend": "process-memory-read-only-catalog",
+        "source_identity_hash": current["source_identity_hash"],
+        "scope": current["scope"],
+    }
+    settings = Settings().model_copy(update={
+        "limited_scalar_deployment_id": "context-trial-test",
+        "limited_scalar_catalog_version": initial["catalog_version"],
+        "limited_scalar_vector_index_version": "stale-vector-version",
+        "limited_scalar_catalog_target_identity_hash": (
+            catalog_publication.digest(target)
+        ),
+        "limited_scalar_oagnet_source_digest": "a" * 64,
+    })
+
+    generation = _build_live_read_only_catalog_generation(
+        settings,
+        modules,
+        enforce_config_versions=False,
+    )
+    assert generation.identity["catalog_version"] == current["catalog_version"]
+    pin = generation.frozen_publication.pin(81, [205])
+    assert pin.identity == generation.identity
+    pin.finish()
+
+    changed_source = deepcopy(current)
+    changed_source["source_identity_hash"] = "changed-source"
+    modules["catalog_publication"].capture_catalog = (
+        lambda _model, _domains: deepcopy(changed_source)
+    )
+    with pytest.raises(RuntimeError, match="CATALOG_TARGET_MISMATCH"):
+        _build_live_read_only_catalog_generation(
+            settings,
+            modules,
+            enforce_config_versions=False,
+        )
+
+
+def test_demo_generation_failure_without_last_known_good_fails_closed():
+    import catalog_publication
+    from test_catalog_publication import authority
+    from vector_store import SearchResult
+
+    snapshot = authority()
+    target = {
+        "backend": "process-memory-read-only-catalog",
+        "source_identity_hash": snapshot["source_identity_hash"],
+        "scope": snapshot["scope"],
+    }
+
+    class FailingPublication(catalog_publication.CatalogPublication):
+        def publish(self, *_args, **_kwargs):
+            raise RuntimeError("CATALOG_GENERATION_FAILED")
+
+    modules = {
+        "catalog_publication": SimpleNamespace(
+            CatalogPublication=FailingPublication,
+            capture_catalog=lambda _model, _domains: deepcopy(snapshot),
+            digest=catalog_publication.digest,
+        ),
+        "vector_store": SimpleNamespace(SearchResult=SearchResult),
+    }
+    settings = Settings().model_copy(update={
+        "limited_scalar_deployment_id": "context-trial-test",
+        "limited_scalar_catalog_target_identity_hash": (
+            catalog_publication.digest(target)
+        ),
+        "limited_scalar_oagnet_source_digest": "a" * 64,
+    })
+
+    with pytest.raises(RuntimeError, match="CATALOG_GENERATION_FAILED"):
+        _build_live_read_only_catalog_generation(
+            settings,
+            modules,
+            enforce_config_versions=False,
+        )
 
 
 def test_candidate_rejects_wrong_data_source_target_before_catalog_or_sql(provider):

@@ -288,13 +288,30 @@ class _ProcessMemoryCatalogRegistry:
         return deepcopy(self._active)
 
 
-def _open_live_read_only_catalog(settings: Settings, modules: dict[str, Any]):
-    """Pin current catalog authority without writing Redis or Milvus.
+@dataclass(frozen=True)
+class LiveReadOnlyCatalogGeneration:
+    """One fully prepared process-memory Catalog generation.
 
-    This is deliberately limited to the internal context replacement trial.
-    The snapshot is captured again by every pin/finish through Oagnet's existing
-    publication checks, so an authority change fails the request closed.
+    ``publication`` keeps the normal live-authority verification behavior used
+    by strict deployments. ``frozen_publication`` exposes the exact same
+    verified records against the immutable snapshot captured for this
+    generation; the demo auto-refresh coordinator only activates it after it
+    has independently compared the current authority at request entry.
     """
+
+    publication: Any
+    frozen_publication: Any
+    snapshot: dict[str, Any]
+    identity: dict[str, Any]
+
+
+def _build_live_read_only_catalog_generation(
+    settings: Settings,
+    modules: dict[str, Any],
+    *,
+    enforce_config_versions: bool,
+) -> LiveReadOnlyCatalogGeneration:
+    """Prepare, verify and pin one current in-process Catalog generation."""
 
     capture = modules["catalog_publication"].capture_catalog
     snapshot = capture(
@@ -306,9 +323,13 @@ def _open_live_read_only_catalog(settings: Settings, modules: dict[str, Any]):
         "business_domain_ids": list(settings.limited_scalar_business_domain_ids),
         "scope_mode": "EXPLICIT_DOMAINS",
     }
-    if (snapshot.get("scope") != expected_scope
-            or snapshot.get("catalog_version")
-                != settings.limited_scalar_catalog_version):
+    if snapshot.get("scope") != expected_scope:
+        raise RuntimeError("LIMITED_SCALAR_CATALOG_SCOPE_MISMATCH")
+    if (
+        enforce_config_versions
+        and snapshot.get("catalog_version")
+        != settings.limited_scalar_catalog_version
+    ):
         raise RuntimeError("LIMITED_SCALAR_CATALOG_PIN_MISMATCH")
     target_identity = {
         "backend": "process-memory-read-only-catalog",
@@ -325,7 +346,12 @@ def _open_live_read_only_catalog(settings: Settings, modules: dict[str, Any]):
         settings.limited_scalar_deployment_id,
         digest_fn,
     )
-    if registry.target_identity_hash != settings.limited_scalar_catalog_target_identity_hash:
+    if (
+        registry.target_identity_hash
+        != settings.limited_scalar_catalog_target_identity_hash
+    ):
+        # This comparison binds both the source identity and the exact model /
+        # domain scope. Demo mode must never auto-adopt a different authority.
         raise RuntimeError("LIMITED_SCALAR_CATALOG_TARGET_MISMATCH")
     publication = modules["catalog_publication"].CatalogPublication(
         store, registry, capture
@@ -337,11 +363,55 @@ def _open_live_read_only_catalog(settings: Settings, modules: dict[str, Any]):
         publication_id="internal-context-replacement-trial",
         producer_revision=settings.limited_scalar_oagnet_source_digest,
         embedding_contract="process-memory-exact-catalog-v1",
-        expected_catalog_version=settings.limited_scalar_catalog_version,
+        expected_catalog_version=snapshot["catalog_version"],
     )
-    if receipt.get("vector_index_version") != settings.limited_scalar_vector_index_version:
+    if (
+        enforce_config_versions
+        and receipt.get("vector_index_version")
+        != settings.limited_scalar_vector_index_version
+    ):
         raise RuntimeError("LIMITED_SCALAR_CATALOG_PIN_MISMATCH")
-    return publication
+
+    pin = publication.pin(
+        expected_scope["semantic_model_id"],
+        expected_scope["business_domain_ids"],
+    )
+    stable_snapshot = pin.snapshot
+    identity = pin.identity
+    pin.finish()
+
+    def frozen_capture(model_id, domain_ids):
+        if (
+            model_id != expected_scope["semantic_model_id"]
+            or list(domain_ids) != expected_scope["business_domain_ids"]
+        ):
+            raise RuntimeError("LIMITED_SCALAR_CATALOG_SCOPE_MISMATCH")
+        return deepcopy(stable_snapshot)
+
+    frozen_publication = modules["catalog_publication"].CatalogPublication(
+        store, registry, frozen_capture
+    )
+    return LiveReadOnlyCatalogGeneration(
+        publication=publication,
+        frozen_publication=frozen_publication,
+        snapshot=deepcopy(stable_snapshot),
+        identity=deepcopy(identity),
+    )
+
+
+def _open_live_read_only_catalog(settings: Settings, modules: dict[str, Any]):
+    """Pin current catalog authority without writing Redis or Milvus.
+
+    This is deliberately limited to the internal context replacement trial.
+    The snapshot is captured again by every pin/finish through Oagnet's existing
+    publication checks, so an authority change fails the request closed.
+    """
+
+    return _build_live_read_only_catalog_generation(
+        settings,
+        modules,
+        enforce_config_versions=True,
+    ).publication
 
 
 def _redis_connection_config(settings: Settings) -> dict[str, Any]:
