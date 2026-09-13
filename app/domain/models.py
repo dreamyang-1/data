@@ -633,6 +633,11 @@ class ChatRequest(StrictModel):
     # planning and execution, but must not merge its own Pending/TaskFrame
     # state into an already resolved question a second time.
     _completed_question_execution: bool = PrivateAttr(default=False)
+    # Populated only by the demo V2-context bridge from a same-conversation,
+    # execution-backed envelope.  Transport JSON cannot set private attrs.
+    _demo_execution_resolved_business_domain_ids: tuple[int, ...] = PrivateAttr(
+        default_factory=tuple
+    )
     conversation_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=4000)

@@ -2620,7 +2620,13 @@ class DataAnalysisOrchestrator:
         raw_rule_request = self._classify_with_rules(
             admission_question, identity, chat.conversation_id
         )
-        bind_authorized_scope(raw_rule_request, chat.authorized_semantic_scope)
+        bind_authorized_scope(
+            raw_rule_request,
+            chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=(
+                chat._demo_execution_resolved_business_domain_ids
+            ),
+        )
         raw_rule_request.application_id = chat.application_id
         independent_chat = raw_rule_request.primary_intent == PrimaryIntent.CHAT
         standalone_complete_business = bool(
@@ -2968,7 +2974,13 @@ class DataAnalysisOrchestrator:
                     # One answer consumes one catalog ambiguity. Slot-readiness
                     # recalculation below cannot decide the remaining semantic
                     # choices; advance Pending before any planning/retrieval.
-                    bind_authorized_scope(request, chat.authorized_semantic_scope)
+                    bind_authorized_scope(
+                        request,
+                        chat.authorized_semantic_scope,
+                        execution_resolved_business_domain_ids=(
+                            chat._demo_execution_resolved_business_domain_ids
+                        ),
+                    )
                     return await self._request_clarification(
                         request, rounds, source_stage="SLOT_MERGE",
                     )
@@ -3205,7 +3217,13 @@ class DataAnalysisOrchestrator:
             request.asl_template = copy.deepcopy(previous_for_rewrite.asl_template)
             request.assumptions.append("DETERMINISTIC_TIME_FAST_PATH")
 
-        bind_authorized_scope(request, chat.authorized_semantic_scope)
+        bind_authorized_scope(
+            request,
+            chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=(
+                chat._demo_execution_resolved_business_domain_ids
+            ),
+        )
         if rewrite is not None and rewrite.semantic_matches:
             # The entity-attribute endpoint is scoped to the current semantic
             # model/domain.  Use its latest dimension labels for both the raw
@@ -4126,7 +4144,13 @@ class DataAnalysisOrchestrator:
             if turn_decision.inherit_business_context
             else None
         )
-        bind_authorized_scope(request, chat.authorized_semantic_scope)
+        bind_authorized_scope(
+            request,
+            chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=(
+                chat._demo_execution_resolved_business_domain_ids
+            ),
+        )
         request.dependency_constraints = list(chat.dependency_constraints)
         request.assumptions = list(dict.fromkeys([
             *request.assumptions,

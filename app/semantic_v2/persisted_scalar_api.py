@@ -591,6 +591,10 @@ return 1
         state_identity: dict,
         v1_execution_called: bool,
         execution_anchor: dict | None = None,
+        demo_execution_envelope: dict | None = None,
+        reused_demo_execution_envelope_id: str | None = None,
+        demo_fallback: bool = False,
+        demo_fallback_reason: str | None = None,
     ) -> PersistedSessionSnapshot:
         record = previous.message(message_id)
         require(
@@ -611,6 +615,12 @@ return 1
             "response": response.model_dump(mode="json"),
             "result": None,
             "execution_anchor": execution_anchor,
+            "demo_execution_envelope": demo_execution_envelope,
+            "reused_demo_execution_envelope_id": (
+                reused_demo_execution_envelope_id
+            ),
+            "demo_fallback": demo_fallback,
+            "demo_fallback_reason": demo_fallback_reason,
         }
         return await self._publish(previous, value, context, state_identity)
 

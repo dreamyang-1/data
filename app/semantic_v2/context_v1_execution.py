@@ -24,7 +24,9 @@ from app.domain.models import (
     AgentResponse,
     AnalysisProcessStep,
     ChatRequest,
+    DependencyConstraint,
     PrimaryIntent,
+    ReliabilityReport,
     TrustedIdentity,
 )
 from app.services.progress import emit_progress
@@ -129,6 +131,37 @@ class ExecutionBackedContextAnchor(semantic_models.StrictModel):
     current_turn_evidence_digest: semantic_models.Identifier
     v1_response_request_id: semantic_models.Identifier
     execution_evidence_refs: tuple[semantic_models.Identifier, ...] = Field(min_length=1)
+    created_at: AwareDatetime
+
+
+class DemoExecutionEnvelope(semantic_models.StrictModel):
+    """Execution environment proven by one successful V1 query.
+
+    This is deliberately separate from the semantic anchor.  It carries no
+    reconstructed business meaning and cannot be supplied through the public
+    request model.  Tool declarations are represented only by a digest so
+    secrets in tool headers are never copied into the persisted envelope.
+    """
+
+    schema_version: Literal["demo-execution-envelope-v1"] = (
+        "demo-execution-envelope-v1"
+    )
+    envelope_id: semantic_models.Identifier
+    source_message_id: semantic_models.Identifier
+    provenance: Literal["V1_SUCCESSFUL_EXECUTION"] = "V1_SUCCESSFUL_EXECUTION"
+    semantic_model_id: int = Field(strict=True, gt=0)
+    requested_business_domain_ids: tuple[int, ...] = ()
+    resolved_business_domain_ids: tuple[int, ...] = Field(min_length=1)
+    database_id: int | None = Field(default=None, strict=True, gt=0)
+    knowledge_base_names: tuple[str, ...] = ()
+    dataset_id: str | None = Field(default=None, min_length=1, max_length=128)
+    dependency_constraints: tuple[DependencyConstraint, ...] = ()
+    extension_contract_digest: semantic_models.Identifier
+    scope_fingerprint: semantic_models.Identifier
+    identity_fingerprint: semantic_models.Identifier
+    execution_evidence_refs: tuple[semantic_models.Identifier, ...] = Field(
+        min_length=1
+    )
     created_at: AwareDatetime
 
 
@@ -625,6 +658,64 @@ def _execution_evidence_refs(response: AgentResponse) -> tuple[str, ...]:
     return refs
 
 
+def _execution_extension_digest(chat: ChatRequest) -> str:
+    """Hash extension inputs without persisting tool or MCP credentials."""
+
+    return contract_digest({
+        "tools": chat.model_dump(mode="json", include={"tools"})["tools"],
+        "skills": chat.model_dump(mode="json", include={"skills"})["skills"],
+        "mcp": chat.model_dump(mode="json", include={"mcp"})["mcp"],
+        "web_search": chat.web_search,
+    })
+
+
+def _execution_identity_fingerprint(
+    context: AuthorizedScopeContext,
+    state_identity: dict[str, str],
+) -> str:
+    return contract_digest({
+        "context": context.fingerprint(),
+        "identity": state_identity,
+    })
+
+
+def _finalize_demo_execution_envelope(
+    update: ExecutionAnchorUpdate,
+    *,
+    chat: ChatRequest,
+    response: AgentResponse,
+    context: AuthorizedScopeContext,
+    state_identity: dict[str, str],
+    now: datetime,
+) -> DemoExecutionEnvelope | None:
+    evidence_refs = _execution_evidence_refs(response)
+    if response.status != "COMPLETED" or response.error_code or not evidence_refs:
+        return None
+    material = {
+        "source_message_id": chat.message_id,
+        "semantic_model_id": chat.semantic_model_id,
+        "requested_business_domain_ids": list(chat.business_domain_ids),
+        "resolved_business_domain_ids": list(update.resolved_business_domain_ids),
+        "database_id": chat.database_id,
+        "knowledge_base_names": list(chat.knowledge_base_names),
+        "dataset_id": chat.dataset_id,
+        "dependency_constraints": [
+            item.model_dump(mode="json") for item in chat.dependency_constraints
+        ],
+        "extension_contract_digest": _execution_extension_digest(chat),
+        "scope_fingerprint": context.fingerprint(),
+        "identity_fingerprint": _execution_identity_fingerprint(
+            context, state_identity
+        ),
+        "execution_evidence_refs": list(evidence_refs),
+        "created_at": now.isoformat(),
+    }
+    return DemoExecutionEnvelope(
+        **material,
+        envelope_id="demo-execution-envelope:" + contract_digest(material)[:32],
+    )
+
+
 def _finalize_execution_anchor(
     update: ExecutionAnchorUpdate,
     *,
@@ -825,6 +916,7 @@ class V2ContextV1ExecutionBridge:
         clock: Callable[[], datetime],
         startup_receipt: dict[str, Any],
         readiness_probe: Callable[[], Awaitable[dict[str, bool]]],
+        demo_mode: bool = False,
     ):
         self.store = store
         self.context_resolver = context_resolver
@@ -832,6 +924,7 @@ class V2ContextV1ExecutionBridge:
         self.v1_executor = v1_executor
         self.clock = clock
         self.startup_receipt = startup_receipt
+        self.demo_mode = demo_mode
         self._readiness_probe = readiness_probe
         self._locks: dict[str, asyncio.Lock] = {}
         self._readiness_lock = asyncio.Lock()
@@ -917,6 +1010,155 @@ class V2ContextV1ExecutionBridge:
         if current is not None and current.scope_fingerprint != context.fingerprint():
             raise ValueError("V1_EXECUTION_ANCHOR_SCOPE_MISMATCH")
         return current
+
+    @staticmethod
+    def _demo_execution_envelope(
+        snapshot,
+        context: AuthorizedScopeContext,
+        state_identity: dict[str, str],
+        anchor: ExecutionBackedContextAnchor,
+    ) -> DemoExecutionEnvelope | None:
+        """Return the envelope paired with the newest execution-backed anchor."""
+
+        current: DemoExecutionEnvelope | None = None
+        records = sorted(
+            snapshot.envelope.get("messages", {}).values(),
+            key=lambda item: (
+                item.get("context_sequence", -1)
+                if isinstance(item, dict) else -1
+            ),
+        )
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            route = record.get("bridge_route")
+            raw = record.get("demo_execution_envelope")
+            if route == "V1_EXECUTION_FALLBACK_NEW_TASK":
+                current = (
+                    DemoExecutionEnvelope.model_validate(raw)
+                    if raw is not None else None
+                )
+            elif route == "V1_EXECUTION_ANCHOR_FOLLOWUP" and raw is not None:
+                current = DemoExecutionEnvelope.model_validate(raw)
+        if current is None:
+            return None
+        expected_identity = _execution_identity_fingerprint(context, state_identity)
+        if (
+            current.scope_fingerprint != context.fingerprint()
+            or current.identity_fingerprint != expected_identity
+            or current.semantic_model_id != context.authorized_scope.semantic_model_id
+            or current.source_message_id != anchor.source_message_id
+        ):
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_SCOPE_MISMATCH")
+        return current
+
+    @staticmethod
+    def _apply_demo_execution_envelope(
+        chat: ChatRequest,
+        envelope: DemoExecutionEnvelope,
+    ) -> ChatRequest:
+        if tuple(chat.business_domain_ids) != envelope.requested_business_domain_ids:
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_REQUEST_SCOPE_MISMATCH")
+        if (
+            chat.database_id != envelope.database_id
+            or tuple(chat.knowledge_base_names) != envelope.knowledge_base_names
+        ):
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_REQUEST_SCOPE_MISMATCH")
+        if chat.dataset_id not in {None, envelope.dataset_id}:
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_DATASET_MISMATCH")
+        current_constraint_values = tuple(
+            item.model_dump(mode="json") for item in chat.dependency_constraints
+        )
+        envelope_constraint_values = tuple(
+            item.model_dump(mode="json")
+            for item in envelope.dependency_constraints
+        )
+        if (
+            current_constraint_values
+            and current_constraint_values != envelope_constraint_values
+        ):
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_DEPENDENCY_MISMATCH")
+        if _execution_extension_digest(chat) != envelope.extension_contract_digest:
+            raise ValueError("DEMO_EXECUTION_ENVELOPE_EXTENSION_MISMATCH")
+
+        execution_chat = chat.model_copy(update={
+            "database_id": envelope.database_id,
+            "knowledge_base_names": list(envelope.knowledge_base_names),
+            "dataset_id": envelope.dataset_id,
+            "dependency_constraints": list(envelope.dependency_constraints),
+        })
+        execution_chat._demo_execution_resolved_business_domain_ids = (
+            envelope.resolved_business_domain_ids
+        )
+        return execution_chat
+
+    @staticmethod
+    def _demo_fallback_response(
+        *,
+        chat: ChatRequest,
+        resolved: ResolvedContextTurn,
+        previous: AgentResponse,
+        now: datetime,
+    ) -> AgentResponse:
+        answer = (
+            "演示降级：已将当前追问补全为“"
+            + resolved.completed_question
+            + "”，但下游未返回新的查询结果。以下展示上一轮已成功结果：\n\n"
+            + previous.answer
+        )
+        fallback = previous.model_copy(deep=True, update={
+            "request_id": uuid4(),
+            "conversation_id": chat.conversation_id,
+            "status": "COMPLETED",
+            "error_code": None,
+            "answer": answer,
+            "evidence": [],
+            "dataset_id": None,
+            "dataset_ids": [],
+            "result_file_url": None,
+            "chart_specs": [],
+            "semantic_model_id": chat.semantic_model_id,
+            "database_id": chat.database_id,
+            "requested_business_domain_ids": list(chat.business_domain_ids),
+            "business_domain_selection_mode": (
+                "EXPLICIT" if chat.business_domain_ids else "AUTO"
+            ),
+            "created_at": now,
+            "reliability": ReliabilityReport(
+                level="DEGRADED",
+                score=0,
+                gates={"demo_fallback": True, "new_query_result": False},
+                warnings=[
+                    "DEMO_FALLBACK_PREVIOUS_RESULT; no current QUERY_RESULT evidence"
+                ],
+            ),
+            "analysis_process": [],
+        })
+        fallback = _attach_completed_question(fallback, resolved)
+        fallback.analysis_process = [
+            *fallback.analysis_process,
+            AnalysisProcessStep(
+                stage="SAFE_TERMINATION",
+                status="DEGRADED",
+                title="演示降级",
+                summary="下游未返回本轮新结果；当前展示内容来自上一轮成功查询。",
+            ),
+        ][:20]
+        return fallback
+
+    @staticmethod
+    def _envelope_source_response(
+        snapshot,
+        envelope: DemoExecutionEnvelope,
+    ) -> AgentResponse | None:
+        record = snapshot.message(envelope.source_message_id)
+        if not isinstance(record, dict) or record.get("status") != "SUCCEEDED":
+            return None
+        raw = record.get("response")
+        if raw is None:
+            return None
+        response = AgentResponse.model_validate(raw)
+        return response if _execution_evidence_refs(response) else None
 
     @staticmethod
     def _terminal_response(
@@ -1155,23 +1397,99 @@ class V2ContextV1ExecutionBridge:
                 "history": [],
             })
             execution_chat._completed_question_execution = True
+            reused_envelope = None
+            previous_demo_response = None
+            if (
+                self.demo_mode
+                and resolved.bridge_route == "V1_EXECUTION_ANCHOR_FOLLOWUP"
+                and resolved.anchor_update is not None
+                and resolved.anchor_update.previous is not None
+            ):
+                reused_envelope = self._demo_execution_envelope(
+                    snapshot,
+                    context,
+                    state_identity,
+                    resolved.anchor_update.previous,
+                )
+                if reused_envelope is not None:
+                    execution_chat = self._apply_demo_execution_envelope(
+                        execution_chat, reused_envelope
+                    )
+                    execution_chat.question = resolved.completed_question
+                    execution_chat.history = []
+                    execution_chat._completed_question_execution = True
+                    previous_demo_response = self._envelope_source_response(
+                        snapshot, reused_envelope
+                    )
+                    logger.info(
+                        "demo execution envelope reused",
+                        extra={
+                            "message_id": chat.message_id,
+                            "source_message_id": reused_envelope.source_message_id,
+                            "resolved_business_domain_ids": list(
+                                reused_envelope.resolved_business_domain_ids
+                            ),
+                        },
+                    )
+            demo_fallback = False
+            demo_fallback_reason = None
             try:
                 response = await self.v1_executor(execution_chat, identity)
                 response = _attach_completed_question(response, resolved)
-            except Exception:
-                try:
-                    await self.store.mark_unknown(
-                        running,
-                        message_id=chat.message_id,
-                        request_fingerprint=fingerprint,
-                        reason_code="V1_EXECUTION_OUTCOME_UNKNOWN",
-                        context=context,
-                        state_identity=state_identity,
-                        observed_at=self.clock(),
+                if (
+                    self.demo_mode
+                    and reused_envelope is not None
+                    and previous_demo_response is not None
+                    and (response.status != "COMPLETED" or response.error_code)
+                ):
+                    demo_fallback_reason = (
+                        response.error_code or "V1_EXECUTION_NOT_COMPLETED"
                     )
-                except (StateTransitionError, ValueError):
-                    pass
-                raise
+                    response = self._demo_fallback_response(
+                        chat=chat,
+                        resolved=resolved,
+                        previous=previous_demo_response,
+                        now=self.clock(),
+                    )
+                    demo_fallback = True
+            except Exception as exc:
+                if (
+                    self.demo_mode
+                    and reused_envelope is not None
+                    and previous_demo_response is not None
+                ):
+                    demo_fallback_reason = type(exc).__name__
+                    response = self._demo_fallback_response(
+                        chat=chat,
+                        resolved=resolved,
+                        previous=previous_demo_response,
+                        now=self.clock(),
+                    )
+                    demo_fallback = True
+                else:
+                    try:
+                        await self.store.mark_unknown(
+                            running,
+                            message_id=chat.message_id,
+                            request_fingerprint=fingerprint,
+                            reason_code="V1_EXECUTION_OUTCOME_UNKNOWN",
+                            context=context,
+                            state_identity=state_identity,
+                            observed_at=self.clock(),
+                        )
+                    except (StateTransitionError, ValueError):
+                        pass
+                    raise
+            if demo_fallback:
+                logger.warning(
+                    "demo fallback returned prior successful result",
+                    extra={
+                        "message_id": chat.message_id,
+                        "source_message_id": reused_envelope.source_message_id,
+                        "demo_fallback": True,
+                        "demo_fallback_reason": demo_fallback_reason,
+                    },
+                )
             execution_anchor = (
                 _finalize_execution_anchor(
                     resolved.anchor_update,
@@ -1183,6 +1501,17 @@ class V2ContextV1ExecutionBridge:
                     now=self.clock(),
                 )
                 if resolved.anchor_update is not None else None
+            )
+            demo_execution_envelope = (
+                _finalize_demo_execution_envelope(
+                    resolved.anchor_update,
+                    chat=execution_chat,
+                    response=response,
+                    context=context,
+                    state_identity=state_identity,
+                    now=self.clock(),
+                )
+                if self.demo_mode and resolved.anchor_update is not None else None
             )
             await self.store.finish_context(
                 running,
@@ -1196,6 +1525,16 @@ class V2ContextV1ExecutionBridge:
                     execution_anchor.model_dump(mode="json")
                     if execution_anchor is not None else None
                 ),
+                demo_execution_envelope=(
+                    demo_execution_envelope.model_dump(mode="json")
+                    if demo_execution_envelope is not None else None
+                ),
+                reused_demo_execution_envelope_id=(
+                    reused_envelope.envelope_id
+                    if reused_envelope is not None else None
+                ),
+                demo_fallback=demo_fallback,
+                demo_fallback_reason=demo_fallback_reason,
             )
             return response
 
@@ -1428,6 +1767,7 @@ def build_context_v1_execution_handler(
     )
     startup_receipt = {
         **receipt,
+        "demo_mode": settings.demo_mode,
         "catalog_pin_verified": True,
         "v1_execution_bridge_enabled": True,
         "v2_limited_scalar_used_for_execution": False,
@@ -1459,4 +1799,5 @@ def build_context_v1_execution_handler(
         clock=lambda: datetime.now(timezone.utc).astimezone(),
         startup_receipt=startup_receipt,
         readiness_probe=readiness_probe,
+        demo_mode=settings.demo_mode,
     )
