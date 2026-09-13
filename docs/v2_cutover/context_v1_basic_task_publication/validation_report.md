@@ -1,6 +1,6 @@
 # V2 Context Basic Task Publication Regression Closure
 
-**V2_BASIC_NEW_TASK_PUBLICATION_OFFLINE_PASS**
+**V2_BASIC_NEW_TASK_PUBLICATION_LIVE_PASS_DOWNSTREAM_PARTIAL**
 
 本轮只修复 `MODEL_WIDE` 请求下的 Source Value 回执范围校验。没有引入 Execution Anchor、DemoExecutionEnvelope、Catalog Pin 门禁或迁移、Execution Scope 物化、V1 执行补丁，也没有修改 Oagent、SQL Translator、Java/platform、8088 路由或 Redis schema。
 
@@ -61,4 +61,29 @@
 
 PRIVATE 证据位于 `.eval_private/basic-new-task-taskstate/`。原始模型正文、Source Value 回执和业务数据不进入 Git。受影响 JUnit 位于 `.eval_private/v2-context-v1-execution-slim/basic-task-publication-affected-final.xml`。
 
-当前状态只证明离线修复和回归 Gate。下一步只重启 DataAnalysis 8088，并从真实平台新会话验证指定的两轮基础问题。
+以上为离线修复和回归 Gate；下节记录随后完成的真实平台验收。
+
+## 真实平台双轮验收
+
+修复提交加载到 8088 后，真实平台在同一会话先后发送“查询去年江苏省订单笔数”和“换今年”。两次请求均经过原 `/agent_chat/stream`，HTTP 200；8088 保持 `/live=200`、`/ready=READY`，Oagent 与 SQL Translator 进程未重启。
+
+首轮不再进入 `V1_EXECUTION_FALLBACK_NEW_TASK`，而是以 `V2_RESOLVED_COMPLETED_QUESTION` 发布一个 Task v1。Task 保存订单笔数、江苏省精确过滤和 2025 年时间范围；随后原 V1、Oagent、SQL Translator 和数据库均成功，响应为 `COMPLETED`，同时具有 Oagent ASL 和 `data-source` 查询结果证据。
+
+第二轮读取同一 Redis conversation key 和同一 Task，`active_version` 从 1 变为 2；订单笔数与江苏省保持不变，时间通过 `REPLACE` 更新为 2026，实际送入 V1 的完整问题为“查询2026年江苏省订单笔数。”。它仍使用 `V2_RESOLVED_COMPLETED_QUESTION`，没有触发 standalone passthrough，证明本轮“基础 NEW_TASK 没有建立 TaskState”的回归已在真实运行态关闭。
+
+第二轮下游没有完成：V1 调用了 Oagent 两次，Oagent 服务日志均记录 ASL 已生成；返回的 ASL 仍含业务歧义，DataAnalysis 的既有 Adapter 在 SQL 翻译前以 `ASL_AMBIGUOUS` 拒绝。Redis 公开响应只持久化 `SAFE_FALLBACK` 和 `source_stage=OAGNET_ASL_GENERATION`，没有保留 ambiguity 正文或上游 error code；`ASL_AMBIGUOUS` 由该 source-stage 对应的唯一代码分支确定。SQL Translator 日志仅有本轮指标解析调用，没有后续 `/api/translate`，数据库也没有收到第二轮查询。
+
+| 验收项 | 结果 |
+|---|---|
+| 基础首问创建 V2 Task | **PASS**；Task v1，未 fallback |
+| 首问 V1 → Oagent → SQL → DB → 页面 | **PASS** |
+| “换今年”复用同一 Task | **PASS**；Task v2 |
+| 时间替换与 completed_question | **PASS**；2026，`查询2026年江苏省订单笔数。` |
+| 第二轮 V1 execution | **REACHED** |
+| 第二轮 Oagent | **REACHED**；两次 ASL generation |
+| 第二轮 SQL translation / DB | **NOT_REACHED** |
+| 第二轮页面业务结果 | **FAIL**；`ASL_AMBIGUOUS` → `SAFE_FALLBACK` |
+
+`FIRST_FAILURE_STAGE = OAGNET_ASL_RESPONSE_AMBIGUITY_VALIDATION`
+
+该新失败位于原 V1/Oagent 执行链，不是 TaskState、completed_question、稳定 conversation identity、Catalog 或 passthrough 回归。本轮按范围要求停止，不修改 V1、Oagent、SQL Translator 或 Bridge，也不运行 Benchmark。

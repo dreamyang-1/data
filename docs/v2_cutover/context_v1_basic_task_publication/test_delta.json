@@ -1,5 +1,5 @@
 {
-  "status": "V2_BASIC_NEW_TASK_PUBLICATION_OFFLINE_PASS",
+  "status": "V2_BASIC_NEW_TASK_PUBLICATION_LIVE_PASS_DOWNSTREAM_PARTIAL",
   "targeted": {
     "passed": 7,
     "failed": 0,
@@ -28,6 +28,34 @@
     "raw_model_exchanges.json": "5baedf92a2a5707281ffa21ccd39de560b93415f9db142f977e49dcf24dbdd70",
     "receipt_comparison.json": "f090eb273f3b4ced3ccb5fa97abadd830dce71ab03fa7e9e058d440e6920603b",
     "post_fix_replay.json": "58718cc819895bef76be73f73e6dda5f2e440fed859ad7147ef256e1bc07a1e7",
-    "affected_junit.xml": "c7225ceed4861dc20a9f27d27523330035d691fcda0973a0d85a505ab86a69ed"
+    "affected_junit.xml": "c7225ceed4861dc20a9f27d27523330035d691fcda0973a0d85a505ab86a69ed",
+    "live_platform_validation.json": "5022eb1ce46d05d3103ca9a34eb98894bd3ae6a776f027571e89fa0a12aaf535"
+  },
+  "live_runtime": {
+    "first_turn": {
+      "v2_task_created": true,
+      "v1_fallback": false,
+      "task_version": 1,
+      "v1_execution": "REACHED",
+      "oagent": "REACHED",
+      "sql_translation": "REACHED",
+      "db_execution": "REACHED",
+      "page_result": "COMPLETED"
+    },
+    "followup": {
+      "same_task": true,
+      "task_version": 2,
+      "time_operation": "REPLACE",
+      "time_year": 2026,
+      "completed_question": "查询2026年江苏省订单笔数。",
+      "v1_execution": "REACHED",
+      "oagent": "REACHED",
+      "sql_translation": "NOT_REACHED",
+      "db_execution": "NOT_REACHED",
+      "page_result": "SAFE_FALLBACK",
+      "first_failure_stage": "OAGNET_ASL_RESPONSE_AMBIGUITY_VALIDATION",
+      "adapter_error_code": "ASL_AMBIGUOUS"
+    },
+    "production_code_changes_after_live_failure": 0
   }
 }
