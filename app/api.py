@@ -856,6 +856,10 @@ async def chat_stream(
             analysis_evidence = [
                 item for item in response.evidence if item.kind == "ANALYSIS_RESULT"
             ]
+            demo_fallback = bool(
+                response.reliability
+                and response.reliability.gates.get("demo_fallback")
+            )
             response_scenario = (
                 "CHAT"
                 if response.intent == PrimaryIntent.CHAT
@@ -867,23 +871,31 @@ async def chat_stream(
             )
             presentation_scenario = response_scenario
             if response_scenario != "CLARIFICATION":
+                if response_scenario == "CHAT":
+                    output_summary = (
+                        "基于用户闲聊文本，由大模型直接生成自然语言闲聊回复，"
+                        "不拼接报表、指标、表格等业务结果。"
+                    )
+                elif demo_fallback:
+                    output_summary = (
+                        "任务状态：已完成；\n"
+                        f"输出意图：{response.intent.value}。\n"
+                        "结果已返回。"
+                    )
+                else:
+                    output_summary = (
+                        "任务状态：已完成；\n"
+                        f"输出意图：{response.intent.value}。\n"
+                        f"数据查询结果：{'已生成并保留证据' if query_evidence else '本轮无数据查询结果'}；"
+                        f"数据分析结果：{'已生成' if analysis_evidence else '本轮未生成独立分析结论'}。\n"
+                        f"附件：{len(response.files)} 个；图表：{len(response.chart_specs)} 个；"
+                        f"证据：{len(response.evidence)} 项。"
+                    )
                 yield render_thinking({
                     "stage": "OUTPUT_SUMMARY",
                     "status": "COMPLETED",
                     "presentation_scenario": response_scenario,
-                    "message": (
-                        "基于用户闲聊文本，由大模型直接生成自然语言闲聊回复，"
-                        "不拼接报表、指标、表格等业务结果。"
-                        if response_scenario == "CHAT"
-                        else (
-                            "任务状态：已完成；\n"
-                            f"输出意图：{response.intent.value}。\n"
-                            f"数据查询结果：{'已生成并保留证据' if query_evidence else '本轮无数据查询结果'}；"
-                            f"数据分析结果：{'已生成' if analysis_evidence else '本轮未生成独立分析结论'}。\n"
-                            f"附件：{len(response.files)} 个；图表：{len(response.chart_specs)} 个；"
-                            f"证据：{len(response.evidence)} 项。"
-                        )
-                    ),
+                    "message": output_summary,
                     "file_count": len(response.files),
                     "chart_count": len(response.chart_specs),
                     "evidence_count": len(response.evidence),

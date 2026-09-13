@@ -595,6 +595,7 @@ return 1
         reused_demo_execution_envelope_id: str | None = None,
         demo_fallback: bool = False,
         demo_fallback_reason: str | None = None,
+        demo_fallback_source: str | None = None,
     ) -> PersistedSessionSnapshot:
         record = previous.message(message_id)
         require(
@@ -621,6 +622,7 @@ return 1
             ),
             "demo_fallback": demo_fallback,
             "demo_fallback_reason": demo_fallback_reason,
+            "demo_fallback_source": demo_fallback_source,
         }
         return await self._publish(previous, value, context, state_identity)
 

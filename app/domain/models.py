@@ -1298,6 +1298,11 @@ class ClarificationDecisionTrace(StrictModel):
 
 
 class AgentResponse(StrictModel):
+    # Internal-only diagnostic passed from the V1 execution workflow to the
+    # opt-in context bridge.  It is deliberately excluded from API payloads so
+    # demo presentation can react to a precise upstream failure without
+    # exposing dependency details to the browser.
+    _upstream_error_code: str | None = PrivateAttr(default=None)
     error_code: str | None = None
     clarification_decision_traces: list[ClarificationDecisionTrace] = Field(default_factory=list)
     request_id: UUID

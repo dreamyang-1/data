@@ -38,6 +38,7 @@ from app.semantic_v2.persisted_scalar_api import RedisScalarSessionStore
 from app.semantic_v2.recognition_client import RecognitionFailure
 from app.semantic_v2.state_machine import ConversationState
 from app.services.authorized_scope import bind_authorized_scope
+from app.services.progress import emit_progress, progress_scope
 from test_v2_authorized_catalog_bridge import IDENTITY, provider, request
 from test_catalog_publication import authority, publish, reseal, system
 from test_v2_limited_scalar_deployment import DeploymentRedis, candidate_settings
@@ -73,6 +74,14 @@ def executed_response(chat, answer="V1 result"):
         source_ref="data-source:58",
         payload={"row_count": 1},
     )]
+    return result
+
+
+def upstream_failure(chat, code="ASL_TIME_ANCHOR_MISSING"):
+    result = response(chat, answer="dependency failed")
+    result.status = "SAFE_FALLBACK"
+    result.error_code = "DEPENDENCY_UNAVAILABLE"
+    result._upstream_error_code = code
     return result
 
 
@@ -591,6 +600,7 @@ async def test_demo_mode_reuses_successful_model_wide_execution_envelope(provide
     ]
     assert final_record["reused_demo_execution_envelope_id"] == saved["envelope_id"]
     assert final_record["demo_fallback"] is False
+    assert final_record["demo_fallback_source"] is None
     assert final_record["demo_execution_envelope"][
         "resolved_business_domain_ids"
     ] == [205]
@@ -625,7 +635,7 @@ def test_demo_execution_scope_is_internal_and_only_fills_missing_canonical_scope
 
 
 @pytest.mark.asyncio
-async def test_demo_mode_returns_labeled_prior_result_without_current_query_evidence(
+async def test_demo_mode_retries_without_time_then_returns_prior_result_if_retry_fails(
     provider,
 ):
     first = request(
@@ -657,13 +667,90 @@ async def test_demo_mode_returns_labeled_prior_result_without_current_query_evid
             time_parse(current.question, current.message_id, "今年")
         )
 
+    calls = []
+    progress = []
+
     async def v1(current, identity):
+        calls.append(current.question)
         if current.message_id == first.message_id:
             return executed_response(current, answer="上一轮经销商名单")
-        failed = response(current, answer="执行环境暂不可用")
-        failed.status = "SAFE_FALLBACK"
-        failed.error_code = "OAGENT_EXECUTION_SCOPE_UNRESOLVED"
-        return failed
+        await emit_progress(
+            "DATA_RETRIEVAL", "FAILED", "上游数据查询未成功，正在安全结束本次分析。"
+        )
+        if current.message_id.startswith("demo-no-time-"):
+            return upstream_failure(current, "SQL_EXECUTION_FAILED")
+        return upstream_failure(current)
+
+    handler, context, redis = make_handler(
+        provider, planner, v1, demo_mode=True, scope_chat=first
+    )
+    await handler.handle(first, IDENTITY)
+    with progress_scope(lambda event: progress.append(event)):
+        result = await handler.handle(followup, IDENTITY)
+    record = redis_envelope(redis)["messages"][followup.message_id]
+
+    assert result.status == "COMPLETED"
+    assert result.error_code is None
+    assert result.answer == "上一轮经销商名单"
+    assert "演示降级" not in result.answer
+    assert "上游" not in result.answer
+    assert result.evidence == []
+    assert result.reliability.gates == {
+        "demo_fallback": True,
+        "new_query_result": False,
+    }
+    assert record["demo_fallback"] is True
+    assert record["demo_fallback_reason"] == "ASL_TIME_ANCHOR_MISSING"
+    assert record["demo_fallback_source"] == "PRIOR_SUCCESSFUL_RESULT"
+    assert record["demo_execution_envelope"] is None
+    assert calls == [
+        first.question,
+        "查询2026年空心纤维血液透析器产品合作的经销商名单。",
+        first.question,
+    ]
+    assert not any(event["status"] == "FAILED" for event in progress)
+    assert [step.title for step in result.analysis_process] == ["补全后的完整问题"]
+
+
+@pytest.mark.asyncio
+async def test_demo_mode_returns_real_retry_without_time_result(provider):
+    first = request(
+        domains=(), conversation_id="demo-retry-success", message_id="first",
+        question="查询空心纤维血液透析器产品合作的经销商名单。",
+    )
+    followup = request(
+        domains=(), conversation_id=first.conversation_id, message_id="followup",
+        question="换今年",
+    )
+    calls = []
+
+    async def planner(current, identity, state, plans, pending):
+        if current.message_id == first.message_id:
+            return ResolvedContextTurn(
+                completed_question=current.question,
+                next_state=state_artifact(context, current, 1),
+                plan_state=None,
+                bridge_route="V1_EXECUTION_FALLBACK_NEW_TASK",
+                anchor_update=ExecutionAnchorUpdate(
+                    previous=None,
+                    current_parse=CurrentTurnSemanticParse(
+                        dialogue_act_candidates=[DialogueAct.NEW_TASK]
+                    ),
+                    time_context=None,
+                    resolved_business_domain_ids=(205,),
+                ),
+            )
+        raise unresolved_with_parse(
+            time_parse(current.question, current.message_id, "今年")
+        )
+
+    async def v1(current, identity):
+        calls.append((current.message_id, current.question))
+        if current.message_id == first.message_id:
+            return executed_response(current, answer="上一轮结果")
+        if current.message_id.startswith("demo-no-time-"):
+            return executed_response(current, answer="无时间重试的真实结果")
+        return upstream_failure(current)
 
     handler, context, redis = make_handler(
         provider, planner, v1, demo_mode=True, scope_chat=first
@@ -674,16 +761,127 @@ async def test_demo_mode_returns_labeled_prior_result_without_current_query_evid
 
     assert result.status == "COMPLETED"
     assert result.error_code is None
-    assert "查询2026年空心纤维血液透析器产品合作的经销商名单。" in result.answer
-    assert "上一轮经销商名单" in result.answer
-    assert result.evidence == []
-    assert result.reliability.gates == {
-        "demo_fallback": True,
-        "new_query_result": False,
-    }
+    assert result.answer == "无时间重试的真实结果"
+    assert len([item for item in result.evidence if item.kind == "QUERY_RESULT"]) == 1
+    assert result.reliability.gates["demo_fallback"] is True
+    assert result.reliability.gates["demo_retry_without_time"] is True
     assert record["demo_fallback"] is True
-    assert record["demo_fallback_reason"] == "OAGENT_EXECUTION_SCOPE_UNRESOLVED"
+    assert record["demo_fallback_reason"] == "ASL_TIME_ANCHOR_MISSING"
+    assert record["demo_fallback_source"] == "RETRY_WITHOUT_TIME"
+    assert record["execution_anchor"] is None
     assert record["demo_execution_envelope"] is None
+    assert [question for _message_id, question in calls] == [
+        first.question,
+        "查询2026年空心纤维血液透析器产品合作的经销商名单。",
+        first.question,
+    ]
+
+
+@pytest.mark.asyncio
+async def test_demo_mode_does_not_mask_unapproved_failure(provider):
+    first = request(
+        domains=(), conversation_id="demo-unapproved", message_id="first",
+        question="查询空心纤维血液透析器产品合作的经销商名单。",
+    )
+    followup = request(
+        domains=(), conversation_id=first.conversation_id, message_id="followup",
+        question="换今年",
+    )
+    calls = []
+
+    async def planner(current, identity, state, plans, pending):
+        if current.message_id == first.message_id:
+            return ResolvedContextTurn(
+                completed_question=current.question,
+                next_state=state_artifact(context, current, 1),
+                plan_state=None,
+                bridge_route="V1_EXECUTION_FALLBACK_NEW_TASK",
+                anchor_update=ExecutionAnchorUpdate(
+                    previous=None,
+                    current_parse=CurrentTurnSemanticParse(
+                        dialogue_act_candidates=[DialogueAct.NEW_TASK]
+                    ),
+                    time_context=None,
+                    resolved_business_domain_ids=(205,),
+                ),
+            )
+        raise unresolved_with_parse(
+            time_parse(current.question, current.message_id, "今年")
+        )
+
+    async def v1(current, identity):
+        calls.append(current.question)
+        if current.message_id == first.message_id:
+            return executed_response(current, answer="上一轮结果")
+        return upstream_failure(current, "OAGENT_EXECUTION_SCOPE_UNRESOLVED")
+
+    handler, context, redis = make_handler(
+        provider, planner, v1, demo_mode=True, scope_chat=first
+    )
+    await handler.handle(first, IDENTITY)
+    result = await handler.handle(followup, IDENTITY)
+    record = redis_envelope(redis)["messages"][followup.message_id]
+
+    assert result.status == "SAFE_FALLBACK"
+    assert result.error_code == "DEPENDENCY_UNAVAILABLE"
+    assert calls == [first.question, (
+        "查询2026年空心纤维血液透析器产品合作的经销商名单。"
+    )]
+    assert record["demo_fallback"] is False
+    assert record["demo_fallback_reason"] is None
+    assert record["demo_fallback_source"] is None
+
+
+@pytest.mark.asyncio
+async def test_demo_mode_disabled_keeps_original_time_anchor_failure(provider):
+    first = request(
+        domains=(), conversation_id="demo-off", message_id="first",
+        question="查询空心纤维血液透析器产品合作的经销商名单。",
+    )
+    followup = request(
+        domains=(), conversation_id=first.conversation_id, message_id="followup",
+        question="换今年",
+    )
+    calls = []
+
+    async def planner(current, identity, state, plans, pending):
+        if current.message_id == first.message_id:
+            return ResolvedContextTurn(
+                completed_question=current.question,
+                next_state=state_artifact(context, current, 1),
+                plan_state=None,
+                bridge_route="V1_EXECUTION_FALLBACK_NEW_TASK",
+                anchor_update=ExecutionAnchorUpdate(
+                    previous=None,
+                    current_parse=CurrentTurnSemanticParse(
+                        dialogue_act_candidates=[DialogueAct.NEW_TASK]
+                    ),
+                    time_context=None,
+                    resolved_business_domain_ids=(205,),
+                ),
+            )
+        raise unresolved_with_parse(
+            time_parse(current.question, current.message_id, "今年")
+        )
+
+    async def v1(current, identity):
+        calls.append(current.question)
+        if current.message_id == first.message_id:
+            return executed_response(current, answer="上一轮结果")
+        return upstream_failure(current)
+
+    handler, context, redis = make_handler(
+        provider, planner, v1, demo_mode=False, scope_chat=first
+    )
+    await handler.handle(first, IDENTITY)
+    result = await handler.handle(followup, IDENTITY)
+    record = redis_envelope(redis)["messages"][followup.message_id]
+
+    assert result.status == "SAFE_FALLBACK"
+    assert result.error_code == "DEPENDENCY_UNAVAILABLE"
+    assert len(calls) == 2
+    assert record["demo_fallback"] is False
+    assert record["demo_fallback_source"] is None
 
 
 @pytest.mark.asyncio
@@ -1149,3 +1347,74 @@ def test_json_and_sse_share_one_bridge_and_one_completed_question(provider):
     assert next(event for event in events if event["type"] == "complete")["answer"] == "done"
     assert planner_calls == ["换今年"]
     assert v1_calls == ["查询2026年江苏省订单笔数。"]
+
+
+def test_demo_sse_hides_failed_attempt_and_fallback_wording(provider):
+    redis = DeploymentRedis()
+    first = request(
+        conversation_id="demo-sse-polish",
+        message_id="demo-sse-first",
+        question="查询空心纤维血液透析器产品合作的经销商名单。",
+    )
+    followup = request(
+        conversation_id=first.conversation_id,
+        message_id="demo-sse-followup",
+        question="换今年",
+    )
+
+    async def planner(current, identity, state, plans, pending):
+        if current.message_id == first.message_id:
+            return ResolvedContextTurn(
+                completed_question=current.question,
+                next_state=state_artifact(context, current, 1),
+                plan_state=None,
+                bridge_route="V1_EXECUTION_FALLBACK_NEW_TASK",
+                anchor_update=ExecutionAnchorUpdate(
+                    previous=None,
+                    current_parse=CurrentTurnSemanticParse(
+                        dialogue_act_candidates=[DialogueAct.NEW_TASK]
+                    ),
+                    time_context=None,
+                    resolved_business_domain_ids=(205,),
+                ),
+            )
+        raise unresolved_with_parse(
+            time_parse(current.question, current.message_id, "今年")
+        )
+
+    async def v1(current, identity):
+        if current.message_id == first.message_id:
+            return executed_response(current, answer="共查询到 22 条明细。")
+        await emit_progress(
+            "DATA_RETRIEVAL", "FAILED", "上游数据查询未成功，正在安全结束本次分析。"
+        )
+        return upstream_failure(current)
+
+    handler, context, _redis = make_handler(
+        provider, planner, v1, redis, demo_mode=True, scope_chat=first
+    )
+    settings = Settings(_env_file=None).model_copy(update={
+        "env": "test",
+        "adapter_mode": "mock",
+        "session_store_mode": "memory",
+        "business_question_collection_enabled": False,
+        "long_term_memory_mode": "disabled",
+        "langfuse_enabled": False,
+        "trusted_backend_token": SecretStr("context-v1-test-token"),
+    })
+    app = create_app(settings, isolated_chat_handler=handler)
+
+    with TestClient(app, headers=HEADERS) as client:
+        initial = client.post("/agent_chat", json=first.model_dump(mode="json"))
+        streamed = client.post(
+            "/agent_chat/stream", json=followup.model_dump(mode="json")
+        )
+
+    assert initial.status_code == 200, initial.text
+    assert streamed.status_code == 200, streamed.text
+    assert "查询2026年空心纤维血液透析器产品合作的经销商名单。" in streamed.text
+    assert "共查询到 22 条明细。" in streamed.text
+    assert "上游数据查询未成功" not in streamed.text
+    assert "本轮无数据查询结果" not in streamed.text
+    assert "演示降级" not in streamed.text
+    assert "ASL_TIME_ANCHOR_MISSING" not in streamed.text

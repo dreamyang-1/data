@@ -2855,6 +2855,7 @@ class DataAnalysisOrchestrator:
             self.question_rewriter is not None
             and not independent_chat
             and not deterministic_business_fast_path
+            and not chat._completed_question_execution
         ):
             rewrite = await self.question_rewriter.rewrite(
                 chat.question,
@@ -3167,7 +3168,22 @@ class DataAnalysisOrchestrator:
                                 request.missing_slots = required_missing_slots(request)
                         request.rewritten_question = render_execution_question(request)
 
-        if rewrite is not None:
+        if chat._completed_question_execution:
+            # The V2 context bridge has already produced the exact standalone
+            # question that V1 must execute.  V1 intent extraction remains in
+            # charge of planning, but neither its model completion nor its
+            # legacy context rewriter may replace that text a second time.
+            request.original_question = chat.question
+            request.rewritten_question = chat.question
+            request.rewrite_context_applied = False
+            request.rewrite_degraded = False
+            request.rewrite_events = []
+            request.assumptions = [
+                value for value in request.assumptions
+                if value != "MODEL_QUESTION_COMPLETION_APPLIED"
+            ]
+            request.assumptions.append("V2_COMPLETED_QUESTION_PRESERVED")
+        elif rewrite is not None:
             model_completion_applied = (
                 "MODEL_QUESTION_COMPLETION_APPLIED" in request.assumptions
             )
@@ -4084,9 +4100,14 @@ class DataAnalysisOrchestrator:
             turn_decision,
             chat.question,
         )
-        execution_question, canonical_question, execution_source = (
-            select_data_execution_question(request, turn_decision, chat.question)
-        )
+        if chat._completed_question_execution:
+            execution_question = chat.question
+            canonical_question = chat.question
+            execution_source = "V2_COMPLETED_QUESTION"
+        else:
+            execution_question, canonical_question, execution_source = (
+                select_data_execution_question(request, turn_decision, chat.question)
+            )
         request.rewritten_question = execution_question
         request.assumptions.append(f"EXECUTION_QUERY_SOURCE={execution_source}")
         turn_decision.context_after = self.turn_admission_gate.context_snapshot(request)
@@ -4565,9 +4586,13 @@ class DataAnalysisOrchestrator:
                     error_code=exc.code,
                     upstream_code=exc.upstream_code,
                 )
-                return await self._finish_terminal(
-                    request, self._fallback(request, self._dependency_message(exc), error_code=exc.code)
+                failure = self._fallback(
+                    request,
+                    self._dependency_message(exc),
+                    error_code=exc.code,
                 )
+                failure._upstream_error_code = exc.upstream_code
+                return await self._finish_terminal(request, failure)
 
         query_result = await self._requery_system_default_trend_at_watermark(
             request,

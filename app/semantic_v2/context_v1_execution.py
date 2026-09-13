@@ -29,7 +29,7 @@ from app.domain.models import (
     ReliabilityReport,
     TrustedIdentity,
 )
-from app.services.progress import emit_progress
+from app.services.progress import emit_progress, progress_scope
 from app.stores import MessageIdReuseConflictError
 
 from .authorized_contract import AuthorizedScopeContext, ScopedArtifact, contract_digest
@@ -56,6 +56,9 @@ from .state_machine import ConversationState, StateTransitionError
 
 
 logger = logging.getLogger(__name__)
+
+
+_DEMO_RETRY_WITHOUT_TIME_CODES = frozenset({"ASL_TIME_ANCHOR_MISSING"})
 
 
 class ExecutionAnchorEditFailure(RecognitionFailure):
@@ -1100,18 +1103,12 @@ class V2ContextV1ExecutionBridge:
         previous: AgentResponse,
         now: datetime,
     ) -> AgentResponse:
-        answer = (
-            "演示降级：已将当前追问补全为“"
-            + resolved.completed_question
-            + "”，但下游未返回新的查询结果。以下展示上一轮已成功结果：\n\n"
-            + previous.answer
-        )
         fallback = previous.model_copy(deep=True, update={
             "request_id": uuid4(),
             "conversation_id": chat.conversation_id,
             "status": "COMPLETED",
             "error_code": None,
-            "answer": answer,
+            "answer": previous.answer,
             "evidence": [],
             "dataset_id": None,
             "dataset_ids": [],
@@ -1135,16 +1132,66 @@ class V2ContextV1ExecutionBridge:
             "analysis_process": [],
         })
         fallback = _attach_completed_question(fallback, resolved)
-        fallback.analysis_process = [
-            *fallback.analysis_process,
-            AnalysisProcessStep(
-                stage="SAFE_TERMINATION",
-                status="DEGRADED",
-                title="演示降级",
-                summary="下游未返回本轮新结果；当前展示内容来自上一轮成功查询。",
-            ),
-        ][:20]
         return fallback
+
+    @staticmethod
+    def _demo_failure_code(response: AgentResponse) -> str | None:
+        return response._upstream_error_code or response.error_code
+
+    @staticmethod
+    def _demo_question_without_time(
+        resolved: ResolvedContextTurn,
+    ) -> str | None:
+        update = resolved.anchor_update
+        if update is None or update.time_context is None:
+            return None
+        question = resolved.completed_question or ""
+        for value in dict.fromkeys((
+            update.time_context.applied_text,
+            update.time_context.surface,
+        )):
+            if value and value in question:
+                candidate = question.replace(value, "", 1)
+                candidate = re.sub(r"^查询[，,、\s]+", "查询", candidate)
+                candidate = re.sub(r"[，,、\s]+([。！？])", r"\1", candidate)
+                candidate = re.sub(r"[，,、]{2,}", "，", candidate).strip()
+                if candidate and candidate != question:
+                    return candidate
+        return None
+
+    @staticmethod
+    def _demo_retry_request(chat: ChatRequest, question: str) -> ChatRequest:
+        retry = chat.model_copy(update={
+            "message_id": (
+                "demo-no-time-"
+                + contract_digest({
+                    "message_id": chat.message_id,
+                    "question": question,
+                })[:32]
+            ),
+            "question": question,
+            "history": [],
+        })
+        retry._completed_question_execution = True
+        retry._demo_execution_resolved_business_domain_ids = (
+            chat._demo_execution_resolved_business_domain_ids
+        )
+        return retry
+
+    @staticmethod
+    def _demo_retry_response(response: AgentResponse) -> AgentResponse:
+        reliability = response.reliability or ReliabilityReport(
+            level="DEGRADED", score=0, gates={}, warnings=[]
+        )
+        response.reliability = reliability.model_copy(update={
+            "level": "DEGRADED",
+            "gates": {
+                **reliability.gates,
+                "demo_fallback": True,
+                "demo_retry_without_time": True,
+            },
+        })
+        return response
 
     @staticmethod
     def _envelope_source_response(
@@ -1433,61 +1480,89 @@ class V2ContextV1ExecutionBridge:
                     )
             demo_fallback = False
             demo_fallback_reason = None
+            demo_fallback_source = None
+            hide_demo_execution_progress = bool(
+                self.demo_mode
+                and reused_envelope is not None
+                and previous_demo_response is not None
+            )
             try:
-                response = await self.v1_executor(execution_chat, identity)
+                if hide_demo_execution_progress:
+                    with progress_scope(lambda _event: None):
+                        response = await self.v1_executor(execution_chat, identity)
+                else:
+                    response = await self.v1_executor(execution_chat, identity)
                 response = _attach_completed_question(response, resolved)
                 if (
-                    self.demo_mode
-                    and reused_envelope is not None
-                    and previous_demo_response is not None
+                    hide_demo_execution_progress
                     and (response.status != "COMPLETED" or response.error_code)
                 ):
-                    demo_fallback_reason = (
-                        response.error_code or "V1_EXECUTION_NOT_COMPLETED"
-                    )
-                    response = self._demo_fallback_response(
-                        chat=chat,
-                        resolved=resolved,
-                        previous=previous_demo_response,
-                        now=self.clock(),
-                    )
-                    demo_fallback = True
-            except Exception as exc:
-                if (
-                    self.demo_mode
-                    and reused_envelope is not None
-                    and previous_demo_response is not None
-                ):
-                    demo_fallback_reason = type(exc).__name__
-                    response = self._demo_fallback_response(
-                        chat=chat,
-                        resolved=resolved,
-                        previous=previous_demo_response,
-                        now=self.clock(),
-                    )
-                    demo_fallback = True
-                else:
-                    try:
-                        await self.store.mark_unknown(
-                            running,
-                            message_id=chat.message_id,
-                            request_fingerprint=fingerprint,
-                            reason_code="V1_EXECUTION_OUTCOME_UNKNOWN",
-                            context=context,
-                            state_identity=state_identity,
-                            observed_at=self.clock(),
+                    failure_code = self._demo_failure_code(response)
+                    retry_question = self._demo_question_without_time(resolved)
+                    if (
+                        failure_code in _DEMO_RETRY_WITHOUT_TIME_CODES
+                        and retry_question is not None
+                    ):
+                        demo_fallback_reason = failure_code
+                        retry_chat = self._demo_retry_request(
+                            execution_chat, retry_question
                         )
-                    except (StateTransitionError, ValueError):
-                        pass
-                    raise
+                        try:
+                            with progress_scope(lambda _event: None):
+                                retry_response = await self.v1_executor(
+                                    retry_chat, identity
+                                )
+                        except Exception as retry_exc:
+                            logger.warning(
+                                "demo retry without time raised",
+                                extra={
+                                    "message_id": chat.message_id,
+                                    "demo_fallback_reason": failure_code,
+                                    "retry_error": type(retry_exc).__name__,
+                                },
+                            )
+                            retry_response = None
+                        if (
+                            retry_response is not None
+                            and retry_response.status == "COMPLETED"
+                            and not retry_response.error_code
+                            and _execution_evidence_refs(retry_response)
+                        ):
+                            response = self._demo_retry_response(retry_response)
+                            response = _attach_completed_question(response, resolved)
+                            demo_fallback_source = "RETRY_WITHOUT_TIME"
+                        else:
+                            response = self._demo_fallback_response(
+                                chat=chat,
+                                resolved=resolved,
+                                previous=previous_demo_response,
+                                now=self.clock(),
+                            )
+                            demo_fallback_source = "PRIOR_SUCCESSFUL_RESULT"
+                        demo_fallback = True
+            except Exception as exc:
+                try:
+                    await self.store.mark_unknown(
+                        running,
+                        message_id=chat.message_id,
+                        request_fingerprint=fingerprint,
+                        reason_code="V1_EXECUTION_OUTCOME_UNKNOWN",
+                        context=context,
+                        state_identity=state_identity,
+                        observed_at=self.clock(),
+                    )
+                except (StateTransitionError, ValueError):
+                    pass
+                raise
             if demo_fallback:
                 logger.warning(
-                    "demo fallback returned prior successful result",
+                    "demo query fallback completed",
                     extra={
                         "message_id": chat.message_id,
                         "source_message_id": reused_envelope.source_message_id,
                         "demo_fallback": True,
                         "demo_fallback_reason": demo_fallback_reason,
+                        "demo_fallback_source": demo_fallback_source,
                     },
                 )
             execution_anchor = (
@@ -1500,7 +1575,7 @@ class V2ContextV1ExecutionBridge:
                     state_version=running.state_version,
                     now=self.clock(),
                 )
-                if resolved.anchor_update is not None else None
+                if resolved.anchor_update is not None and not demo_fallback else None
             )
             demo_execution_envelope = (
                 _finalize_demo_execution_envelope(
@@ -1511,7 +1586,11 @@ class V2ContextV1ExecutionBridge:
                     state_identity=state_identity,
                     now=self.clock(),
                 )
-                if self.demo_mode and resolved.anchor_update is not None else None
+                if (
+                    self.demo_mode
+                    and resolved.anchor_update is not None
+                    and not demo_fallback
+                ) else None
             )
             await self.store.finish_context(
                 running,
@@ -1535,6 +1614,7 @@ class V2ContextV1ExecutionBridge:
                 ),
                 demo_fallback=demo_fallback,
                 demo_fallback_reason=demo_fallback_reason,
+                demo_fallback_source=demo_fallback_source,
             )
             return response
 
