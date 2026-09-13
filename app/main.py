@@ -45,6 +45,14 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
                     app.state.container.orchestrator
                     .execute_v1_from_completed_question
                 ),
+                v1_context_reader=(
+                    app.state.container.orchestrator
+                    .read_completed_question_execution_context
+                ),
+                v1_context_value_resolver=(
+                    app.state.container.orchestrator
+                    .resolve_completed_question_context_value
+                ),
                 external=context_v1_external,
             )
         app.state.isolated_chat_handler = handler

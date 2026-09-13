@@ -369,10 +369,8 @@ class RawTurnPlanner:
             context_trace = accept_proposal(session, recognized.context_proposal, discovered,
                 state=state, question=request.question)
         except ContextProposalFailure as exc:
-            # The context bridge may have a scope-bound, execution-backed opaque
-            # anchor which is deliberately absent from ConversationState. Keep
-            # the already generated current-turn semantic evidence available so
-            # that bridge validation does not make a second model call.
+            # Keep the already generated current-turn semantic evidence
+            # available so bridge validation does not make a second model call.
             exc.current_turn_parse = parsed
             raise
         parsed, reference_repairs = repair_pure_historical_reference(parsed,

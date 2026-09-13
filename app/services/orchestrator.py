@@ -409,6 +409,51 @@ class DataAnalysisOrchestrator:
         execution_chat._completed_question_execution = True
         return await self.handle(execution_chat, identity)
 
+    async def read_completed_question_execution_context(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> CanonicalAnalysisRequest | None:
+        """Read V1's semantic result for the exact completed-question session.
+
+        The context bridge may use this only as evidence for conversational
+        wording after a successful query. Authorization, retrieval and
+        execution remain owned by the original V1 request path.
+        """
+        return await self.sessions.get_last_request(
+            identity.tenant_id,
+            identity.user_id,
+            chat.application_id,
+            chat.conversation_id,
+        )
+
+    async def resolve_completed_question_context_value(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        surface: str,
+        expected_family: str,
+    ) -> SemanticFilterBinding | None:
+        """Resolve a terse follow-up value through V1's semantic retriever.
+
+        The trusted identity has already passed the ordinary API ingress.  The
+        resolver intentionally uses the untouched V1 request scope and returns
+        only semantic evidence to the context layer; it does not materialize
+        authorization or any execution request on V2's behalf.
+        """
+        _ = identity
+        if self.question_rewriter is None:
+            return None
+        return await self.question_rewriter.resolve_context_filter_value(
+            surface,
+            expected_family=expected_family,
+            semantic_model_id=chat.semantic_model_id,
+            business_domain_id=self._effective_business_domain_id(chat),
+            business_domain_ids=list(chat.business_domain_ids),
+            tenant_id=identity.tenant_id,
+            user_id=identity.user_id,
+            application_id=chat.application_id,
+            conversation_id=chat.conversation_id,
+        )
+
     async def _handle_request(
         self, chat: ChatRequest, identity: TrustedIdentity
     ) -> AgentResponse:

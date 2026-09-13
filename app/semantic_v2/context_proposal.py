@@ -109,6 +109,10 @@ def discover_context(session, *, state=None, plans=(), pending=None):
             subject=_labels(semantics.subject), filters=_labels(semantics.filter_expression),
             time=_labels(semantics.time_spec), cleared_slots=list(task.clear_barriers),
             query_shape=str(prior_plans[task.task_id].query_shape) if task.task_id in prior_plans else None,
+            context_question=(
+                version.context_question.model_dump(mode='json')
+                if version.context_question is not None else None
+            ),
             created_order=min(v.created_at.timestamp() for v in task.versions),
             updated_order=updated(task), last_user_semantic_delta=None,
             last_delta_status='NOT_STORED_IN_TASK_VERSION; DO_NOT_INFER_FROM_QUESTION'))

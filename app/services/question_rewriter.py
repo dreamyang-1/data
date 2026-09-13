@@ -13,6 +13,7 @@ import httpx
 
 from app.domain.models import (
     CanonicalAnalysisRequest,
+    PrimaryIntent,
     SemanticAmbiguity,
     SemanticFilterBinding,
 )
@@ -512,6 +513,104 @@ class QuestionRewriter:
         for item in ambiguities:
             by_id[item.ambiguity_id or f"{item.type}:{item.phrase}"] = item
         return list(by_id.values())[:5]
+
+    @staticmethod
+    def _context_filter_family(*values: object) -> str:
+        """Map V1 entity attributes to a safe conversational edit family.
+
+        This deliberately groups product name, brand, manufacturer and product
+        category because users commonly replace one product-scoping surface
+        with another (for example a product name with a parent brand).  It
+        keeps hospitals and trading partners separate so a terse ``X呢`` can
+        never silently change the business role of the prior condition.
+        """
+        material = " ".join(str(value or "").strip().casefold() for value in values)
+        families = (
+            (
+                "COMMERCIAL_PRODUCT",
+                (
+                    "product_name", "goods_name", "商品名称", "产品名称",
+                    "商品品牌", "产品品牌", "parent_brand", "母品牌", "母厂牌",
+                    "brand", "厂家", "manufacturer", "商品分类", "产品分类",
+                    "category", "品类",
+                ),
+            ),
+            ("REGION", ("province", "city", "region", "area", "省份", "城市", "地区", "区域")),
+            ("HOSPITAL", ("hospital", "医院", "护理院", "卫生服务中心", "卫生院")),
+            ("PARTNER", ("dealer", "distributor", "supplier", "vendor", "经销商", "供应商")),
+        )
+        matches = [
+            family
+            for family, markers in families
+            if any(marker.casefold() in material for marker in markers)
+        ]
+        return matches[0] if len(matches) == 1 else "OTHER"
+
+    async def resolve_context_filter_value(
+        self,
+        surface: str,
+        *,
+        expected_family: str,
+        semantic_model_id: int | None,
+        business_domain_id: int | None,
+        business_domain_ids: list[int] | None = None,
+        tenant_id: str,
+        user_id: str,
+        application_id: str,
+        conversation_id: str,
+    ) -> SemanticFilterBinding | None:
+        """Use V1's existing scoped entity search for one contextual value.
+
+        The returned binding is evidence that V2 may replace one visible
+        surface in ``completed_question``.  It is not copied into an execution
+        request: the completed full question still traverses the ordinary V1
+        rewrite, intent, Oagent and SQL chain and is grounded there again.
+        """
+        literal = surface.strip().strip("%")
+        if (
+            not literal
+            or len(literal) > 500
+            or semantic_model_id is None
+            or expected_family not in {
+                "COMMERCIAL_PRODUCT", "REGION", "HOSPITAL", "PARTNER"
+            }
+        ):
+            return None
+        provisional_field = {
+            "COMMERCIAL_PRODUCT": "商品名称",
+            "REGION": "地区",
+            "HOSPITAL": "医院名称",
+            "PARTNER": "经销商名称",
+        }[expected_family]
+        probe = CanonicalAnalysisRequest(
+            conversation_id=conversation_id,
+            application_id=application_id,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            original_question=literal,
+            primary_intent=PrimaryIntent.DETAIL_QUERY,
+            semantic_model_id=semantic_model_id,
+            business_domain_ids=list(business_domain_ids or []),
+            filters=[{
+                "field": provisional_field,
+                "operator": "EQ",
+                "value": literal,
+            }],
+        )
+        ambiguities = await self.ground_executable_filters(
+            probe,
+            semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id,
+            business_domain_ids=list(business_domain_ids or []),
+        )
+        if ambiguities or len(probe.semantic_filter_bindings) != 1:
+            return None
+        binding = probe.semantic_filter_bindings[0]
+        if self._context_filter_family(
+            binding.attribute_code, binding.canonical_name
+        ) != expected_family:
+            return None
+        return binding
 
     async def rewrite(
         self,

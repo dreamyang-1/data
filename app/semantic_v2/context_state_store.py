@@ -315,6 +315,7 @@ return 1
         request_fingerprint: str,
         response: AgentResponse,
         v1_execution_called: bool,
+        final_state: ScopedArtifact | None = None,
     ) -> ContextStateSnapshot:
         record = snapshot.message(chat.message_id)
         if (
@@ -324,6 +325,17 @@ return 1
         ):
             raise ValueError("V2_CONTEXT_MESSAGE_RESERVATION_MISMATCH")
         value = deepcopy(snapshot.envelope)
+        if final_state is not None:
+            if final_state.kind != "CONVERSATION":
+                raise ValueError("V2_CONTEXT_FINAL_STATE_KIND_INVALID")
+            state = ConversationState.model_validate(final_state.payload)
+            if state.state_version != snapshot.state_version:
+                raise ValueError("V2_CONTEXT_FINAL_STATE_VERSION_MISMATCH")
+            current = snapshot.state
+            if current is None or final_state.context != current.context:
+                raise ValueError("V2_CONTEXT_FINAL_STATE_SCOPE_MISMATCH")
+            value["state"] = final_state.model_dump(mode="json")
+            value["state_version"] = state.state_version
         value["revision"] = snapshot.revision + 1
         value["messages"][chat.message_id] = {
             **record,

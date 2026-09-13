@@ -351,6 +351,76 @@ async def test_isolated_filter_lookup_makes_parent_brand_binding_authoritative()
     assert "FILTER_SUBJECT_REMOVED_FROM_TREND_GROUPING" in request.assumptions
 
 
+@pytest.mark.asyncio
+async def test_context_value_resolution_reuses_v1_entity_retrieval_across_product_attributes():
+    searcher = FakeSearcher([
+        {
+            "record_id": "parent-brand-fresenius",
+            "score": 1.0,
+            "entity_name": "生产厂家",
+            "attribute_name": "母厂牌",
+            "attribute_code": "parent_brand",
+            "attribute_value": "费森尤斯",
+            "business_domain_id": 205,
+            "semantic_model_version": "published-31",
+        },
+        {
+            "record_id": "manufacturer-fresenius",
+            "score": 0.75,
+            "entity_name": "生产厂家",
+            "attribute_name": "厂家名称",
+            "attribute_code": "manufacturer_name",
+            "attribute_value": "费森尤斯医疗用品股份有限公司",
+            "business_domain_id": 205,
+            "semantic_model_version": "published-31",
+        },
+    ])
+
+    binding = await QuestionRewriter(searcher).resolve_context_filter_value(
+        "费森尤斯",
+        expected_family="COMMERCIAL_PRODUCT",
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+        tenant_id="t1",
+        user_id="u1",
+        application_id="app",
+        conversation_id="context-value",
+    )
+
+    assert searcher.calls == [("费森尤斯", 81, None, [])]
+    assert binding is not None
+    assert binding.attribute_code == "parent_brand"
+    assert binding.canonical_value == "费森尤斯"
+
+
+@pytest.mark.asyncio
+async def test_context_value_resolution_rejects_a_different_semantic_family():
+    searcher = FakeSearcher([{
+        "record_id": "hospital-a",
+        "score": 1.0,
+        "entity_name": "医院",
+        "attribute_name": "医院名称",
+        "attribute_code": "hospital_name",
+        "attribute_value": "协和医院",
+        "business_domain_id": 205,
+    }])
+
+    binding = await QuestionRewriter(searcher).resolve_context_filter_value(
+        "协和医院",
+        expected_family="COMMERCIAL_PRODUCT",
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+        tenant_id="t1",
+        user_id="u1",
+        application_id="app",
+        conversation_id="context-value",
+    )
+
+    assert binding is None
+
+
 def test_explicit_per_product_trend_keeps_product_grouping_after_brand_binding():
     request = CanonicalAnalysisRequest(
         conversation_id="fresenius-product-series",

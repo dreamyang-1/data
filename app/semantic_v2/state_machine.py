@@ -10,7 +10,8 @@ from pydantic import AwareDatetime, ConfigDict, Field, model_validator
 
 from .enums import TaskVersionStatus
 from .models import (Identifier, StrictModel, ReadinessBlocker, TaskSemanticState,
-                     ExecutionAttemptRecord, DatasetAncestry, ClarificationOption)
+                     ExecutionAttemptRecord, DatasetAncestry, ClarificationOption,
+                     ContextQuestionState)
 from .slot_reducer import TaskPatch, apply_task_patch, semantic_fingerprint
 
 
@@ -112,6 +113,7 @@ class TaskVersion(StrictModel):
     status: TaskVersionStatus
     plan_id: Identifier | None = None
     semantics: TaskSemanticState = Field(default_factory=TaskSemanticState)
+    context_question: ContextQuestionState | None = None
     current_turn_ref: Identifier | None = None
     current_turn_digest: Identifier | None = None
     created_at: datetime
@@ -120,6 +122,10 @@ class TaskVersion(StrictModel):
     def immutable_semantics(self):
         from .models import freeze_contract
         object.__setattr__(self, 'semantics', freeze_contract(self.semantics))
+        if self.context_question is not None:
+            object.__setattr__(
+                self, 'context_question', freeze_contract(self.context_question)
+            )
         return self
 
     @property

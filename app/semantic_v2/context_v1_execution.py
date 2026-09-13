@@ -20,9 +20,11 @@ from app.config import Settings
 from app.domain.models import (
     AgentResponse,
     AnalysisProcessStep,
+    CanonicalAnalysisRequest,
     ChatRequest,
     PrimaryIntent,
     ReliabilityReport,
+    SemanticFilterBinding,
     TrustedIdentity,
 )
 from app.services.progress import emit_progress
@@ -39,6 +41,14 @@ from .completed_question import (
     build_completed_question_display,
 )
 from .context_proposal import ContextProposalFailure
+from .context_question import (
+    build_context_question,
+    canonical_matches_execution,
+    has_active_context_question,
+    is_contextual_short_edit,
+    publish_context_task,
+    resolve_context_question_followup,
+)
 from .context_state_store import ContextStateSnapshot, RedisContextStateStore
 from .current_catalog import CurrentAuthorizedCatalog
 from .enums import CatalogType
@@ -70,6 +80,9 @@ class ResolvedContextTurn:
     clarification_trace: Any = None
     display: CompletedQuestionDisplay | None = None
     bridge_route: str = "V2_RESOLVED_COMPLETED_QUESTION"
+    understanding: str | None = None
+    standalone_parse: Any = None
+    fallback_reason: str | None = None
 
 
 def _standalone_execution_display(
@@ -90,9 +103,9 @@ def _completed_question_step(
 ) -> AnalysisProcessStep | None:
     if not resolved.completed_question:
         return None
-    summary = (
-        resolved.display.public_message
-        if resolved.display is not None
+    summary = resolved.display.public_message if resolved.display is not None else (
+        f"本轮理解：{resolved.understanding}\n补全后的完整问题：{resolved.completed_question}"
+        if resolved.understanding
         else "补全后的完整问题：" + resolved.completed_question
     )
     if len(summary) > 500:
@@ -308,11 +321,21 @@ class V2ContextV1ExecutionBridge:
         ],
         clock: Callable[[], datetime],
         startup_receipt: dict[str, Any],
+        v1_context_reader: Callable[
+            [ChatRequest, TrustedIdentity],
+            Awaitable[CanonicalAnalysisRequest | None],
+        ] | None = None,
+        v1_context_value_resolver: Callable[
+            [ChatRequest, TrustedIdentity, str, str],
+            Awaitable[SemanticFilterBinding | None],
+        ] | None = None,
     ):
         self.store = store
         self.catalog = catalog
         self.model = model
         self.v1_executor = v1_executor
+        self.v1_context_reader = v1_context_reader
+        self.v1_context_value_resolver = v1_context_value_resolver
         self.clock = clock
         self.startup_receipt = dict(startup_receipt)
         self._locks: dict[str, asyncio.Lock] = {}
@@ -412,6 +435,50 @@ class V2ContextV1ExecutionBridge:
             if state is not None
             else None
         )
+        async def resolve_value(
+            surface: str, expected_family: str
+        ) -> SemanticFilterBinding | None:
+            if self.v1_context_value_resolver is None:
+                return None
+            return await self.v1_context_value_resolver(
+                chat, identity, surface, expected_family
+            )
+
+        context_resolution = await resolve_context_question_followup(
+            chat=chat,
+            identity=identity,
+            state_artifact=state,
+            catalog=catalog,
+            resolved_business_domain_ids=resolved_business_domain_ids,
+            now=self.clock(),
+            resolve_value=resolve_value,
+        )
+        if context_resolution is not None:
+            return (
+                ResolvedContextTurn(
+                    completed_question=context_resolution.completed_question,
+                    next_state=context_resolution.next_state,
+                    plan_state=None,
+                    bridge_route="V2_CONTEXT_QUESTION_COMPLETED",
+                    understanding=context_resolution.understanding,
+                ),
+                provenance,
+            )
+        if has_active_context_question(state) and is_contextual_short_edit(
+            chat.question
+        ):
+            return (
+                ResolvedContextTurn(
+                    completed_question=None,
+                    next_state=None,
+                    plan_state=None,
+                    clarification_question=(
+                        "当前替换值无法唯一对应上一任务中的可编辑条件，请补充要替换的条件。"
+                    ),
+                    bridge_route="V2_CONTEXT_QUESTION_AMBIGUOUS",
+                ),
+                provenance,
+            )
         engine = RawTurnPlanner(
             self.model, self.catalog if catalog is None else catalog, clock=self.clock
         )
@@ -431,6 +498,8 @@ class V2ContextV1ExecutionBridge:
                     next_state=result.next_state,
                     plan_state=None,
                     bridge_route=result.execution_route,
+                    standalone_parse=result.parse,
+                    fallback_reason=result.fallback_reason,
                 ),
                 provenance,
             )
@@ -634,6 +703,48 @@ class V2ContextV1ExecutionBridge:
             execution_chat._completed_question_execution = True
             response = await self.v1_executor(execution_chat, identity)
             response = _attach_completed_question(response, resolved)
+            final_state = None
+            if (
+                resolved.bridge_route == "V1_EXECUTION_FALLBACK_NEW_TASK"
+                and resolved.next_state is not None
+                and response.status == "COMPLETED"
+                and response.error_code is None
+                and any(item.kind == "QUERY_RESULT" for item in response.evidence)
+            ):
+                v1_request = None
+                if self.v1_context_reader is not None:
+                    candidate = await self.v1_context_reader(
+                        execution_chat, identity
+                    )
+                    if canonical_matches_execution(
+                        candidate, chat=execution_chat, identity=identity
+                    ):
+                        v1_request = candidate
+                    else:
+                        logger.warning(
+                            "V1 context evidence did not match completed execution request",
+                            extra={"message_id": chat.message_id},
+                        )
+                frame = build_context_question(
+                    chat=execution_chat,
+                    parse=resolved.standalone_parse,
+                    v1_request=v1_request,
+                    catalog_version=(provenance or {}).get("catalog_version"),
+                )
+                final_state = publish_context_task(
+                    resolved.next_state,
+                    chat=chat,
+                    frame=frame,
+                    created_at=self.clock(),
+                )
+                logger.info(
+                    "V2 context task published after successful V1 query",
+                    extra={
+                        "message_id": chat.message_id,
+                        "context_task_completeness": frame.completeness,
+                        "v1_semantic_evidence": v1_request is not None,
+                    },
+                )
             await self.store.complete(
                 running,
                 chat=chat,
@@ -641,6 +752,7 @@ class V2ContextV1ExecutionBridge:
                 request_fingerprint=fingerprint,
                 response=response,
                 v1_execution_called=True,
+                final_state=final_state,
             )
             return response
 
@@ -675,6 +787,13 @@ def build_context_v1_execution_handler(
     v1_executor: Callable[
         [ChatRequest, TrustedIdentity], Awaitable[AgentResponse]
     ],
+    v1_context_reader: Callable[
+        [ChatRequest, TrustedIdentity], Awaitable[CanonicalAnalysisRequest | None]
+    ] | None = None,
+    v1_context_value_resolver: Callable[
+        [ChatRequest, TrustedIdentity, str, str],
+        Awaitable[SemanticFilterBinding | None],
+    ] | None = None,
     external: ContextV1ExternalDependencies | None = None,
 ) -> V2ContextV1ExecutionBridge:
     receipt = validate_context_v1_settings(settings)
@@ -701,6 +820,8 @@ def build_context_v1_execution_handler(
         catalog=dependencies.catalog,
         model=dependencies.model,
         v1_executor=v1_executor,
+        v1_context_reader=v1_context_reader,
+        v1_context_value_resolver=v1_context_value_resolver,
         clock=lambda: datetime.now(timezone.utc).astimezone(),
         startup_receipt={
             **receipt,
