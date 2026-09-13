@@ -41,13 +41,20 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
             )
             handler = build_context_v1_execution_handler(
                 effective_settings,
-                v1_workflow=app.state.container.workflow,
+                v1_executor=(
+                    app.state.container.orchestrator
+                    .execute_v1_from_completed_question
+                ),
                 external=context_v1_external,
             )
         app.state.isolated_chat_handler = handler
         configure_langfuse(effective_settings)
         dataset_cleaner_started = bool(
-            handler is None and app.state.container.dataset_cleaner is not None
+            app.state.container.dataset_cleaner is not None
+            and (
+                handler is None
+                or bool(getattr(handler, "uses_v1_execution", False))
+            )
         )
         if dataset_cleaner_started:
             app.state.container.dataset_cleaner.start()

@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # bridge.  The default remains disabled so normal production behavior and
     # fail-closed execution-scope handling are unchanged.
     demo_mode: bool = False
+    # Source tree for the existing semantic-catalog authority used by the
+    # context-only bridge.  It is read on each request and is independent of
+    # the Limited Scalar publication/pin configuration below.
+    context_catalog_root: Path = SERVICE_BUNDLE_ROOT / "Oagnet"
     # v2 separates fingerprint-aware idempotency records from pre-upgrade Redis
     # values that cannot prove which request payload produced a cached response.
     session_key_prefix: str = "youo:data-analysis:v2"

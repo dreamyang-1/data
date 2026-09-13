@@ -396,6 +396,19 @@ class DataAnalysisOrchestrator:
                     if not running:
                         self._running_requests.pop(scope, None)
 
+    async def execute_v1_from_completed_question(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> AgentResponse:
+        """Run original V1 planning/execution for a V2-completed question.
+
+        The request keeps every execution field supplied by the caller.  Only
+        transport history is neutralized and the internal context mode is set
+        so legacy Pending/TaskFrame/LastRequest inheritance cannot run again.
+        """
+        execution_chat = chat.model_copy(deep=True, update={"history": []})
+        execution_chat._completed_question_execution = True
+        return await self.handle(execution_chat, identity)
+
     async def _handle_request(
         self, chat: ChatRequest, identity: TrustedIdentity
     ) -> AgentResponse:
@@ -2851,19 +2864,24 @@ class DataAnalysisOrchestrator:
         await emit_progress(
             "QUESTION_REWRITE", "RUNNING", "正在结合上下文和实体别名规范化问题。"
         )
-        if (
-            self.question_rewriter is not None
-            and not independent_chat
-            and not deterministic_business_fast_path
-            and not chat._completed_question_execution
+        if self.question_rewriter is not None and (
+            chat._completed_question_execution
+            or (not independent_chat and not deterministic_business_fast_path)
         ):
             rewrite = await self.question_rewriter.rewrite(
                 chat.question,
-                previous=previous_for_rewrite,
+                previous=(
+                    None if chat._completed_question_execution
+                    else previous_for_rewrite
+                ),
                 semantic_model_id=chat.semantic_model_id,
                 business_domain_id=self._effective_business_domain_id(chat),
                 business_domain_ids=list(chat.business_domain_ids),
-                force_context=turn_decision.inherit_business_context,
+                force_context=(
+                    False if chat._completed_question_execution
+                    else turn_decision.inherit_business_context
+                ),
+                apply_previous_context=not chat._completed_question_execution,
             )
             classification_question = rewrite.rewritten_question
         await emit_progress(
@@ -3169,15 +3187,21 @@ class DataAnalysisOrchestrator:
                         request.rewritten_question = render_execution_question(request)
 
         if chat._completed_question_execution:
-            # The V2 context bridge has already produced the exact standalone
-            # question that V1 must execute.  V1 intent extraction remains in
-            # charge of planning, but neither its model completion nor its
-            # legacy context rewriter may replace that text a second time.
+            # V2 already owns historical completion. V1 keeps context-free
+            # normalization of this current question, then owns all planning
+            # and execution stages as usual.
             request.original_question = chat.question
-            request.rewritten_question = chat.question
+            request.rewritten_question = (
+                rewrite.rewritten_question if rewrite is not None else chat.question
+            )
             request.rewrite_context_applied = False
-            request.rewrite_degraded = False
-            request.rewrite_events = []
+            request.rewrite_degraded = bool(rewrite and rewrite.degraded)
+            request.rewrite_events = (
+                [event.__dict__ for event in rewrite.events]
+                if rewrite is not None else []
+            )
+            if rewrite is not None and rewrite.semantic_model_version:
+                request.semantic_model_version = rewrite.semantic_model_version
             request.assumptions = [
                 value for value in request.assumptions
                 if value != "MODEL_QUESTION_COMPLETION_APPLIED"
@@ -4101,8 +4125,8 @@ class DataAnalysisOrchestrator:
             chat.question,
         )
         if chat._completed_question_execution:
-            execution_question = chat.question
-            canonical_question = chat.question
+            execution_question = request.rewritten_question or chat.question
+            canonical_question = execution_question
             execution_source = "V2_COMPLETED_QUESTION"
         else:
             execution_question, canonical_question, execution_source = (

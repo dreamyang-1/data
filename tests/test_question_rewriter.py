@@ -1263,3 +1263,37 @@ async def test_temporal_scope_before_polite_verb_is_normalized_without_losing_te
     assert any(
         event.kind == "GROUPED_CALCULATION_WORDING" for event in result.events
     )
+
+
+@pytest.mark.asyncio
+async def test_pre_resolved_context_keeps_current_normalization_without_history(monkeypatch):
+    previous = CanonicalAnalysisRequest(
+        semantic_model_id=81,
+        business_domain_ids=[205],
+        conversation_id="old-conversation",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询2025年江苏省订单笔数",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="订单笔数")],
+    )
+    rewriter = QuestionRewriter(None)
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("legacy history context must not run")
+
+    monkeypatch.setattr(rewriter, "_apply_context", forbidden)
+    result = await rewriter.rewrite(
+        "按月请计算2026年销售总额。",
+        previous=previous,
+        semantic_model_id=81,
+        business_domain_id=205,
+        business_domain_ids=[205],
+        force_context=True,
+        apply_previous_context=False,
+    )
+
+    assert result.context_applied is False
+    assert result.rewritten_question == "按月统计2026年销售总额。"
+    assert "订单笔数" not in result.rewritten_question
+    assert any(event.kind == "POLITE_WORD_ORDER" for event in result.events)

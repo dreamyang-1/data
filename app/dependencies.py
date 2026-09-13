@@ -47,6 +47,7 @@ class Container:
     file_importer: SpreadsheetFileImporter | None
     report_exporter: DatasetReportExporter | None
     business_question_collector: BusinessQuestionCollector | None
+    orchestrator: DataAnalysisOrchestrator
     workflow: object
 
 
@@ -252,5 +253,6 @@ def build_container(settings: Settings) -> Container:
             if settings.business_question_collection_enabled
             else None
         ),
+        orchestrator=orchestrator,
         workflow=build_workflow(orchestrator),
     )

@@ -544,7 +544,9 @@ async def chat(
     require_application_namespace(request, payload.application_id)
     external_conversation_id = payload.conversation_id
     isolated_handler = getattr(request.app.state, "isolated_chat_handler", None)
-    if isolated_handler is None:
+    if isolated_handler is None or bool(
+        getattr(isolated_handler, "uses_v1_ingress", False)
+    ):
         is_regeneration = payload.regenerate
         if not is_regeneration:
             await _collect_business_question(request, payload)
@@ -624,7 +626,9 @@ async def chat_stream(
     external_conversation_id = payload.conversation_id
     external_message_id = payload.message_id
     isolated_handler = getattr(request.app.state, "isolated_chat_handler", None)
-    if isolated_handler is None:
+    if isolated_handler is None or bool(
+        getattr(isolated_handler, "uses_v1_ingress", False)
+    ):
         is_regeneration = payload.regenerate
         if not is_regeneration:
             await _collect_business_question(request, payload)

@@ -522,6 +522,7 @@ class QuestionRewriter:
         business_domain_id: int | None,
         business_domain_ids: list[int] | None = None,
         force_context: bool = False,
+        apply_previous_context: bool = True,
     ) -> RewriteResult:
         if business_domain_ids is None:
             business_domain_ids = [business_domain_id] if business_domain_id is not None else []
@@ -539,14 +540,21 @@ class QuestionRewriter:
             locally_normalized
         )
         local_events.extend(temporal_events)
-        rewritten, context_applied = self._apply_context(
-            locally_normalized,
-            previous,
-            semantic_model_id=semantic_model_id,
-            business_domain_ids=business_domain_ids,
-            force_context=force_context,
-        )
-        if previous is not None and self.is_deterministic_slot_update(locally_normalized):
+        if apply_previous_context:
+            rewritten, context_applied = self._apply_context(
+                locally_normalized,
+                previous,
+                semantic_model_id=semantic_model_id,
+                business_domain_ids=business_domain_ids,
+                force_context=force_context,
+            )
+        else:
+            rewritten, context_applied = locally_normalized, False
+        if (
+            apply_previous_context
+            and previous is not None
+            and self.is_deterministic_slot_update(locally_normalized)
+        ):
             return RewriteResult(
                 original, rewritten, local_events, context_applied=context_applied
             )

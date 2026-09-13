@@ -1,0 +1,34 @@
+{
+  "baseline_head": "89880f1bc2d259829278dfd272b60785e3c306e9",
+  "production_files": [
+    "app/api.py",
+    "app/config.py",
+    "app/dependencies.py",
+    "app/main.py",
+    "app/semantic_v2/context_state_store.py",
+    "app/semantic_v2/context_v1_execution.py",
+    "app/semantic_v2/context_v1_execution_cutover.py",
+    "app/semantic_v2/current_catalog.py",
+    "app/services/orchestrator.py",
+    "app/services/question_rewriter.py"
+  ],
+  "test_files": [
+    "tests/test_orchestrator.py",
+    "tests/test_question_rewriter.py",
+    "tests/test_v2_context_v1_execution_bridge.py",
+    "tests/test_v2_context_v1_execution_cutover.py"
+  ],
+  "documentation_files": [
+    "docs/v2_cutover/context_v1_execution_slim/validation_report.md",
+    "docs/v2_cutover/context_v1_execution_slim/test_delta.json",
+    "docs/v2_cutover/context_v1_execution_slim/change_manifest.json"
+  ],
+  "excluded": [
+    ".env",
+    "logs",
+    "cache",
+    "credentials",
+    "private runtime receipts",
+    "business query results"
+  ]
+}

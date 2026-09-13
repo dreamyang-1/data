@@ -69,9 +69,11 @@ async def test_completed_question_execution_does_not_restore_v1_semantic_context
         async def get_recent_task_frames(self, *args, **kwargs):
             raise AssertionError("completed question must not restore V1 task history")
 
-    class RewriteTrap(QuestionRewriter):
-        async def rewrite(self, *args, **kwargs):
-            raise AssertionError("completed question must not be rewritten by V1")
+    class PreviousContextTrap(QuestionRewriter):
+        def _apply_context(self, *args, **kwargs):
+            raise AssertionError(
+                "completed question must not restore context in V1 rewriter"
+            )
 
     agent = DataAnalysisOrchestrator(
         settings=Settings(
@@ -83,7 +85,7 @@ async def test_completed_question_execution_does_not_restore_v1_semantic_context
         classifier=RuleBasedIntentClassifier(),
         adapters=build_mock_adapters(),
         sessions=ContextReadTrapStore(),
-        question_rewriter=RewriteTrap(None),
+        question_rewriter=PreviousContextTrap(None),
     )
     chat = ChatRequest(
         semantic_model_id=81,
