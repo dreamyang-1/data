@@ -48,6 +48,7 @@ from app.semantic_v2.context_v1_execution import (
 from app.semantic_v2.recognition_client import RecognitionFailure
 from app.semantic_v2.state_machine import ConversationState
 from app.services.orchestrator import DataAnalysisOrchestrator
+from app.services.progress import progress_scope
 from app.services.question_rewriter import QuestionRewriter
 from app.stores import InMemorySessionStore
 from test_v2_authorized_catalog_bridge import (
@@ -307,6 +308,33 @@ def test_context_frame_keeps_query_object_separate_from_metric_calculation_subje
     assert frame.dimensions == ["dealer"]
     assert frame.metrics == ["区域医院覆盖率"]
     assert "metric_subject_entity" not in frame.model_dump(mode="json")
+
+
+@pytest.mark.asyncio
+async def test_bridge_streams_context_progress_before_resolution(provider):
+    redis = DeploymentRedis()
+
+    async def v1(chat, _identity):
+        return response(chat)
+
+    bridge = handler(provider, redis, v1)
+    install_resolution(bridge, provider)
+    events = []
+
+    with progress_scope(events.append):
+        result = await bridge.handle(
+            request(
+                question="查询去年江苏省订单笔数",
+                message_id="context-progress",
+            ),
+            IDENTITY,
+        )
+
+    assert result.status == "COMPLETED"
+    assert events[0]["stage"] == "INTENT_RECOGNITION"
+    assert events[0]["status"] == "RUNNING"
+    assert events[0]["progress_phase"] == "V2_CONTEXT_START"
+    assert "正在理解当前问题" in events[0]["message"]
 
 
 @pytest.mark.parametrize(

@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 
 from pydantic import Field, JsonValue, TypeAdapter, ValidationError
 
+from app.services.progress import emit_progress
+
 from . import models as m
 from .authorized_contract import AuthorizedVersionMetadata, ScopedArtifact, contract_digest
 from .catalog_bridge import RECORD_TYPES, ScopedPlanSession
@@ -390,6 +392,12 @@ class RawTurnPlanner:
                 extra={'message_id': request.message_id, 'catalog_span_trace': catalog_spans})
             parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
                 text_ref=request.message_id, parsed=parsed)
+        await emit_progress(
+            'INTENT_RECOGNITION',
+            'RUNNING',
+            '当前问句和轮次关系已识别，正在匹配指标、维度、筛选条件和时间。',
+            progress_phase='V2_CURRENT_TURN_PARSED',
+        )
         if allow_standalone_new_task_passthrough and self._is_standalone_new_task(
             parse, context_trace
         ):
@@ -430,6 +438,12 @@ class RawTurnPlanner:
         if handle_repairs:
             logging.getLogger(__name__).info('V2 collection handle representation repaired',
                 extra={'message_id': request.message_id, 'handle_repairs': handle_repairs})
+        await emit_progress(
+            'INTENT_RECOGNITION',
+            'RUNNING',
+            '关键语义候选已提取，正在校验绑定并生成可独立执行的完整问题。',
+            progress_phase='V2_SEMANTIC_CANDIDATES_READY',
+        )
         draft,blockers,pending_operations,deferred=prepare_ambiguities(session,parse,draft,handles,candidates,SlotEditDraft)
         historical = selected_tasks.get(draft.historical_task_handle)
         if draft.historical_task_handle and (context_trace['FINAL_RELATION'] != 'RETURN_TO_TOPIC' or historical is None):

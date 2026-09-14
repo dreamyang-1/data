@@ -588,7 +588,7 @@ async def chat_refresh(
         "这是 POST SSE，采用与 New_Agent 相同的 data-only Envelope；"
         "事件类型放在JSON的 type 字段中，不输出 event: 行。"
         "常用类型为 updata_state、message_chunk、tool_result、answer、complete。"
-        "各节点已完成并校验的展示文本通过 message_chunk 渐进推送；普通文本默认"
+        "各节点先即时推送运行状态，已完成并校验的展示文本再通过 message_chunk 渐进推送；普通文本默认"
         "每 4 个 Unicode 字符一片，超长内容自适应增大片长并限制事件总数。"
         "最终答案完成可靠性校验后，按 New_Agent 的规则每 6 个 Unicode 字符"
         "推送一个 output/message_chunk（末片可少于 6 字）。"
@@ -1010,12 +1010,12 @@ def _thinking_events(
     chunk_size: int = 4,
     max_chunks: int = 120,
 ) -> list[str]:
-    """Render one completed node as state plus progressive text SSE events.
+    """Render one node milestone as state plus progressive text SSE events.
 
-    Progress producers still publish one complete, validated milestone.  This
-    function only splits its public rendering at the HTTP boundary, preserving
-    exact content, order and metadata while allowing the browser to paint a
-    few Unicode characters at a time.
+    Producers may publish truthful RUNNING milestones before the validated
+    result. This function splits each public milestone at the HTTP boundary,
+    preserving exact content, order and metadata while allowing the browser to
+    paint a few Unicode characters at a time.
     """
 
     stage = str(progress.get("stage") or "processing")
@@ -1214,11 +1214,11 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
 def _heading_event_is_visible_summary(
     section: str, event: dict[str, Any]
 ) -> bool:
-    # The platform may collapse the short INTENT_RECOGNITION/RUNNING chunk.
-    # Attach its heading to the completed structured summary so the title and
-    # extracted fields are rendered together. Other stages keep their first
-    # emitted event, matching the existing UI behavior.
-    return section != "intent" or str(event.get("status") or "").upper() == "COMPLETED"
+    # Open every section on its first truthful milestone. In particular, the
+    # intent node must become visible before structured model validation ends;
+    # otherwise a 30-second model call looks like a stalled request even though
+    # SSE is connected and work is progressing.
+    return True
 
 
 def _new_agent_think_step(stage: str) -> str:

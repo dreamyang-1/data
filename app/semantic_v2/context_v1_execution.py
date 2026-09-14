@@ -858,6 +858,12 @@ class V2ContextV1ExecutionBridge:
                 return response
 
             context_chat = chat.model_copy(deep=True, update={"history": []})
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "正在理解当前问题，并核对本轮与会话上下文的关系。",
+                progress_phase="V2_CONTEXT_START",
+            )
             catalog = await self._request_catalog(context_chat)
             provenance = None
             try:

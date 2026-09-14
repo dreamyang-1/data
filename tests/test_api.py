@@ -1022,7 +1022,9 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
     )
     assert intent_chunk["step"] == "step1"
-    assert "#### 1、意图识别" not in intent_chunk["content"]
+    assert "#### 1、意图识别" in thinking_content(
+        events, "INTENT_RECOGNITION", status="RUNNING"
+    )
     completed_intent_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
@@ -1032,10 +1034,10 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     completed_intent_content = thinking_content(
         events, "INTENT_RECOGNITION", status="COMPLETED"
     )
-    assert "#### 1、意图识别" in completed_intent_content
+    assert "#### 1、意图识别" not in completed_intent_content
     assert completed_intent_chunk["meta"]["display_model"] == "IntentRecognitionDisplayV2"
     assert completed_intent_chunk["meta"]["display_version"] == "V2"
-    assert "#### 1、意图识别\n\n用户原始问题：" in completed_intent_content
+    assert "用户原始问题：" in completed_intent_content
     assert re.search(
         r"用户原始问题：[^\n]+  \n补全后的问题：",
         completed_intent_content,

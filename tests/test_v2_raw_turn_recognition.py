@@ -10,6 +10,7 @@ import httpx
 import pytest
 
 from app.config import Settings
+from app.services.progress import progress_scope
 from app.semantic_v2.authorized_contract import ScopedArtifact, contract_digest
 from app.semantic_v2.context_proposal import ContextProposalFailure
 from app.semantic_v2.pipeline import CurrentTurnSemanticParse
@@ -103,13 +104,21 @@ async def turns(engine,steps):
 @pytest.mark.asyncio
 async def test_raw_input_reaches_model_catalog_and_plan(catalog):
     steps=[metric_step('销售额')];engine,transport=planner(catalog,steps)
-    result=(await turns(engine,steps))[0]
+    progress=[]
+    with progress_scope(progress.append):
+        result=(await turns(engine,steps))[0]
     assert result.plan['logical_plan']['payload']['measures'][0]['canonical_code']=='amount'
     assert result.plan['backend_contract']['mode']=='SHADOW_ONLY'
     assert len(transport.calls)==2
     assert all(c['model']=='existing-configured-model' and c['temperature']==0 for c in transport.calls)
     assert 'tasks' not in json.loads(transport.calls[0]['messages'][1]['content'])
     assert result.next_state.context.authorized_scope.business_domain_ids==(205,)
+    assert [item['progress_phase'] for item in progress] == [
+        'V2_CURRENT_TURN_PARSED',
+        'V2_SEMANTIC_CANDIDATES_READY',
+    ]
+    assert all(item['stage'] == 'INTENT_RECOGNITION' for item in progress)
+    assert all(item['status'] == 'RUNNING' for item in progress)
 
 
 @pytest.mark.asyncio
