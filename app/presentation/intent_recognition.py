@@ -7,6 +7,7 @@ intent recognition, ASL generation, SQL translation, or execution.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -576,7 +577,13 @@ def build_intent_recognition_display_v2(
 def render_intent_recognition_display_v2(
     view: IntentRecognitionDisplayV2,
 ) -> str:
-    """Render the document-defined public trace with one fact per line."""
+    """Render intent facts that are known before downstream ASL generation.
+
+    The executable ASL does not exist when this view is built.  Do not present
+    a second, locally reconstructed structure as if it were the ASL selected by
+    Oagnet.  The validated ASL is rendered separately once query planning has
+    completed.
+    """
 
     original_label = (
         "用户原始问句"
@@ -595,59 +602,20 @@ def render_intent_recognition_display_v2(
         f"任务意图：{view.task_intent}",
         f"意图判定依据：{view.intent_basis}",
     ])
-    structured: list[str] = []
-    if view.metrics:
-        structured.append(
-            f"指标：{_list_text(view.metrics)}（来源：当前语义模型向量库）"
-        )
-    elif view.show_structure:
-        structured.append(
-            "指标：[]（用户未要求统计指标）"
-            if view.show_empty_metrics
-            else "指标：[]"
-        )
-    if view.entity_values:
-        structured.append(
-            f"实体：{_entity_text(view.entity_values)}"
-            "（来源：当前语义模型向量库）"
-        )
-    elif view.entity:
-        structured.append(f"实体：{view.entity}")
-    structured.append(
-        f"维度：{_list_text(view.dimensions)}（来源：当前语义模型向量库）"
-        if view.dimensions else "维度：[]"
-    )
-    structured.append(
-        f"查询字段：{_list_text(view.fields)}（来源：当前语义模型向量库）"
-        if view.fields else "查询字段：[]"
-    )
-    structured.append(
-        f"时间区间：{view.time_range}（来源：{view.time_source}）"
-        if view.time_range else "时间区间：无"
-    )
-    structured.append(
-        f"筛选条件：{_list_text(view.filters)}"
-        if view.filters else "筛选条件：无"
-    )
-    if view.show_structure:
-        structured.append(
-            f"排序数量：{view.ranking_count if view.ranking_count is not None else '无'}"
-        )
-    if structured and view.show_structure:
-        lines.append("结构化提取：")
-        lines.extend(structured)
-    lines.extend([
-        f"轮次关系：{view.turn_relation}",
-        f"上下文补全：{view.context_completion}",
-        f"是否需要追问：{'是' if view.needs_clarification else '否'}",
-        (
-            f"{'需要追问' if view.needs_clarification else '不追问'}理由："
-            f"{view.clarification_reason}"
-        ),
-    ])
     if view.show_structure:
         lines.append(f"参数规范化：{view.normalization_status}")
     return "\n".join(lines)
+
+
+def render_asl_extraction_json(asl: dict[str, object]) -> str:
+    """Render the exact validated ASL object without a display-side rewrite."""
+
+    return (
+        "结构化提取（ASL）：\n"
+        "```json\n"
+        f"{json.dumps(asl, ensure_ascii=False, indent=2)}\n"
+        "```"
+    )
 
 
 def build_composite_intent_recognition_display_v2(
@@ -725,10 +693,5 @@ def render_composite_intent_recognition_display_v2(
             f"子任务 {index}（{task.task_id}）：{task.question}；"
             f"意图={task.intent}{dependency}"
         )
-    lines.extend([
-        "轮次关系：独立复合问题",
-        "上下文补全：否（共享条件已写入每个完整子任务）",
-        "是否需要追问：由各子任务完成语义规范化后分别校验",
-        f"参数规范化：任务拆分已完成（规划器={view.planner}）",
-    ])
+    lines.append(f"参数规范化：任务拆分已完成（规划器={view.planner}）")
     return "\n".join(lines)

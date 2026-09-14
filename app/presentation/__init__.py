@@ -7,6 +7,7 @@ from .intent_recognition import (
     build_composite_intent_recognition_display_v2,
     build_intent_recognition_display_v2,
     render_composite_intent_recognition_display_v2,
+    render_asl_extraction_json,
     render_intent_recognition_display_v2,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     "build_composite_intent_recognition_display_v2",
     "build_intent_recognition_display_v2",
     "render_composite_intent_recognition_display_v2",
+    "render_asl_extraction_json",
     "render_intent_recognition_display_v2",
 ]

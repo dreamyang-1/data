@@ -88,6 +88,56 @@ def test_chat_endpoint():
     assert response.json()["intent_confidence"] == 0.95
 
 
+def test_stream_replaces_local_structure_with_exact_asl_json():
+    with TestClient(build_test_app()) as client:
+        response = client.post(
+            "/agent_chat/stream",
+            headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
+            json={
+                "semantic_model_id": 81,
+                "conversation_id": "asl-display-stream",
+                "application_id": "app1",
+                "message_id": "m1",
+                "question": "查询本月销售额",
+            },
+        )
+
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    intent = next(
+        event for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
+        and event.get("meta", {}).get("status") == "COMPLETED"
+    )
+    intent_message = intent["meta"]["message"]
+    assert "结构化提取" not in intent_message
+    assert "轮次关系：" not in intent_message
+    assert "上下文补全：" not in intent_message
+    assert "是否需要追问：" not in intent_message
+    assert "不追问理由：" not in intent_message
+
+    asl_event = next(
+        event for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "ASL_GENERATION"
+    )
+    asl_message = asl_event["meta"]["message"]
+    asl_json = asl_message.split("```json\n", 1)[1].rsplit("\n```", 1)[0]
+    assert json.loads(asl_json) == {
+        "version": "2.0",
+        "intent": "query",
+        "metrics": [{
+            "name": "metric.sales_amount",
+            "alias": "销售额",
+        }],
+        "ambiguity": [],
+    }
+    assert asl_event["meta"]["display_model"] == "OagentASL"
+
+
 def test_chat_collects_sync_and_stream_questions_but_not_refresh(tmp_path):
     document_path = tmp_path / "实际业务问题.md"
     app = build_test_app(
@@ -236,7 +286,7 @@ def test_intent_summary_marks_file_based_analysis_only_when_selected():
     assert "文件判断：检测到用户上传文件，但当前问题不使用该文件" in normal_summary
 
 
-def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
+def test_intent_summary_hides_internal_turn_and_clarification_diagnostics():
     standalone = CanonicalAnalysisRequest(
         conversation_id="turn-relation-display",
         application_id="app",
@@ -250,10 +300,10 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
     standalone_summary = DataAnalysisOrchestrator._intent_think_summary(
         standalone
     )
-    assert "轮次关系：独立新问题" in standalone_summary
-    assert "上下文补全：否" in standalone_summary
-    assert "是否需要追问：否" in standalone_summary
-    assert "不追问理由：" in standalone_summary
+    assert "轮次关系：" not in standalone_summary
+    assert "上下文补全：" not in standalone_summary
+    assert "是否需要追问：" not in standalone_summary
+    assert "不追问理由：" not in standalone_summary
     assert "参数规范化：已完成" in standalone_summary
 
     followup = standalone.model_copy(
@@ -265,8 +315,8 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
         },
     )
     followup_summary = DataAnalysisOrchestrator._intent_think_summary(followup)
-    assert "轮次关系：当前主题追问" in followup_summary
-    assert "上下文补全：是" in followup_summary
+    assert "轮次关系：" not in followup_summary
+    assert "上下文补全：" not in followup_summary
 
     model_enriched = standalone.model_copy(
         deep=True,
@@ -285,7 +335,7 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
     assert "意图判定依据：" in model_summary
 
 
-def test_intent_summary_hides_unverified_and_empty_semantic_slots():
+def test_intent_summary_does_not_render_a_pre_asl_structure():
     request = CanonicalAnalysisRequest(
         conversation_id="vector-display-only",
         application_id="app",
@@ -312,16 +362,17 @@ def test_intent_summary_hides_unverified_and_empty_semantic_slots():
 
     summary = DataAnalysisOrchestrator._intent_think_summary(request)
 
-    assert "查询字段：['经销商名称']" in summary
-    assert "实体：费森尤斯医疗用品股份有限公司" in summary
-    assert "商品品牌 EQ 费森尤斯医疗用品股份有限公司" in summary
-    assert "维度：[]" in summary
+    assert "结构化提取" not in summary
+    assert "查询字段：" not in summary
+    assert "实体：费森尤斯医疗用品股份有限公司" not in summary
+    assert "商品品牌 EQ 费森尤斯医疗用品股份有限公司" not in summary
+    assert "维度：" not in summary
     assert "商品名称 EQ 费森尤斯" not in summary
     assert "模型猜测值" not in summary
     assert "未提取" not in summary
 
 
-def test_intent_summary_omits_structure_line_when_nothing_is_vector_grounded():
+def test_intent_summary_omits_all_local_structure_when_nothing_is_grounded():
     request = CanonicalAnalysisRequest(
         conversation_id="no-vector-display",
         application_id="app",
@@ -337,8 +388,9 @@ def test_intent_summary_omits_structure_line_when_nothing_is_vector_grounded():
 
     assert "模型猜测对象" not in summary
     assert "未提取" not in summary
-    assert "指标：[]（用户未要求统计指标）" in summary
-    assert "排序数量：无" in summary
+    assert "结构化提取" not in summary
+    assert "指标：" not in summary
+    assert "排序数量：" not in summary
 
 
 def test_intent_display_v2_is_multiline_and_does_not_mutate_execution_request():
@@ -372,12 +424,12 @@ def test_intent_display_v2_is_multiline_and_does_not_mutate_execution_request():
     assert "\n用户原始问题：" in summary
     assert "\n补全后的问题：" in summary
     assert "文件判断：" not in summary
-    assert "\n结构化提取：\n指标：[]" in summary
-    assert "商品品牌 EQ 费森尤斯（来源：用户原始输入，经当前语义模型向量库规范化）" in summary
-    assert "\n是否需要追问：否" in summary
+    assert "\n结构化提取" not in summary
+    assert "商品品牌 EQ 费森尤斯" not in summary
+    assert "\n是否需要追问：" not in summary
 
 
-def test_default_trend_time_display_waits_for_verified_source_watermark():
+def test_default_trend_time_is_not_reconstructed_before_asl_generation():
     request = CanonicalAnalysisRequest(
         conversation_id="intent-display-watermark-time",
         application_id="app",
@@ -394,11 +446,11 @@ def test_default_trend_time_display_waits_for_verified_source_watermark():
 
     summary = DataAnalysisOrchestrator._intent_think_summary(request)
 
-    assert "最近12个完整业务月份（执行时按数据水位确定）" in summary
+    assert "时间区间：" not in summary
     assert "2025-09-04 至 2026-09-05" not in summary
 
 
-def test_intent_display_v2_renders_relation_enum_without_internal_code():
+def test_intent_display_v2_does_not_render_local_filter_or_entity_projection():
     request = CanonicalAnalysisRequest(
         conversation_id="intent-display-enum",
         application_id="app",
@@ -417,8 +469,8 @@ def test_intent_display_v2_renders_relation_enum_without_internal_code():
 
     summary = DataAnalysisOrchestrator._intent_think_summary(request)
 
-    assert "适用科室类型 EQ 主要适用" in summary
-    assert "实体：TDC-3" in summary
+    assert "适用科室类型 EQ 主要适用" not in summary
+    assert "实体：TDC-3" not in summary
     assert "实体：1" not in summary
 
 
