@@ -1558,7 +1558,9 @@ class ContextQuestionFilter(StrictModel):
     attribute_code: str | None = Field(default=None, max_length=257)
     semantic_family: str = Field(min_length=1, max_length=100)
     evidence_source: Literal[
-        "V1_SUCCESSFUL_QUERY_EVIDENCE", "CURRENT_EXPLICIT_SURFACE"
+        "V1_SUCCESSFUL_QUERY_EVIDENCE",
+        "CURRENT_EXPLICIT_SURFACE",
+        "V2_TASK_STATE",
     ]
 
 
@@ -1569,7 +1571,9 @@ class ContextQuestionTime(StrictModel):
     start: date
     end_exclusive: date
     evidence_source: Literal[
-        "V1_SUCCESSFUL_QUERY_EVIDENCE", "CURRENT_EXPLICIT_SURFACE"
+        "V1_SUCCESSFUL_QUERY_EVIDENCE",
+        "CURRENT_EXPLICIT_SURFACE",
+        "V2_TASK_STATE",
     ]
 
 
@@ -1589,7 +1593,9 @@ class ContextQuestionState(StrictModel):
     """
 
     schema_version: Literal["v2-context-question-v1"] = "v2-context-question-v1"
-    provenance: Literal["V2_CONTEXT_WITH_V1_QUERY_EVIDENCE"] = (
+    provenance: Literal[
+        "V2_CONTEXT_WITH_V1_QUERY_EVIDENCE", "V2_CONTEXT_RESOLUTION"
+    ] = (
         "V2_CONTEXT_WITH_V1_QUERY_EVIDENCE"
     )
     completeness: Literal["PARTIAL"] = "PARTIAL"

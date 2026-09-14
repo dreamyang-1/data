@@ -257,6 +257,31 @@ return 1
                 raise ValueError("V2_CONTEXT_PLANNED_STATE_VERSION_MISMATCH")
             value["state"] = next_state.model_dump(mode="json")
             value["state_version"] = state.state_version
+            # A language-only context continuation creates a new TaskVersion
+            # without a V2 logical plan.  The previous version's plan must not
+            # remain eligible for a later turn: RawTurnPlanner correctly
+            # rejects a plan whose version/identity differs from the active
+            # task, which would otherwise block an unrelated complete NEW_TASK.
+            for task_id, raw_plan in tuple(value["plans"].items()):
+                plan = AuthorizedLogicalPlan.model_validate(raw_plan["payload"])
+                task = state.tasks.get(task_id)
+                active = (
+                    next(
+                        (
+                            item for item in task.versions
+                            if item.version == task.active_version
+                        ),
+                        None,
+                    )
+                    if task is not None
+                    else None
+                )
+                if (
+                    active is None
+                    or plan.task_version != active.version
+                    or active.plan_id != plan.plan_id
+                ):
+                    del value["plans"][task_id]
         elif plan_state is not None or pending_state is not None:
             raise ValueError("V2_CONTEXT_ARTIFACTS_REQUIRE_STATE")
         if plan_state is not None:

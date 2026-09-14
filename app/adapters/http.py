@@ -604,7 +604,16 @@ class HttpDataRetrievalAdapter:
         request: CanonicalAnalysisRequest,
         business_domain_id: int | None,
     ) -> dict[str, int | list[int] | None]:
-        """Build Oagent's execution scope without changing request authorization."""
+        """Forward V1's request scope, with optional proven single-domain narrowing.
+
+        An empty business-domain list is Oagent's existing MODEL_WIDE contract.
+        Entity-vector grounding may provide a single execution-domain hint, but
+        failure to find such a hit must not turn an otherwise executable V1
+        question into ``OAGENT_EXECUTION_SCOPE_UNRESOLVED``.  In that case the
+        original MODEL_WIDE request is forwarded and Oagent resolves the domain
+        from its current semantic catalog and returns the selected domain in its
+        signed semantic evidence.
+        """
 
         scope = request.authorized_semantic_scope
         requested_domains = list(request.business_domain_ids)
@@ -630,28 +639,23 @@ class HttpDataRetrievalAdapter:
                     "Resolved execution scope differs from explicit authorization",
                 )
             resolved_domains = requested_domains
-        elif not resolved_domains:
-            raise AdapterError(
-                "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
-                "MODEL_WIDE request has no resolved Oagent execution domain",
-            )
+            execution_domain = resolved_domains[0]
+        elif business_domain_id is None:
+            # Preserve the platform/V1 contract exactly.  Oagent supports an
+            # empty domain list as MODEL_WIDE and proves the domains selected
+            # by the generated ASL in ``semantic_evidence``.
+            return {
+                "business_domain_id": None,
+                "business_domain_ids": [],
+            }
+        else:
+            if resolved_domains != [business_domain_id]:
+                raise AdapterError(
+                    "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
+                    "Single-domain narrowing is not backed by current semantic evidence",
+                )
+            execution_domain = business_domain_id
 
-        if (
-            not resolved_domains
-            or any(type(domain) is not int or domain <= 0 for domain in resolved_domains)
-            or len(resolved_domains) != len(set(resolved_domains))
-        ):
-            raise AdapterError(
-                "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
-                "Oagent execution scope is empty or invalid",
-            )
-        if len(resolved_domains) > 1:
-            raise AdapterError(
-                "OAGENT_MULTI_DOMAIN_CONTRACT_UNSUPPORTED",
-                "Oagent /agent/query does not support multiple execution domains",
-            )
-
-        execution_domain = resolved_domains[0]
         if business_domain_id is not None and business_domain_id != execution_domain:
             raise AdapterError(
                 "REQUEST_SCOPE_INVALID",

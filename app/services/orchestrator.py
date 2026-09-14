@@ -431,6 +431,7 @@ class DataAnalysisOrchestrator:
         identity: TrustedIdentity,
         surface: str,
         expected_family: str,
+        preferred_attribute_code: str | None = None,
     ) -> SemanticFilterBinding | None:
         """Resolve a terse follow-up value through V1's semantic retriever.
 
@@ -445,6 +446,7 @@ class DataAnalysisOrchestrator:
         return await self.question_rewriter.resolve_context_filter_value(
             surface,
             expected_family=expected_family,
+            preferred_attribute_code=preferred_attribute_code,
             semantic_model_id=chat.semantic_model_id,
             business_domain_id=self._effective_business_domain_id(chat),
             business_domain_ids=list(chat.business_domain_ids),

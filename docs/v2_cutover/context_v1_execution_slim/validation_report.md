@@ -145,3 +145,56 @@ Per the instruction to stop architecture changes after the comparable suite and
 avoid adding more fallback/anchor compatibility, no Bridge code was changed for
 this result. Catalog metadata mutation and the second relation-query group were
 not started because the first group did not pass.
+
+## Context capability closure — 2026-09-14
+
+The subsequent implementation keeps the slim architecture and closes the
+observed failures by semantic class rather than by business literal:
+
+| Capability class | Generic behavior |
+|---|---|
+| Complete standalone question | V2 first attempts normal Task publication; a complete unsupported NEW_TASK may still pass its unchanged text to V1. |
+| Time and time-grain edit | Replace only the active task's time slot and preserve its metric, entity and filters. |
+| Metric edit | Add, remove or replace a catalog-proven metric while preserving the active task scope. |
+| Filter edit | Replace only a compatible semantic family; explicit cross-family replacement is rejected rather than silently becoming ADD. |
+| Filter clear | Clear the named family, including nationwide/all-value language, without restoring an older value. |
+| Named return | A named object plus an explicit metric replaces both slots only after unique current-catalog/V1 resolver proof. |
+| Relationship pronoun | A singular pronoun resolves to one proven relationship actor; plural/result-set references remain tied to result evidence. |
+| Result-set continuation | Ranking, drill-down, count and extreme-value continuations retain the immediate governed result context and fail closed when no unique antecedent exists. |
+| New-topic isolation | A self-contained current question wins over older pronouns, values and failed tasks. |
+| V1 parser compatibility | Demo mode may retry one simpler real V1 question for universal entity scope or a redundant generic type suffix; it never invents a result and never removes a concrete entity value. |
+
+The bridge still delegates authentication, MODEL_WIDE scope, retrieval,
+Canonical construction, Intent, Oagent, ASL, SQL, database access, Dataset and
+response assembly to the original V1 path. It does not import or invoke
+`context_v1_execution_cutover.py`. Catalog Pin, AUTO_REFRESH, catalog
+migration/reseal, `DemoExecutionEnvelope`, execution-scope reconstruction and
+prior-result fallback remain outside the live bridge.
+
+Final verification on the accumulated candidate:
+
+- Focused and affected tests: **347 passed / 0 failed**.
+- Full offline suite: **3774 passed / 91 existing failed / 0 collection errors**.
+- Compared with the latest pre-closure full candidate: **old-pass -> new-fail = 0** and **old-fail -> new-pass = 15**.
+- The candidate contains 45 new nodes. Three older nodes were intentionally
+  replaced by tests for the approved slim contracts: MODEL_WIDE is forwarded
+  to V1/Oagent instead of being rejected by the Bridge, and failed direct
+  completion preserves current semantic context rather than reviving an older
+  task.
+- Python AST and `compileall` checks passed. `git diff --check` passed; Ruff was
+  unavailable in the installed environment.
+
+This evidence covers context completion, state continuity and the V1 handoff.
+It does not claim semantic answer accuracy for every downstream query shape.
+
+## Final runtime load
+
+The 16 explicit source, test and report files were synchronized from the Git
+worktree to the development runtime directory and verified byte-for-byte with
+SHA-256. Only DataAnalysis Agent was restarted: 8088 moved from PID 6992 to PID
+26356. `/live` returned HTTP 200 and `/ready` returned HTTP 200 / `READY` with
+`runtime_mode=V2_CONTEXT_V1_EXECUTION`. The unrelated loopback 8088 listener
+and the Java/platform, Oagent and SQL Translator services were not restarted.
+
+The fixed two-minute platform input stream was paused before this final load,
+so no new live semantic result is claimed in this closing section.

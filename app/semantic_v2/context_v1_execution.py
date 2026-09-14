@@ -42,11 +42,14 @@ from .completed_question import (
 )
 from .context_proposal import ContextProposalFailure
 from .context_question import (
+    build_result_availability_question,
     build_context_question,
     canonical_matches_execution,
     has_active_context_question,
     is_contextual_short_edit,
+    is_self_contained_execution_question,
     publish_context_task,
+    refine_context_question_relation_actor,
     resolve_context_question_followup,
     resolve_context_references,
 )
@@ -307,6 +310,46 @@ def _revalidate_context_artifacts(
     return rebound_state, rebound_plan_artifacts, rebound_pending, provenance
 
 
+def _plans_for_active_task_versions(
+    state: ScopedArtifact | None,
+    plans: tuple[ScopedArtifact, ...],
+) -> tuple[ScopedArtifact, ...]:
+    """Drop obsolete plan snapshots before context discovery.
+
+    Stable conversation state may already contain a context-only TaskVersion
+    produced by an older bridge process while Redis still holds the preceding
+    V2 plan.  A plan is usable only for the exact active version and plan id it
+    was created for.  Ignoring obsolete evidence is safe; treating it as the
+    current plan is not.
+    """
+
+    if state is None:
+        return ()
+    current = ConversationState.model_validate(state.payload)
+    usable: list[ScopedArtifact] = []
+    for artifact in plans:
+        plan = AuthorizedLogicalPlan.model_validate(artifact.payload)
+        task = current.tasks.get(plan.task_id)
+        active = (
+            next(
+                (
+                    item for item in task.versions
+                    if item.version == task.active_version
+                ),
+                None,
+            )
+            if task is not None
+            else None
+        )
+        if (
+            active is not None
+            and plan.task_version == active.version
+            and active.plan_id == plan.plan_id
+        ):
+            usable.append(artifact)
+    return tuple(usable)
+
+
 class V2ContextV1ExecutionBridge:
     """Resolve context once, then call the original V1 execution once."""
 
@@ -329,9 +372,10 @@ class V2ContextV1ExecutionBridge:
             Awaitable[CanonicalAnalysisRequest | None],
         ] | None = None,
         v1_context_value_resolver: Callable[
-            [ChatRequest, TrustedIdentity, str, str],
+            [ChatRequest, TrustedIdentity, str, str, str | None],
             Awaitable[SemanticFilterBinding | None],
         ] | None = None,
+        demo_mode: bool = False,
     ):
         self.store = store
         self.catalog = catalog
@@ -341,7 +385,76 @@ class V2ContextV1ExecutionBridge:
         self.v1_context_value_resolver = v1_context_value_resolver
         self.clock = clock
         self.startup_receipt = dict(startup_receipt)
+        self.demo_mode = demo_mode
         self._locks: dict[str, asyncio.Lock] = {}
+
+    async def _retry_for_result_availability(
+        self,
+        *,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        resolved: ResolvedContextTurn,
+        response: AgentResponse,
+        prior_state: ScopedArtifact | None = None,
+    ) -> AgentResponse:
+        if (
+            not self.demo_mode
+            or response.status == "COMPLETED"
+            or response.error_code is None
+        ):
+            return response
+        failed_capability = (
+            getattr(response, "_upstream_error_code", None)
+            or response.error_code
+        )
+        fallback_question = build_result_availability_question(
+            resolved.next_state,
+            failed_capability=failed_capability,
+            completed_question=resolved.completed_question,
+            prior_state_artifact=(
+                prior_state
+                if resolved.bridge_route.startswith("V2_CONTEXT_")
+                else None
+            ),
+        )
+        if not fallback_question or fallback_question == resolved.completed_question:
+            return response
+        retry_id = "v2-result-retry-" + contract_digest({
+            "conversation_id": chat.conversation_id,
+            "message_id": chat.message_id,
+            "question": fallback_question,
+        })[:24]
+        retry_chat = chat.model_copy(
+            deep=True,
+            update={
+                "message_id": retry_id,
+                "question": fallback_question,
+                "history": [],
+            },
+        )
+        retry_chat._completed_question_execution = True
+        retried = await self.v1_executor(retry_chat, identity)
+        if not (
+            retried.status == "COMPLETED"
+            and retried.error_code is None
+            and any(item.kind == "QUERY_RESULT" for item in retried.evidence)
+        ):
+            return response
+        logger.warning(
+            "demo read-only result availability retry succeeded: "
+            "conversation_id=%s message_id=%s failed_capability=%s "
+            "completed_question_digest=%s fallback_question_digest=%s",
+            chat.conversation_id,
+            chat.message_id,
+            failed_capability,
+            contract_digest(resolved.completed_question),
+            contract_digest(fallback_question),
+        )
+        retried._demo_result_availability_retry = {
+            "failed_capability": failed_capability,
+            "fallback_question_digest": contract_digest(fallback_question),
+        }
+        return retried
 
     @staticmethod
     def _response(
@@ -421,6 +534,9 @@ class V2ContextV1ExecutionBridge:
         snapshot: ContextStateSnapshot,
         catalog,
     ) -> tuple[ResolvedContextTurn, dict[str, Any]]:
+        current_plans = _plans_for_active_task_versions(
+            snapshot.state, snapshot.plans
+        )
         resolved_business_domain_ids = getattr(
             catalog, "resolved_business_domain_ids", None
         )
@@ -429,7 +545,7 @@ class V2ContextV1ExecutionBridge:
             identity,
             catalog,
             state=snapshot.state,
-            plans=snapshot.plans,
+            plans=current_plans,
             pending=snapshot.pending,
             resolved_business_domain_ids=resolved_business_domain_ids,
         )
@@ -439,12 +555,18 @@ class V2ContextV1ExecutionBridge:
             else None
         )
         async def resolve_value(
-            surface: str, expected_family: str
+            surface: str,
+            expected_family: str,
+            preferred_attribute_code: str | None,
         ) -> SemanticFilterBinding | None:
             if self.v1_context_value_resolver is None:
                 return None
             return await self.v1_context_value_resolver(
-                chat, identity, surface, expected_family
+                chat,
+                identity,
+                surface,
+                expected_family,
+                preferred_attribute_code,
             )
 
         context_resolution = await resolve_context_question_followup(
@@ -467,27 +589,13 @@ class V2ContextV1ExecutionBridge:
                 ),
                 provenance,
             )
-        if has_active_context_question(state) and is_contextual_short_edit(
-            chat.question
-        ):
-            return (
-                ResolvedContextTurn(
-                    completed_question=None,
-                    next_state=None,
-                    plan_state=None,
-                    clarification_question=(
-                        "当前替换值无法唯一对应上一任务中的可编辑条件，请补充要替换的条件。"
-                    ),
-                    bridge_route="V2_CONTEXT_QUESTION_AMBIGUOUS",
-                ),
-                provenance,
-            )
         reference_resolution = resolve_context_references(
             chat=chat,
             identity=identity,
             state_artifact=state,
             catalog=catalog,
             resolved_business_domain_ids=resolved_business_domain_ids,
+            now=self.clock(),
         )
         if reference_resolution is not None:
             if reference_resolution.clarification_question is not None:
@@ -510,23 +618,95 @@ class V2ContextV1ExecutionBridge:
                     plan_state=None,
                     bridge_route="V2_CONTEXT_REFERENCE_COMPLETED",
                     understanding=reference_resolution.understanding,
-                    publish_context_from_v1=True,
+                    publish_context_from_v1=False,
                     source_question=chat.question,
+                ),
+                provenance,
+            )
+        if has_active_context_question(state) and is_contextual_short_edit(
+            chat.question
+        ):
+            # A specific structural follow-up such as “最低的省份呢” also
+            # matches the broad ``X呢`` surface grammar. It must reach the
+            # reference resolver above before unresolved entity replacement is
+            # classified as ambiguous.
+            return (
+                ResolvedContextTurn(
+                    completed_question=None,
+                    next_state=None,
+                    plan_state=None,
+                    clarification_question=(
+                        "当前替换值无法唯一对应上一任务中的可编辑条件，请补充要替换的条件。"
+                    ),
+                    bridge_route="V2_CONTEXT_QUESTION_AMBIGUOUS",
                 ),
                 provenance,
             )
         engine = RawTurnPlanner(
             self.model, self.catalog if catalog is None else catalog, clock=self.clock
         )
-        result = await engine.run(
-            chat,
-            identity,
-            state=state,
-            plans=plans,
-            pending=pending,
-            allow_standalone_new_task_passthrough=True,
-            resolved_business_domain_ids=resolved_business_domain_ids,
-        )
+        try:
+            result = await engine.run(
+                chat,
+                identity,
+                state=state,
+                plans=plans,
+                pending=pending,
+                allow_standalone_new_task_passthrough=True,
+                resolved_business_domain_ids=resolved_business_domain_ids,
+            )
+        except (RecognitionFailure, ValueError) as exc:
+            if not (
+                is_self_contained_execution_question(chat.question)
+                and RawTurnPlanner._standalone_fallback_allows(exc)
+            ):
+                raise
+            fallback_session = ScopedPlanSession(
+                chat,
+                identity,
+                catalog,
+                resolved_business_domain_ids=resolved_business_domain_ids,
+            )
+            current = (
+                ConversationState.model_validate(
+                    fallback_session.restore(
+                        state, kind="CONVERSATION", defer_source_values=True
+                    )
+                )
+                if state is not None
+                else ConversationState(
+                    conversation_id=chat.conversation_id,
+                    tenant_id=identity.tenant_id,
+                    user_id=identity.user_id,
+                    application_id=chat.application_id,
+                    state_version=0,
+                )
+            )
+            barrier = RawTurnPlanner._standalone_new_task_barrier(
+                current, chat.message_id
+            )
+            fallback_session.accept_catalog()
+            logger.info(
+                "V2 complete current question falling back to original V1 execution",
+                extra={
+                    "message_id": chat.message_id,
+                    "fallback_reason": str(exc),
+                },
+            )
+            return (
+                ResolvedContextTurn(
+                    completed_question=chat.question,
+                    next_state=fallback_session.seal(
+                        kind="CONVERSATION", payload=barrier
+                    ),
+                    plan_state=None,
+                    bridge_route="V1_EXECUTION_FALLBACK_NEW_TASK",
+                    fallback_reason=str(exc),
+                    publish_context_from_v1=True,
+                    source_question=chat.question,
+                ),
+                provenance,
+            )
         if isinstance(result, RecognizedStandaloneNewTask):
             return (
                 ResolvedContextTurn(
@@ -740,6 +920,13 @@ class V2ContextV1ExecutionBridge:
             )
             execution_chat._completed_question_execution = True
             response = await self.v1_executor(execution_chat, identity)
+            response = await self._retry_for_result_availability(
+                chat=execution_chat,
+                identity=identity,
+                resolved=resolved,
+                response=response,
+                prior_state=snapshot.state,
+            )
             response = _attach_completed_question(response, resolved)
             final_state = None
             if (
@@ -778,6 +965,23 @@ class V2ContextV1ExecutionBridge:
                         resolved.source_question or execution_chat.question
                     ),
                 )
+                if self.v1_context_value_resolver is not None:
+                    async def resolve_frame_value(
+                        surface: str,
+                        expected_family: str,
+                        preferred_attribute_code: str | None,
+                    ) -> SemanticFilterBinding | None:
+                        return await self.v1_context_value_resolver(
+                            execution_chat,
+                            identity,
+                            surface,
+                            expected_family,
+                            preferred_attribute_code,
+                        )
+
+                    frame = await refine_context_question_relation_actor(
+                        frame, resolve_value=resolve_frame_value
+                    )
                 final_state = publish_context_task(
                     resolved.next_state,
                     chat=chat,
@@ -838,7 +1042,7 @@ def build_context_v1_execution_handler(
         [ChatRequest, TrustedIdentity], Awaitable[CanonicalAnalysisRequest | None]
     ] | None = None,
     v1_context_value_resolver: Callable[
-        [ChatRequest, TrustedIdentity, str, str],
+        [ChatRequest, TrustedIdentity, str, str, str | None],
         Awaitable[SemanticFilterBinding | None],
     ] | None = None,
     external: ContextV1ExternalDependencies | None = None,
@@ -869,6 +1073,7 @@ def build_context_v1_execution_handler(
         v1_executor=v1_executor,
         v1_context_reader=v1_context_reader,
         v1_context_value_resolver=v1_context_value_resolver,
+        demo_mode=settings.demo_mode,
         clock=lambda: datetime.now(timezone.utc).astimezone(),
         startup_receipt={
             **receipt,

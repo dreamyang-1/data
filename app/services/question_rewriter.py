@@ -551,6 +551,7 @@ class QuestionRewriter:
         surface: str,
         *,
         expected_family: str,
+        preferred_attribute_code: str | None = None,
         semantic_model_id: int | None,
         business_domain_id: int | None,
         business_domain_ids: list[int] | None = None,
@@ -582,35 +583,63 @@ class QuestionRewriter:
             "HOSPITAL": "医院名称",
             "PARTNER": "经销商名称",
         }[expected_family]
-        probe = CanonicalAnalysisRequest(
-            conversation_id=conversation_id,
-            application_id=application_id,
-            tenant_id=tenant_id,
-            user_id=user_id,
-            original_question=literal,
-            primary_intent=PrimaryIntent.DETAIL_QUERY,
-            semantic_model_id=semantic_model_id,
-            business_domain_ids=list(business_domain_ids or []),
-            filters=[{
-                "field": provisional_field,
-                "operator": "EQ",
-                "value": literal,
-            }],
-        )
-        ambiguities = await self.ground_executable_filters(
-            probe,
-            semantic_model_id=semantic_model_id,
-            business_domain_id=business_domain_id,
-            business_domain_ids=list(business_domain_ids or []),
-        )
-        if ambiguities or len(probe.semantic_filter_bindings) != 1:
-            return None
-        binding = probe.semantic_filter_bindings[0]
-        if self._context_filter_family(
-            binding.attribute_code, binding.canonical_name
-        ) != expected_family:
-            return None
-        return binding
+        if (
+            preferred_attribute_code
+            and self._context_filter_family(preferred_attribute_code)
+            == expected_family
+        ):
+            confirmed_attribute = preferred_attribute_code.strip()
+        else:
+            confirmed_attribute = None
+        literals = [literal]
+        if expected_family == "REGION":
+            normalized_region = re.sub(
+                r"(?:(?:壮族|回族|维吾尔)?自治区|特别行政区|省|市|地区)$",
+                "",
+                literal,
+            ).strip()
+            if normalized_region and normalized_region != literal:
+                literals.append(normalized_region)
+
+        for candidate_literal in literals:
+            probe = CanonicalAnalysisRequest(
+                conversation_id=conversation_id,
+                application_id=application_id,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                original_question=candidate_literal,
+                primary_intent=PrimaryIntent.DETAIL_QUERY,
+                semantic_model_id=semantic_model_id,
+                business_domain_ids=list(business_domain_ids or []),
+                assumptions=(
+                    [
+                        "SEMANTIC_AMBIGUITY_CONFIRMED_ATTRIBUTE="
+                        + confirmed_attribute
+                    ]
+                    if confirmed_attribute is not None
+                    else []
+                ),
+                filters=[{
+                    "field": provisional_field,
+                    "operator": "EQ",
+                    "value": candidate_literal,
+                }],
+            )
+            ambiguities = await self.ground_executable_filters(
+                probe,
+                semantic_model_id=semantic_model_id,
+                business_domain_id=business_domain_id,
+                business_domain_ids=list(business_domain_ids or []),
+            )
+            if ambiguities or len(probe.semantic_filter_bindings) != 1:
+                continue
+            binding = probe.semantic_filter_bindings[0]
+            if self._context_filter_family(
+                binding.attribute_code, binding.canonical_name
+            ) != expected_family:
+                continue
+            return binding
+        return None
 
     async def rewrite(
         self,

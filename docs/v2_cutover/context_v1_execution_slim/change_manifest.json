@@ -1,34 +1,92 @@
 {
-  "baseline_head": "89880f1bc2d259829278dfd272b60785e3c306e9",
-  "production_files": [
-    "app/api.py",
-    "app/config.py",
-    "app/dependencies.py",
-    "app/main.py",
-    "app/semantic_v2/context_state_store.py",
-    "app/semantic_v2/context_v1_execution.py",
-    "app/semantic_v2/context_v1_execution_cutover.py",
-    "app/semantic_v2/current_catalog.py",
-    "app/services/orchestrator.py",
-    "app/services/question_rewriter.py"
+  "status": "V2_CONTEXT_V1_EXECUTION_CLASS_CLOSURE_COMPLETE",
+  "branch": "v2-context-v1-execution-slim-20260913T102135Z",
+  "base_head": "8e0d2982fa57568f62afda64d0b24fa13050bf0f",
+  "files": [
+    {
+      "path": "app/adapters/http.py",
+      "sha256": "3b52abda2cad0309cc31bd056d038a7c2a8abe7fd4e77f4b19551bf21147cfe6"
+    },
+    {
+      "path": "app/semantic_v2/completed_question.py",
+      "sha256": "0fabe9238f7d64d2b6fcfdd5099f0609066f1fd91dda7d6bb0849786e1c73070"
+    },
+    {
+      "path": "app/semantic_v2/context_question.py",
+      "sha256": "8dd6c555ada191f02996690ed6edc86ba5d023c9ab4806092891afe23c44f60f"
+    },
+    {
+      "path": "app/semantic_v2/context_state_store.py",
+      "sha256": "3fe2c9b8ef6d64f3b75aafafa7918362675607680e179b541dd75d0ae12eec7a"
+    },
+    {
+      "path": "app/semantic_v2/context_v1_execution.py",
+      "sha256": "c5c2f821daca1b6245c066057155e008615379c51cc8a7e94e4fb617531e2cbf"
+    },
+    {
+      "path": "app/semantic_v2/models.py",
+      "sha256": "010bfcdebeb12a978881631352a8bd2325d482c6740186eecf5e5d9c5c8c9e25"
+    },
+    {
+      "path": "app/services/orchestrator.py",
+      "sha256": "3778ff5f1cb7ecc398c1692b24d5a7f81defca88e0e25787f474dbe98be49bb3"
+    },
+    {
+      "path": "app/services/question_rewriter.py",
+      "sha256": "b86939d0105b36e7f4c939fabce00e3b5fb47659f2bac22354c21cc5780e863a"
+    },
+    {
+      "path": "docs/v2_cutover/context_v1_execution_slim/final_test_delta.json",
+      "sha256": "6f93328462681bf94a858745efb1c386171d361aa8e6d28a05d9c9c124ff0c93"
+    },
+    {
+      "path": "docs/v2_cutover/context_v1_execution_slim/validation_report.md",
+      "sha256": "36a819fada64e56fd2f1426c613f8b4151625f2f46a21a2f27387c2c931733b4"
+    },
+    {
+      "path": "tests/test_oagent_execution_scope_materialization.py",
+      "sha256": "8a834a5fad758efff2059dccb286adadafbf21ce39c91a7a3b3aed73cd16495b"
+    },
+    {
+      "path": "tests/test_phase0c_scope_contract.py",
+      "sha256": "c88b437860bda429679622374cbb06726e3e7ab331324576f648bc091b5e6317"
+    },
+    {
+      "path": "tests/test_question_rewriter.py",
+      "sha256": "986fe9e04dc4ea8f62de4ffac32152c7603d95554163eb638ffcefb1c2bb73fe"
+    },
+    {
+      "path": "tests/test_v2_context_completed_question_trial.py",
+      "sha256": "df31a3035ecda91b01641aca00da2f6c720ef81382ce0b428e4fa0ed781250af"
+    },
+    {
+      "path": "tests/test_v2_context_v1_execution_bridge.py",
+      "sha256": "5ce19388aadea6fa433aaab144ec15621b176094813e3359cf353e3c2c58600a"
+    }
   ],
-  "test_files": [
-    "tests/test_orchestrator.py",
-    "tests/test_question_rewriter.py",
-    "tests/test_v2_context_v1_execution_bridge.py",
-    "tests/test_v2_context_v1_execution_cutover.py"
-  ],
-  "documentation_files": [
-    "docs/v2_cutover/context_v1_execution_slim/validation_report.md",
-    "docs/v2_cutover/context_v1_execution_slim/test_delta.json",
-    "docs/v2_cutover/context_v1_execution_slim/change_manifest.json"
-  ],
+  "validation": {
+    "focused_affected": "347 passed / 0 failed",
+    "full": "3774 passed / 91 existing failed / 0 collection errors",
+    "old_pass_to_new_fail": 0,
+    "old_fail_to_new_pass": 15,
+    "ast_compileall": "PASS",
+    "git_diff_check": "PASS"
+  },
   "excluded": [
     ".env",
     "logs",
     "cache",
+    "backup",
     "credentials",
-    "private runtime receipts",
-    "business query results"
-  ]
+    ".eval_private"
+  ],
+  "runtime": {
+    "pid": 26356,
+    "live": "HTTP 200",
+    "ready": "HTTP 200 / READY",
+    "runtime_mode": "V2_CONTEXT_V1_EXECUTION",
+    "restarted_services": [
+      "DataAnalysis Agent 8088"
+    ]
+  }
 }

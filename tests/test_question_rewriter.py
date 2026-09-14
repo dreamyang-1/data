@@ -421,6 +421,117 @@ async def test_context_value_resolution_rejects_a_different_semantic_family():
     assert binding is None
 
 
+@pytest.mark.asyncio
+async def test_context_region_resolution_tries_a_suffix_normalized_value():
+    class RegionSearcher(FakeSearcher):
+        async def search(
+            self, query, *, semantic_model_id, business_domain_id,
+            business_domain_ids=None,
+        ):
+            self.calls.append(
+                (query, semantic_model_id, business_domain_id, business_domain_ids)
+            )
+            if query != "上海":
+                return []
+            return [{
+                "record_id": "city-shanghai",
+                "score": 1.0,
+                "entity_name": "地区",
+                "attribute_name": "城市名称",
+                "attribute_code": "city_name",
+                "attribute_value": "上海",
+                "business_domain_id": 205,
+            }]
+
+    searcher = RegionSearcher([])
+    binding = await QuestionRewriter(searcher).resolve_context_filter_value(
+        "上海市",
+        expected_family="REGION",
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+        tenant_id="t1",
+        user_id="u1",
+        application_id="app",
+        conversation_id="context-region-value",
+    )
+
+    assert [call[0] for call in searcher.calls] == ["上海市", "上海"]
+    assert binding is not None
+    assert binding.canonical_value == "上海"
+    assert binding.attribute_code == "city_name"
+
+
+@pytest.mark.asyncio
+async def test_context_region_resolution_uses_prior_dimension_attribute_level():
+    searcher = FakeSearcher([
+        {
+            "record_id": "city-shanghai",
+            "score": 1.0,
+            "entity_name": "市",
+            "attribute_name": "城市名称",
+            "attribute_code": "city_name",
+            "attribute_value": "上海市",
+            "business_domain_id": 205,
+        },
+        {
+            "record_id": "province-shanghai",
+            "score": 1.0,
+            "entity_name": "省份",
+            "attribute_name": "省份名称",
+            "attribute_code": "province_name",
+            "attribute_value": "上海市",
+            "business_domain_id": 205,
+        },
+    ])
+
+    binding = await QuestionRewriter(searcher).resolve_context_filter_value(
+        "上海市",
+        expected_family="REGION",
+        preferred_attribute_code="province_name",
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+        tenant_id="t1",
+        user_id="u1",
+        application_id="app",
+        conversation_id="context-region-level",
+    )
+
+    assert binding is not None
+    assert binding.attribute_code == "province_name"
+    assert binding.canonical_value == "上海市"
+
+
+@pytest.mark.asyncio
+async def test_context_non_region_value_never_strips_an_embedded_city_suffix():
+    searcher = FakeSearcher([{
+        "record_id": "hospital-shanghai-skin",
+        "score": 1.0,
+        "entity_name": "医院",
+        "attribute_name": "医院名称",
+        "attribute_code": "hospital_name",
+        "attribute_value": "上海市皮肤病医院",
+        "business_domain_id": 205,
+    }])
+
+    binding = await QuestionRewriter(searcher).resolve_context_filter_value(
+        "上海市皮肤病医院",
+        expected_family="HOSPITAL",
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+        tenant_id="t1",
+        user_id="u1",
+        application_id="app",
+        conversation_id="context-hospital-value",
+    )
+
+    assert searcher.calls == [("上海市皮肤病医院", 81, None, [])]
+    assert binding is not None
+    assert binding.canonical_value == "上海市皮肤病医院"
+
+
 def test_explicit_per_product_trend_keeps_product_grouping_after_brand_binding():
     request = CanonicalAnalysisRequest(
         conversation_id="fresenius-product-series",

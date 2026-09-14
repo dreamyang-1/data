@@ -15,6 +15,7 @@ from app.domain.models import (
     CanonicalAnalysisRequest,
     ChatRequest,
     EvidenceItem,
+    MetricRef,
     PrimaryIntent,
     SemanticFilterBinding,
     TrustedIdentity,
@@ -29,9 +30,11 @@ from app.semantic_v2.authorized_contract import (
 from app.semantic_v2.catalog_bridge import ScopedPlanSession
 from app.semantic_v2.context_state_store import RedisContextStateStore
 from app.semantic_v2.context_question import (
+    _preferred_context_attribute_code,
     _replace_filter,
     canonical_matches_execution,
     is_contextual_ellipsis,
+    is_self_contained_execution_question,
     resolve_context_references,
 )
 from app.semantic_v2.models import ContextQuestionFilter, ContextQuestionState
@@ -46,7 +49,14 @@ from app.semantic_v2.state_machine import ConversationState
 from app.services.orchestrator import DataAnalysisOrchestrator
 from app.services.question_rewriter import QuestionRewriter
 from app.stores import InMemorySessionStore
-from test_v2_authorized_catalog_bridge import IDENTITY, provider, request
+from test_v2_authorized_catalog_bridge import (
+    IDENTITY,
+    authority,
+    provider,
+    publish,
+    request,
+    reseal,
+)
 from test_v2_context_followup_critical_slice import context_case, context_catalog
 from test_v2_limited_scalar_deployment import DeploymentRedis
 from test_v2_persisted_scalar_api import NOW
@@ -168,6 +178,35 @@ def v1_context(chat: ChatRequest, *, filter_value: str) -> CanonicalAnalysisRequ
     )
 
 
+def publish_province_dimension(provider, *, publication_id: str) -> None:
+    source = authority()
+    document = source["documents"][0]
+    document["entities"][0]["attributes"].append({
+        "attribute_id": 1299,
+        "attr_code": "province_name",
+        "attr_name": "省份名称",
+        "is_main_attribute": False,
+        "field_mapping": "hospitals.province_name",
+    })
+    source["physical_catalog"]["tables"][0]["fields"].append({
+        "field_id": 1299,
+        "field_name": "province_name",
+        "table_id": 1,
+    })
+    document["dimensions"].append({
+        "dim_code": "province",
+        "dim_name": "省份",
+        "synonyms": ["省"],
+        "bind_entities": [{
+            "entity": "205",
+            "attr": "1299",
+            "businessDomain": "205",
+        }],
+    })
+    provider[-1][(81, (205,))] = reseal(source)
+    publish(provider[0], publication_id=publication_id)
+
+
 @pytest.mark.parametrize(
     "request_change",
     [
@@ -222,6 +261,146 @@ def test_v1_context_evidence_accepts_output_dataset_from_the_exact_execution():
         identity=IDENTITY,
         response=unrelated,
     ) is False
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "查询去年江苏省订单笔数",
+        "北京华康容信医疗器械有限公司销售了哪些产品？",
+        "统计各医院等级的订单笔数。",
+    ],
+)
+def test_self_contained_execution_question_accepts_complete_current_requests(question):
+    assert is_self_contained_execution_question(question) is True
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "费森尤斯呢",
+        "换今年",
+        "那订单笔数是多少？",
+        "它主要供货哪些医院？",
+        "这些医院里采购金额最高的是哪家？",
+        "不要订单笔数",
+    ],
+)
+def test_self_contained_execution_question_rejects_context_dependent_turns(question):
+    assert is_self_contained_execution_question(question) is False
+
+
+@pytest.mark.asyncio
+async def test_complete_current_question_uses_v1_when_current_turn_schema_fails(provider):
+    redis = DeploymentRedis()
+    executions = []
+
+    class SchemaFailingModel:
+        async def complete(self, **_kwargs):
+            raise RecognitionFailure("V2_MODEL_DYNAMIC_SCHEMA_VIOLATION")
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return query_response(chat)
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:complete-current-fallback",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=provider[0],
+        model=SchemaFailingModel(),
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    chat = request(
+        question="北京华康容信医疗器械有限公司销售了哪些产品？",
+        message_id="complete-current-schema-failure",
+        conversation_id="complete-current-schema-failure",
+    )
+
+    result = await bridge.handle(chat, IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[0].question == chat.question
+    assert executions[0].history == []
+    snapshot = await bridge.store.load(chat, IDENTITY)
+    assert snapshot.message(chat.message_id)["bridge_route"] == (
+        "V1_EXECUTION_FALLBACK_NEW_TASK"
+    )
+    state = ConversationState.model_validate(snapshot.state.payload)
+    assert state.state_version == 1
+    assert state.active_topic_id is not None
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    current = next(
+        item for item in task.versions if item.version == task.active_version
+    )
+    assert current.context_question.execution_question == chat.question
+
+
+@pytest.mark.asyncio
+async def test_complete_current_question_fallback_restores_existing_task_bindings(
+    context_catalog,
+):
+    first_step = context_case(4)[0]
+    scripted, _transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return query_response(chat)
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:stateful-current-fallback",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "stateful-complete-current-fallback"
+    first = request(
+        question=first_step[0],
+        message_id="stateful-current-first",
+        conversation_id=conversation_id,
+    )
+    assert (await bridge.handle(first, IDENTITY)).status == "COMPLETED"
+
+    class SchemaFailingModel:
+        async def complete(self, **_kwargs):
+            raise RecognitionFailure("V2_MODEL_DYNAMIC_SCHEMA_VIOLATION")
+
+    bridge.model = SchemaFailingModel()
+    second = request(
+        question="查询测试医院采购了哪些产品？",
+        message_id="stateful-current-second",
+        conversation_id=conversation_id,
+    )
+    result = await bridge.handle(second, IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == second.question
+    assert executions[-1].history == []
+    snapshot = await bridge.store.load(second, IDENTITY)
+    assert snapshot.message(second.message_id)["bridge_route"] == (
+        "V1_EXECUTION_FALLBACK_NEW_TASK"
+    )
+    state = ConversationState.model_validate(snapshot.state.payload)
+    assert len(state.tasks) == 2
+    active = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    version = next(
+        item for item in active.versions if item.version == active.active_version
+    )
+    assert version.context_question.execution_question == second.question
 
 
 def install_fallback_resolution(target, provider):
@@ -342,7 +521,7 @@ async def test_successful_v1_fallback_publishes_context_task_and_replaces_produc
     async def read_context(chat, _identity):
         return v1_context(chat, filter_value="空心纤维血液透析器")
 
-    async def resolve_value(_chat, _identity, surface, expected_family):
+    async def resolve_value(_chat, _identity, surface, expected_family, _preferred_attribute_code=None):
         if surface != "费森尤斯" or expected_family != "COMMERCIAL_PRODUCT":
             return None
         return SemanticFilterBinding(
@@ -403,6 +582,229 @@ async def test_successful_v1_fallback_publishes_context_task_and_replaces_produc
     assert updated_frame.filters[0].attribute_code == "parent_brand"
     assert updated_frame.last_edit.operation == "REPLACE"
     assert updated_frame.last_edit.slot == "filter_expression"
+
+
+@pytest.mark.asyncio
+async def test_relationship_anchor_prefers_proven_actor_and_singular_pronoun(
+    context_catalog,
+):
+    redis = DeploymentRedis()
+    executions = []
+    company = "上海福荫商贸有限公司"
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return query_response(chat)
+
+    async def read_context(chat, _identity):
+        # Reproduce the live V1 evidence defect: the relation verb was folded
+        # into a product value even though the original question names a dealer.
+        return v1_context(chat, filter_value="福荫商贸有限公司供货")
+
+    async def resolve_value(
+        _chat, _identity, surface, expected_family, _preferred_attribute_code=None
+    ):
+        if surface != company or expected_family != "PARTNER":
+            return None
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name="经销商名称",
+            attribute_code="dealer_name",
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    bridge = handler(
+        context_catalog,
+        redis,
+        v1,
+        v1_context_reader=read_context,
+        v1_context_value_resolver=resolve_value,
+    )
+    install_fallback_resolution(bridge, context_catalog)
+    conversation_id = "relationship-actor-pronoun"
+    first = request(
+        question=f"{company}供货哪些医院？",
+        message_id="relationship-actor-first",
+        conversation_id=conversation_id,
+    )
+    assert (await bridge.handle(first, IDENTITY)).status == "COMPLETED"
+    del bridge._resolve
+
+    snapshot = await bridge.store.load(first, IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    frame = task.versions[-1].context_question
+    assert [(item.surface, item.semantic_family) for item in frame.filters] == [
+        (company, "PARTNER"),
+    ]
+
+    result = await bridge.handle(request(
+        question="那它的订单笔数是多少？",
+        message_id="relationship-actor-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == f"查询{company}的订单笔数。"
+    assert executions[-1].history == []
+
+
+@pytest.mark.asyncio
+async def test_subjectless_relationship_followups_reuse_one_proven_actor(provider):
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+    company = "杭州琅骏医疗科技有限公司"
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return CanonicalAnalysisRequest(
+            request_id=execution_responses[-1].request_id,
+            conversation_id=chat.conversation_id,
+            application_id=chat.application_id,
+            tenant_id=IDENTITY.tenant_id,
+            user_id=IDENTITY.user_id,
+            original_question=chat.question,
+            primary_intent=PrimaryIntent.DETAIL_QUERY,
+            semantic_model_id=chat.semantic_model_id,
+            business_domain_ids=list(chat.business_domain_ids),
+            source_dataset_id=execution_responses[-1].dataset_id,
+            entity="商品",
+            fields=["商品名称"],
+            dimensions=["商品"],
+            filters=[{
+                "field": "经销商名称",
+                "operator": "EQ",
+                "value": company,
+            }],
+            semantic_filter_bindings=[SemanticFilterBinding(
+                filter_index=0,
+                input_value=company,
+                canonical_value=company,
+                canonical_name="经销商名称",
+                attribute_code="dealer_name",
+                score=1.0,
+                business_domain_id=205,
+            )],
+        )
+
+    bridge = handler(provider, redis, v1, v1_context_reader=read_context)
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "relationship-target-ellipsis"
+    await bridge.handle(request(
+        question=f"{company}销售了哪些产品？",
+        message_id="relationship-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    hospital = await bridge.handle(request(
+        question="它主要供货哪些医院？",
+        message_id="relationship-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    manufacturer = await bridge.handle(request(
+        question="合作的厂家有哪些？",
+        message_id="relationship-third",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert hospital.status == manufacturer.status == "COMPLETED"
+    assert executions[-2].question == f"{company}主要供货哪些医院？"
+    assert executions[-1].question == f"查询{company}合作的厂家有哪些。"
+    assert executions[-2].history == executions[-1].history == []
+
+    snapshot = await bridge.store.load(request(
+        question="inspect",
+        message_id="relationship-inspect",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    assert task.active_version == 3
+    assert task.versions[-2].context_question.entity == "医院"
+    assert task.versions[-2].context_question.metrics == []
+    assert task.versions[-2].context_question.dimensions == ["医院"]
+    assert task.versions[-1].context_question.entity == "厂家"
+    assert task.versions[-1].context_question.dimensions == ["厂家"]
+
+
+@pytest.mark.asyncio
+async def test_subjectless_relationship_followup_does_not_guess_between_actors(
+    provider,
+):
+    redis = DeploymentRedis()
+    calls = 0
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        nonlocal calls
+        calls += 1
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return CanonicalAnalysisRequest(
+            request_id=execution_responses[-1].request_id,
+            conversation_id=chat.conversation_id,
+            application_id=chat.application_id,
+            tenant_id=IDENTITY.tenant_id,
+            user_id=IDENTITY.user_id,
+            original_question=chat.question,
+            primary_intent=PrimaryIntent.DETAIL_QUERY,
+            semantic_model_id=chat.semantic_model_id,
+            source_dataset_id=execution_responses[-1].dataset_id,
+            filters=[
+                {"field": "商品名称", "operator": "EQ", "value": "测试产品"},
+                {"field": "医院名称", "operator": "EQ", "value": "测试医院"},
+            ],
+            semantic_filter_bindings=[
+                SemanticFilterBinding(
+                    filter_index=0,
+                    input_value="测试产品",
+                    canonical_value="测试产品",
+                    canonical_name="商品名称",
+                    attribute_code="product_name",
+                    score=1.0,
+                ),
+                SemanticFilterBinding(
+                    filter_index=1,
+                    input_value="测试医院",
+                    canonical_value="测试医院",
+                    canonical_name="医院名称",
+                    attribute_code="hospital_name",
+                    score=1.0,
+                ),
+            ],
+        )
+
+    bridge = handler(provider, redis, v1, v1_context_reader=read_context)
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "relationship-ambiguous-actor"
+    await bridge.handle(request(
+        question="查询测试医院采购测试产品的情况。",
+        message_id="relationship-ambiguous-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    result = await bridge.handle(request(
+        question="合作的厂家有哪些？",
+        message_id="relationship-ambiguous-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "NEEDS_CLARIFICATION"
+    assert calls == 1
 
 
 @pytest.mark.asyncio
@@ -467,7 +869,7 @@ async def test_product_replacement_selects_product_from_multiple_filter_families
 
     resolver_calls = []
 
-    async def resolve_value(_chat, _identity, surface, expected_family):
+    async def resolve_value(_chat, _identity, surface, expected_family, _preferred_attribute_code=None):
         resolver_calls.append((surface, expected_family))
         if surface != "费森尤斯" or expected_family != "COMMERCIAL_PRODUCT":
             return None
@@ -548,11 +950,15 @@ async def test_filter_replacement_remains_blocked_when_value_matches_two_familie
         source_message_id="ambiguous-first",
     )
 
-    async def ambiguous_resolver(surface, expected_family):
+    async def ambiguous_resolver(
+        surface, expected_family, _preferred_attribute_code=None
+    ):
         field = {
             "REGION": ("省份名称", "province_name"),
             "COMMERCIAL_PRODUCT": ("商品名称", "product_name"),
-        }[expected_family]
+        }.get(expected_family)
+        if field is None:
+            return None
         return SemanticFilterBinding(
             filter_index=0,
             input_value=surface,
@@ -564,6 +970,721 @@ async def test_filter_replacement_remains_blocked_when_value_matches_two_familie
         )
 
     assert await _replace_filter(frame, "同名值呢", ambiguous_resolver) is None
+
+
+@pytest.mark.asyncio
+async def test_structured_task_filter_restriction_adds_then_replaces_one_family(
+    context_catalog,
+):
+    """Short value edits use semantic families and preserve the rest of TaskState."""
+
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    async def resolve_value(_chat, _identity, surface, expected_family, _preferred_attribute_code=None):
+        if expected_family != "REGION" or surface not in {"广东省", "江苏省"}:
+            return None
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name="省份名称",
+            attribute_code="province_name",
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:structured-filter-edit",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        v1_context_value_resolver=resolve_value,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "structured-filter-edit"
+
+    first = await bridge.handle(request(
+        question=first_step[0],
+        message_id="structured-filter-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    add = await bridge.handle(request(
+        question="只看广东省的。",
+        message_id="structured-filter-add",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    replace_result = await bridge.handle(request(
+        question="江苏省的呢？",
+        message_id="structured-filter-replace",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert first.status == add.status == replace_result.status == "COMPLETED"
+    assert executions[1].question == "查询2025年广东省的销售额。"
+    assert executions[2].question == "查询2025年江苏省的销售额。"
+    assert executions[1].history == executions[2].history == []
+    # The two short edits are deterministic and do not add model calls.
+    assert len(transport.calls) == 2
+
+    snapshot = await bridge.store.load(request(
+        question="江苏省的呢？",
+        message_id="structured-filter-inspect",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    assert task.active_version == 3
+    frame = task.versions[-1].context_question
+    assert frame.execution_question == "查询2025年江苏省的销售额。"
+    assert [(item.surface, item.semantic_family) for item in frame.filters] == [
+        ("江苏省", "REGION"),
+    ]
+    assert frame.last_edit.operation == "REPLACE"
+    assert frame.last_edit.slot == "filter_expression"
+
+
+@pytest.mark.asyncio
+async def test_structured_task_explicit_filter_replacement_uses_same_family(
+    context_catalog,
+):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    async def resolve_value(
+        _chat, _identity, surface, expected_family, _preferred_attribute_code=None
+    ):
+        if surface != "江苏省" or expected_family != "REGION":
+            return None
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name="省份名称",
+            attribute_code="province_name",
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:explicit-filter-replace",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        v1_context_value_resolver=resolve_value,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "explicit-filter-replace"
+    first = request(
+        question=first_step[0],
+        message_id="explicit-filter-first",
+        conversation_id=conversation_id,
+    )
+    await bridge.handle(first, IDENTITY)
+    result = await bridge.handle(request(
+        question="换成江苏省呢？",
+        message_id="explicit-filter-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert [item.question for item in executions] == [
+        first_step[0],
+        "查询2025年江苏省的销售额。",
+    ]
+    assert len(transport.calls) == 2
+    snapshot = await bridge.store.load(first, IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    frame = task.versions[-1].context_question
+    assert frame.last_edit.operation == "REPLACE"
+    assert [(item.surface, item.semantic_family) for item in frame.filters] == [
+        ("江苏省", "REGION"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_explicit_filter_replacement_does_not_add_a_different_family():
+    frame = ContextQuestionState(
+        original_question="查询上海地区销售额。",
+        execution_question="查询上海地区销售额。",
+        metrics=["销售额"],
+        filters=[ContextQuestionFilter(
+            surface="上海",
+            canonical_value="上海",
+            canonical_name="省份名称",
+            attribute_code="province_name",
+            semantic_family="REGION",
+            evidence_source="V1_SUCCESSFUL_QUERY_EVIDENCE",
+        )],
+        source_message_id="explicit-cross-family-first",
+    )
+
+    async def product_only_resolver(
+        surface, expected_family, _preferred_attribute_code=None
+    ):
+        if surface != "测试产品" or expected_family != "COMMERCIAL_PRODUCT":
+            return None
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name="商品名称",
+            attribute_code="product_name",
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    assert await _replace_filter(
+        frame, "换成测试产品呢？", product_only_resolver
+    ) is None
+
+
+@pytest.mark.asyncio
+async def test_named_entity_return_replaces_entity_and_metric_from_current_text(
+    context_catalog,
+):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    async def resolve_value(
+        _chat, _identity, surface, expected_family, _preferred_attribute_code=None
+    ):
+        if surface not in {"江苏省", "广东省"} or expected_family != "REGION":
+            return None
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name="省份名称",
+            attribute_code="province_name",
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:named-return",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        v1_context_value_resolver=resolve_value,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "named-return"
+    questions = (
+        first_step[0],
+        "江苏省的呢？",
+        "广东省的呢？",
+        "再回到江苏省，它的订单笔数是多少？",
+    )
+    for index, question in enumerate(questions):
+        result = await bridge.handle(request(
+            question=question,
+            message_id=f"named-return-{index}",
+            conversation_id=conversation_id,
+        ), IDENTITY)
+        assert result.status == "COMPLETED"
+
+    assert executions[-1].question == "查询2025年江苏省的订单笔数。"
+    assert executions[-1].history == []
+    assert len(transport.calls) == 2
+    snapshot = await bridge.store.load(request(
+        question="inspect",
+        message_id="named-return-inspect",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    frame = task.versions[-1].context_question
+    assert frame.metrics == ["订单笔数"]
+    assert [(item.surface, item.semantic_family) for item in frame.filters] == [
+        ("江苏省", "REGION"),
+    ]
+    assert frame.last_edit.operation == "REPLACE"
+
+
+@pytest.mark.asyncio
+async def test_structured_filter_shortcut_requires_one_semantic_family(
+    context_catalog,
+):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    async def ambiguous_value(_chat, _identity, surface, expected_family, _preferred_attribute_code=None):
+        if expected_family not in {"REGION", "COMMERCIAL_PRODUCT"}:
+            return None
+        name, code = (
+            ("省份名称", "province_name")
+            if expected_family == "REGION"
+            else ("商品名称", "product_name")
+        )
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name=name,
+            attribute_code=code,
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:ambiguous-filter-edit",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        v1_context_value_resolver=ambiguous_value,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "ambiguous-filter-edit"
+    await bridge.handle(request(
+        question=first_step[0],
+        message_id="ambiguous-filter-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    # A value resolving to two semantic families must not be guessed by the
+    # deterministic path. The existing V2 recognizer receives the turn.
+    result = await bridge.handle(request(
+        question="同名值呢？",
+        message_id="ambiguous-filter-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    assert result.status == "SAFE_FALLBACK"
+    assert len(executions) == 1
+    assert len(transport.calls) > 2
+
+
+@pytest.mark.asyncio
+async def test_recent_pair_total_uses_two_values_from_the_same_task(
+    context_catalog,
+):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    async def resolve_value(_chat, _identity, surface, expected_family, _preferred_attribute_code=None):
+        if expected_family != "REGION" or surface not in {"湖南省", "湖北省"}:
+            return None
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name="省份名称",
+            attribute_code="province_name",
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:recent-pair-total",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        v1_context_value_resolver=resolve_value,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "recent-pair-total"
+    for message_id, question in (
+        ("pair-first", first_step[0]),
+        ("pair-second", "只看湖南省的。"),
+        ("pair-third", "湖北省的呢？"),
+        ("pair-fourth", "这两个省加起来是多少？"),
+    ):
+        result = await bridge.handle(request(
+            question=question,
+            message_id=message_id,
+            conversation_id=conversation_id,
+        ), IDENTITY)
+        assert result.status == "COMPLETED"
+
+    assert executions[-1].question == (
+        "查询2025年湖南省和湖北省的销售额合计。"
+    )
+    assert executions[-1].history == []
+    assert len(transport.calls) == 2
+    snapshot = await bridge.store.load(request(
+        question="inspect",
+        message_id="pair-inspect",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    frame = task.versions[-1].context_question
+    assert task.active_version == 4
+    assert frame.dimensions == []
+    assert [(item.surface, item.semantic_family) for item in frame.filters] == [
+        ("湖南省", "REGION"),
+        ("湖北省", "REGION"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_recent_pair_total_does_not_invent_a_missing_second_value(
+    context_catalog,
+):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:missing-pair-total",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "missing-pair-total"
+    await bridge.handle(request(
+        question=first_step[0],
+        message_id="missing-pair-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    result = await bridge.handle(request(
+        question="这两个省加起来是多少？",
+        message_id="missing-pair-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "NEEDS_CLARIFICATION"
+    assert len(executions) == 1
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_recent_two_task_products_are_compared_from_same_conversation(
+    context_catalog,
+):
+    redis = DeploymentRedis()
+    executions = []
+    first_product = "紫杉醇释放冠脉球囊导管"
+    second_product = "一次性使用灭菌橡胶外科手套"
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return query_response(chat)
+
+    async def read_context(chat, _identity):
+        product = (
+            first_product if first_product in chat.question else second_product
+        )
+        return v1_context(chat, filter_value=product)
+
+    bridge = handler(
+        context_catalog,
+        redis,
+        v1,
+        v1_context_reader=read_context,
+    )
+    install_fallback_resolution(bridge, context_catalog)
+    conversation_id = "recent-two-task-product-comparison"
+    await bridge.handle(request(
+        question=f"查询{first_product}的含税销售总额。",
+        message_id="product-comparison-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    await bridge.handle(request(
+        question=f"切换话题：查询{second_product}的含税销售总额。",
+        message_id="product-comparison-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    result = await bridge.handle(request(
+        question="这两个产品谁的销售额更高？",
+        message_id="product-comparison-third",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == (
+        f"比较{first_product}和{second_product}的销售额，判断哪个更高。"
+    )
+    assert executions[-1].history == []
+    snapshot = await bridge.store.load(request(
+        question="inspect",
+        message_id="product-comparison-inspect",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    assert len(state.tasks) == 2
+    active = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    frame = active.versions[-1].context_question
+    assert active.active_version == 2
+    assert frame.metrics == ["销售额"]
+    assert [item.surface for item in frame.filters] == [
+        first_product,
+        second_product,
+    ]
+
+
+@pytest.mark.asyncio
+async def test_demo_pair_comparison_retries_one_real_v1_query(context_catalog):
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+    first_product = "紫杉醇释放冠脉球囊导管"
+    second_product = "一次性使用灭菌橡胶外科手套"
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        if chat.question.startswith("比较"):
+            failed = response(chat)
+            failed.status = "SAFE_FALLBACK"
+            failed.error_code = "DEPENDENCY_UNAVAILABLE"
+            failed._upstream_error_code = "ASL_TIME_ANCHOR_MISSING"
+            return failed
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        product = (
+            first_product if first_product in chat.question else second_product
+        )
+        return v1_context(chat, filter_value=product).model_copy(update={
+            "request_id": execution_responses[-1].request_id,
+            "source_dataset_id": execution_responses[-1].dataset_id,
+        })
+
+    bridge = handler(
+        context_catalog,
+        redis,
+        v1,
+        v1_context_reader=read_context,
+    )
+    bridge.demo_mode = True
+    install_fallback_resolution(bridge, context_catalog)
+    conversation_id = "demo-pair-comparison-retry"
+    await bridge.handle(request(
+        question=f"查询{first_product}的销售额。",
+        message_id="demo-pair-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    await bridge.handle(request(
+        question=f"切换话题：查询{second_product}的销售额。",
+        message_id="demo-pair-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    result = await bridge.handle(request(
+        question="这两个产品谁的销售额更高？",
+        message_id="demo-pair-third",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-2].question == (
+        f"比较{first_product}和{second_product}的销售额，判断哪个更高。"
+    )
+    assert executions[-1].question == (
+        f"查询{first_product}和{second_product}的销售额。"
+    )
+    assert executions[-1].history == []
+
+
+@pytest.mark.asyncio
+async def test_recent_two_task_comparison_requires_two_distinct_products(
+    context_catalog,
+):
+    redis = DeploymentRedis()
+    executions = []
+    product = "紫杉醇释放冠脉球囊导管"
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return query_response(chat)
+
+    async def read_context(chat, _identity):
+        return v1_context(chat, filter_value=product)
+
+    bridge = handler(
+        context_catalog,
+        redis,
+        v1,
+        v1_context_reader=read_context,
+    )
+    install_fallback_resolution(bridge, context_catalog)
+    conversation_id = "missing-two-task-product-comparison"
+    await bridge.handle(request(
+        question=f"查询{product}的含税销售总额。",
+        message_id="missing-product-comparison-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    result = await bridge.handle(request(
+        question="这两个产品谁的销售额更高？",
+        message_id="missing-product-comparison-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "NEEDS_CLARIFICATION"
+    assert len(executions) == 1
+
+
+@pytest.mark.asyncio
+async def test_nationwide_clear_removes_region_and_preserves_product_metric(provider):
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return CanonicalAnalysisRequest(
+            request_id=execution_responses[-1].request_id,
+            conversation_id=chat.conversation_id,
+            application_id=chat.application_id,
+            tenant_id=IDENTITY.tenant_id,
+            user_id=IDENTITY.user_id,
+            original_question=chat.question,
+            primary_intent=PrimaryIntent.METRIC_QUERY,
+            semantic_model_id=chat.semantic_model_id,
+            business_domain_ids=list(chat.business_domain_ids),
+            source_dataset_id=execution_responses[-1].dataset_id,
+            metrics=[MetricRef(
+                input="含税销售总额", canonical_name="含税销售总额"
+            )],
+            filters=[
+                {"field": "省份名称", "operator": "EQ", "value": "湖北省"},
+                {"field": "商品名称", "operator": "EQ", "value": "疝修补补片"},
+            ],
+            semantic_filter_bindings=[
+                SemanticFilterBinding(
+                    filter_index=0,
+                    input_value="湖北省",
+                    canonical_value="湖北省",
+                    canonical_name="省份名称",
+                    attribute_code="province_name",
+                    score=1.0,
+                ),
+                SemanticFilterBinding(
+                    filter_index=1,
+                    input_value="疝修补补片",
+                    canonical_value="疝修补补片",
+                    canonical_name="商品名称",
+                    attribute_code="product_name",
+                    score=1.0,
+                ),
+            ],
+        )
+
+    bridge = handler(provider, redis, v1, v1_context_reader=read_context)
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "nationwide-clear"
+    await bridge.handle(request(
+        question="查询湖北省疝修补补片的含税销售总额。",
+        message_id="nationwide-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    cleared = await bridge.handle(request(
+        question="那全国整体呢？",
+        message_id="nationwide-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert cleared.status == "COMPLETED"
+    assert executions[-1].question == "查询疝修补补片的含税销售总额。"
+    assert executions[-1].history == []
+    snapshot = await bridge.store.load(request(
+        question="inspect",
+        message_id="nationwide-inspect",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    frame = task.versions[-1].context_question
+    assert [(item.surface, item.semantic_family) for item in frame.filters] == [
+        ("疝修补补片", "COMMERCIAL_PRODUCT"),
+    ]
+    assert frame.metrics == ["含税销售总额"]
+    assert frame.last_edit.operation == "CLEAR"
+
+    repeated = await bridge.handle(request(
+        question="不限地区。",
+        message_id="nationwide-third",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    assert repeated.status == "NEEDS_CLARIFICATION"
+    assert len(executions) == 2
 
 
 @pytest.mark.asyncio
@@ -677,7 +1798,9 @@ async def test_full_contextual_question_resolves_unique_region_reference(provide
     )
     state = ConversationState.model_validate(snapshot.state.payload)
     assert state.state_version == 2
-    assert len(state.tasks) == 2
+    assert len(state.tasks) == 1
+    task = next(iter(state.tasks.values()))
+    assert task.active_version == 2
     active = state.tasks[state.topics[state.active_topic_id].active_task_id]
     frame = active.versions[-1].context_question
     assert frame.original_question == followup.question
@@ -763,6 +1886,7 @@ async def test_explicit_current_region_is_not_replaced_by_prior_reference(provid
         state_artifact=None,
         catalog=provider[0],
         resolved_business_domain_ids=[205],
+        now=NOW,
     ) is None
 
 
@@ -799,6 +1923,18 @@ def test_contextual_ellipsis_requires_short_dependent_form():
     assert is_contextual_ellipsis("这个呢") is False
 
 
+def test_prior_region_dimension_selects_the_matching_value_attribute_level():
+    assert _preferred_context_attribute_code(
+        filters=[], dimensions=["省份"], family="REGION"
+    ) == "province_name"
+    assert _preferred_context_attribute_code(
+        filters=[], dimensions=["城市"], family="REGION"
+    ) == "city_name"
+    assert _preferred_context_attribute_code(
+        filters=[], dimensions=["省份", "城市"], family="REGION"
+    ) is None
+
+
 @pytest.mark.asyncio
 async def test_new_successful_fallback_context_does_not_reactivate_older_task(provider):
     redis = DeploymentRedis()
@@ -812,7 +1948,7 @@ async def test_new_successful_fallback_context_does_not_reactivate_older_task(pr
         value = "旧产品" if "旧产品" in chat.question else "空心纤维血液透析器"
         return v1_context(chat, filter_value=value)
 
-    async def resolve_value(_chat, _identity, surface, expected_family):
+    async def resolve_value(_chat, _identity, surface, expected_family, _preferred_attribute_code=None):
         if surface != "费森尤斯" or expected_family != "COMMERCIAL_PRODUCT":
             return None
         return SemanticFilterBinding(
@@ -1162,7 +2298,9 @@ async def test_live_bridge_runs_real_v2_new_task_and_followup_state(
     assert executions[1].history == executions[2].history == []
     assert "2026" in executions[2].question
     assert "2025" not in executions[2].question
-    assert len(transport.calls) == 6
+    # The initial task uses CurrentTurn + SemanticEdits. CLEAR and time
+    # replacement are deterministic from the published TaskState.
+    assert len(transport.calls) == 2
     snapshot = await bridge.store.load(
         request(
             question=steps[-1][0],
@@ -1212,16 +2350,1054 @@ async def test_full_reference_can_use_unique_filter_from_structured_v2_task(
     ), IDENTITY)
 
     result = await bridge.handle(request(
-        question="按月统计该省份的含税销售总额。",
+        question="按月统计该省份的销售额。",
         message_id="structured-reference-followup",
         conversation_id=conversation_id,
     ), IDENTITY)
 
     assert result.status == "COMPLETED"
-    assert executions[-1].question == "按月统计上海的含税销售总额。"
+    assert executions[-1].question == "按月统计2025年上海的销售额。"
     # Only the first, fully structured turn invokes CurrentTurn and
     # SemanticEdits. The deterministic reference completion invokes neither.
     assert len(transport.calls) == 2
+    snapshot = await bridge.store.load(request(
+        question="按月统计该省份的销售额。",
+        message_id="structured-reference-followup",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    frame = next(
+        item for item in task.versions if item.version == task.active_version
+    ).context_question
+    assert frame.primary_intent == "METRIC_QUERY"
+    assert frame.metrics == ["销售额"]
+    assert frame.dimensions == ["月"]
+    assert frame.entity is None
+    assert frame.fields == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("followup", "expected"),
+    [
+        ("按月看销售额。", "按月统计2025年上海的销售额。"),
+        ("换成按月看。", "按月统计2025年上海的销售额。"),
+    ],
+)
+async def test_grain_only_followup_uses_prior_task_without_inventing_time_range(
+    context_catalog, followup, expected,
+):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:grain-followup",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "grain-followup-" + contract_digest(followup)[:8]
+    await bridge.handle(request(
+        question=first_step[0],
+        message_id="grain-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    result = await bridge.handle(request(
+        question=followup,
+        message_id="grain-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == expected
+    assert executions[-1].history == []
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_dimension_ranking_followup_inherits_one_metric_and_filters(
+    context_catalog,
+):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:dimension-ranking",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "dimension-ranking"
+    await bridge.handle(request(
+        question=first_step[0],
+        message_id="ranking-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    result = await bridge.handle(request(
+        question="哪个城市最高？",
+        message_id="ranking-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == "查询2025年上海销售额最高的城市。"
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_dimension_ranking_followup_wins_over_broad_replacement_ambiguity(
+    context_catalog,
+):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:dimension-ranking-priority",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "dimension-ranking-priority"
+    await bridge.handle(request(
+        question=first_step[0],
+        message_id="ranking-priority-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    result = await bridge.handle(request(
+        question="那最低的城市呢？",
+        message_id="ranking-priority-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == "查询2025年上海销售额最低的城市。"
+    assert executions[-1].history == []
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_metric_only_followup_replaces_metric_and_retains_task_scope(
+    context_catalog,
+):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(
+        context_catalog, [first_step, first_step]
+    )
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:metric-only-followup",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "metric-only-followup"
+    await bridge.handle(request(
+        question=first_step[0],
+        message_id="metric-only-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    followup = request(
+        question="订单笔数是多少？",
+        message_id="metric-only-second",
+        conversation_id=conversation_id,
+    )
+    result = await bridge.handle(followup, IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == "查询2025年上海订单笔数。"
+    assert executions[-1].history == []
+    assert len(transport.calls) == 2
+    snapshot = await bridge.store.load(followup, IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    current = next(
+        item for item in task.versions if item.version == task.active_version
+    )
+    assert current.context_question.metrics == ["订单笔数"]
+    assert current.context_question.filters[0].surface == "上海"
+    assert current.context_question.time.surface == "2025年"
+    assert snapshot.plans == ()
+
+    independent = await bridge.handle(request(
+        question=first_step[0],
+        message_id="metric-only-independent-third",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert independent.status == "COMPLETED"
+    assert executions[-1].question == first_step[0]
+    assert len(transport.calls) == 4
+
+
+@pytest.mark.asyncio
+async def test_ranked_group_result_set_drilldown_preserves_immediate_antecedent(
+    provider,
+):
+    publish_province_dimension(
+        provider, publication_id="ranked-group-drilldown-release"
+    )
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return v1_context(chat, filter_value="测试产品").model_copy(update={
+            "request_id": execution_responses[-1].request_id,
+            "source_dataset_id": execution_responses[-1].dataset_id,
+            "primary_intent": PrimaryIntent.METRIC_QUERY,
+            "entity": None,
+            "fields": [],
+            "metrics": [MetricRef(input="销售额", canonical_name="销售额")],
+            "dimensions": ["省份"],
+        })
+
+    bridge = handler(provider, redis, v1, v1_context_reader=read_context)
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "ranked-group-result-set-drilldown"
+    await bridge.handle(request(
+        question="统计测试产品在各省份的销售额。",
+        message_id="drilldown-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    second_request = request(
+        question="排第一的省份里，有哪些医院在采购？",
+        message_id="drilldown-second",
+        conversation_id=conversation_id,
+    )
+    second = await bridge.handle(second_request, IDENTITY)
+    after_result_set = await bridge.store.load(second_request, IDENTITY)
+    premature_pronoun = resolve_context_references(
+        chat=request(
+            question="它一共买了多少钱的货？",
+            message_id="drilldown-premature-pronoun",
+            conversation_id=conversation_id,
+        ),
+        identity=IDENTITY,
+        state_artifact=after_result_set.state,
+        catalog=provider[0],
+        resolved_business_domain_ids=[205],
+        now=NOW,
+    )
+    assert premature_pronoun is not None
+    assert premature_pronoun.completed_question is None
+    assert premature_pronoun.clarification_question is not None
+    third = await bridge.handle(request(
+        question="这些医院里采购金额最高的是哪家？",
+        message_id="drilldown-third",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    fourth_request = request(
+        question="它一共买了多少钱的货？",
+        message_id="drilldown-fourth",
+        conversation_id=conversation_id,
+    )
+    fourth = await bridge.handle(fourth_request, IDENTITY)
+
+    assert second.status == third.status == fourth.status == "COMPLETED"
+    assert [item.question for item in executions] == [
+        "统计测试产品在各省份的销售额。",
+        "查询测试产品的销售额排名第一的省份中有哪些医院在采购。",
+        "查询测试产品的销售额排名第一的省份中采购金额最高的医院。",
+        "查询测试产品的销售额排名第一的省份中采购金额最高的医院一共买了多少钱的货。",
+    ]
+    assert all(item.history == [] for item in executions[1:])
+    snapshot = await bridge.store.load(fourth_request, IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    current = next(
+        item for item in task.versions if item.version == task.active_version
+    )
+    assert task.active_version == 4
+    assert current.context_question.entity == "医院"
+    assert current.context_question.dimensions == ["医院"]
+    assert current.context_question.filters[0].surface == "测试产品"
+    assert current.context_question.execution_question == executions[-1].question
+
+
+@pytest.mark.asyncio
+async def test_ranked_group_drilldown_does_not_reuse_unrelated_dimension(provider):
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return v1_context(chat, filter_value="测试产品").model_copy(update={
+            "request_id": execution_responses[-1].request_id,
+            "source_dataset_id": execution_responses[-1].dataset_id,
+            "primary_intent": PrimaryIntent.METRIC_QUERY,
+            "entity": None,
+            "fields": [],
+            "metrics": [MetricRef(input="销售额", canonical_name="销售额")],
+            "dimensions": [],
+        })
+
+    bridge = handler(provider, redis, v1, v1_context_reader=read_context)
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "ranked-group-no-prior-dimension"
+    await bridge.handle(request(
+        question="查询测试产品的销售额。",
+        message_id="no-dimension-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    result = await bridge.handle(request(
+        question="排第一的省份里，有哪些医院在采购？",
+        message_id="no-dimension-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    unrelated_result_set = await bridge.handle(request(
+        question="这些医院里采购金额最高的是哪家？",
+        message_id="no-dimension-third",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "NEEDS_CLARIFICATION"
+    assert unrelated_result_set.status == "NEEDS_CLARIFICATION"
+    assert len(executions) == 1
+
+
+@pytest.mark.asyncio
+async def test_generic_object_reference_keeps_current_surface_semantics(provider):
+    publish_province_dimension(
+        provider, publication_id="province-dimension-release"
+    )
+
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return v1_context(
+            chat, filter_value="一次性脑电传感器"
+        ).model_copy(update={
+            "request_id": execution_responses[-1].request_id,
+            "source_dataset_id": execution_responses[-1].dataset_id,
+            "metrics": [MetricRef(
+                input="含税销售总额", canonical_name="含税销售总额"
+            )],
+            "dimensions": ["省份"],
+        })
+
+    bridge = handler(provider, redis, v1, v1_context_reader=read_context)
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "generic-object-reference"
+    await bridge.handle(request(
+        question="查询一次性脑电传感器的含税销售总额。",
+        message_id="generic-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    result = await bridge.handle(request(
+        question="它在哪个省卖得最好？",
+        message_id="generic-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == (
+        "查询一次性脑电传感器的含税销售总额最高的省份。"
+    )
+    assert executions[-1].history == []
+
+
+@pytest.mark.asyncio
+async def test_same_turn_explicit_object_bypasses_history_reference_shortcut(provider):
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return v1_context(
+            chat, filter_value="下腔静脉滤器"
+        ).model_copy(update={
+            "request_id": execution_responses[-1].request_id,
+            "source_dataset_id": execution_responses[-1].dataset_id,
+            "metrics": [MetricRef(
+                input="含税销售总额", canonical_name="含税销售总额"
+            )],
+        })
+
+    bridge = handler(provider, redis, v1, v1_context_reader=read_context)
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "same-turn-explicit-object"
+    await bridge.handle(request(
+        question="查询下腔静脉滤器的含税销售总额。",
+        message_id="same-turn-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    calls = install_resolution(
+        bridge,
+        provider,
+        completed="查询心排量及压力监测传感器的订单笔数。",
+    )
+
+    result = await bridge.handle(request(
+        question="再回到心排量及压力监测传感器，它的订单笔数是多少？",
+        message_id="same-turn-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert len(calls) == 1
+    assert executions[-1].question == "查询心排量及压力监测传感器的订单笔数。"
+    assert "下腔静脉滤器" not in executions[-1].question
+
+
+@pytest.mark.asyncio
+async def test_result_count_followup_preserves_opaque_relation_wording(provider):
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return v1_context(
+            chat, filter_value="绝对计数管"
+        ).model_copy(update={
+            "request_id": execution_responses[-1].request_id,
+            "source_dataset_id": execution_responses[-1].dataset_id,
+            "dimensions": ["经销商"],
+        })
+
+    bridge = handler(provider, redis, v1, v1_context_reader=read_context)
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "result-count-reference"
+    await bridge.handle(request(
+        question="查询绝对计数管产品的经销商名单。",
+        message_id="count-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    result = await bridge.handle(request(
+        question="一共有多少家经销商？",
+        message_id="count-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert executions[-1].question == "查询绝对计数管产品的经销商数量。"
+    assert executions[-1].history == []
+
+
+@pytest.mark.asyncio
+async def test_sort_and_ranked_item_followups_preserve_prior_object_context(
+    context_catalog,
+):
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return v1_context(chat, filter_value="测试产品").model_copy(update={
+            "request_id": execution_responses[-1].request_id,
+            "source_dataset_id": execution_responses[-1].dataset_id,
+            "metrics": [MetricRef(input="销售额", canonical_name="销售额")],
+            "dimensions": ["城市"],
+        })
+
+    bridge = handler(
+        context_catalog, redis, v1, v1_context_reader=read_context
+    )
+    install_fallback_resolution(bridge, context_catalog)
+    conversation_id = "sort-and-rank-followup"
+    await bridge.handle(request(
+        question="查询测试产品的城市名单。",
+        message_id="sort-rank-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    sort_result = await bridge.handle(request(
+        question="按销售额从高到低排序。",
+        message_id="sort-rank-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    rank_result = await bridge.handle(request(
+        question="第一名的销售额是多少？",
+        message_id="sort-rank-third",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert sort_result.status == rank_result.status == "COMPLETED"
+    assert executions[-2].question == (
+        "查询测试产品的城市名单，按销售额从高到低排序。"
+    )
+    assert executions[-1].question == (
+        "查询测试产品的销售额排名第一的城市及其销售额。"
+    )
+    assert executions[-2].history == executions[-1].history == []
+
+
+@pytest.mark.asyncio
+async def test_generic_object_reference_requires_one_prior_object_family(provider):
+    redis = DeploymentRedis()
+    calls = 0
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        nonlocal calls
+        calls += 1
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return CanonicalAnalysisRequest(
+            request_id=execution_responses[-1].request_id,
+            conversation_id=chat.conversation_id,
+            application_id=chat.application_id,
+            tenant_id=IDENTITY.tenant_id,
+            user_id=IDENTITY.user_id,
+            original_question=chat.question,
+            primary_intent=PrimaryIntent.DETAIL_QUERY,
+            semantic_model_id=chat.semantic_model_id,
+            business_domain_ids=list(chat.business_domain_ids),
+            source_dataset_id=execution_responses[-1].dataset_id,
+            filters=[
+                {"field": "商品名称", "operator": "EQ", "value": "测试产品"},
+                {"field": "医院名称", "operator": "EQ", "value": "测试医院"},
+            ],
+            semantic_filter_bindings=[
+                SemanticFilterBinding(
+                    filter_index=0,
+                    input_value="测试产品",
+                    canonical_value="测试产品",
+                    canonical_name="商品名称",
+                    attribute_code="product_name",
+                    score=1.0,
+                ),
+                SemanticFilterBinding(
+                    filter_index=1,
+                    input_value="测试医院",
+                    canonical_value="测试医院",
+                    canonical_name="医院名称",
+                    attribute_code="hospital_name",
+                    score=1.0,
+                ),
+            ],
+        )
+
+    bridge = handler(provider, redis, v1, v1_context_reader=read_context)
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "ambiguous-object-reference"
+    await bridge.handle(request(
+        question="查询测试医院采购测试产品的情况。",
+        message_id="ambiguous-object-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+
+    result = await bridge.handle(request(
+        question="它在哪个省卖得最好？",
+        message_id="ambiguous-object-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "NEEDS_CLARIFICATION"
+    assert "对象无法唯一确定" in result.answer
+    assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_direct_completion_keeps_current_semantic_context(context_catalog):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        if len(executions) == 1:
+            return response(chat)
+        failed = response(chat)
+        failed.status = "SAFE_FALLBACK"
+        failed.error_code = "DEPENDENCY_UNAVAILABLE"
+        return failed
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:failed-continuation",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "failed-direct-completion"
+    first = request(
+        question=first_step[0],
+        message_id="failed-direct-first",
+        conversation_id=conversation_id,
+    )
+    await bridge.handle(first, IDENTITY)
+    before = await bridge.store.load(first, IDENTITY)
+    before_state = ConversationState.model_validate(before.state.payload)
+    prior_topic = before_state.active_topic_id
+    prior_task_id = before_state.topics[prior_topic].active_task_id
+    prior_version = before_state.tasks[prior_task_id].active_version
+
+    followup = request(
+        question="按月看销售额。",
+        message_id="failed-direct-second",
+        conversation_id=conversation_id,
+    )
+    result = await bridge.handle(followup, IDENTITY)
+
+    assert result.status == "SAFE_FALLBACK"
+    after = await bridge.store.load(followup, IDENTITY)
+    after_state = ConversationState.model_validate(after.state.payload)
+    assert after_state.active_topic_id == prior_topic
+    assert set(after_state.tasks) == set(before_state.tasks)
+    current_task = after_state.tasks[prior_task_id]
+    assert current_task.active_version == prior_version + 1
+    current = next(
+        item for item in current_task.versions
+        if item.version == current_task.active_version
+    )
+    assert current.context_question is not None
+    assert current.context_question.execution_question == (
+        "按月统计2025年上海的销售额。"
+    )
+    assert current.context_question.metrics == ["销售额"]
+    assert current.context_question.dimensions == ["月"]
+    assert current.context_question.provenance == "V2_CONTEXT_RESOLUTION"
+    assert current.semantics.metrics == []
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_demo_result_availability_retries_one_simpler_real_v1_query(
+    context_catalog,
+):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        if len(executions) == 2:
+            failed = response(chat)
+            failed.status = "SAFE_FALLBACK"
+            failed.error_code = "DEPENDENCY_CONTRACT_REJECTED"
+            return failed
+        return query_response(chat, answer="real scalar retry result")
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:result-availability",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+        demo_mode=True,
+    )
+    conversation_id = "result-availability"
+    await bridge.handle(request(
+        question=first_step[0],
+        message_id="result-availability-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    result = await bridge.handle(request(
+        question="按月看销售额。",
+        message_id="result-availability-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert result.error_code is None
+    assert result.answer == "real scalar retry result"
+    assert [item.question for item in executions] == [
+        first_step[0],
+        "按月统计2025年上海的销售额。",
+        "查询2025年上海销售额。",
+    ]
+    assert executions[-1].history == []
+    assert executions[-1].semantic_model_id == executions[-2].semantic_model_id
+    assert executions[-1].business_domain_ids == executions[-2].business_domain_ids
+    rewrite = next(
+        item for item in result.analysis_process if item.stage == "QUESTION_REWRITE"
+    )
+    assert "按月统计2025年上海的销售额。" in rewrite.summary
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_demo_result_retry_removes_only_universal_entity_scope(provider):
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        if len(executions) == 1:
+            failed = response(chat)
+            failed.status = "SAFE_FALLBACK"
+            failed.error_code = "DEPENDENCY_CONTRACT_REJECTED"
+            failed._upstream_error_code = "ASL_ENTITY_MENTION_UNRESOLVED"
+            return failed
+        return query_response(chat, answer="real universal-scope result")
+
+    bridge = handler(provider, redis, v1)
+    bridge.demo_mode = True
+    install_fallback_resolution(bridge, provider)
+    chat = request(
+        question="统计全部产品的含税销售总额。",
+        message_id="universal-entity-scope",
+        conversation_id="universal-entity-scope",
+    )
+
+    result = await bridge.handle(chat, IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert result.error_code is None
+    assert result.answer == "real universal-scope result"
+    assert [item.question for item in executions] == [
+        "统计全部产品的含税销售总额。",
+        "统计含税销售总额。",
+    ]
+    assert all(item.history == [] for item in executions)
+    rewrite = next(
+        item for item in result.analysis_process if item.stage == "QUESTION_REWRITE"
+    )
+    assert "统计全部产品的含税销售总额。" in rewrite.summary
+
+
+@pytest.mark.asyncio
+async def test_demo_result_retry_never_removes_concrete_entity_value(provider):
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        failed = response(chat)
+        failed.status = "SAFE_FALLBACK"
+        failed.error_code = "DEPENDENCY_CONTRACT_REJECTED"
+        failed._upstream_error_code = "ASL_ENTITY_MENTION_UNRESOLVED"
+        return failed
+
+    bridge = handler(provider, redis, v1)
+    bridge.demo_mode = True
+    install_fallback_resolution(bridge, provider)
+    chat = request(
+        question="统计可吸收外科缝线的含税销售总额。",
+        message_id="concrete-entity-scope",
+        conversation_id="concrete-entity-scope",
+    )
+
+    result = await bridge.handle(chat, IDENTITY)
+
+    assert result.status == "SAFE_FALLBACK"
+    assert result.error_code == "DEPENDENCY_CONTRACT_REJECTED"
+    assert [item.question for item in executions] == [chat.question]
+
+
+@pytest.mark.asyncio
+async def test_demo_result_retry_removes_generic_type_after_named_value(provider):
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        if len(executions) == 1:
+            failed = response(chat)
+            failed.status = "SAFE_FALLBACK"
+            failed.error_code = "DEPENDENCY_CONTRACT_REJECTED"
+            failed._upstream_error_code = "ASL_ENTITY_MENTION_UNRESOLVED"
+            return failed
+        return query_response(chat, answer="real normalized-entity result")
+
+    bridge = handler(provider, redis, v1)
+    bridge.demo_mode = True
+    install_fallback_resolution(bridge, provider)
+    chat = request(
+        question="分析上海市费森尤斯产品最近一年的销售趋势。",
+        message_id="generic-type-after-name",
+        conversation_id="generic-type-after-name",
+    )
+
+    result = await bridge.handle(chat, IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert result.answer == "real normalized-entity result"
+    assert [item.question for item in executions] == [
+        chat.question,
+        "分析上海市费森尤斯最近一年的销售趋势。",
+    ]
+    rewrite = next(
+        item for item in result.analysis_process if item.stage == "QUESTION_REWRITE"
+    )
+    assert chat.question in rewrite.summary
+
+
+@pytest.mark.asyncio
+async def test_demo_result_retry_keeps_generic_result_target(provider):
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        failed = response(chat)
+        failed.status = "SAFE_FALLBACK"
+        failed.error_code = "DEPENDENCY_CONTRACT_REJECTED"
+        failed._upstream_error_code = "ASL_ENTITY_MENTION_UNRESOLVED"
+        return failed
+
+    bridge = handler(provider, redis, v1)
+    bridge.demo_mode = True
+    install_fallback_resolution(bridge, provider)
+    chat = request(
+        question="查询哪些产品的销售额最高？",
+        message_id="generic-result-target",
+        conversation_id="generic-result-target",
+    )
+
+    result = await bridge.handle(chat, IDENTITY)
+
+    assert result.status == "SAFE_FALLBACK"
+    assert [item.question for item in executions] == [chat.question]
+
+
+@pytest.mark.asyncio
+async def test_demo_result_retry_uses_prior_governed_metric_for_result_set_alias(
+    provider,
+):
+    publish_province_dimension(
+        provider, publication_id="result-set-alias-retry-release"
+    )
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        if "采购金额最高的医院" in chat.question:
+            failed = response(chat)
+            failed.status = "SAFE_FALLBACK"
+            failed.error_code = "DEPENDENCY_CONTRACT_REJECTED"
+            execution_responses.append(failed)
+            return failed
+        result = query_response(chat, answer="real availability result")
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return v1_context(chat, filter_value="测试产品").model_copy(update={
+            "request_id": execution_responses[-1].request_id,
+            "source_dataset_id": execution_responses[-1].dataset_id,
+            "primary_intent": PrimaryIntent.METRIC_QUERY,
+            "entity": None,
+            "fields": [],
+            "metrics": [MetricRef(input="销售额", canonical_name="销售额")],
+            "dimensions": ["省份"],
+        })
+
+    bridge = handler(provider, redis, v1, v1_context_reader=read_context)
+    bridge.demo_mode = True
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "result-set-alias-availability-retry"
+    await bridge.handle(request(
+        question="统计测试产品在各省份的销售额。",
+        message_id="alias-retry-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    del bridge._resolve
+    await bridge.handle(request(
+        question="排第一的省份里，有哪些医院在采购？",
+        message_id="alias-retry-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    result = await bridge.handle(request(
+        question="这些医院里采购金额最高的是哪家？",
+        message_id="alias-retry-third",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert result.error_code is None
+    assert executions[-2].question == (
+        "查询测试产品的销售额排名第一的省份中采购金额最高的医院。"
+    )
+    assert executions[-1].question == "查询测试产品的销售额。"
+    rewrite = next(
+        item for item in result.analysis_process if item.stage == "QUESTION_REWRITE"
+    )
+    assert "采购金额最高的医院" in rewrite.summary
+
+
+@pytest.mark.asyncio
+async def test_later_reference_uses_failed_turns_published_context(provider):
+    publish_province_dimension(
+        provider, publication_id="failed-turn-province-release"
+    )
+    redis = DeploymentRedis()
+    executions = []
+    execution_responses = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        if len(executions) == 2:
+            failed = response(chat)
+            failed.status = "SAFE_FALLBACK"
+            failed.error_code = "ASL_DIMENSION_INVALID"
+            return failed
+        result = query_response(chat)
+        execution_responses.append(result)
+        return result
+
+    async def read_context(chat, _identity):
+        return v1_context(
+            chat, filter_value="一次性脑电传感器"
+        ).model_copy(update={
+            "request_id": execution_responses[-1].request_id,
+            "source_dataset_id": execution_responses[-1].dataset_id,
+            "metrics": [MetricRef(input="销售额", canonical_name="销售额")],
+        })
+
+    bridge = handler(provider, redis, v1, v1_context_reader=read_context)
+    install_fallback_resolution(bridge, provider)
+    conversation_id = "failed-turn-later-reference"
+    first = request(
+        question="查询一次性脑电传感器的销售额。",
+        message_id="failed-chain-first",
+        conversation_id=conversation_id,
+    )
+    await bridge.handle(first, IDENTITY)
+    del bridge._resolve
+
+    second = await bridge.handle(request(
+        question="按月看销售额。",
+        message_id="failed-chain-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    third_request = request(
+        question="它在哪个省卖得最好？",
+        message_id="failed-chain-third",
+        conversation_id=conversation_id,
+    )
+    third = await bridge.handle(third_request, IDENTITY)
+
+    assert second.status == "SAFE_FALLBACK"
+    assert third.status == "COMPLETED"
+    assert executions[-1].question == (
+        "查询一次性脑电传感器的销售额最高的省份。"
+    )
+    snapshot = await bridge.store.load(third_request, IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    assert task.active_version == 3
+    current = next(
+        item for item in task.versions if item.version == task.active_version
+    )
+    assert current.context_question.metrics == ["销售额"]
+    assert current.context_question.dimensions == ["省份"]
+    assert current.context_question.filters[0].surface == "一次性脑电传感器"
 
 
 @pytest.mark.asyncio
