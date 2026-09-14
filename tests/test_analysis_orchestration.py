@@ -27,6 +27,7 @@ from app.domain.models import (
 from app.intent import RuleBasedIntentClassifier
 from app.services import DataAnalysisOrchestrator
 from app.services.orchestrator import _requires_deterministic_analysis
+from app.services.progress import progress_scope
 from app.stores import InMemorySessionStore
 from minio_followup_store import DatasetReference, LoadedDataset
 
@@ -478,6 +479,33 @@ class FailingReportExporter:
         raise RuntimeError("simulated MinIO report failure")
 
 
+class InlineChartExporterStub:
+    def __init__(self, *, fail: bool = False):
+        self.fail = fail
+        self.published = []
+
+    def publish_chart(self, chart_spec, *, scope, dataset_ids):
+        if self.fail:
+            raise RuntimeError("simulated inline chart publication failure")
+        self.published.append((chart_spec, scope, dataset_ids))
+        return {
+            "report_id": "chart-1",
+            "format": "svg",
+            "object_name": "data-analysis/reports/chart-1.svg",
+            "download_url": "http://minio/bam/chart-1.svg",
+            "byte_size": 123,
+            "object_expires_at": datetime.now(timezone.utc).isoformat(),
+            "report_reference": {
+                "report_id": "chart-1",
+                "object_name": "data-analysis/reports/chart-1.svg",
+                "expires_at": datetime.now(timezone.utc).isoformat(),
+            },
+        }
+
+    def delete_object(self, object_name):
+        raise AssertionError(f"unexpected chart cleanup: {object_name}")
+
+
 class SynthesisStub:
     async def synthesize(self, request, analysis, evidence):
         return (
@@ -911,6 +939,62 @@ async def test_qwen_synthesis_is_used_only_after_analysis_evidence_exists() -> N
     )
     assert synthesis_step.status == "COMPLETED"
     assert "模型不被允许新增无证据事实" in synthesis_step.summary
+
+
+@pytest.mark.asyncio
+async def test_trend_chart_is_embedded_in_insight_progress_for_existing_web_client() -> None:
+    exporter = InlineChartExporterStub()
+    events = []
+    with progress_scope(events.append):
+        response = await service(
+            dataset_store=SmallDatasetStore(),
+            report_exporter=exporter,
+        ).handle(
+            ChatRequest(
+                application_id="app",
+                conversation_id="inline-trend-chart",
+                message_id="m1",
+                question="分析2026年1月到2月销售额趋势",
+                semantic_model_id=1,
+                business_domain_id=1,
+            ),
+            TrustedIdentity(tenant_id="tenant", user_id="user"),
+        )
+
+    insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
+    assert response.status == "COMPLETED"
+    assert response.chart_specs[0].chart_type == "LINE"
+    assert insight["chart_image_count"] == 1
+    assert "#### 图表" in insight["message"]
+    assert "![销售额趋势](http://minio/bam/chart-1.svg)" in insight["message"]
+    assert exporter.published[0][2] == [response.dataset_id]
+    assert exporter.published[0][1].conversation_id == "inline-trend-chart"
+
+
+@pytest.mark.asyncio
+async def test_inline_chart_publication_failure_keeps_valid_analysis_result() -> None:
+    events = []
+    with progress_scope(events.append):
+        response = await service(
+            dataset_store=SmallDatasetStore(),
+            report_exporter=InlineChartExporterStub(fail=True),
+        ).handle(
+            ChatRequest(
+                application_id="app",
+                conversation_id="inline-chart-failure",
+                message_id="m1",
+                question="分析2026年1月到2月销售额趋势",
+                semantic_model_id=1,
+                business_domain_id=1,
+            ),
+            TrustedIdentity(tenant_id="tenant", user_id="user"),
+        )
+
+    insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
+    assert response.status == "COMPLETED"
+    assert response.chart_specs[0].chart_type == "LINE"
+    assert insight["chart_image_count"] == 0
+    assert "#### 图表" not in insight["message"]
 
 
 @pytest.mark.asyncio

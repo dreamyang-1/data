@@ -5400,6 +5400,15 @@ class DataAnalysisOrchestrator:
                 for item in chart_specs
             )
             chart_summary = f"\n已根据本次分析任务生成{rendered_charts}，用于直观查看数据变化和差异。"
+        chart_images = await self._publish_inline_charts(
+            request=request,
+            identity=identity,
+            dataset_id=dataset_id,
+            chart_specs=chart_specs,
+        )
+        chart_display = ""
+        if chart_images:
+            chart_display = "\n\n#### 图表\n\n" + "\n\n".join(chart_images)
         insight_text = (
             synthesized_answer
             or (
@@ -5423,8 +5432,11 @@ class DataAnalysisOrchestrator:
                 f"分析意图：{self._intent_label(request.primary_intent)}。\n\n"
                 + insight_text
                 + chart_summary
+                + chart_display
                 + "\n\n以上内容只基于本次查询结果和已验证证据，不额外推测业务原因。"
             ),
+            message_limit=8192,
+            chart_image_count=len(chart_images),
         )
         if reliability.level == "FAIL":
             response = self._fallback(
@@ -5999,6 +6011,68 @@ class DataAnalysisOrchestrator:
             )
         )
         response.answer += f"\n已生成{file_format.upper()}文件，可通过返回的 files[0].download_url 下载。"
+
+    async def _publish_inline_charts(
+        self,
+        *,
+        request: CanonicalAnalysisRequest,
+        identity: TrustedIdentity,
+        dataset_id: str | None,
+        chart_specs: list[dict[str, Any]],
+    ) -> list[str]:
+        """Publish validated chart specs for clients that render Markdown images.
+
+        Native clients may continue to consume ``AgentResponse.chart_specs``.
+        Publishing is presentation-only and failure never changes the query or
+        analysis result.
+        """
+
+        if not chart_specs or self.report_exporter is None:
+            return []
+        publish_chart = getattr(self.report_exporter, "publish_chart", None)
+        if not callable(publish_chart):
+            return []
+        scope = DatasetScope(
+            identity.tenant_id,
+            identity.user_id,
+            request.application_id,
+            request.conversation_id,
+            (
+                request.authorized_semantic_scope.fingerprint()
+                if request.authorized_semantic_scope
+                else ""
+            ),
+        )
+        dataset_ids = [dataset_id] if dataset_id else []
+        images: list[str] = []
+        for chart_spec in chart_specs[:3]:
+            try:
+                result = await asyncio.to_thread(
+                    publish_chart,
+                    chart_spec,
+                    scope=scope,
+                    dataset_ids=dataset_ids,
+                )
+                report_reference = result["report_reference"]
+                try:
+                    await self.sessions.put_report_reference(report_reference)
+                except Exception:
+                    await asyncio.to_thread(
+                        self.report_exporter.delete_object,
+                        result["object_name"],
+                    )
+                    raise
+                title = str(chart_spec.get("title") or "数据图表")
+                alt_text = (
+                    title.replace("[", "（")
+                    .replace("]", "）")
+                    .replace("\r", " ")
+                    .replace("\n", " ")
+                )
+                images.append(f"![{alt_text}]({result['download_url']})")
+            except Exception as exc:
+                logger.warning("inline chart publication failed: %s", exc)
+        return images
 
     async def _knowledge_document_answer(
         self, request: CanonicalAnalysisRequest, identity: TrustedIdentity

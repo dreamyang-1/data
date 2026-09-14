@@ -108,3 +108,48 @@ def test_composition_produces_pie_chart_with_decimal_metric() -> None:
     assert chart.chart_type == "PIE"
     assert chart.x_field == "渠道"
     assert chart.y_fields == ["销售额"]
+
+
+def test_line_chart_spec_renders_as_safe_self_contained_svg() -> None:
+    from app.analysis.visualization import render_chart_svg
+
+    payload = render_chart_svg({
+        "chart_type": "LINE",
+        "title": "销售额<趋势>",
+        "x_field": "月份",
+        "y_fields": ["销售额"],
+        "series_field": "产品",
+        "data": [
+            {"月份": "2026-01", "销售额": 100, "产品": "甲"},
+            {"月份": "2026-02", "销售额": 120, "产品": "甲"},
+        ],
+    })
+
+    assert payload is not None
+    text = payload.decode("utf-8")
+    assert text.startswith("<svg")
+    assert "<polyline" in text
+    assert "<circle" in text
+    assert "销售额&lt;趋势&gt;" in text
+    assert "<script" not in text
+
+
+def test_pie_chart_spec_renders_slices_and_legend() -> None:
+    from app.analysis.visualization import render_chart_svg
+
+    payload = render_chart_svg({
+        "chart_type": "PIE",
+        "title": "渠道占比",
+        "x_field": "渠道",
+        "y_fields": ["销售额"],
+        "data": [
+            {"渠道": "直销", "销售额": 60},
+            {"渠道": "分销", "销售额": 40},
+        ],
+    })
+
+    assert payload is not None
+    text = payload.decode("utf-8")
+    assert text.count("<path") == 2
+    assert "直销 60.0%" in text
+    assert "分销 40.0%" in text
