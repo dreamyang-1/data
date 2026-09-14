@@ -20,6 +20,7 @@ from app.domain.models import (
 from app.main import create_app
 from app.services.orchestrator import (
     DataAnalysisOrchestrator,
+    QUERY_EXECUTION_CHAIN,
     _business_datetime_text,
     _quality_status_text,
 )
@@ -152,6 +153,14 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
         "ambiguity": [],
     }
     assert asl_event["meta"]["display_model"] == "OagentASL"
+    planning_content = thinking_content(
+        events, "TASK_PLANNING", status="COMPLETED"
+    )
+    execution_running_content = thinking_content(
+        events, "DATA_RETRIEVAL", status="RUNNING"
+    )
+    assert f"规划调用：{QUERY_EXECUTION_CHAIN}" in planning_content
+    assert f"执行链路：{QUERY_EXECUTION_CHAIN}" in execution_running_content
     asl_index = events.index(asl_event)
     retrieval_completed_index = next(
         index for index, event in enumerate(events)
@@ -1042,6 +1051,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     assert "#### ◉ 任务拆分与规划" in planning_completed_content
     assert "拆分判断完成" in planning_completed_content
     assert "当前问题无需拆分，按单任务执行。  \n子任务1：" in planning_completed_content
+    assert f"规划调用：{QUERY_EXECUTION_CHAIN}" in planning_completed_content
     completed_think_stages = [
         data.get("meta", {}).get("stage")
         for data in events

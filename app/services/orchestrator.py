@@ -121,6 +121,10 @@ _INTERNAL_ASSUMPTIONS: ContextVar[tuple[str, ...]] = ContextVar(
     "data_agent_internal_assumptions", default=()
 )
 _BUSINESS_TIMEZONE = ZoneInfo("Asia/Shanghai")
+QUERY_EXECUTION_CHAIN = (
+    "语义解析 → ASL 查询规划 → SQL 翻译与只读执行 → "
+    "数据集 → 结果校验 → 洞察分析"
+)
 _QUALITY_STATUS_LABELS = {
     "PASS": "通过",
     "FAIL": "不通过",
@@ -691,7 +695,7 @@ class DataAnalysisOrchestrator:
                                     f"子任务1：{chat.question}"
                                 )
                             )
-                            + "\n规划调用：语义解析 → ASL 查询规划 → 只读 SQL → 结果校验"
+                            + f"\n规划调用：{QUERY_EXECUTION_CHAIN}"
                         ),
                         task_count=len(plan.tasks) if plan is not None else 1,
                     )
@@ -4580,8 +4584,8 @@ class DataAnalysisOrchestrator:
                 "DATA_RETRIEVAL",
                 "RUNNING",
                 "### ◉ 规划与执行\n"
-                "分析链路：智能语义查询器 → 独立 SQL 执行服务 → 数据集 → 分析。\n"
-                "正在按顺序执行查询规划与数据读取。",
+                f"执行链路：{QUERY_EXECUTION_CHAIN}。\n"
+                "正在按以上链路执行查询规划与数据读取。",
             )
             try:
                 relationship_count_request = self._relationship_count_projection_request(request)

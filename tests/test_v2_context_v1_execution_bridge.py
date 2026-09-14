@@ -32,6 +32,7 @@ from app.semantic_v2.context_state_store import RedisContextStateStore
 from app.semantic_v2.context_question import (
     _preferred_context_attribute_code,
     _replace_filter,
+    build_context_question,
     canonical_matches_execution,
     is_contextual_ellipsis,
     is_self_contained_execution_question,
@@ -265,6 +266,47 @@ def test_v1_context_evidence_accepts_output_dataset_from_the_exact_execution():
         identity=IDENTITY,
         response=unrelated,
     ) is False
+
+
+def test_context_frame_keeps_query_object_separate_from_metric_calculation_subject():
+    chat = request(
+        question="统计上海市各个经销商的区域医院覆盖率",
+        message_id="coverage-context-frame",
+    )
+    canonical = CanonicalAnalysisRequest(
+        conversation_id=chat.conversation_id,
+        application_id=chat.application_id,
+        tenant_id=IDENTITY.tenant_id,
+        user_id=IDENTITY.user_id,
+        original_question=chat.question,
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        semantic_model_id=chat.semantic_model_id,
+        business_domain_ids=list(chat.business_domain_ids),
+        metrics=[MetricRef(
+            input="区域医院覆盖率",
+            canonical_name="区域医院覆盖率",
+        )],
+        entity="经销商",
+        metric_subject_entity="hospital",
+        dimensions=["dealer"],
+        filters=[{
+            "field": "dim_city.city_name",
+            "operator": "EQ",
+            "value": "上海市",
+        }],
+    )
+
+    frame = build_context_question(
+        chat=chat,
+        parse=None,
+        v1_request=canonical,
+        catalog_version="current",
+    )
+
+    assert frame.entity == "经销商"
+    assert frame.dimensions == ["dealer"]
+    assert frame.metrics == ["区域医院覆盖率"]
+    assert "metric_subject_entity" not in frame.model_dump(mode="json")
 
 
 @pytest.mark.parametrize(
