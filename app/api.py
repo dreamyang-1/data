@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
 import json
 import logging
 import re
@@ -40,6 +41,32 @@ from app.security import trusted_backend, require_application_namespace, resolve
 
 router = APIRouter(tags=["data-analysis"], dependencies=[Depends(trusted_backend)])
 logger = logging.getLogger(__name__)
+
+
+async def _forward_traced_progress(
+    stage_tracker: StageSpanTracker,
+    downstream,
+    event: dict[str, Any],
+) -> None:
+    """Deliver visible progress before recording optional telemetry.
+
+    Langfuse's synchronous span lifecycle may perform network or exporter work.
+    Running it during an SSE request delayed both the queued milestone and all
+    heartbeats. Streaming already has a request/root span, so its public stage
+    events go straight to the transport and never wait for optional per-stage
+    telemetry. Non-streaming calls retain their stage spans off the ASGI loop.
+    """
+
+    if downstream is not None:
+        result = downstream(event)
+        if inspect.isawaitable(result):
+            await result
+        # Queue.put() completes inline while the queue has capacity. Yield once
+        # so the SSE producer can render this milestone before recognition
+        # continues into its next synchronous catalog/validation section.
+        await asyncio.sleep(0)
+        return
+    await asyncio.to_thread(stage_tracker.handle, event)
 
 
 class SpreadsheetImportRequest(StrictModel):
@@ -156,11 +183,12 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
     stage_tracker = StageSpanTracker()
     existing_progress = _progress_callback.get()
 
-    def trace_progress(event: dict[str, Any]) -> Any:
-        stage_tracker.handle(event)
-        if existing_progress is not None:
-            return existing_progress(event)
-        return None
+    async def trace_progress(event: dict[str, Any]) -> None:
+        await _forward_traced_progress(
+            stage_tracker,
+            existing_progress,
+            event,
+        )
 
     try:
         user_hash = hash_identifier(identity.user_id)
@@ -664,16 +692,24 @@ async def chat_stream(
         ) from exc
 
     async def events() -> AsyncIterator[str]:
-        progress_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=100)
+        progress_queue: asyncio.Queue[
+            tuple[dict[str, Any], asyncio.Future[None]]
+        ] = asyncio.Queue(maxsize=100)
 
         async def publish_progress(event: dict[str, Any]) -> None:
-            await progress_queue.put(event)
+            rendered = asyncio.get_running_loop().create_future()
+            await progress_queue.put((event, rendered))
+            # A non-full Queue.put() does not yield control. Wait until the SSE
+            # producer has rendered this milestone so immediate synchronous
+            # recognition work cannot starve already-published UI output.
+            await rendered
 
         async def execute() -> AgentResponse:
             with progress_scope(publish_progress):
                 return await invoke(request, payload, identity)
 
         started_at = time.monotonic()
+        last_visible_at = started_at
         execution = asyncio.create_task(execute())
         deferred_planning: list[dict[str, Any]] = []
         intent_completed = False
@@ -683,6 +719,9 @@ async def chat_stream(
         titled_think_sections: set[str] = set()
         composite_mode = False
         composite_child_progress: list[dict[str, Any]] = []
+        latest_progress_stage = "INTENT_RECOGNITION"
+        settings = request.app.state.container.settings
+        heartbeat_interval = settings.thinking_stream_heartbeat_seconds
 
         def render_thinking(event: dict[str, Any]) -> list[str]:
             stage = str(event.get("stage") or "processing").strip().upper()
@@ -694,7 +733,6 @@ async def chat_stream(
             )
             if include_heading:
                 titled_think_sections.add(section)
-            settings = request.app.state.container.settings
             return _thinking_events(
                 event,
                 heading=(
@@ -706,6 +744,7 @@ async def chat_stream(
             )
 
         async def stream_thinking(event: dict[str, Any]) -> AsyncIterator[str]:
+            nonlocal last_visible_at
             rendered_events = render_thinking(event)
             message_chunk_count = max(0, len(rendered_events) - 1)
             settings = request.app.state.container.settings
@@ -719,11 +758,26 @@ async def chat_stream(
             )
             for index, rendered_event in enumerate(rendered_events):
                 yield rendered_event
+                if index > 0:
+                    last_visible_at = time.monotonic()
                 # The first item is the node-state event.  Yield control between
                 # subsequent text chunks so the ASGI server and browser can
                 # paint them progressively instead of coalescing one milestone.
                 if chunk_delay and 0 < index < len(rendered_events) - 1:
                     await asyncio.sleep(chunk_delay)
+
+        def heartbeat_events_if_due(*, force: bool = False) -> list[str]:
+            nonlocal last_visible_at
+            now = time.monotonic()
+            if not force and now - last_visible_at < heartbeat_interval:
+                return []
+            heartbeat_events = _progress_heartbeat_events(
+                latest_progress_stage,
+                elapsed_seconds=now - started_at,
+                message_id=external_message_id,
+            )
+            last_visible_at = now
+            return heartbeat_events
 
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
@@ -833,6 +887,29 @@ async def chat_stream(
             }:
                 return []
             return [event]
+
+        async def stream_progress_item(
+            item: tuple[dict[str, Any], asyncio.Future[None]],
+        ) -> AsyncIterator[str]:
+            nonlocal latest_progress_stage
+            progress_event, rendered = item
+            try:
+                candidate_progress_stage = str(
+                    progress_event.get("stage") or latest_progress_stage
+                ).strip().upper()
+                if _thinking_section(candidate_progress_stage) is not None:
+                    latest_progress_stage = candidate_progress_stage
+                visible_progress = ordered_progress(progress_event)
+                for event in visible_progress:
+                    async for rendered_event in stream_thinking(event):
+                        yield rendered_event
+                if not visible_progress:
+                    for heartbeat_event in heartbeat_events_if_due():
+                        yield heartbeat_event
+            finally:
+                if not rendered.done():
+                    rendered.set_result(None)
+
         yield _event("updata_state", {
             "step": "",
             "data": "accepted",
@@ -841,21 +918,25 @@ async def chat_stream(
         try:
             while not execution.done() or not progress_queue.empty():
                 if not progress_queue.empty():
-                    for event in ordered_progress(progress_queue.get_nowait()):
-                        async for rendered_event in stream_thinking(event):
-                            yield rendered_event
+                    progress_item = progress_queue.get_nowait()
+                    async for rendered_event in stream_progress_item(progress_item):
+                        yield rendered_event
                     continue
 
                 next_progress = asyncio.create_task(progress_queue.get())
+                remaining_heartbeat_seconds = max(
+                    0.05,
+                    heartbeat_interval - (time.monotonic() - last_visible_at),
+                )
                 done, _ = await asyncio.wait(
                     {execution, next_progress},
-                    timeout=10.0,
+                    timeout=remaining_heartbeat_seconds,
                     return_when=asyncio.FIRST_COMPLETED,
                 )
                 if next_progress in done:
-                    for event in ordered_progress(next_progress.result()):
-                        async for rendered_event in stream_thinking(event):
-                            yield rendered_event
+                    progress_item = next_progress.result()
+                    async for rendered_event in stream_progress_item(progress_item):
+                        yield rendered_event
                     continue
                 next_progress.cancel()
                 try:
@@ -864,12 +945,8 @@ async def chat_stream(
                     pass
                 if execution in done:
                     continue
-                yield _event("updata_state", {
-                    "step": "",
-                    "data": "heartbeat",
-                    "message_id": external_message_id,
-                    "elapsed_seconds": round(time.monotonic() - started_at, 1),
-                })
+                for heartbeat_event in heartbeat_events_if_due(force=True):
+                    yield heartbeat_event
 
             response = await execution
             response.conversation_id = external_conversation_id
@@ -1001,6 +1078,66 @@ def _event(name: str, data: dict) -> str:
     """Serialize the platform's data-only SSE envelope used by New_Agent."""
     payload = {"type": name, **data}
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def _progress_heartbeat_events(
+    stage: str,
+    *,
+    elapsed_seconds: float,
+    message_id: str,
+) -> list[str]:
+    """Keep the SSE connection and the platform's visible stage both alive.
+
+    New_Agent's page consumes ``<stage>`` markers carried by the existing
+    ``message_chunk`` contract.  A raw ``updata_state`` heartbeat alone is not
+    rendered, so a long model or tool call otherwise looks frozen even while
+    the request is healthy.  This reports elapsed work only; it does not claim
+    that a semantic or execution milestone has completed.
+    """
+
+    normalized_stage = (stage or "INTENT_RECOGNITION").strip().upper()
+    elapsed = max(0.0, round(float(elapsed_seconds), 1))
+    message = _progress_waiting_message(normalized_stage)
+    meta = {
+        "stage": normalized_stage,
+        "status": "RUNNING",
+        "progress_heartbeat": True,
+        "elapsed_seconds": elapsed,
+    }
+    return [
+        _event("updata_state", {
+            "step": "",
+            "data": "heartbeat",
+            "message_id": message_id,
+            "elapsed_seconds": elapsed,
+        }),
+        _event("message_chunk", {
+            "step": _new_agent_think_step(normalized_stage),
+            "index": 0,
+            "content": (
+                f"<stage>⏳ {message}（已用时 {elapsed:g} 秒）...</stage>"
+            ),
+            "role": "assistant",
+            "node": "",
+            "is_last": True,
+            "meta": meta,
+        }),
+    ]
+
+
+def _progress_waiting_message(stage: str) -> str:
+    section = _thinking_section(stage.strip().upper())
+    return {
+        "intent": "正在识别问题中的指标、维度与筛选条件",
+        "file": "正在读取并解析文件内容",
+        "planning": "正在生成任务拆分与调用计划",
+        "execution": "正在生成查询规划或读取数据",
+        "validation": "正在校验查询结果和数据质量",
+        "insight": "正在生成分析洞察和图表",
+        "clarification_execution": "正在处理补充信息",
+        "clarification_result": "正在整理补充信息的处理结果",
+        "final_output": "正在生成最终结果",
+    }.get(section or "", "当前处理仍在进行")
 
 
 def _thinking_events(

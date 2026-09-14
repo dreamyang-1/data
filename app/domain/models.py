@@ -605,6 +605,11 @@ class McpConfig(StrictModel):
     mcp_server_url: str = Field(min_length=8, max_length=2048)
     connect_type: Literal["sse", "streamable_http"] = "sse"
     headers: dict[str, str] | None = None
+    slug: str = Field(
+        default="",
+        max_length=100,
+        description="平台透传的MCP/Skill关联标识；不参与数据权限判定",
+    )
 
     @field_validator("mcp_server_url")
     @classmethod

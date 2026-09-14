@@ -5,6 +5,7 @@ import asyncio
 import copy
 import hashlib
 import hmac
+import html
 import json
 import logging
 import re
@@ -5413,14 +5414,56 @@ class DataAnalysisOrchestrator:
                 for item in chart_specs
             )
             chart_summary = f"\n已根据本次分析任务生成{rendered_charts}，用于直观查看数据变化和差异。"
-        chart_images = (
-            self._render_inline_charts(chart_specs=chart_specs)
-            if reliability.level != "FAIL"
-            else []
-        )
+        visualization_executions: list[ExtensionExecution] = []
+        mcp_chart_urls: list[str] = []
+        if chart_specs and reliability.level != "FAIL" and chat.mcp:
+            try:
+                attempted_visualizations = (
+                    await self.extension_dispatcher.execute_visualizations(
+                        chat=chat,
+                        chart_specs=chart_specs,
+                    )
+                )
+            except Exception as exc:
+                logger.warning(
+                    "configured visualization MCP unavailable: %s",
+                    type(exc).__name__,
+                )
+            else:
+                for execution in attempted_visualizations:
+                    url = self.extension_dispatcher.visualization_url(execution)
+                    if url is None:
+                        logger.warning(
+                            "visualization MCP did not return a usable image: %s",
+                            execution.name,
+                        )
+                        continue
+                    visualization_executions.append(execution)
+                    mcp_chart_urls.append(url)
+        chart_images = []
+        if reliability.level != "FAIL" and not mcp_chart_urls:
+            chart_images = self._render_inline_charts(chart_specs=chart_specs)
         chart_display = ""
-        if chart_images:
+        if mcp_chart_urls:
+            remote_images = []
+            for index, url in enumerate(mcp_chart_urls):
+                spec = chart_specs[min(index, len(chart_specs) - 1)]
+                title = html.escape(str(spec.get("title") or "数据图表"), quote=True)
+                safe_url = html.escape(url, quote=True)
+                remote_images.append(
+                    f'<img src="{safe_url}" alt="{title}" '
+                    'style="max-width:100%;height:auto;display:block" />'
+                )
+            chart_display = "\n\n#### 图表\n\n" + "\n\n".join(remote_images)
+        elif chart_images:
             chart_display = "\n\n#### 图表\n\n" + "\n\n".join(chart_images)
+        chart_source = (
+            "PLATFORM_MCP"
+            if mcp_chart_urls
+            else "INLINE_SVG"
+            if chart_images
+            else "NONE"
+        )
         insight_text = (
             synthesized_answer
             or (
@@ -5448,7 +5491,8 @@ class DataAnalysisOrchestrator:
                 + "\n\n以上内容只基于本次查询结果和已验证证据，不额外推测业务原因。"
             ),
             message_limit=8192,
-            chart_image_count=len(chart_images),
+            chart_image_count=len(mcp_chart_urls) + len(chart_images),
+            chart_source=chart_source,
         )
         if reliability.level == "FAIL":
             response = self._fallback(
@@ -5589,9 +5633,12 @@ class DataAnalysisOrchestrator:
             chart_specs=chart_specs,
         )
         if external_search_mode == "ENRICH":
-            response.extension_executions = enrichment_executions
+            response.extension_executions = [
+                *visualization_executions,
+                *enrichment_executions,
+            ]
         else:
-            response.extension_executions = await self.extension_dispatcher.execute(
+            optional_executions = await self.extension_dispatcher.execute(
                 chat=chat,
                 intent=request.primary_intent.value,
                 builtin_skill=skill_for_intent(request.primary_intent),
@@ -5622,6 +5669,10 @@ class DataAnalysisOrchestrator:
                     "summary": True,
                 },
             )
+            response.extension_executions = [
+                *visualization_executions,
+                *optional_executions,
+            ]
             external_supplement, external_records = self._external_search_material(
                 response.extension_executions,
             )

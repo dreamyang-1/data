@@ -1,5 +1,7 @@
+import asyncio
 import json
 import re
+import time
 from datetime import date, datetime, timezone
 from uuid import uuid4
 
@@ -24,11 +26,14 @@ from app.services.orchestrator import (
     _business_datetime_text,
     _quality_status_text,
 )
+from app.services.progress import emit_progress
 from app.api import (
     _answer_chunk_delay,
     _answer_chunks,
+    _forward_traced_progress,
     _markdown_hard_line_breaks,
     _prepare_regeneration,
+    _progress_heartbeat_events,
     _thinking_chunk_delay,
     _thinking_chunks,
     _thinking_events,
@@ -351,6 +356,123 @@ def test_thinking_transport_preserves_inline_svg_chart_markup():
     assert svg in reconstructed
     assert reconstructed.count("<svg") == 1
     assert reconstructed.count("</svg>") == 1
+
+
+def test_progress_heartbeat_uses_visible_existing_stage_contract():
+    serialized = _progress_heartbeat_events(
+        "INTENT_RECOGNITION",
+        elapsed_seconds=6.04,
+        message_id="heartbeat-message",
+    )
+    events = [
+        json.loads(item.removeprefix("data: ").strip())
+        for item in serialized
+    ]
+
+    assert events[0] == {
+        "type": "updata_state",
+        "step": "",
+        "data": "heartbeat",
+        "message_id": "heartbeat-message",
+        "elapsed_seconds": 6.0,
+    }
+    visible = events[1]
+    assert visible["type"] == "message_chunk"
+    assert visible["step"] == "step1"
+    assert visible["is_last"] is True
+    assert visible["content"] == (
+        "<stage>⏳ 正在识别问题中的指标、维度与筛选条件"
+        "（已用时 6 秒）...</stage>"
+    )
+    assert visible["meta"] == {
+        "stage": "INTENT_RECOGNITION",
+        "status": "RUNNING",
+        "progress_heartbeat": True,
+        "elapsed_seconds": 6.0,
+    }
+
+
+def test_progress_delivery_is_not_blocked_by_slow_telemetry():
+    delivered = asyncio.Event()
+
+    class SlowTracker:
+        def handle(self, _event):
+            time.sleep(0.15)
+            raise AssertionError("streaming progress must not wait for telemetry")
+
+    async def downstream(_event):
+        delivered.set()
+
+    async def exercise():
+        task = asyncio.create_task(
+            _forward_traced_progress(
+                SlowTracker(),
+                downstream,
+                {"stage": "INTENT_RECOGNITION", "status": "RUNNING"},
+            )
+        )
+        await asyncio.wait_for(delivered.wait(), timeout=0.03)
+        await asyncio.wait_for(task, timeout=0.03)
+
+    asyncio.run(exercise())
+
+
+def test_slow_stream_emits_visible_progress_while_waiting():
+    app = build_test_app(
+        runtime_mode="V1",
+        thinking_stream_heartbeat_seconds=0.05,
+    )
+
+    class SlowWorkflow:
+        async def ainvoke(self, state):
+            # Hidden internal events must not postpone visible progress. They
+            # used to restart the wait timeout even though the page could not
+            # render them, recreating a several-second frozen interval.
+            for _ in range(6):
+                await emit_progress(
+                    "QUESTION_REWRITE",
+                    "RUNNING",
+                    "internal context normalization",
+                )
+                await asyncio.sleep(0.03)
+            chat = state["chat"]
+            return {"response": AgentResponse(
+                request_id=uuid4(),
+                conversation_id=chat.conversation_id,
+                status="COMPLETED",
+                intent=PrimaryIntent.CHAT,
+                answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(app.state.container, "workflow", SlowWorkflow())
+        response = client.post(
+            "/agent_chat/stream",
+            json={
+                "semantic_model_id": 81,
+                "application_id": "app1",
+                "conversation_id": "visible-waiting-progress",
+                "message_id": "m1",
+                "question": "请处理这个问题",
+            },
+        )
+
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    heartbeats = [
+        event for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("progress_heartbeat") is True
+    ]
+
+    assert response.status_code == 200
+    assert len(heartbeats) >= 2
+    assert all(event["step"] == "step1" for event in heartbeats)
+    assert all("<stage>⏳ 正在识别问题" in event["content"] for event in heartbeats)
+    assert all("已用时" in event["content"] for event in heartbeats)
+    assert next(event for event in events if event["type"] == "complete")["status"] == "COMPLETED"
 
 
 def test_file_inspection_summary_reports_successful_parse_without_internal_path():
@@ -1410,6 +1532,7 @@ def test_chat_accepts_platform_skill_tool_and_mcp_contract():
         "mcp": [{
             "mcp_server_url": "http://mcp.example.invalid/mcp",
             "connect_type": "streamable_http",
+            "slug": "",
         }],
         "temp_file_paths": [],
     }

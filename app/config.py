@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     thinking_stream_chunk_size: int = Field(default=4, ge=1, le=64)
     thinking_stream_max_chunks: int = Field(default=120, ge=1, le=1000)
     thinking_stream_chunk_interval_seconds: float = Field(default=0.03, ge=0, le=0.2)
+    # A protocol-only ``updata_state`` heartbeat keeps the HTTP connection
+    # alive, but the platform does not render it as changing progress.  Emit an
+    # existing ``message_chunk`` stage marker at this interval while a long
+    # semantic/model/tool call has no new milestone.
+    thinking_stream_heartbeat_seconds: float = Field(default=3.0, ge=0.05, le=30)
     # Source tree for the existing semantic-catalog authority used by the
     # context-only bridge.  It is read on each request and is independent of
     # the Limited Scalar publication/pin configuration below.

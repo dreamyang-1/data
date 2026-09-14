@@ -16,7 +16,9 @@ from app.domain.models import (
     DataQueryResult,
     Dataset,
     EvidenceItem,
+    ExtensionExecution,
     KnowledgeContext,
+    McpConfig,
     MetricRef,
     PrimaryIntent,
     SemanticAmbiguity,
@@ -943,6 +945,109 @@ async def test_trend_chart_is_embedded_in_insight_progress_for_existing_web_clie
 
 
 @pytest.mark.asyncio
+async def test_configured_visualization_mcp_is_used_before_inline_fallback() -> None:
+    class VisualizationDispatcher:
+        async def execute_visualizations(self, *, chat, chart_specs):
+            assert chat.mcp[0].connect_type == "sse"
+            assert chart_specs[0]["chart_type"] == "LINE"
+            return [ExtensionExecution(
+                name="generate_line_chart",
+                kind="MCP_TOOL",
+                status="COMPLETED",
+                output={
+                    "content": [{
+                        "type": "text",
+                        "text": "https://charts.example/sales-trend.jpeg",
+                    }]
+                },
+            )]
+
+        @staticmethod
+        def visualization_url(execution):
+            return execution.output["content"][0]["text"]
+
+        async def execute(self, **_kwargs):
+            return []
+
+    events = []
+    with progress_scope(events.append):
+        response = await service(
+            dataset_store=SmallDatasetStore(),
+            extension_dispatcher=VisualizationDispatcher(),
+        ).handle(
+            ChatRequest(
+                application_id="app",
+                conversation_id="mcp-trend-chart",
+                message_id="m1",
+                question="分析2026年1月到2月销售额趋势",
+                semantic_model_id=1,
+                business_domain_id=1,
+                mcp=[McpConfig(
+                    mcp_server_url="https://mcp.example/sse",
+                    connect_type="sse",
+                    slug="",
+                )],
+            ),
+            TrustedIdentity(tenant_id="tenant", user_id="user"),
+        )
+
+    insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
+    assert response.status == "COMPLETED"
+    assert insight["chart_source"] == "PLATFORM_MCP"
+    assert insight["chart_image_count"] == 1
+    assert "https://charts.example/sales-trend.jpeg" in insight["message"]
+    assert "<svg" not in insight["message"]
+    assert response.extension_executions[0].name == "generate_line_chart"
+
+
+@pytest.mark.asyncio
+async def test_failed_visualization_mcp_falls_back_to_inline_chart() -> None:
+    class FailedVisualizationDispatcher:
+        async def execute_visualizations(self, **_kwargs):
+            return [ExtensionExecution(
+                name="generate_line_chart",
+                kind="MCP_TOOL",
+                status="FAILED",
+                error="network unavailable",
+            )]
+
+        @staticmethod
+        def visualization_url(_execution):
+            return None
+
+        async def execute(self, **_kwargs):
+            return []
+
+    events = []
+    with progress_scope(events.append):
+        response = await service(
+            dataset_store=SmallDatasetStore(),
+            extension_dispatcher=FailedVisualizationDispatcher(),
+        ).handle(
+            ChatRequest(
+                application_id="app",
+                conversation_id="mcp-trend-fallback",
+                message_id="m1",
+                question="分析2026年1月到2月销售额趋势",
+                semantic_model_id=1,
+                business_domain_id=1,
+                mcp=[McpConfig(
+                    mcp_server_url="https://mcp.example/sse",
+                    connect_type="sse",
+                )],
+            ),
+            TrustedIdentity(tenant_id="tenant", user_id="user"),
+        )
+
+    insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
+    assert response.status == "COMPLETED"
+    assert insight["chart_source"] == "INLINE_SVG"
+    assert insight["chart_image_count"] == 1
+    assert "<svg" in insight["message"]
+    assert response.extension_executions == []
+
+
+@pytest.mark.asyncio
 async def test_inline_chart_render_failure_keeps_valid_analysis_result(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.services.orchestrator.render_chart_svg",
@@ -968,6 +1073,7 @@ async def test_inline_chart_render_failure_keeps_valid_analysis_result(monkeypat
     assert response.status == "COMPLETED"
     assert response.chart_specs[0].chart_type == "LINE"
     assert insight["chart_image_count"] == 0
+    assert insight["chart_source"] == "NONE"
     assert "#### 图表" not in insight["message"]
 
 
