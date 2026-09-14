@@ -1,11 +1,15 @@
 {
-  "status": "V2_CONTEXT_V1_EXECUTION_CLASS_CLOSURE_COMPLETE",
+  "status": "V2_CONTEXT_V1_EXECUTION_REGION_PENDING_CLOSURE_COMPLETE",
   "branch": "v2-context-v1-execution-slim-20260913T102135Z",
   "base_head": "8e0d2982fa57568f62afda64d0b24fa13050bf0f",
   "files": [
     {
       "path": "app/adapters/http.py",
       "sha256": "3b52abda2cad0309cc31bd056d038a7c2a8abe7fd4e77f4b19551bf21147cfe6"
+    },
+    {
+      "path": "app/main.py",
+      "sha256": "70b0d9cc85773bf7cf29d1c0201c9e327d7051c100a7411e1f712aa8051a9a58"
     },
     {
       "path": "app/semantic_v2/completed_question.py",
@@ -21,7 +25,7 @@
     },
     {
       "path": "app/semantic_v2/context_v1_execution.py",
-      "sha256": "c5c2f821daca1b6245c066057155e008615379c51cc8a7e94e4fb617531e2cbf"
+      "sha256": "e03459f1b39bf2df349fa8c2eb5abbb379b4036bbeb22d86439fbe3c55a82c81"
     },
     {
       "path": "app/semantic_v2/models.py",
@@ -29,19 +33,19 @@
     },
     {
       "path": "app/services/orchestrator.py",
-      "sha256": "3778ff5f1cb7ecc398c1692b24d5a7f81defca88e0e25787f474dbe98be49bb3"
+      "sha256": "9d0f172cc428c496297690b6d988b97b120c87a4fbc297416c9c9fa906b72adc"
     },
     {
       "path": "app/services/question_rewriter.py",
-      "sha256": "b86939d0105b36e7f4c939fabce00e3b5fb47659f2bac22354c21cc5780e863a"
+      "sha256": "afc9108eeb96296d03b69d4ff2c0a7aefafee814b74ab86ccdace2195932746f"
     },
     {
       "path": "docs/v2_cutover/context_v1_execution_slim/final_test_delta.json",
-      "sha256": "6f93328462681bf94a858745efb1c386171d361aa8e6d28a05d9c9c124ff0c93"
+      "sha256": "9d94ed8eed28141482d36adfb6120a09f213501128a053ffafed756954ba8170"
     },
     {
       "path": "docs/v2_cutover/context_v1_execution_slim/validation_report.md",
-      "sha256": "36a819fada64e56fd2f1426c613f8b4151625f2f46a21a2f27387c2c931733b4"
+      "sha256": "59540e5473c971d00dcf36c446299eaa5fff6c2ccd4a3e0a818fb771a0de3a82"
     },
     {
       "path": "tests/test_oagent_execution_scope_materialization.py",
@@ -53,7 +57,7 @@
     },
     {
       "path": "tests/test_question_rewriter.py",
-      "sha256": "986fe9e04dc4ea8f62de4ffac32152c7603d95554163eb638ffcefb1c2bb73fe"
+      "sha256": "70f3a1d14bec60be48d1a2eb241461b012ebd03053b6e09139e2c07bc734cebb"
     },
     {
       "path": "tests/test_v2_context_completed_question_trial.py",
@@ -61,16 +65,18 @@
     },
     {
       "path": "tests/test_v2_context_v1_execution_bridge.py",
-      "sha256": "5ce19388aadea6fa433aaab144ec15621b176094813e3359cf353e3c2c58600a"
+      "sha256": "0836f6e5a9063e8d2b3b57ffd80b43b6c665ca2e19dd38c01faf7d64ac56d238"
     }
   ],
   "validation": {
-    "focused_affected": "347 passed / 0 failed",
-    "full": "3774 passed / 91 existing failed / 0 collection errors",
+    "focused_affected": "289 passed / 0 failed",
+    "full": "3778 passed / 91 existing failed / 0 collection errors",
     "old_pass_to_new_fail": 0,
     "old_fail_to_new_pass": 15,
     "ast_compileall": "PASS",
-    "git_diff_check": "PASS"
+    "git_diff_check": "PASS",
+    "old_fail_to_new_pass_latest": 0,
+    "new_test_nodes_latest": 4
   },
   "excluded": [
     ".env",
@@ -81,7 +87,7 @@
     ".eval_private"
   ],
   "runtime": {
-    "pid": 26356,
+    "pid": 40832,
     "live": "HTTP 200",
     "ready": "HTTP 200 / READY",
     "runtime_mode": "V2_CONTEXT_V1_EXECUTION",

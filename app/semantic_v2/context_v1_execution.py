@@ -375,6 +375,12 @@ class V2ContextV1ExecutionBridge:
             [ChatRequest, TrustedIdentity, str, str, str | None],
             Awaitable[SemanticFilterBinding | None],
         ] | None = None,
+        v1_pending_answer_probe: Callable[
+            [ChatRequest, TrustedIdentity], Awaitable[bool]
+        ] | None = None,
+        v1_pending_executor: Callable[
+            [ChatRequest, TrustedIdentity], Awaitable[AgentResponse]
+        ] | None = None,
         demo_mode: bool = False,
     ):
         self.store = store
@@ -383,6 +389,8 @@ class V2ContextV1ExecutionBridge:
         self.v1_executor = v1_executor
         self.v1_context_reader = v1_context_reader
         self.v1_context_value_resolver = v1_context_value_resolver
+        self.v1_pending_answer_probe = v1_pending_answer_probe
+        self.v1_pending_executor = v1_pending_executor
         self.clock = clock
         self.startup_receipt = dict(startup_receipt)
         self.demo_mode = demo_mode
@@ -819,6 +827,36 @@ class V2ContextV1ExecutionBridge:
                     answer="原会话状态已过期，请使用新的消息标识重新提出完整问题。",
                 )
 
+            if (
+                self.v1_pending_answer_probe is not None
+                and self.v1_pending_executor is not None
+                and await self.v1_pending_answer_probe(chat, identity)
+            ):
+                running = await self.store.reserve(
+                    snapshot,
+                    chat=chat,
+                    trusted=identity,
+                    request_fingerprint=fingerprint,
+                    next_state=None,
+                    plan_state=None,
+                    pending_state=None,
+                    bridge_route="V1_PENDING_CLARIFICATION_CONTINUATION",
+                    catalog_provenance=None,
+                )
+                response = await self.v1_pending_executor(
+                    chat.model_copy(deep=True, update={"history": []}),
+                    identity,
+                )
+                await self.store.complete(
+                    running,
+                    chat=chat,
+                    trusted=identity,
+                    request_fingerprint=fingerprint,
+                    response=response,
+                    v1_execution_called=True,
+                )
+                return response
+
             context_chat = chat.model_copy(deep=True, update={"history": []})
             catalog = await self._request_catalog(context_chat)
             provenance = None
@@ -1045,6 +1083,12 @@ def build_context_v1_execution_handler(
         [ChatRequest, TrustedIdentity, str, str, str | None],
         Awaitable[SemanticFilterBinding | None],
     ] | None = None,
+    v1_pending_answer_probe: Callable[
+        [ChatRequest, TrustedIdentity], Awaitable[bool]
+    ] | None = None,
+    v1_pending_executor: Callable[
+        [ChatRequest, TrustedIdentity], Awaitable[AgentResponse]
+    ] | None = None,
     external: ContextV1ExternalDependencies | None = None,
 ) -> V2ContextV1ExecutionBridge:
     receipt = validate_context_v1_settings(settings)
@@ -1073,6 +1117,8 @@ def build_context_v1_execution_handler(
         v1_executor=v1_executor,
         v1_context_reader=v1_context_reader,
         v1_context_value_resolver=v1_context_value_resolver,
+        v1_pending_answer_probe=v1_pending_answer_probe,
+        v1_pending_executor=v1_pending_executor,
         demo_mode=settings.demo_mode,
         clock=lambda: datetime.now(timezone.utc).astimezone(),
         startup_receipt={

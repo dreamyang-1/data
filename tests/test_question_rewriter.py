@@ -1301,6 +1301,89 @@ async def test_confirmed_city_attribute_does_not_reopen_province_city_ambiguity(
 
 
 @pytest.mark.asyncio
+async def test_same_region_value_uses_finest_administrative_level_without_question():
+    matches = [
+        {
+            "score": 1.0,
+            "record_id": "province-shanghai",
+            "entity_name": "省份",
+            "attribute_name": "省份名称",
+            "attribute_code": "province_name",
+            "attribute_value": "上海市",
+            "business_domain_id": 205,
+        },
+        {
+            "score": 1.0,
+            "record_id": "city-shanghai",
+            "entity_name": "市",
+            "attribute_name": "城市名称",
+            "attribute_code": "city_name",
+            "attribute_value": "上海市",
+            "business_domain_id": 205,
+        },
+    ]
+    request = CanonicalAnalysisRequest(
+        conversation_id="finest-shanghai-city",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="分析上海市某产品最近一年的销售趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        filters=[{"field": "地区", "operator": "EQ", "value": "上海市"}],
+    )
+
+    ambiguities = await QuestionRewriter(
+        FakeSearcher(matches)
+    ).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert ambiguities == []
+    assert request.filters == [
+        {"field": "城市名称", "operator": "EQ", "value": "上海市"}
+    ]
+    assert len(request.semantic_filter_bindings) == 1
+    assert request.semantic_filter_bindings[0].attribute_code == "city_name"
+
+
+@pytest.mark.asyncio
+async def test_rewrite_does_not_surface_same_value_region_hierarchy_as_ambiguity():
+    matches = [
+        {
+            "score": 1.0,
+            "record_id": "province-municipality",
+            "entity_name": "省份",
+            "attribute_name": "省份名称",
+            "attribute_code": "province_name",
+            "attribute_value": "示例市",
+            "business_domain_id": 205,
+        },
+        {
+            "score": 1.0,
+            "record_id": "city-municipality",
+            "entity_name": "市",
+            "attribute_name": "城市名称",
+            "attribute_code": "city_name",
+            "attribute_value": "示例市",
+            "business_domain_id": 205,
+        },
+    ]
+
+    result = await QuestionRewriter(FakeSearcher(matches)).rewrite(
+        "查询示例市销售额",
+        previous=None,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert result.semantic_ambiguities == []
+    assert {
+        item["attribute_code"] for item in result.semantic_matches
+    } == {"city_name"}
+
+
+@pytest.mark.asyncio
 async def test_unique_full_hospital_name_suppresses_nested_alias_ambiguity():
     searcher = FakeSearcher([
         {

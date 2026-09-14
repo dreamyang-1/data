@@ -198,3 +198,48 @@ and the Java/platform, Oagent and SQL Translator services were not restarted.
 
 The fixed two-minute platform input stream was paused before this final load,
 so no new live semantic result is claimed in this closing section.
+
+## Region hierarchy and clarification continuation closure
+
+The latest platform trace exposed two related contract gaps. First, the live
+V1 Source Value search can return the same municipality value from both a
+province attribute and a city attribute. The old ambiguity check treated the
+two administrative levels as different business meanings. The rewriter now
+collapses only exact same-value region candidates whose administrative levels
+are known and chooses the finest level. Different values, different semantic
+families and unknown levels still use the normal clarification gate.
+
+Second, a clarification raised after the completed question had entered V1 was
+stored in the original V1 Pending store. A compact reply such as `1` reached
+the V2 bridge first and could not see that Pending through V2 TaskState. The
+bridge now delegates a turn to the original V1 Pending consumer only when the
+same trusted tenant, user, application, conversation, semantic scope and
+dataset have a pending question and the reply is a valid option or deterministic
+slot answer. The delegated request clears transport history and does not enable
+general V1 history inheritance. Unrelated turns continue through normal V2
+context resolution.
+
+Verification for this closure:
+
+- Exact positive and negative contract cases: **6 passed / 0 failed**.
+- Affected Bridge, rewriter, completed-question, Scope and candidate-integrity
+  set: **289 passed / 0 failed**.
+- Full offline suite: **3778 passed / 91 existing failed / 0 collection errors**.
+- Compared with the immediately preceding 3865-node full run: four new test
+  nodes passed, no node was removed, and **old-pass -> new-fail = 0**. The same
+  91 baseline nodes remained failed.
+- Python `compileall` and `git diff --check` passed.
+
+The fix does not add an execution anchor, Catalog Pin or migration, scope
+materialization, Demo execution envelope, V1 execution patch, Oagent change or
+SQL Translator change. No model, Benchmark, business SQL or production write
+was run.
+
+The eight explicit source, test and evidence files were synchronized to the
+development runtime and verified byte-for-byte with SHA-256. Only DataAnalysis
+Agent was restarted: `192.168.1.27:8088` now runs as PID 40832. `/live` and
+`/ready` returned HTTP 200, readiness was `READY`, and runtime mode remained
+`V2_CONTEXT_V1_EXECUTION`. The unrelated loopback 8088 listener and the
+Java/platform, Oagent and SQL Translator services were not restarted. The
+periodic platform input stream had been paused, so no new live business result
+is claimed here.

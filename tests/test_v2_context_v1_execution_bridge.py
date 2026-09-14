@@ -98,6 +98,8 @@ def handler(
     *,
     v1_context_reader=None,
     v1_context_value_resolver=None,
+    v1_pending_answer_probe=None,
+    v1_pending_executor=None,
 ):
     class NoModel:
         async def complete(self, **_kwargs):
@@ -115,6 +117,8 @@ def handler(
         v1_executor=v1,
         v1_context_reader=v1_context_reader,
         v1_context_value_resolver=v1_context_value_resolver,
+        v1_pending_answer_probe=v1_pending_answer_probe,
+        v1_pending_executor=v1_pending_executor,
         clock=lambda: NOW,
         startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
     )
@@ -3435,6 +3439,91 @@ async def test_pre_resolved_v1_entry_preserves_fields_and_clears_history():
         "dataset_id",
     ):
         assert getattr(execution, field) == getattr(source, field)
+
+
+@pytest.mark.asyncio
+async def test_v1_pending_option_answer_bypasses_v2_and_resumes_original_v1(provider):
+    redis = DeploymentRedis()
+    probes = []
+    pending_calls = []
+    normal_calls = []
+
+    async def normal_v1(chat, _identity):
+        normal_calls.append(chat.model_copy(deep=True))
+        raise AssertionError("V2 completed-question execution must not handle Pending")
+
+    async def probe(chat, identity):
+        probes.append((chat.model_copy(deep=True), identity))
+        return chat.question == "1"
+
+    async def resume(chat, identity):
+        pending_calls.append((chat.model_copy(deep=True), identity))
+        return query_response(chat, "clarification completed")
+
+    bridge = handler(
+        provider,
+        redis,
+        normal_v1,
+        v1_pending_answer_probe=probe,
+        v1_pending_executor=resume,
+    )
+    chat = request(
+        question="1",
+        message_id="v1-pending-option",
+        conversation_id="v1-pending-option",
+        history=[{"role": "assistant", "content": "请选择一个业务含义"}],
+    )
+
+    result = await bridge.handle(chat, IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert normal_calls == []
+    assert probes[0][0].question == "1"
+    assert pending_calls[0][0].question == "1"
+    assert pending_calls[0][0].history == []
+    assert pending_calls[0][1] == IDENTITY
+    snapshot = await bridge.store.load(chat, IDENTITY)
+    record = snapshot.message(chat.message_id)
+    assert record["bridge_route"] == "V1_PENDING_CLARIFICATION_CONTINUATION"
+    assert record["v1_execution_called"] is True
+
+
+@pytest.mark.asyncio
+async def test_non_pending_turn_keeps_normal_v2_resolution(provider):
+    redis = DeploymentRedis()
+    executions = []
+    pending_calls = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    async def probe(_chat, _identity):
+        return False
+
+    async def resume(chat, _identity):
+        pending_calls.append(chat)
+        raise AssertionError("an unrelated turn must not enter V1 Pending")
+
+    bridge = handler(
+        provider,
+        redis,
+        v1,
+        v1_pending_answer_probe=probe,
+        v1_pending_executor=resume,
+    )
+    install_resolution(bridge, provider)
+    chat = request(
+        question="查询今年销售额",
+        message_id="not-a-pending-answer",
+        conversation_id="not-a-pending-answer",
+    )
+
+    result = await bridge.handle(chat, IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert pending_calls == []
+    assert executions[0].question == chat.question
 
 
 def test_live_bridge_api_uses_original_v1_ingress(monkeypatch):

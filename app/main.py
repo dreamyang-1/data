@@ -53,6 +53,14 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
                     app.state.container.orchestrator
                     .resolve_completed_question_context_value
                 ),
+                v1_pending_answer_probe=(
+                    app.state.container.orchestrator
+                    .is_v1_pending_clarification_answer
+                ),
+                v1_pending_executor=(
+                    app.state.container.orchestrator
+                    .execute_v1_pending_clarification_answer
+                ),
                 external=context_v1_external,
             )
         app.state.isolated_chat_handler = handler

@@ -468,6 +468,8 @@ class QuestionRewriter:
             ]
             if confirmed:
                 current = confirmed
+            else:
+                current = self._prefer_finest_administrative_region(current)
             matches.extend(current)
             version = self._semantic_model_version(current)
             ambiguities.extend(self._detect_semantic_ambiguities(
@@ -513,6 +515,76 @@ class QuestionRewriter:
         for item in ambiguities:
             by_id[item.ambiguity_id or f"{item.type}:{item.phrase}"] = item
         return list(by_id.values())[:5]
+
+    @classmethod
+    def _prefer_finest_administrative_region(
+        cls, matches: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Resolve one geographic value to its finest catalog level.
+
+        A municipality can legitimately occur in both province and city
+        attributes with the same canonical value.  That is a hierarchy, not a
+        business ambiguity.  Collapse only exact same-value region candidates
+        whose administrative levels are known; different values, different
+        semantic families, and unknown levels remain available for the normal
+        ambiguity gate.
+        """
+
+        def level(item: dict[str, Any]) -> int | None:
+            reference = " ".join(
+                str(item.get(key) or "").strip().casefold()
+                for key in (
+                    "attribute_code", "attribute_name", "dimension_name",
+                    "field_name", "entity_name",
+                )
+            )
+            ordered = (
+                (10, ("province", "省份", "自治区", "直辖市")),
+                (50, ("village", "村")),
+                (40, ("street", "town", "乡", "镇", "街道")),
+                (30, ("district", "county", "区县", "区", "县")),
+                (20, ("city", "城市", "地级市", "市")),
+            )
+            return next(
+                (
+                    rank
+                    for rank, markers in ordered
+                    if any(marker in reference for marker in markers)
+                ),
+                None,
+            )
+
+        grouped: dict[tuple[int | None, str], list[tuple[int, dict[str, Any]]]] = {}
+        retained: list[tuple[int, dict[str, Any]]] = []
+        for index, item in enumerate(matches):
+            if cls._semantic_match_family(item) != "region":
+                retained.append((index, item))
+                continue
+            value = str(
+                item.get("canonical_value")
+                or item.get("attribute_value")
+                or ""
+            ).strip().casefold()
+            if not value:
+                retained.append((index, item))
+                continue
+            grouped.setdefault(
+                (item.get("business_domain_id"), value), []
+            ).append((index, item))
+
+        for alternatives in grouped.values():
+            ranked = [(level(item), index, item) for index, item in alternatives]
+            known = [rank for rank, _index, _item in ranked if rank is not None]
+            if len(set(known)) < 2 or len(known) != len(ranked):
+                retained.extend(alternatives)
+                continue
+            finest = max(known)
+            retained.extend(
+                (index, item)
+                for rank, index, item in ranked
+                if rank == finest
+            )
+        return [item for _index, item in sorted(retained, key=lambda pair: pair[0])]
 
     @staticmethod
     def _context_filter_family(*values: object) -> str:
@@ -734,6 +806,7 @@ class QuestionRewriter:
         matches = [item for item in matches if isinstance(item, dict)
                    and item.get('semantic_model_id', semantic_model_id) == semantic_model_id
                    and (not business_domain_ids or item.get('business_domain_id') in business_domain_ids)]
+        matches = self._prefer_finest_administrative_region(matches)
         normalized, events = self._normalize(rewritten, locally_normalized, matches)
         semantic_version = self._semantic_model_version(matches)
         semantic_ambiguities = self._detect_semantic_ambiguities(

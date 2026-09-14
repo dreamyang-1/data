@@ -409,6 +409,42 @@ class DataAnalysisOrchestrator:
         execution_chat._completed_question_execution = True
         return await self.handle(execution_chat, identity)
 
+    async def is_v1_pending_clarification_answer(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> bool:
+        """Return true only when this turn can safely consume V1 Pending.
+
+        A completed V2 question can still encounter a V1 execution ambiguity.
+        That Pending belongs to the original V1 session store.  The live bridge
+        may defer a compact option/slot answer back to V1, but it must never
+        route an unrelated new request through legacy context inheritance.
+        """
+
+        pending = await self.sessions.get_pending(
+            identity.tenant_id,
+            identity.user_id,
+            chat.application_id,
+            chat.conversation_id,
+        )
+        if pending is None or not self._pending_scope_matches(pending.request, chat):
+            return False
+        return bool(
+            self._semantic_clarification_choice(
+                pending.request, chat.question
+            ) is not None
+            or self._is_deterministic_pending_reply(
+                chat.question, pending.request
+            )
+        )
+
+    async def execute_v1_pending_clarification_answer(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> AgentResponse:
+        """Resume one already-verified V1 clarification without V2 rewriting."""
+
+        execution_chat = chat.model_copy(deep=True, update={"history": []})
+        return await self.handle(execution_chat, identity)
+
     async def read_completed_question_execution_context(
         self, chat: ChatRequest, identity: TrustedIdentity
     ) -> CanonicalAnalysisRequest | None:
