@@ -589,6 +589,8 @@ async def chat_refresh(
         "这是 POST SSE，采用与 New_Agent 相同的 data-only Envelope；"
         "事件类型放在JSON的 type 字段中，不输出 event: 行。"
         "常用类型为 updata_state、message_chunk、tool_result、answer、complete。"
+        "各节点已完成并校验的展示文本通过 message_chunk 渐进推送；普通文本默认"
+        "每 4 个 Unicode 字符一片，超长内容自适应增大片长并限制事件总数。"
         "最终答案完成可靠性校验后，按 New_Agent 的规则每 6 个 Unicode 字符"
         "推送一个 output/message_chunk（末片可少于 6 字）。"
         "身份、请求格式和已存在的 message_id 冲突在建立事件流前保持标准 HTTP 状态；"
@@ -683,7 +685,7 @@ async def chat_stream(
         composite_mode = False
         composite_child_progress: list[dict[str, Any]] = []
 
-        def render_thinking(event: dict[str, Any]) -> str:
+        def render_thinking(event: dict[str, Any]) -> list[str]:
             stage = str(event.get("stage") or "processing").strip().upper()
             section = _thinking_section(stage)
             include_heading = bool(
@@ -693,13 +695,36 @@ async def chat_stream(
             )
             if include_heading:
                 titled_think_sections.add(section)
-            return _thinking_event(
+            settings = request.app.state.container.settings
+            return _thinking_events(
                 event,
                 heading=(
                     _thinking_title(section, presentation_scenario)
                     if include_heading else None
                 ),
+                chunk_size=settings.thinking_stream_chunk_size,
+                max_chunks=settings.thinking_stream_max_chunks,
             )
+
+        async def stream_thinking(event: dict[str, Any]) -> AsyncIterator[str]:
+            rendered_events = render_thinking(event)
+            message_chunk_count = max(0, len(rendered_events) - 1)
+            settings = request.app.state.container.settings
+            chunk_delay = (
+                0.0
+                if settings.env == "test"
+                else _thinking_chunk_delay(
+                    message_chunk_count,
+                    interval_seconds=settings.thinking_stream_chunk_interval_seconds,
+                )
+            )
+            for index, rendered_event in enumerate(rendered_events):
+                yield rendered_event
+                # The first item is the node-state event.  Yield control between
+                # subsequent text chunks so the ASGI server and browser can
+                # paint them progressively instead of coalescing one milestone.
+                if chunk_delay and 0 < index < len(rendered_events) - 1:
+                    await asyncio.sleep(chunk_delay)
 
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
@@ -818,7 +843,8 @@ async def chat_stream(
             while not execution.done() or not progress_queue.empty():
                 if not progress_queue.empty():
                     for event in ordered_progress(progress_queue.get_nowait()):
-                        yield render_thinking(event)
+                        async for rendered_event in stream_thinking(event):
+                            yield rendered_event
                     continue
 
                 next_progress = asyncio.create_task(progress_queue.get())
@@ -829,7 +855,8 @@ async def chat_stream(
                 )
                 if next_progress in done:
                     for event in ordered_progress(next_progress.result()):
-                        yield render_thinking(event)
+                        async for rendered_event in stream_thinking(event):
+                            yield rendered_event
                     continue
                 next_progress.cancel()
                 try:
@@ -850,10 +877,12 @@ async def chat_stream(
             for event in _ordered_composite_child_progress_events(
                 composite_child_progress
             ):
-                yield render_thinking(event)
+                async for rendered_event in stream_thinking(event):
+                    yield rendered_event
             composite_child_progress.clear()
             for event in deferred_planning:
-                yield render_thinking(event)
+                async for rendered_event in stream_thinking(event):
+                    yield rendered_event
             deferred_planning.clear()
             query_evidence = [
                 item for item in response.evidence if item.kind == "QUERY_RESULT"
@@ -896,7 +925,7 @@ async def chat_stream(
                         f"附件：{len(response.files)} 个；图表：{len(response.chart_specs)} 个；"
                         f"证据：{len(response.evidence)} 项。"
                     )
-                yield render_thinking({
+                async for rendered_event in stream_thinking({
                     "stage": "OUTPUT_SUMMARY",
                     "status": "COMPLETED",
                     "presentation_scenario": response_scenario,
@@ -904,15 +933,17 @@ async def chat_stream(
                     "file_count": len(response.files),
                     "chart_count": len(response.chart_specs),
                     "evidence_count": len(response.evidence),
-                })
+                }):
+                    yield rendered_event
             if response_scenario in {"CHAT", "CLARIFICATION"}:
-                yield render_thinking({
+                async for rendered_event in stream_thinking({
                     "stage": "FINAL_OUTPUT",
                     "status": "COMPLETED",
                     "presentation_scenario": response_scenario,
                     "message": "",
                     "heading_only": True,
-                })
+                }):
+                    yield rendered_event
             for extension in response.extension_executions:
                 tool_content = (
                     json.dumps(extension.output, ensure_ascii=False, default=str)
@@ -1014,9 +1045,21 @@ def _event(name: str, data: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
-def _thinking_event(
-    progress: dict[str, Any], *, heading: str | None = None
-) -> str:
+def _thinking_events(
+    progress: dict[str, Any],
+    *,
+    heading: str | None = None,
+    chunk_size: int = 4,
+    max_chunks: int = 120,
+) -> list[str]:
+    """Render one completed node as state plus progressive text SSE events.
+
+    Progress producers still publish one complete, validated milestone.  This
+    function only splits its public rendering at the HTTP boundary, preserving
+    exact content, order and metadata while allowing the browser to paint a
+    few Unicode characters at a time.
+    """
+
     stage = str(progress.get("stage") or "processing")
     # Keep the transport labels identical to New_Agent.  The platform-side
     # stream renderer does not understand data-agent-specific step names such
@@ -1041,19 +1084,83 @@ def _thinking_event(
     # Keep each body milestone in a fresh block so adjacent chunks are not
     # concatenated into a single line by the platform renderer.
     content = f"\n\n{content}\n\n"
-    message_payload: dict[str, Any] = {
-        "step": step,
-        "content": content,
-        "role": "assistant",
-        "node": "",
-        "meta": progress,
-    }
-    if step == "execute_exe":
-        # New_Agent associates execution records with a task.  A single data
-        # query is task 0; multi-task details remain available in meta.
-        message_payload["task_index"] = int(progress.get("task_index") or 0)
-    message_event = _event("message_chunk", message_payload)
-    return state_event + message_event
+    chunks = _thinking_chunks(
+        content,
+        chunk_size=chunk_size,
+        max_chunks=max_chunks,
+    )
+    message_events: list[str] = []
+    for index, chunk in enumerate(chunks):
+        chunk_meta = progress if index == 0 else {
+            key: progress[key]
+            for key in (
+                "stage",
+                "status",
+                "is_child_task",
+                "task_id",
+                "task_index",
+                "task_count",
+                "presentation_scenario",
+            )
+            if key in progress
+        }
+        message_payload: dict[str, Any] = {
+            "step": step,
+            "index": index,
+            "content": chunk,
+            "role": "assistant",
+            "node": "",
+            "is_last": index == len(chunks) - 1,
+            # Keep the complete diagnostic metadata on the first fragment only.
+            # Repeating an ASL-sized ``meta.message`` in every tiny transport
+            # chunk would multiply response bytes without helping the renderer.
+            "meta": chunk_meta,
+        }
+        if step == "execute_exe":
+            # New_Agent associates execution records with a task.  A single
+            # data query is task 0; multi-task details remain available in meta.
+            message_payload["task_index"] = int(progress.get("task_index") or 0)
+        message_events.append(_event("message_chunk", message_payload))
+    return [state_event, *message_events]
+
+
+def _thinking_event(
+    progress: dict[str, Any], *, heading: str | None = None
+) -> str:
+    """Backward-compatible serialized form for callers that need one string."""
+
+    return "".join(_thinking_events(progress, heading=heading))
+
+
+def _thinking_chunks(
+    content: str,
+    *,
+    chunk_size: int = 4,
+    max_chunks: int = 120,
+) -> list[str]:
+    """Split thinking text into small chunks with a bounded event count."""
+
+    if not content:
+        return []
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be greater than zero")
+    if max_chunks <= 0:
+        raise ValueError("max_chunks must be greater than zero")
+    effective_size = max(chunk_size, (len(content) + max_chunks - 1) // max_chunks)
+    return [
+        content[index:index + effective_size]
+        for index in range(0, len(content), effective_size)
+    ]
+
+
+def _thinking_chunk_delay(
+    chunk_count: int, *, interval_seconds: float = 0.03
+) -> float:
+    """Return a paintable cadence for successive SSE text fragments."""
+
+    if chunk_count <= 1 or interval_seconds <= 0:
+        return 0.0
+    return interval_seconds
 
 
 def _markdown_hard_line_breaks(content: str) -> str:

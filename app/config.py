@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     # bridge.  The default remains disabled so normal production behavior and
     # fail-closed execution-scope handling are unchanged.
     demo_mode: bool = False
+    # Public thinking/progress text uses the same SSE ``message_chunk``
+    # contract as the final answer.  These settings control presentation only;
+    # model, ASL and SQL stages continue to consume complete validated values.
+    thinking_stream_chunk_size: int = Field(default=4, ge=1, le=64)
+    thinking_stream_max_chunks: int = Field(default=120, ge=1, le=1000)
+    thinking_stream_chunk_interval_seconds: float = Field(default=0.03, ge=0, le=0.2)
     # Source tree for the existing semantic-catalog authority used by the
     # context-only bridge.  It is read on each request and is independent of
     # the Limited Scalar publication/pin configuration below.

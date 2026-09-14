@@ -28,6 +28,9 @@ from app.api import (
     _answer_chunks,
     _markdown_hard_line_breaks,
     _prepare_regeneration,
+    _thinking_chunk_delay,
+    _thinking_chunks,
+    _thinking_events,
     _thinking_section,
     _thinking_title,
 )
@@ -59,6 +62,19 @@ def build_test_app(**overrides):
     }
     defaults.update(overrides)
     return create_app(Settings(**defaults))
+
+
+def thinking_content(
+    events: list[dict], stage: str, *, status: str | None = None
+) -> str:
+    return "".join(
+        event["content"]
+        for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("step") != "output"
+        and event.get("meta", {}).get("stage") == stage
+        and (status is None or event.get("meta", {}).get("status") == status)
+    )
 
 
 def test_markdown_hard_line_breaks_preserve_document_logical_lines():
@@ -246,6 +262,52 @@ def test_normal_answer_uses_small_streaming_chunks():
 def test_answer_transport_chunk_size_must_be_positive():
     with pytest.raises(ValueError, match="chunk_size must be greater than zero"):
         _answer_chunks("答案", chunk_size=0)
+
+
+def test_thinking_transport_streams_unicode_and_bounds_large_nodes():
+    short = "结构化提取：上海市销售趋势"
+    short_chunks = _thinking_chunks(short, chunk_size=4, max_chunks=120)
+    assert "".join(short_chunks) == short
+    assert len(short_chunks) > 1
+    assert all(len(chunk) == 4 for chunk in short_chunks[:-1])
+
+    large = "语义字段" * 2000
+    large_chunks = _thinking_chunks(large, chunk_size=4, max_chunks=120)
+    assert "".join(large_chunks) == large
+    assert len(large_chunks) <= 120
+    assert _thinking_chunk_delay(len(large_chunks)) == 0.03
+
+
+def test_thinking_transport_reconstructs_exact_asl_markdown():
+    asl = {"version": "2.0", "filters": [{"field": "城市", "value": "上海市"}]}
+    message = "结构化提取（ASL）：\n```json\n" + json.dumps(
+        asl, ensure_ascii=False, indent=2
+    ) + "\n```"
+    serialized = _thinking_events(
+        {
+            "stage": "ASL_GENERATION",
+            "status": "COMPLETED",
+            "message": message,
+            "display_model": "OagentASL",
+        },
+        heading="#### ◉ 调度执行",
+        chunk_size=3,
+    )
+    events = [
+        json.loads(item.removeprefix("data: ").strip())
+        for item in serialized
+    ]
+    chunks = [item for item in events if item["type"] == "message_chunk"]
+    reconstructed = "".join(item["content"] for item in chunks)
+    assert len(chunks) > 1
+    assert reconstructed.startswith("\n\n#### ◉ 调度执行")
+    assert reconstructed.endswith("\n\n")
+    normalized = reconstructed.replace("  \n", "\n")
+    extracted = normalized.split("```json\n", 1)[1].rsplit("\n```", 1)[0]
+    assert json.loads(extracted) == asl
+    assert chunks[0]["meta"]["display_model"] == "OagentASL"
+    assert "message" not in chunks[1]["meta"]
+    assert chunks[-1]["is_last"] is True
 
 
 def test_file_inspection_summary_reports_successful_parse_without_internal_path():
@@ -906,11 +968,22 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         data for data in events
         if data["type"] == "message_chunk" and data.get("step") != "output"
     ]
+    milestone_chunks: list[list[dict]] = []
+    for data in think_chunks:
+        if data.get("index") == 0:
+            milestone_chunks.append([])
+        assert milestone_chunks
+        milestone_chunks[-1].append(data)
     assert all(
-        data["content"].startswith("\n\n")
-        and data["content"].endswith("\n\n")
-        for data in think_chunks
+        "".join(chunk["content"] for chunk in chunks).startswith("\n\n")
+        for chunks in milestone_chunks
     )
+    assert all(
+        "".join(chunk["content"] for chunk in chunks).endswith("\n\n")
+        for chunks in milestone_chunks
+    )
+    assert all(chunks[-1]["is_last"] is True for chunks in milestone_chunks)
+    assert any(len(chunks) > 1 for chunks in milestone_chunks)
     assert {data["step"] for data in think_chunks} <= {
         "step1", "execute_plan", "execute_exe", "response_result"
     }
@@ -939,30 +1012,38 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
         and data.get("meta", {}).get("status") == "COMPLETED"
+        and data.get("index") == 0
     )
-    assert "#### 1、意图识别" in completed_intent_chunk["content"]
+    completed_intent_content = thinking_content(
+        events, "INTENT_RECOGNITION", status="COMPLETED"
+    )
+    assert "#### 1、意图识别" in completed_intent_content
     assert completed_intent_chunk["meta"]["display_model"] == "IntentRecognitionDisplayV2"
     assert completed_intent_chunk["meta"]["display_version"] == "V2"
-    assert "#### 1、意图识别\n\n用户原始问题：" in completed_intent_chunk["content"]
+    assert "#### 1、意图识别\n\n用户原始问题：" in completed_intent_content
     assert re.search(
         r"用户原始问题：[^\n]+  \n补全后的问题：",
-        completed_intent_chunk["content"],
+        completed_intent_content,
     )
     planning_completed_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "TASK_PLANNING"
         and data.get("meta", {}).get("status") == "COMPLETED"
     )
-    assert "#### ◉ 任务拆分与规划" in planning_completed_chunk["content"]
-    assert "拆分判断完成" in planning_completed_chunk["content"]
-    assert "当前问题无需拆分，按单任务执行。  \n子任务1：" in planning_completed_chunk["content"]
+    planning_completed_content = thinking_content(
+        events, "TASK_PLANNING", status="COMPLETED"
+    )
+    assert "#### ◉ 任务拆分与规划" in planning_completed_content
+    assert "拆分判断完成" in planning_completed_content
+    assert "当前问题无需拆分，按单任务执行。  \n子任务1：" in planning_completed_content
     summary_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "OUTPUT_SUMMARY"
     )
     assert summary_chunk["step"] == "response_result"
-    assert "输出意图：能力说明。" in summary_chunk["content"]
-    assert "CAPABILITY_HELP" not in summary_chunk["content"]
+    summary_content = thinking_content(events, "OUTPUT_SUMMARY")
+    assert "输出意图：能力说明。" in summary_content
+    assert "CAPABILITY_HELP" not in summary_content
     completed_think_stages = [
         data.get("meta", {}).get("stage")
         for data in events
@@ -1069,13 +1150,14 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
         if event["type"] == "message_chunk"
         and event.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
     ]
-    assert len(intent_chunks) == 1
+    assert len(intent_chunks) > 1
     intent = intent_chunks[0]
     assert intent["meta"]["display_model"] == "CompositeIntentRecognitionDisplayV2"
     assert intent["meta"]["is_composite"] is True
-    assert "查询 TDC-3 产品的主要适用科室、次要适用科室" in intent["content"]
-    assert "子任务 1" in intent["content"]
-    assert "子任务 2" in intent["content"]
+    intent_content = "".join(event["content"] for event in intent_chunks)
+    assert "查询 TDC-3 产品的主要适用科室、次要适用科室" in intent_content
+    assert "子任务 1" in intent_content
+    assert "子任务 2" in intent_content
     assert not intent["meta"].get("is_child_task")
     completed = next(event for event in events if event["type"] == "complete")
     assert completed["execution_shape"] == "COMPOSITE"
