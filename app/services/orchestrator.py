@@ -77,6 +77,7 @@ from app.services.extension_dispatcher import ExtensionDispatcher
 from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress, task_progress_scope
 from app.presentation import (
+    QUERY_EXECUTION_CHAIN,
     build_composite_intent_recognition_display_v2,
     build_intent_recognition_display_v2,
     render_composite_intent_recognition_display_v2,
@@ -123,10 +124,6 @@ _INTERNAL_ASSUMPTIONS: ContextVar[tuple[str, ...]] = ContextVar(
     "data_agent_internal_assumptions", default=()
 )
 _BUSINESS_TIMEZONE = ZoneInfo("Asia/Shanghai")
-QUERY_EXECUTION_CHAIN = (
-    "语义解析 → ASL 查询规划 → SQL 翻译与只读执行 → "
-    "数据集 → 结果校验 → 洞察分析"
-)
 _QUALITY_STATUS_LABELS = {
     "PASS": "通过",
     "FAIL": "不通过",

@@ -834,9 +834,11 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
     ])
 
     progress: list[tuple[str, int]] = []
+    progress_messages: list[tuple[str, str]] = []
 
     async def capture_progress(event):
         progress.append((event["stage"], len(client.calls)))
+        progress_messages.append((event["stage"], event["message"]))
 
     with progress_scope(capture_progress):
         result = await HttpDataRetrievalAdapter(
@@ -858,6 +860,21 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
     assert next(item for item in progress if item[0] == "SQL_EXECUTION") == (
         "SQL_EXECUTION",
         2,
+    )
+    assert any(
+        stage == "ASL_GENERATION"
+        and message.startswith("工具：智能语义查询器（ASL 结构化提取）。")
+        for stage, message in progress_messages
+    )
+    assert any(
+        stage == "SEMANTIC_QUERY_PLANNING"
+        and message.startswith("调用工具：SQL 翻译服务。")
+        for stage, message in progress_messages
+    )
+    assert any(
+        stage == "SQL_EXECUTION"
+        and message.startswith("调用工具：SQL 执行服务。")
+        for stage, message in progress_messages
     )
 
 

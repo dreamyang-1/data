@@ -26,6 +26,11 @@ from app.services.orchestrator import (
     _business_datetime_text,
     _quality_status_text,
 )
+from app.presentation import (
+    SEMANTIC_QUERY_TOOL_NAME,
+    SQL_EXECUTION_TOOL_NAME,
+    SQL_TRANSLATION_TOOL_NAME,
+)
 from app.services.progress import emit_progress
 from app.api import (
     _answer_chunk_delay,
@@ -147,6 +152,7 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
         and event.get("meta", {}).get("stage") == "ASL_GENERATION"
     )
     asl_message = asl_event["meta"]["message"]
+    assert f"工具：{SEMANTIC_QUERY_TOOL_NAME}。" in asl_message
     asl_json = asl_message.split("```json\n", 1)[1].rsplit("\n```", 1)[0]
     assert json.loads(asl_json) == {
         "version": "2.0",
@@ -166,6 +172,11 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
     )
     assert f"规划调用：{QUERY_EXECUTION_CHAIN}" in planning_content
     assert f"执行链路：{QUERY_EXECUTION_CHAIN}" in execution_running_content
+    assert "语义解析" not in QUERY_EXECUTION_CHAIN
+    assert QUERY_EXECUTION_CHAIN == (
+        f"{SEMANTIC_QUERY_TOOL_NAME} → {SQL_TRANSLATION_TOOL_NAME} → "
+        f"{SQL_EXECUTION_TOOL_NAME} → 数据集输出 → 结果校验 → 洞察分析"
+    )
     asl_index = events.index(asl_event)
     retrieval_completed_index = next(
         index for index, event in enumerate(events)

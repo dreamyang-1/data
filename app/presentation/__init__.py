@@ -16,6 +16,12 @@ from .reliability import (
     reliability_level_label_zh,
     render_reliability_validation,
 )
+from .execution_trace import (
+    QUERY_EXECUTION_CHAIN,
+    SEMANTIC_QUERY_TOOL_NAME,
+    SQL_EXECUTION_TOOL_NAME,
+    SQL_TRANSLATION_TOOL_NAME,
+)
 
 __all__ = [
     "CompositeIntentRecognitionDisplayV2",
@@ -30,4 +36,8 @@ __all__ = [
     "quality_status_label_zh",
     "reliability_level_label_zh",
     "render_reliability_validation",
+    "QUERY_EXECUTION_CHAIN",
+    "SEMANTIC_QUERY_TOOL_NAME",
+    "SQL_EXECUTION_TOOL_NAME",
+    "SQL_TRANSLATION_TOOL_NAME",
 ]

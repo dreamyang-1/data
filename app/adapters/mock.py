@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from app.adapters.base import AdapterBundle
 from app.adapters.semantic_query import CompositeSemanticQueryTool
 from app.domain.models import CanonicalAnalysisRequest, DataQueryResult, Dataset, EvidenceItem, KnowledgeContext, KnowledgeDocument, MetricRef, TrustedIdentity
-from app.presentation import render_asl_extraction_json
+from app.presentation import SEMANTIC_QUERY_TOOL_NAME, render_asl_extraction_json
 from app.services.progress import emit_progress
 
 METRICS = {
@@ -64,7 +64,8 @@ class MockDataRetrievalAdapter:
         await emit_progress(
             "ASL_GENERATION",
             "COMPLETED",
-            render_asl_extraction_json(asl),
+            f"工具：{SEMANTIC_QUERY_TOOL_NAME}。\n"
+            + render_asl_extraction_json(asl),
             message_limit=65536,
             display_model="OagentASL",
             display_version=str(asl.get("version") or "UNKNOWN"),

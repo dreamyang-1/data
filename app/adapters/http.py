@@ -37,7 +37,12 @@ from app.services.knowledge_retrieval import (
     normalize_and_deduplicate_hits,
 )
 from app.services.progress import emit_progress
-from app.presentation import render_asl_extraction_json
+from app.presentation import (
+    SEMANTIC_QUERY_TOOL_NAME,
+    SQL_EXECUTION_TOOL_NAME,
+    SQL_TRANSLATION_TOOL_NAME,
+    render_asl_extraction_json,
+)
 from app.services.intent_asl_contract import (
     build_intent_asl_contract,
     validate_intent_asl_contract_completeness,
@@ -2141,7 +2146,8 @@ class HttpDataRetrievalAdapter:
         await emit_progress(
             "ASL_GENERATION",
             "COMPLETED",
-            render_asl_extraction_json(asl),
+            f"工具：{SEMANTIC_QUERY_TOOL_NAME}。\n"
+            + render_asl_extraction_json(asl),
             message_limit=65536,
             display_model="OagentASL",
             display_version=str(asl.get("version") or "UNKNOWN"),
@@ -2263,15 +2269,12 @@ class HttpDataRetrievalAdapter:
         await emit_progress(
             "SEMANTIC_QUERY_PLANNING",
             "COMPLETED",
-            "工具：智能语义查询器；"
-            f"输入：问题={_compact_progress_value(request.rewritten_question or request.original_question, 180)}，"
-            f"语义模型={semantic_model_id}，"
-            f"业务域={request.business_domain_ids or ([business_domain_id] if business_domain_id else [])}，"
-            f"指标诉求={_compact_progress_value([metric.input for metric in request.metrics], 240)}，"
-            f"筛选条件={_compact_progress_value(request.filters, 500)}；"
-            f"输出：指标绑定={_compact_progress_value(metric_bindings, 500)}，"
+            f"调用工具：{SQL_TRANSLATION_TOOL_NAME}。\n"
+            f"输入：已验证 ASL（版本={asl.get('version') or 'UNKNOWN'}，"
+            f"指标绑定={_compact_progress_value(metric_bindings, 500)}，"
             f"查询结构={_compact_progress_value(query_shape, 500)}，"
-            f"只读SQL：已生成（{len(sql)}字符），安全校验：通过。",
+            f"筛选条件={_compact_progress_value(asl.get('filters') or [], 500)}）；"
+            f"输出：只读 SQL 已生成（{len(sql)}字符），安全校验：通过。",
         )
 
         execute_payload: dict[str, Any] = {
@@ -2312,7 +2315,7 @@ class HttpDataRetrievalAdapter:
         await emit_progress(
             "SQL_EXECUTION",
             "RUNNING",
-            "调用工具：SQL 执行服务。\n"
+            f"调用工具：{SQL_EXECUTION_TOOL_NAME}。\n"
             f"输入：{_compact_progress_value(execute_payload, 1200)}。",
         )
         try:
@@ -2382,7 +2385,7 @@ class HttpDataRetrievalAdapter:
         await emit_progress(
             "SQL_EXECUTION",
             "COMPLETED",
-            "SQL 执行服务调用完成。\n"
+            f"{SQL_EXECUTION_TOOL_NAME}调用完成。\n"
             f"输出字段：{_compact_progress_value(raw.get('columns') or [], 500)}；"
             f"返回行数：{raw.get('row_count', len(raw.get('rows') or []))}；"
             f"数据预览：{_compact_progress_value((raw.get('data') or raw.get('preview_data') or [])[:2], 1000)}。\n"
