@@ -1,5 +1,5 @@
 {
-  "status": "V2_CONTEXT_V1_EXECUTION_CLASS_CLOSURE_VERIFIED",
+  "status": "V2_CONTEXT_V1_EXECUTION_NAMED_PRODUCT_TREND_CLOSURE_VERIFIED",
   "baseline": {
     "nodes": 3823,
     "passed": 3717,
@@ -43,5 +43,32 @@
     "new_nodes": 4,
     "removed_nodes": 0,
     "affected_tests": "289 passed / 0 failed"
+  },
+  "latest_named_product_trend_closure": {
+    "baseline_nodes": 3869,
+    "baseline_passed": 3778,
+    "baseline_failed": 91,
+    "final_nodes": 3875,
+    "final_passed": 3784,
+    "final_failed": 91,
+    "collection_errors": 0,
+    "old_pass_to_new_fail": 0,
+    "old_fail_to_new_pass": 0,
+    "new_or_reframed_nodes": 8,
+    "replaced_test_names": 2,
+    "focused_tests": "12 passed / 0 failed",
+    "affected_tests": "713 passed / 0 failed",
+    "live_read_only_cases": {
+      "total": 4,
+      "query_result_returned": 4,
+      "completed": 3,
+      "partial_success": 1
+    },
+    "runtime": {
+      "pid": 39288,
+      "live": "HTTP 200",
+      "ready": "HTTP 200 / READY",
+      "runtime_mode": "V2_CONTEXT_V1_EXECUTION"
+    }
   }
 }

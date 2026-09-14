@@ -1039,13 +1039,60 @@ def test_dealer_quantity_is_normalized_to_relationship_count_metric():
     assert request.missing_slots == []
 
 
-def test_region_brand_product_trend_uses_parent_brand_not_product_name():
+def test_region_named_product_trend_preserves_value_for_catalog_rebinding():
     request = RuleBasedIntentClassifier().classify(
         "分析上海地区费森尤斯产品最近一年的销售趋势。",
         IDENTITY,
         "c-brand-trend",
     )
-    assert not any(item.get("field") == "商品名称" for item in request.filters)
+    assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in request.filters
+    assert "费森尤斯" in request.semantic_entity_mentions
+
+
+@pytest.mark.parametrize(
+    ("question", "region_field", "region_value", "named_value"),
+    [
+        ("分析江苏省费森尤斯产品最近一年的销售趋势。", "业务省份", "江苏省", "费森尤斯"),
+        ("查询广东美敦力产品本年度销售额。", "业务省份", "广东省", "美敦力"),
+        ("分析空心纤维血液透析器产品最近一年的销售趋势。", None, None, "空心纤维血液透析器"),
+    ],
+)
+def test_named_product_scope_is_separated_from_region_and_time_scaffolding(
+    question, region_field, region_value, named_value,
+):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, f"named-scope-{named_value}",
+    )
+
+    assert {
+        "field": "商品名称", "operator": "EQ", "value": named_value,
+    } in request.filters
+    if region_field is not None:
+        assert {
+            "field": region_field, "operator": "EQ", "value": region_value,
+        } in request.filters
+    assert named_value in request.semantic_entity_mentions
+
+
+def test_query_scaffolding_is_not_emitted_as_a_second_catalog_value():
+    request = CanonicalAnalysisRequest(
+        conversation_id="catalog-span-scaffolding",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="分析上海市费森尤斯产品最近一年的销售趋势。",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        filters=[
+            {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+            {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"},
+        ],
+        semantic_entity_mentions=[
+            "上海市", "费森尤斯", "费森尤斯产品最近一年",
+        ],
+    )
+
+    RuleBasedIntentClassifier.sanitize_semantic_entity_mentions(request)
+
+    assert request.semantic_entity_mentions == ["上海市", "费森尤斯"]
 
 
 @pytest.mark.parametrize(

@@ -3203,19 +3203,17 @@ async def test_demo_result_retry_never_removes_concrete_entity_value(provider):
 
 
 @pytest.mark.asyncio
-async def test_demo_result_retry_removes_generic_type_after_named_value(provider):
+async def test_demo_result_retry_does_not_change_named_value_boundary(provider):
     redis = DeploymentRedis()
     executions = []
 
     async def v1(chat, _identity):
         executions.append(chat.model_copy(deep=True))
-        if len(executions) == 1:
-            failed = response(chat)
-            failed.status = "SAFE_FALLBACK"
-            failed.error_code = "DEPENDENCY_CONTRACT_REJECTED"
-            failed._upstream_error_code = "ASL_ENTITY_MENTION_UNRESOLVED"
-            return failed
-        return query_response(chat, answer="real normalized-entity result")
+        failed = response(chat)
+        failed.status = "SAFE_FALLBACK"
+        failed.error_code = "DEPENDENCY_CONTRACT_REJECTED"
+        failed._upstream_error_code = "ASL_ENTITY_MENTION_UNRESOLVED"
+        return failed
 
     bridge = handler(provider, redis, v1)
     bridge.demo_mode = True
@@ -3228,16 +3226,8 @@ async def test_demo_result_retry_removes_generic_type_after_named_value(provider
 
     result = await bridge.handle(chat, IDENTITY)
 
-    assert result.status == "COMPLETED"
-    assert result.answer == "real normalized-entity result"
-    assert [item.question for item in executions] == [
-        chat.question,
-        "分析上海市费森尤斯最近一年的销售趋势。",
-    ]
-    rewrite = next(
-        item for item in result.analysis_process if item.stage == "QUESTION_REWRITE"
-    )
-    assert chat.question in rewrite.summary
+    assert result.status == "SAFE_FALLBACK"
+    assert [item.question for item in executions] == [chat.question]
 
 
 @pytest.mark.asyncio

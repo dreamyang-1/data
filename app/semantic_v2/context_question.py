@@ -1463,24 +1463,11 @@ def build_result_availability_question(
             universal.group(2),
         ):
             return f"{universal.group(1)}{universal.group(2).rstrip('。.!！?？')}。"
-        generic_type_retry = None
-        for generic_type in re.finditer(
-            r"(?:产品|商品)(?=(?:的|在|最近|近|合作|销售|采购|含税|订单|数量|金额|趋势|排名))",
-            completed_question,
-        ):
-            prefix = completed_question[:generic_type.start()].rstrip()
-            if prefix.endswith(("全部", "所有", "哪些", "什么")):
-                continue
-            # A trailing entity-type label is sometimes absorbed into a brand
-            # or product name by V1's relation/trend parser. Removing only that
-            # label preserves the named value and all query operations.
-            generic_type_retry = (
-                completed_question[:generic_type.start()]
-                + completed_question[generic_type.end():]
-            )
-            break
-    else:
-        generic_type_retry = None
+        # Never repair a failed named-value query by deleting its entity-type
+        # boundary.  ``费森尤斯产品最近一年`` becoming ``费森尤斯最近一年``
+        # makes the time phrase part of the catalog value and changes meaning.
+        # Named values are separated and grounded before V1 execution instead.
+    generic_type_retry = None
     if state_artifact is None:
         return generic_type_retry
     state = ConversationState.model_validate(state_artifact.payload)

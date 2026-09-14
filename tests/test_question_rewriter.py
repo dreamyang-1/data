@@ -352,6 +352,68 @@ async def test_isolated_filter_lookup_makes_parent_brand_binding_authoritative()
 
 
 @pytest.mark.asyncio
+async def test_region_and_named_product_values_are_independently_grounded():
+    request = CanonicalAnalysisRequest(
+        conversation_id="region-parent-brand",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="分析上海市费森尤斯产品最近一年的销售趋势。",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        entity="产品",
+        filters=[
+            {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+            {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"},
+        ],
+        semantic_entity_mentions=["上海市", "费森尤斯"],
+    )
+
+    class ValueSearcher(FakeSearcher):
+        async def search(
+            self, query, *, semantic_model_id, business_domain_id,
+            business_domain_ids=None,
+        ):
+            self.calls.append(
+                (query, semantic_model_id, business_domain_id, business_domain_ids)
+            )
+            if query == "上海市":
+                return [{
+                    "record_id": "city-shanghai",
+                    "score": 1.0,
+                    "entity_name": "销售记录",
+                    "attribute_name": "城市名称",
+                    "attribute_code": "city_name",
+                    "attribute_value": "上海市",
+                    "business_domain_id": 205,
+                    "semantic_model_version": "published-31",
+                }]
+            return [{
+                "record_id": "parent-brand-fresenius",
+                "score": 1.0,
+                "entity_name": "生产厂家",
+                "attribute_name": "母厂牌",
+                "attribute_code": "parent_brand",
+                "attribute_value": "费森尤斯",
+                "business_domain_id": 205,
+                "semantic_model_version": "published-31",
+            }]
+
+    searcher = ValueSearcher([])
+    ambiguities = await QuestionRewriter(searcher).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+    )
+
+    assert ambiguities == []
+    assert request.filters == [
+        {"field": "城市名称", "operator": "EQ", "value": "上海市"},
+        {"field": "母厂牌", "operator": "EQ", "value": "费森尤斯"},
+    ]
+    assert [call[0] for call in searcher.calls] == ["上海市", "费森尤斯"]
+
+
+@pytest.mark.asyncio
 async def test_context_value_resolution_reuses_v1_entity_retrieval_across_product_attributes():
     searcher = FakeSearcher([
         {

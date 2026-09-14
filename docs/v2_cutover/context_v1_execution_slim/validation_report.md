@@ -243,3 +243,61 @@ Agent was restarted: `192.168.1.27:8088` now runs as PID 40832. `/live` and
 Java/platform, Oagent and SQL Translator services were not restarted. The
 periodic platform input stream had been paused, so no new live business result
 is claimed here.
+
+## Named product trend entity-boundary closure
+
+The real request `分析上海市费森尤斯产品最近一年的销售趋势。` proved a new
+first divergence in the V1 intent handoff. Structured extraction emitted the
+clean literals `上海市` and `费森尤斯`, but also emitted
+`费森尤斯产品最近一年` as a second entity value. Because the deterministic
+shape had previously discarded its provisional named-value filter, the
+sanitizer had no independent slot boundary with which to reject the larger
+span. Oagent then correctly rejected that span as
+`ASL_ENTITY_MENTION_UNRESOLVED`. The demo retry compounded the problem by
+deleting `产品`, producing `费森尤斯最近一年` as a product filter and consuming
+the remaining request deadline.
+
+The correction keeps each named product scope as one provisional catalog-value
+slot, separately retains the already recognized region and time, and delegates
+the final field choice to V1's existing isolated live-Catalog grounding. The
+same input value can therefore resolve to a parent brand, manufacturer or exact
+product without a hard-coded business field. A longer model mention is removed
+only when subtracting a contained clean literal leaves nothing except product
+labels, time expressions, metrics and query grammar. Coordinated comparison
+values and mentions with other lexical residue continue through the existing
+ambiguity and Catalog checks. The retry path no longer changes a named
+entity/type boundary after an Oagent failure.
+
+Validation for this closure:
+
+- Focused entity-boundary, current-Catalog and retry contracts: **12 passed**.
+- Affected intent, rewriter, admission, Bridge, Orchestrator, HTTP and API
+  suites: **713 passed**.
+- Full offline suite: **3784 passed / 91 existing failed / 0 collection
+  errors** across 3875 nodes.
+- Against the preceding 3869-node baseline: **old-pass -> new-fail = 0**,
+  **old-fail -> new-pass = 0**; eight new/reframed tests passed and two old
+  names were replaced by their corrected contract names.
+- Python `compileall` and `git diff --check` passed.
+
+Four isolated live read-only requests were run with semantic model 81 and
+MODEL_WIDE business-domain input. Every request reached Oagent and produced a
+real `QUERY_RESULT` from `data-source:58`:
+
+| Request class | Runtime result | Rows | Display outcome |
+|---|---:|---:|---|
+| Shanghai + Fresenius brand + latest-year trend | `COMPLETED` | 3 | result returned |
+| Jiangsu + Fresenius brand + latest-year trend | `PARTIAL_SUCCESS` | 1 | result returned; insufficient rows for full trend analysis |
+| Shanghai + Medtronic brand + latest-year trend | `COMPLETED` | 3 | result returned |
+| Shanghai + exact dialysis-product + latest-year trend | `COMPLETED` | 3 | result returned |
+
+The original Shanghai/Fresenius request was repeated after loading the final
+candidate and again returned HTTP 200 / `COMPLETED`, three rows, Oagent metric
+evidence, a DB query result and deterministic trend analysis. Raw business
+results remain PRIVATE and are not committed.
+
+Only DataAnalysis Agent was restarted. The final runtime is PID 39288;
+`/live` and `/ready` return HTTP 200 / `READY`, and runtime mode is
+`V2_CONTEXT_V1_EXECUTION`. V2 still supplies context completion while the
+original V1 Catalog, Oagent, SQL Translator and read-only DB chain own business
+grounding and execution.

@@ -1,11 +1,15 @@
 {
-  "status": "V2_CONTEXT_V1_EXECUTION_REGION_PENDING_CLOSURE_COMPLETE",
+  "status": "V2_CONTEXT_V1_EXECUTION_NAMED_PRODUCT_TREND_CLOSURE_COMPLETE",
   "branch": "v2-context-v1-execution-slim-20260913T102135Z",
-  "base_head": "8e0d2982fa57568f62afda64d0b24fa13050bf0f",
+  "base_head": "ac5e8aa7f20c29d2b07039789abc1881db92235b",
   "files": [
     {
       "path": "app/adapters/http.py",
       "sha256": "3b52abda2cad0309cc31bd056d038a7c2a8abe7fd4e77f4b19551bf21147cfe6"
+    },
+    {
+      "path": "app/intent/classifier.py",
+      "sha256": "c19c6b1273580d8da91caee65ae9161ac4199dd528a401dcbff0eacc6675e2f5"
     },
     {
       "path": "app/main.py",
@@ -17,7 +21,7 @@
     },
     {
       "path": "app/semantic_v2/context_question.py",
-      "sha256": "8dd6c555ada191f02996690ed6edc86ba5d023c9ab4806092891afe23c44f60f"
+      "sha256": "bdf939023aba9c9aa88a965e4c5b24722aa2c8a8ceb250141339a51a0c70eb5e"
     },
     {
       "path": "app/semantic_v2/context_state_store.py",
@@ -41,11 +45,15 @@
     },
     {
       "path": "docs/v2_cutover/context_v1_execution_slim/final_test_delta.json",
-      "sha256": "9d94ed8eed28141482d36adfb6120a09f213501128a053ffafed756954ba8170"
+      "sha256": "d1d6e3db389a3ce814a89017af57a4c638b8e85c224d42a888e6e13242f6a698"
     },
     {
       "path": "docs/v2_cutover/context_v1_execution_slim/validation_report.md",
-      "sha256": "59540e5473c971d00dcf36c446299eaa5fff6c2ccd4a3e0a818fb771a0de3a82"
+      "sha256": "d298eade9125ef60fe8888e1d3cc33d1ba66cd2aa0c2aadc42b5ddd31058e33a"
+    },
+    {
+      "path": "tests/test_intent.py",
+      "sha256": "2ee31f9e3a4515d22e14ebfd172a2295e1563b199c4a6c24a19beb8192195e09"
     },
     {
       "path": "tests/test_oagent_execution_scope_materialization.py",
@@ -57,7 +65,11 @@
     },
     {
       "path": "tests/test_question_rewriter.py",
-      "sha256": "70f3a1d14bec60be48d1a2eb241461b012ebd03053b6e09139e2c07bc734cebb"
+      "sha256": "4617936ed1a964c58763681a5547947201a99bbebae850009247c3492e7e21e4"
+    },
+    {
+      "path": "tests/test_structured_intent.py",
+      "sha256": "4daf882c9b9b20af35dec73f73589ab898c03fa41b18a94e892e2c5cf790ff77"
     },
     {
       "path": "tests/test_v2_context_completed_question_trial.py",
@@ -65,18 +77,22 @@
     },
     {
       "path": "tests/test_v2_context_v1_execution_bridge.py",
-      "sha256": "0836f6e5a9063e8d2b3b57ffd80b43b6c665ca2e19dd38c01faf7d64ac56d238"
+      "sha256": "d62a3c0eee0d4c17ce62cf1eba56b6ce3349bf59dad25c22845b169aa753b5ee"
     }
   ],
   "validation": {
-    "focused_affected": "289 passed / 0 failed",
-    "full": "3778 passed / 91 existing failed / 0 collection errors",
+    "focused_entity_boundary": "12 passed / 0 failed",
+    "affected": "713 passed / 0 failed",
+    "full": "3784 passed / 91 existing failed / 0 collection errors",
+    "baseline_nodes": 3869,
+    "final_nodes": 3875,
     "old_pass_to_new_fail": 0,
-    "old_fail_to_new_pass": 15,
+    "old_fail_to_new_pass": 0,
+    "new_or_reframed_nodes": 8,
+    "replaced_test_names": 2,
     "ast_compileall": "PASS",
     "git_diff_check": "PASS",
-    "old_fail_to_new_pass_latest": 0,
-    "new_test_nodes_latest": 4
+    "live_read_only_query_results": "4 / 4"
   },
   "excluded": [
     ".env",
@@ -87,7 +103,7 @@
     ".eval_private"
   ],
   "runtime": {
-    "pid": 40832,
+    "pid": 39288,
     "live": "HTTP 200",
     "ready": "HTTP 200 / READY",
     "runtime_mode": "V2_CONTEXT_V1_EXECUTION",

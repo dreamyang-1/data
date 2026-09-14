@@ -1085,7 +1085,7 @@ class RuleBasedIntentClassifier:
             request, re.sub(r"\s+", "", question)
         )
         cls._apply_relationship_projection_defaults(request, question)
-        cls._apply_brand_product_scope(request, compact)
+        cls._apply_brand_product_scope(request, re.sub(r"\s+", "", question))
         cls._apply_explicit_dealer_metric_scope(request, question)
         cls._apply_time_grouped_metric_scope(request, compact)
         if (
@@ -3394,9 +3394,9 @@ class RuleBasedIntentClassifier:
                 "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
             )
 
-    @staticmethod
+    @classmethod
     def _apply_brand_product_scope(
-        request: CanonicalAnalysisRequest, text: str
+        cls, request: CanonicalAnalysisRequest, text: str
     ) -> None:
         if request.primary_intent not in {
             PrimaryIntent.METRIC_QUERY, PrimaryIntent.TREND_ANALYSIS,
@@ -3404,25 +3404,108 @@ class RuleBasedIntentClassifier:
         }:
             return
         match = re.search(
-            r"(?:北京|上海|天津|重庆)(?:市|地区)?(?P<brand>[^，,。；;]{2,24}?)产品"
-            r"(?=(?:最近|近|过去|本|20\d{2}|的)?(?:一|二|三|四|五|六|七|八|九|十|\d+)?"
-            r"(?:年|月|季度)?(?:的)?(?:销售|含税|订单|趋势|$))",
+            r"(?P<scope>[^，,。；;？?]{2,80}?)产品"
+            r"(?=(?:(?:最近|近|过去)"
+            r"(?:一|二|三|四|五|六|七|八|九|十|\d+)(?:个)?(?:年|月|季度)"
+            r"|本年度|今年|去年|前年|明年|20\d{2}年)?"
+            r"(?:的)?(?:销售|含税|不含税|订单|趋势))",
             text,
         )
         if match is None:
             return
-        brand = match.group("brand").strip("的")
+        brand = re.sub(
+            r"^(?:请|麻烦|帮我|给我|请帮我)?"
+            r"(?:分析|查询|查找|找出|列出|展示|显示|查看|看看|统计|汇总)?",
+            "",
+            match.group("scope"),
+        ).strip("的")
+        if re.search(r"(?:与|和|及|、|对比|比较)", brand):
+            # Coordinated named values belong to the comparison/list rules.
+            # They must not be collapsed into one provisional literal.
+            return
+        # Region extraction runs before this rule.  Remove only an exact
+        # leading region literal already represented by a region filter; no
+        # open-world text is guessed away.  This makes the same boundary work
+        # for provinces, municipalities and catalog-backed city names.
+        region_fields = {
+            "地区", "区域", "省份", "城市", "业务省份", "业务城市",
+            "医院省份", "医院城市", "经销商省份", "经销商城市",
+        }
+        region_removed = False
+        for item in request.filters:
+            if str(item.get("field") or "").strip() not in region_fields:
+                continue
+            raw_values = item.get("value")
+            values = raw_values if isinstance(raw_values, list) else [raw_values]
+            for raw_value in sorted(
+                (str(value or "").strip() for value in values),
+                key=len,
+                reverse=True,
+            ):
+                aliases = {raw_value}
+                aliases.update(
+                    surface
+                    for surface, canonical in _COMMON_REGIONS.items()
+                    if canonical == raw_value
+                )
+                for region_surface in sorted(aliases, key=len, reverse=True):
+                    region_prefix = re.fullmatch(
+                        rf"{re.escape(region_surface)}(?:市|地区)?(?P<rest>.+)",
+                        brand,
+                    )
+                    if region_prefix is not None:
+                        brand = region_prefix.group("rest").strip("的")
+                        region_removed = True
+                        break
+        # A broad provisional product span can initially protect an embedded
+        # region from the common-region extractor.  Recover only a known
+        # leading region token from the same governed alias map, then create
+        # the ordinary business-geography filter.  Company/product names with
+        # lexical residue before the region are untouched.
+        if not region_removed:
+            known_regions = {
+                **_COMMON_REGIONS,
+                **{value: value for value in _COMMON_REGIONS.values()},
+            }
+            for region_surface in sorted(known_regions, key=len, reverse=True):
+                region_prefix = re.fullmatch(
+                    rf"{re.escape(region_surface)}(?:地区)?(?P<rest>.+)",
+                    brand,
+                )
+                if region_prefix is None:
+                    continue
+                canonical_region = known_regions[region_surface]
+                brand = region_prefix.group("rest").strip("的")
+                region_field = (
+                    "业务省份"
+                    if canonical_region == "国外"
+                    or canonical_region.endswith(("省", "自治区", "特别行政区"))
+                    else "业务城市"
+                )
+                request.filters.append({
+                    "field": region_field,
+                    "operator": "EQ",
+                    "value": canonical_region,
+                })
+                break
         if not brand:
             return
         request.filters = [
             item for item in request.filters
             if str(item.get("field") or "") not in {"商品名称", "品牌名称", "母品牌"}
         ]
-        # Keep the brand phrase in the natural-language semantic query. Model
-        # 81 has multiple governed brand/manufacturer name attributes; forcing
-        # a generic caller field here creates an artificial equal-priority
-        # ambiguity. The important deterministic correction is to remove the
-        # incorrect ``商品名称=<地区+品牌+时间>`` filter.
+        # This is a provisional catalog-value slot, not a declaration that the
+        # text is an exact product name.  The isolated live-catalog lookup in
+        # QuestionRewriter subsequently rebinds it to the strongest authorized
+        # attribute (for example parent brand, manufacturer or exact product).
+        # Keeping the named value as its own slot prevents structured extraction
+        # from sending ``<name>产品最近一年`` to Oagent as one entity mention.
+        request.filters.append({
+            "field": "商品名称", "operator": "EQ", "value": brand,
+        })
+        request.assumptions.append(
+            "NAMED_PRODUCT_SCOPE_REQUIRES_CURRENT_CATALOG_BINDING"
+        )
         request.dimensions = [
             item for item in request.dimensions if item not in {"产品", "商品"}
         ]
@@ -4483,6 +4566,46 @@ class RuleBasedIntentClassifier:
         return spans
 
     @classmethod
+    def _is_query_scaffolding_extension(
+        cls,
+        candidate: str,
+        contained: str,
+    ) -> bool:
+        """Return true when a longer mention only adds query grammar.
+
+        Structured extraction can emit both a clean catalog literal and a
+        larger span such as ``费森尤斯产品最近一年``.  The larger span is not a
+        second business value.  Collapse it only when removing the contained
+        literal leaves generic entity labels, time expressions, metrics or
+        analysis words.  Any open-world lexical residue keeps both mentions
+        for governed catalog resolution.
+        """
+
+        long_value = cls._normalize_catalog_punctuation(
+            re.sub(r"\s+", "", candidate or "")
+        )
+        short_value = cls._normalize_catalog_punctuation(
+            re.sub(r"\s+", "", contained or "")
+        )
+        if (
+            not short_value
+            or long_value == short_value
+            or short_value not in long_value
+        ):
+            return False
+        residue = long_value.replace(short_value, "", 1)
+        scaffolding = re.compile(
+            r"(?:的|产品|商品|货品|物料|品牌|厂家|厂商|制造商|"
+            r"(?:最近|近|过去)(?:\d{1,3}|[一二两三四五六七八九十百]+)个?"
+            r"(?:天|日|周|月|季度|年)(?:内|期间)?|"
+            r"(?:今年|去年|前年|明年|本年|本年度|本月|上月|下月|本季度|上季度|下季度)|"
+            r"(?:销售|含税销售|不含税销售|订单)(?:总额|金额|数量|总数量|笔数|数)?|"
+            r"趋势|走势|变化|分析|查询|统计|汇总|情况|数据|金额|数量|总额|总数量|笔数)"
+        )
+        residue = scaffolding.sub("", residue)
+        return not residue.strip("，,。；;：:！？?!、")
+
+    @classmethod
     def sanitize_semantic_entity_mentions(
         cls, request: CanonicalAnalysisRequest
     ) -> None:
@@ -4584,6 +4707,11 @@ class RuleBasedIntentClassifier:
                     ) in compact
                     and mention != value
                     for mention in current_filter_mentions
+                )
+                or any(
+                    cls._is_query_scaffolding_extension(value, other)
+                    for other in request.semantic_entity_mentions
+                    if str(other or "").strip() != value
                 )
             ):
                 continue

@@ -153,6 +153,47 @@ async def test_short_followup_keeps_model_extracted_current_entity_value(
         )
 
 
+@pytest.mark.asyncio
+async def test_named_product_trend_drops_model_span_contaminated_by_time_scaffolding():
+    output = {
+        "primary_intent": "TREND_ANALYSIS",
+        "secondary_intents": [],
+        "operators": ["AGGREGATE", "TIME_BUCKET", "FILTER"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.98,
+        "evidence": ["销售趋势", "最近一年", "费森尤斯产品"],
+        "metrics": ["销售额"],
+        "dimensions": [],
+        "entity": "产品",
+        "fields": [],
+        "current_entity_values": ["上海市", "费森尤斯", "费森尤斯产品最近一年"],
+        "comparison_type": None,
+        "ambiguities": [],
+        "completed_question": "分析上海市费森尤斯产品最近一年的销售趋势。",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "分析上海市费森尤斯产品最近一年的销售趋势。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "named-product-trend",
+    )
+
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in result.filters
+    assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in result.filters
+    assert result.semantic_entity_mentions == ["上海市", "费森尤斯"]
+    assert "费森尤斯产品最近一年" not in result.semantic_entity_mentions
+
+
 @pytest.mark.parametrize(
     "generic",
     ["销售", "订单", "业务", "数据", "金额", "数量", "趋势", "业绩"],
