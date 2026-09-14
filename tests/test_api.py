@@ -1005,10 +1005,9 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     expected_headings = [
         "#### 1、意图识别",
         "#### ◉ 任务拆分与规划",
-        "#### ◉ 输出总结",
     ]
     assert all(all_thinking_content.count(heading) == 1 for heading in expected_headings)
-    assert len(re.findall(r"(?m)^\s*#{1,6}\s+", all_thinking_content)) == 3
+    assert len(re.findall(r"(?m)^\s*#{1,6}\s+", all_thinking_content)) == 2
     intent_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
@@ -1043,21 +1042,13 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     assert "#### ◉ 任务拆分与规划" in planning_completed_content
     assert "拆分判断完成" in planning_completed_content
     assert "当前问题无需拆分，按单任务执行。  \n子任务1：" in planning_completed_content
-    summary_chunk = next(
-        data for data in think_chunks
-        if data.get("meta", {}).get("stage") == "OUTPUT_SUMMARY"
-    )
-    assert summary_chunk["step"] == "response_result"
-    summary_content = thinking_content(events, "OUTPUT_SUMMARY")
-    assert "输出意图：能力说明。" in summary_content
-    assert "CAPABILITY_HELP" not in summary_content
     completed_think_stages = [
         data.get("meta", {}).get("stage")
         for data in events
         if data["type"] == "message_chunk"
         and data.get("meta", {}).get("status") == "COMPLETED"
     ]
-    assert "OUTPUT_SUMMARY" in completed_think_stages
+    assert "OUTPUT_SUMMARY" not in completed_think_stages
     if "TASK_PLANNING" in completed_think_stages:
         assert completed_think_stages.index("INTENT_RECOGNITION") < completed_think_stages.index("TASK_PLANNING")
 
@@ -1086,9 +1077,8 @@ def test_chat_stream_uses_document_chat_section_format():
 
     assert "#### 1、意图识别" in thinking
     assert "用户原始问句：今天工作辛苦了。" in thinking
-    assert "#### 4、输出总结" in thinking
-    assert "基于用户闲聊文本，由大模型直接生成自然语言闲聊回复" in thinking
-    assert "#### 5、最终输出" in thinking
+    assert "输出总结" not in thinking
+    assert "#### 2、最终输出" in thinking
     assert "任务拆分与规划" not in thinking
     assert "调度执行" not in thinking
 
@@ -1237,7 +1227,7 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert "PASS" not in completed_validation_text
 
 
-def test_all_seven_thinking_stages_have_normalized_unnumbered_headings():
+def test_all_six_analytic_thinking_stages_have_normalized_headings():
     expected = {
         "INTENT_RECOGNITION": "#### 1、意图识别",
         "FILE_INSPECTION": "#### ◉ 文件感知与解析",
@@ -1245,7 +1235,6 @@ def test_all_seven_thinking_stages_have_normalized_unnumbered_headings():
         "DATA_RETRIEVAL": "#### ◉ 调度执行",
         "RELIABILITY_CHECK": "#### ◉ 结果校验",
         "INSIGHT_ANALYSIS": "#### ◉ 数据洞察分析",
-        "OUTPUT_SUMMARY": "#### ◉ 输出总结",
     }
 
     assert {

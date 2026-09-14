@@ -34,7 +34,6 @@ from app.observability.langfuse_client import (
 from app.services.file_ingestion import FileImportError
 from app.services.orchestrator import DataAnalysisOrchestrator
 from app.services.progress import _progress_callback, progress_scope
-from app.presentation import intent_label_zh
 from minio_followup_store import DatasetScope
 from app.security import trusted_backend, require_application_namespace, resolve_conversation_identity
 
@@ -884,16 +883,6 @@ async def chat_stream(
                 async for rendered_event in stream_thinking(event):
                     yield rendered_event
             deferred_planning.clear()
-            query_evidence = [
-                item for item in response.evidence if item.kind == "QUERY_RESULT"
-            ]
-            analysis_evidence = [
-                item for item in response.evidence if item.kind == "ANALYSIS_RESULT"
-            ]
-            demo_fallback = bool(
-                response.reliability
-                and response.reliability.gates.get("demo_fallback")
-            )
             response_scenario = (
                 "CHAT"
                 if response.intent == PrimaryIntent.CHAT
@@ -904,37 +893,6 @@ async def chat_stream(
                 else presentation_scenario
             )
             presentation_scenario = response_scenario
-            if response_scenario != "CLARIFICATION":
-                if response_scenario == "CHAT":
-                    output_summary = (
-                        "基于用户闲聊文本，由大模型直接生成自然语言闲聊回复，"
-                        "不拼接报表、指标、表格等业务结果。"
-                    )
-                elif demo_fallback:
-                    output_summary = (
-                        "任务状态：已完成；\n"
-                        f"输出意图：{intent_label_zh(response.intent)}。\n"
-                        "结果已返回。"
-                    )
-                else:
-                    output_summary = (
-                        "任务状态：已完成；\n"
-                        f"输出意图：{intent_label_zh(response.intent)}。\n"
-                        f"数据查询结果：{'已生成并保留证据' if query_evidence else '本轮无数据查询结果'}；"
-                        f"数据分析结果：{'已生成' if analysis_evidence else '本轮未生成独立分析结论'}。\n"
-                        f"附件：{len(response.files)} 个；图表：{len(response.chart_specs)} 个；"
-                        f"证据：{len(response.evidence)} 项。"
-                    )
-                async for rendered_event in stream_thinking({
-                    "stage": "OUTPUT_SUMMARY",
-                    "status": "COMPLETED",
-                    "presentation_scenario": response_scenario,
-                    "message": output_summary,
-                    "file_count": len(response.files),
-                    "chart_count": len(response.chart_specs),
-                    "evidence_count": len(response.evidence),
-                }):
-                    yield rendered_event
             if response_scenario in {"CHAT", "CLARIFICATION"}:
                 async for rendered_event in stream_thinking({
                     "stage": "FINAL_OUTPUT",
@@ -1194,7 +1152,6 @@ def _thinking_section(stage: str) -> str | None:
         "EXTERNAL_SEARCH": "execution",
         "RELIABILITY_CHECK": "validation",
         "INSIGHT_ANALYSIS": "insight",
-        "OUTPUT_SUMMARY": "summary",
         "CLARIFICATION_EXECUTION": "clarification_execution",
         "CLARIFICATION_RESULT": "clarification_result",
         "FINAL_OUTPUT": "final_output",
@@ -1237,8 +1194,7 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
     if normalized_scenario == "CHAT":
         scenario_titles = {
             "intent": "#### 1、意图识别",
-            "summary": "#### 4、输出总结",
-            "final_output": "#### 5、最终输出",
+            "final_output": "#### 2、最终输出",
         }
         if section in scenario_titles:
             return scenario_titles[section]
@@ -1249,7 +1205,6 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
         "execution": "#### ◉ 调度执行",
         "validation": "#### ◉ 结果校验",
         "insight": "#### ◉ 数据洞察分析",
-        "summary": "#### ◉ 输出总结",
         "clarification_execution": "#### 3、调研执行",
         "clarification_result": "#### 4、结果生成",
         "final_output": "#### 5、最终输出",
@@ -1287,7 +1242,6 @@ def _new_agent_think_step(stage: str) -> str:
         "ANSWER_SYNTHESIS",
         "RELIABILITY_CHECK",
         "INSIGHT_ANALYSIS",
-        "OUTPUT_SUMMARY",
         "CLARIFICATION_EXECUTION",
         "CLARIFICATION_RESULT",
         "FINAL_OUTPUT",

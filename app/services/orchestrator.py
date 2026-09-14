@@ -5050,7 +5050,7 @@ class DataAnalysisOrchestrator:
                 request, query_result.dataset
             )
             if source_watermark_note:
-                answer += f"\n{source_watermark_note}"
+                answer += f"\n\n{source_watermark_note}"
             reliability = ReliabilityReport(
                 level="LIMITED",
                 score=(
@@ -5493,9 +5493,9 @@ class DataAnalysisOrchestrator:
                         result_truncated=True,
                     )
                     + (
-                        "\n完整结果请使用回答末尾的附件链接下载。"
+                        "\n\n说明：完整结果请使用回答末尾的附件链接下载。"
                         if query_result.result_file_url
-                        else "\n本次未收到完整结果文件；请缩小查询范围或继续分页查询。"
+                        else "\n\n说明：本次未收到完整结果文件；请缩小查询范围或继续分页查询。"
                     )
                 )
                 if query_result.dataset.truncated
@@ -5509,7 +5509,7 @@ class DataAnalysisOrchestrator:
             )
         )
         if analysis_output is not None and analysis_output.warnings:
-            answer += "\n注意事项：" + "；".join(analysis_output.warnings) + "。"
+            answer += "\n\n注意事项：" + "；".join(analysis_output.warnings) + "。"
         unavailable_fields = [
             value.split("=", 1)[1]
             for value in request.assumptions
@@ -5517,18 +5517,18 @@ class DataAnalysisOrchestrator:
         ]
         if unavailable_fields:
             answer += (
-                "\n字段说明：当前语义模型未配置“"
+                "\n\n字段说明：当前语义模型未配置“"
                 + "、".join(dict.fromkeys(unavailable_fields))
                 + "”，已返回其余可执行指标；未使用其他字段代替该口径。"
             )
         activity_definition_note = self._activity_definition_note(request)
         if activity_definition_note:
-            answer += f"\n{activity_definition_note}"
+            answer += f"\n\n{activity_definition_note}"
         source_watermark_note = self._source_watermark_note(
             request, query_result.dataset
         )
         if source_watermark_note:
-            answer += f"\n{source_watermark_note}"
+            answer += f"\n\n{source_watermark_note}"
         incomplete_result = bool(
             query_result.dataset.truncated and not query_result.result_file_url
         )

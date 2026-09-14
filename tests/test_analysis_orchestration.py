@@ -666,6 +666,7 @@ async def test_download_only_metric_query_returns_file_instead_of_fake_empty_dat
     assert response.files[0].format == "xlsx"
     assert response.files[0].download_url == response.result_file_url
     assert "[下载完整查询结果（XLSX）](http://minio/bam/result.xlsx)" in response.answer
+    assert "\n\n说明：完整结果请使用回答末尾的附件链接下载。" in response.answer
     assert response.dataset_id is None
 
 
