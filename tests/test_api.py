@@ -953,6 +953,8 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         if data.get("meta", {}).get("stage") == "OUTPUT_SUMMARY"
     )
     assert summary_chunk["step"] == "response_result"
+    assert "输出意图：能力说明。" in summary_chunk["content"]
+    assert "CAPABILITY_HELP" not in summary_chunk["content"]
     completed_think_stages = [
         data.get("meta", {}).get("stage")
         for data in events
@@ -1112,7 +1114,7 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert "查询字段：" in completed_retrieval_text
     assert "返回行数：" in completed_retrieval_text
     assert "结果总行数：" in completed_retrieval_text
-    assert "数据质量：通过" in completed_retrieval_text
+    assert "数据质量：" not in completed_retrieval_text
     assert re.search(
         r"查询快照时间：\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}（北京时间）",
         completed_retrieval_text,
@@ -1123,6 +1125,19 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
         "quality_status=", "data_as_of=", "rows_preview=",
     ):
         assert internal_label not in completed_retrieval_text
+    completed_validation_text = "".join(
+        event["content"] for event in child_public_progress
+        if event["meta"]["stage"] == "RELIABILITY_CHECK"
+        and event["meta"]["status"] == "COMPLETED"
+    )
+    assert "校验结论：高可信" in completed_validation_text
+    assert "数据质量：通过" in completed_validation_text
+    assert "证据（" in completed_validation_text
+    assert "查询结果：" in completed_validation_text
+    assert "（来源：本轮只读数据库查询返回的数据集" in completed_validation_text
+    assert "告警：无。" in completed_validation_text
+    assert "HIGH" not in completed_validation_text
+    assert "PASS" not in completed_validation_text
 
 
 def test_all_seven_thinking_stages_have_normalized_unnumbered_headings():

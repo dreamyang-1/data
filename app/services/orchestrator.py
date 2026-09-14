@@ -79,6 +79,7 @@ from app.presentation import (
     render_composite_intent_recognition_display_v2,
     render_asl_extraction_json,
     render_intent_recognition_display_v2,
+    render_reliability_validation,
 )
 from app.services.relationship_projection import (
     requires_distinct_relationship_projection,
@@ -4733,7 +4734,6 @@ class DataAnalysisOrchestrator:
                 f"查询字段：{_compact_trace_value(query_result.dataset.columns, 800)}；\n"
                 f"返回行数：{query_result.dataset.row_count}；\n"
                 f"结果总行数：{query_result.dataset.total_row_count}；\n"
-                f"数据质量：{_quality_status_text(query_result.dataset.quality_status)}；\n"
                 f"查询快照时间：{_business_datetime_text(query_result.dataset.data_as_of)}；\n"
                 f"数据预览：{_compact_trace_value(query_result.dataset.rows[:2], 1200)}。\n"
                 f"结果状态：{'结果已截断，完整数据通过结果文件提供。' if query_result.dataset.truncated else '当前结果未截断。'}"
@@ -5081,8 +5081,11 @@ class DataAnalysisOrchestrator:
             await emit_progress(
                 "RELIABILITY_CHECK",
                 "COMPLETED",
-                "查询结果已通过数据证据校验；分析样本不足，已保留并展示实际数据，"
-                "同时跳过不可靠的分析结论。",
+                render_reliability_validation(
+                    reliability,
+                    evidence,
+                    query_result.dataset.quality_status,
+                ),
                 reliability_level=reliability.level,
                 reliability_score=reliability.score,
             )
@@ -5347,12 +5350,10 @@ class DataAnalysisOrchestrator:
         await emit_progress(
             "RELIABILITY_CHECK",
             "COMPLETED" if reliability.level != "FAIL" else "FAILED",
-            (
-                "### ◉ 结果研判与应答\n"
-                f"校验结论：{reliability.level}（{reliability.score:.2f}）。\n"
-                f"数据质量：{query_result.dataset.quality_status}；证据数量：{len(evidence)}；"
-                f"告警数量：{len(reliability.warnings)}。\n"
-                + ("结果通过可靠性门禁。" if reliability.level != "FAIL" else "结果未通过可靠性门禁，不输出未经验证的数值。")
+            render_reliability_validation(
+                reliability,
+                evidence,
+                query_result.dataset.quality_status,
             ),
             reliability_level=reliability.level,
             reliability_score=round(float(reliability.score), 4),

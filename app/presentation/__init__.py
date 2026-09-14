@@ -10,6 +10,12 @@ from .intent_recognition import (
     render_asl_extraction_json,
     render_intent_recognition_display_v2,
 )
+from .reliability import (
+    intent_label_zh,
+    quality_status_label_zh,
+    reliability_level_label_zh,
+    render_reliability_validation,
+)
 
 __all__ = [
     "CompositeIntentRecognitionDisplayV2",
@@ -20,4 +26,8 @@ __all__ = [
     "render_composite_intent_recognition_display_v2",
     "render_asl_extraction_json",
     "render_intent_recognition_display_v2",
+    "intent_label_zh",
+    "quality_status_label_zh",
+    "reliability_level_label_zh",
+    "render_reliability_validation",
 ]

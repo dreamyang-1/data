@@ -34,6 +34,7 @@ from app.observability.langfuse_client import (
 from app.services.file_ingestion import FileImportError
 from app.services.orchestrator import DataAnalysisOrchestrator
 from app.services.progress import _progress_callback, progress_scope
+from app.presentation import intent_label_zh
 from minio_followup_store import DatasetScope
 from app.security import trusted_backend, require_application_namespace, resolve_conversation_identity
 
@@ -883,13 +884,13 @@ async def chat_stream(
                 elif demo_fallback:
                     output_summary = (
                         "任务状态：已完成；\n"
-                        f"输出意图：{response.intent.value}。\n"
+                        f"输出意图：{intent_label_zh(response.intent)}。\n"
                         "结果已返回。"
                     )
                 else:
                     output_summary = (
                         "任务状态：已完成；\n"
-                        f"输出意图：{response.intent.value}。\n"
+                        f"输出意图：{intent_label_zh(response.intent)}。\n"
                         f"数据查询结果：{'已生成并保留证据' if query_evidence else '本轮无数据查询结果'}；"
                         f"数据分析结果：{'已生成' if analysis_evidence else '本轮未生成独立分析结论'}。\n"
                         f"附件：{len(response.files)} 个；图表：{len(response.chart_specs)} 个；"
