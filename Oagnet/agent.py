@@ -3059,10 +3059,9 @@ def _administrative_attribute_kind(
     explicit exclusion even when it also contains words such as ``region``.
     """
     column = field.rsplit(".", 1)[-1]
-    code_text = " ".join((
-        column,
-        str(attribute.get("attr_code") or ""),
-    )).casefold()
+    column_text = column.casefold()
+    attribute_code_text = str(attribute.get("attr_code") or "").casefold()
+    code_text = " ".join((column_text, attribute_code_text))
     semantic_text = " ".join((
         code_text,
         str(attribute.get("attr_name") or ""),
@@ -3075,18 +3074,22 @@ def _administrative_attribute_kind(
     def english_token(text: str, token: str) -> bool:
         return bool(re.search(rf"(?:^|[^a-z0-9]){token}(?:$|[^a-z0-9])", text))
 
-    # Stable codes are more precise than a broad translated label such as
-    # "所在省市".  This makes ``attr_code=province`` unambiguously provincial.
-    for token, kind in (
+    # The executable physical column wins when recalled metadata conflicts
+    # with its binding.  For example a recalled "省份名称" dimension must not
+    # make ``dim_city.city_name`` provincial.  If the physical column is
+    # generic (such as ``name``), fall back to the registered attribute code.
+    administrative_codes = (
         ("province", "province"),
         ("city", "city"),
         ("district", "district"),
         ("county", "district"),
         ("region", "region"),
         ("administrative_area", "region"),
-    ):
-        if english_token(code_text.replace("_", " "), token.replace("_", " ")):
-            return kind
+    )
+    for source in (column_text, attribute_code_text):
+        for token, kind in administrative_codes:
+            if english_token(source.replace("_", " "), token.replace("_", " ")):
+                return kind
 
     label = _semantic_label(semantic_text)
     if any(token in label for token in ("省份", "所在省", "行政省")):
@@ -5389,6 +5392,8 @@ def _contract_filter_candidates(
             return "province"
         return None
 
+    target_administrative_role = administrative_role(target)
+
     def match_score(
         identity_terms: set[str], descriptive_terms: set[str]
     ) -> int | None:
@@ -5423,6 +5428,12 @@ def _contract_filter_candidates(
         for field, attribute in entity_attributes.items():
             if field not in authorized or _is_relationship_key_field(
                 field, attributes_by_entity
+            ):
+                continue
+            if (
+                target_administrative_role is not None
+                and _administrative_attribute_kind(field, attribute)
+                != target_administrative_role
             ):
                 continue
             identity_terms = {_contract_label(field.rsplit(".", 1)[-1])}
@@ -5465,7 +5476,20 @@ def _contract_filter_candidates(
             table = str(binding.get("mappingTable") or "").strip()
             column = str(binding.get("mappingColumn") or "").strip()
             field = f"{table}.{column}" if table and column else ""
-            if field in authorized:
+            if (
+                field in authorized
+                and (
+                    target_administrative_role is None
+                    or _administrative_attribute_kind(
+                        field,
+                        {
+                            "attr_code": metadata.get("dim_code"),
+                            "attr_name": metadata.get("dim_name"),
+                            "description": metadata.get("dim_description"),
+                        },
+                    ) == target_administrative_role
+                )
+            ):
                 scored.append((score, field))
 
     if not scored and semantic_model_id is not None:
@@ -5496,6 +5520,11 @@ def _contract_filter_candidates(
                 field not in active_fields
                 or attribute.get("is_primary_key")
                 or bool(re.search(r"(?:^|[._])(?:id|code)$", field, re.I))
+                or (
+                    target_administrative_role is not None
+                    and _administrative_attribute_kind(field, attribute)
+                    != target_administrative_role
+                )
             ):
                 continue
             identity_terms = {_contract_label(field.rsplit(".", 1)[-1])}

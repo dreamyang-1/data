@@ -31,6 +31,34 @@ def test_metric_internal_noun_does_not_replace_explicit_grouped_query_object():
     assert "EXPLICIT_RESULT_OBJECT_FROM_GROUPING=经销商" in request.assumptions
 
 
+@pytest.mark.parametrize(
+    "question",
+    [
+        "统计上海地区各个经销商的区域医院覆盖率",
+        "统计上海地区各经销商区域医院覆盖率",
+        "查询北京地区每家经销商的区域医院覆盖率",
+        "统计江苏地区按经销商汇总区域医院覆盖率",
+    ],
+)
+def test_colloquial_region_and_grouping_scaffolding_is_not_a_product_filter(question):
+    request = RuleBasedIntentClassifier().classify(
+        question,
+        IDENTITY,
+        "coverage-colloquial-region",
+    )
+
+    assert request.entity == "经销商"
+    assert request.dimensions == ["经销商"]
+    assert not any(
+        item.get("field") in {"商品名称", "产品名称"}
+        for item in request.filters
+    )
+    assert not any(
+        "经销商" in value and "区域" in value
+        for value in request.semantic_entity_mentions
+    )
+
+
 def test_forecast_is_not_historical_trend():
     classifier = RuleBasedIntentClassifier()
     forecast = classifier.classify("预测下个月销售额", IDENTITY, "c1")

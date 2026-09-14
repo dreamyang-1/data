@@ -3674,7 +3674,11 @@ class RuleBasedIntentClassifier:
             return
 
         region_pattern = (
-            r"(?:北京|上海|天津|重庆)(?:市)?|"
+            # Consume the complete colloquial municipality surface.  Keeping
+            # ``地区`` outside this group leaves it at the start of the
+            # following scope and can turn grouping grammar into a fake
+            # catalog value (for example 上海地区 + 各个经销商的区域).
+            r"(?:北京|上海|天津|重庆)(?:市|地区)?|"
             r"(?:香港|澳门)特别行政区|"
             r"[\u4e00-\u9fff]{2,12}(?:省|自治区|市|地区)"
         )
@@ -3716,12 +3720,15 @@ class RuleBasedIntentClassifier:
             not 2 <= len(subject) <= 100
             or any(marker in subject for marker in ("报告", "报表", "趋势", "覆盖", "明细"))
             or any(ord(char) < 32 for char in subject)
+            or cls._is_structural_entity_mention(subject)
             or normalized_role in {
                 "经销商", "供应商", "医院", "客户", "门店",
                 "商品", "产品", "厂家", "制造商",
             }
         ):
             return
+        region_surface = region.removesuffix("地区")
+        region = _COMMON_REGIONS.get(region_surface, region_surface)
         if region in {"北京", "上海", "天津", "重庆"}:
             region += "市"
 
@@ -4469,16 +4476,19 @@ class RuleBasedIntentClassifier:
         ):
             return True
         if re.fullmatch(
+            r"(?:(?:地区|区域|地域|范围)(?:范围)?(?:内|中)?(?:的)?)?"
             r"(?:各个|每一个|各|每个|每家|分别|各自|逐个)"
             r"(?:经销商|供应商|医院|门店|客户|商品|产品|厂家|制造商|科室|渠道)"
-            r"(?:的(?:区域|地区|范围|覆盖范围|销售|销量|销售额))?",
+            r"(?:的?(?:区域|地区|范围|覆盖范围|销售区域|销售地区|销售|销量|销售额))?",
             compact,
         ):
             return True
         if re.fullmatch(
+            r"(?:(?:地区|区域|地域|范围)(?:范围)?(?:内|中)?(?:的)?)?"
             r"(?:再|也|改成|换成)?按(?:日|天|周|月|季度|年|省份?|城市|医院|"
             r"经销商|供应商|科室|医院等级)(?:度|份)?"
-            r"(?:统计|计算|分析|查看|查询|展示|返回|汇总|拆分|分组|看)?",
+            r"(?:统计|计算|分析|查看|查询|展示|返回|汇总|拆分|分组|看)?"
+            r"(?:的?(?:区域|地区|范围|覆盖范围|销售区域|销售地区))?",
             compact,
         ):
             return True

@@ -474,6 +474,54 @@ def test_unique_contract_filter_repair_clears_stale_field_only_ambiguity():
     _validate_intent_asl_contract(repaired, _province_order_count_contract(), knowledge)
 
 
+def test_province_contract_rejects_recalled_city_binding_and_uses_published_level(
+    monkeypatch,
+):
+    knowledge = {
+        "entities": [],
+        "dimensions": [SimpleNamespace(metadata={
+            "dim_code": "province",
+            "dim_name": "省份名称",
+            "bind_entities": [{
+                "entity": "city",
+                "mappingTable": "dim_city",
+                "mappingColumn": "city_name",
+            }],
+        })],
+    }
+    monkeypatch.setattr(
+        agent,
+        "get_registered_entity_attributes",
+        lambda *_args: [{
+            "entity_code": "province",
+            "attr_code": "province_name",
+            "attr_name": "省份名称",
+            "field_mapping": "dim_province.province_name",
+            "is_main_attribute": True,
+        }],
+    )
+    monkeypatch.setattr(
+        agent,
+        "get_table_field_by_scope",
+        lambda **_kwargs: {
+            "tables": [{
+                "table_name": "dim_province",
+                "fields": [{"field_name": "province_name"}],
+            }],
+        },
+    )
+
+    candidates = _contract_filter_candidates(
+        "省份名称",
+        knowledge,
+        semantic_model_id=81,
+        domain_scope=205,
+        query_object="经销商",
+    )
+
+    assert candidates == ["dim_province.province_name"]
+
+
 def test_contract_filter_repair_keeps_unrelated_filter_ambiguity():
     knowledge = {
         "entities": [
