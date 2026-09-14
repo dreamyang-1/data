@@ -5400,11 +5400,15 @@ class DataAnalysisOrchestrator:
                 for item in chart_specs
             )
             chart_summary = f"\n已根据本次分析任务生成{rendered_charts}，用于直观查看数据变化和差异。"
-        chart_images = await self._publish_inline_charts(
-            request=request,
-            identity=identity,
-            dataset_id=dataset_id,
-            chart_specs=chart_specs,
+        chart_images = (
+            await self._publish_inline_charts(
+                request=request,
+                identity=identity,
+                dataset_id=dataset_id,
+                chart_specs=chart_specs,
+            )
+            if reliability.level != "FAIL"
+            else []
         )
         chart_display = ""
         if chart_images:
