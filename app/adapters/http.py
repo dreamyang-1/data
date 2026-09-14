@@ -37,6 +37,7 @@ from app.services.knowledge_retrieval import (
     normalize_and_deduplicate_hits,
 )
 from app.services.progress import emit_progress
+from app.presentation import render_asl_extraction_json
 from app.services.intent_asl_contract import (
     build_intent_asl_contract,
     validate_intent_asl_contract_completeness,
@@ -2133,6 +2134,18 @@ class HttpDataRetrievalAdapter:
                     "ASL_ANALYSIS_SHAPE_INVALID",
                     "trend ASL must group by a registered temporal dimension",
                 )
+
+        # Publish the validated ASL at its real lifecycle boundary: Oagent has
+        # finished and all local ASL guards have passed, while SQL translation
+        # and database execution have not started yet.
+        await emit_progress(
+            "ASL_GENERATION",
+            "COMPLETED",
+            render_asl_extraction_json(asl),
+            message_limit=65536,
+            display_model="OagentASL",
+            display_version=str(asl.get("version") or "UNKNOWN"),
+        )
 
         if asl_cache_key is not None:
             if len(self._asl_plan_cache) >= self.settings.asl_plan_cache_max_items:

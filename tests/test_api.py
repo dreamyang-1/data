@@ -136,6 +136,14 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
         "ambiguity": [],
     }
     assert asl_event["meta"]["display_model"] == "OagentASL"
+    asl_index = events.index(asl_event)
+    retrieval_completed_index = next(
+        index for index, event in enumerate(events)
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "DATA_RETRIEVAL"
+        and event.get("meta", {}).get("status") == "COMPLETED"
+    )
+    assert asl_index < retrieval_completed_index
 
 
 def test_chat_collects_sync_and_stream_questions_but_not_refresh(tmp_path):

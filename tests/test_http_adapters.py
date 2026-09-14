@@ -17,6 +17,7 @@ from app.services.knowledge_retrieval import RedisKnowledgeSearchCache
 from app.services.relationship_projection import (
     requires_distinct_relationship_projection,
 )
+from app.services.progress import progress_scope
 
 IDENTITY = TrustedIdentity(tenant_id="t1", user_id="u1")
 
@@ -832,9 +833,17 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
         },
     ])
 
-    result = await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
-        constrained, IDENTITY, semantic_model_id=81, business_domain_id=205
-    )
+    progress: list[tuple[str, int]] = []
+
+    async def capture_progress(event):
+        progress.append((event["stage"], len(client.calls)))
+
+    with progress_scope(capture_progress):
+        result = await HttpDataRetrievalAdapter(
+            Settings(adapter_mode="http"), client
+        ).query(
+            constrained, IDENTITY, semantic_model_id=81, business_domain_id=205
+        )
 
     assert result.dataset.row_count == 1
     assert [call[1] for call in client.calls] == ["/agent/query", "/api/translate", "/api/execute"]
@@ -842,6 +851,14 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
     assert "Internal DAG semantic retrieval requirement" in client.calls[0][2]["retrieval_query"]
     translated_asl = json.loads(client.calls[1][2]["asl"])
     assert translated_asl["projection_mode"] == "DISTINCT"
+    assert next(item for item in progress if item[0] == "ASL_GENERATION") == (
+        "ASL_GENERATION",
+        1,
+    )
+    assert next(item for item in progress if item[0] == "SQL_EXECUTION") == (
+        "SQL_EXECUTION",
+        2,
+    )
 
 
 def test_dependency_constraint_field_family_keeps_join_key_kind() -> None:

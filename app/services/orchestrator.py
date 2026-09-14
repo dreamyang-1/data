@@ -77,7 +77,6 @@ from app.presentation import (
     build_composite_intent_recognition_display_v2,
     build_intent_recognition_display_v2,
     render_composite_intent_recognition_display_v2,
-    render_asl_extraction_json,
     render_intent_recognition_display_v2,
     render_reliability_validation,
 )
@@ -4713,18 +4712,6 @@ class DataAnalysisOrchestrator:
         query_result = self._enforce_name_projection_integrity(
             request, query_result
         )
-        if query_result.sql not in {
-            "DATASET_FOLLOWUP_NO_SQL",
-            "UPLOADED_DATASET_NO_SQL",
-        }:
-            await emit_progress(
-                "ASL_GENERATION",
-                "COMPLETED",
-                render_asl_extraction_json(query_result.asl),
-                message_limit=65536,
-                display_model="OagentASL",
-                display_version=str(query_result.asl.get("version") or "UNKNOWN"),
-            )
         await emit_progress(
             "DATA_RETRIEVAL",
             "COMPLETED",
