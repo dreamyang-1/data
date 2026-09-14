@@ -411,6 +411,48 @@ class QuestionRewriter:
 
         if self.searcher is None or semantic_model_id is None:
             return []
+        original_filter_count = len(request.filters)
+        existing_filter_literals = {
+            str(value or "").strip().strip("%").casefold()
+            for item in request.filters
+            if isinstance(item, dict)
+            for value in (
+                item.get("value")
+                if isinstance(item.get("value"), list)
+                else [item.get("value")]
+            )
+            if str(value or "").strip().strip("%")
+        }
+        untyped_catalog_identifiers: list[str] = []
+        if "CATALOG_IDENTIFIER_GROUNDING_REQUIRED" in request.assumptions:
+            for mention in request.semantic_entity_mentions:
+                literal = str(mention or "").strip().strip("%")
+                if (
+                    literal
+                    and literal.casefold() not in existing_filter_literals
+                    and re.fullmatch(
+                        r"(?=[0-9A-Za-z-]{3,64}$)"
+                        r"(?=[0-9A-Za-z-]*[A-Za-z])"
+                        r"[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+",
+                        literal,
+                    )
+                ):
+                    untyped_catalog_identifiers.append(literal)
+        untyped_catalog_identifiers = list(dict.fromkeys(
+            untyped_catalog_identifiers
+        ))[:10]
+        for literal in untyped_catalog_identifiers:
+            # ``商品名称`` is a temporary semantic family hint, not a physical
+            # binding. It survives only when the current authorized V1 catalog
+            # returns a high-confidence product-family match for this literal.
+            request.filters.append({
+                "field": "商品名称",
+                "operator": "EQ",
+                "value": literal,
+            })
+        provisional_filter_indices = set(range(
+            original_filter_count, len(request.filters)
+        ))
         literals: list[str] = []
         for item in request.filters:
             if not isinstance(item, dict):
@@ -470,6 +512,11 @@ class QuestionRewriter:
                 current = confirmed
             else:
                 current = self._prefer_finest_administrative_region(current)
+            if literal in untyped_catalog_identifiers:
+                current = [
+                    item for item in current
+                    if self._semantic_match_family(item) == "product"
+                ]
             matches.extend(current)
             version = self._semantic_model_version(current)
             ambiguities.extend(self._detect_semantic_ambiguities(
@@ -510,6 +557,38 @@ class QuestionRewriter:
             })
             if resolved_domains:
                 request.resolved_business_domain_ids = resolved_domains
+
+        if provisional_filter_indices:
+            accepted_provisional = {
+                binding.filter_index
+                for binding in request.semantic_filter_bindings
+                if binding.filter_index in provisional_filter_indices
+                and self._semantic_match_family({
+                    "attribute_name": binding.canonical_name,
+                    "attribute_code": binding.attribute_code,
+                }) == "product"
+            }
+            keep_indices = [
+                index for index in range(len(request.filters))
+                if index not in provisional_filter_indices
+                or index in accepted_provisional
+            ]
+            index_map = {
+                old_index: new_index
+                for new_index, old_index in enumerate(keep_indices)
+            }
+            request.filters = [request.filters[index] for index in keep_indices]
+            request.semantic_filter_bindings = [
+                binding.model_copy(update={
+                    "filter_index": index_map[binding.filter_index]
+                })
+                for binding in request.semantic_filter_bindings
+                if binding.filter_index in index_map
+            ]
+            if accepted_provisional:
+                request.assumptions.append(
+                    "CATALOG_IDENTIFIER_GROUNDED_FROM_CURRENT_MODEL"
+                )
 
         by_id: dict[str, SemanticAmbiguity] = {}
         for item in ambiguities:
@@ -602,6 +681,7 @@ class QuestionRewriter:
                 "COMMERCIAL_PRODUCT",
                 (
                     "product_name", "goods_name", "商品名称", "产品名称",
+                    "规格型号", "产品规格", "商品规格", "specification",
                     "商品品牌", "产品品牌", "parent_brand", "母品牌", "母厂牌",
                     "brand", "厂家", "manufacturer", "商品分类", "产品分类",
                     "category", "品类",
@@ -981,7 +1061,10 @@ class QuestionRewriter:
             ("hospital", ("医院", "护理院", "卫生服务中心", "hospital")),
             ("partner", ("经销商", "供应商", "dealer", "supplier", "vendor")),
             ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
-            ("product", ("商品名称", "产品名称", "商品", "产品", "product", "goods", "sku")),
+            ("product", (
+                "商品名称", "产品名称", "规格型号", "产品规格", "商品规格",
+                "specification", "商品", "产品", "product", "goods", "sku",
+            )),
         )
         return next(
             (name for name, aliases in families if any(alias in reference for alias in aliases)),
@@ -1079,7 +1162,10 @@ class QuestionRewriter:
                 ("hospital", ("医院", "护理院", "卫生服务中心", "hospital")),
                 ("region", ("地区", "区域", "省份", "城市", "region", "province", "city")),
                 ("partner", ("经销商", "供应商", "dealer", "supplier", "vendor")),
-                ("product", ("商品名称", "产品名称", "商品", "产品", "product", "goods", "sku")),
+                ("product", (
+                    "商品名称", "产品名称", "规格型号", "产品规格", "商品规格",
+                    "specification", "商品", "产品", "product", "goods", "sku",
+                )),
             )
             return next(
                 (name for name, aliases in families if any(alias in text for alias in aliases)),

@@ -2,21 +2,48 @@ import json
 
 from app.domain.models import (
     AnalysisOperator,
+    AtomicTask,
     CanonicalAnalysisRequest,
     ContextMode,
     MetricRef,
     PrimaryIntent,
+    TaskPlan,
     TrustedIdentity,
 )
 from app.intent import RuleBasedIntentClassifier
 from app.presentation.intent_recognition import (
+    build_composite_intent_recognition_display_v2,
     build_intent_recognition_display_v2,
+    render_composite_intent_recognition_display_v2,
     render_asl_extraction_json,
     render_intent_recognition_display_v2,
 )
 
 
 IDENTITY = TrustedIdentity(tenant_id="tenant", user_id="user")
+
+
+def test_composite_display_lists_real_unique_child_intents_only():
+    plan = TaskPlan(planner="DETERMINISTIC_RULE", tasks=[
+        AtomicTask(task_id="task-1", question="查询产品明细"),
+        AtomicTask(task_id="task-2", question="分析销售趋势"),
+    ])
+
+    rendered = render_composite_intent_recognition_display_v2(
+        build_composite_intent_recognition_display_v2(
+            "查询产品明细并分析销售趋势",
+            plan,
+            task_intents=[
+                PrimaryIntent.DETAIL_QUERY,
+                PrimaryIntent.TREND_ANALYSIS,
+            ],
+        )
+    )
+
+    assert "任务意图：明细查询、趋势分析" in rendered
+    assert "复合查询" not in rendered
+    assert "共享业务标识" not in rendered
+    assert "结构化拆分" not in rendered
 
 
 def test_transaction_partner_list_displays_natural_completed_question():

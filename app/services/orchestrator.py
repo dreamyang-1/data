@@ -658,10 +658,19 @@ class DataAnalysisOrchestrator:
                     except TaskPlanningError as exc:
                         logger.warning("multi-question plan rejected: %s", exc)
                     if plan is not None:
+                        task_intents = [
+                            self._classify_with_rules(
+                                task.question,
+                                identity,
+                                chat.conversation_id,
+                            ).primary_intent
+                            for task in plan.tasks
+                        ]
                         composite_view = (
                             build_composite_intent_recognition_display_v2(
                                 chat.question,
                                 plan,
+                                task_intents=task_intents,
                             )
                         )
                         await emit_progress(
@@ -670,7 +679,9 @@ class DataAnalysisOrchestrator:
                             render_composite_intent_recognition_display_v2(
                                 composite_view
                             ),
-                            intent="COMPOSITE_QUERY",
+                            intent=",".join(dict.fromkeys(
+                                item.value for item in task_intents
+                            )),
                             confidence=1.0,
                             display_model="CompositeIntentRecognitionDisplayV2",
                             display_version="V2",
@@ -685,17 +696,18 @@ class DataAnalysisOrchestrator:
                             "拆分判断完成。"
                             + (
                                 "已拆分为以下任务：\n"
-                                + "\n".join(
-                                    f"{index}. {task.question}"
+                                + "\n\n".join(
+                                    f"任务{index}：{task.question}\n"
+                                    f"规划调用：{QUERY_EXECUTION_CHAIN}"
                                     for index, task in enumerate(plan.tasks, 1)
                                 )
                                 if plan is not None
                                 else (
                                     "当前问题无需拆分，按单任务执行。\n"
-                                    f"子任务1：{chat.question}"
+                                    f"任务1：{chat.question}\n"
+                                    f"规划调用：{QUERY_EXECUTION_CHAIN}"
                                 )
                             )
-                            + f"\n规划调用：{QUERY_EXECUTION_CHAIN}"
                         ),
                         task_count=len(plan.tasks) if plan is not None else 1,
                     )

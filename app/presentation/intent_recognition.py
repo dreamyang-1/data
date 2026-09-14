@@ -181,7 +181,6 @@ class CompositeIntentRecognitionDisplayV2:
     original_question: str = ""
     completed_question: str = ""
     planner: str = ""
-    shared_identifiers: list[str] = field(default_factory=list)
     tasks: list[CompositeIntentTaskDisplayV2] = field(default_factory=list)
 
 
@@ -643,16 +642,6 @@ def build_composite_intent_recognition_display_v2(
     as planning facts only and are never fed back into ASL or SQL execution.
     """
 
-    normalized_source = str(original_question).translate(str.maketrans({
-        "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
-        "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
-        "\uff0d": "-",
-    }))
-    identifiers = list(dict.fromkeys(re.findall(
-        r"(?<![0-9A-Za-z])(?=[0-9A-Za-z-]{3,64}(?![0-9A-Za-z-]))"
-        r"(?=[0-9A-Za-z-]*[A-Za-z])[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+",
-        normalized_source,
-    )))
     intents = task_intents or []
     tasks = [
         CompositeIntentTaskDisplayV2(
@@ -674,7 +663,6 @@ def build_composite_intent_recognition_display_v2(
         original_question=_single_line(original_question, 1000),
         completed_question=completed,
         planner=plan.planner,
-        shared_identifiers=identifiers,
         tasks=tasks,
     )
 
@@ -684,27 +672,20 @@ def render_composite_intent_recognition_display_v2(
 ) -> str:
     """Render one deterministic parent trace for every DAG child."""
 
+    intent_labels = list(dict.fromkeys(
+        task.intent for task in view.tasks if task.intent
+    ))
+    task_intent = "、".join(intent_labels) or "待语义识别"
     lines = [
         "### 1、意图识别",
         "",
         f"用户原始问题：{view.original_question}",
         f"补全后的问题：{view.completed_question}",
-        f"任务意图：复合查询（共 {len(view.tasks)} 个子任务）",
-        "意图判定依据：用户要求分别返回多个可独立交付的业务结果。",
+        f"任务意图：{task_intent}",
+        (
+            "意图判定依据：各项任务均按其实际业务目标识别，"
+            "并分别交付查询或分析结果。"
+        ),
+        f"参数规范化：已识别 {len(view.tasks)} 个待执行任务。",
     ]
-    if view.shared_identifiers:
-        lines.append(
-            f"共享业务标识：{_list_text(view.shared_identifiers)}"
-            "（每个子任务继续按当前语义层独立规范化）"
-        )
-    lines.append("结构化拆分：")
-    for index, task in enumerate(view.tasks, 1):
-        dependency = (
-            f"；依赖={_list_text(task.depends_on)}" if task.depends_on else ""
-        )
-        lines.append(
-            f"子任务 {index}（{task.task_id}）：{task.question}；"
-            f"意图={task.intent}{dependency}"
-        )
-    lines.append(f"参数规范化：任务拆分已完成（规划器={view.planner}）")
     return "\n".join(lines)

@@ -1174,9 +1174,27 @@ def _ordered_composite_child_progress_events(
             task_index = 0
         return section_order.get(section or "", 99), task_index, sequence
 
-    return [
-        event for _, event in sorted(enumerate(events), key=sort_key)
-    ]
+    ordered = [event for _, event in sorted(enumerate(events), key=sort_key)]
+    labelled_execution_tasks: set[int] = set()
+    rendered: list[dict[str, Any]] = []
+    for event in ordered:
+        current = dict(event)
+        section = _thinking_section(str(current.get("stage") or "").upper())
+        try:
+            task_index = max(0, int(current.get("task_index") or 0))
+        except (TypeError, ValueError):
+            task_index = 0
+        if section == "execution" and task_index not in labelled_execution_tasks:
+            labelled_execution_tasks.add(task_index)
+            message = str(current.get("message") or "").strip()
+            message = re.sub(
+                r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", message
+            ).strip()
+            if message.startswith("执行链路："):
+                message = message.removeprefix("执行链路：")
+            current["message"] = f"任务{task_index + 1}执行链路：{message}"
+        rendered.append(current)
+    return rendered
 
 
 def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:

@@ -1052,7 +1052,8 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     )
     assert "#### ◉ 任务拆分与规划" in planning_completed_content
     assert "拆分判断完成" in planning_completed_content
-    assert "当前问题无需拆分，按单任务执行。  \n子任务1：" in planning_completed_content
+    assert "当前问题无需拆分，按单任务执行。  \n任务1：" in planning_completed_content
+    assert "规划调用：" in planning_completed_content
     assert f"规划调用：{QUERY_EXECUTION_CHAIN}" in planning_completed_content
     completed_think_stages = [
         data.get("meta", {}).get("stage")
@@ -1165,9 +1166,19 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert intent["meta"]["is_composite"] is True
     intent_content = "".join(event["content"] for event in intent_chunks)
     assert "查询 TDC-3 产品的主要适用科室、次要适用科室" in intent_content
-    assert "子任务 1" in intent_content
-    assert "子任务 2" in intent_content
+    assert "任务意图：明细查询" in intent_content
+    assert "复合查询" not in intent_content
+    assert "共享业务标识" not in intent_content
+    assert "结构化拆分" not in intent_content
     assert not intent["meta"].get("is_child_task")
+    planning_content = "".join(
+        event["content"] for event in events
+        if event["type"] == "message_chunk"
+        and event.get("meta", {}).get("stage") == "TASK_PLANNING"
+    )
+    assert "任务1：查询 TDC-3 产品的主要适用科室" in planning_content
+    assert "任务2：查询 TDC-3 产品的次要适用科室" in planning_content
+    assert planning_content.count("规划调用：") == 2
     completed = next(event for event in events if event["type"] == "complete")
     assert completed["execution_shape"] == "COMPOSITE"
     assert len(completed["task_results"]) == 2
@@ -1184,6 +1195,9 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert {event["meta"]["task_id"] for event in child_execution} == {
         "task-1", "task-2",
     }
+    child_execution_text = "".join(event["content"] for event in child_execution)
+    assert "任务1执行链路：" in child_execution_text
+    assert "任务2执行链路：" in child_execution_text
     child_public_progress = [
         event for event in events
         if event["type"] == "message_chunk"

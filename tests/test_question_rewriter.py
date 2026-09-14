@@ -352,6 +352,125 @@ async def test_isolated_filter_lookup_makes_parent_brand_binding_authoritative()
 
 
 @pytest.mark.asyncio
+async def test_untyped_product_identifier_uses_current_catalog_attribute_binding():
+    request = CanonicalAnalysisRequest(
+        conversation_id="catalog-product-identifier",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询 TDC-3 产品的主要适用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=81,
+        entity="产品",
+        fields=["商品名称", "适用科室"],
+        filters=[{"field": "适用科室类型", "operator": "EQ", "value": 1}],
+        semantic_entity_mentions=["TDC-3"],
+        assumptions=["CATALOG_IDENTIFIER_GROUNDING_REQUIRED"],
+    )
+    searcher = FakeSearcher([{
+        "record_id": "specification-tdc-3",
+        "score": 1.0,
+        "entity_name": "产品",
+        "attribute_name": "规格型号",
+        "attribute_code": "specification",
+        "attribute_value": "TDC-3",
+        "business_domain_id": 205,
+        "semantic_model_id": 81,
+        "semantic_model_version": "published-81",
+    }])
+
+    ambiguities = await QuestionRewriter(searcher).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+    )
+
+    assert ambiguities == []
+    assert searcher.calls == [("TDC-3", 81, None, [])]
+    assert request.filters == [
+        {"field": "适用科室类型", "operator": "EQ", "value": 1},
+        {"field": "规格型号", "operator": "EQ", "value": "TDC-3"},
+    ]
+    assert len(request.semantic_filter_bindings) == 1
+    binding = request.semantic_filter_bindings[0]
+    assert binding.filter_index == 1
+    assert binding.attribute_code == "specification"
+    assert binding.canonical_value == "TDC-3"
+    assert "CATALOG_IDENTIFIER_GROUNDED_FROM_CURRENT_MODEL" in request.assumptions
+
+
+@pytest.mark.asyncio
+async def test_unmatched_untyped_product_identifier_does_not_create_a_filter():
+    request = CanonicalAnalysisRequest(
+        conversation_id="unmatched-catalog-product-identifier",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询 UNKNOWN-404 产品的主要适用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=81,
+        entity="产品",
+        fields=["商品名称", "适用科室"],
+        filters=[{"field": "适用科室类型", "operator": "EQ", "value": 1}],
+        semantic_entity_mentions=["UNKNOWN-404"],
+        assumptions=["CATALOG_IDENTIFIER_GROUNDING_REQUIRED"],
+    )
+
+    ambiguities = await QuestionRewriter(FakeSearcher([])).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+    )
+
+    assert ambiguities == []
+    assert request.filters == [
+        {"field": "适用科室类型", "operator": "EQ", "value": 1},
+    ]
+    assert request.semantic_filter_bindings == []
+    assert "CATALOG_IDENTIFIER_GROUNDED_FROM_CURRENT_MODEL" not in request.assumptions
+
+
+@pytest.mark.asyncio
+async def test_product_identifier_cannot_bind_to_a_non_product_catalog_family():
+    request = CanonicalAnalysisRequest(
+        conversation_id="wrong-family-catalog-identifier",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询 CODE-9 产品的主要适用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=81,
+        entity="产品",
+        fields=["商品名称", "适用科室"],
+        filters=[{"field": "适用科室类型", "operator": "EQ", "value": 1}],
+        semantic_entity_mentions=["CODE-9"],
+        assumptions=["CATALOG_IDENTIFIER_GROUNDING_REQUIRED"],
+    )
+    searcher = FakeSearcher([{
+        "record_id": "hospital-code-9",
+        "score": 1.0,
+        "entity_name": "医院",
+        "attribute_name": "医院编码",
+        "attribute_code": "hospital_code",
+        "attribute_value": "CODE-9",
+        "business_domain_id": 205,
+        "semantic_model_id": 81,
+    }])
+
+    ambiguities = await QuestionRewriter(searcher).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+    )
+
+    assert ambiguities == []
+    assert request.filters == [
+        {"field": "适用科室类型", "operator": "EQ", "value": 1},
+    ]
+    assert request.semantic_filter_bindings == []
+
+
+@pytest.mark.asyncio
 async def test_region_and_named_product_values_are_independently_grounded():
     request = CanonicalAnalysisRequest(
         conversation_id="region-parent-brand",
