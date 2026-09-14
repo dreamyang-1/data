@@ -27,6 +27,7 @@ from app.analysis import (
     AnalysisPlanner,
     QwenAnalysisSynthesizer,
     SynthesisValidationError,
+    build_query_result_insight,
 )
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
 from app.services.chat_responder import QwenChatResponder
@@ -5193,6 +5194,7 @@ class DataAnalysisOrchestrator:
             )
 
         analysis_output = None
+        insight_output = None
         synthesized_answer: str | None = None
         if _requires_deterministic_analysis(request):
             await emit_progress(
@@ -5272,66 +5274,96 @@ class DataAnalysisOrchestrator:
                     },
                 )
             )
-            if self.analysis_synthesizer is not None:
-                await emit_progress(
-                    "ANSWER_SYNTHESIS", "RUNNING", "正在将已验证的分析事实整理成回答。"
+            insight_output = analysis_output
+        elif request.primary_intent in {
+            PrimaryIntent.METRIC_QUERY,
+            PrimaryIntent.DETAIL_QUERY,
+        }:
+            insight_output = build_query_result_insight(
+                request,
+                query_result.dataset.columns,
+                query_result.dataset.rows,
+                total_row_count=total_row_count,
+                total_row_count_confirmed=total_row_count_confirmed,
+                truncated=query_result.dataset.truncated,
+            )
+            if insight_output is not None:
+                evidence.append(
+                    EvidenceItem(
+                        evidence_id=f"analysis:{request.request_id}",
+                        kind="ANALYSIS_RESULT",
+                        source_ref=f"deterministic:{insight_output.method}",
+                        payload={
+                            "method": insight_output.method,
+                            "facts": insight_output.facts,
+                            "warnings": insight_output.warnings,
+                        },
+                    )
                 )
-                try:
-                    synthesized_answer, synthesis = (
-                        await self.analysis_synthesizer.synthesize(
-                            request, analysis_output, evidence
-                        )
+
+        if insight_output is not None and self.analysis_synthesizer is not None:
+            await emit_progress(
+                "ANSWER_SYNTHESIS", "RUNNING", "正在将已验证的查询事实整理成通俗的数据解读。"
+            )
+            try:
+                synthesized_answer, synthesis = (
+                    await self.analysis_synthesizer.synthesize(
+                        request, insight_output, evidence
                     )
-                    evidence.append(
-                        EvidenceItem(
-                            evidence_id=f"analysis-synthesis:{request.request_id}",
-                            kind="ANSWER_SYNTHESIS",
-                            source_ref=(
-                                f"qwen:{self.settings.analysis_synthesis_model_name}"
-                            ),
-                            payload={
-                                "model": self.settings.analysis_synthesis_model_name,
-                                "claim_count": len(synthesis.claims),
-                                "claims": [
-                                    claim.model_dump(mode="json")
-                                    for claim in synthesis.claims
-                                ],
-                            },
-                        )
-                    )
-                except (
-                    httpx.HTTPError,
-                    KeyError,
-                    RuntimeError,
-                    ValueError,
-                    SynthesisValidationError,
-                ) as exc:
-                    logger.warning(
-                        "analysis synthesis unavailable or rejected; using "
-                        "deterministic answer: %s",
-                        exc,
-                    )
-                    analysis_evidence = next(
-                        item for item in evidence if item.kind == "ANALYSIS_RESULT"
-                    )
-                    warnings = analysis_evidence.payload.setdefault(
-                        "presentation_warnings", []
-                    )
-                    warning = (
-                        "Qwen分析总结未通过可用性或证据校验，"
-                        "已返回确定性分析结果"
-                    )
-                    if warning not in warnings:
-                        warnings.append(warning)
-                await emit_progress(
-                    "ANSWER_SYNTHESIS",
-                    "COMPLETED" if synthesized_answer is not None else "DEGRADED",
-                    (
-                        "分析结论整理完成。"
-                        if synthesized_answer is not None
-                        else "模型总结不可用，已使用确定性分析结论。"
-                    ),
                 )
+                evidence.append(
+                    EvidenceItem(
+                        evidence_id=f"analysis-synthesis:{request.request_id}",
+                        kind="ANSWER_SYNTHESIS",
+                        source_ref=(
+                            f"qwen:{self.settings.analysis_synthesis_model_name}"
+                        ),
+                        payload={
+                            "model": self.settings.analysis_synthesis_model_name,
+                            "claim_count": len(synthesis.claims),
+                            "claims": [
+                                claim.model_dump(mode="json")
+                                for claim in synthesis.claims
+                            ],
+                        },
+                    )
+                )
+            except (
+                httpx.HTTPError,
+                KeyError,
+                RuntimeError,
+                ValueError,
+                SynthesisValidationError,
+            ) as exc:
+                logger.warning(
+                    "analysis synthesis unavailable or rejected; using "
+                    "deterministic answer: %s",
+                    exc,
+                )
+                analysis_evidence = next(
+                    item
+                    for item in evidence
+                    if item.kind == "ANALYSIS_RESULT"
+                    and item.evidence_id == f"analysis:{request.request_id}"
+                )
+                warnings = analysis_evidence.payload.setdefault(
+                    "presentation_warnings", []
+                )
+                warning = (
+                    "Qwen分析总结未通过可用性或证据校验，"
+                    "已返回确定性分析结果"
+                )
+                if warning not in warnings:
+                    warnings.append(warning)
+            await emit_progress(
+                "ANSWER_SYNTHESIS",
+                "COMPLETED" if synthesized_answer is not None else "DEGRADED",
+                (
+                    "通俗的数据解读已生成。"
+                    if synthesized_answer is not None
+                    else "模型总结不可用，已使用确定性数据摘要。"
+                ),
+            )
 
         reliability = self._reliability(request, evidence, query_result.dataset.quality_status)
         await emit_progress(
@@ -5345,19 +5377,49 @@ class DataAnalysisOrchestrator:
             reliability_level=reliability.level,
             reliability_score=round(float(reliability.score), 4),
         )
+        chart_specs = (
+            analysis_output.facts.get("chart_specs", [])
+            if analysis_output is not None
+            else []
+        )
+        chart_summary = ""
+        if chart_specs:
+            chart_labels = {
+                "LINE": "折线图",
+                "BAR": "柱状图",
+                "PIE": "饼图",
+                "SCATTER": "散点图",
+                "TABLE": "数据表",
+            }
+            rendered_charts = "、".join(
+                f"{chart_labels.get(str(item.get('chart_type')), '图表')}“{item.get('title', '')}”"
+                for item in chart_specs
+            )
+            chart_summary = f"\n已根据本次分析任务生成{rendered_charts}，用于直观查看数据变化和差异。"
+        insight_text = (
+            synthesized_answer
+            or (
+                insight_output.answer
+                if insight_output is not None
+                else "本次查询没有足够的数据生成补充解读。"
+            )
+        )
+        if (
+            synthesized_answer is None
+            and insight_output is not None
+            and insight_output.warnings
+        ):
+            insight_text += "\n需要注意的是，" + "；".join(
+                warning.rstrip("。") for warning in insight_output.warnings
+            ) + "。"
         await emit_progress(
             "INSIGHT_ANALYSIS",
             "COMPLETED" if reliability.level != "FAIL" else "SKIPPED",
             (
-                "### ◉ 结果研判与应答\n"
-                f"分析意图：{self._intent_label(request.primary_intent)}。"
-                + (
-                    "已完成确定性计算、结构化解释和答案优先级筛选。\n"
-                    f"核心判断：{analysis_output.facts.get('structured_analysis_result', {}).get('headline', analysis_output.answer)}\n"
-                    if analysis_output is not None
-                    else "当前意图采用结构化查询结果展示，不额外生成推断性洞察。\n"
-                )
-                + "说明：展示的是可审计的方法和事实摘要，不包含模型内部隐藏推理。"
+                f"分析意图：{self._intent_label(request.primary_intent)}。\n\n"
+                + insight_text
+                + chart_summary
+                + "\n\n以上内容只基于本次查询结果和已验证证据，不额外推测业务原因。"
             ),
         )
         if reliability.level == "FAIL":
@@ -5496,11 +5558,7 @@ class DataAnalysisOrchestrator:
             reliability=reliability,
             dataset_id=dataset_id,
             result_file_url=query_result.result_file_url,
-            chart_specs=(
-                analysis_output.facts.get("chart_specs", [])
-                if analysis_output is not None
-                else []
-            ),
+            chart_specs=chart_specs,
         )
         if external_search_mode == "ENRICH":
             response.extension_executions = enrichment_executions

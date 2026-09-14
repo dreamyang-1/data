@@ -160,6 +160,13 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
         and event.get("meta", {}).get("status") == "COMPLETED"
     )
     assert asl_index < retrieval_completed_index
+    insight_content = thinking_content(
+        events, "INSIGHT_ANALYSIS", status="COMPLETED"
+    )
+    assert "#### ◉ 数据洞察分析" in insight_content
+    assert "本次查询共命中" in insight_content
+    assert "这次结果的核心值" in insight_content
+    assert "只基于本次查询结果和已验证证据" in insight_content
 
 
 def test_chat_collects_sync_and_stream_questions_but_not_refresh(tmp_path):

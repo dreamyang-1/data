@@ -214,6 +214,7 @@ class Settings(BaseSettings):
     analysis_synthesis_model_name: str = "qwen3.7-max"
     analysis_synthesis_timeout_seconds: float = Field(default=8, gt=0, le=20)
     analysis_synthesis_max_retries: int = Field(default=0, ge=0, le=1)
+    analysis_synthesis_validation_retries: int = Field(default=1, ge=0, le=1)
     chat_model_enabled: bool = True
     chat_model_name: str = "qwen3.7-max"
     chat_model_timeout_seconds: float = Field(default=8, gt=0, le=20)

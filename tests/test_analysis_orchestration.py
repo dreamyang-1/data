@@ -901,6 +901,8 @@ async def test_qwen_synthesis_is_used_only_after_analysis_evidence_exists() -> N
     )
     assert response.status == "COMPLETED"
     assert response.answer == "模型整理后的证据化总结"
+    assert response.chart_specs[0].chart_type == "LINE"
+    assert response.chart_specs[0].point_count == 2
     kinds = [item.kind for item in response.evidence]
     assert kinds.index("ANALYSIS_RESULT") < kinds.index("ANSWER_SYNTHESIS")
     synthesis_step = next(
@@ -908,6 +910,30 @@ async def test_qwen_synthesis_is_used_only_after_analysis_evidence_exists() -> N
     )
     assert synthesis_step.status == "COMPLETED"
     assert "模型不被允许新增无证据事实" in synthesis_step.summary
+
+
+@pytest.mark.asyncio
+async def test_plain_metric_query_uses_model_for_insight_but_keeps_query_answer() -> None:
+    response = await service(synthesizer=SynthesisStub()).handle(
+        ChatRequest(
+            application_id="app",
+            conversation_id="metric-synthesis",
+            message_id="m1",
+            question="查询2026年1月到2月销售额",
+            semantic_model_id=1,
+            business_domain_id=1,
+        ),
+        TrustedIdentity(tenant_id="tenant", user_id="user"),
+    )
+
+    assert response.status == "COMPLETED"
+    assert response.answer != "模型整理后的证据化总结"
+    assert "2026-01" in response.answer
+    analysis_evidence = next(
+        item for item in response.evidence if item.kind == "ANALYSIS_RESULT"
+    )
+    assert analysis_evidence.payload["method"] == "validated_query_result_summary"
+    assert any(item.kind == "ANSWER_SYNTHESIS" for item in response.evidence)
 
 
 @pytest.mark.asyncio

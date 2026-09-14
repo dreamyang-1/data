@@ -69,3 +69,42 @@ def test_chart_data_is_capped_for_response_stability() -> None:
     assert chart.point_count == 200
     assert chart.data_truncated is True
     assert len(chart.data) == 200
+
+
+def test_trend_prefers_time_axis_and_keeps_category_as_series() -> None:
+    from app.analysis.visualization import build_chart_specs
+
+    chart = build_chart_specs(
+        PrimaryIntent.TREND_ANALYSIS,
+        ["产品", "月份", "销售额"],
+        [
+            {"产品": "甲", "月份": "2026-01", "销售额": "100.5"},
+            {"产品": "甲", "月份": "2026-02", "销售额": "120.5"},
+        ],
+        {"metric_column": "销售额"},
+    )[0]
+
+    assert chart.chart_type == "LINE"
+    assert chart.x_field == "月份"
+    assert chart.series_field == "产品"
+    assert chart.data[0] == {"月份": "2026-01", "销售额": "100.5", "产品": "甲"}
+
+
+def test_composition_produces_pie_chart_with_decimal_metric() -> None:
+    from decimal import Decimal
+
+    from app.analysis.visualization import build_chart_specs
+
+    chart = build_chart_specs(
+        PrimaryIntent.COMPOSITION_ANALYSIS,
+        ["渠道", "销售额"],
+        [
+            {"渠道": "直销", "销售额": Decimal("60")},
+            {"渠道": "分销", "销售额": Decimal("40")},
+        ],
+        {},
+    )[0]
+
+    assert chart.chart_type == "PIE"
+    assert chart.x_field == "渠道"
+    assert chart.y_fields == ["销售额"]
