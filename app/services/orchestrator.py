@@ -30,6 +30,7 @@ from app.analysis import (
     build_query_result_insight,
 )
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
+from app.analysis.visualization import render_chart_svg
 from app.services.chat_responder import QwenChatResponder
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
@@ -5413,12 +5414,7 @@ class DataAnalysisOrchestrator:
             )
             chart_summary = f"\n已根据本次分析任务生成{rendered_charts}，用于直观查看数据变化和差异。"
         chart_images = (
-            await self._publish_inline_charts(
-                request=request,
-                identity=identity,
-                dataset_id=dataset_id,
-                chart_specs=chart_specs,
-            )
+            self._render_inline_charts(chart_specs=chart_specs)
             if reliability.level != "FAIL"
             else []
         )
@@ -6028,66 +6024,36 @@ class DataAnalysisOrchestrator:
         )
         response.answer += f"\n已生成{file_format.upper()}文件，可通过返回的 files[0].download_url 下载。"
 
-    async def _publish_inline_charts(
+    def _render_inline_charts(
         self,
         *,
-        request: CanonicalAnalysisRequest,
-        identity: TrustedIdentity,
-        dataset_id: str | None,
         chart_specs: list[dict[str, Any]],
     ) -> list[str]:
-        """Publish validated chart specs for clients that render Markdown images.
+        """Embed validated chart specs as inert SVG for existing web clients.
 
         Native clients may continue to consume ``AgentResponse.chart_specs``.
-        Publishing is presentation-only and failure never changes the query or
-        analysis result.
+        Inline SVG avoids making browser rendering depend on a cross-origin,
+        expiring object-store URL. Rendering is presentation-only and failure
+        never changes the query or analysis result.
         """
 
-        if not chart_specs or self.report_exporter is None:
+        if not chart_specs:
             return []
-        publish_chart = getattr(self.report_exporter, "publish_chart", None)
-        if not callable(publish_chart):
-            return []
-        scope = DatasetScope(
-            identity.tenant_id,
-            identity.user_id,
-            request.application_id,
-            request.conversation_id,
-            (
-                request.authorized_semantic_scope.fingerprint()
-                if request.authorized_semantic_scope
-                else ""
-            ),
-        )
-        dataset_ids = [dataset_id] if dataset_id else []
         images: list[str] = []
         for chart_spec in chart_specs[:3]:
             try:
-                result = await asyncio.to_thread(
-                    publish_chart,
-                    chart_spec,
-                    scope=scope,
-                    dataset_ids=dataset_ids,
+                payload = render_chart_svg(chart_spec)
+                if not payload:
+                    continue
+                svg = payload.decode("utf-8")
+                svg = svg.replace(
+                    "<svg ",
+                    '<svg style="max-width:100%;height:auto;display:block" ',
+                    1,
                 )
-                report_reference = result["report_reference"]
-                try:
-                    await self.sessions.put_report_reference(report_reference)
-                except Exception:
-                    await asyncio.to_thread(
-                        self.report_exporter.delete_object,
-                        result["object_name"],
-                    )
-                    raise
-                title = str(chart_spec.get("title") or "数据图表")
-                alt_text = (
-                    title.replace("[", "（")
-                    .replace("]", "）")
-                    .replace("\r", " ")
-                    .replace("\n", " ")
-                )
-                images.append(f"![{alt_text}]({result['download_url']})")
+                images.append(svg)
             except Exception as exc:
-                logger.warning("inline chart publication failed: %s", exc)
+                logger.warning("inline chart rendering failed: %s", exc)
         return images
 
     async def _knowledge_document_answer(

@@ -326,6 +326,33 @@ def test_thinking_transport_reconstructs_exact_asl_markdown():
     assert chunks[-1]["is_last"] is True
 
 
+def test_thinking_transport_preserves_inline_svg_chart_markup():
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 10">'
+        '<title>销售额趋势</title><path d="M0 9 L20 1"/></svg>'
+    )
+    serialized = _thinking_events(
+        {
+            "stage": "INSIGHT_ANALYSIS",
+            "status": "COMPLETED",
+            "message": f"数据洞察分析\n\n#### 图表\n\n{svg}",
+        },
+        heading="#### ◉ 数据洞察分析",
+        chunk_size=3,
+    )
+    events = [
+        json.loads(item.removeprefix("data: ").strip())
+        for item in serialized
+    ]
+    reconstructed = "".join(
+        item["content"] for item in events if item["type"] == "message_chunk"
+    )
+
+    assert svg in reconstructed
+    assert reconstructed.count("<svg") == 1
+    assert reconstructed.count("</svg>") == 1
+
+
 def test_file_inspection_summary_reports_successful_parse_without_internal_path():
     summary = DataAnalysisOrchestrator._file_inspection_think_summary({
         "status": "READ_SUCCESS",
