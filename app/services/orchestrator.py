@@ -1727,6 +1727,7 @@ class DataAnalysisOrchestrator:
                     task_id=task.task_id,
                     task_index=task_index_by_id[task.task_id],
                     task_count=len(plan.tasks),
+                    task_question=task.question,
                     is_child_task=True,
                 ):
                     if len(task.depends_on) >= 2 and self._is_join_task(task.question):
@@ -1779,7 +1780,7 @@ class DataAnalysisOrchestrator:
         answer_parts: list[str] = []
         scores: list[float] = []
         all_high = True
-        for task in plan.tasks:
+        for task_number, task in enumerate(plan.tasks, 1):
             value = responses[task.task_id]
             if isinstance(value, AgentResponse):
                 if value.status in {"COMPLETED", "PARTIAL_SUCCESS"}:
@@ -1822,7 +1823,9 @@ class DataAnalysisOrchestrator:
                     chart_specs=value.chart_specs,
                     evidence_ids=prefixed_ids,
                 ))
-                answer_parts.append(f"### ◉ {task.question}\n{value.answer}")
+                answer_parts.append(
+                    f"### ◉ 任务{task_number}：{task.question}\n{value.answer}"
+                )
             else:
                 task_results.append(TaskExecutionResult(
                     task_id=task.task_id,
@@ -1835,7 +1838,8 @@ class DataAnalysisOrchestrator:
                     ),
                 ))
                 answer_parts.append(
-                    f"### ◉ {task.question}\n{task_results[-1].answer}"
+                    f"### ◉ 任务{task_number}：{task.question}\n"
+                    f"{task_results[-1].answer}"
                 )
                 all_high = False
 
@@ -5197,11 +5201,6 @@ class DataAnalysisOrchestrator:
                 )
                 + f"\n\n数据充足性说明：{insufficiency}"
             )
-            source_watermark_note = self._source_watermark_note(
-                request, query_result.dataset
-            )
-            if source_watermark_note:
-                answer += f"\n\n{source_watermark_note}"
             reliability = ReliabilityReport(
                 level="LIMITED",
                 score=(
@@ -5729,11 +5728,6 @@ class DataAnalysisOrchestrator:
         activity_definition_note = self._activity_definition_note(request)
         if activity_definition_note:
             answer += f"\n\n{activity_definition_note}"
-        source_watermark_note = self._source_watermark_note(
-            request, query_result.dataset
-        )
-        if source_watermark_note:
-            answer += f"\n\n{source_watermark_note}"
         incomplete_result = bool(
             query_result.dataset.truncated and not query_result.result_file_url
         )
@@ -9635,7 +9629,7 @@ class DataAnalysisOrchestrator:
             content = (result.answer or "未返回结果。").strip()
             status = "" if result.status == "COMPLETED" else f"（{result.status}）"
             sections.append(
-                f"### {index}. {result.question}{status}\n\n{content}"
+                f"### ◉ 任务{index}：{result.question}{status}\n\n{content}"
             )
         return "\n\n".join(sections)
 
@@ -10593,31 +10587,6 @@ class DataAnalysisOrchestrator:
             "source_watermark_field": dataset.source_watermark_field,
             "requested_time_coverage": coverage,
         }
-
-    @classmethod
-    def _source_watermark_note(
-        cls, request: CanonicalAnalysisRequest, dataset: Dataset
-    ) -> str:
-        payload = cls._source_watermark_payload(request, dataset)
-        if not payload:
-            return ""
-        source_data_as_of = dataset.source_data_as_of
-        source_data_as_of_text = (
-            source_data_as_of.isoformat(sep=" ", timespec="seconds")
-            if isinstance(source_data_as_of, datetime)
-            else source_data_as_of.isoformat()
-        )
-        note = (
-            f"数据水位：当前业务数据截至 {source_data_as_of_text}"
-            "（按销售记录时间统计）。"
-            "查询快照时间仅表示本次读取时间，不代表业务数据更新时间。"
-        )
-        coverage = payload["requested_time_coverage"]
-        if coverage == "OUTSIDE_SOURCE_WATERMARK":
-            note += "所请求的时间段完全晚于该水位，空结果不能解释为业务没有发生。"
-        elif coverage == "PARTIAL_AFTER_SOURCE_WATERMARK":
-            note += "所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。"
-        return note
 
     @staticmethod
     def _reliability(request: CanonicalAnalysisRequest, evidence: list[EvidenceItem], quality_status: str) -> ReliabilityReport:

@@ -1346,7 +1346,7 @@ def _ordered_composite_child_progress_events(
         return section_order.get(section or "", 99), task_index, sequence
 
     ordered = [event for _, event in sorted(enumerate(events), key=sort_key)]
-    labelled_execution_tasks: set[int] = set()
+    labelled_tasks: set[tuple[str, int]] = set()
     rendered: list[dict[str, Any]] = []
     for event in ordered:
         current = dict(event)
@@ -1355,15 +1355,30 @@ def _ordered_composite_child_progress_events(
             task_index = max(0, int(current.get("task_index") or 0))
         except (TypeError, ValueError):
             task_index = 0
-        if section == "execution" and task_index not in labelled_execution_tasks:
-            labelled_execution_tasks.add(task_index)
+        task_key = (section or "", task_index)
+        if (
+            section in {"execution", "validation", "insight"}
+            and task_key not in labelled_tasks
+        ):
+            labelled_tasks.add(task_key)
             message = str(current.get("message") or "").strip()
-            message = re.sub(
-                r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", message
-            ).strip()
-            if message.startswith("执行链路："):
-                message = message.removeprefix("执行链路：")
-            current["message"] = f"任务{task_index + 1}执行链路：{message}"
+            if section == "execution":
+                message = re.sub(
+                    r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", message
+                ).strip()
+                if message.startswith("执行链路："):
+                    message = message.removeprefix("执行链路：")
+                current["message"] = (
+                    f"任务{task_index + 1}执行链路：{message}"
+                )
+            else:
+                task_question = str(current.get("task_question") or "").strip()
+                task_label = f"任务{task_index + 1}"
+                if task_question:
+                    task_label += f"：{task_question}"
+                current["message"] = (
+                    f"{task_label}\n{message}" if message else task_label
+                )
         rendered.append(current)
     return rendered
 

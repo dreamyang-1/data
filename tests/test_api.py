@@ -188,10 +188,15 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
     insight_content = thinking_content(
         events, "INSIGHT_ANALYSIS", status="COMPLETED"
     )
+    validation_content = thinking_content(
+        events, "RELIABILITY_CHECK", status="COMPLETED"
+    )
     assert "#### ◉ 数据洞察分析" in insight_content
     assert "本次查询共命中" in insight_content
     assert "这次结果的核心值" in insight_content
     assert "只基于本次查询结果和已验证证据" in insight_content
+    assert "任务1：" not in validation_content
+    assert "任务1：" not in insight_content
 
 
 def test_chat_collects_sync_and_stream_questions_but_not_refresh(tmp_path):
@@ -1354,6 +1359,8 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     completed = next(event for event in events if event["type"] == "complete")
     assert completed["execution_shape"] == "COMPOSITE"
     assert len(completed["task_results"]) == 2
+    assert "### ◉ 任务1：查询 TDC-3 产品的主要适用科室" in completed["answer"]
+    assert "### ◉ 任务2：查询 TDC-3 产品的次要适用科室" in completed["answer"]
     assert "| 查询目标 | 结果内容 |" not in completed["answer"]
     assert "\\|" not in completed["answer"]
     assert "<br>" not in completed["answer"]
@@ -1423,6 +1430,30 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert "告警：无。" in completed_validation_text
     assert "HIGH" not in completed_validation_text
     assert "PASS" not in completed_validation_text
+    validation_by_task = {
+        task_id: "".join(
+            event["content"]
+            for event in child_public_progress
+            if event["meta"]["task_id"] == task_id
+            and event["meta"]["stage"] == "RELIABILITY_CHECK"
+            and event["meta"]["status"] == "COMPLETED"
+        )
+        for task_id in ("task-1", "task-2")
+    }
+    assert "任务1：查询 TDC-3 产品的主要适用科室" in validation_by_task["task-1"]
+    assert "任务2：查询 TDC-3 产品的次要适用科室" in validation_by_task["task-2"]
+    insight_by_task = {
+        task_id: "".join(
+            event["content"]
+            for event in child_public_progress
+            if event["meta"]["task_id"] == task_id
+            and event["meta"]["stage"] == "INSIGHT_ANALYSIS"
+            and event["meta"]["status"] == "COMPLETED"
+        )
+        for task_id in ("task-1", "task-2")
+    }
+    assert "任务1：查询 TDC-3 产品的主要适用科室" in insight_by_task["task-1"]
+    assert "任务2：查询 TDC-3 产品的次要适用科室" in insight_by_task["task-2"]
 
 
 def test_all_six_analytic_thinking_stages_have_normalized_headings():

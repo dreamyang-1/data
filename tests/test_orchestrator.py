@@ -1055,6 +1055,8 @@ async def test_relationship_count_projection_is_accepted_as_verified_metric_evid
         "source_watermark_verified": True,
     }
     assert "101" in response.answer
+    assert "数据水位：" not in response.answer
+    assert "查询快照时间仅表示本次读取时间" not in response.answer
     derived = next(
         item for item in response.evidence
         if item.kind == "DERIVED_METRIC_RESOLUTION"
