@@ -541,6 +541,81 @@ def test_default_visible_progress_heartbeat_is_one_second():
     )
 
 
+def test_default_thinking_text_uses_one_character_every_30ms():
+    assert Settings.model_fields["thinking_stream_chunk_size"].default == 1
+    assert (
+        Settings.model_fields[
+            "thinking_stream_chunk_interval_seconds"
+        ].default
+        == 0.03
+    )
+
+
+def test_character_pacing_does_not_block_background_execution():
+    publish_latencies = []
+    app = build_test_app(
+        env="development",
+        runtime_mode="V1",
+        session_store_mode="memory",
+        long_term_memory_mode="disabled",
+        thinking_stream_chunk_size=1,
+        thinking_stream_chunk_interval_seconds=0.02,
+        thinking_stream_heartbeat_seconds=1.0,
+    )
+
+    class TwoMilestoneWorkflow:
+        async def ainvoke(self, state):
+            started = time.monotonic()
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "正在理解当前问题，并核对本轮与会话上下文的关系。",
+            )
+            publish_latencies.append(time.monotonic() - started)
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "对话状态识别：独立新问题。",
+            )
+            chat = state["chat"]
+            return {"response": AgentResponse(
+                request_id=uuid4(),
+                conversation_id=chat.conversation_id,
+                status="COMPLETED",
+                intent=PrimaryIntent.CHAT,
+                answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(app.state.container, "workflow", TwoMilestoneWorkflow())
+        response = client.post(
+            "/agent_chat/stream",
+            json={
+                "semantic_model_id": 81,
+                "application_id": "app1",
+                "conversation_id": "paced-progress-does-not-block",
+                "message_id": "m1",
+                "question": "请处理这个问题",
+            },
+        )
+
+    assert response.status_code == 200
+    assert publish_latencies and publish_latencies[0] < 0.15
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    thinking = "".join(
+        event.get("content", "")
+        for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("step") == "step1"
+        and "已用时" not in event.get("content", "")
+    )
+    assert "正在理解当前问题，并核对本轮与会话上下文的关系。" in thinking
+    assert "对话状态识别：独立新问题。" in thinking
+
+
 def test_file_inspection_summary_reports_successful_parse_without_internal_path():
     summary = DataAnalysisOrchestrator._file_inspection_think_summary({
         "status": "READ_SUCCESS",

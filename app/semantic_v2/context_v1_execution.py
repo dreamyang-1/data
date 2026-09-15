@@ -668,6 +668,9 @@ class V2ContextV1ExecutionBridge:
                 pending=pending,
                 allow_standalone_new_task_passthrough=True,
                 resolved_business_domain_ids=resolved_business_domain_ids,
+                published_context_relation=(
+                    chat._conversation_state_progress_relation or None
+                ),
             )
         except (RecognitionFailure, ValueError) as exc:
             if not (
@@ -905,6 +908,23 @@ class V2ContextV1ExecutionBridge:
                 "正在理解当前问题，并核对本轮与会话上下文的关系。",
                 progress_phase="V2_CONTEXT_START",
             )
+            if (
+                snapshot.state is None
+                and snapshot.pending is None
+                and not snapshot.plans
+            ):
+                # With no persisted task or Pending there is nothing the turn
+                # can refer to. Publish this state fact immediately instead of
+                # waiting for the semantic extraction model, which still runs
+                # unchanged and remains authoritative for all business slots.
+                await emit_progress(
+                    "INTENT_RECOGNITION",
+                    "RUNNING",
+                    "对话状态识别：独立新问题。",
+                    progress_phase="V2_CONVERSATION_STATE_READY",
+                    resolution_source="DETERMINISTIC_EMPTY_CONTEXT",
+                )
+                context_chat._conversation_state_progress_relation = "NEW_TASK"
             catalog = await self._request_catalog(context_chat)
             business_domain_labels = tuple(
                 str(label).strip()

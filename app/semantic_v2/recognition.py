@@ -381,6 +381,7 @@ class RawTurnPlanner:
         pending=None,
         allow_standalone_new_task_passthrough=False,
         resolved_business_domain_ids=None,
+        published_context_relation=None,
     ):
         fallback = []
         try:
@@ -395,6 +396,7 @@ class RawTurnPlanner:
                 ),
                 standalone_new_task_fallback=fallback,
                 resolved_business_domain_ids=resolved_business_domain_ids,
+                published_context_relation=published_context_relation,
             )
         except ValidationError:
             failure = RecognitionFailure('V2_CONTRACT_VALIDATION_FAILURE')
@@ -423,6 +425,7 @@ class RawTurnPlanner:
         allow_standalone_new_task_passthrough=False,
         standalone_new_task_fallback=None,
         resolved_business_domain_ids=None,
+        published_context_relation=None,
     ):
         session = ScopedPlanSession(
             request,
@@ -449,6 +452,20 @@ class RawTurnPlanner:
             previous_plans[previous.task_id] = previous
         if request.message_id in current.recent_turn_ids or any(v.current_turn_ref == request.message_id for t in current.tasks.values() for v in t.versions):
             raise RecognitionFailure('V2_MESSAGE_ALREADY_PLANNED')
+        published_context_relation = str(published_context_relation or '').strip()
+        if (
+            not published_context_relation
+            and not current.tasks
+            and current.pending is None
+        ):
+            published_context_relation = 'NEW_TASK'
+            await emit_progress(
+                'INTENT_RECOGNITION',
+                'RUNNING',
+                '对话状态识别：独立新问题。',
+                progress_phase='V2_CONVERSATION_STATE_READY',
+                resolution_source='DETERMINISTIC_EMPTY_CONTEXT',
+            )
         discovered = discover_context(session, state=state, plans=plans, pending=pending)
         recognized = await self.model.complete(stage='v2_current_turn', instruction=PARSE_PROMPT,
             context={'question': request.question, 'turn_id': request.message_id,
@@ -483,17 +500,19 @@ class RawTurnPlanner:
                 extra={'message_id': request.message_id, 'catalog_span_trace': catalog_spans})
             parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
                 text_ref=request.message_id, parsed=parsed)
-        await emit_progress(
-            'INTENT_RECOGNITION',
-            'RUNNING',
-            '对话状态识别：'
-            + _CONTEXT_RELATION_LABELS.get(
-                str(context_trace.get('FINAL_RELATION') or ''),
-                '轮次关系待确认',
+        final_context_relation = str(context_trace.get('FINAL_RELATION') or '')
+        if final_context_relation != published_context_relation:
+            await emit_progress(
+                'INTENT_RECOGNITION',
+                'RUNNING',
+                '对话状态识别：'
+                + _CONTEXT_RELATION_LABELS.get(
+                    final_context_relation,
+                    '轮次关系待确认',
+                )
+                + '。',
+                progress_phase='V2_CURRENT_TURN_PARSED',
             )
-            + '。',
-            progress_phase='V2_CURRENT_TURN_PARSED',
-        )
         if allow_standalone_new_task_passthrough and self._is_standalone_new_task(
             parse, context_trace
         ):

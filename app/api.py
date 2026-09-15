@@ -736,10 +736,14 @@ async def chat_stream(
         async def publish_progress(event: dict[str, Any]) -> None:
             rendered = asyncio.get_running_loop().create_future()
             await progress_queue.put((event, rendered))
-            # A non-full Queue.put() does not yield control. Wait until the SSE
-            # producer has rendered this milestone so immediate synchronous
-            # recognition work cannot starve already-published UI output.
-            await rendered
+            # Give the SSE producer a short opportunity to put the first text
+            # fragment on the wire. Do not make model/tool execution wait for
+            # the full character animation, or several long milestones can
+            # consume the request deadline purely in presentation work.
+            try:
+                await asyncio.wait_for(asyncio.shield(rendered), timeout=0.05)
+            except asyncio.TimeoutError:
+                pass
 
         async def execute() -> AgentResponse:
             with progress_scope(publish_progress):
@@ -934,8 +938,17 @@ async def chat_stream(
                     latest_progress_stage = candidate_progress_stage
                 visible_progress = ordered_progress(progress_event)
                 for event in visible_progress:
+                    rendered_index = 0
                     async for rendered_event in stream_thinking(event):
                         yield rendered_event
+                        rendered_index += 1
+                        if rendered_index == 2 and not rendered.done():
+                            # The node-state event and first visible text
+                            # fragment have reached the ASGI response. Let the
+                            # business coroutine continue while the remaining
+                            # characters are paced; the single consumer still
+                            # preserves queue and document order.
+                            rendered.set_result(None)
                 if not visible_progress:
                     for heartbeat_event in heartbeat_events_if_due():
                         yield heartbeat_event

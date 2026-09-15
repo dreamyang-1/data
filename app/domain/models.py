@@ -656,6 +656,10 @@ class ChatRequest(StrictModel):
     # semantic fields and business-domain block. V1 can then publish only the
     # remaining intent decision instead of replaying the same visible facts.
     _intent_context_progress_emitted: bool = PrivateAttr(default=False)
+    # Presentation-only record of a conversation relation that was already
+    # proven from persisted state and published before semantic model parsing.
+    # It never comes from transport JSON and never participates in planning.
+    _conversation_state_progress_relation: str = PrivateAttr(default="")
     # Populated only by the demo V2-context bridge from a same-conversation,
     # execution-backed envelope.  Transport JSON cannot set private attrs.
     _demo_execution_resolved_business_domain_ids: tuple[int, ...] = PrivateAttr(
