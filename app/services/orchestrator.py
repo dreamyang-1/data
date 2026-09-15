@@ -5731,6 +5731,13 @@ class DataAnalysisOrchestrator:
         activity_definition_note = self._activity_definition_note(request)
         if activity_definition_note:
             answer += f"\n\n{activity_definition_note}"
+        # The platform's generic agent returns remote MCP images in the final
+        # answer, which is rendered by the normal Markdown component. Keep the
+        # progress copy for existing clients and also place the same Markdown
+        # in the final answer so image rendering does not depend on the
+        # thinking/progress renderer.
+        if mcp_chart_urls and chart_display not in answer:
+            answer += chart_display
         incomplete_result = bool(
             query_result.dataset.truncated and not query_result.result_file_url
         )

@@ -996,6 +996,7 @@ async def test_configured_visualization_mcp_is_used_before_inline_fallback() -> 
     assert insight["chart_source"] == "PLATFORM_MCP"
     assert insight["chart_image_count"] == 1
     assert "![销售额趋势](https://charts.example/sales-trend.jpeg)" in insight["message"]
+    assert "![销售额趋势](https://charts.example/sales-trend.jpeg)" in response.answer
     assert "<img" not in insight["message"]
     assert "<svg" not in insight["message"]
     assert response.extension_executions[0].name == "generate_line_chart"

@@ -8,6 +8,7 @@ import json
 
 import httpx
 import pytest
+from pydantic import BaseModel
 
 from app.config import Settings
 from app.services.progress import progress_scope
@@ -67,7 +68,9 @@ def metric_step(text,name='销售额',operation='SET',follow=False):
 
 
 class ScriptedTransport:
-    def __init__(self,steps):self.steps=steps;self.calls=[];self.next=0
+    def __init__(self,steps):
+        self.steps=steps;self.calls=[];self.next=0
+        self.before_semantic_edits=None
     def __call__(self,req):
         body=json.loads(req.content);context=json.loads(body['messages'][1]['content'])
         self.calls.append(body)
@@ -85,6 +88,8 @@ class ScriptedTransport:
                 data['context_proposal']=fixture_proposal(data,context)
             for mention in data.get('mentions',[]):mention['source_turn_id']=context['turn_id']
         else:
+            if self.before_semantic_edits is not None:
+                self.before_semantic_edits()
             data=draft(context) if callable(draft) else deepcopy(draft);self.next+=1
         return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':json.dumps(data)}}]})
 
@@ -109,6 +114,12 @@ async def turns(engine,steps):
 async def test_raw_input_reaches_model_catalog_and_plan(catalog):
     steps=[metric_step('销售额')];engine,transport=planner(catalog,steps)
     progress=[]
+    def assert_candidate_progress_precedes_semantic_edits():
+        assert [item['progress_phase'] for item in progress] == [
+            'V2_CONVERSATION_STATE_READY',
+            'V2_SEMANTIC_CANDIDATES_READY',
+        ]
+    transport.before_semantic_edits = assert_candidate_progress_precedes_semantic_edits
     with progress_scope(progress.append):
         result=(await turns(engine,steps))[0]
     assert result.plan['logical_plan']['payload']['measures'][0]['canonical_code']=='amount'
@@ -134,6 +145,55 @@ async def test_raw_input_reaches_model_catalog_and_plan(catalog):
     },)
     assert all(item['stage'] == 'INTENT_RECOGNITION' for item in progress)
     assert all(item['status'] == 'RUNNING' for item in progress)
+
+
+@pytest.mark.asyncio
+async def test_streaming_recognition_publishes_start_but_validates_complete_json():
+    chunks = [
+        {'choices': [{'delta': {'content': '{"value":'}, 'finish_reason': None}]},
+        {'choices': [{'delta': {'content': '"ok"}'}, 'finish_reason': 'stop'}]},
+    ]
+    body = ''.join(
+        'data: ' + json.dumps(item) + '\n\n' for item in chunks
+    ) + 'data: [DONE]\n\n'
+
+    def handler(request):
+        sent = json.loads(request.content)
+        assert sent['stream'] is True
+        return httpx.Response(
+            200,
+            headers={'content-type': 'text/event-stream'},
+            content=body.encode(),
+        )
+
+    class OutputModel(BaseModel):
+        value: str
+
+    settings = Settings(
+        _env_file=None,
+        intent_model_base_url='https://model.invalid/v1',
+        intent_model_api_key='test-only-key',
+        intent_model_name='existing-configured-model',
+        intent_model_max_retries=0,
+    )
+    client = RecognitionModelClient(
+        settings,
+        httpx.MockTransport(handler),
+        force_stream=True,
+    )
+    progress = []
+    with progress_scope(progress.append):
+        result = await client.complete(
+            stage='v2_current_turn',
+            instruction='Return JSON.',
+            context={'question': '查询销售额'},
+            output_model=OutputModel,
+        )
+
+    assert result.value == 'ok'
+    assert [item['progress_phase'] for item in progress] == [
+        'V2_CURRENT_TURN_MODEL_STREAM_STARTED',
+    ]
 
 
 @pytest.mark.asyncio

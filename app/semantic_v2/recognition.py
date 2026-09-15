@@ -528,6 +528,15 @@ class RawTurnPlanner:
             option=selected_option(current.pending,request.question)
             return self._answer_pending(session,current,state,pending,option,parsed,parse,now)
         handles, candidates = self._candidates(session, parse)
+        # Candidate extraction is complete at this point. Publish that fact
+        # before the semantic-edit model call, whose latency can otherwise
+        # leave the stream silent even though this stage has already finished.
+        await emit_progress(
+            'INTENT_RECOGNITION',
+            'RUNNING',
+            '关键语义候选已提取，正在校验绑定并生成可独立执行的完整问题。',
+            progress_phase='V2_SEMANTIC_CANDIDATES_READY',
+        )
         tasks = {'task:' + contract_digest({'task': t.task_id})[:24]: t for t in current.tasks.values()}
         selected_tasks = {h:t for h,t in tasks.items() if t.task_id == context_trace['FINAL_TARGET']}
         datasets = {'dataset:' + contract_digest({'dataset': d.dataset_id})[:24]: d for d in current.datasets.values() if d.status == 'VALID'}
@@ -553,12 +562,6 @@ class RawTurnPlanner:
         if handle_repairs:
             logging.getLogger(__name__).info('V2 collection handle representation repaired',
                 extra={'message_id': request.message_id, 'handle_repairs': handle_repairs})
-        await emit_progress(
-            'INTENT_RECOGNITION',
-            'RUNNING',
-            '关键语义候选已提取，正在校验绑定并生成可独立执行的完整问题。',
-            progress_phase='V2_SEMANTIC_CANDIDATES_READY',
-        )
         draft,blockers,pending_operations,deferred=prepare_ambiguities(session,parse,draft,handles,candidates,SlotEditDraft)
         historical = selected_tasks.get(draft.historical_task_handle)
         if draft.historical_task_handle and (context_trace['FINAL_RELATION'] != 'RETURN_TO_TOPIC' or historical is None):

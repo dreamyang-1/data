@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     # existing ``message_chunk`` stage marker at this interval while a long
     # semantic/model/tool call has no new milestone.
     thinking_stream_heartbeat_seconds: float = Field(default=1.0, ge=0.05, le=30)
+    # Stream structured recognition responses internally so the transport can
+    # publish real model-start milestones without weakening final JSON/schema
+    # validation. The complete payload is still assembled and validated before
+    # it can affect semantic state or execution.
+    intent_model_stream_enabled: bool = True
     # Source tree for the existing semantic-catalog authority used by the
     # context-only bridge.  It is read on each request and is independent of
     # the Limited Scalar publication/pin configuration below.

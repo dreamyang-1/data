@@ -979,6 +979,12 @@ class V2ContextV1ExecutionBridge:
                 if str(label).strip()
             )
             context_chat._business_domain_labels = business_domain_labels
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "业务域语义目录已加载，正在提取当前问题的查询要素。",
+                progress_phase="V2_SEMANTIC_CATALOG_READY",
+            )
             provenance = None
             try:
                 resolved, provenance = await self._resolve(
