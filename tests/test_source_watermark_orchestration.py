@@ -59,6 +59,22 @@ def test_source_watermark_marks_request_outside_available_business_data() -> Non
     assert "sales_order.created_date" not in note
 
 
+def test_source_watermark_note_uses_readable_datetime_separator() -> None:
+    value = request(date(2025, 10, 1), date(2025, 12, 31))
+    timestamp_dataset = dataset().model_copy(
+        update={"source_data_as_of": datetime(2025, 12, 30, 0, 0, 0)}
+    )
+
+    payload = DataAnalysisOrchestrator._source_watermark_payload(
+        value, timestamp_dataset
+    )
+    note = DataAnalysisOrchestrator._source_watermark_note(value, timestamp_dataset)
+
+    assert payload["source_data_as_of"] == "2025-12-30T00:00:00"
+    assert "当前业务数据截至 2025-12-30 00:00:00" in note
+    assert "2025-12-30T00:00:00" not in note
+
+
 def test_source_watermark_keeps_fully_covered_request_high_reliability() -> None:
     value = request(date(2025, 10, 1), date(2025, 12, 31))
 

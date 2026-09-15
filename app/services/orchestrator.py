@@ -10471,8 +10471,14 @@ class DataAnalysisOrchestrator:
         payload = cls._source_watermark_payload(request, dataset)
         if not payload:
             return ""
+        source_data_as_of = dataset.source_data_as_of
+        source_data_as_of_text = (
+            source_data_as_of.isoformat(sep=" ", timespec="seconds")
+            if isinstance(source_data_as_of, datetime)
+            else source_data_as_of.isoformat()
+        )
         note = (
-            f"数据水位：当前业务数据截至 {payload['source_data_as_of']}"
+            f"数据水位：当前业务数据截至 {source_data_as_of_text}"
             "（按销售记录时间统计）。"
             "查询快照时间仅表示本次读取时间，不代表业务数据更新时间。"
         )
