@@ -623,6 +623,99 @@ async def test_standalone_new_task_passthrough_reaches_v1_byte_for_byte(provider
 
 
 @pytest.mark.asyncio
+async def test_invalid_request_catalog_returns_visible_safe_fallback_without_v1(provider):
+    redis = DeploymentRedis()
+    v1_calls = []
+
+    class InvalidCatalog:
+        def for_request(self, _semantic_model_id, _business_domain_ids):
+            raise RuntimeError("CATALOG_VALUE_SOURCE_MAPPING_INVALID")
+
+    async def v1(chat, _identity):
+        v1_calls.append(chat)
+        return response(chat)
+
+    bridge = handler((InvalidCatalog(),), redis, v1)
+    chat = request(
+        question="袁飞在2026年5月1日至5月10日设备维修的总时长是多少？",
+        message_id="invalid-request-catalog",
+        semantic_model_id=91,
+        domains=(233,),
+    )
+
+    result = await bridge.handle(chat, IDENTITY)
+
+    assert result.status == "SAFE_FALLBACK"
+    assert result.error_code == "SEMANTIC_CATALOG_INVALID"
+    assert "语义模型目录配置不完整" in result.answer
+    assert v1_calls == []
+    snapshot = await bridge.store.load(chat, IDENTITY)
+    record = snapshot.message(chat.message_id)
+    assert record["status"] == "SUCCEEDED"
+    assert record["response"]["error_code"] == "SEMANTIC_CATALOG_INVALID"
+
+
+def test_invalid_request_catalog_stream_has_visible_answer_and_complete_event(provider):
+    class InvalidCatalog:
+        def for_request(self, _semantic_model_id, _business_domain_ids):
+            raise RuntimeError("CATALOG_VALUE_SOURCE_MAPPING_INVALID")
+
+    async def v1(chat, _identity):
+        raise AssertionError("invalid catalog must not enter V1 execution")
+
+    bridge = handler((InvalidCatalog(),), DeploymentRedis(), v1)
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        adapter_mode="mock",
+        session_store_mode="memory",
+        long_term_memory_mode="disabled",
+        business_question_collection_enabled=False,
+        allow_missing_trusted_identity_headers=True,
+        trusted_backend_token=SecretStr("test-token"),
+    )
+    app = create_app(settings, isolated_chat_handler=bridge)
+    payload = {
+        "application_id": "eam-agent",
+        "conversation_id": "invalid-catalog-stream",
+        "message_id": "invalid-catalog-stream-message",
+        "question": "袁飞在2026年5月1日至5月10日设备维修的总时长是多少？",
+        "semantic_model_id": 91,
+        "business_domain_ids": [233],
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/agent_chat/stream",
+            json=payload,
+            headers={"Authorization": "Bearer test-token"},
+        )
+
+    assert response.status_code == 200
+    assert "当前语义模型目录配置不完整" in response.text
+    assert '"error_code": "SEMANTIC_CATALOG_INVALID"' in response.text
+    assert '"type": "complete"' in response.text
+    assert '"type": "error"' not in response.text
+
+
+@pytest.mark.asyncio
+async def test_unexpected_request_catalog_error_is_not_hidden(provider):
+    class BrokenCatalog:
+        def for_request(self, _semantic_model_id, _business_domain_ids):
+            raise RuntimeError("unexpected database failure")
+
+    async def v1(chat, _identity):
+        raise AssertionError("unexpected catalog failure must not enter V1")
+
+    bridge = handler((BrokenCatalog(),), DeploymentRedis(), v1)
+
+    with pytest.raises(RuntimeError, match="unexpected database failure"):
+        await bridge.handle(
+            request(message_id="unexpected-request-catalog"), IDENTITY
+        )
+
+
+@pytest.mark.asyncio
 async def test_successful_v1_fallback_publishes_context_task_and_replaces_product(
     provider,
 ):

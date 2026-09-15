@@ -72,6 +72,22 @@ from .state_machine import ConversationState, StateTransitionError
 logger = logging.getLogger(__name__)
 
 
+def _catalog_request_failure_code(exc: Exception) -> str | None:
+    """Return a bounded code for request-scoped catalog contract failures.
+
+    The current catalog implementation is loaded from the reviewed Oagnet
+    source tree, so importing its exception class here would couple application
+    startup to that external module.  Its public failure contract is the
+    bounded ``CATALOG_*``/``CURRENT_CATALOG_*`` code carried by ``str(exc)``.
+    Unknown exceptions must continue to the normal transport error path.
+    """
+
+    code = str(exc).strip()
+    if code.startswith(("CATALOG_", "CURRENT_CATALOG_")):
+        return code[:100]
+    return None
+
+
 @dataclass(frozen=True)
 class ContextV1ExternalDependencies:
     catalog: Any
@@ -925,7 +941,38 @@ class V2ContextV1ExecutionBridge:
                     resolution_source="DETERMINISTIC_EMPTY_CONTEXT",
                 )
                 context_chat._conversation_state_progress_relation = "NEW_TASK"
-            catalog = await self._request_catalog(context_chat)
+            try:
+                catalog = await self._request_catalog(context_chat)
+            except Exception as exc:
+                catalog_failure = _catalog_request_failure_code(exc)
+                if catalog_failure is None:
+                    raise
+                logger.warning(
+                    "request-scoped semantic catalog is invalid: "
+                    "semantic_model_id=%s requested_business_domain_ids=%s "
+                    "catalog_failure=%s",
+                    chat.semantic_model_id,
+                    list(chat.business_domain_ids),
+                    catalog_failure,
+                )
+                response = self._response(
+                    chat,
+                    status="SAFE_FALLBACK",
+                    error_code="SEMANTIC_CATALOG_INVALID",
+                    answer=(
+                        "当前语义模型目录配置不完整，无法安全执行查询。"
+                        "请检查实体编码、字段映射，以及指标与维度的绑定后重试。"
+                    ),
+                )
+                return await self._save_without_v1(
+                    snapshot,
+                    chat=chat,
+                    identity=identity,
+                    fingerprint=fingerprint,
+                    resolved=ResolvedContextTurn(None, None, None),
+                    response=response,
+                    provenance=None,
+                )
             business_domain_labels = tuple(
                 str(label).strip()
                 for label in getattr(catalog, "business_domain_labels", ())
