@@ -483,7 +483,16 @@ def test_slow_stream_emits_visible_progress_while_waiting():
     assert all(event["step"] == "step1" for event in heartbeats)
     assert all("<stage>⏳ 正在识别问题" in event["content"] for event in heartbeats)
     assert all("已用时" in event["content"] for event in heartbeats)
-    assert next(event for event in events if event["type"] == "complete")["status"] == "COMPLETED"
+    assert next(
+        event for event in events if event["type"] == "complete"
+    )["status"] == "COMPLETED"
+
+
+def test_default_visible_progress_heartbeat_is_one_second():
+    assert (
+        Settings.model_fields["thinking_stream_heartbeat_seconds"].default
+        == 1.0
+    )
 
 
 def test_file_inspection_summary_reports_successful_parse_without_internal_path():

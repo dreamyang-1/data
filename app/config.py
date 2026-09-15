@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     # alive, but the platform does not render it as changing progress.  Emit an
     # existing ``message_chunk`` stage marker at this interval while a long
     # semantic/model/tool call has no new milestone.
-    thinking_stream_heartbeat_seconds: float = Field(default=3.0, ge=0.05, le=30)
+    thinking_stream_heartbeat_seconds: float = Field(default=1.0, ge=0.05, le=30)
     # Source tree for the existing semantic-catalog authority used by the
     # context-only bridge.  It is read on each request and is independent of
     # the Limited Scalar publication/pin configuration below.
