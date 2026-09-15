@@ -32,6 +32,15 @@ from app.observability.langfuse_client import (
     text_metadata,
     trace_attributes,
 )
+from app.observability.bridge_profile import (
+    BRIDGE_RUNTIME_MODE,
+    bridge_capability_profile,
+)
+from app.observability.call_timing import (
+    RequestTimingTracker,
+    log_performance_trace,
+    timing_scope,
+)
 from app.services.file_ingestion import FileImportError
 from app.services.upload_file_resolver import (
     NO_PARSE_MARKER,
@@ -177,6 +186,18 @@ CHAT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
 }
 
 
+@router.get(
+    "/v1/data-analysis/diagnostics/bridge-profile",
+    summary="当前桥接主线能力与计时点",
+)
+async def bridge_profile(request: Request) -> dict[str, Any]:
+    """Return the content-free Phase-1 capability/timing contract."""
+
+    return bridge_capability_profile(
+        active_runtime_mode=request.app.state.container.settings.runtime_mode
+    )
+
+
 def trusted_identity(request: Request, payload: ChatRequest | SpreadsheetImportRequest) -> TrustedIdentity:
     """State isolation identity, verified by the backend service dependency."""
     return resolve_conversation_identity(request, payload.application_id, payload.conversation_id)
@@ -185,9 +206,19 @@ def trusted_identity(request: Request, payload: ChatRequest | SpreadsheetImportR
 async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
     require_application_namespace(request, chat.application_id)
     stage_tracker = StageSpanTracker()
+    settings = request.app.state.container.settings
+    performance_tracker = (
+        RequestTimingTracker(runtime_mode=settings.runtime_mode)
+        if settings.runtime_mode == BRIDGE_RUNTIME_MODE
+        else None
+    )
+    performance_trace_logged = False
+    timing_terminal_status = "FAILED"
     existing_progress = _progress_callback.get()
 
     async def trace_progress(event: dict[str, Any]) -> None:
+        if performance_tracker is not None:
+            performance_tracker.record_progress(event)
         await _forward_traced_progress(
             stage_tracker,
             existing_progress,
@@ -220,26 +251,35 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                 },
             ) as root_span:
                 try:
-                    with progress_scope(trace_progress):
-                        isolated_handler = getattr(
-                            request.app.state, "isolated_chat_handler", None
-                        )
-                        operation = (
-                            isolated_handler.handle(chat, identity)
-                            if isolated_handler is not None
-                            else request.app.state.container.workflow.ainvoke(
-                                {"chat": chat, "identity": identity}
+                    with timing_scope(performance_tracker):
+                        with progress_scope(trace_progress):
+                            isolated_handler = getattr(
+                                request.app.state, "isolated_chat_handler", None
                             )
-                        )
-                        result = await asyncio.wait_for(
-                            operation,
-                            timeout=request.app.state.container.settings.request_timeout_seconds,
-                        )
+                            operation = (
+                                isolated_handler.handle(chat, identity)
+                                if isolated_handler is not None
+                                else request.app.state.container.workflow.ainvoke(
+                                    {"chat": chat, "identity": identity}
+                                )
+                            )
+                            result = await asyncio.wait_for(
+                                operation,
+                                timeout=settings.request_timeout_seconds,
+                            )
                     response = (
                         result
                         if isolated_handler is not None
                         else result["response"]
                     )
+                    timing_terminal_status = response.status
+                    if performance_tracker is not None:
+                        performance_trace = performance_tracker.finish(
+                            timing_terminal_status
+                        )
+                        response.performance_trace = performance_trace
+                        log_performance_trace(performance_trace)
+                        performance_trace_logged = True
                     _record_extension_tool_spans(response)
                     root_span.update(output={
                         "status": response.status,
@@ -252,6 +292,7 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                     })
                     return response
                 except TimeoutError:
+                    timing_terminal_status = "TIMEOUT"
                     root_span.update(
                         output={"status": "TIMEOUT"},
                         level="ERROR",
@@ -259,6 +300,7 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                     )
                     raise
                 except MessageIdReuseConflictError:
+                    timing_terminal_status = "MESSAGE_ID_REUSE_CONFLICT"
                     root_span.update(
                         output={"status": "MESSAGE_ID_REUSE_CONFLICT"},
                         level="ERROR",
@@ -266,6 +308,7 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
                     )
                     raise
                 except Exception as exc:
+                    timing_terminal_status = "FAILED"
                     root_span.update(
                         output={"status": "FAILED", "error_type": type(exc).__name__},
                         level="ERROR",
@@ -280,6 +323,10 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
             detail={"code": exc.code, "message": str(exc)},
         ) from exc
     finally:
+        if performance_tracker is not None and not performance_trace_logged:
+            log_performance_trace(
+                performance_tracker.finish(timing_terminal_status)
+            )
         stage_tracker.close_all()
 
 

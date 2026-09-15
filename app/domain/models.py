@@ -1324,6 +1324,50 @@ class ClarificationDecisionTrace(StrictModel):
     decision: Literal['ASK', 'SUPPRESS']
 
 
+class OperationTiming(StrictModel):
+    """One content-free timing record for a real model, service, or tool call."""
+
+    sequence: int = Field(ge=1)
+    layer: Literal[
+        "V2_CONTEXT",
+        "V1_ORCHESTRATION",
+        "UPSTREAM",
+        "VALIDATION",
+        "ANALYSIS",
+        "EXTENSION",
+    ]
+    operation: str = Field(min_length=1, max_length=100)
+    started_after_ms: int = Field(ge=0)
+    first_result_after_ms: int | None = Field(default=None, ge=0)
+    duration_ms: int = Field(ge=0)
+    status: Literal["COMPLETED", "FAILED", "CANCELLED"]
+    error_type: str | None = Field(default=None, max_length=100)
+    attributes: dict[str, Any] = Field(default_factory=dict)
+
+
+class ProgressTiming(StrictModel):
+    """Relative time of a truthful internal progress milestone."""
+
+    sequence: int = Field(ge=1)
+    stage: str = Field(min_length=1, max_length=100)
+    status: str = Field(min_length=1, max_length=30)
+    occurred_after_ms: int = Field(ge=0)
+    progress_phase: str | None = Field(default=None, max_length=100)
+    task_index: int | None = Field(default=None, ge=0)
+
+
+class RequestPerformanceTrace(StrictModel):
+    """Bounded request trace used to locate silent time without user content."""
+
+    version: Literal["bridge-timing-v1"] = "bridge-timing-v1"
+    runtime_mode: str = Field(min_length=1, max_length=50)
+    total_duration_ms: int = Field(ge=0)
+    terminal_status: str = Field(min_length=1, max_length=50)
+    operations: list[OperationTiming] = Field(default_factory=list, max_length=100)
+    progress: list[ProgressTiming] = Field(default_factory=list, max_length=200)
+    slow_operations: list[str] = Field(default_factory=list, max_length=20)
+
+
 class AgentResponse(StrictModel):
     # Internal-only diagnostic passed from the V1 execution workflow to the
     # opt-in context bridge.  It is deliberately excluded from API payloads so
@@ -1403,6 +1447,7 @@ class AgentResponse(StrictModel):
     )
     requested_business_domain_ids: list[int] = Field(default_factory=list)
     business_domain_selection_mode: Literal["AUTO", "EXPLICIT"] = "AUTO"
+    performance_trace: RequestPerformanceTrace | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

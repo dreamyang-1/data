@@ -37,6 +37,7 @@ from app.services.knowledge_retrieval import (
     normalize_and_deduplicate_hits,
 )
 from app.services.progress import emit_progress
+from app.observability.call_timing import track_operation
 from app.presentation import (
     SEMANTIC_QUERY_TOOL_NAME,
     SQL_EXECUTION_TOOL_NAME,
@@ -1862,10 +1863,15 @@ class HttpDataRetrievalAdapter:
                 else:
                     self._asl_plan_cache.pop(asl_cache_key, None)
         if asl is None:
-            generated = await self.client.post(
-                self.settings.asl_generator_base_url,
-                self.settings.asl_generator_path,
-                {
+            with track_operation(
+                "UPSTREAM",
+                "upstream.oagnet.asl_generation",
+                attributes={"retryable": True},
+            ) as timing:
+                generated = await self.client.post(
+                    self.settings.asl_generator_base_url,
+                    self.settings.asl_generator_path,
+                    {
                     "query": asl_query,
                     "retrieval_query": retrieval_query,
                     "semantic_model_id": semantic_model_id,
@@ -1891,17 +1897,18 @@ class HttpDataRetrievalAdapter:
                         exploration_requirements.model_dump(mode="json")
                         if exploration_requirements is not None else None
                     ),
-                },
-                identity=identity,
-                application_id=request.application_id,
-                idempotency_key=f"{request.request_id}:asl",
-                # ASL generation is read-only and guarded by a stable
-                # idempotency key. Transient connection resets are therefore
-                # safe to retry; disabling retries made a single upstream TCP
-                # reset surface directly as a failed user turn.
-                retryable=True,
-                timeout=self.settings.asl_generation_timeout_seconds,
-            )
+                    },
+                    identity=identity,
+                    application_id=request.application_id,
+                    idempotency_key=f"{request.request_id}:asl",
+                    # ASL generation is read-only and guarded by a stable
+                    # idempotency key. Transient connection resets are therefore
+                    # safe to retry; disabling retries made a single upstream TCP
+                    # reset surface directly as a failed user turn.
+                    retryable=True,
+                    timeout=self.settings.asl_generation_timeout_seconds,
+                )
+                timing.mark_first_result()
             if generated.get("success") is not True:
                 raise AdapterError("ASL_GENERATION_FAILED", "ASL generator rejected request")
             self._confirm_generated_scope(
@@ -2166,10 +2173,15 @@ class HttpDataRetrievalAdapter:
             )
 
         try:
-            translated = await self.client.post(
-                self.settings.sql_translator_base_url,
-                self.settings.sql_translate_path,
-                {
+            with track_operation(
+                "UPSTREAM",
+                "upstream.sql.translation",
+                attributes={"retryable": True},
+            ) as timing:
+                translated = await self.client.post(
+                    self.settings.sql_translator_base_url,
+                    self.settings.sql_translate_path,
+                    {
                     "asl": json.dumps(asl, ensure_ascii=False),
                     "modelId": str(semantic_model_id),
                     "business_domain_ids": list(request.business_domain_ids),
@@ -2178,17 +2190,18 @@ class HttpDataRetrievalAdapter:
                         analysis_contract.model_dump(mode="json")
                         if analysis_contract is not None else None
                     ),
-                },
-                identity=identity,
-                application_id=request.application_id,
-                idempotency_key=(
-                    f"{request.request_id}:sql-translate:"
-                    f"{metric_definition_fingerprints[0][:16]}"
-                    if metric_definition_fingerprints
-                    else f"{request.request_id}:sql-translate"
-                ),
-                retryable=True,
-            )
+                    },
+                    identity=identity,
+                    application_id=request.application_id,
+                    idempotency_key=(
+                        f"{request.request_id}:sql-translate:"
+                        f"{metric_definition_fingerprints[0][:16]}"
+                        if metric_definition_fingerprints
+                        else f"{request.request_id}:sql-translate"
+                    ),
+                    retryable=True,
+                )
+                timing.mark_first_result()
         except AdapterError as exc:
             if exc.status_code == 404:
                 raise AdapterError(
@@ -2319,17 +2332,23 @@ class HttpDataRetrievalAdapter:
             f"输入：{_compact_progress_value(execute_payload, 1200)}。",
         )
         try:
-            executed = await self.client.post(
-                self.settings.sql_translator_base_url,
-                self.settings.sql_execute_path,
-                execute_payload,
-                identity=identity,
-                application_id=request.application_id,
-                idempotency_key=f"{request.request_id}:sql-execute",
-                # Database execution is not automatically retried: a timeout does
-                # not prove that the upstream query was never started.
-                retryable=False,
-            )
+            with track_operation(
+                "UPSTREAM",
+                "upstream.sql.execution",
+                attributes={"retryable": False},
+            ) as timing:
+                executed = await self.client.post(
+                    self.settings.sql_translator_base_url,
+                    self.settings.sql_execute_path,
+                    execute_payload,
+                    identity=identity,
+                    application_id=request.application_id,
+                    idempotency_key=f"{request.request_id}:sql-execute",
+                    # Database execution is not automatically retried: a timeout does
+                    # not prove that the upstream query was never started.
+                    retryable=False,
+                )
+                timing.mark_first_result()
         except AdapterError as exc:
             if exc.status_code == 404:
                 raise AdapterError(

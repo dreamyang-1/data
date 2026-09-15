@@ -10,6 +10,7 @@ from jsonschema.exceptions import SchemaError, ValidationError
 from referencing.exceptions import Unresolvable
 
 from app.services.progress import emit_progress
+from app.observability.call_timing import OperationHandle, track_operation
 
 
 class RecognitionFailure(ValueError):
@@ -78,7 +79,7 @@ class RecognitionModelClient:
             progress_phase=phase,
         )
 
-    async def _stream_choice(self, client, *, headers, body, stage):
+    async def _stream_choice(self, client, *, headers, body, stage, timing):
         async with client.stream(
             'POST', '/chat/completions', headers=headers,
             json={**body, 'stream': True},
@@ -87,6 +88,7 @@ class RecognitionModelClient:
             content_type = response.headers.get('content-type', '').casefold()
             if 'text/event-stream' not in content_type:
                 payload = json.loads((await response.aread()).decode('utf-8'))
+                timing.mark_first_result()
                 return self._choice_payload(payload)
 
             fragments: list[str] = []
@@ -115,11 +117,43 @@ class RecognitionModelClient:
                 if fragment:
                     fragments.append(fragment)
                     if not published_start:
+                        timing.mark_first_result()
                         await self._emit_stream_started(stage)
                         published_start = True
             return ''.join(fragments), finish_reason, refusal
 
     async def complete(self, *, stage, instruction, context, output_model, schema=None):
+        operation_suffix = {
+            'v2_current_turn': 'current_turn',
+            'v2_semantic_edits': 'semantic_edits',
+        }.get(stage, str(stage).removeprefix('v2_'))
+        with track_operation(
+            "V2_CONTEXT",
+            f"v2.model.{operation_suffix}",
+            attributes={
+                "model": self.settings.intent_model_name,
+                "stream": self.stream_enabled,
+            },
+        ) as timing:
+            return await self._complete(
+                stage=stage,
+                instruction=instruction,
+                context=context,
+                output_model=output_model,
+                schema=schema,
+                timing=timing,
+            )
+
+    async def _complete(
+        self,
+        *,
+        stage,
+        instruction,
+        context,
+        output_model,
+        schema=None,
+        timing: OperationHandle,
+    ):
         if not self.settings.intent_model_api_key:
             raise RecognitionFailure('V2_MODEL_NOT_CONFIGURED')
         schema = output_model.model_json_schema() if schema is None else schema
@@ -144,11 +178,16 @@ class RecognitionModelClient:
                     try:
                         if self.stream_enabled:
                             content, finish_reason, refusal = await self._stream_choice(
-                                client, headers=headers, body=body, stage=stage,
+                                client,
+                                headers=headers,
+                                body=body,
+                                stage=stage,
+                                timing=timing,
                             )
                         else:
                             response = await client.post('/chat/completions', headers=headers, json=body)
                             response.raise_for_status()
+                            timing.mark_first_result()
                             content, finish_reason, refusal = self._choice_payload(
                                 response.json()
                             )

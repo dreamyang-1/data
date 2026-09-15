@@ -28,6 +28,7 @@ from app.domain.models import (
     TrustedIdentity,
 )
 from app.services.progress import emit_progress
+from app.observability.call_timing import track_operation
 from app.presentation import render_resolved_intent_context_v2
 from app.stores import MessageIdReuseConflictError
 
@@ -548,14 +549,25 @@ class V2ContextV1ExecutionBridge:
             raise MessageIdReuseConflictError(chat.message_id)
 
     async def _request_catalog(self, chat: ChatRequest):
-        factory = getattr(self.catalog, "for_request", None)
-        if callable(factory):
-            return await asyncio.to_thread(
-                factory,
-                chat.semantic_model_id,
-                tuple(chat.business_domain_ids),
-            )
-        return self.catalog
+        with track_operation(
+            "V2_CONTEXT",
+            "v2.catalog.load",
+            attributes={
+                "semantic_model_id": chat.semantic_model_id,
+                "business_domain_count": len(chat.business_domain_ids),
+            },
+        ) as timing:
+            factory = getattr(self.catalog, "for_request", None)
+            if callable(factory):
+                result = await asyncio.to_thread(
+                    factory,
+                    chat.semantic_model_id,
+                    tuple(chat.business_domain_ids),
+                )
+            else:
+                result = self.catalog
+            timing.mark_first_result()
+            return result
 
     async def _resolve(
         self,
@@ -876,7 +888,13 @@ class V2ContextV1ExecutionBridge:
                     deep=True, update={"history": []}
                 )
                 execution_chat._completed_question_execution = True
-                response = await self.v1_executor(execution_chat, identity)
+                with track_operation(
+                    "V1_ORCHESTRATION",
+                    "bridge.v1_execution",
+                    attributes={"route": "uploaded_file"},
+                ) as timing:
+                    response = await self.v1_executor(execution_chat, identity)
+                    timing.mark_first_result()
                 await self.store.complete(
                     running,
                     chat=chat,
@@ -903,10 +921,16 @@ class V2ContextV1ExecutionBridge:
                     bridge_route="V1_PENDING_CLARIFICATION_CONTINUATION",
                     catalog_provenance=None,
                 )
-                response = await self.v1_pending_executor(
-                    chat.model_copy(deep=True, update={"history": []}),
-                    identity,
-                )
+                with track_operation(
+                    "V1_ORCHESTRATION",
+                    "bridge.v1_execution",
+                    attributes={"route": "pending_clarification"},
+                ) as timing:
+                    response = await self.v1_pending_executor(
+                        chat.model_copy(deep=True, update={"history": []}),
+                        identity,
+                    )
+                    timing.mark_first_result()
                 await self.store.complete(
                     running,
                     chat=chat,
@@ -987,9 +1011,14 @@ class V2ContextV1ExecutionBridge:
             )
             provenance = None
             try:
-                resolved, provenance = await self._resolve(
-                    context_chat, identity, snapshot, catalog
-                )
+                with track_operation(
+                    "V2_CONTEXT",
+                    "v2.context_resolution",
+                ) as timing:
+                    resolved, provenance = await self._resolve(
+                        context_chat, identity, snapshot, catalog
+                    )
+                    timing.mark_first_result()
             except ContextProposalFailure as exc:
                 ambiguous = exc.context_status == "AMBIGUOUS"
                 response = self._response(
@@ -1105,14 +1134,20 @@ class V2ContextV1ExecutionBridge:
             )
             execution_chat._business_domain_labels = business_domain_labels
             execution_chat._semantic_extraction_items = semantic_extractions
-            response = await self.v1_executor(execution_chat, identity)
-            response = await self._retry_for_result_availability(
-                chat=execution_chat,
-                identity=identity,
-                resolved=resolved,
-                response=response,
-                prior_state=snapshot.state,
-            )
+            with track_operation(
+                "V1_ORCHESTRATION",
+                "bridge.v1_execution",
+                attributes={"route": resolved.bridge_route},
+            ) as timing:
+                response = await self.v1_executor(execution_chat, identity)
+                response = await self._retry_for_result_availability(
+                    chat=execution_chat,
+                    identity=identity,
+                    resolved=resolved,
+                    response=response,
+                    prior_state=snapshot.state,
+                )
+                timing.mark_first_result()
             response = _attach_completed_question(response, resolved)
             final_state = None
             if (

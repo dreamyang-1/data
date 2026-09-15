@@ -79,6 +79,7 @@ from app.services.mcp_file_analysis import (
 )
 from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress, task_progress_scope
+from app.observability.call_timing import track_operation
 from app.presentation import (
     QUERY_EXECUTION_CHAIN,
     build_composite_intent_recognition_display_v2,
@@ -676,7 +677,16 @@ class DataAnalysisOrchestrator:
                         "### ◉ 规划与执行\n正在判断是否需要拆分多个分析任务。",
                     )
                     try:
-                        plan = await self.task_planner.plan(chat.question)
+                        with track_operation(
+                            "V1_ORCHESTRATION",
+                            "v1.task_decomposition",
+                        ) as timing:
+                            plan = await self.task_planner.plan(chat.question)
+                            timing.mark_first_result()
+                            timing.set_attribute(
+                                "task_count",
+                                len(plan.tasks) if plan is not None else 1,
+                            )
                     except TaskPlanningError as exc:
                         logger.warning("multi-question plan rejected: %s", exc)
                     if plan is not None:
@@ -3108,21 +3118,27 @@ class DataAnalysisOrchestrator:
             chat._completed_question_execution
             or (not independent_chat and not deterministic_business_fast_path)
         ):
-            rewrite = await self.question_rewriter.rewrite(
-                chat.question,
-                previous=(
-                    None if chat._completed_question_execution
-                    else previous_for_rewrite
-                ),
-                semantic_model_id=chat.semantic_model_id,
-                business_domain_id=self._effective_business_domain_id(chat),
-                business_domain_ids=list(chat.business_domain_ids),
-                force_context=(
-                    False if chat._completed_question_execution
-                    else turn_decision.inherit_business_context
-                ),
-                apply_previous_context=not chat._completed_question_execution,
-            )
+            with track_operation(
+                "V1_ORCHESTRATION",
+                "v1.question_rewrite",
+            ) as timing:
+                rewrite = await self.question_rewriter.rewrite(
+                    chat.question,
+                    previous=(
+                        None if chat._completed_question_execution
+                        else previous_for_rewrite
+                    ),
+                    semantic_model_id=chat.semantic_model_id,
+                    business_domain_id=self._effective_business_domain_id(chat),
+                    business_domain_ids=list(chat.business_domain_ids),
+                    force_context=(
+                        False if chat._completed_question_execution
+                        else turn_decision.inherit_business_context
+                    ),
+                    apply_previous_context=not chat._completed_question_execution,
+                )
+                timing.mark_first_result()
+                timing.set_attribute("degraded", bool(rewrite.degraded))
             classification_question = rewrite.rewritten_question
         await emit_progress(
             "QUESTION_REWRITE",
@@ -4890,7 +4906,14 @@ class DataAnalysisOrchestrator:
             truncated=query_result.dataset.truncated,
         )
 
-        self._bind_metrics_from_asl(request, query_result.asl, chat.semantic_model_id)
+        with track_operation(
+            "V1_ORCHESTRATION",
+            "v1.semantic_binding",
+        ) as timing:
+            self._bind_metrics_from_asl(
+                request, query_result.asl, chat.semantic_model_id
+            )
+            timing.mark_first_result()
         if query_result.sql not in {"DATASET_FOLLOWUP_NO_SQL", "UPLOADED_DATASET_NO_SQL"}:
             request.asl_template = query_result.asl
         if query_result.dataset.quality_status.upper() in {
@@ -5356,23 +5379,29 @@ class DataAnalysisOrchestrator:
                 "DETERMINISTIC_ANALYSIS", "RUNNING", "正在使用确定性算法计算分析结果。"
             )
             try:
-                analysis_output = (
-                    self.analysis_engine.analyze_ranking(
-                        request,
-                        query_result.dataset.columns,
-                        query_result.dataset.rows,
-                        knowledge_context,
+                with track_operation(
+                    "ANALYSIS",
+                    "analysis.deterministic",
+                    attributes={"intent": request.primary_intent.value},
+                ) as timing:
+                    analysis_output = (
+                        self.analysis_engine.analyze_ranking(
+                            request,
+                            query_result.dataset.columns,
+                            query_result.dataset.rows,
+                            knowledge_context,
+                        )
+                        if ordered_entity_metric_ranking_request(request)
+                        or AnalysisOperator.TOP_N in request.operators
+                        or AnalysisOperator.BOTTOM_N in request.operators
+                        else self.analysis_engine.analyze(
+                            request,
+                            query_result.dataset.columns,
+                            query_result.dataset.rows,
+                            knowledge_context,
+                        )
                     )
-                    if ordered_entity_metric_ranking_request(request)
-                    or AnalysisOperator.TOP_N in request.operators
-                    or AnalysisOperator.BOTTOM_N in request.operators
-                    else self.analysis_engine.analyze(
-                        request,
-                        query_result.dataset.columns,
-                        query_result.dataset.rows,
-                        knowledge_context,
-                    )
-                )
+                    timing.mark_first_result()
             except AnalysisError as exc:
                 fallback = self._fallback(
                     request, f"数据不足以支持可靠分析：{exc}。"
@@ -5434,14 +5463,20 @@ class DataAnalysisOrchestrator:
             PrimaryIntent.METRIC_QUERY,
             PrimaryIntent.DETAIL_QUERY,
         }:
-            insight_output = build_query_result_insight(
-                request,
-                query_result.dataset.columns,
-                query_result.dataset.rows,
-                total_row_count=total_row_count,
-                total_row_count_confirmed=total_row_count_confirmed,
-                truncated=query_result.dataset.truncated,
-            )
+            with track_operation(
+                "ANALYSIS",
+                "analysis.deterministic",
+                attributes={"intent": request.primary_intent.value},
+            ) as timing:
+                insight_output = build_query_result_insight(
+                    request,
+                    query_result.dataset.columns,
+                    query_result.dataset.rows,
+                    total_row_count=total_row_count,
+                    total_row_count_confirmed=total_row_count_confirmed,
+                    truncated=query_result.dataset.truncated,
+                )
+                timing.mark_first_result()
             if insight_output is not None:
                 evidence.append(
                     EvidenceItem(
@@ -5461,11 +5496,19 @@ class DataAnalysisOrchestrator:
                 "ANSWER_SYNTHESIS", "RUNNING", "正在将已验证的查询事实整理成通俗的数据解读。"
             )
             try:
-                synthesized_answer, synthesis = (
-                    await self.analysis_synthesizer.synthesize(
-                        request, insight_output, evidence
+                with track_operation(
+                    "ANALYSIS",
+                    "analysis.synthesis",
+                    attributes={
+                        "model": self.settings.analysis_synthesis_model_name
+                    },
+                ) as timing:
+                    synthesized_answer, synthesis = (
+                        await self.analysis_synthesizer.synthesize(
+                            request, insight_output, evidence
+                        )
                     )
-                )
+                    timing.mark_first_result()
                 evidence.append(
                     EvidenceItem(
                         evidence_id=f"analysis-synthesis:{request.request_id}",
@@ -5520,7 +5563,14 @@ class DataAnalysisOrchestrator:
                 ),
             )
 
-        reliability = self._reliability(request, evidence, query_result.dataset.quality_status)
+        with track_operation(
+            "VALIDATION",
+            "validation.result_reliability",
+        ) as timing:
+            reliability = self._reliability(
+                request, evidence, query_result.dataset.quality_status
+            )
+            timing.mark_first_result()
         await emit_progress(
             "RELIABILITY_CHECK",
             "COMPLETED" if reliability.level != "FAIL" else "FAILED",
@@ -5532,11 +5582,17 @@ class DataAnalysisOrchestrator:
             reliability_level=reliability.level,
             reliability_score=round(float(reliability.score), 4),
         )
-        chart_specs = (
-            analysis_output.facts.get("chart_specs", [])
-            if analysis_output is not None
-            else []
-        )
+        with track_operation(
+            "ANALYSIS",
+            "chart.specification",
+        ) as timing:
+            chart_specs = (
+                analysis_output.facts.get("chart_specs", [])
+                if analysis_output is not None
+                else []
+            )
+            timing.set_attribute("chart_count", len(chart_specs))
+            timing.mark_first_result()
         chart_summary = ""
         if chart_specs:
             chart_labels = {
@@ -5555,12 +5611,18 @@ class DataAnalysisOrchestrator:
         mcp_chart_urls: list[str] = []
         if chart_specs and reliability.level != "FAIL" and chat.mcp:
             try:
-                attempted_visualizations = (
-                    await self.extension_dispatcher.execute_visualizations(
-                        chat=chat,
-                        chart_specs=chart_specs,
+                with track_operation(
+                    "EXTENSION",
+                    "mcp.chart_render",
+                    attributes={"chart_count": len(chart_specs)},
+                ) as timing:
+                    attempted_visualizations = (
+                        await self.extension_dispatcher.execute_visualizations(
+                            chat=chat,
+                            chart_specs=chart_specs,
+                        )
                     )
-                )
+                    timing.mark_first_result()
             except Exception as exc:
                 logger.warning(
                     "configured visualization MCP unavailable: %s",
@@ -5579,7 +5641,13 @@ class DataAnalysisOrchestrator:
                     mcp_chart_urls.append(url)
         chart_images = []
         if reliability.level != "FAIL" and not mcp_chart_urls:
-            chart_images = self._render_inline_charts(chart_specs=chart_specs)
+            with track_operation(
+                "EXTENSION",
+                "chart.inline_render",
+                attributes={"chart_count": len(chart_specs)},
+            ) as timing:
+                chart_images = self._render_inline_charts(chart_specs=chart_specs)
+                timing.mark_first_result()
         chart_display = ""
         if mcp_chart_urls:
             remote_images = []
@@ -7162,8 +7230,19 @@ class DataAnalysisOrchestrator:
     async def _classify(
         self, question: str, identity: TrustedIdentity, conversation_id: str
     ) -> CanonicalAnalysisRequest:
-        classified = self.classifier.classify(question, identity, conversation_id)
-        return await classified if inspect.isawaitable(classified) else classified
+        with track_operation(
+            "V1_ORCHESTRATION",
+            "v1.intent_recognition",
+        ) as timing:
+            classified = self.classifier.classify(
+                question, identity, conversation_id
+            )
+            result = (
+                await classified if inspect.isawaitable(classified) else classified
+            )
+            timing.mark_first_result()
+            timing.set_attribute("intent_source", result.intent_source)
+            return result
 
     def _classify_with_rules(
         self, question: str, identity: TrustedIdentity, conversation_id: str
@@ -8843,7 +8922,15 @@ class DataAnalysisOrchestrator:
             # disguise this external contract gap as missing user information.
             return self._fallback(request, "已识别要追溯的对象，但当前血缘服务尚不支持该类对象。需要由血缘服务补齐支持后查询。")
         try:
-            resolved = await self.adapters.semantic.resolve_metrics(request, semantic_model_id)
+            with track_operation(
+                "V1_ORCHESTRATION",
+                "v1.semantic_binding",
+                attributes={"metadata_query": True},
+            ) as timing:
+                resolved = await self.adapters.semantic.resolve_metrics(
+                    request, semantic_model_id
+                )
+                timing.mark_first_result()
             if len(resolved) != 1:
                 return self._fallback(request, "没有找到唯一、已发布的指标定义。")
             scoped_metadata = getattr(self.adapters.semantic, 'scoped_metadata', None)
