@@ -486,7 +486,7 @@ class RawTurnPlanner:
         await emit_progress(
             'INTENT_RECOGNITION',
             'RUNNING',
-            '当前问句和轮次关系已识别：'
+            '对话状态识别：'
             + _CONTEXT_RELATION_LABELS.get(
                 str(context_trace.get('FINAL_RELATION') or ''),
                 '轮次关系待确认',
