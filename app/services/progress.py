@@ -61,6 +61,8 @@ async def emit_progress(
     stage: str,
     status: str,
     message: str,
+    *,
+    message_limit: int = 2000,
     **details: Any,
 ) -> None:
     """Emit one sanitized milestone when the caller requested streaming."""
@@ -68,10 +70,14 @@ async def emit_progress(
     callback = _progress_callback.get()
     if callback is None:
         return
+    # Most milestones stay deliberately compact.  A validated ASL display may
+    # opt into a larger, still bounded budget so its JSON is never cut into an
+    # invalid fragment by the generic 2,000-character limit.
+    bounded_message_limit = max(1, min(int(message_limit), 65536))
     event: dict[str, Any] = {
         "stage": stage,
         "status": status,
-        "message": message[:2000],
+        "message": message[:bounded_message_limit],
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     task_context = _task_progress_context.get() or {}

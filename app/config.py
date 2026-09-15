@@ -39,6 +39,26 @@ class Settings(BaseSettings):
     # bridge.  The default remains disabled so normal production behavior and
     # fail-closed execution-scope handling are unchanged.
     demo_mode: bool = False
+    # Public thinking/progress text uses the same SSE ``message_chunk``
+    # contract as the final answer.  These settings control presentation only;
+    # model, ASL and SQL stages continue to consume complete validated values.
+    thinking_stream_chunk_size: int = Field(default=1, ge=1, le=64)
+    thinking_stream_max_chunks: int = Field(default=120, ge=1, le=1000)
+    thinking_stream_chunk_interval_seconds: float = Field(default=0.03, ge=0, le=0.2)
+    # A protocol-only ``updata_state`` heartbeat keeps the HTTP connection
+    # alive, but the platform does not render it as changing progress.  Emit an
+    # existing ``message_chunk`` stage marker at this interval while a long
+    # semantic/model/tool call has no new milestone.
+    thinking_stream_heartbeat_seconds: float = Field(default=1.0, ge=0.05, le=30)
+    # Stream structured recognition responses internally so the transport can
+    # publish real model-start milestones without weakening final JSON/schema
+    # validation. The complete payload is still assembled and validated before
+    # it can affect semantic state or execution.
+    intent_model_stream_enabled: bool = True
+    # Source tree for the existing semantic-catalog authority used by the
+    # context-only bridge.  It is read on each request and is independent of
+    # the Limited Scalar publication/pin configuration below.
+    context_catalog_root: Path = SERVICE_BUNDLE_ROOT / "Oagnet"
     # v2 separates fingerprint-aware idempotency records from pre-upgrade Redis
     # values that cannot prove which request payload produced a cached response.
     session_key_prefix: str = "youo:data-analysis:v2"
@@ -104,6 +124,24 @@ class Settings(BaseSettings):
     dynamic_skills_enabled: bool = True
     autonomous_tool_selection_enabled: bool = True
     autonomous_tool_selection_max_tools: int = Field(default=3, ge=1, le=5)
+    # Platform-configured MCP services may act as the primary executor only
+    # for a request that carries an uploaded file and exposes at least one
+    # file-analysis tool.  All ordinary semantic/SQL requests keep the V1
+    # execution path unchanged.
+    mcp_file_analysis_enabled: bool = True
+    mcp_file_analysis_discovery_timeout_seconds: float = Field(
+        default=20, gt=0, le=60
+    )
+    mcp_file_analysis_model_timeout_seconds: float = Field(
+        default=30, gt=0, le=60
+    )
+    mcp_file_analysis_tool_timeout_seconds: float = Field(
+        default=60, gt=0, le=180
+    )
+    mcp_file_analysis_total_budget_seconds: float = Field(
+        default=105, gt=0, le=240
+    )
+    mcp_file_analysis_max_turns: int = Field(default=8, ge=1, le=20)
     bocha_api_key: SecretStr | None = Field(
         default=None,
         validation_alias=AliasChoices("DATA_AGENT_BOCHA_KEY", "BOCHA_KEY"),
@@ -204,6 +242,7 @@ class Settings(BaseSettings):
     analysis_synthesis_model_name: str = "qwen3.7-max"
     analysis_synthesis_timeout_seconds: float = Field(default=8, gt=0, le=20)
     analysis_synthesis_max_retries: int = Field(default=0, ge=0, le=1)
+    analysis_synthesis_validation_retries: int = Field(default=1, ge=0, le=1)
     chat_model_enabled: bool = True
     chat_model_name: str = "qwen3.7-max"
     chat_model_timeout_seconds: float = Field(default=8, gt=0, le=20)
@@ -303,6 +342,10 @@ class Settings(BaseSettings):
     mysql_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
     mysql_read_timeout_seconds: int = Field(default=10, ge=1, le=60)
     mysql_write_timeout_seconds: int = Field(default=10, ge=1, le=60)
+    platform_upload_reference_resolution_enabled: bool = True
+    platform_upload_reference_max_age_seconds: int = Field(
+        default=600, ge=30, le=3600
+    )
     minio_dataset_enabled: bool = False
     minio_endpoint: str | None = Field(
         default=None,

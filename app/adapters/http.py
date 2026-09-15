@@ -37,6 +37,12 @@ from app.services.knowledge_retrieval import (
     normalize_and_deduplicate_hits,
 )
 from app.services.progress import emit_progress
+from app.presentation import (
+    SEMANTIC_QUERY_TOOL_NAME,
+    SQL_EXECUTION_TOOL_NAME,
+    SQL_TRANSLATION_TOOL_NAME,
+    render_asl_extraction_json,
+)
 from app.services.intent_asl_contract import (
     build_intent_asl_contract,
     validate_intent_asl_contract_completeness,
@@ -604,7 +610,16 @@ class HttpDataRetrievalAdapter:
         request: CanonicalAnalysisRequest,
         business_domain_id: int | None,
     ) -> dict[str, int | list[int] | None]:
-        """Build Oagent's execution scope without changing request authorization."""
+        """Forward V1's request scope, with optional proven single-domain narrowing.
+
+        An empty business-domain list is Oagent's existing MODEL_WIDE contract.
+        Entity-vector grounding may provide a single execution-domain hint, but
+        failure to find such a hit must not turn an otherwise executable V1
+        question into ``OAGENT_EXECUTION_SCOPE_UNRESOLVED``.  In that case the
+        original MODEL_WIDE request is forwarded and Oagent resolves the domain
+        from its current semantic catalog and returns the selected domain in its
+        signed semantic evidence.
+        """
 
         scope = request.authorized_semantic_scope
         requested_domains = list(request.business_domain_ids)
@@ -630,28 +645,23 @@ class HttpDataRetrievalAdapter:
                     "Resolved execution scope differs from explicit authorization",
                 )
             resolved_domains = requested_domains
-        elif not resolved_domains:
-            raise AdapterError(
-                "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
-                "MODEL_WIDE request has no resolved Oagent execution domain",
-            )
+            execution_domain = resolved_domains[0]
+        elif business_domain_id is None:
+            # Preserve the platform/V1 contract exactly.  Oagent supports an
+            # empty domain list as MODEL_WIDE and proves the domains selected
+            # by the generated ASL in ``semantic_evidence``.
+            return {
+                "business_domain_id": None,
+                "business_domain_ids": [],
+            }
+        else:
+            if resolved_domains != [business_domain_id]:
+                raise AdapterError(
+                    "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
+                    "Single-domain narrowing is not backed by current semantic evidence",
+                )
+            execution_domain = business_domain_id
 
-        if (
-            not resolved_domains
-            or any(type(domain) is not int or domain <= 0 for domain in resolved_domains)
-            or len(resolved_domains) != len(set(resolved_domains))
-        ):
-            raise AdapterError(
-                "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
-                "Oagent execution scope is empty or invalid",
-            )
-        if len(resolved_domains) > 1:
-            raise AdapterError(
-                "OAGENT_MULTI_DOMAIN_CONTRACT_UNSUPPORTED",
-                "Oagent /agent/query does not support multiple execution domains",
-            )
-
-        execution_domain = resolved_domains[0]
         if business_domain_id is not None and business_domain_id != execution_domain:
             raise AdapterError(
                 "REQUEST_SCOPE_INVALID",
@@ -2130,6 +2140,19 @@ class HttpDataRetrievalAdapter:
                     "trend ASL must group by a registered temporal dimension",
                 )
 
+        # Publish the validated ASL at its real lifecycle boundary: Oagent has
+        # finished and all local ASL guards have passed, while SQL translation
+        # and database execution have not started yet.
+        await emit_progress(
+            "ASL_GENERATION",
+            "COMPLETED",
+            f"工具：{SEMANTIC_QUERY_TOOL_NAME}。\n"
+            + render_asl_extraction_json(asl),
+            message_limit=65536,
+            display_model="OagentASL",
+            display_version=str(asl.get("version") or "UNKNOWN"),
+        )
+
         if asl_cache_key is not None:
             if len(self._asl_plan_cache) >= self.settings.asl_plan_cache_max_items:
                 oldest_key = min(
@@ -2246,15 +2269,12 @@ class HttpDataRetrievalAdapter:
         await emit_progress(
             "SEMANTIC_QUERY_PLANNING",
             "COMPLETED",
-            "工具：智能语义查询器；"
-            f"输入：问题={_compact_progress_value(request.rewritten_question or request.original_question, 180)}，"
-            f"语义模型={semantic_model_id}，"
-            f"业务域={request.business_domain_ids or ([business_domain_id] if business_domain_id else [])}，"
-            f"指标诉求={_compact_progress_value([metric.input for metric in request.metrics], 240)}，"
-            f"筛选条件={_compact_progress_value(request.filters, 500)}；"
-            f"输出：指标绑定={_compact_progress_value(metric_bindings, 500)}，"
+            f"调用工具：{SQL_TRANSLATION_TOOL_NAME}。\n"
+            f"输入：已验证 ASL（版本={asl.get('version') or 'UNKNOWN'}，"
+            f"指标绑定={_compact_progress_value(metric_bindings, 500)}，"
             f"查询结构={_compact_progress_value(query_shape, 500)}，"
-            f"只读SQL：已生成（{len(sql)}字符），安全校验：通过。",
+            f"筛选条件={_compact_progress_value(asl.get('filters') or [], 500)}）；"
+            f"输出：只读 SQL 已生成（{len(sql)}字符），安全校验：通过。",
         )
 
         execute_payload: dict[str, Any] = {
@@ -2295,7 +2315,7 @@ class HttpDataRetrievalAdapter:
         await emit_progress(
             "SQL_EXECUTION",
             "RUNNING",
-            "调用工具：SQL 执行服务。\n"
+            f"调用工具：{SQL_EXECUTION_TOOL_NAME}。\n"
             f"输入：{_compact_progress_value(execute_payload, 1200)}。",
         )
         try:
@@ -2365,7 +2385,7 @@ class HttpDataRetrievalAdapter:
         await emit_progress(
             "SQL_EXECUTION",
             "COMPLETED",
-            "SQL 执行服务调用完成。\n"
+            f"{SQL_EXECUTION_TOOL_NAME}调用完成。\n"
             f"输出字段：{_compact_progress_value(raw.get('columns') or [], 500)}；"
             f"返回行数：{raw.get('row_count', len(raw.get('rows') or []))}；"
             f"数据预览：{_compact_progress_value((raw.get('data') or raw.get('preview_data') or [])[:2], 1000)}。\n"

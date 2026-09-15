@@ -7,6 +7,7 @@ intent recognition, ASL generation, SQL translation, or execution.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -135,6 +136,132 @@ def _entity_text(values: list[str]) -> str:
     return values[0] if len(values) == 1 else "、".join(values)
 
 
+def _surface_in_question(value: Any, question: str) -> str:
+    """Prefer the user's visible surface while retaining a canonical fallback."""
+
+    text = _single_line(value, 200)
+    if not text:
+        return ""
+    compact_question = re.sub(r"\s+", "", question)
+    compact_text = re.sub(r"\s+", "", text)
+    if not compact_text or compact_text not in compact_question:
+        return text
+    for suffix in ("产品", "商品"):
+        if not compact_text.endswith(suffix) and compact_text + suffix in compact_question:
+            return text + suffix
+    return text
+
+
+def _semantic_extraction_parameters(
+    question: str,
+    semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]],
+) -> list[str]:
+    """Select V2-accepted current-turn fields that belong to one task."""
+
+    compact_question = re.sub(r"\s+", "", question).casefold()
+    parameters: list[str] = []
+    for item in semantic_extractions:
+        if not isinstance(item, dict):
+            continue
+        surface = _single_line(item.get("surface"), 200)
+        normalized = _single_line(item.get("normalized_surface"), 200)
+        candidates = [
+            re.sub(r"\s+", "", value).casefold()
+            for value in (surface, normalized)
+            if value
+        ]
+        if not candidates or not any(value in compact_question for value in candidates):
+            continue
+        labels = _unique_text(item.get("labels"))
+        if not surface or not labels:
+            continue
+        rendered = f"{surface}（{'/'.join(labels)}）"
+        if rendered not in parameters:
+            parameters.append(rendered)
+    return parameters
+
+
+def _request_extraction_parameters(
+    request: CanonicalAnalysisRequest,
+    question: str,
+) -> list[str]:
+    """Fallback projection from the already normalized canonical request."""
+
+    display = dict(request.semantic_display_slots or {})
+    if not display:
+        # Raw classifier fields are candidates, not catalog-grounded facts.
+        # Keep them out of the public trace when neither V2 nor the display
+        # resolver supplied accepted semantic evidence.
+        return []
+    metrics = _unique_text(display.get("metrics"))
+    dimensions = _unique_text(display.get("dimensions"))
+    entity = _single_line(display.get("entity"), 120)
+    fields = _unique_text(display.get("fields"))
+    filter_items = [
+        item for item in display.get("filters") or []
+        if isinstance(item, dict)
+    ]
+
+    candidates: list[tuple[str, tuple[str, ...]]] = []
+    for item in filter_items:
+        raw_value = item.get("value")
+        values = raw_value if isinstance(raw_value, list) else [raw_value]
+        for value in values:
+            surface = _surface_in_question(value, question)
+            if surface:
+                candidates.append((surface, ("筛选值",)))
+    for metric in metrics:
+        candidates.append((_surface_in_question(metric, question), ("指标",)))
+    if entity:
+        entity_labels = ["业务对象"]
+        if entity in dimensions:
+            entity_labels.append("分组维度")
+        candidates.append((_surface_in_question(entity, question), tuple(entity_labels)))
+    for dimension in dimensions:
+        if dimension != entity:
+            candidates.append((
+                _surface_in_question(dimension, question),
+                ("分组维度",),
+            ))
+    normalized_entity = re.sub(r"(?:名称|编码|代码)$", "", entity)
+    normalized_dimensions = {
+        re.sub(r"(?:名称|编码|代码)$", "", value) for value in dimensions
+    }
+    for field_name in fields:
+        normalized_field = re.sub(r"(?:名称|编码|代码)$", "", field_name)
+        if normalized_field and normalized_field in {
+            normalized_entity, *normalized_dimensions
+        }:
+            continue
+        candidates.append((
+            _surface_in_question(field_name, question),
+            ("查询字段",),
+        ))
+
+    compact_question = re.sub(r"\s+", "", question).casefold()
+    ordered: list[tuple[int, int, str]] = []
+    for sequence, (surface, labels) in enumerate(candidates):
+        if not surface:
+            continue
+        compact_surface = re.sub(r"\s+", "", surface).casefold()
+        position = compact_question.find(compact_surface)
+        if position < 0:
+            position = len(compact_question) + sequence
+        ordered.append((position, sequence, f"{surface}（{'/'.join(labels)}）"))
+    return list(dict.fromkeys(item[2] for item in sorted(ordered)))
+
+
+def _structured_parameters_for_question(
+    question: str,
+    request: CanonicalAnalysisRequest | None,
+    semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]],
+) -> list[str]:
+    semantic = _semantic_extraction_parameters(question, semantic_extractions)
+    if semantic:
+        return semantic
+    return _request_extraction_parameters(request, question) if request is not None else []
+
+
 @dataclass(frozen=True)
 class IntentRecognitionDisplayV2:
     """Immutable display projection; never part of the execution contract."""
@@ -143,9 +270,11 @@ class IntentRecognitionDisplayV2:
     scenario: str = "ANALYTIC"
     original_question: str = ""
     completed_question: str = ""
+    structured_parameters: list[str] = field(default_factory=list)
     file_judgement: str = ""
     task_intent: str = ""
     intent_basis: str = ""
+    business_domains: list[str] = field(default_factory=list)
     show_structure: bool = True
     metrics: list[str] = field(default_factory=list)
     show_empty_metrics: bool = False
@@ -169,6 +298,7 @@ class CompositeIntentTaskDisplayV2:
     task_id: str
     question: str
     intent: str
+    structured_parameters: list[str] = field(default_factory=list)
     depends_on: list[str] = field(default_factory=list)
 
 
@@ -179,8 +309,8 @@ class CompositeIntentRecognitionDisplayV2:
     version: str = "V2"
     original_question: str = ""
     completed_question: str = ""
+    business_domains: list[str] = field(default_factory=list)
     planner: str = ""
-    shared_identifiers: list[str] = field(default_factory=list)
     tasks: list[CompositeIntentTaskDisplayV2] = field(default_factory=list)
 
 
@@ -435,6 +565,8 @@ def build_intent_recognition_display_v2(
     *,
     file_status: str = "NOT_PROVIDED",
     file_based: bool = False,
+    business_domain_labels: tuple[str, ...] | list[str] = (),
+    semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]] = (),
 ) -> IntentRecognitionDisplayV2:
     """Build a detached presentation snapshot from an executable request."""
 
@@ -534,15 +666,32 @@ def build_intent_recognition_display_v2(
         if request.missing_slots
         else "ANALYTIC"
     )
+    domain_labels = _unique_text(list(business_domain_labels))
+    if not domain_labels:
+        authorized_domain_ids = (
+            request.business_domain_ids or request.resolved_business_domain_ids
+        )
+        domain_labels = (
+            [f"ID {domain_id}" for domain_id in authorized_domain_ids]
+            if authorized_domain_ids
+            else ["当前语义模型全部授权业务域"]
+        )
+    completed_question = _single_line(_completed_question_for_display(request))
     return IntentRecognitionDisplayV2(
         scenario=scenario,
         original_question=_single_line(request.original_question),
-        completed_question=_single_line(_completed_question_for_display(request)),
+        completed_question=completed_question,
+        structured_parameters=_structured_parameters_for_question(
+            f"{request.original_question} {completed_question}",
+            request,
+            semantic_extractions,
+        ),
         file_judgement=_file_judgement(file_status, file_based),
         task_intent=task_intent,
         intent_basis=_INTENT_BASES.get(
             request.primary_intent, "根据当前问题中的任务目标和输出要求完成分类。"
         ),
+        business_domains=domain_labels,
         show_structure=request.primary_intent not in {
             PrimaryIntent.CHAT,
             PrimaryIntent.CAPABILITY_HELP,
@@ -575,79 +724,91 @@ def build_intent_recognition_display_v2(
 
 def render_intent_recognition_display_v2(
     view: IntentRecognitionDisplayV2,
+    *,
+    include_resolved_context: bool = True,
 ) -> str:
-    """Render the document-defined public trace with one fact per line."""
+    """Render intent facts that are known before downstream ASL generation.
+
+    The executable ASL does not exist when this view is built.  Do not present
+    a second, locally reconstructed structure as if it were the ASL selected by
+    Oagnet.  The validated ASL is rendered separately once query planning has
+    completed.
+    """
 
     original_label = (
         "用户原始问句"
         if view.scenario in {"CHAT", "CLARIFICATION"}
         else "用户原始问题"
     )
-    lines = [
-        "### 1、意图识别",
-        "",
-        f"{original_label}：{view.original_question}",
-        f"补全后的问题：{view.completed_question}",
-    ]
-    if view.file_judgement:
-        lines.append(f"文件判断：{view.file_judgement}")
+    lines = ["### ◉ 意图识别", ""]
+    if include_resolved_context:
+        lines.extend([
+            f"{original_label}：{view.original_question}",
+            f"补全后的问题：{view.completed_question}",
+        ])
+        if view.structured_parameters:
+            lines.append(
+                "结构化参数提取：" + "；".join(view.structured_parameters) + "。"
+            )
+        lines.append(f"业务域：{'、'.join(view.business_domains)}")
+        if view.file_judgement:
+            lines.append(f"文件判断：{view.file_judgement}")
     lines.extend([
         f"任务意图：{view.task_intent}",
         f"意图判定依据：{view.intent_basis}",
     ])
-    structured: list[str] = []
-    if view.metrics:
-        structured.append(
-            f"指标：{_list_text(view.metrics)}（来源：当前语义模型向量库）"
-        )
-    elif view.show_structure:
-        structured.append(
-            "指标：[]（用户未要求统计指标）"
-            if view.show_empty_metrics
-            else "指标：[]"
-        )
-    if view.entity_values:
-        structured.append(
-            f"实体：{_entity_text(view.entity_values)}"
-            "（来源：当前语义模型向量库）"
-        )
-    elif view.entity:
-        structured.append(f"实体：{view.entity}")
-    structured.append(
-        f"维度：{_list_text(view.dimensions)}（来源：当前语义模型向量库）"
-        if view.dimensions else "维度：[]"
-    )
-    structured.append(
-        f"查询字段：{_list_text(view.fields)}（来源：当前语义模型向量库）"
-        if view.fields else "查询字段：[]"
-    )
-    structured.append(
-        f"时间区间：{view.time_range}（来源：{view.time_source}）"
-        if view.time_range else "时间区间：无"
-    )
-    structured.append(
-        f"筛选条件：{_list_text(view.filters)}"
-        if view.filters else "筛选条件：无"
-    )
-    if view.show_structure:
-        structured.append(
-            f"排序数量：{view.ranking_count if view.ranking_count is not None else '无'}"
-        )
-    if structured and view.show_structure:
-        lines.append("结构化提取：")
-        lines.extend(structured)
-    lines.extend([
-        f"轮次关系：{view.turn_relation}",
-        f"上下文补全：{view.context_completion}",
-        f"是否需要追问：{'是' if view.needs_clarification else '否'}",
-        (
-            f"{'需要追问' if view.needs_clarification else '不追问'}理由："
-            f"{view.clarification_reason}"
-        ),
-    ])
     if view.show_structure:
         lines.append(f"参数规范化：{view.normalization_status}")
     return "\n".join(lines)
+
+
+def render_resolved_intent_context_v2(
+    *,
+    original_question: str,
+    completed_question: str,
+    business_domains: tuple[str, ...] | list[str] = (),
+    semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]] = (),
+) -> str:
+    """Render V2 facts once context and semantic binding are validated."""
+
+    parameters = _semantic_extraction_parameters(
+        f"{original_question} {completed_question}", semantic_extractions
+    )
+    domain_labels = _unique_text(list(business_domains)) or [
+        "当前语义模型全部授权业务域"
+    ]
+    lines = [
+        f"用户原始问题：{_single_line(original_question)}",
+        f"补全后的问题：{_single_line(completed_question)}",
+    ]
+    if parameters:
+        lines.append("结构化参数提取：" + "；".join(parameters) + "。")
+    lines.append(f"业务域：{'、'.join(domain_labels)}")
+    return "\n".join(lines)
+
+
+def render_asl_extraction_json(asl: dict[str, object]) -> str:
+    """Render the exact validated ASL object without a display-side rewrite."""
+
+    rendered = (
+        "结构化提取（ASL）：\n"
+        "```json\n"
+        f"{json.dumps(asl, ensure_ascii=False, indent=2)}\n"
+        "```"
+    )
+    subject = asl.get("subject")
+    dimensions = asl.get("dimensions")
+    if (
+        isinstance(subject, dict)
+        and subject.get("entity")
+        and isinstance(dimensions, list)
+        and dimensions
+    ):
+        rendered += (
+            "\n\n字段说明：`subject.entity` 表示指标计算所基于的业务实体；"
+            "`dimensions` 表示结果的分组与展示粒度，两者可以不同。"
+        )
+    return rendered
 
 
 def build_composite_intent_recognition_display_v2(
@@ -655,6 +816,9 @@ def build_composite_intent_recognition_display_v2(
     plan: TaskPlan,
     *,
     task_intents: list[PrimaryIntent] | None = None,
+    task_requests: list[CanonicalAnalysisRequest] | None = None,
+    business_domains: tuple[str, ...] | list[str] = (),
+    semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]] = (),
 ) -> CompositeIntentRecognitionDisplayV2:
     """Build one immutable root display instead of exposing a DAG child.
 
@@ -662,17 +826,8 @@ def build_composite_intent_recognition_display_v2(
     as planning facts only and are never fed back into ASL or SQL execution.
     """
 
-    normalized_source = str(original_question).translate(str.maketrans({
-        "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
-        "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
-        "\uff0d": "-",
-    }))
-    identifiers = list(dict.fromkeys(re.findall(
-        r"(?<![0-9A-Za-z])(?=[0-9A-Za-z-]{3,64}(?![0-9A-Za-z-]))"
-        r"(?=[0-9A-Za-z-]*[A-Za-z])[0-9A-Za-z]+(?:-[0-9A-Za-z]+)+",
-        normalized_source,
-    )))
     intents = task_intents or []
+    requests = task_requests or []
     tasks = [
         CompositeIntentTaskDisplayV2(
             task_id=task.task_id,
@@ -681,6 +836,11 @@ def build_composite_intent_recognition_display_v2(
                 _INTENT_LABELS.get(intents[index], intents[index].value)
                 if index < len(intents)
                 else "待子任务语义校验"
+            ),
+            structured_parameters=_structured_parameters_for_question(
+                task.question,
+                requests[index] if index < len(requests) else None,
+                semantic_extractions,
             ),
             depends_on=list(task.depends_on),
         )
@@ -692,43 +852,48 @@ def build_composite_intent_recognition_display_v2(
     return CompositeIntentRecognitionDisplayV2(
         original_question=_single_line(original_question, 1000),
         completed_question=completed,
+        business_domains=(
+            _unique_text(list(business_domains))
+            or ["当前语义模型全部授权业务域"]
+        ),
         planner=plan.planner,
-        shared_identifiers=identifiers,
         tasks=tasks,
     )
 
 
 def render_composite_intent_recognition_display_v2(
     view: CompositeIntentRecognitionDisplayV2,
+    *,
+    include_resolved_context: bool = True,
 ) -> str:
     """Render one deterministic parent trace for every DAG child."""
 
-    lines = [
-        "### 1、意图识别",
-        "",
-        f"用户原始问题：{view.original_question}",
-        f"补全后的问题：{view.completed_question}",
-        f"任务意图：复合查询（共 {len(view.tasks)} 个子任务）",
-        "意图判定依据：用户要求分别返回多个可独立交付的业务结果。",
-    ]
-    if view.shared_identifiers:
-        lines.append(
-            f"共享业务标识：{_list_text(view.shared_identifiers)}"
-            "（每个子任务继续按当前语义层独立规范化）"
-        )
-    lines.append("结构化拆分：")
+    intent_labels = list(dict.fromkeys(
+        task.intent for task in view.tasks if task.intent
+    ))
+    task_intent = "、".join(intent_labels) or "待语义识别"
+    lines = ["### ◉ 意图识别", ""]
+    if include_resolved_context:
+        lines.append(f"用户原始问题：{view.original_question}")
+    lines.extend(["补全后的问题：", ""])
     for index, task in enumerate(view.tasks, 1):
-        dependency = (
-            f"；依赖={_list_text(task.depends_on)}" if task.depends_on else ""
-        )
-        lines.append(
-            f"子任务 {index}（{task.task_id}）：{task.question}；"
-            f"意图={task.intent}{dependency}"
-        )
+        lines.append(f"{index}. {task.question}")
+        if task.structured_parameters:
+            lines.append(
+                "   结构化参数提取："
+                + "；".join(task.structured_parameters)
+                + "。"
+            )
+        if index < len(view.tasks):
+            lines.append("")
+    lines.append("")
+    if include_resolved_context:
+        lines.append(f"业务域：{'、'.join(view.business_domains)}")
     lines.extend([
-        "轮次关系：独立复合问题",
-        "上下文补全：否（共享条件已写入每个完整子任务）",
-        "是否需要追问：由各子任务完成语义规范化后分别校验",
-        f"参数规范化：任务拆分已完成（规划器={view.planner}）",
+        f"任务意图：{task_intent}",
+        (
+            "意图判定依据：各项任务均按其实际业务目标识别，"
+            "并分别交付查询或分析结果。"
+        ),
     ])
     return "\n".join(lines)

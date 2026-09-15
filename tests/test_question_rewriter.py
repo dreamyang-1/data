@@ -351,6 +351,368 @@ async def test_isolated_filter_lookup_makes_parent_brand_binding_authoritative()
     assert "FILTER_SUBJECT_REMOVED_FROM_TREND_GROUPING" in request.assumptions
 
 
+@pytest.mark.asyncio
+async def test_untyped_product_identifier_uses_current_catalog_attribute_binding():
+    request = CanonicalAnalysisRequest(
+        conversation_id="catalog-product-identifier",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询 TDC-3 产品的主要适用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=81,
+        entity="产品",
+        fields=["商品名称", "适用科室"],
+        filters=[{"field": "适用科室类型", "operator": "EQ", "value": 1}],
+        semantic_entity_mentions=["TDC-3"],
+        assumptions=["CATALOG_IDENTIFIER_GROUNDING_REQUIRED"],
+    )
+    searcher = FakeSearcher([{
+        "record_id": "specification-tdc-3",
+        "score": 1.0,
+        "entity_name": "产品",
+        "attribute_name": "规格型号",
+        "attribute_code": "specification",
+        "attribute_value": "TDC-3",
+        "business_domain_id": 205,
+        "semantic_model_id": 81,
+        "semantic_model_version": "published-81",
+    }])
+
+    ambiguities = await QuestionRewriter(searcher).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+    )
+
+    assert ambiguities == []
+    assert searcher.calls == [("TDC-3", 81, None, [])]
+    assert request.filters == [
+        {"field": "适用科室类型", "operator": "EQ", "value": 1},
+        {"field": "规格型号", "operator": "EQ", "value": "TDC-3"},
+    ]
+    assert len(request.semantic_filter_bindings) == 1
+    binding = request.semantic_filter_bindings[0]
+    assert binding.filter_index == 1
+    assert binding.attribute_code == "specification"
+    assert binding.canonical_value == "TDC-3"
+    assert "CATALOG_IDENTIFIER_GROUNDED_FROM_CURRENT_MODEL" in request.assumptions
+
+
+@pytest.mark.asyncio
+async def test_unmatched_untyped_product_identifier_does_not_create_a_filter():
+    request = CanonicalAnalysisRequest(
+        conversation_id="unmatched-catalog-product-identifier",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询 UNKNOWN-404 产品的主要适用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=81,
+        entity="产品",
+        fields=["商品名称", "适用科室"],
+        filters=[{"field": "适用科室类型", "operator": "EQ", "value": 1}],
+        semantic_entity_mentions=["UNKNOWN-404"],
+        assumptions=["CATALOG_IDENTIFIER_GROUNDING_REQUIRED"],
+    )
+
+    ambiguities = await QuestionRewriter(FakeSearcher([])).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+    )
+
+    assert ambiguities == []
+    assert request.filters == [
+        {"field": "适用科室类型", "operator": "EQ", "value": 1},
+    ]
+    assert request.semantic_filter_bindings == []
+    assert "CATALOG_IDENTIFIER_GROUNDED_FROM_CURRENT_MODEL" not in request.assumptions
+
+
+@pytest.mark.asyncio
+async def test_product_identifier_cannot_bind_to_a_non_product_catalog_family():
+    request = CanonicalAnalysisRequest(
+        conversation_id="wrong-family-catalog-identifier",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询 CODE-9 产品的主要适用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=81,
+        entity="产品",
+        fields=["商品名称", "适用科室"],
+        filters=[{"field": "适用科室类型", "operator": "EQ", "value": 1}],
+        semantic_entity_mentions=["CODE-9"],
+        assumptions=["CATALOG_IDENTIFIER_GROUNDING_REQUIRED"],
+    )
+    searcher = FakeSearcher([{
+        "record_id": "hospital-code-9",
+        "score": 1.0,
+        "entity_name": "医院",
+        "attribute_name": "医院编码",
+        "attribute_code": "hospital_code",
+        "attribute_value": "CODE-9",
+        "business_domain_id": 205,
+        "semantic_model_id": 81,
+    }])
+
+    ambiguities = await QuestionRewriter(searcher).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+    )
+
+    assert ambiguities == []
+    assert request.filters == [
+        {"field": "适用科室类型", "operator": "EQ", "value": 1},
+    ]
+    assert request.semantic_filter_bindings == []
+
+
+@pytest.mark.asyncio
+async def test_region_and_named_product_values_are_independently_grounded():
+    request = CanonicalAnalysisRequest(
+        conversation_id="region-parent-brand",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="分析上海市费森尤斯产品最近一年的销售趋势。",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        entity="产品",
+        filters=[
+            {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+            {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"},
+        ],
+        semantic_entity_mentions=["上海市", "费森尤斯"],
+    )
+
+    class ValueSearcher(FakeSearcher):
+        async def search(
+            self, query, *, semantic_model_id, business_domain_id,
+            business_domain_ids=None,
+        ):
+            self.calls.append(
+                (query, semantic_model_id, business_domain_id, business_domain_ids)
+            )
+            if query == "上海市":
+                return [{
+                    "record_id": "city-shanghai",
+                    "score": 1.0,
+                    "entity_name": "销售记录",
+                    "attribute_name": "城市名称",
+                    "attribute_code": "city_name",
+                    "attribute_value": "上海市",
+                    "business_domain_id": 205,
+                    "semantic_model_version": "published-31",
+                }]
+            return [{
+                "record_id": "parent-brand-fresenius",
+                "score": 1.0,
+                "entity_name": "生产厂家",
+                "attribute_name": "母厂牌",
+                "attribute_code": "parent_brand",
+                "attribute_value": "费森尤斯",
+                "business_domain_id": 205,
+                "semantic_model_version": "published-31",
+            }]
+
+    searcher = ValueSearcher([])
+    ambiguities = await QuestionRewriter(searcher).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+    )
+
+    assert ambiguities == []
+    assert request.filters == [
+        {"field": "城市名称", "operator": "EQ", "value": "上海市"},
+        {"field": "母厂牌", "operator": "EQ", "value": "费森尤斯"},
+    ]
+    assert [call[0] for call in searcher.calls] == ["上海市", "费森尤斯"]
+
+
+@pytest.mark.asyncio
+async def test_context_value_resolution_reuses_v1_entity_retrieval_across_product_attributes():
+    searcher = FakeSearcher([
+        {
+            "record_id": "parent-brand-fresenius",
+            "score": 1.0,
+            "entity_name": "生产厂家",
+            "attribute_name": "母厂牌",
+            "attribute_code": "parent_brand",
+            "attribute_value": "费森尤斯",
+            "business_domain_id": 205,
+            "semantic_model_version": "published-31",
+        },
+        {
+            "record_id": "manufacturer-fresenius",
+            "score": 0.75,
+            "entity_name": "生产厂家",
+            "attribute_name": "厂家名称",
+            "attribute_code": "manufacturer_name",
+            "attribute_value": "费森尤斯医疗用品股份有限公司",
+            "business_domain_id": 205,
+            "semantic_model_version": "published-31",
+        },
+    ])
+
+    binding = await QuestionRewriter(searcher).resolve_context_filter_value(
+        "费森尤斯",
+        expected_family="COMMERCIAL_PRODUCT",
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+        tenant_id="t1",
+        user_id="u1",
+        application_id="app",
+        conversation_id="context-value",
+    )
+
+    assert searcher.calls == [("费森尤斯", 81, None, [])]
+    assert binding is not None
+    assert binding.attribute_code == "parent_brand"
+    assert binding.canonical_value == "费森尤斯"
+
+
+@pytest.mark.asyncio
+async def test_context_value_resolution_rejects_a_different_semantic_family():
+    searcher = FakeSearcher([{
+        "record_id": "hospital-a",
+        "score": 1.0,
+        "entity_name": "医院",
+        "attribute_name": "医院名称",
+        "attribute_code": "hospital_name",
+        "attribute_value": "协和医院",
+        "business_domain_id": 205,
+    }])
+
+    binding = await QuestionRewriter(searcher).resolve_context_filter_value(
+        "协和医院",
+        expected_family="COMMERCIAL_PRODUCT",
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+        tenant_id="t1",
+        user_id="u1",
+        application_id="app",
+        conversation_id="context-value",
+    )
+
+    assert binding is None
+
+
+@pytest.mark.asyncio
+async def test_context_region_resolution_tries_a_suffix_normalized_value():
+    class RegionSearcher(FakeSearcher):
+        async def search(
+            self, query, *, semantic_model_id, business_domain_id,
+            business_domain_ids=None,
+        ):
+            self.calls.append(
+                (query, semantic_model_id, business_domain_id, business_domain_ids)
+            )
+            if query != "上海":
+                return []
+            return [{
+                "record_id": "city-shanghai",
+                "score": 1.0,
+                "entity_name": "地区",
+                "attribute_name": "城市名称",
+                "attribute_code": "city_name",
+                "attribute_value": "上海",
+                "business_domain_id": 205,
+            }]
+
+    searcher = RegionSearcher([])
+    binding = await QuestionRewriter(searcher).resolve_context_filter_value(
+        "上海市",
+        expected_family="REGION",
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+        tenant_id="t1",
+        user_id="u1",
+        application_id="app",
+        conversation_id="context-region-value",
+    )
+
+    assert [call[0] for call in searcher.calls] == ["上海市", "上海"]
+    assert binding is not None
+    assert binding.canonical_value == "上海"
+    assert binding.attribute_code == "city_name"
+
+
+@pytest.mark.asyncio
+async def test_context_region_resolution_uses_prior_dimension_attribute_level():
+    searcher = FakeSearcher([
+        {
+            "record_id": "city-shanghai",
+            "score": 1.0,
+            "entity_name": "市",
+            "attribute_name": "城市名称",
+            "attribute_code": "city_name",
+            "attribute_value": "上海市",
+            "business_domain_id": 205,
+        },
+        {
+            "record_id": "province-shanghai",
+            "score": 1.0,
+            "entity_name": "省份",
+            "attribute_name": "省份名称",
+            "attribute_code": "province_name",
+            "attribute_value": "上海市",
+            "business_domain_id": 205,
+        },
+    ])
+
+    binding = await QuestionRewriter(searcher).resolve_context_filter_value(
+        "上海市",
+        expected_family="REGION",
+        preferred_attribute_code="province_name",
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+        tenant_id="t1",
+        user_id="u1",
+        application_id="app",
+        conversation_id="context-region-level",
+    )
+
+    assert binding is not None
+    assert binding.attribute_code == "province_name"
+    assert binding.canonical_value == "上海市"
+
+
+@pytest.mark.asyncio
+async def test_context_non_region_value_never_strips_an_embedded_city_suffix():
+    searcher = FakeSearcher([{
+        "record_id": "hospital-shanghai-skin",
+        "score": 1.0,
+        "entity_name": "医院",
+        "attribute_name": "医院名称",
+        "attribute_code": "hospital_name",
+        "attribute_value": "上海市皮肤病医院",
+        "business_domain_id": 205,
+    }])
+
+    binding = await QuestionRewriter(searcher).resolve_context_filter_value(
+        "上海市皮肤病医院",
+        expected_family="HOSPITAL",
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+        tenant_id="t1",
+        user_id="u1",
+        application_id="app",
+        conversation_id="context-hospital-value",
+    )
+
+    assert searcher.calls == [("上海市皮肤病医院", 81, None, [])]
+    assert binding is not None
+    assert binding.canonical_value == "上海市皮肤病医院"
+
+
 def test_explicit_per_product_trend_keeps_product_grouping_after_brand_binding():
     request = CanonicalAnalysisRequest(
         conversation_id="fresenius-product-series",
@@ -1120,6 +1482,89 @@ async def test_confirmed_city_attribute_does_not_reopen_province_city_ambiguity(
 
 
 @pytest.mark.asyncio
+async def test_same_region_value_uses_finest_administrative_level_without_question():
+    matches = [
+        {
+            "score": 1.0,
+            "record_id": "province-shanghai",
+            "entity_name": "省份",
+            "attribute_name": "省份名称",
+            "attribute_code": "province_name",
+            "attribute_value": "上海市",
+            "business_domain_id": 205,
+        },
+        {
+            "score": 1.0,
+            "record_id": "city-shanghai",
+            "entity_name": "市",
+            "attribute_name": "城市名称",
+            "attribute_code": "city_name",
+            "attribute_value": "上海市",
+            "business_domain_id": 205,
+        },
+    ]
+    request = CanonicalAnalysisRequest(
+        conversation_id="finest-shanghai-city",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="分析上海市某产品最近一年的销售趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        filters=[{"field": "地区", "operator": "EQ", "value": "上海市"}],
+    )
+
+    ambiguities = await QuestionRewriter(
+        FakeSearcher(matches)
+    ).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert ambiguities == []
+    assert request.filters == [
+        {"field": "城市名称", "operator": "EQ", "value": "上海市"}
+    ]
+    assert len(request.semantic_filter_bindings) == 1
+    assert request.semantic_filter_bindings[0].attribute_code == "city_name"
+
+
+@pytest.mark.asyncio
+async def test_rewrite_does_not_surface_same_value_region_hierarchy_as_ambiguity():
+    matches = [
+        {
+            "score": 1.0,
+            "record_id": "province-municipality",
+            "entity_name": "省份",
+            "attribute_name": "省份名称",
+            "attribute_code": "province_name",
+            "attribute_value": "示例市",
+            "business_domain_id": 205,
+        },
+        {
+            "score": 1.0,
+            "record_id": "city-municipality",
+            "entity_name": "市",
+            "attribute_name": "城市名称",
+            "attribute_code": "city_name",
+            "attribute_value": "示例市",
+            "business_domain_id": 205,
+        },
+    ]
+
+    result = await QuestionRewriter(FakeSearcher(matches)).rewrite(
+        "查询示例市销售额",
+        previous=None,
+        semantic_model_id=81,
+        business_domain_id=205,
+    )
+
+    assert result.semantic_ambiguities == []
+    assert {
+        item["attribute_code"] for item in result.semantic_matches
+    } == {"city_name"}
+
+
+@pytest.mark.asyncio
 async def test_unique_full_hospital_name_suppresses_nested_alias_ambiguity():
     searcher = FakeSearcher([
         {
@@ -1263,3 +1708,37 @@ async def test_temporal_scope_before_polite_verb_is_normalized_without_losing_te
     assert any(
         event.kind == "GROUPED_CALCULATION_WORDING" for event in result.events
     )
+
+
+@pytest.mark.asyncio
+async def test_pre_resolved_context_keeps_current_normalization_without_history(monkeypatch):
+    previous = CanonicalAnalysisRequest(
+        semantic_model_id=81,
+        business_domain_ids=[205],
+        conversation_id="old-conversation",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询2025年江苏省订单笔数",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="订单笔数")],
+    )
+    rewriter = QuestionRewriter(None)
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("legacy history context must not run")
+
+    monkeypatch.setattr(rewriter, "_apply_context", forbidden)
+    result = await rewriter.rewrite(
+        "按月请计算2026年销售总额。",
+        previous=previous,
+        semantic_model_id=81,
+        business_domain_id=205,
+        business_domain_ids=[205],
+        force_context=True,
+        apply_previous_context=False,
+    )
+
+    assert result.context_applied is False
+    assert result.rewritten_question == "按月统计2026年销售总额。"
+    assert "订单笔数" not in result.rewritten_question
+    assert any(event.kind == "POLITE_WORD_ORDER" for event in result.events)

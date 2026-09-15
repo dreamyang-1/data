@@ -602,9 +602,20 @@ class SkillConfig(StrictModel):
 class McpConfig(StrictModel):
     """MCP server declaration compatible with the platform agent contract."""
 
+    # Match the generic-agent transport contract.  The platform can add
+    # presentation/runtime metadata (for example a display name or timeout)
+    # without making an otherwise valid MCP server unusable.  Only the fields
+    # below are trusted by the data-agent runtime.
+    model_config = ConfigDict(extra="ignore")
+
     mcp_server_url: str = Field(min_length=8, max_length=2048)
     connect_type: Literal["sse", "streamable_http"] = "sse"
     headers: dict[str, str] | None = None
+    slug: str = Field(
+        default="",
+        max_length=100,
+        description="平台透传的MCP/Skill关联标识；不参与数据权限判定",
+    )
 
     @field_validator("mcp_server_url")
     @classmethod
@@ -622,6 +633,14 @@ class McpConfig(StrictModel):
 
 class ChatRequest(StrictModel):
     _file_inspection: dict[str, Any] = PrivateAttr(default_factory=dict)
+    # Presentation-only labels read from the same authorized catalog snapshot
+    # used for this turn. Transport JSON cannot set private attributes.
+    _business_domain_labels: tuple[str, ...] = PrivateAttr(default_factory=tuple)
+    # V2 current-turn surfaces and their accepted semantic roles.  This is a
+    # private presentation hint only: V1 ASL/SQL execution never consumes it.
+    _semantic_extraction_items: tuple[dict[str, Any], ...] = PrivateAttr(
+        default_factory=tuple
+    )
     # These flags are set only by the refresh endpoints.  Keeping them as
     # private attributes prevents transport-only refresh semantics from
     # leaking into ASL/SQL payloads or request fingerprints.
@@ -633,6 +652,14 @@ class ChatRequest(StrictModel):
     # planning and execution, but must not merge its own Pending/TaskFrame
     # state into an already resolved question a second time.
     _completed_question_execution: bool = PrivateAttr(default=False)
+    # Set only after the V2 bridge has published the validated question,
+    # semantic fields and business-domain block. V1 can then publish only the
+    # remaining intent decision instead of replaying the same visible facts.
+    _intent_context_progress_emitted: bool = PrivateAttr(default=False)
+    # Presentation-only record of a conversation relation that was already
+    # proven from persisted state and published before semantic model parsing.
+    # It never comes from transport JSON and never participates in planning.
+    _conversation_state_progress_relation: str = PrivateAttr(default="")
     # Populated only by the demo V2-context bridge from a same-conversation,
     # execution-backed envelope.  Transport JSON cannot set private attrs.
     _demo_execution_resolved_business_domain_ids: tuple[int, ...] = PrivateAttr(

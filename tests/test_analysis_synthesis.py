@@ -53,6 +53,31 @@ def transport_for(output: dict) -> httpx.MockTransport:
     return httpx.MockTransport(handler)
 
 
+def capturing_transport(output: dict, captured: dict) -> httpx.MockTransport:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        captured.update(json.loads(body["messages"][1]["content"]))
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": json.dumps(output)}}]},
+        )
+
+    return httpx.MockTransport(handler)
+
+
+def sequence_transport(outputs: list[dict], call_count: list[int]) -> httpx.MockTransport:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        index = call_count[0]
+        call_count[0] += 1
+        output = outputs[min(index, len(outputs) - 1)]
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": json.dumps(output)}}]},
+        )
+
+    return httpx.MockTransport(handler)
+
+
 def settings() -> Settings:
     return Settings(env="test", intent_model_api_key="test-key", analysis_synthesis_enabled=True, analysis_synthesis_max_retries=0)
 
@@ -66,7 +91,9 @@ async def test_qwen_accepts_algorithm_selected_grounded_claims() -> None:
     ]}
     answer, parsed = await QwenAnalysisSynthesizer(settings(), transport_for(output)).synthesize(request(), analysis(), evidence())
     assert len(parsed.claims) == 3
-    assert "已验证结论" in answer and "待验证原因" in answer and "分析限制" in answer
+    assert "从本次查询结果来看" in answer
+    assert "结合已有业务资料" in answer
+    assert "需要注意的是" in answer
 
 
 @pytest.mark.asyncio
@@ -74,6 +101,169 @@ async def test_qwen_rejects_invented_number() -> None:
     output = {"claims": [{"statement": "销售额下降999。", "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]}]}
     with pytest.raises(SynthesisValidationError, match="ungrounded number"):
         await QwenAnalysisSynthesizer(settings(), transport_for(output)).synthesize(request(), analysis(), evidence())
+
+
+@pytest.mark.asyncio
+async def test_qwen_may_repeat_explicit_time_number_from_user_question() -> None:
+    scoped_request = request().model_copy(
+        update={"original_question": "分析2026年销售额变化"}
+    )
+    output = {"claims": [
+        {
+            "statement": "2026年销售额下降50。",
+            "certainty": "VERIFIED_FACT",
+            "evidence_ids": ["analysis:a1"],
+        },
+        {
+            "statement": "当前归因不足以证明因果关系。",
+            "certainty": "LIMITATION",
+            "evidence_ids": ["analysis:a1"],
+        },
+    ]}
+
+    answer, _ = await QwenAnalysisSynthesizer(
+        settings(), transport_for(output)
+    ).synthesize(scoped_request, analysis(), evidence())
+
+    assert "2026年销售额下降50" in answer
+
+
+@pytest.mark.asyncio
+async def test_query_summary_accepts_natural_grounded_paraphrase() -> None:
+    query_summary = AnalysisOutput(
+        answer=(
+            "本次查询共命中1条结果，返回字段为订单笔数。\n"
+            "本次返回的是完整查询结果，没有发生结果截断。\n"
+            "这次结果的核心值是订单笔数为49。"
+        ),
+        method="validated_query_result_summary",
+        facts={
+            "decision_source": "DETERMINISTIC_ALGORITHM",
+            "llm_role": "PRESENTATION_ONLY",
+            "row_count": 1,
+            "returned_row_count": 1,
+            "truncated": False,
+        },
+    )
+    query_request = request().model_copy(
+        update={"original_question": "查询2025年江苏省订单笔数"}
+    )
+    query_evidence = [
+        EvidenceItem(
+            evidence_id="analysis:a1",
+            kind="ANALYSIS_RESULT",
+            source_ref="deterministic:test",
+            payload={"facts": query_summary.facts},
+        )
+    ]
+    output = {"claims": [
+        {
+            "statement": "2025年江苏省订单笔数查询结果已确认，返回的订单笔数为49笔。",
+            "certainty": "VERIFIED_FACT",
+            "evidence_ids": ["analysis:a1"],
+        },
+        {
+            "statement": "本次返回的是完整查询结果，没有发生结果截断。",
+            "certainty": "VERIFIED_FACT",
+            "evidence_ids": ["analysis:a1"],
+        },
+    ]}
+
+    answer, _ = await QwenAnalysisSynthesizer(
+        settings(), transport_for(output)
+    ).synthesize(query_request, query_summary, query_evidence)
+
+    assert "订单笔数为49笔" in answer
+    assert "没有发生结果截断" in answer
+
+
+@pytest.mark.asyncio
+async def test_query_summary_still_rejects_unrelated_business_claim() -> None:
+    query_summary = AnalysisOutput(
+        answer="本次查询共命中1条结果，订单笔数为49。",
+        method="validated_query_result_summary",
+        facts={
+            "decision_source": "DETERMINISTIC_ALGORITHM",
+            "llm_role": "PRESENTATION_ONLY",
+            "row_count": 1,
+            "columns": ["订单笔数"],
+        },
+    )
+    output = {"claims": [{
+        "statement": "订单笔数为49，反映市场需求旺盛。",
+        "certainty": "VERIFIED_FACT",
+        "evidence_ids": ["analysis:a1"],
+    }]}
+
+    with pytest.raises(SynthesisValidationError, match="business interpretation"):
+        await QwenAnalysisSynthesizer(
+            settings(), transport_for(output)
+        ).synthesize(
+            request(),
+            query_summary,
+            [EvidenceItem(
+                evidence_id="analysis:a1",
+                kind="ANALYSIS_RESULT",
+                source_ref="deterministic:test",
+                payload={"facts": query_summary.facts},
+            )],
+        )
+
+
+@pytest.mark.asyncio
+async def test_synthesis_prompt_exposes_an_explicit_numeric_allowlist() -> None:
+    captured: dict = {}
+    output = {"claims": [
+        {
+            "statement": "销售额下降50。",
+            "certainty": "VERIFIED_FACT",
+            "evidence_ids": ["analysis:a1"],
+        },
+        {
+            "statement": "当前归因不足以证明因果关系。",
+            "certainty": "LIMITATION",
+            "evidence_ids": ["analysis:a1"],
+        },
+    ]}
+
+    await QwenAnalysisSynthesizer(
+        settings(), capturing_transport(output, captured)
+    ).synthesize(request(), analysis(), evidence())
+
+    allowed = captured["allowed_numbers_for_output"]
+    assert 50 in allowed
+    assert -80 in allowed
+    assert 999 not in allowed
+
+
+@pytest.mark.asyncio
+async def test_synthesis_repairs_one_validation_failure_then_returns_valid_claims() -> None:
+    invalid = {"claims": [{
+        "statement": "销售额下降999。",
+        "certainty": "VERIFIED_FACT",
+        "evidence_ids": ["analysis:a1"],
+    }]}
+    repaired = {"claims": [
+        {
+            "statement": "销售额下降50。",
+            "certainty": "VERIFIED_FACT",
+            "evidence_ids": ["analysis:a1"],
+        },
+        {
+            "statement": "当前归因不足以证明因果关系。",
+            "certainty": "LIMITATION",
+            "evidence_ids": ["analysis:a1"],
+        },
+    ]}
+    calls = [0]
+
+    answer, _ = await QwenAnalysisSynthesizer(
+        settings(), sequence_transport([invalid, repaired], calls)
+    ).synthesize(request(), analysis(), evidence())
+
+    assert calls == [2]
+    assert "销售额下降50" in answer
+    assert "999" not in answer
 
 
 @pytest.mark.asyncio

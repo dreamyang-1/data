@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 
 from pydantic import Field, JsonValue, TypeAdapter, ValidationError
 
+from app.services.progress import emit_progress
+
 from . import models as m
 from .authorized_contract import AuthorizedVersionMetadata, ScopedArtifact, contract_digest
 from .catalog_bridge import RECORD_TYPES, ScopedPlanSession
@@ -125,6 +127,97 @@ and global ranking is never a local operation on a partial or unknown dataset.''
 EDIT_SLOTS = ('subject', 'metrics', 'dimensions', 'projection_spec', 'filter_expression',
     'time_spec', 'ranking_spec', 'comparison_spec', 'delivery_spec', 'relationship_spec')
 DIRECT_EDIT_SLOTS = tuple(slot for slot in EDIT_SLOTS if slot not in {'relationship_spec', 'comparison_spec'})
+
+
+_EXTRACTION_SLOT_LABELS = {
+    'metrics': '指标',
+    'dimensions': '分组维度',
+    'projection_spec': '查询字段',
+    'filter_expression': '筛选条件',
+    'time_spec': '时间',
+    'ranking_spec': '排序数量',
+    'comparison_spec': '对比条件',
+    'subject': '业务对象',
+    'relationship_spec': '关系',
+    'delivery_spec': '交付要求',
+}
+
+_EXTRACTION_ROLE_LABELS = {
+    'MEASURE': '指标',
+    'GROUP_BY': '分组维度',
+    'PROJECTION_FIELD': '查询字段',
+    'FILTER_FIELD': '筛选字段',
+    'FILTER_VALUE': '筛选值',
+    'TIME_FIELD': '时间字段',
+    'TIME_RANGE': '时间范围',
+    'TIME_GRAIN': '时间粒度',
+    'COMPARISON_BASELINE': '对比基准',
+    'ORDER_BY': '排序字段',
+    'SORT_DIRECTION': '排序方向',
+    'LIMIT': '结果数量',
+    'SOURCE_ENTITY': '来源对象',
+    'TARGET_ENTITY': '目标对象',
+    'SUBJECT_ENTITY': '业务对象',
+    'RELATIONSHIP': '业务关系',
+    'RELATION_TARGET': '关系对象',
+    'DATASET_SOURCE': '数据集',
+    'DELIVERY_TARGET': '交付目标',
+}
+
+
+_CONTEXT_RELATION_LABELS = {
+    'NEW_TASK': '独立新问题',
+    'FOLLOW_UP': '当前主题追问',
+    'MODIFY': '当前主题条件修改',
+    'ADD': '当前主题条件补充',
+    'REPLACE': '当前主题条件替换',
+    'REMOVE': '当前主题条件删除',
+    'CLEAR': '当前主题条件清除',
+    'CORRECT': '纠正上一请求',
+    'CONTINUE': '当前主题追问',
+    'DRILL_DOWN': '当前主题下钻',
+    'RETURN_TO_TOPIC': '返回历史主题',
+    'ANSWER_CLARIFICATION': '澄清回复',
+}
+
+
+def current_turn_extraction_items(
+    parse: CurrentTurnSemanticParse,
+) -> tuple[dict[str, object], ...]:
+    """Project accepted current-turn mentions for presentation only.
+
+    The surface text and semantic roles come directly from the validated V2
+    parse.  This projection is passed to V1 only as a private display hint and
+    never participates in ASL generation or execution.
+    """
+
+    slots_by_mention: dict[str, list[str]] = {}
+    for slot_name, mention_ids in parse.explicit_slot_mentions.items():
+        label = _EXTRACTION_SLOT_LABELS.get(slot_name)
+        if label is None:
+            continue
+        for mention_id in mention_ids:
+            slots_by_mention.setdefault(mention_id, []).append(label)
+
+    extracted: list[dict[str, object]] = []
+    for mention in sorted(parse.mentions, key=lambda item: item.start_char):
+        labels = [
+            _EXTRACTION_ROLE_LABELS[str(role)]
+            for role in mention.candidate_roles
+            if str(role) in _EXTRACTION_ROLE_LABELS
+        ]
+        if not labels:
+            labels = slots_by_mention.get(mention.mention_id, [])
+        labels = list(dict.fromkeys(labels))
+        if labels:
+            extracted.append({
+                'surface': mention.surface,
+                'normalized_surface': mention.normalized_surface,
+                'labels': tuple(labels),
+                'start_char': mention.start_char,
+                'clause_id': mention.clause_id,
+            })
+    return tuple(extracted)
 
 
 def current_turn_schema():
@@ -288,6 +381,7 @@ class RawTurnPlanner:
         pending=None,
         allow_standalone_new_task_passthrough=False,
         resolved_business_domain_ids=None,
+        published_context_relation=None,
     ):
         fallback = []
         try:
@@ -302,6 +396,7 @@ class RawTurnPlanner:
                 ),
                 standalone_new_task_fallback=fallback,
                 resolved_business_domain_ids=resolved_business_domain_ids,
+                published_context_relation=published_context_relation,
             )
         except ValidationError:
             failure = RecognitionFailure('V2_CONTRACT_VALIDATION_FAILURE')
@@ -330,6 +425,7 @@ class RawTurnPlanner:
         allow_standalone_new_task_passthrough=False,
         standalone_new_task_fallback=None,
         resolved_business_domain_ids=None,
+        published_context_relation=None,
     ):
         session = ScopedPlanSession(
             request,
@@ -356,6 +452,20 @@ class RawTurnPlanner:
             previous_plans[previous.task_id] = previous
         if request.message_id in current.recent_turn_ids or any(v.current_turn_ref == request.message_id for t in current.tasks.values() for v in t.versions):
             raise RecognitionFailure('V2_MESSAGE_ALREADY_PLANNED')
+        published_context_relation = str(published_context_relation or '').strip()
+        if (
+            not published_context_relation
+            and not current.tasks
+            and current.pending is None
+        ):
+            published_context_relation = 'NEW_TASK'
+            await emit_progress(
+                'INTENT_RECOGNITION',
+                'RUNNING',
+                '对话状态识别：独立新问题。',
+                progress_phase='V2_CONVERSATION_STATE_READY',
+                resolution_source='DETERMINISTIC_EMPTY_CONTEXT',
+            )
         discovered = discover_context(session, state=state, plans=plans, pending=pending)
         recognized = await self.model.complete(stage='v2_current_turn', instruction=PARSE_PROMPT,
             context={'question': request.question, 'turn_id': request.message_id,
@@ -369,10 +479,8 @@ class RawTurnPlanner:
             context_trace = accept_proposal(session, recognized.context_proposal, discovered,
                 state=state, question=request.question)
         except ContextProposalFailure as exc:
-            # The context bridge may have a scope-bound, execution-backed opaque
-            # anchor which is deliberately absent from ConversationState. Keep
-            # the already generated current-turn semantic evidence available so
-            # that bridge validation does not make a second model call.
+            # Keep the already generated current-turn semantic evidence
+            # available so bridge validation does not make a second model call.
             exc.current_turn_parse = parsed
             raise
         parsed, reference_repairs = repair_pure_historical_reference(parsed,
@@ -392,6 +500,19 @@ class RawTurnPlanner:
                 extra={'message_id': request.message_id, 'catalog_span_trace': catalog_spans})
             parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
                 text_ref=request.message_id, parsed=parsed)
+        final_context_relation = str(context_trace.get('FINAL_RELATION') or '')
+        if final_context_relation != published_context_relation:
+            await emit_progress(
+                'INTENT_RECOGNITION',
+                'RUNNING',
+                '对话状态识别：'
+                + _CONTEXT_RELATION_LABELS.get(
+                    final_context_relation,
+                    '轮次关系待确认',
+                )
+                + '。',
+                progress_phase='V2_CURRENT_TURN_PARSED',
+            )
         if allow_standalone_new_task_passthrough and self._is_standalone_new_task(
             parse, context_trace
         ):
@@ -407,6 +528,15 @@ class RawTurnPlanner:
             option=selected_option(current.pending,request.question)
             return self._answer_pending(session,current,state,pending,option,parsed,parse,now)
         handles, candidates = self._candidates(session, parse)
+        # Candidate extraction is complete at this point. Publish that fact
+        # before the semantic-edit model call, whose latency can otherwise
+        # leave the stream silent even though this stage has already finished.
+        await emit_progress(
+            'INTENT_RECOGNITION',
+            'RUNNING',
+            '关键语义候选已提取，正在校验绑定并生成可独立执行的完整问题。',
+            progress_phase='V2_SEMANTIC_CANDIDATES_READY',
+        )
         tasks = {'task:' + contract_digest({'task': t.task_id})[:24]: t for t in current.tasks.values()}
         selected_tasks = {h:t for h,t in tasks.items() if t.task_id == context_trace['FINAL_TARGET']}
         datasets = {'dataset:' + contract_digest({'dataset': d.dataset_id})[:24]: d for d in current.datasets.values() if d.status == 'VALID'}

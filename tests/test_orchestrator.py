@@ -69,9 +69,11 @@ async def test_completed_question_execution_does_not_restore_v1_semantic_context
         async def get_recent_task_frames(self, *args, **kwargs):
             raise AssertionError("completed question must not restore V1 task history")
 
-    class RewriteTrap(QuestionRewriter):
-        async def rewrite(self, *args, **kwargs):
-            raise AssertionError("completed question must not be rewritten by V1")
+    class PreviousContextTrap(QuestionRewriter):
+        def _apply_context(self, *args, **kwargs):
+            raise AssertionError(
+                "completed question must not restore context in V1 rewriter"
+            )
 
     agent = DataAnalysisOrchestrator(
         settings=Settings(
@@ -83,7 +85,7 @@ async def test_completed_question_execution_does_not_restore_v1_semantic_context
         classifier=RuleBasedIntentClassifier(),
         adapters=build_mock_adapters(),
         sessions=ContextReadTrapStore(),
-        question_rewriter=RewriteTrap(None),
+        question_rewriter=PreviousContextTrap(None),
     )
     chat = ChatRequest(
         semantic_model_id=81,
@@ -1053,6 +1055,8 @@ async def test_relationship_count_projection_is_accepted_as_verified_metric_evid
         "source_watermark_verified": True,
     }
     assert "101" in response.answer
+    assert "数据水位：" not in response.answer
+    assert "查询快照时间仅表示本次读取时间" not in response.answer
     derived = next(
         item for item in response.evidence
         if item.kind == "DERIVED_METRIC_RESOLUTION"

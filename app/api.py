@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
 import json
 import logging
 import re
@@ -32,6 +33,10 @@ from app.observability.langfuse_client import (
     trace_attributes,
 )
 from app.services.file_ingestion import FileImportError
+from app.services.upload_file_resolver import (
+    NO_PARSE_MARKER,
+    UploadReferenceResolutionError,
+)
 from app.services.orchestrator import DataAnalysisOrchestrator
 from app.services.progress import _progress_callback, progress_scope
 from minio_followup_store import DatasetScope
@@ -40,6 +45,32 @@ from app.security import trusted_backend, require_application_namespace, resolve
 
 router = APIRouter(tags=["data-analysis"], dependencies=[Depends(trusted_backend)])
 logger = logging.getLogger(__name__)
+
+
+async def _forward_traced_progress(
+    stage_tracker: StageSpanTracker,
+    downstream,
+    event: dict[str, Any],
+) -> None:
+    """Deliver visible progress before recording optional telemetry.
+
+    Langfuse's synchronous span lifecycle may perform network or exporter work.
+    Running it during an SSE request delayed both the queued milestone and all
+    heartbeats. Streaming already has a request/root span, so its public stage
+    events go straight to the transport and never wait for optional per-stage
+    telemetry. Non-streaming calls retain their stage spans off the ASGI loop.
+    """
+
+    if downstream is not None:
+        result = downstream(event)
+        if inspect.isawaitable(result):
+            await result
+        # Queue.put() completes inline while the queue has capacity. Yield once
+        # so the SSE producer can render this milestone before recognition
+        # continues into its next synchronous catalog/validation section.
+        await asyncio.sleep(0)
+        return
+    await asyncio.to_thread(stage_tracker.handle, event)
 
 
 class SpreadsheetImportRequest(StrictModel):
@@ -156,11 +187,12 @@ async def invoke(request: Request, chat: ChatRequest, identity: TrustedIdentity)
     stage_tracker = StageSpanTracker()
     existing_progress = _progress_callback.get()
 
-    def trace_progress(event: dict[str, Any]) -> Any:
-        stage_tracker.handle(event)
-        if existing_progress is not None:
-            return existing_progress(event)
-        return None
+    async def trace_progress(event: dict[str, Any]) -> None:
+        await _forward_traced_progress(
+            stage_tracker,
+            existing_progress,
+            event,
+        )
 
     try:
         user_hash = hash_identifier(identity.user_id)
@@ -321,6 +353,27 @@ async def bind_chat_spreadsheet(
         if chat.dataset_id and not file_based:
             chat.dataset_id = None
         return
+    if any(
+        item.casefold() == NO_PARSE_MARKER for item in chat.temp_file_paths
+    ):
+        resolver = getattr(
+            request.app.state.container,
+            "upload_file_resolver",
+            None,
+        )
+        if resolver is None:
+            raise HTTPException(
+                status_code=422,
+                detail="本轮上传文件缺少可用的MinIO对象名",
+            )
+        try:
+            chat.temp_file_paths = await resolver.resolve(
+                chat.temp_file_paths,
+                conversation_id=chat.conversation_id,
+                question=chat.question,
+            )
+        except UploadReferenceResolutionError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     if chat.dataset_id is not None:
         chat._file_inspection = {
             "status": "DATASET_BOUND",
@@ -361,6 +414,18 @@ async def bind_chat_spreadsheet(
     except FileImportError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
+        if chat.mcp and file_based:
+            logger.warning(
+                "local spreadsheet import failed; continuing with configured MCP: %s",
+                type(exc).__name__,
+            )
+            chat._file_inspection = {
+                "status": "LOCAL_IMPORT_FAILED_MCP_AVAILABLE",
+                "file_name": object_name.rsplit("/", 1)[-1],
+                "file_count": 1,
+                "file_based": True,
+            }
+            return
         logger.exception("chat spreadsheet import failed")
         raise HTTPException(status_code=502, detail="spreadsheet import failed") from exc
     if file_based:
@@ -544,7 +609,9 @@ async def chat(
     require_application_namespace(request, payload.application_id)
     external_conversation_id = payload.conversation_id
     isolated_handler = getattr(request.app.state, "isolated_chat_handler", None)
-    if isolated_handler is None:
+    if isolated_handler is None or bool(
+        getattr(isolated_handler, "uses_v1_ingress", False)
+    ):
         is_regeneration = payload.regenerate
         if not is_regeneration:
             await _collect_business_question(request, payload)
@@ -586,6 +653,8 @@ async def chat_refresh(
         "这是 POST SSE，采用与 New_Agent 相同的 data-only Envelope；"
         "事件类型放在JSON的 type 字段中，不输出 event: 行。"
         "常用类型为 updata_state、message_chunk、tool_result、answer、complete。"
+        "各节点先即时推送运行状态，已完成并校验的展示文本再通过 message_chunk 渐进推送；普通文本默认"
+        "每 4 个 Unicode 字符一片，超长内容自适应增大片长并限制事件总数。"
         "最终答案完成可靠性校验后，按 New_Agent 的规则每 6 个 Unicode 字符"
         "推送一个 output/message_chunk（末片可少于 6 字）。"
         "身份、请求格式和已存在的 message_id 冲突在建立事件流前保持标准 HTTP 状态；"
@@ -624,7 +693,9 @@ async def chat_stream(
     external_conversation_id = payload.conversation_id
     external_message_id = payload.message_id
     isolated_handler = getattr(request.app.state, "isolated_chat_handler", None)
-    if isolated_handler is None:
+    if isolated_handler is None or bool(
+        getattr(isolated_handler, "uses_v1_ingress", False)
+    ):
         is_regeneration = payload.regenerate
         if not is_regeneration:
             await _collect_business_question(request, payload)
@@ -658,16 +729,28 @@ async def chat_stream(
         ) from exc
 
     async def events() -> AsyncIterator[str]:
-        progress_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=100)
+        progress_queue: asyncio.Queue[
+            tuple[dict[str, Any], asyncio.Future[None]]
+        ] = asyncio.Queue(maxsize=100)
 
         async def publish_progress(event: dict[str, Any]) -> None:
-            await progress_queue.put(event)
+            rendered = asyncio.get_running_loop().create_future()
+            await progress_queue.put((event, rendered))
+            # Give the SSE producer a short opportunity to put the first text
+            # fragment on the wire. Do not make model/tool execution wait for
+            # the full character animation, or several long milestones can
+            # consume the request deadline purely in presentation work.
+            try:
+                await asyncio.wait_for(asyncio.shield(rendered), timeout=0.05)
+            except asyncio.TimeoutError:
+                pass
 
         async def execute() -> AgentResponse:
             with progress_scope(publish_progress):
                 return await invoke(request, payload, identity)
 
         started_at = time.monotonic()
+        last_visible_at = started_at
         execution = asyncio.create_task(execute())
         deferred_planning: list[dict[str, Any]] = []
         intent_completed = False
@@ -676,9 +759,12 @@ async def chat_stream(
         presentation_scenario = "ANALYTIC"
         titled_think_sections: set[str] = set()
         composite_mode = False
-        composite_child_progress: list[dict[str, Any]] = []
+        composite_child_orderer = _CompositeChildProgressOrderer()
+        latest_progress_stage = "INTENT_RECOGNITION"
+        settings = request.app.state.container.settings
+        heartbeat_interval = settings.thinking_stream_heartbeat_seconds
 
-        def render_thinking(event: dict[str, Any]) -> str:
+        def render_thinking(event: dict[str, Any]) -> list[str]:
             stage = str(event.get("stage") or "processing").strip().upper()
             section = _thinking_section(stage)
             include_heading = bool(
@@ -688,13 +774,50 @@ async def chat_stream(
             )
             if include_heading:
                 titled_think_sections.add(section)
-            return _thinking_event(
+            return _thinking_events(
                 event,
                 heading=(
                     _thinking_title(section, presentation_scenario)
                     if include_heading else None
                 ),
+                chunk_size=settings.thinking_stream_chunk_size,
+                max_chunks=settings.thinking_stream_max_chunks,
             )
+
+        async def stream_thinking(event: dict[str, Any]) -> AsyncIterator[str]:
+            nonlocal last_visible_at
+            rendered_events = render_thinking(event)
+            message_chunk_count = max(0, len(rendered_events) - 1)
+            settings = request.app.state.container.settings
+            chunk_delay = (
+                0.0
+                if settings.env == "test"
+                else _thinking_chunk_delay(
+                    message_chunk_count,
+                    interval_seconds=settings.thinking_stream_chunk_interval_seconds,
+                )
+            )
+            for index, rendered_event in enumerate(rendered_events):
+                yield rendered_event
+                if index > 0:
+                    last_visible_at = time.monotonic()
+                # The first item is the node-state event.  Yield control between
+                # subsequent text chunks so the ASGI server and browser can
+                # paint them progressively instead of coalescing one milestone.
+                if chunk_delay and 0 < index < len(rendered_events) - 1:
+                    await asyncio.sleep(chunk_delay)
+
+        def heartbeat_events_if_due(*, force: bool = False) -> list[str]:
+            nonlocal last_visible_at
+            now = time.monotonic()
+            if not force and now - last_visible_at < heartbeat_interval:
+                return []
+            heartbeat_events = _progress_heartbeat_events(
+                latest_progress_stage,
+                elapsed_seconds=now - started_at,
+            )
+            last_visible_at = now
+            return heartbeat_events
 
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
@@ -746,15 +869,12 @@ async def chat_stream(
                     "execution", "validation", "insight",
                 }
             ):
-                # Composite children execute concurrently, so their raw event
-                # arrival order can be task-1 validation/insight followed by
-                # task-2 SQL execution.  Rendering that order places the second
-                # tool call under the already-open insight heading.  Buffer only
-                # the public child milestones and release them in document
-                # section order after the DAG finishes.  Execution remains
-                # parallel; this is a presentation boundary only.
-                composite_child_progress.append(dict(event))
-                return []
+                # Child tasks execute concurrently. Publish execution events as
+                # they happen, then open validation and insight only when every
+                # child has crossed the preceding stage boundary. This keeps the
+                # document headings stable without replaying all child progress
+                # after the DAG has already finished.
+                return composite_child_orderer.push(event)
             if (
                 stage == "FILE_INSPECTION"
                 and event.get("status") == "COMPLETED"
@@ -804,6 +924,38 @@ async def chat_stream(
             }:
                 return []
             return [event]
+
+        async def stream_progress_item(
+            item: tuple[dict[str, Any], asyncio.Future[None]],
+        ) -> AsyncIterator[str]:
+            nonlocal latest_progress_stage
+            progress_event, rendered = item
+            try:
+                candidate_progress_stage = str(
+                    progress_event.get("stage") or latest_progress_stage
+                ).strip().upper()
+                if _thinking_section(candidate_progress_stage) is not None:
+                    latest_progress_stage = candidate_progress_stage
+                visible_progress = ordered_progress(progress_event)
+                for event in visible_progress:
+                    rendered_index = 0
+                    async for rendered_event in stream_thinking(event):
+                        yield rendered_event
+                        rendered_index += 1
+                        if rendered_index == 2 and not rendered.done():
+                            # The node-state event and first visible text
+                            # fragment have reached the ASGI response. Let the
+                            # business coroutine continue while the remaining
+                            # characters are paced; the single consumer still
+                            # preserves queue and document order.
+                            rendered.set_result(None)
+                if not visible_progress:
+                    for heartbeat_event in heartbeat_events_if_due():
+                        yield heartbeat_event
+            finally:
+                if not rendered.done():
+                    rendered.set_result(None)
+
         yield _event("updata_state", {
             "step": "",
             "data": "accepted",
@@ -812,19 +964,25 @@ async def chat_stream(
         try:
             while not execution.done() or not progress_queue.empty():
                 if not progress_queue.empty():
-                    for event in ordered_progress(progress_queue.get_nowait()):
-                        yield render_thinking(event)
+                    progress_item = progress_queue.get_nowait()
+                    async for rendered_event in stream_progress_item(progress_item):
+                        yield rendered_event
                     continue
 
                 next_progress = asyncio.create_task(progress_queue.get())
+                remaining_heartbeat_seconds = max(
+                    0.05,
+                    heartbeat_interval - (time.monotonic() - last_visible_at),
+                )
                 done, _ = await asyncio.wait(
                     {execution, next_progress},
-                    timeout=10.0,
+                    timeout=remaining_heartbeat_seconds,
                     return_when=asyncio.FIRST_COMPLETED,
                 )
                 if next_progress in done:
-                    for event in ordered_progress(next_progress.result()):
-                        yield render_thinking(event)
+                    progress_item = next_progress.result()
+                    async for rendered_event in stream_progress_item(progress_item):
+                        yield rendered_event
                     continue
                 next_progress.cancel()
                 try:
@@ -833,33 +991,18 @@ async def chat_stream(
                     pass
                 if execution in done:
                     continue
-                yield _event("updata_state", {
-                    "step": "",
-                    "data": "heartbeat",
-                    "message_id": external_message_id,
-                    "elapsed_seconds": round(time.monotonic() - started_at, 1),
-                })
+                for heartbeat_event in heartbeat_events_if_due(force=True):
+                    yield heartbeat_event
 
             response = await execution
             response.conversation_id = external_conversation_id
-            for event in _ordered_composite_child_progress_events(
-                composite_child_progress
-            ):
-                yield render_thinking(event)
-            composite_child_progress.clear()
+            for event in composite_child_orderer.flush():
+                async for rendered_event in stream_thinking(event):
+                    yield rendered_event
             for event in deferred_planning:
-                yield render_thinking(event)
+                async for rendered_event in stream_thinking(event):
+                    yield rendered_event
             deferred_planning.clear()
-            query_evidence = [
-                item for item in response.evidence if item.kind == "QUERY_RESULT"
-            ]
-            analysis_evidence = [
-                item for item in response.evidence if item.kind == "ANALYSIS_RESULT"
-            ]
-            demo_fallback = bool(
-                response.reliability
-                and response.reliability.gates.get("demo_fallback")
-            )
             response_scenario = (
                 "CHAT"
                 if response.intent == PrimaryIntent.CHAT
@@ -870,44 +1013,15 @@ async def chat_stream(
                 else presentation_scenario
             )
             presentation_scenario = response_scenario
-            if response_scenario != "CLARIFICATION":
-                if response_scenario == "CHAT":
-                    output_summary = (
-                        "基于用户闲聊文本，由大模型直接生成自然语言闲聊回复，"
-                        "不拼接报表、指标、表格等业务结果。"
-                    )
-                elif demo_fallback:
-                    output_summary = (
-                        "任务状态：已完成；\n"
-                        f"输出意图：{response.intent.value}。\n"
-                        "结果已返回。"
-                    )
-                else:
-                    output_summary = (
-                        "任务状态：已完成；\n"
-                        f"输出意图：{response.intent.value}。\n"
-                        f"数据查询结果：{'已生成并保留证据' if query_evidence else '本轮无数据查询结果'}；"
-                        f"数据分析结果：{'已生成' if analysis_evidence else '本轮未生成独立分析结论'}。\n"
-                        f"附件：{len(response.files)} 个；图表：{len(response.chart_specs)} 个；"
-                        f"证据：{len(response.evidence)} 项。"
-                    )
-                yield render_thinking({
-                    "stage": "OUTPUT_SUMMARY",
-                    "status": "COMPLETED",
-                    "presentation_scenario": response_scenario,
-                    "message": output_summary,
-                    "file_count": len(response.files),
-                    "chart_count": len(response.chart_specs),
-                    "evidence_count": len(response.evidence),
-                })
             if response_scenario in {"CHAT", "CLARIFICATION"}:
-                yield render_thinking({
+                async for rendered_event in stream_thinking({
                     "stage": "FINAL_OUTPUT",
                     "status": "COMPLETED",
                     "presentation_scenario": response_scenario,
                     "message": "",
                     "heading_only": True,
-                })
+                }):
+                    yield rendered_event
             for extension in response.extension_executions:
                 tool_content = (
                     json.dumps(extension.output, ensure_ascii=False, default=str)
@@ -1009,9 +1123,79 @@ def _event(name: str, data: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
-def _thinking_event(
-    progress: dict[str, Any], *, heading: str | None = None
-) -> str:
+def _progress_heartbeat_events(
+    stage: str,
+    *,
+    elapsed_seconds: float,
+) -> list[str]:
+    """Keep the SSE connection and the platform's visible stage both alive.
+
+    New_Agent's page consumes ``<stage>`` markers carried by the existing
+    ``message_chunk`` contract.  A raw ``updata_state`` heartbeat alone is not
+    rendered, so a long model or tool call otherwise looks frozen even while
+    the request is healthy.  This reports elapsed work only; it does not claim
+    that a semantic or execution milestone has completed.
+    """
+
+    normalized_stage = (stage or "INTENT_RECOGNITION").strip().upper()
+    elapsed_raw = max(0.0, float(elapsed_seconds))
+    elapsed = round(elapsed_raw, 1)
+    message = _progress_waiting_message(normalized_stage)
+    meta = {
+        "stage": normalized_stage,
+        "status": "RUNNING",
+        "elapsed_seconds": elapsed,
+    }
+    return [
+        _event("message_chunk", {
+            "step": _new_agent_think_step(normalized_stage),
+            # Some deployed platform adapters suppress an ``updata_state``
+            # heartbeat together with the following synthetic final chunk.
+            # Emit the visible wait state as an ordinary, non-final think
+            # fragment with a changing index so it follows the same path as
+            # all other progressively rendered thinking content.
+            "index": max(1, int(round(elapsed_raw * 1000))),
+            "content": (
+                f"<stage>⏳ {message}（已用时 {elapsed:g} 秒）...</stage>"
+            ),
+            "role": "assistant",
+            "node": "",
+            "is_last": False,
+            "meta": meta,
+        }),
+    ]
+
+
+def _progress_waiting_message(stage: str) -> str:
+    section = _thinking_section(stage.strip().upper())
+    return {
+        "intent": "正在识别问题中的指标、维度与筛选条件",
+        "file": "正在读取并解析文件内容",
+        "planning": "正在生成任务拆分与调用计划",
+        "execution": "正在生成查询规划或读取数据",
+        "validation": "正在校验查询结果和数据质量",
+        "insight": "正在生成分析洞察和图表",
+        "clarification_execution": "正在处理补充信息",
+        "clarification_result": "正在整理补充信息的处理结果",
+        "final_output": "正在生成最终结果",
+    }.get(section or "", "当前处理仍在进行")
+
+
+def _thinking_events(
+    progress: dict[str, Any],
+    *,
+    heading: str | None = None,
+    chunk_size: int = 4,
+    max_chunks: int = 120,
+) -> list[str]:
+    """Render one node milestone as state plus progressive text SSE events.
+
+    Producers may publish truthful RUNNING milestones before the validated
+    result. This function splits each public milestone at the HTTP boundary,
+    preserving exact content, order and metadata while allowing the browser to
+    paint a few Unicode characters at a time.
+    """
+
     stage = str(progress.get("stage") or "processing")
     # Keep the transport labels identical to New_Agent.  The platform-side
     # stream renderer does not understand data-agent-specific step names such
@@ -1036,19 +1220,83 @@ def _thinking_event(
     # Keep each body milestone in a fresh block so adjacent chunks are not
     # concatenated into a single line by the platform renderer.
     content = f"\n\n{content}\n\n"
-    message_payload: dict[str, Any] = {
-        "step": step,
-        "content": content,
-        "role": "assistant",
-        "node": "",
-        "meta": progress,
-    }
-    if step == "execute_exe":
-        # New_Agent associates execution records with a task.  A single data
-        # query is task 0; multi-task details remain available in meta.
-        message_payload["task_index"] = int(progress.get("task_index") or 0)
-    message_event = _event("message_chunk", message_payload)
-    return state_event + message_event
+    chunks = _thinking_chunks(
+        content,
+        chunk_size=chunk_size,
+        max_chunks=max_chunks,
+    )
+    message_events: list[str] = []
+    for index, chunk in enumerate(chunks):
+        chunk_meta = progress if index == 0 else {
+            key: progress[key]
+            for key in (
+                "stage",
+                "status",
+                "is_child_task",
+                "task_id",
+                "task_index",
+                "task_count",
+                "presentation_scenario",
+            )
+            if key in progress
+        }
+        message_payload: dict[str, Any] = {
+            "step": step,
+            "index": index,
+            "content": chunk,
+            "role": "assistant",
+            "node": "",
+            "is_last": index == len(chunks) - 1,
+            # Keep the complete diagnostic metadata on the first fragment only.
+            # Repeating an ASL-sized ``meta.message`` in every tiny transport
+            # chunk would multiply response bytes without helping the renderer.
+            "meta": chunk_meta,
+        }
+        if step == "execute_exe":
+            # New_Agent associates execution records with a task.  A single
+            # data query is task 0; multi-task details remain available in meta.
+            message_payload["task_index"] = int(progress.get("task_index") or 0)
+        message_events.append(_event("message_chunk", message_payload))
+    return [state_event, *message_events]
+
+
+def _thinking_event(
+    progress: dict[str, Any], *, heading: str | None = None
+) -> str:
+    """Backward-compatible serialized form for callers that need one string."""
+
+    return "".join(_thinking_events(progress, heading=heading))
+
+
+def _thinking_chunks(
+    content: str,
+    *,
+    chunk_size: int = 4,
+    max_chunks: int = 120,
+) -> list[str]:
+    """Split thinking text into small chunks with a bounded event count."""
+
+    if not content:
+        return []
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be greater than zero")
+    if max_chunks <= 0:
+        raise ValueError("max_chunks must be greater than zero")
+    effective_size = max(chunk_size, (len(content) + max_chunks - 1) // max_chunks)
+    return [
+        content[index:index + effective_size]
+        for index in range(0, len(content), effective_size)
+    ]
+
+
+def _thinking_chunk_delay(
+    chunk_count: int, *, interval_seconds: float = 0.03
+) -> float:
+    """Return a paintable cadence for successive SSE text fragments."""
+
+    if chunk_count <= 1 or interval_seconds <= 0:
+        return 0.0
+    return interval_seconds
 
 
 def _markdown_hard_line_breaks(content: str) -> str:
@@ -1082,15 +1330,126 @@ def _thinking_section(stage: str) -> str | None:
         "EXTERNAL_SEARCH": "execution",
         "RELIABILITY_CHECK": "validation",
         "INSIGHT_ANALYSIS": "insight",
-        "OUTPUT_SUMMARY": "summary",
         "CLARIFICATION_EXECUTION": "clarification_execution",
         "CLARIFICATION_RESULT": "clarification_result",
         "FINAL_OUTPUT": "final_output",
     }.get(stage)
 
 
+class _CompositeChildProgressOrderer:
+    """Release concurrent child progress at truthful public stage barriers."""
+
+    _TERMINAL_STATUSES = {"COMPLETED", "DEGRADED", "FAILED", "SKIPPED"}
+
+    def __init__(self) -> None:
+        self.expected_task_count = 0
+        self.execution_completed: set[str] = set()
+        self.validation_completed: set[str] = set()
+        self.execution_barrier_open = False
+        self.validation_barrier_open = False
+        self.deferred_validation: list[dict[str, Any]] = []
+        self.deferred_insight: list[dict[str, Any]] = []
+        self.labelled_tasks: set[tuple[str, int]] = set()
+
+    @staticmethod
+    def _task_key(event: dict[str, Any]) -> str:
+        task_id = str(event.get("task_id") or "").strip()
+        if task_id:
+            return task_id
+        try:
+            return f"task-index-{max(0, int(event.get('task_index') or 0))}"
+        except (TypeError, ValueError):
+            return "task-index-0"
+
+    def _observe_task_count(self, event: dict[str, Any]) -> None:
+        try:
+            self.expected_task_count = max(
+                self.expected_task_count, int(event.get("task_count") or 0)
+            )
+        except (TypeError, ValueError):
+            pass
+
+    def _all_tasks_completed(self, completed: set[str]) -> bool:
+        return bool(
+            self.expected_task_count > 1
+            and len(completed) >= self.expected_task_count
+        )
+
+    def _label(self, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return _ordered_composite_child_progress_events(
+            events, labelled_tasks=self.labelled_tasks
+        )
+
+    def _open_validation_if_ready(self) -> list[dict[str, Any]]:
+        if (
+            self.execution_barrier_open
+            or not self._all_tasks_completed(self.execution_completed)
+        ):
+            return []
+        self.execution_barrier_open = True
+        released = self._label(self.deferred_validation)
+        self.deferred_validation.clear()
+        released.extend(self._open_insight_if_ready())
+        return released
+
+    def _open_insight_if_ready(self) -> list[dict[str, Any]]:
+        if (
+            not self.execution_barrier_open
+            or self.validation_barrier_open
+            or not self._all_tasks_completed(self.validation_completed)
+        ):
+            return []
+        self.validation_barrier_open = True
+        released = self._label(self.deferred_insight)
+        self.deferred_insight.clear()
+        return released
+
+    def push(self, event: dict[str, Any]) -> list[dict[str, Any]]:
+        current = dict(event)
+        self._observe_task_count(current)
+        stage = str(current.get("stage") or "").upper()
+        status = str(current.get("status") or "").upper()
+        section = _thinking_section(stage)
+        task_key = self._task_key(current)
+
+        if section == "execution":
+            visible = self._label([current])
+            if (
+                stage == "DATA_RETRIEVAL"
+                and status in self._TERMINAL_STATUSES
+            ):
+                self.execution_completed.add(task_key)
+                visible.extend(self._open_validation_if_ready())
+            return visible
+
+        if section == "validation":
+            if status in self._TERMINAL_STATUSES:
+                self.validation_completed.add(task_key)
+            if not self.execution_barrier_open:
+                self.deferred_validation.append(current)
+                return []
+            visible = self._label([current])
+            visible.extend(self._open_insight_if_ready())
+            return visible
+
+        if section == "insight":
+            if not self.validation_barrier_open:
+                self.deferred_insight.append(current)
+                return []
+            return self._label([current])
+        return [current]
+
+    def flush(self) -> list[dict[str, Any]]:
+        pending = [*self.deferred_validation, *self.deferred_insight]
+        self.deferred_validation.clear()
+        self.deferred_insight.clear()
+        return self._label(pending)
+
+
 def _ordered_composite_child_progress_events(
     events: list[dict[str, Any]],
+    *,
+    labelled_tasks: set[tuple[str, int]] | None = None,
 ) -> list[dict[str, Any]]:
     """Keep concurrent child milestones inside their public UI sections."""
 
@@ -1105,16 +1464,49 @@ def _ordered_composite_child_progress_events(
             task_index = 0
         return section_order.get(section or "", 99), task_index, sequence
 
-    return [
-        event for _, event in sorted(enumerate(events), key=sort_key)
-    ]
+    ordered = [event for _, event in sorted(enumerate(events), key=sort_key)]
+    labelled_tasks = labelled_tasks if labelled_tasks is not None else set()
+    rendered: list[dict[str, Any]] = []
+    for event in ordered:
+        current = dict(event)
+        section = _thinking_section(str(current.get("stage") or "").upper())
+        try:
+            task_index = max(0, int(current.get("task_index") or 0))
+        except (TypeError, ValueError):
+            task_index = 0
+        task_key = (section or "", task_index)
+        if (
+            section in {"execution", "validation", "insight"}
+            and task_key not in labelled_tasks
+        ):
+            labelled_tasks.add(task_key)
+            message = str(current.get("message") or "").strip()
+            if section == "execution":
+                message = re.sub(
+                    r"^\s*#{1,6}\s+[^\r\n]+(?:\r?\n)?", "", message
+                ).strip()
+                if message.startswith("执行链路："):
+                    message = message.removeprefix("执行链路：")
+                current["message"] = (
+                    f"任务{task_index + 1}执行链路：{message}"
+                )
+            else:
+                task_question = str(current.get("task_question") or "").strip()
+                task_label = f"任务{task_index + 1}"
+                if task_question:
+                    task_label += f"：{task_question}"
+                current["message"] = (
+                    f"{task_label}\n{message}" if message else task_label
+                )
+        rendered.append(current)
+    return rendered
 
 
 def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
     normalized_scenario = scenario.strip().upper()
     if normalized_scenario == "CLARIFICATION":
         scenario_titles = {
-            "intent": "#### 1、意图识别",
+            "intent": "#### ◉ 意图识别",
             "planning": "#### 2、任务拆分与规划",
             "clarification_execution": "#### 3、调研执行",
             "clarification_result": "#### 4、结果生成",
@@ -1124,20 +1516,18 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
             return scenario_titles[section]
     if normalized_scenario == "CHAT":
         scenario_titles = {
-            "intent": "#### 1、意图识别",
-            "summary": "#### 4、输出总结",
-            "final_output": "#### 5、最终输出",
+            "intent": "#### ◉ 意图识别",
+            "final_output": "#### 2、最终输出",
         }
         if section in scenario_titles:
             return scenario_titles[section]
     return {
-        "intent": "#### 1、意图识别",
+        "intent": "#### ◉ 意图识别",
         "file": "#### ◉ 文件感知与解析",
         "planning": "#### ◉ 任务拆分与规划",
         "execution": "#### ◉ 调度执行",
         "validation": "#### ◉ 结果校验",
         "insight": "#### ◉ 数据洞察分析",
-        "summary": "#### ◉ 输出总结",
         "clarification_execution": "#### 3、调研执行",
         "clarification_result": "#### 4、结果生成",
         "final_output": "#### 5、最终输出",
@@ -1147,11 +1537,11 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
 def _heading_event_is_visible_summary(
     section: str, event: dict[str, Any]
 ) -> bool:
-    # The platform may collapse the short INTENT_RECOGNITION/RUNNING chunk.
-    # Attach its heading to the completed structured summary so the title and
-    # extracted fields are rendered together. Other stages keep their first
-    # emitted event, matching the existing UI behavior.
-    return section != "intent" or str(event.get("status") or "").upper() == "COMPLETED"
+    # Open every section on its first truthful milestone. In particular, the
+    # intent node must become visible before structured model validation ends;
+    # otherwise a 30-second model call looks like a stalled request even though
+    # SSE is connected and work is progressing.
+    return True
 
 
 def _new_agent_think_step(stage: str) -> str:
@@ -1175,7 +1565,6 @@ def _new_agent_think_step(stage: str) -> str:
         "ANSWER_SYNTHESIS",
         "RELIABILITY_CHECK",
         "INSIGHT_ANALYSIS",
-        "OUTPUT_SUMMARY",
         "CLARIFICATION_EXECUTION",
         "CLARIFICATION_RESULT",
         "FINAL_OUTPUT",

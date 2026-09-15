@@ -27,8 +27,10 @@ from app.analysis import (
     AnalysisPlanner,
     QwenAnalysisSynthesizer,
     SynthesisValidationError,
+    build_query_result_insight,
 )
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
+from app.analysis.visualization import render_chart_svg
 from app.services.chat_responder import QwenChatResponder
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
@@ -71,13 +73,19 @@ from app.services.legacy_guards import pending_answer_admissibility, apply_snaps
 from app.services.history_compaction import compact_history
 from app.services.working_memory import recalls_prior_task, requires_prior_task_resolution, select_recalled_task_frame
 from app.services.extension_dispatcher import ExtensionDispatcher
+from app.services.mcp_file_analysis import (
+    McpFileAnalysisRunner,
+    pick_primary_artifact,
+)
 from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress, task_progress_scope
 from app.presentation import (
+    QUERY_EXECUTION_CHAIN,
     build_composite_intent_recognition_display_v2,
     build_intent_recognition_display_v2,
     render_composite_intent_recognition_display_v2,
     render_intent_recognition_display_v2,
+    render_reliability_validation,
 )
 from app.services.relationship_projection import (
     requires_distinct_relationship_projection,
@@ -256,6 +264,7 @@ class DataAnalysisOrchestrator:
         report_exporter: Any | None = None,
         file_importer: Any | None = None,
         extension_dispatcher: ExtensionDispatcher | None = None,
+        mcp_file_analysis_runner: McpFileAnalysisRunner | None = None,
         chat_responder: QwenChatResponder | None = None,
         event_store: SessionEventStore | None = None,
         turn_admission_gate: TurnAdmissionGate | None = None,
@@ -287,6 +296,11 @@ class DataAnalysisOrchestrator:
                 if settings.dynamic_skills_enabled
                 else None
             )
+        )
+        self.mcp_file_analysis_runner = mcp_file_analysis_runner or (
+            McpFileAnalysisRunner(settings, self.extension_dispatcher)
+            if settings.mcp_file_analysis_enabled
+            else None
         )
         self.analysis_synthesizer = analysis_synthesizer or (
             QwenAnalysisSynthesizer(settings)
@@ -395,6 +409,102 @@ class DataAnalysisOrchestrator:
                     running.pop(execution, None)
                     if not running:
                         self._running_requests.pop(scope, None)
+
+    async def execute_v1_from_completed_question(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> AgentResponse:
+        """Run original V1 planning/execution for a V2-completed question.
+
+        The request keeps every execution field supplied by the caller.  Only
+        transport history is neutralized and the internal context mode is set
+        so legacy Pending/TaskFrame/LastRequest inheritance cannot run again.
+        """
+        execution_chat = chat.model_copy(deep=True, update={"history": []})
+        execution_chat._completed_question_execution = True
+        return await self.handle(execution_chat, identity)
+
+    async def is_v1_pending_clarification_answer(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> bool:
+        """Return true only when this turn can safely consume V1 Pending.
+
+        A completed V2 question can still encounter a V1 execution ambiguity.
+        That Pending belongs to the original V1 session store.  The live bridge
+        may defer a compact option/slot answer back to V1, but it must never
+        route an unrelated new request through legacy context inheritance.
+        """
+
+        pending = await self.sessions.get_pending(
+            identity.tenant_id,
+            identity.user_id,
+            chat.application_id,
+            chat.conversation_id,
+        )
+        if pending is None or not self._pending_scope_matches(pending.request, chat):
+            return False
+        return bool(
+            self._semantic_clarification_choice(
+                pending.request, chat.question
+            ) is not None
+            or self._is_deterministic_pending_reply(
+                chat.question, pending.request
+            )
+        )
+
+    async def execute_v1_pending_clarification_answer(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> AgentResponse:
+        """Resume one already-verified V1 clarification without V2 rewriting."""
+
+        execution_chat = chat.model_copy(deep=True, update={"history": []})
+        return await self.handle(execution_chat, identity)
+
+    async def read_completed_question_execution_context(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> CanonicalAnalysisRequest | None:
+        """Read V1's semantic result for the exact completed-question session.
+
+        The context bridge may use this only as evidence for conversational
+        wording after a successful query. Authorization, retrieval and
+        execution remain owned by the original V1 request path.
+        """
+        return await self.sessions.get_last_request(
+            identity.tenant_id,
+            identity.user_id,
+            chat.application_id,
+            chat.conversation_id,
+        )
+
+    async def resolve_completed_question_context_value(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        surface: str,
+        expected_family: str,
+        preferred_attribute_code: str | None = None,
+    ) -> SemanticFilterBinding | None:
+        """Resolve a terse follow-up value through V1's semantic retriever.
+
+        The trusted identity has already passed the ordinary API ingress.  The
+        resolver intentionally uses the untouched V1 request scope and returns
+        only semantic evidence to the context layer; it does not materialize
+        authorization or any execution request on V2's behalf.
+        """
+        _ = identity
+        if self.question_rewriter is None:
+            return None
+        return await self.question_rewriter.resolve_context_filter_value(
+            surface,
+            expected_family=expected_family,
+            preferred_attribute_code=preferred_attribute_code,
+            semantic_model_id=chat.semantic_model_id,
+            business_domain_id=self._effective_business_domain_id(chat),
+            business_domain_ids=list(chat.business_domain_ids),
+            tenant_id=identity.tenant_id,
+            user_id=identity.user_id,
+            application_id=chat.application_id,
+            conversation_id=chat.conversation_id,
+        )
 
     async def _handle_request(
         self, chat: ChatRequest, identity: TrustedIdentity
@@ -517,7 +627,21 @@ class DataAnalysisOrchestrator:
                     chat.conversation_id,
                 )
             )
-            if independent_chat:
+            mcp_response = (
+                await self._run_mcp_file_analysis(chat, raw_request)
+                if self._should_dispatch_mcp_file_analysis(chat)
+                else None
+            )
+            if mcp_response is not None:
+                response = mcp_response
+                if dag_pending is not None:
+                    await self.sessions.clear_dag_pending(
+                        identity.tenant_id,
+                        identity.user_id,
+                        chat.application_id,
+                        chat.conversation_id,
+                    )
+            elif independent_chat:
                 # A standalone social/lifestyle turn is never a DAG answer or
                 # a multi-question analytical task, even when it contains a
                 # conjunction such as “草莓和可乐”. Drop stale analytical DAG
@@ -556,19 +680,47 @@ class DataAnalysisOrchestrator:
                     except TaskPlanningError as exc:
                         logger.warning("multi-question plan rejected: %s", exc)
                     if plan is not None:
+                        task_requests = [
+                            self._classify_with_rules(
+                                task.question,
+                                identity,
+                                chat.conversation_id,
+                            )
+                            for task in plan.tasks
+                        ]
+                        task_intents = [
+                            request.primary_intent for request in task_requests
+                        ]
                         composite_view = (
                             build_composite_intent_recognition_display_v2(
                                 chat.question,
                                 plan,
+                                task_intents=task_intents,
+                                task_requests=task_requests,
+                                business_domains=(
+                                    chat._business_domain_labels
+                                    or tuple(
+                                        f"ID {domain_id}"
+                                        for domain_id in chat.business_domain_ids
+                                    )
+                                ),
+                                semantic_extractions=(
+                                    chat._semantic_extraction_items
+                                ),
                             )
                         )
                         await emit_progress(
                             "INTENT_RECOGNITION",
                             "COMPLETED",
                             render_composite_intent_recognition_display_v2(
-                                composite_view
+                                composite_view,
+                                include_resolved_context=(
+                                    not chat._intent_context_progress_emitted
+                                ),
                             ),
-                            intent="COMPOSITE_QUERY",
+                            intent=",".join(dict.fromkeys(
+                                item.value for item in task_intents
+                            )),
                             confidence=1.0,
                             display_model="CompositeIntentRecognitionDisplayV2",
                             display_version="V2",
@@ -583,17 +735,18 @@ class DataAnalysisOrchestrator:
                             "拆分判断完成。"
                             + (
                                 "已拆分为以下任务：\n"
-                                + "\n".join(
-                                    f"{index}. {task.question}"
+                                + "\n\n".join(
+                                    f"任务{index}：{task.question}\n"
+                                    f"规划调用：{QUERY_EXECUTION_CHAIN}"
                                     for index, task in enumerate(plan.tasks, 1)
                                 )
                                 if plan is not None
                                 else (
                                     "当前问题无需拆分，按单任务执行。\n"
-                                    f"子任务1：{chat.question}"
+                                    f"任务1：{chat.question}\n"
+                                    f"规划调用：{QUERY_EXECUTION_CHAIN}"
                                 )
                             )
-                            + "\n规划调用：语义解析 → ASL 查询规划 → 只读 SQL → 结果校验"
                         ),
                         task_count=len(plan.tasks) if plan is not None else 1,
                     )
@@ -650,6 +803,102 @@ class DataAnalysisOrchestrator:
                     identity.tenant_id, identity.user_id, chat.application_id,
                     chat.conversation_id, chat.message_id, owner_token,
                 )
+
+    def _should_dispatch_mcp_file_analysis(self, chat: ChatRequest) -> bool:
+        """Use MCP as a primary executor only for an explicit file request."""
+
+        return bool(
+            self.settings.mcp_file_analysis_enabled
+            and self.mcp_file_analysis_runner is not None
+            and chat.temp_file_paths
+            and chat.mcp
+        )
+
+    async def _run_mcp_file_analysis(
+        self,
+        chat: ChatRequest,
+        request: CanonicalAnalysisRequest,
+    ) -> AgentResponse | None:
+        """Try the generic-agent style MCP loop, then preserve V1 fallback."""
+
+        runner = self.mcp_file_analysis_runner
+        if runner is None:
+            return None
+        await emit_progress(
+            "MCP_ANALYSIS",
+            "RUNNING",
+            "正在检查平台配置的MCP工具是否可用于本次上传文件。",
+        )
+        try:
+            outcome = await runner.run(chat)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.warning("MCP file analysis channel failed: %s", type(exc).__name__)
+            return None
+        if not outcome.applicable or not outcome.usable:
+            return None
+
+        warnings = list(outcome.warnings)
+        if len(outcome.executions) > 10:
+            warnings.append(
+                f"共调用{len(outcome.executions)}次MCP工具，响应仅保留前10条明细"
+            )
+        intent = request.primary_intent
+        if intent in {PrimaryIntent.CHAT, PrimaryIntent.OUT_OF_SCOPE}:
+            intent = PrimaryIntent.DATA_QUALITY
+        completed = [
+            item.name
+            for item in outcome.executions
+            if item.status == "COMPLETED"
+        ]
+        evidence = [
+            EvidenceItem(
+                evidence_id=f"mcp-tool-{index}",
+                kind="MCP_TOOL_RESULT",
+                source_ref="platform-configured-mcp",
+                payload={"tool": name, "status": "COMPLETED"},
+            )
+            for index, name in enumerate(completed[:20], 1)
+        ]
+        answer = outcome.answer.strip()
+        for url in outcome.artifact_urls:
+            if url not in answer:
+                answer += f"\n\n下载结果：{url}"
+        return AgentResponse(
+            request_id=request.request_id,
+            conversation_id=request.conversation_id,
+            status="COMPLETED",
+            intent=intent,
+            intent_source="PLATFORM_MCP_FILE_ANALYSIS",
+            intent_confidence=max(request.intent_confidence, 0.9),
+            answer=answer,
+            evidence=evidence,
+            analysis_process=[
+                AnalysisProcessStep(
+                    stage="DETERMINISTIC_ANALYSIS",
+                    status="COMPLETED",
+                    title="平台MCP文件分析",
+                    summary=(
+                        f"模型依据工具Schema完成{outcome.turns_used}轮调度，"
+                        f"其中{len(completed)}次工具调用成功。"
+                    ),
+                    evidence_ids=[item.evidence_id for item in evidence],
+                )
+            ],
+            extension_executions=outcome.executions[:10],
+            result_file_url=pick_primary_artifact(outcome.artifact_urls),
+            reliability=ReliabilityReport(
+                level="LIMITED",
+                score=0.8,
+                gates={
+                    "mcp_tool_discovered": True,
+                    "mcp_tool_completed": bool(completed),
+                    "mcp_answer_present": bool(answer),
+                },
+                warnings=warnings,
+            ),
+        )
 
     @staticmethod
     def _running_scope(
@@ -1480,6 +1729,7 @@ class DataAnalysisOrchestrator:
                     task_id=task.task_id,
                     task_index=task_index_by_id[task.task_id],
                     task_count=len(plan.tasks),
+                    task_question=task.question,
                     is_child_task=True,
                 ):
                     if len(task.depends_on) >= 2 and self._is_join_task(task.question):
@@ -1532,7 +1782,7 @@ class DataAnalysisOrchestrator:
         answer_parts: list[str] = []
         scores: list[float] = []
         all_high = True
-        for task in plan.tasks:
+        for task_number, task in enumerate(plan.tasks, 1):
             value = responses[task.task_id]
             if isinstance(value, AgentResponse):
                 if value.status in {"COMPLETED", "PARTIAL_SUCCESS"}:
@@ -1575,7 +1825,9 @@ class DataAnalysisOrchestrator:
                     chart_specs=value.chart_specs,
                     evidence_ids=prefixed_ids,
                 ))
-                answer_parts.append(f"### ◉ {task.question}\n{value.answer}")
+                answer_parts.append(
+                    f"### ◉ 任务{task_number}：{task.question}\n{value.answer}"
+                )
             else:
                 task_results.append(TaskExecutionResult(
                     task_id=task.task_id,
@@ -1588,7 +1840,8 @@ class DataAnalysisOrchestrator:
                     ),
                 ))
                 answer_parts.append(
-                    f"### ◉ {task.question}\n{task_results[-1].answer}"
+                    f"### ◉ 任务{task_number}：{task.question}\n"
+                    f"{task_results[-1].answer}"
                 )
                 all_high = False
 
@@ -2851,19 +3104,24 @@ class DataAnalysisOrchestrator:
         await emit_progress(
             "QUESTION_REWRITE", "RUNNING", "正在结合上下文和实体别名规范化问题。"
         )
-        if (
-            self.question_rewriter is not None
-            and not independent_chat
-            and not deterministic_business_fast_path
-            and not chat._completed_question_execution
+        if self.question_rewriter is not None and (
+            chat._completed_question_execution
+            or (not independent_chat and not deterministic_business_fast_path)
         ):
             rewrite = await self.question_rewriter.rewrite(
                 chat.question,
-                previous=previous_for_rewrite,
+                previous=(
+                    None if chat._completed_question_execution
+                    else previous_for_rewrite
+                ),
                 semantic_model_id=chat.semantic_model_id,
                 business_domain_id=self._effective_business_domain_id(chat),
                 business_domain_ids=list(chat.business_domain_ids),
-                force_context=turn_decision.inherit_business_context,
+                force_context=(
+                    False if chat._completed_question_execution
+                    else turn_decision.inherit_business_context
+                ),
+                apply_previous_context=not chat._completed_question_execution,
             )
             classification_question = rewrite.rewritten_question
         await emit_progress(
@@ -3169,15 +3427,21 @@ class DataAnalysisOrchestrator:
                         request.rewritten_question = render_execution_question(request)
 
         if chat._completed_question_execution:
-            # The V2 context bridge has already produced the exact standalone
-            # question that V1 must execute.  V1 intent extraction remains in
-            # charge of planning, but neither its model completion nor its
-            # legacy context rewriter may replace that text a second time.
+            # V2 already owns historical completion. V1 keeps context-free
+            # normalization of this current question, then owns all planning
+            # and execution stages as usual.
             request.original_question = chat.question
-            request.rewritten_question = chat.question
+            request.rewritten_question = (
+                rewrite.rewritten_question if rewrite is not None else chat.question
+            )
             request.rewrite_context_applied = False
-            request.rewrite_degraded = False
-            request.rewrite_events = []
+            request.rewrite_degraded = bool(rewrite and rewrite.degraded)
+            request.rewrite_events = (
+                [event.__dict__ for event in rewrite.events]
+                if rewrite is not None else []
+            )
+            if rewrite is not None and rewrite.semantic_model_version:
+                request.semantic_model_version = rewrite.semantic_model_version
             request.assumptions = [
                 value for value in request.assumptions
                 if value != "MODEL_QUESTION_COMPLETION_APPLIED"
@@ -4101,8 +4365,8 @@ class DataAnalysisOrchestrator:
             chat.question,
         )
         if chat._completed_question_execution:
-            execution_question = chat.question
-            canonical_question = chat.question
+            execution_question = request.rewritten_question or chat.question
+            canonical_question = execution_question
             execution_source = "V2_COMPLETED_QUESTION"
         else:
             execution_question, canonical_question, execution_source = (
@@ -4216,6 +4480,11 @@ class DataAnalysisOrchestrator:
                 request,
                 file_status=str(chat._file_inspection.get("status") or "NOT_PROVIDED"),
                 file_based=bool(chat._file_inspection.get("file_based")),
+                business_domain_labels=chat._business_domain_labels,
+                semantic_extractions=chat._semantic_extraction_items,
+                include_resolved_context=(
+                    not chat._intent_context_progress_emitted
+                ),
             ),
             intent=request.primary_intent.value,
             confidence=round(float(request.intent_confidence), 4),
@@ -4471,8 +4740,8 @@ class DataAnalysisOrchestrator:
                 "DATA_RETRIEVAL",
                 "RUNNING",
                 "### ◉ 规划与执行\n"
-                "分析链路：智能语义查询器 → 独立 SQL 执行服务 → 数据集 → 分析。\n"
-                "正在按顺序执行查询规划与数据读取。",
+                f"执行链路：{QUERY_EXECUTION_CHAIN}。\n"
+                "正在按以上链路执行查询规划与数据读取。",
             )
             try:
                 relationship_count_request = self._relationship_count_projection_request(request)
@@ -4613,7 +4882,6 @@ class DataAnalysisOrchestrator:
                 f"查询字段：{_compact_trace_value(query_result.dataset.columns, 800)}；\n"
                 f"返回行数：{query_result.dataset.row_count}；\n"
                 f"结果总行数：{query_result.dataset.total_row_count}；\n"
-                f"数据质量：{_quality_status_text(query_result.dataset.quality_status)}；\n"
                 f"查询快照时间：{_business_datetime_text(query_result.dataset.data_as_of)}；\n"
                 f"数据预览：{_compact_trace_value(query_result.dataset.rows[:2], 1200)}。\n"
                 f"结果状态：{'结果已截断，完整数据通过结果文件提供。' if query_result.dataset.truncated else '当前结果未截断。'}"
@@ -4938,11 +5206,6 @@ class DataAnalysisOrchestrator:
                 )
                 + f"\n\n数据充足性说明：{insufficiency}"
             )
-            source_watermark_note = self._source_watermark_note(
-                request, query_result.dataset
-            )
-            if source_watermark_note:
-                answer += f"\n{source_watermark_note}"
             reliability = ReliabilityReport(
                 level="LIMITED",
                 score=(
@@ -4961,8 +5224,11 @@ class DataAnalysisOrchestrator:
             await emit_progress(
                 "RELIABILITY_CHECK",
                 "COMPLETED",
-                "查询结果已通过数据证据校验；分析样本不足，已保留并展示实际数据，"
-                "同时跳过不可靠的分析结论。",
+                render_reliability_validation(
+                    reliability,
+                    evidence,
+                    query_result.dataset.quality_status,
+                ),
                 reliability_level=reliability.level,
                 reliability_score=reliability.score,
             )
@@ -5083,6 +5349,7 @@ class DataAnalysisOrchestrator:
             )
 
         analysis_output = None
+        insight_output = None
         synthesized_answer: str | None = None
         if _requires_deterministic_analysis(request):
             await emit_progress(
@@ -5162,95 +5429,205 @@ class DataAnalysisOrchestrator:
                     },
                 )
             )
-            if self.analysis_synthesizer is not None:
-                await emit_progress(
-                    "ANSWER_SYNTHESIS", "RUNNING", "正在将已验证的分析事实整理成回答。"
+            insight_output = analysis_output
+        elif request.primary_intent in {
+            PrimaryIntent.METRIC_QUERY,
+            PrimaryIntent.DETAIL_QUERY,
+        }:
+            insight_output = build_query_result_insight(
+                request,
+                query_result.dataset.columns,
+                query_result.dataset.rows,
+                total_row_count=total_row_count,
+                total_row_count_confirmed=total_row_count_confirmed,
+                truncated=query_result.dataset.truncated,
+            )
+            if insight_output is not None:
+                evidence.append(
+                    EvidenceItem(
+                        evidence_id=f"analysis:{request.request_id}",
+                        kind="ANALYSIS_RESULT",
+                        source_ref=f"deterministic:{insight_output.method}",
+                        payload={
+                            "method": insight_output.method,
+                            "facts": insight_output.facts,
+                            "warnings": insight_output.warnings,
+                        },
+                    )
                 )
-                try:
-                    synthesized_answer, synthesis = (
-                        await self.analysis_synthesizer.synthesize(
-                            request, analysis_output, evidence
-                        )
+
+        if insight_output is not None and self.analysis_synthesizer is not None:
+            await emit_progress(
+                "ANSWER_SYNTHESIS", "RUNNING", "正在将已验证的查询事实整理成通俗的数据解读。"
+            )
+            try:
+                synthesized_answer, synthesis = (
+                    await self.analysis_synthesizer.synthesize(
+                        request, insight_output, evidence
                     )
-                    evidence.append(
-                        EvidenceItem(
-                            evidence_id=f"analysis-synthesis:{request.request_id}",
-                            kind="ANSWER_SYNTHESIS",
-                            source_ref=(
-                                f"qwen:{self.settings.analysis_synthesis_model_name}"
-                            ),
-                            payload={
-                                "model": self.settings.analysis_synthesis_model_name,
-                                "claim_count": len(synthesis.claims),
-                                "claims": [
-                                    claim.model_dump(mode="json")
-                                    for claim in synthesis.claims
-                                ],
-                            },
-                        )
-                    )
-                except (
-                    httpx.HTTPError,
-                    KeyError,
-                    RuntimeError,
-                    ValueError,
-                    SynthesisValidationError,
-                ) as exc:
-                    logger.warning(
-                        "analysis synthesis unavailable or rejected; using "
-                        "deterministic answer: %s",
-                        exc,
-                    )
-                    analysis_evidence = next(
-                        item for item in evidence if item.kind == "ANALYSIS_RESULT"
-                    )
-                    warnings = analysis_evidence.payload.setdefault(
-                        "presentation_warnings", []
-                    )
-                    warning = (
-                        "Qwen分析总结未通过可用性或证据校验，"
-                        "已返回确定性分析结果"
-                    )
-                    if warning not in warnings:
-                        warnings.append(warning)
-                await emit_progress(
-                    "ANSWER_SYNTHESIS",
-                    "COMPLETED" if synthesized_answer is not None else "DEGRADED",
-                    (
-                        "分析结论整理完成。"
-                        if synthesized_answer is not None
-                        else "模型总结不可用，已使用确定性分析结论。"
-                    ),
                 )
+                evidence.append(
+                    EvidenceItem(
+                        evidence_id=f"analysis-synthesis:{request.request_id}",
+                        kind="ANSWER_SYNTHESIS",
+                        source_ref=(
+                            f"qwen:{self.settings.analysis_synthesis_model_name}"
+                        ),
+                        payload={
+                            "model": self.settings.analysis_synthesis_model_name,
+                            "claim_count": len(synthesis.claims),
+                            "claims": [
+                                claim.model_dump(mode="json")
+                                for claim in synthesis.claims
+                            ],
+                        },
+                    )
+                )
+            except (
+                httpx.HTTPError,
+                KeyError,
+                RuntimeError,
+                ValueError,
+                SynthesisValidationError,
+            ) as exc:
+                logger.warning(
+                    "analysis synthesis unavailable or rejected; using "
+                    "deterministic answer: %s",
+                    exc,
+                )
+                analysis_evidence = next(
+                    item
+                    for item in evidence
+                    if item.kind == "ANALYSIS_RESULT"
+                    and item.evidence_id == f"analysis:{request.request_id}"
+                )
+                warnings = analysis_evidence.payload.setdefault(
+                    "presentation_warnings", []
+                )
+                warning = (
+                    "Qwen分析总结未通过可用性或证据校验，"
+                    "已返回确定性分析结果"
+                )
+                if warning not in warnings:
+                    warnings.append(warning)
+            await emit_progress(
+                "ANSWER_SYNTHESIS",
+                "COMPLETED" if synthesized_answer is not None else "DEGRADED",
+                (
+                    "通俗的数据解读已生成。"
+                    if synthesized_answer is not None
+                    else "模型总结不可用，已使用确定性数据摘要。"
+                ),
+            )
 
         reliability = self._reliability(request, evidence, query_result.dataset.quality_status)
         await emit_progress(
             "RELIABILITY_CHECK",
             "COMPLETED" if reliability.level != "FAIL" else "FAILED",
-            (
-                "### ◉ 结果研判与应答\n"
-                f"校验结论：{reliability.level}（{reliability.score:.2f}）。\n"
-                f"数据质量：{query_result.dataset.quality_status}；证据数量：{len(evidence)}；"
-                f"告警数量：{len(reliability.warnings)}。\n"
-                + ("结果通过可靠性门禁。" if reliability.level != "FAIL" else "结果未通过可靠性门禁，不输出未经验证的数值。")
+            render_reliability_validation(
+                reliability,
+                evidence,
+                query_result.dataset.quality_status,
             ),
             reliability_level=reliability.level,
             reliability_score=round(float(reliability.score), 4),
         )
+        chart_specs = (
+            analysis_output.facts.get("chart_specs", [])
+            if analysis_output is not None
+            else []
+        )
+        chart_summary = ""
+        if chart_specs:
+            chart_labels = {
+                "LINE": "折线图",
+                "BAR": "柱状图",
+                "PIE": "饼图",
+                "SCATTER": "散点图",
+                "TABLE": "数据表",
+            }
+            rendered_charts = "、".join(
+                f"{chart_labels.get(str(item.get('chart_type')), '图表')}“{item.get('title', '')}”"
+                for item in chart_specs
+            )
+            chart_summary = f"\n已根据本次分析任务生成{rendered_charts}，用于直观查看数据变化和差异。"
+        visualization_executions: list[ExtensionExecution] = []
+        mcp_chart_urls: list[str] = []
+        if chart_specs and reliability.level != "FAIL" and chat.mcp:
+            try:
+                attempted_visualizations = (
+                    await self.extension_dispatcher.execute_visualizations(
+                        chat=chat,
+                        chart_specs=chart_specs,
+                    )
+                )
+            except Exception as exc:
+                logger.warning(
+                    "configured visualization MCP unavailable: %s",
+                    type(exc).__name__,
+                )
+            else:
+                for execution in attempted_visualizations:
+                    url = self.extension_dispatcher.visualization_url(execution)
+                    if url is None:
+                        logger.warning(
+                            "visualization MCP did not return a usable image: %s",
+                            execution.name,
+                        )
+                        continue
+                    visualization_executions.append(execution)
+                    mcp_chart_urls.append(url)
+        chart_images = []
+        if reliability.level != "FAIL" and not mcp_chart_urls:
+            chart_images = self._render_inline_charts(chart_specs=chart_specs)
+        chart_display = ""
+        if mcp_chart_urls:
+            remote_images = []
+            for index, url in enumerate(mcp_chart_urls):
+                spec = chart_specs[min(index, len(chart_specs) - 1)]
+                title = self._markdown_image_alt(
+                    str(spec.get("title") or "数据图表")
+                )
+                remote_images.append(f"![{title}]({url})")
+            chart_display = "\n\n#### 图表\n\n" + "\n\n".join(remote_images)
+        elif chart_images:
+            chart_display = "\n\n#### 图表\n\n" + "\n\n".join(chart_images)
+        chart_source = (
+            "PLATFORM_MCP"
+            if mcp_chart_urls
+            else "INLINE_SVG"
+            if chart_images
+            else "NONE"
+        )
+        insight_text = (
+            synthesized_answer
+            or (
+                insight_output.answer
+                if insight_output is not None
+                else "本次查询没有足够的数据生成补充解读。"
+            )
+        )
+        if (
+            synthesized_answer is None
+            and insight_output is not None
+            and insight_output.warnings
+        ):
+            insight_text += "\n需要注意的是，" + "；".join(
+                warning.rstrip("。") for warning in insight_output.warnings
+            ) + "。"
         await emit_progress(
             "INSIGHT_ANALYSIS",
             "COMPLETED" if reliability.level != "FAIL" else "SKIPPED",
             (
-                "### ◉ 结果研判与应答\n"
-                f"分析意图：{self._intent_label(request.primary_intent)}。"
-                + (
-                    "已完成确定性计算、结构化解释和答案优先级筛选。\n"
-                    f"核心判断：{analysis_output.facts.get('structured_analysis_result', {}).get('headline', analysis_output.answer)}\n"
-                    if analysis_output is not None
-                    else "当前意图采用结构化查询结果展示，不额外生成推断性洞察。\n"
-                )
-                + "说明：展示的是可审计的方法和事实摘要，不包含模型内部隐藏推理。"
+                f"分析意图：{self._intent_label(request.primary_intent)}。\n\n"
+                + insight_text
+                + chart_summary
+                + chart_display
+                + "\n\n以上内容只基于本次查询结果和已验证证据，不额外推测业务原因。"
             ),
+            message_limit=8192,
+            chart_image_count=len(mcp_chart_urls) + len(chart_images),
+            chart_source=chart_source,
         )
         if reliability.level == "FAIL":
             response = self._fallback(
@@ -5323,9 +5700,9 @@ class DataAnalysisOrchestrator:
                         result_truncated=True,
                     )
                     + (
-                        "\n完整结果请使用回答末尾的附件链接下载。"
+                        "\n\n说明：完整结果请使用回答末尾的附件链接下载。"
                         if query_result.result_file_url
-                        else "\n本次未收到完整结果文件；请缩小查询范围或继续分页查询。"
+                        else "\n\n说明：本次未收到完整结果文件；请缩小查询范围或继续分页查询。"
                     )
                 )
                 if query_result.dataset.truncated
@@ -5339,7 +5716,7 @@ class DataAnalysisOrchestrator:
             )
         )
         if analysis_output is not None and analysis_output.warnings:
-            answer += "\n注意事项：" + "；".join(analysis_output.warnings) + "。"
+            answer += "\n\n注意事项：" + "；".join(analysis_output.warnings) + "。"
         unavailable_fields = [
             value.split("=", 1)[1]
             for value in request.assumptions
@@ -5347,18 +5724,20 @@ class DataAnalysisOrchestrator:
         ]
         if unavailable_fields:
             answer += (
-                "\n字段说明：当前语义模型未配置“"
+                "\n\n字段说明：当前语义模型未配置“"
                 + "、".join(dict.fromkeys(unavailable_fields))
                 + "”，已返回其余可执行指标；未使用其他字段代替该口径。"
             )
         activity_definition_note = self._activity_definition_note(request)
         if activity_definition_note:
-            answer += f"\n{activity_definition_note}"
-        source_watermark_note = self._source_watermark_note(
-            request, query_result.dataset
-        )
-        if source_watermark_note:
-            answer += f"\n{source_watermark_note}"
+            answer += f"\n\n{activity_definition_note}"
+        # The platform's generic agent returns remote MCP images in the final
+        # answer, which is rendered by the normal Markdown component. Keep the
+        # progress copy for existing clients and also place the same Markdown
+        # in the final answer so image rendering does not depend on the
+        # thinking/progress renderer.
+        if mcp_chart_urls and chart_display not in answer:
+            answer += chart_display
         incomplete_result = bool(
             query_result.dataset.truncated and not query_result.result_file_url
         )
@@ -5388,16 +5767,15 @@ class DataAnalysisOrchestrator:
             reliability=reliability,
             dataset_id=dataset_id,
             result_file_url=query_result.result_file_url,
-            chart_specs=(
-                analysis_output.facts.get("chart_specs", [])
-                if analysis_output is not None
-                else []
-            ),
+            chart_specs=chart_specs,
         )
         if external_search_mode == "ENRICH":
-            response.extension_executions = enrichment_executions
+            response.extension_executions = [
+                *visualization_executions,
+                *enrichment_executions,
+            ]
         else:
-            response.extension_executions = await self.extension_dispatcher.execute(
+            optional_executions = await self.extension_dispatcher.execute(
                 chat=chat,
                 intent=request.primary_intent.value,
                 builtin_skill=skill_for_intent(request.primary_intent),
@@ -5428,6 +5806,10 @@ class DataAnalysisOrchestrator:
                     "summary": True,
                 },
             )
+            response.extension_executions = [
+                *visualization_executions,
+                *optional_executions,
+            ]
             external_supplement, external_records = self._external_search_material(
                 response.extension_executions,
             )
@@ -5829,6 +6211,49 @@ class DataAnalysisOrchestrator:
             )
         )
         response.answer += f"\n已生成{file_format.upper()}文件，可通过返回的 files[0].download_url 下载。"
+
+    def _render_inline_charts(
+        self,
+        *,
+        chart_specs: list[dict[str, Any]],
+    ) -> list[str]:
+        """Embed validated chart specs as inert SVG for existing web clients.
+
+        Native clients may continue to consume ``AgentResponse.chart_specs``.
+        Inline SVG avoids making browser rendering depend on a cross-origin,
+        expiring object-store URL. Rendering is presentation-only and failure
+        never changes the query or analysis result.
+        """
+
+        if not chart_specs:
+            return []
+        images: list[str] = []
+        for chart_spec in chart_specs[:3]:
+            try:
+                payload = render_chart_svg(chart_spec)
+                if not payload:
+                    continue
+                svg = payload.decode("utf-8")
+                svg = svg.replace(
+                    "<svg ",
+                    '<svg style="max-width:100%;height:auto;display:block" ',
+                    1,
+                )
+                images.append(svg)
+            except Exception as exc:
+                logger.warning("inline chart rendering failed: %s", exc)
+        return images
+
+    @staticmethod
+    def _markdown_image_alt(value: str) -> str:
+        """Keep a chart title valid inside Markdown image alternative text."""
+
+        return (
+            re.sub(r"[\r\n]+", " ", value).strip()
+            .replace("\\", "\\\\")
+            .replace("[", "\\[")
+            .replace("]", "\\]")
+        ) or "数据图表"
 
     async def _knowledge_document_answer(
         self, request: CanonicalAnalysisRequest, identity: TrustedIdentity
@@ -8157,13 +8582,20 @@ class DataAnalysisOrchestrator:
         *,
         file_status: str = "NOT_PROVIDED",
         file_based: bool = False,
+        business_domain_labels: tuple[str, ...] | list[str] = (),
+        semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]] = (),
+        include_resolved_context: bool = True,
     ) -> str:
         view = build_intent_recognition_display_v2(
             request,
             file_status=file_status,
             file_based=file_based,
+            business_domain_labels=business_domain_labels,
+            semantic_extractions=semantic_extractions,
         )
-        return render_intent_recognition_display_v2(view)
+        return render_intent_recognition_display_v2(
+            view, include_resolved_context=include_resolved_context
+        )
 
     @staticmethod
     def _file_inspection_think_summary(inspection: dict[str, Any]) -> str:
@@ -9221,7 +9653,7 @@ class DataAnalysisOrchestrator:
             content = (result.answer or "未返回结果。").strip()
             status = "" if result.status == "COMPLETED" else f"（{result.status}）"
             sections.append(
-                f"### {index}. {result.question}{status}\n\n{content}"
+                f"### ◉ 任务{index}：{result.question}{status}\n\n{content}"
             )
         return "\n\n".join(sections)
 
@@ -10179,25 +10611,6 @@ class DataAnalysisOrchestrator:
             "source_watermark_field": dataset.source_watermark_field,
             "requested_time_coverage": coverage,
         }
-
-    @classmethod
-    def _source_watermark_note(
-        cls, request: CanonicalAnalysisRequest, dataset: Dataset
-    ) -> str:
-        payload = cls._source_watermark_payload(request, dataset)
-        if not payload:
-            return ""
-        note = (
-            f"数据水位：当前业务数据截至 {payload['source_data_as_of']}"
-            "（按销售记录时间统计）。"
-            "查询快照时间仅表示本次读取时间，不代表业务数据更新时间。"
-        )
-        coverage = payload["requested_time_coverage"]
-        if coverage == "OUTSIDE_SOURCE_WATERMARK":
-            note += "所请求的时间段完全晚于该水位，空结果不能解释为业务没有发生。"
-        elif coverage == "PARTIAL_AFTER_SOURCE_WATERMARK":
-            note += "所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。"
-        return note
 
     @staticmethod
     def _reliability(request: CanonicalAnalysisRequest, evidence: list[EvidenceItem], quality_status: str) -> ReliabilityReport:
