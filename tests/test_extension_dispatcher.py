@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import httpx
@@ -22,6 +23,45 @@ def chat(**updates):
         question="分析本月销售趋势", semantic_model_id=6,
     )
     return base.model_copy(update=updates)
+
+
+@pytest.mark.asyncio
+async def test_bounded_mcp_discovery_keeps_tools_from_responsive_servers(
+    monkeypatch,
+):
+    dispatcher = ExtensionDispatcher()
+    fast_tool = ToolConfig(
+        name="mcp:analysis_profile",
+        description="Analyze an Excel workbook",
+        url="https://excel.example/mcp",
+    )
+
+    async def fast_server(_url, _headers):
+        return [fast_tool]
+
+    async def slow_server(_url, _headers):
+        await asyncio.sleep(1)
+        return []
+
+    monkeypatch.setattr(dispatcher, "_list_mcp_server", fast_server)
+    monkeypatch.setattr(dispatcher, "_list_sse_mcp_server", slow_server)
+    request = chat(mcp=[
+        McpConfig(
+            mcp_server_url="https://charts.example/sse",
+            connect_type="sse",
+        ),
+        McpConfig(
+            mcp_server_url="https://excel.example/mcp",
+            connect_type="streamable_http",
+        ),
+    ])
+
+    discovered = await dispatcher.discover_mcp_tools(
+        request,
+        timeout_seconds=0.02,
+    )
+
+    assert discovered == [fast_tool]
 
 
 @pytest.mark.asyncio

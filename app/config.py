@@ -119,6 +119,24 @@ class Settings(BaseSettings):
     dynamic_skills_enabled: bool = True
     autonomous_tool_selection_enabled: bool = True
     autonomous_tool_selection_max_tools: int = Field(default=3, ge=1, le=5)
+    # Platform-configured MCP services may act as the primary executor only
+    # for a request that carries an uploaded file and exposes at least one
+    # file-analysis tool.  All ordinary semantic/SQL requests keep the V1
+    # execution path unchanged.
+    mcp_file_analysis_enabled: bool = True
+    mcp_file_analysis_discovery_timeout_seconds: float = Field(
+        default=20, gt=0, le=60
+    )
+    mcp_file_analysis_model_timeout_seconds: float = Field(
+        default=30, gt=0, le=60
+    )
+    mcp_file_analysis_tool_timeout_seconds: float = Field(
+        default=60, gt=0, le=180
+    )
+    mcp_file_analysis_total_budget_seconds: float = Field(
+        default=105, gt=0, le=240
+    )
+    mcp_file_analysis_max_turns: int = Field(default=8, ge=1, le=20)
     bocha_api_key: SecretStr | None = Field(
         default=None,
         validation_alias=AliasChoices("DATA_AGENT_BOCHA_KEY", "BOCHA_KEY"),

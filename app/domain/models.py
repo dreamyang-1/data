@@ -602,6 +602,12 @@ class SkillConfig(StrictModel):
 class McpConfig(StrictModel):
     """MCP server declaration compatible with the platform agent contract."""
 
+    # Match the generic-agent transport contract.  The platform can add
+    # presentation/runtime metadata (for example a display name or timeout)
+    # without making an otherwise valid MCP server unusable.  Only the fields
+    # below are trusted by the data-agent runtime.
+    model_config = ConfigDict(extra="ignore")
+
     mcp_server_url: str = Field(min_length=8, max_length=2048)
     connect_type: Literal["sse", "streamable_http"] = "sse"
     headers: dict[str, str] | None = None

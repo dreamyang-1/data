@@ -1556,6 +1556,8 @@ def test_chat_accepts_platform_skill_tool_and_mcp_contract():
             "mcp_server_url": "http://mcp.example.invalid/mcp",
             "connect_type": "streamable_http",
             "slug": "",
+            "display_name": "Excel数据分析",
+            "time_out": 120,
         }],
         "temp_file_paths": [],
     }

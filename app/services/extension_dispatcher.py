@@ -386,20 +386,94 @@ class ExtensionDispatcher:
         prefix = tool.description if tool is not None else ""
         return f"{prefix}\nSkill instructions:\n{skill.content}".strip()
 
-    async def _discover_mcp_tools(self, chat: ChatRequest) -> list[ToolConfig]:
+    async def _discover_mcp_tools(
+        self,
+        chat: ChatRequest,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> list[ToolConfig]:
         import asyncio
 
-        discovered = await asyncio.gather(*[
+        coroutines = [
             self._list_mcp_server(server.mcp_server_url, server.headers)
             if server.connect_type == "streamable_http"
             else self._list_sse_mcp_server(server.mcp_server_url, server.headers)
             for server in chat.mcp
-        ])
+        ]
+        if not coroutines:
+            return []
+        if timeout_seconds is None:
+            discovered = await asyncio.gather(*coroutines)
+        else:
+            tasks = [asyncio.create_task(item) for item in coroutines]
+            done, pending = await asyncio.wait(tasks, timeout=timeout_seconds)
+            for task in pending:
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+                logger.warning(
+                    "MCP tool discovery timed out for %s of %s configured servers",
+                    len(pending),
+                    len(tasks),
+                )
+            # Keep configuration order deterministic while retaining every
+            # server that completed within the shared discovery budget.
+            discovered = [task.result() for task in tasks if task in done]
         unique: dict[str, ToolConfig] = {}
         for tools in discovered:
             for tool in tools:
                 unique.setdefault(tool.name, tool)
         return list(unique.values())
+
+    async def discover_mcp_tools(
+        self,
+        chat: ChatRequest,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> list[ToolConfig]:
+        """Discover request-scoped MCP tools for a model-driven tool loop.
+
+        This is the same per-server, failure-isolated discovery used by the
+        supplementary extension path.  Exposing it as a bounded public method
+        avoids creating a second MCP transport implementation.
+        """
+
+        return await self._discover_mcp_tools(
+            chat,
+            timeout_seconds=timeout_seconds,
+        )
+
+    async def call_discovered_mcp_tool(
+        self,
+        *,
+        chat: ChatRequest,
+        tool: ToolConfig,
+        arguments: dict[str, Any],
+    ) -> ExtensionExecution:
+        """Call a discovered MCP tool on the server that advertised it."""
+
+        tool_name = tool.name.removeprefix("mcp:")
+        matching_servers = [
+            server
+            for server in chat.mcp
+            if server.mcp_server_url == tool.url
+        ]
+        if not matching_servers:
+            return ExtensionExecution(
+                name=tool_name[:100],
+                kind="MCP_TOOL",
+                status="REJECTED",
+                error="MCP工具来源与当前请求配置不匹配",
+                error_type="parameter_error",
+            )
+        scoped_chat = chat.model_copy(
+            deep=True, update={"mcp": matching_servers}
+        )
+        return await self._call_mcp_servers(
+            tool_name,
+            scoped_chat,
+            arguments,
+        )
 
     @staticmethod
     async def _empty_mcp_list() -> list[ToolConfig]:

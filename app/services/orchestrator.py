@@ -74,6 +74,10 @@ from app.services.legacy_guards import pending_answer_admissibility, apply_snaps
 from app.services.history_compaction import compact_history
 from app.services.working_memory import recalls_prior_task, requires_prior_task_resolution, select_recalled_task_frame
 from app.services.extension_dispatcher import ExtensionDispatcher
+from app.services.mcp_file_analysis import (
+    McpFileAnalysisRunner,
+    pick_primary_artifact,
+)
 from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress, task_progress_scope
 from app.presentation import (
@@ -261,6 +265,7 @@ class DataAnalysisOrchestrator:
         report_exporter: Any | None = None,
         file_importer: Any | None = None,
         extension_dispatcher: ExtensionDispatcher | None = None,
+        mcp_file_analysis_runner: McpFileAnalysisRunner | None = None,
         chat_responder: QwenChatResponder | None = None,
         event_store: SessionEventStore | None = None,
         turn_admission_gate: TurnAdmissionGate | None = None,
@@ -292,6 +297,11 @@ class DataAnalysisOrchestrator:
                 if settings.dynamic_skills_enabled
                 else None
             )
+        )
+        self.mcp_file_analysis_runner = mcp_file_analysis_runner or (
+            McpFileAnalysisRunner(settings, self.extension_dispatcher)
+            if settings.mcp_file_analysis_enabled
+            else None
         )
         self.analysis_synthesizer = analysis_synthesizer or (
             QwenAnalysisSynthesizer(settings)
@@ -618,7 +628,21 @@ class DataAnalysisOrchestrator:
                     chat.conversation_id,
                 )
             )
-            if independent_chat:
+            mcp_response = (
+                await self._run_mcp_file_analysis(chat, raw_request)
+                if self._should_dispatch_mcp_file_analysis(chat)
+                else None
+            )
+            if mcp_response is not None:
+                response = mcp_response
+                if dag_pending is not None:
+                    await self.sessions.clear_dag_pending(
+                        identity.tenant_id,
+                        identity.user_id,
+                        chat.application_id,
+                        chat.conversation_id,
+                    )
+            elif independent_chat:
                 # A standalone social/lifestyle turn is never a DAG answer or
                 # a multi-question analytical task, even when it contains a
                 # conjunction such as “草莓和可乐”. Drop stale analytical DAG
@@ -777,6 +801,102 @@ class DataAnalysisOrchestrator:
                     identity.tenant_id, identity.user_id, chat.application_id,
                     chat.conversation_id, chat.message_id, owner_token,
                 )
+
+    def _should_dispatch_mcp_file_analysis(self, chat: ChatRequest) -> bool:
+        """Use MCP as a primary executor only for an explicit file request."""
+
+        return bool(
+            self.settings.mcp_file_analysis_enabled
+            and self.mcp_file_analysis_runner is not None
+            and chat.temp_file_paths
+            and chat.mcp
+        )
+
+    async def _run_mcp_file_analysis(
+        self,
+        chat: ChatRequest,
+        request: CanonicalAnalysisRequest,
+    ) -> AgentResponse | None:
+        """Try the generic-agent style MCP loop, then preserve V1 fallback."""
+
+        runner = self.mcp_file_analysis_runner
+        if runner is None:
+            return None
+        await emit_progress(
+            "MCP_ANALYSIS",
+            "RUNNING",
+            "正在检查平台配置的MCP工具是否可用于本次上传文件。",
+        )
+        try:
+            outcome = await runner.run(chat)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.warning("MCP file analysis channel failed: %s", type(exc).__name__)
+            return None
+        if not outcome.applicable or not outcome.usable:
+            return None
+
+        warnings = list(outcome.warnings)
+        if len(outcome.executions) > 10:
+            warnings.append(
+                f"共调用{len(outcome.executions)}次MCP工具，响应仅保留前10条明细"
+            )
+        intent = request.primary_intent
+        if intent in {PrimaryIntent.CHAT, PrimaryIntent.OUT_OF_SCOPE}:
+            intent = PrimaryIntent.DATA_QUALITY
+        completed = [
+            item.name
+            for item in outcome.executions
+            if item.status == "COMPLETED"
+        ]
+        evidence = [
+            EvidenceItem(
+                evidence_id=f"mcp-tool-{index}",
+                kind="MCP_TOOL_RESULT",
+                source_ref="platform-configured-mcp",
+                payload={"tool": name, "status": "COMPLETED"},
+            )
+            for index, name in enumerate(completed[:20], 1)
+        ]
+        answer = outcome.answer.strip()
+        for url in outcome.artifact_urls:
+            if url not in answer:
+                answer += f"\n\n下载结果：{url}"
+        return AgentResponse(
+            request_id=request.request_id,
+            conversation_id=request.conversation_id,
+            status="COMPLETED",
+            intent=intent,
+            intent_source="PLATFORM_MCP_FILE_ANALYSIS",
+            intent_confidence=max(request.intent_confidence, 0.9),
+            answer=answer,
+            evidence=evidence,
+            analysis_process=[
+                AnalysisProcessStep(
+                    stage="DETERMINISTIC_ANALYSIS",
+                    status="COMPLETED",
+                    title="平台MCP文件分析",
+                    summary=(
+                        f"模型依据工具Schema完成{outcome.turns_used}轮调度，"
+                        f"其中{len(completed)}次工具调用成功。"
+                    ),
+                    evidence_ids=[item.evidence_id for item in evidence],
+                )
+            ],
+            extension_executions=outcome.executions[:10],
+            result_file_url=pick_primary_artifact(outcome.artifact_urls),
+            reliability=ReliabilityReport(
+                level="LIMITED",
+                score=0.8,
+                gates={
+                    "mcp_tool_discovered": True,
+                    "mcp_tool_completed": bool(completed),
+                    "mcp_answer_present": bool(answer),
+                },
+                warnings=warnings,
+            ),
+        )
 
     @staticmethod
     def _running_scope(

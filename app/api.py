@@ -389,6 +389,18 @@ async def bind_chat_spreadsheet(
     except FileImportError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
+        if chat.mcp and file_based:
+            logger.warning(
+                "local spreadsheet import failed; continuing with configured MCP: %s",
+                type(exc).__name__,
+            )
+            chat._file_inspection = {
+                "status": "LOCAL_IMPORT_FAILED_MCP_AVAILABLE",
+                "file_name": object_name.rsplit("/", 1)[-1],
+                "file_count": 1,
+                "file_based": True,
+            }
+            return
         logger.exception("chat spreadsheet import failed")
         raise HTTPException(status_code=502, detail="spreadsheet import failed") from exc
     if file_based:

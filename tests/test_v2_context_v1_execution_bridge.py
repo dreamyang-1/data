@@ -184,6 +184,36 @@ def v1_context(chat: ChatRequest, *, filter_value: str) -> CanonicalAnalysisRequ
     )
 
 
+@pytest.mark.asyncio
+async def test_uploaded_file_bypasses_v2_semantic_recognition_and_reaches_v1(
+    provider,
+):
+    calls = []
+
+    async def v1(chat, identity):
+        calls.append((chat, identity))
+        return response(chat, "文件分析完成")
+
+    bridge = handler(provider, DeploymentRedis(), v1)
+    current = request(
+        question="分析一下",
+        message_id="uploaded-file-m1",
+        temp_file_paths=["uploads/E-Commerce.xlsx"],
+        mcp=[{
+            "mcp_server_url": "https://mcp.example/sse",
+            "connect_type": "sse",
+        }],
+    )
+
+    result = await bridge.handle(current, IDENTITY)
+
+    assert result.answer == "文件分析完成"
+    assert len(calls) == 1
+    assert calls[0][0].temp_file_paths == ["uploads/E-Commerce.xlsx"]
+    assert calls[0][0].mcp[0].connect_type == "sse"
+    assert calls[0][0]._completed_question_execution is True
+
+
 def publish_province_dimension(provider, *, publication_id: str) -> None:
     source = authority()
     document = source["documents"][0]
