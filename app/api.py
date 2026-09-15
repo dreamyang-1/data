@@ -33,6 +33,10 @@ from app.observability.langfuse_client import (
     trace_attributes,
 )
 from app.services.file_ingestion import FileImportError
+from app.services.upload_file_resolver import (
+    NO_PARSE_MARKER,
+    UploadReferenceResolutionError,
+)
 from app.services.orchestrator import DataAnalysisOrchestrator
 from app.services.progress import _progress_callback, progress_scope
 from minio_followup_store import DatasetScope
@@ -349,6 +353,27 @@ async def bind_chat_spreadsheet(
         if chat.dataset_id and not file_based:
             chat.dataset_id = None
         return
+    if any(
+        item.casefold() == NO_PARSE_MARKER for item in chat.temp_file_paths
+    ):
+        resolver = getattr(
+            request.app.state.container,
+            "upload_file_resolver",
+            None,
+        )
+        if resolver is None:
+            raise HTTPException(
+                status_code=422,
+                detail="本轮上传文件缺少可用的MinIO对象名",
+            )
+        try:
+            chat.temp_file_paths = await resolver.resolve(
+                chat.temp_file_paths,
+                conversation_id=chat.conversation_id,
+                question=chat.question,
+            )
+        except UploadReferenceResolutionError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     if chat.dataset_id is not None:
         chat._file_inspection = {
             "status": "DATASET_BOUND",

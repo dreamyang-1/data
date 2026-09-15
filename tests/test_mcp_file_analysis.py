@@ -74,6 +74,15 @@ class FailingImporter:
         raise ValueError("mixed column types")
 
 
+class ResolvingUploadReference:
+    def __init__(self):
+        self.calls = []
+
+    async def resolve(self, references, *, conversation_id, question):
+        self.calls.append((references, conversation_id, question))
+        return ["uploads/E-Commerce.xlsx"]
+
+
 def settings(**updates) -> Settings:
     values = {
         "env": "test",
@@ -206,6 +215,60 @@ async def test_local_import_failure_can_continue_to_configured_file_mcp():
             TrustedIdentity(tenant_id="tenant", user_id="user"),
         )
     assert exc_info.value.status_code == 502
+
+
+@pytest.mark.asyncio
+async def test_no_parse_is_resolved_before_local_import_and_mcp_fallback():
+    resolver = ResolvingUploadReference()
+    request = SimpleNamespace(
+        app=SimpleNamespace(
+            state=SimpleNamespace(
+                container=SimpleNamespace(
+                    file_importer=FailingImporter(),
+                    upload_file_resolver=resolver,
+                )
+            )
+        )
+    )
+    current = chat(temp_file_paths=["no-parse"])
+
+    await bind_chat_spreadsheet(
+        request,
+        current,
+        TrustedIdentity(tenant_id="tenant", user_id="user"),
+    )
+
+    assert resolver.calls == [
+        (["no-parse"], "conversation", current.question)
+    ]
+    assert current.temp_file_paths == ["uploads/E-Commerce.xlsx"]
+    assert current._file_inspection["status"] == (
+        "LOCAL_IMPORT_FAILED_MCP_AVAILABLE"
+    )
+
+
+@pytest.mark.asyncio
+async def test_no_parse_fails_clearly_when_platform_resolver_is_unavailable():
+    request = SimpleNamespace(
+        app=SimpleNamespace(
+            state=SimpleNamespace(
+                container=SimpleNamespace(
+                    file_importer=FailingImporter(),
+                    upload_file_resolver=None,
+                )
+            )
+        )
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await bind_chat_spreadsheet(
+            request,
+            chat(temp_file_paths=["no-parse"]),
+            TrustedIdentity(tenant_id="tenant", user_id="user"),
+        )
+
+    assert exc_info.value.status_code == 422
+    assert "MinIO" in exc_info.value.detail
 
 
 @pytest.mark.asyncio

@@ -337,6 +337,10 @@ class Settings(BaseSettings):
     mysql_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
     mysql_read_timeout_seconds: int = Field(default=10, ge=1, le=60)
     mysql_write_timeout_seconds: int = Field(default=10, ge=1, le=60)
+    platform_upload_reference_resolution_enabled: bool = True
+    platform_upload_reference_max_age_seconds: int = Field(
+        default=600, ge=30, le=3600
+    )
     minio_dataset_enabled: bool = False
     minio_endpoint: str | None = Field(
         default=None,
