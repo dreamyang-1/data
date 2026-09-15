@@ -454,6 +454,141 @@ async def test_structured_model_plan_is_schema_validated() -> None:
 
 
 @pytest.mark.asyncio
+async def test_model_judges_period_separated_independent_questions() -> None:
+    question = (
+        "查询空心纤维血液透析器产品合作的经销商名单。"
+        "查询外周插管中心静脉导管合作的医院名单。"
+    )
+
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": """
+            {"is_multi_question":true,"tasks":[
+              {"question":"查询空心纤维血液透析器产品合作的经销商名单","depends_on":[]},
+              {"question":"查询外周插管中心静脉导管合作的医院名单","depends_on":[]}
+            ]}
+            """}}]
+        })
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    plan = await planner.plan(question)
+
+    assert plan is not None
+    assert plan.planner == "STRUCTURED_MODEL"
+    assert [task.question for task in plan.tasks] == [
+        "查询空心纤维血液透析器产品合作的经销商名单",
+        "查询外周插管中心静脉导管合作的医院名单",
+    ]
+    assert all(not task.depends_on for task in plan.tasks)
+
+
+@pytest.mark.asyncio
+async def test_valid_model_single_task_decision_is_authoritative() -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [{"message": {
+                "content": '{"is_multi_question":false,"tasks":[]}'
+            }}]
+        })
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    assert await planner.plan("查询最近半年销售额；然后分析趋势") is None
+
+
+@pytest.mark.asyncio
+async def test_model_single_decision_does_not_remove_proven_dependency_plan() -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [{"message": {
+                "content": '{"is_multi_question":false,"tasks":[]}'
+            }}]
+        })
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    plan = await planner.plan(
+        "找出销售额下降最大的五个产品，并列出涉及的经销商和医院。"
+    )
+
+    assert plan is not None
+    assert plan.planner == "DETERMINISTIC_RULE"
+    assert plan.tasks[1].depends_on == ["task-1"]
+
+
+@pytest.mark.asyncio
+async def test_disabled_model_never_calls_multi_question_transport() -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        raise AssertionError("disabled model transport must not be called")
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_enabled=False,
+        intent_model_api_key=SecretStr("configured-but-disabled"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    plan = await planner.plan("查询本月销售额；另外查询本月订单量")
+
+    assert plan is not None
+    assert plan.planner == "DETERMINISTIC_RULE"
+
+
+@pytest.mark.asyncio
+async def test_period_separated_queries_have_deterministic_failure_fallback() -> None:
+    planner = MultiQuestionPlanner(Settings(
+        _env_file=None,
+        env="test",
+        multi_question_model_enabled=False,
+    ))
+    question = (
+        "查询空心纤维血液透析器产品合作的经销商名单。"
+        "查询外周插管中心静脉导管合作的医院名单。"
+    )
+
+    plan = await planner.plan(question)
+
+    assert plan is not None
+    assert [task.question for task in plan.tasks] == [
+        "查询空心纤维血液透析器产品合作的经销商名单",
+        "查询外周插管中心静脉导管合作的医院名单",
+    ]
+    assert all(not task.depends_on for task in plan.tasks)
+
+
+@pytest.mark.asyncio
+async def test_single_continuous_query_with_trailing_period_is_not_split() -> None:
+    planner = MultiQuestionPlanner(Settings(
+        _env_file=None,
+        env="test",
+        multi_question_model_enabled=False,
+    ))
+
+    assert await planner.plan("查询最近半年销售额并分析趋势。") is None
+
+
+@pytest.mark.asyncio
 async def test_model_plan_cannot_invent_another_time_or_metric() -> None:
     async def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={

@@ -13,6 +13,22 @@ from app.observability.langfuse_client import trace_generation
 from app.domain.models import AtomicTask, TaskPlan
 
 
+_ACTION_PATTERN = (
+    r"查询|查一下|统计|分析|比较|对比|占比|预测|解释|口径|血缘|"
+    r"生成|导出|下载|检查|找出|列出|筛选|匹配|拆分|计算|"
+    r"算(?:出|一下)?|(?:再)?加(?:上)?|是多少"
+)
+_NEW_SENTENCE_ACTION_START = (
+    r"(?:请|麻烦|帮我|请帮我|再)?\s*"
+    r"(?:查询|查一下|统计|分析|比较|对比|预测|解释|生成|导出|下载|"
+    r"检查|找出|列出|筛选|匹配|拆分|计算|算)"
+)
+_TASK_SPLIT_PATTERN = re.compile(
+    rf"[;；?？\n]+|[。！!]\s*(?={_NEW_SENTENCE_ACTION_START})|"
+    r"(?:，|,)?(?:另外|同时|此外|然后|再帮我|还要|以及还要)"
+)
+
+
 class TaskPlanningError(RuntimeError):
     pass
 
@@ -36,11 +52,12 @@ _SYSTEM_PROMPT = """你是企业数据分析任务拆分器，只输出JSON，�
 规则：
 1. 单个目标的连续步骤（例如“查询销售额并分析趋势”）通常是一个任务。
 2. 不同指标、不同实体、不同时间目标或不同交付物且可分别回答时，拆成多个任务。
-3. 只有一个查询动作，但明确列出同一语义属性下需要分别返回的多个分类、关系类型、状态或时间切片，也要拆分。例如“查询TDC-3产品的主要适用科室、次要适用科室”必须拆成两个独立任务。
-4. 普通返回字段列表或共同分组维度不得拆分。例如“查询产品名称、规格型号”和“按城市和品牌统计销售额”都仍是一个任务；“所有适用科室”也不是多个任务。
-5. 每个任务必须补全原句中共享的指标、时间、对象和筛选值，使其脱离其他任务也能理解；不得创造原文没有的信息。
-6. depends_on使用从0开始的任务下标。只有“基于上一步结果、再从其中、对上述结果”等确需复用前序结果时才建立依赖；并列分类分支之间没有依赖。
-7. 最多5个任务，保持用户原始顺序，不输出推理过程。
+3. 两个各自包含查询动作和业务对象的完整句子，即使只用句号连接、没有“另外”或“同时”，也属于两个独立任务。例如“查询甲产品的经销商名单。查询乙产品的医院名单。”必须拆成两个任务。
+4. 只有一个查询动作，但明确列出同一语义属性下需要分别返回的多个分类、关系类型、状态或时间切片，也要拆分。例如“查询TDC-3产品的主要适用科室、次要适用科室”必须拆成两个独立任务。
+5. 普通返回字段列表或共同分组维度不得拆分。例如“查询产品名称、规格型号”和“按城市和品牌统计销售额”都仍是一个任务；“所有适用科室”也不是多个任务。
+6. 每个任务必须补全原句中共享的指标、时间、对象和筛选值，使其脱离其他任务也能理解；不得创造原文没有的信息。
+7. depends_on使用从0开始的任务下标。只有“基于上一步结果、再从其中、对上述结果”等确需复用前序结果时才建立依赖；并列分类分支之间没有依赖。
+8. 最多5个任务，保持用户原始顺序，不输出推理过程。
 """
 
 
@@ -66,6 +83,22 @@ class MultiQuestionPlanner:
         self._transport = transport
 
     async def plan(self, question: str) -> TaskPlan | None:
+        model_decided_single = False
+        if (
+            self.settings.intent_model_enabled
+            and self.settings.multi_question_model_enabled
+            and self.settings.intent_model_api_key
+        ):
+            try:
+                plan = await self._model_plan(question)
+                if plan is not None:
+                    self.validate(plan, source_question=question)
+                    return plan
+                model_decided_single = True
+            except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError):
+                # A transport, schema or grounding failure falls back to the
+                # bounded deterministic planner.
+                pass
         ranked_relation_plan = self._ranked_relation_plan(question)
         if ranked_relation_plan is not None:
             self.validate(ranked_relation_plan, source_question=question)
@@ -78,18 +111,15 @@ class MultiQuestionPlanner:
         if parallel_ranking_plan is not None:
             self.validate(parallel_ranking_plan, source_question=question)
             return parallel_ranking_plan
+        # A valid model single-task decision is authoritative for ordinary
+        # language. Only the narrow, proven structural plans above may retain
+        # a split when the model misses an explicit report, ranking or
+        # dependency contract.
+        if model_decided_single:
+            return None
         if not self._candidate(question):
             return None
-        plan: TaskPlan | None = None
-        if self.settings.multi_question_model_enabled and self.settings.intent_model_api_key:
-            try:
-                plan = await self._model_plan(question)
-                if plan is not None:
-                    self.validate(plan, source_question=question)
-            except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError):
-                plan = None
-        if plan is None:
-            plan = self._rule_plan(question)
+        plan = self._rule_plan(question)
         if plan is None or len(plan.tasks) < 2:
             return None
         # Structured-model plans are validated inside the guarded block above so
@@ -326,14 +356,11 @@ class MultiQuestionPlanner:
         normalized = re.sub(
             r"(?:^|[\s;；])[一二三四五12345][、.)．]\s*", "\n", normalized
         )
-        if not re.search(r"[;；?？\n]", normalized):
+        if _TASK_SPLIT_PATTERN.search(normalized) is None:
             dependent_plan = self._inline_dependent_plan(normalized)
             if dependent_plan is not None:
                 return dependent_plan
-        pieces = re.split(
-            r"[;；?？\n]+|(?:，|,)?(?:另外|同时|此外|然后|再帮我|还要|以及还要)",
-            normalized,
-        )
+        pieces = _TASK_SPLIT_PATTERN.split(normalized)
         pieces = [piece.strip(" ，,。.") for piece in pieces if piece.strip(" ，,。.")]
         actionable = [piece for piece in pieces if self._has_action(piece)]
         if len(actionable) < 2:
@@ -703,14 +730,11 @@ class MultiQuestionPlanner:
 
     @staticmethod
     def _candidate(question: str) -> bool:
-        action_count = len(re.findall(
-            r"查询|查一下|统计|分析|比较|对比|占比|预测|解释|口径|血缘|"
-            r"生成|导出|下载|检查|找出|列出|筛选|匹配|拆分|计算|算(?:出|一下)?|(?:再)?加(?:上)?|是多少",
-            question,
-        ))
-        separators = bool(re.search(
-            r"[;；?？\n、]|(?:另外|同时|此外|然后|再帮我|还要|以及还要|以及|和|与|及)", question
-        ))
+        action_count = len(re.findall(_ACTION_PATTERN, question))
+        separators = bool(
+            _TASK_SPLIT_PATTERN.search(question)
+            or re.search(r"[、]|(?:以及|和|与|及)", question)
+        )
         numbered = len(re.findall(r"(?:^|\s)[一二三四五12345][、.)．]", question)) >= 2
         inline_dependency = bool(re.search(
             r"(?:"
@@ -728,11 +752,7 @@ class MultiQuestionPlanner:
 
     @staticmethod
     def _has_action(text: str) -> bool:
-        return bool(re.search(
-            r"查询|查一下|统计|分析|比较|对比|占比|预测|解释|口径|血缘|"
-            r"生成|导出|下载|检查|找出|列出|筛选|匹配|拆分|计算|算(?:出|一下)?|(?:再)?加(?:上)?|是多少",
-            text,
-        ))
+        return bool(re.search(_ACTION_PATTERN, text))
 
     @staticmethod
     def _depends_on_previous(text: str) -> bool:
