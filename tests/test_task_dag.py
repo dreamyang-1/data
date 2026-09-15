@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import uuid4
@@ -428,9 +429,15 @@ async def test_dependent_new_entity_does_not_reuse_predecessor_dataset() -> None
 @pytest.mark.asyncio
 async def test_structured_model_plan_is_schema_validated() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        system_prompt = body["messages"][0]["content"]
+        assert "业务任务边界" in system_prompt
+        assert "每个任务都会由系统独立执行完整链路" in system_prompt
+        assert "多个指标、多个展示字段或多个分组维度" in system_prompt
+        assert '"task_structure"' in system_prompt
         return httpx.Response(200, json={
             "choices": [{"message": {"content": """
-            {"is_multi_question":true,"tasks":[
+            {"task_structure":"PARALLEL_TASKS","tasks":[
               {"question":"查询本月销售额","depends_on":[]},
               {"question":"解释退款率口径","depends_on":[]}
             ]}
@@ -454,6 +461,61 @@ async def test_structured_model_plan_is_schema_validated() -> None:
 
 
 @pytest.mark.asyncio
+async def test_structured_model_dependency_decision_is_preserved() -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": """
+            {"task_structure":"DEPENDENT_TASKS","tasks":[
+              {"question":"查询TDC-3产品的适用科室","depends_on":[]},
+              {"question":"从TDC-3产品的适用科室中筛选合作医院","depends_on":[0]}
+            ]}
+            """}}]
+        })
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    plan = await planner.plan("先查询TDC-3产品的适用科室，再从这些科室中筛选合作医院")
+
+    assert plan is not None
+    assert plan.planner == "STRUCTURED_MODEL"
+    assert plan.tasks[0].depends_on == []
+    assert plan.tasks[1].depends_on == ["task-1"]
+
+
+@pytest.mark.asyncio
+async def test_inconsistent_parallel_model_plan_falls_back_without_dependency() -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": """
+            {"task_structure":"PARALLEL_TASKS","tasks":[
+              {"question":"查询本月销售额","depends_on":[]},
+              {"question":"查询本月订单量","depends_on":[0]}
+            ]}
+            """}}]
+        })
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    plan = await planner.plan("查询本月销售额；另外查询本月订单量")
+
+    assert plan is not None
+    assert plan.planner == "DETERMINISTIC_RULE"
+    assert all(not task.depends_on for task in plan.tasks)
+
+
+@pytest.mark.asyncio
 async def test_model_judges_period_separated_independent_questions() -> None:
     question = (
         "查询空心纤维血液透析器产品合作的经销商名单。"
@@ -463,7 +525,7 @@ async def test_model_judges_period_separated_independent_questions() -> None:
     async def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={
             "choices": [{"message": {"content": """
-            {"is_multi_question":true,"tasks":[
+            {"task_structure":"PARALLEL_TASKS","tasks":[
               {"question":"查询空心纤维血液透析器产品合作的经销商名单","depends_on":[]},
               {"question":"查询外周插管中心静脉导管合作的医院名单","depends_on":[]}
             ]}
@@ -494,7 +556,7 @@ async def test_valid_model_single_task_decision_is_authoritative() -> None:
     async def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={
             "choices": [{"message": {
-                "content": '{"is_multi_question":false,"tasks":[]}'
+                "content": '{"task_structure":"SINGLE_TASK","tasks":[]}'
             }}]
         })
 
@@ -514,7 +576,7 @@ async def test_model_single_decision_does_not_remove_proven_dependency_plan() ->
     async def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={
             "choices": [{"message": {
-                "content": '{"is_multi_question":false,"tasks":[]}'
+                "content": '{"task_structure":"SINGLE_TASK","tasks":[]}'
             }}]
         })
 
@@ -589,11 +651,32 @@ async def test_single_continuous_query_with_trailing_period_is_not_split() -> No
 
 
 @pytest.mark.asyncio
+async def test_explicit_result_reference_has_deterministic_dependency_fallback() -> None:
+    planner = MultiQuestionPlanner(Settings(
+        _env_file=None,
+        env="test",
+        multi_question_model_enabled=False,
+    ))
+
+    plan = await planner.plan(
+        "先查询TDC-3产品的适用科室，再从这些科室中筛选合作医院"
+    )
+
+    assert plan is not None
+    assert [task.question for task in plan.tasks] == [
+        "先查询TDC-3产品的适用科室",
+        "从这些科室中筛选合作医院，业务对象为TDC-3",
+    ]
+    assert plan.tasks[0].depends_on == []
+    assert plan.tasks[1].depends_on == ["task-1"]
+
+
+@pytest.mark.asyncio
 async def test_model_plan_cannot_invent_another_time_or_metric() -> None:
     async def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={
             "choices": [{"message": {"content": """
-            {"is_multi_question":true,"tasks":[
+            {"task_structure":"PARALLEL_TASKS","tasks":[
               {"question":"查询上月销售额","depends_on":[]},
               {"question":"分析本月退款率","depends_on":[]}
             ]}
@@ -616,7 +699,7 @@ async def test_model_plan_cannot_silently_drop_an_analysis_goal() -> None:
     async def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={
             "choices": [{"message": {"content": """
-            {"is_multi_question":true,"tasks":[
+            {"task_structure":"PARALLEL_TASKS","tasks":[
               {"question":"查询本月销售额","depends_on":[]},
               {"question":"查询本月订单量","depends_on":[]}
             ]}
@@ -646,6 +729,35 @@ def test_plan_validation_rejects_dropped_exclusion_constraint() -> None:
             plan,
             source_question="查询本月销售额但排除退款；另外查询本月订单量",
         )
+
+
+def test_plan_validation_allows_distinct_identifiers_in_distinct_tasks() -> None:
+    plan = TaskPlan(planner="STRUCTURED_MODEL", tasks=[
+        AtomicTask(task_id="task-1", question="查询TDC-3产品合作的经销商"),
+        AtomicTask(task_id="task-2", question="查询ABC-4产品合作的医院"),
+    ])
+
+    MultiQuestionPlanner.validate(
+        plan,
+        source_question="查询TDC-3产品合作的经销商。查询ABC-4产品合作的医院。",
+    )
+
+
+def test_plan_validation_rejects_invented_or_dropped_business_identifier() -> None:
+    invented = TaskPlan(planner="STRUCTURED_MODEL", tasks=[
+        AtomicTask(task_id="task-1", question="查询TDC-3产品合作的经销商"),
+        AtomicTask(task_id="task-2", question="查询XYZ-3产品合作的医院"),
+    ])
+    dropped = TaskPlan(planner="STRUCTURED_MODEL", tasks=[
+        AtomicTask(task_id="task-1", question="查询TDC-3产品合作的经销商"),
+        AtomicTask(task_id="task-2", question="查询合作医院"),
+    ])
+    source = "查询TDC-3产品合作的经销商。查询ABC-3产品合作的医院。"
+
+    with pytest.raises(TaskPlanningError, match="不存在的业务型号或编码"):
+        MultiQuestionPlanner.validate(invented, source_question=source)
+    with pytest.raises(TaskPlanningError, match="遗漏原问题中的业务型号或编码"):
+        MultiQuestionPlanner.validate(dropped, source_question=source)
 
 
 @pytest.mark.asyncio
