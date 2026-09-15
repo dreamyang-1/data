@@ -187,7 +187,7 @@ def _current_turn_extraction_summary(parse: CurrentTurnSemanticParse) -> str:
             labels = slots_by_mention.get(mention.mention_id, [])
         labels = list(dict.fromkeys(labels))
         if labels:
-            extracted.append(f"{mention.surface}（{'/'.join(labels)}）")
+            extracted.append(mention.surface)
     if not extracted:
         return "语义提取字段：未提取到可展示的业务字段。"
     return f"语义提取字段：{'；'.join(extracted)}。"
