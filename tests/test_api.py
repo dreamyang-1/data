@@ -373,24 +373,18 @@ def test_progress_heartbeat_uses_visible_existing_stage_contract():
     serialized = _progress_heartbeat_events(
         "INTENT_RECOGNITION",
         elapsed_seconds=6.04,
-        message_id="heartbeat-message",
     )
     events = [
         json.loads(item.removeprefix("data: ").strip())
         for item in serialized
     ]
 
-    assert events[0] == {
-        "type": "updata_state",
-        "step": "",
-        "data": "heartbeat",
-        "message_id": "heartbeat-message",
-        "elapsed_seconds": 6.0,
-    }
-    visible = events[1]
+    assert len(events) == 1
+    visible = events[0]
     assert visible["type"] == "message_chunk"
     assert visible["step"] == "step1"
-    assert visible["is_last"] is True
+    assert visible["index"] == 6040
+    assert visible["is_last"] is False
     assert visible["content"] == (
         "<stage>⏳ 正在识别问题中的指标、维度与筛选条件"
         "（已用时 6 秒）...</stage>"
@@ -398,7 +392,6 @@ def test_progress_heartbeat_uses_visible_existing_stage_contract():
     assert visible["meta"] == {
         "stage": "INTENT_RECOGNITION",
         "status": "RUNNING",
-        "progress_heartbeat": True,
         "elapsed_seconds": 6.0,
     }
 
@@ -475,12 +468,15 @@ def test_slow_stream_emits_visible_progress_while_waiting():
     heartbeats = [
         event for event in events
         if event.get("type") == "message_chunk"
-        and event.get("meta", {}).get("progress_heartbeat") is True
+        and "已用时" in event.get("content", "")
+        and event.get("meta", {}).get("status") == "RUNNING"
     ]
 
     assert response.status_code == 200
     assert len(heartbeats) >= 2
     assert all(event["step"] == "step1" for event in heartbeats)
+    assert all(event["is_last"] is False for event in heartbeats)
+    assert len({event["index"] for event in heartbeats}) == len(heartbeats)
     assert all("<stage>⏳ 正在识别问题" in event["content"] for event in heartbeats)
     assert all("已用时" in event["content"] for event in heartbeats)
     assert next(

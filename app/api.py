@@ -774,7 +774,6 @@ async def chat_stream(
             heartbeat_events = _progress_heartbeat_events(
                 latest_progress_stage,
                 elapsed_seconds=now - started_at,
-                message_id=external_message_id,
             )
             last_visible_at = now
             return heartbeat_events
@@ -1084,7 +1083,6 @@ def _progress_heartbeat_events(
     stage: str,
     *,
     elapsed_seconds: float,
-    message_id: str,
 ) -> list[str]:
     """Keep the SSE connection and the platform's visible stage both alive.
 
@@ -1096,30 +1094,29 @@ def _progress_heartbeat_events(
     """
 
     normalized_stage = (stage or "INTENT_RECOGNITION").strip().upper()
-    elapsed = max(0.0, round(float(elapsed_seconds), 1))
+    elapsed_raw = max(0.0, float(elapsed_seconds))
+    elapsed = round(elapsed_raw, 1)
     message = _progress_waiting_message(normalized_stage)
     meta = {
         "stage": normalized_stage,
         "status": "RUNNING",
-        "progress_heartbeat": True,
         "elapsed_seconds": elapsed,
     }
     return [
-        _event("updata_state", {
-            "step": "",
-            "data": "heartbeat",
-            "message_id": message_id,
-            "elapsed_seconds": elapsed,
-        }),
         _event("message_chunk", {
             "step": _new_agent_think_step(normalized_stage),
-            "index": 0,
+            # Some deployed platform adapters suppress an ``updata_state``
+            # heartbeat together with the following synthetic final chunk.
+            # Emit the visible wait state as an ordinary, non-final think
+            # fragment with a changing index so it follows the same path as
+            # all other progressively rendered thinking content.
+            "index": max(1, int(round(elapsed_raw * 1000))),
             "content": (
                 f"<stage>⏳ {message}（已用时 {elapsed:g} 秒）...</stage>"
             ),
             "role": "assistant",
             "node": "",
-            "is_last": True,
+            "is_last": False,
             "meta": meta,
         }),
     ]
