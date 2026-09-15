@@ -17,10 +17,42 @@ from app.presentation.intent_recognition import (
     render_composite_intent_recognition_display_v2,
     render_asl_extraction_json,
     render_intent_recognition_display_v2,
+    render_resolved_intent_context_v2,
 )
 
 
 IDENTITY = TrustedIdentity(tenant_id="tenant", user_id="user")
+
+
+def test_resolved_context_and_intent_decision_render_as_nonduplicated_steps():
+    context = render_resolved_intent_context_v2(
+        original_question="分析上海销售趋势",
+        completed_question="分析上海最近一年的销售趋势",
+        business_domains=["医药销售域"],
+        semantic_extractions=[{
+            "surface": "上海",
+            "normalized_surface": "上海",
+            "labels": ("筛选值",),
+        }],
+    )
+    request = RuleBasedIntentClassifier().classify(
+        "分析上海最近一年的销售趋势", IDENTITY, "incremental-intent-display"
+    )
+    decision = render_intent_recognition_display_v2(
+        build_intent_recognition_display_v2(
+            request, business_domain_labels=["医药销售域"]
+        ),
+        include_resolved_context=False,
+    )
+
+    assert "用户原始问题：分析上海销售趋势" in context
+    assert "补全后的问题：分析上海最近一年的销售趋势" in context
+    assert "结构化参数提取：上海（筛选值）。" in context
+    assert "业务域：医药销售域" in context
+    assert "用户原始问题：" not in decision
+    assert "补全后的问题：" not in decision
+    assert "业务域：" not in decision
+    assert "任务意图：趋势分析" in decision
 
 
 def test_composite_display_lists_real_unique_child_intents_only():

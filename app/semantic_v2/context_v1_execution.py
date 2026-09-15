@@ -28,6 +28,7 @@ from app.domain.models import (
     TrustedIdentity,
 )
 from app.services.progress import emit_progress
+from app.presentation import render_resolved_intent_context_v2
 from app.stores import MessageIdReuseConflictError
 
 from .authorized_contract import (
@@ -989,9 +990,26 @@ class V2ContextV1ExecutionBridge:
             if not resolved.completed_question:
                 raise ValueError("V2_COMPLETED_QUESTION_REQUIRED")
             step = _completed_question_step(resolved)
+            semantic_parse = resolved.semantic_parse or resolved.standalone_parse
+            semantic_extractions = (
+                current_turn_extraction_items(semantic_parse)
+                if semantic_parse is not None
+                else ()
+            )
+            intent_context_progress_emitted = step is not None
             if step is not None:
                 await emit_progress(
-                    "QUESTION_REWRITE", "COMPLETED", step.summary
+                    "INTENT_RECOGNITION",
+                    "RUNNING",
+                    render_resolved_intent_context_v2(
+                        original_question=chat.question,
+                        completed_question=resolved.completed_question,
+                        business_domains=business_domain_labels,
+                        semantic_extractions=semantic_extractions,
+                    ),
+                    progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+                    display_model="IntentRecognitionContextProgressV2",
+                    display_version="V2",
                 )
             running = await self.store.reserve(
                 snapshot,
@@ -1009,12 +1027,11 @@ class V2ContextV1ExecutionBridge:
                 update={"question": resolved.completed_question, "history": []},
             )
             execution_chat._completed_question_execution = True
+            execution_chat._intent_context_progress_emitted = (
+                intent_context_progress_emitted
+            )
             execution_chat._business_domain_labels = business_domain_labels
-            semantic_parse = resolved.semantic_parse or resolved.standalone_parse
-            if semantic_parse is not None:
-                execution_chat._semantic_extraction_items = (
-                    current_turn_extraction_items(semantic_parse)
-                )
+            execution_chat._semantic_extraction_items = semantic_extractions
             response = await self.v1_executor(execution_chat, identity)
             response = await self._retry_for_result_availability(
                 chat=execution_chat,

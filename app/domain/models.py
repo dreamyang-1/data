@@ -652,6 +652,10 @@ class ChatRequest(StrictModel):
     # planning and execution, but must not merge its own Pending/TaskFrame
     # state into an already resolved question a second time.
     _completed_question_execution: bool = PrivateAttr(default=False)
+    # Set only after the V2 bridge has published the validated question,
+    # semantic fields and business-domain block. V1 can then publish only the
+    # remaining intent decision instead of replaying the same visible facts.
+    _intent_context_progress_emitted: bool = PrivateAttr(default=False)
     # Populated only by the demo V2-context bridge from a same-conversation,
     # execution-backed envelope.  Transport JSON cannot set private attrs.
     _demo_execution_resolved_business_domain_ids: tuple[int, ...] = PrivateAttr(

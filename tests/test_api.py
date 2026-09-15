@@ -33,6 +33,7 @@ from app.presentation import (
 )
 from app.services.progress import emit_progress
 from app.api import (
+    _CompositeChildProgressOrderer,
     _answer_chunk_delay,
     _answer_chunks,
     _forward_traced_progress,
@@ -197,6 +198,50 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
     assert "只基于本次查询结果和已验证证据" in insight_content
     assert "任务1：" not in validation_content
     assert "任务1：" not in insight_content
+
+
+def test_composite_progress_streams_each_stage_at_its_real_barrier():
+    orderer = _CompositeChildProgressOrderer()
+
+    def event(stage, status, task_index):
+        return {
+            "stage": stage,
+            "status": status,
+            "message": f"{stage}-{task_index}",
+            "is_child_task": True,
+            "task_id": f"task-{task_index + 1}",
+            "task_index": task_index,
+            "task_count": 2,
+        }
+
+    # Execution is visible immediately; task-1 validation/insight wait only
+    # for the truthful cross-task stage barriers, not for the whole DAG.
+    first_execution = orderer.push(event("DATA_RETRIEVAL", "RUNNING", 0))
+    assert [item["stage"] for item in first_execution] == ["DATA_RETRIEVAL"]
+    orderer.push(event("DATA_RETRIEVAL", "COMPLETED", 0))
+    assert orderer.push(event("RELIABILITY_CHECK", "COMPLETED", 0)) == []
+    assert orderer.push(event("INSIGHT_ANALYSIS", "COMPLETED", 0)) == []
+
+    second_execution = orderer.push(event("DATA_RETRIEVAL", "COMPLETED", 1))
+    assert [item["stage"] for item in second_execution] == [
+        "DATA_RETRIEVAL",
+        "RELIABILITY_CHECK",
+    ]
+    assert orderer.execution_barrier_open is True
+    assert orderer.validation_barrier_open is False
+
+    second_validation = orderer.push(
+        event("RELIABILITY_CHECK", "COMPLETED", 1)
+    )
+    assert [item["stage"] for item in second_validation] == [
+        "RELIABILITY_CHECK",
+        "INSIGHT_ANALYSIS",
+    ]
+    assert orderer.validation_barrier_open is True
+    assert orderer.push(event("INSIGHT_ANALYSIS", "COMPLETED", 1))[0][
+        "stage"
+    ] == "INSIGHT_ANALYSIS"
+    assert orderer.flush() == []
 
 
 def test_chat_collects_sync_and_stream_questions_but_not_refresh(tmp_path):

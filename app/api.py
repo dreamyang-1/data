@@ -755,7 +755,7 @@ async def chat_stream(
         presentation_scenario = "ANALYTIC"
         titled_think_sections: set[str] = set()
         composite_mode = False
-        composite_child_progress: list[dict[str, Any]] = []
+        composite_child_orderer = _CompositeChildProgressOrderer()
         latest_progress_stage = "INTENT_RECOGNITION"
         settings = request.app.state.container.settings
         heartbeat_interval = settings.thinking_stream_heartbeat_seconds
@@ -865,15 +865,12 @@ async def chat_stream(
                     "execution", "validation", "insight",
                 }
             ):
-                # Composite children execute concurrently, so their raw event
-                # arrival order can be task-1 validation/insight followed by
-                # task-2 SQL execution.  Rendering that order places the second
-                # tool call under the already-open insight heading.  Buffer only
-                # the public child milestones and release them in document
-                # section order after the DAG finishes.  Execution remains
-                # parallel; this is a presentation boundary only.
-                composite_child_progress.append(dict(event))
-                return []
+                # Child tasks execute concurrently. Publish execution events as
+                # they happen, then open validation and insight only when every
+                # child has crossed the preceding stage boundary. This keeps the
+                # document headings stable without replaying all child progress
+                # after the DAG has already finished.
+                return composite_child_orderer.push(event)
             if (
                 stage == "FILE_INSPECTION"
                 and event.get("status") == "COMPLETED"
@@ -986,12 +983,9 @@ async def chat_stream(
 
             response = await execution
             response.conversation_id = external_conversation_id
-            for event in _ordered_composite_child_progress_events(
-                composite_child_progress
-            ):
+            for event in composite_child_orderer.flush():
                 async for rendered_event in stream_thinking(event):
                     yield rendered_event
-            composite_child_progress.clear()
             for event in deferred_planning:
                 async for rendered_event in stream_thinking(event):
                     yield rendered_event
@@ -1329,8 +1323,120 @@ def _thinking_section(stage: str) -> str | None:
     }.get(stage)
 
 
+class _CompositeChildProgressOrderer:
+    """Release concurrent child progress at truthful public stage barriers."""
+
+    _TERMINAL_STATUSES = {"COMPLETED", "DEGRADED", "FAILED", "SKIPPED"}
+
+    def __init__(self) -> None:
+        self.expected_task_count = 0
+        self.execution_completed: set[str] = set()
+        self.validation_completed: set[str] = set()
+        self.execution_barrier_open = False
+        self.validation_barrier_open = False
+        self.deferred_validation: list[dict[str, Any]] = []
+        self.deferred_insight: list[dict[str, Any]] = []
+        self.labelled_tasks: set[tuple[str, int]] = set()
+
+    @staticmethod
+    def _task_key(event: dict[str, Any]) -> str:
+        task_id = str(event.get("task_id") or "").strip()
+        if task_id:
+            return task_id
+        try:
+            return f"task-index-{max(0, int(event.get('task_index') or 0))}"
+        except (TypeError, ValueError):
+            return "task-index-0"
+
+    def _observe_task_count(self, event: dict[str, Any]) -> None:
+        try:
+            self.expected_task_count = max(
+                self.expected_task_count, int(event.get("task_count") or 0)
+            )
+        except (TypeError, ValueError):
+            pass
+
+    def _all_tasks_completed(self, completed: set[str]) -> bool:
+        return bool(
+            self.expected_task_count > 1
+            and len(completed) >= self.expected_task_count
+        )
+
+    def _label(self, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return _ordered_composite_child_progress_events(
+            events, labelled_tasks=self.labelled_tasks
+        )
+
+    def _open_validation_if_ready(self) -> list[dict[str, Any]]:
+        if (
+            self.execution_barrier_open
+            or not self._all_tasks_completed(self.execution_completed)
+        ):
+            return []
+        self.execution_barrier_open = True
+        released = self._label(self.deferred_validation)
+        self.deferred_validation.clear()
+        released.extend(self._open_insight_if_ready())
+        return released
+
+    def _open_insight_if_ready(self) -> list[dict[str, Any]]:
+        if (
+            not self.execution_barrier_open
+            or self.validation_barrier_open
+            or not self._all_tasks_completed(self.validation_completed)
+        ):
+            return []
+        self.validation_barrier_open = True
+        released = self._label(self.deferred_insight)
+        self.deferred_insight.clear()
+        return released
+
+    def push(self, event: dict[str, Any]) -> list[dict[str, Any]]:
+        current = dict(event)
+        self._observe_task_count(current)
+        stage = str(current.get("stage") or "").upper()
+        status = str(current.get("status") or "").upper()
+        section = _thinking_section(stage)
+        task_key = self._task_key(current)
+
+        if section == "execution":
+            visible = self._label([current])
+            if (
+                stage == "DATA_RETRIEVAL"
+                and status in self._TERMINAL_STATUSES
+            ):
+                self.execution_completed.add(task_key)
+                visible.extend(self._open_validation_if_ready())
+            return visible
+
+        if section == "validation":
+            if status in self._TERMINAL_STATUSES:
+                self.validation_completed.add(task_key)
+            if not self.execution_barrier_open:
+                self.deferred_validation.append(current)
+                return []
+            visible = self._label([current])
+            visible.extend(self._open_insight_if_ready())
+            return visible
+
+        if section == "insight":
+            if not self.validation_barrier_open:
+                self.deferred_insight.append(current)
+                return []
+            return self._label([current])
+        return [current]
+
+    def flush(self) -> list[dict[str, Any]]:
+        pending = [*self.deferred_validation, *self.deferred_insight]
+        self.deferred_validation.clear()
+        self.deferred_insight.clear()
+        return self._label(pending)
+
+
 def _ordered_composite_child_progress_events(
     events: list[dict[str, Any]],
+    *,
+    labelled_tasks: set[tuple[str, int]] | None = None,
 ) -> list[dict[str, Any]]:
     """Keep concurrent child milestones inside their public UI sections."""
 
@@ -1346,7 +1452,7 @@ def _ordered_composite_child_progress_events(
         return section_order.get(section or "", 99), task_index, sequence
 
     ordered = [event for _, event in sorted(enumerate(events), key=sort_key)]
-    labelled_tasks: set[tuple[str, int]] = set()
+    labelled_tasks = labelled_tasks if labelled_tasks is not None else set()
     rendered: list[dict[str, Any]] = []
     for event in ordered:
         current = dict(event)

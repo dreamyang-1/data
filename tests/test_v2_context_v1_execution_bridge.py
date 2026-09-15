@@ -365,6 +365,15 @@ async def test_bridge_streams_context_progress_before_resolution(provider):
     assert events[0]["status"] == "RUNNING"
     assert events[0]["progress_phase"] == "V2_CONTEXT_START"
     assert "正在理解当前问题" in events[0]["message"]
+    resolved_context = next(
+        event for event in events
+        if event.get("progress_phase") == "V2_RESOLVED_INTENT_CONTEXT_READY"
+    )
+    assert resolved_context["stage"] == "INTENT_RECOGNITION"
+    assert resolved_context["status"] == "RUNNING"
+    assert "用户原始问题：查询去年江苏省订单笔数" in resolved_context["message"]
+    assert "补全后的问题：" in resolved_context["message"]
+    assert "业务域：" in resolved_context["message"]
 
 
 @pytest.mark.parametrize(

@@ -714,7 +714,10 @@ class DataAnalysisOrchestrator:
                             "INTENT_RECOGNITION",
                             "COMPLETED",
                             render_composite_intent_recognition_display_v2(
-                                composite_view
+                                composite_view,
+                                include_resolved_context=(
+                                    not chat._intent_context_progress_emitted
+                                ),
                             ),
                             intent=",".join(dict.fromkeys(
                                 item.value for item in task_intents
@@ -4480,6 +4483,9 @@ class DataAnalysisOrchestrator:
                 file_based=bool(chat._file_inspection.get("file_based")),
                 business_domain_labels=chat._business_domain_labels,
                 semantic_extractions=chat._semantic_extraction_items,
+                include_resolved_context=(
+                    not chat._intent_context_progress_emitted
+                ),
             ),
             intent=request.primary_intent.value,
             confidence=round(float(request.intent_confidence), 4),
@@ -8563,6 +8569,7 @@ class DataAnalysisOrchestrator:
         file_based: bool = False,
         business_domain_labels: tuple[str, ...] | list[str] = (),
         semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]] = (),
+        include_resolved_context: bool = True,
     ) -> str:
         view = build_intent_recognition_display_v2(
             request,
@@ -8571,7 +8578,9 @@ class DataAnalysisOrchestrator:
             business_domain_labels=business_domain_labels,
             semantic_extractions=semantic_extractions,
         )
-        return render_intent_recognition_display_v2(view)
+        return render_intent_recognition_display_v2(
+            view, include_resolved_context=include_resolved_context
+        )
 
     @staticmethod
     def _file_inspection_think_summary(inspection: dict[str, Any]) -> str:

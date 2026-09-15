@@ -724,6 +724,8 @@ def build_intent_recognition_display_v2(
 
 def render_intent_recognition_display_v2(
     view: IntentRecognitionDisplayV2,
+    *,
+    include_resolved_context: bool = True,
 ) -> str:
     """Render intent facts that are known before downstream ASL generation.
 
@@ -738,25 +740,50 @@ def render_intent_recognition_display_v2(
         if view.scenario in {"CHAT", "CLARIFICATION"}
         else "用户原始问题"
     )
-    lines = [
-        "### ◉ 意图识别",
-        "",
-        f"{original_label}：{view.original_question}",
-        f"补全后的问题：{view.completed_question}",
-    ]
-    if view.structured_parameters:
-        lines.append(
-            "结构化参数提取：" + "；".join(view.structured_parameters) + "。"
-        )
-    lines.append(f"业务域：{'、'.join(view.business_domains)}")
-    if view.file_judgement:
-        lines.append(f"文件判断：{view.file_judgement}")
+    lines = ["### ◉ 意图识别", ""]
+    if include_resolved_context:
+        lines.extend([
+            f"{original_label}：{view.original_question}",
+            f"补全后的问题：{view.completed_question}",
+        ])
+        if view.structured_parameters:
+            lines.append(
+                "结构化参数提取：" + "；".join(view.structured_parameters) + "。"
+            )
+        lines.append(f"业务域：{'、'.join(view.business_domains)}")
+        if view.file_judgement:
+            lines.append(f"文件判断：{view.file_judgement}")
     lines.extend([
         f"任务意图：{view.task_intent}",
         f"意图判定依据：{view.intent_basis}",
     ])
     if view.show_structure:
         lines.append(f"参数规范化：{view.normalization_status}")
+    return "\n".join(lines)
+
+
+def render_resolved_intent_context_v2(
+    *,
+    original_question: str,
+    completed_question: str,
+    business_domains: tuple[str, ...] | list[str] = (),
+    semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]] = (),
+) -> str:
+    """Render V2 facts once context and semantic binding are validated."""
+
+    parameters = _semantic_extraction_parameters(
+        f"{original_question} {completed_question}", semantic_extractions
+    )
+    domain_labels = _unique_text(list(business_domains)) or [
+        "当前语义模型全部授权业务域"
+    ]
+    lines = [
+        f"用户原始问题：{_single_line(original_question)}",
+        f"补全后的问题：{_single_line(completed_question)}",
+    ]
+    if parameters:
+        lines.append("结构化参数提取：" + "；".join(parameters) + "。")
+    lines.append(f"业务域：{'、'.join(domain_labels)}")
     return "\n".join(lines)
 
 
@@ -836,6 +863,8 @@ def build_composite_intent_recognition_display_v2(
 
 def render_composite_intent_recognition_display_v2(
     view: CompositeIntentRecognitionDisplayV2,
+    *,
+    include_resolved_context: bool = True,
 ) -> str:
     """Render one deterministic parent trace for every DAG child."""
 
@@ -843,13 +872,10 @@ def render_composite_intent_recognition_display_v2(
         task.intent for task in view.tasks if task.intent
     ))
     task_intent = "、".join(intent_labels) or "待语义识别"
-    lines = [
-        "### ◉ 意图识别",
-        "",
-        f"用户原始问题：{view.original_question}",
-        "补全后的问题：",
-        "",
-    ]
+    lines = ["### ◉ 意图识别", ""]
+    if include_resolved_context:
+        lines.append(f"用户原始问题：{view.original_question}")
+    lines.extend(["补全后的问题：", ""])
     for index, task in enumerate(view.tasks, 1):
         lines.append(f"{index}. {task.question}")
         if task.structured_parameters:
@@ -860,9 +886,10 @@ def render_composite_intent_recognition_display_v2(
             )
         if index < len(view.tasks):
             lines.append("")
+    lines.append("")
+    if include_resolved_context:
+        lines.append(f"业务域：{'、'.join(view.business_domains)}")
     lines.extend([
-        "",
-        f"业务域：{'、'.join(view.business_domains)}",
         f"任务意图：{task_intent}",
         (
             "意图判定依据：各项任务均按其实际业务目标识别，"
