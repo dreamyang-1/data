@@ -54,10 +54,21 @@ def test_bridge_profile_freezes_mainline_and_lists_requested_timing_points():
     assert profile["active"] is True
     assert profile["pure_v2_execution_expansion"] == "PAUSED"
     assert profile["timing_trace_version"] == "bridge-timing-v1"
+    assert profile["semantic_decision_version"] == "semantic-decision-v1"
+    assert profile["semantic_handoff"] == {
+        "transport_visibility": "INTERNAL_PRIVATE_ATTRIBUTE",
+        "accepted_source": "V2_AUTHORIZED_PLAN",
+        "accepted_v1_intent_model": "SKIPPED",
+        "fallback_source": "V1_SEMANTIC_FALLBACK",
+        "fallback_reason_recorded": True,
+        "v1_execution_safety_validation": "REQUIRED",
+    }
     assert {
         "v2.catalog.load",
         "v2.model.current_turn",
         "v2.model.semantic_edits",
+        "semantic.contract.build",
+        "semantic.contract.validation",
         "v1.question_rewrite",
         "v1.intent_recognition",
         "v1.task_decomposition",

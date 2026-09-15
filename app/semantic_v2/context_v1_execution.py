@@ -67,6 +67,7 @@ from .recognition import (
     current_turn_extraction_items,
 )
 from .recognition_client import RecognitionFailure, RecognitionModelClient
+from .semantic_decision import build_semantic_decision
 from .state_machine import ConversationState, StateTransitionError
 
 
@@ -1091,6 +1092,32 @@ class V2ContextV1ExecutionBridge:
                 )
             if not resolved.completed_question:
                 raise ValueError("V2_COMPLETED_QUESTION_REQUIRED")
+            with track_operation(
+                "V2_CONTEXT",
+                "semantic.contract.build",
+                attributes={"route": resolved.bridge_route},
+            ) as contract_timing:
+                semantic_decision = build_semantic_decision(
+                    chat=chat,
+                    completed_question=resolved.completed_question,
+                    bridge_route=resolved.bridge_route,
+                    plan_state=resolved.plan_state,
+                    conversation_state=(
+                        resolved.display.relation
+                        if resolved.display is not None
+                        else None
+                    ),
+                    fallback_reason=resolved.fallback_reason,
+                    catalog_version=(provenance or {}).get("catalog_version"),
+                )
+                contract_timing.mark_first_result()
+                contract_timing.set_attribute(
+                    "source", semantic_decision.source.value
+                )
+                contract_timing.set_attribute("status", semantic_decision.status)
+                contract_timing.set_attribute(
+                    "fallback_reason", semantic_decision.fallback_reason
+                )
             step = _completed_question_step(resolved)
             semantic_parse = resolved.semantic_parse or resolved.standalone_parse
             semantic_extractions = (
@@ -1134,10 +1161,18 @@ class V2ContextV1ExecutionBridge:
             )
             execution_chat._business_domain_labels = business_domain_labels
             execution_chat._semantic_extraction_items = semantic_extractions
+            execution_chat._semantic_decision = semantic_decision
             with track_operation(
                 "V1_ORCHESTRATION",
                 "bridge.v1_execution",
-                attributes={"route": resolved.bridge_route},
+                attributes={
+                    "route": resolved.bridge_route,
+                    "semantic_decision_source": semantic_decision.source.value,
+                    "semantic_decision_status": semantic_decision.status,
+                    "v1_semantic_fallback_reason": (
+                        semantic_decision.fallback_reason
+                    ),
+                },
             ) as timing:
                 response = await self.v1_executor(execution_chat, identity)
                 response = await self._retry_for_result_availability(
@@ -1148,6 +1183,20 @@ class V2ContextV1ExecutionBridge:
                     prior_state=snapshot.state,
                 )
                 timing.mark_first_result()
+                final_semantic_decision = execution_chat._semantic_decision
+                if final_semantic_decision is not None:
+                    timing.set_attribute(
+                        "semantic_decision_source",
+                        final_semantic_decision.source.value,
+                    )
+                    timing.set_attribute(
+                        "semantic_decision_status",
+                        final_semantic_decision.status,
+                    )
+                    timing.set_attribute(
+                        "v1_semantic_fallback_reason",
+                        final_semantic_decision.fallback_reason,
+                    )
             response = _attach_completed_question(response, resolved)
             final_state = None
             if (

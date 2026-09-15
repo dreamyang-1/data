@@ -665,6 +665,9 @@ class ChatRequest(StrictModel):
     _demo_execution_resolved_business_domain_ids: tuple[int, ...] = PrivateAttr(
         default_factory=tuple
     )
+    # Trusted in-process semantic handoff.  It is never accepted from request
+    # JSON and therefore cannot be used by callers to bypass scope validation.
+    _semantic_decision: Any = PrivateAttr(default=None)
     conversation_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=4000)

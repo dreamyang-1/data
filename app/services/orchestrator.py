@@ -69,6 +69,11 @@ from app.services.conversation_followup import (
 from app.services.turn_admission import TurnAdmissionGate
 from app.services.clarification_policy import decide_clarification, restore_clarification_keys
 from app.services.authorized_scope import bind_authorized_scope, state_scope_matches
+from app.services.semantic_decision import (
+    canonical_request_from_semantic_decision,
+    semantic_decision_for_task_plan,
+    semantic_decision_with_v1_fallback,
+)
 from app.services.legacy_guards import pending_answer_admissibility, apply_snapshot_display_default, apply_region_clear_barrier
 from app.services.history_compaction import compact_history
 from app.services.working_memory import recalls_prior_task, requires_prior_task_resolution, select_recalled_task_frame
@@ -676,19 +681,35 @@ class DataAnalysisOrchestrator:
                         "RUNNING",
                         "### ◉ 规划与执行\n正在判断是否需要拆分多个分析任务。",
                     )
-                    try:
-                        with track_operation(
-                            "V1_ORCHESTRATION",
-                            "v1.task_decomposition",
-                        ) as timing:
-                            plan = await self.task_planner.plan(chat.question)
-                            timing.mark_first_result()
-                            timing.set_attribute(
-                                "task_count",
-                                len(plan.tasks) if plan is not None else 1,
-                            )
-                    except TaskPlanningError as exc:
-                        logger.warning("multi-question plan rejected: %s", exc)
+                    semantic_decision = chat._semantic_decision
+                    semantic_decision_ready = bool(
+                        chat._completed_question_execution
+                        and semantic_decision is not None
+                        and callable(getattr(
+                            semantic_decision, "request_mismatch_reason", None
+                        ))
+                        and semantic_decision.request_mismatch_reason(
+                            message_id=chat.message_id,
+                            conversation_id=chat.conversation_id,
+                            application_id=chat.application_id,
+                            completed_question=chat.question,
+                            authorized_scope=chat.authorized_semantic_scope,
+                        ) is None
+                    )
+                    if not semantic_decision_ready:
+                        try:
+                            with track_operation(
+                                "V1_ORCHESTRATION",
+                                "v1.task_decomposition",
+                            ) as timing:
+                                plan = await self.task_planner.plan(chat.question)
+                                timing.mark_first_result()
+                                timing.set_attribute(
+                                    "task_count",
+                                    len(plan.tasks) if plan is not None else 1,
+                                )
+                        except TaskPlanningError as exc:
+                            logger.warning("multi-question plan rejected: %s", exc)
                     if plan is not None:
                         task_requests = [
                             self._classify_with_rules(
@@ -698,6 +719,28 @@ class DataAnalysisOrchestrator:
                             )
                             for task in plan.tasks
                         ]
+                        if chat._semantic_decision is not None:
+                            with track_operation(
+                                "V1_ORCHESTRATION",
+                                "semantic.contract.validation",
+                                attributes={
+                                    "source": "V1_SEMANTIC_FALLBACK",
+                                    "task_count": len(plan.tasks),
+                                },
+                            ) as semantic_timing:
+                                chat._semantic_decision = (
+                                    semantic_decision_for_task_plan(
+                                        chat=chat,
+                                        plan=plan,
+                                        preliminary_requests=task_requests,
+                                    )
+                                )
+                                semantic_timing.mark_first_result()
+                                semantic_timing.set_attribute("accepted", False)
+                                semantic_timing.set_attribute(
+                                    "fallback_reason",
+                                    chat._semantic_decision.fallback_reason,
+                                )
                         task_intents = [
                             request.primary_intent for request in task_requests
                         ]
@@ -2891,6 +2934,62 @@ class DataAnalysisOrchestrator:
             ),
         )
         raw_rule_request.application_id = chat.application_id
+        semantic_decision_request = None
+        semantic_decision_fallback_reason = None
+        semantic_decision = chat._semantic_decision
+        if semantic_decision is not None:
+            with track_operation(
+                "V1_ORCHESTRATION",
+                "semantic.contract.validation",
+                attributes={
+                    "source": getattr(
+                        getattr(semantic_decision, "source", None),
+                        "value",
+                        str(getattr(semantic_decision, "source", "INVALID")),
+                    ),
+                },
+            ) as semantic_timing:
+                if not chat._completed_question_execution:
+                    semantic_decision_fallback_reason = (
+                        "SEMANTIC_DECISION_PRE_RESOLUTION_REQUIRED"
+                    )
+                else:
+                    rules = getattr(self.classifier, "rules", None)
+                    if not isinstance(rules, RuleBasedIntentClassifier):
+                        rules = (
+                            self.classifier
+                            if isinstance(self.classifier, RuleBasedIntentClassifier)
+                            else RuleBasedIntentClassifier()
+                        )
+                    (
+                        semantic_decision_request,
+                        semantic_decision_fallback_reason,
+                    ) = canonical_request_from_semantic_decision(
+                        semantic_decision,
+                        chat=chat,
+                        identity=identity,
+                        rules=rules,
+                    )
+                semantic_timing.mark_first_result()
+                semantic_timing.set_attribute(
+                    "accepted", semantic_decision_request is not None
+                )
+                semantic_timing.set_attribute(
+                    "fallback_reason", semantic_decision_fallback_reason
+                )
+            if semantic_decision_request is None:
+                chat._semantic_decision = semantic_decision_with_v1_fallback(
+                    semantic_decision,
+                    semantic_decision_fallback_reason
+                    or "SEMANTIC_DECISION_NOT_EXECUTION_READY",
+                )
+                logger.info(
+                    "semantic decision requires V1 semantic fallback",
+                    extra={
+                        "message_id": chat.message_id,
+                        "fallback_reason": semantic_decision_fallback_reason,
+                    },
+                )
         independent_chat = raw_rule_request.primary_intent == PrimaryIntent.CHAT
         standalone_complete_business = bool(
             pending is None
@@ -3114,7 +3213,7 @@ class DataAnalysisOrchestrator:
         await emit_progress(
             "QUESTION_REWRITE", "RUNNING", "正在结合上下文和实体别名规范化问题。"
         )
-        if self.question_rewriter is not None and (
+        if self.question_rewriter is not None and semantic_decision_request is None and (
             chat._completed_question_execution
             or (not independent_chat and not deterministic_business_fast_path)
         ):
@@ -3263,7 +3362,9 @@ class DataAnalysisOrchestrator:
                 request.assumptions.append("DETERMINISTIC_SLOT_FAST_PATH")
         else:
             request = (
-                raw_rule_request
+                semantic_decision_request
+                if semantic_decision_request is not None
+                else raw_rule_request
                 if independent_chat or deterministic_business_fast_path
                 else await self._classify(
                     classification_question, identity, chat.conversation_id

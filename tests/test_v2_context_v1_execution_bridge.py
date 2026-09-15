@@ -62,7 +62,10 @@ from test_v2_authorized_catalog_bridge import (
 from test_v2_context_followup_critical_slice import context_case, context_catalog
 from test_v2_limited_scalar_deployment import DeploymentRedis
 from test_v2_persisted_scalar_api import NOW
-from test_v2_raw_turn_recognition import planner as scripted_planner
+from test_v2_raw_turn_recognition import (
+    metric_step,
+    planner as scripted_planner,
+)
 
 
 def response(chat: ChatRequest, answer: str = "V1 result") -> AgentResponse:
@@ -591,6 +594,11 @@ async def test_bridge_changes_only_completed_question_history_and_internal_mode(
     assert execution.question == "查询2026年江苏省订单笔数。"
     assert execution.history == []
     assert execution._completed_question_execution is True
+    assert execution._semantic_decision.status == "REQUIRES_V1_FALLBACK"
+    assert execution._semantic_decision.source.value == "V1_SEMANTIC_FALLBACK"
+    assert execution._semantic_decision.fallback_reason == (
+        "V2_CONTEXT_ONLY_REQUIRES_V1_SEMANTICS"
+    )
     for field in (
         "semantic_model_id",
         "business_domain_id",
@@ -624,6 +632,37 @@ async def test_standalone_new_task_passthrough_reaches_v1_byte_for_byte(provider
 
     assert seen[0].question == question
     assert seen[0].history == []
+
+
+@pytest.mark.asyncio
+async def test_successful_v2_plan_attaches_authorized_semantic_decision(provider):
+    question = "查询销售额"
+    engine, _transport = scripted_planner(provider, [metric_step(question)])
+    seen = []
+
+    async def v1(chat, _identity):
+        seen.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    bridge = handler(provider, DeploymentRedis(), v1)
+    bridge.model = engine.model
+    chat = request(
+        question=question,
+        message_id="authorized-semantic-decision",
+        conversation_id="authorized-semantic-decision",
+    )
+
+    result = await bridge.handle(chat, IDENTITY)
+
+    assert result.status == "COMPLETED"
+    assert len(seen) == 1
+    decision = seen[0]._semantic_decision
+    assert decision.status == "ACCEPTED"
+    assert decision.source.value == "V2_AUTHORIZED_PLAN"
+    assert decision.can_skip_v1_intent_model is True
+    assert decision.tasks[0].intent == PrimaryIntent.METRIC_QUERY
+    assert decision.tasks[0].metrics[0].display_name == "销售额"
+    assert decision.scope_proof.authorized_scope == chat.authorized_semantic_scope
 
 
 @pytest.mark.asyncio
