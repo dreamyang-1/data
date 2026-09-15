@@ -5,7 +5,6 @@ import asyncio
 import copy
 import hashlib
 import hmac
-import html
 import json
 import logging
 import re
@@ -5586,12 +5585,10 @@ class DataAnalysisOrchestrator:
             remote_images = []
             for index, url in enumerate(mcp_chart_urls):
                 spec = chart_specs[min(index, len(chart_specs) - 1)]
-                title = html.escape(str(spec.get("title") or "数据图表"), quote=True)
-                safe_url = html.escape(url, quote=True)
-                remote_images.append(
-                    f'<img src="{safe_url}" alt="{title}" '
-                    'style="max-width:100%;height:auto;display:block" />'
+                title = self._markdown_image_alt(
+                    str(spec.get("title") or "数据图表")
                 )
+                remote_images.append(f"![{title}]({url})")
             chart_display = "\n\n#### 图表\n\n" + "\n\n".join(remote_images)
         elif chart_images:
             chart_display = "\n\n#### 图表\n\n" + "\n\n".join(chart_images)
@@ -6239,6 +6236,17 @@ class DataAnalysisOrchestrator:
             except Exception as exc:
                 logger.warning("inline chart rendering failed: %s", exc)
         return images
+
+    @staticmethod
+    def _markdown_image_alt(value: str) -> str:
+        """Keep a chart title valid inside Markdown image alternative text."""
+
+        return (
+            re.sub(r"[\r\n]+", " ", value).strip()
+            .replace("\\", "\\\\")
+            .replace("[", "\\[")
+            .replace("]", "\\]")
+        ) or "数据图表"
 
     async def _knowledge_document_answer(
         self, request: CanonicalAnalysisRequest, identity: TrustedIdentity

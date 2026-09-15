@@ -144,6 +144,54 @@ def test_visualization_mcp_rejects_unsafe_or_non_image_text_result():
     assert dispatcher.visualization_url(execution) is None
 
 
+@pytest.mark.parametrize(
+    ("output", "expected"),
+    [
+        (
+            {
+                "content": [{
+                    "type": "text",
+                    "text": "![趋势图](https://charts.example/trend.jpeg)",
+                }]
+            },
+            "https://charts.example/trend.jpeg",
+        ),
+        (
+            {
+                "result": {
+                    "content": [{
+                        "type": "text",
+                        "text": '{"image_url":"https://charts.example/trend.png"}',
+                    }]
+                }
+            },
+            "https://charts.example/trend.png",
+        ),
+        (
+            {
+                "result": {
+                    "content": [{
+                        "type": "resource_link",
+                        "uri": "https://charts.example/trend.svg",
+                    }]
+                }
+            },
+            "https://charts.example/trend.svg",
+        ),
+    ],
+)
+def test_visualization_mcp_normalizes_platform_image_result_shapes(output, expected):
+    dispatcher = ExtensionDispatcher()
+    execution = ExtensionExecution(
+        name="generate_line_chart",
+        kind="MCP_TOOL",
+        status="COMPLETED",
+        output=output,
+    )
+
+    assert dispatcher.visualization_url(execution) == expected
+
+
 @pytest.mark.asyncio
 async def test_explicit_skill_binding_calls_private_http_tool():
     seen = {}

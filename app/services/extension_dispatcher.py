@@ -329,22 +329,66 @@ class ExtensionDispatcher:
 
         if execution.status != "COMPLETED" or not isinstance(execution.output, dict):
             return None
+        candidates: list[Any] = [execution.output]
         result = execution.output.get("result")
-        content = (
-            result.get("content")
-            if isinstance(result, dict)
-            else execution.output.get("content")
-        )
-        if not isinstance(content, list):
-            return None
-        for item in content:
-            if not isinstance(item, dict) or item.get("type") != "text":
+        if isinstance(result, dict):
+            candidates.append(result)
+        for candidate in candidates:
+            direct = ExtensionDispatcher._public_image_url(candidate)
+            if direct is not None:
+                return direct
+            content = candidate.get("content")
+            if not isinstance(content, list):
                 continue
-            value = str(item.get("text") or "").strip()
-            match = re.fullmatch(r"https://[^\s<>'\"]+", value)
-            if match:
-                return match.group(0)
+            for item in content:
+                value = ExtensionDispatcher._public_image_url(item)
+                if value is not None:
+                    return value
         return None
+
+    @staticmethod
+    def _public_image_url(value: Any) -> str | None:
+        """Normalize public-image shapes returned by platform MCP adapters."""
+
+        if isinstance(value, dict):
+            for key in (
+                "url", "image_url", "imageUrl", "download_url", "downloadUrl",
+                "uri",
+            ):
+                candidate = value.get(key)
+                if isinstance(candidate, str):
+                    normalized = ExtensionDispatcher._public_image_url(candidate)
+                    if normalized is not None:
+                        return normalized
+            if value.get("type") in {"text", "resource_link", "image"}:
+                for key in ("text", "url", "uri"):
+                    candidate = value.get(key)
+                    if isinstance(candidate, str):
+                        normalized = ExtensionDispatcher._public_image_url(candidate)
+                        if normalized is not None:
+                            return normalized
+            return None
+        if not isinstance(value, str):
+            return None
+        text = value.strip()
+        if not text:
+            return None
+        direct = re.fullmatch(r"https://[^\s<>'\"]+", text)
+        if direct:
+            return direct.group(0)
+        markdown = re.fullmatch(
+            r"!\[[^\]\r\n]*\]\(\s*<?(https://[^\s<>'\"]+?)>?\s*\)",
+            text,
+        )
+        if markdown:
+            return markdown.group(1)
+        try:
+            decoded = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        if decoded == value:
+            return None
+        return ExtensionDispatcher._public_image_url(decoded)
 
     @staticmethod
     def _is_web_search_capability(
