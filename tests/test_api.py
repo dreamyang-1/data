@@ -419,6 +419,30 @@ def test_thinking_transport_preserves_inline_svg_chart_markup():
     assert reconstructed.count("</svg>") == 1
 
 
+def test_thinking_transport_preserves_remote_markdown_image():
+    markdown = "![销售额趋势](https://charts.example/sales-trend.jpeg)"
+    serialized = _thinking_events(
+        {
+            "stage": "INSIGHT_ANALYSIS",
+            "status": "COMPLETED",
+            "message": f"数据洞察分析\n\n#### 图表\n\n{markdown}",
+        },
+        heading="#### ◉ 数据洞察分析",
+        chunk_size=1,
+    )
+    events = [
+        json.loads(item.removeprefix("data: ").strip())
+        for item in serialized
+    ]
+    reconstructed = "".join(
+        item["content"] for item in events if item["type"] == "message_chunk"
+    )
+
+    assert markdown in reconstructed
+    assert "![]\\(" not in reconstructed
+    assert "[https://charts.example" not in reconstructed
+
+
 def test_progress_heartbeat_uses_visible_existing_stage_contract():
     serialized = _progress_heartbeat_events(
         "INTENT_RECOGNITION",
