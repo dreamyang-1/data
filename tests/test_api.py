@@ -530,7 +530,7 @@ def test_intent_summary_marks_file_based_analysis_only_when_selected():
         file_status="READ_SUCCESS",
         file_based=False,
     )
-    assert "### 1、意图识别" in file_summary
+    assert "### ◉ 意图识别" in file_summary
     assert "任务意图：基于用户文件进行趋势分析" in file_summary
     assert "文件判断：检测到用户上传文件，按文件数据链路处理" in file_summary
     assert "任务意图：基于用户文件进行" not in normal_summary
@@ -668,12 +668,16 @@ def test_intent_display_v2_is_multiline_and_does_not_mutate_execution_request():
     )
     before = request.model_copy(deep=True)
 
-    summary = DataAnalysisOrchestrator._intent_think_summary(request)
+    summary = DataAnalysisOrchestrator._intent_think_summary(
+        request,
+        business_domain_labels=("医药销售域",),
+    )
 
     assert request == before
-    assert summary.startswith("### 1、意图识别\n\n")
+    assert summary.startswith("### ◉ 意图识别\n\n")
     assert "\n用户原始问题：" in summary
     assert "\n补全后的问题：" in summary
+    assert "\n业务域：医药销售域" in summary
     assert "文件判断：" not in summary
     assert "\n结构化提取" not in summary
     assert "商品品牌 EQ 费森尤斯" not in summary
@@ -1177,7 +1181,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     )
     all_thinking_content = "".join(data["content"] for data in think_chunks)
     expected_headings = [
-        "#### 1、意图识别",
+        "#### ◉ 意图识别",
         "#### ◉ 任务拆分与规划",
     ]
     assert all(all_thinking_content.count(heading) == 1 for heading in expected_headings)
@@ -1187,7 +1191,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
     )
     assert intent_chunk["step"] == "step1"
-    assert "#### 1、意图识别" in thinking_content(
+    assert "#### ◉ 意图识别" in thinking_content(
         events, "INTENT_RECOGNITION", status="RUNNING"
     )
     completed_intent_chunk = next(
@@ -1199,7 +1203,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     completed_intent_content = thinking_content(
         events, "INTENT_RECOGNITION", status="COMPLETED"
     )
-    assert "#### 1、意图识别" not in completed_intent_content
+    assert "#### ◉ 意图识别" not in completed_intent_content
     assert completed_intent_chunk["meta"]["display_model"] == "IntentRecognitionDisplayV2"
     assert completed_intent_chunk["meta"]["display_version"] == "V2"
     assert "用户原始问题：" in completed_intent_content
@@ -1253,7 +1257,7 @@ def test_chat_stream_uses_document_chat_section_format():
         if event["type"] == "message_chunk" and event.get("step") != "output"
     )
 
-    assert "#### 1、意图识别" in thinking
+    assert "#### ◉ 意图识别" in thinking
     assert "用户原始问句：今天工作辛苦了。" in thinking
     assert "输出总结" not in thinking
     assert "#### 2、最终输出" in thinking
@@ -1285,7 +1289,7 @@ def test_missing_parameter_stream_uses_document_clarification_section_format():
     completed = next(event for event in events if event["type"] == "complete")
 
     assert completed["status"] == "NEEDS_CLARIFICATION"
-    assert "#### 1、意图识别" in thinking
+    assert "#### ◉ 意图识别" in thinking
     assert "用户原始问句：查询经销商销售数据" in thinking
     assert "#### 2、任务拆分与规划" in thinking
     assert "当前任务参数不完整，暂停子任务拆分" in thinking
@@ -1420,7 +1424,7 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
 
 def test_all_six_analytic_thinking_stages_have_normalized_headings():
     expected = {
-        "INTENT_RECOGNITION": "#### 1、意图识别",
+        "INTENT_RECOGNITION": "#### ◉ 意图识别",
         "FILE_INSPECTION": "#### ◉ 文件感知与解析",
         "TASK_PLANNING": "#### ◉ 任务拆分与规划",
         "DATA_RETRIEVAL": "#### ◉ 调度执行",

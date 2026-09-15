@@ -627,6 +627,9 @@ class McpConfig(StrictModel):
 
 class ChatRequest(StrictModel):
     _file_inspection: dict[str, Any] = PrivateAttr(default_factory=dict)
+    # Presentation-only labels read from the same authorized catalog snapshot
+    # used for this turn. Transport JSON cannot set private attributes.
+    _business_domain_labels: tuple[str, ...] = PrivateAttr(default_factory=tuple)
     # These flags are set only by the refresh endpoints.  Keeping them as
     # private attributes prevents transport-only refresh semantics from
     # leaking into ASL/SQL payloads or request fingerprints.

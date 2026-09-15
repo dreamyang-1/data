@@ -2215,6 +2215,15 @@ def _current_catalog_with_fake_authority(*, model_domains):
                 "scope": cls.catalog_scope(semantic_model_id, domains),
                 "catalog_version": "current-version",
                 "source_identity_hash": "current-source",
+                "documents": [
+                    {
+                        "business_domain": {
+                            "id": domain_id,
+                            "name": f"业务域{domain_id}",
+                        }
+                    }
+                    for domain_id in domains
+                ],
                 "physical_catalog": {"tables": []},
             }
 
@@ -2246,6 +2255,7 @@ def test_model_wide_current_catalog_materializes_authorized_model_domain_only():
     assert calls == [(81, (205,))]
     assert current.requested_business_domain_ids == ()
     assert current.resolved_business_domain_ids == (205,)
+    assert current.business_domain_labels == ("业务域205",)
     assert current._snapshot["scope"] == {
         "semantic_model_id": 81,
         "business_domain_ids": [205],
@@ -2261,6 +2271,7 @@ def test_explicit_current_catalog_scope_is_not_rematerialized():
     assert calls == [(81, (205,))]
     assert current.requested_business_domain_ids == (205,)
     assert current.resolved_business_domain_ids == (205,)
+    assert current.business_domain_labels == ("业务域205",)
 
 
 def test_model_wide_context_session_uses_resolved_catalog_without_changing_request(

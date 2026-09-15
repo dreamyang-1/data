@@ -117,6 +117,7 @@ async def test_raw_input_reaches_model_catalog_and_plan(catalog):
         'V2_CURRENT_TURN_PARSED',
         'V2_SEMANTIC_CANDIDATES_READY',
     ]
+    assert '语义提取字段：销售额（指标）。' in progress[0]['message']
     assert all(item['stage'] == 'INTENT_RECOGNITION' for item in progress)
     assert all(item['status'] == 'RUNNING' for item in progress)
 

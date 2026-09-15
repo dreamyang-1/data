@@ -147,6 +147,7 @@ class IntentRecognitionDisplayV2:
     file_judgement: str = ""
     task_intent: str = ""
     intent_basis: str = ""
+    business_domains: list[str] = field(default_factory=list)
     show_structure: bool = True
     metrics: list[str] = field(default_factory=list)
     show_empty_metrics: bool = False
@@ -180,6 +181,7 @@ class CompositeIntentRecognitionDisplayV2:
     version: str = "V2"
     original_question: str = ""
     completed_question: str = ""
+    business_domains: list[str] = field(default_factory=list)
     planner: str = ""
     tasks: list[CompositeIntentTaskDisplayV2] = field(default_factory=list)
 
@@ -435,6 +437,7 @@ def build_intent_recognition_display_v2(
     *,
     file_status: str = "NOT_PROVIDED",
     file_based: bool = False,
+    business_domain_labels: tuple[str, ...] | list[str] = (),
 ) -> IntentRecognitionDisplayV2:
     """Build a detached presentation snapshot from an executable request."""
 
@@ -534,6 +537,16 @@ def build_intent_recognition_display_v2(
         if request.missing_slots
         else "ANALYTIC"
     )
+    domain_labels = _unique_text(list(business_domain_labels))
+    if not domain_labels:
+        authorized_domain_ids = (
+            request.business_domain_ids or request.resolved_business_domain_ids
+        )
+        domain_labels = (
+            [f"ID {domain_id}" for domain_id in authorized_domain_ids]
+            if authorized_domain_ids
+            else ["当前语义模型全部授权业务域"]
+        )
     return IntentRecognitionDisplayV2(
         scenario=scenario,
         original_question=_single_line(request.original_question),
@@ -543,6 +556,7 @@ def build_intent_recognition_display_v2(
         intent_basis=_INTENT_BASES.get(
             request.primary_intent, "根据当前问题中的任务目标和输出要求完成分类。"
         ),
+        business_domains=domain_labels,
         show_structure=request.primary_intent not in {
             PrimaryIntent.CHAT,
             PrimaryIntent.CAPABILITY_HELP,
@@ -590,10 +604,11 @@ def render_intent_recognition_display_v2(
         else "用户原始问题"
     )
     lines = [
-        "### 1、意图识别",
+        "### ◉ 意图识别",
         "",
         f"{original_label}：{view.original_question}",
         f"补全后的问题：{view.completed_question}",
+        f"业务域：{'、'.join(view.business_domains)}",
     ]
     if view.file_judgement:
         lines.append(f"文件判断：{view.file_judgement}")
@@ -635,6 +650,7 @@ def build_composite_intent_recognition_display_v2(
     plan: TaskPlan,
     *,
     task_intents: list[PrimaryIntent] | None = None,
+    business_domains: tuple[str, ...] | list[str] = (),
 ) -> CompositeIntentRecognitionDisplayV2:
     """Build one immutable root display instead of exposing a DAG child.
 
@@ -662,6 +678,10 @@ def build_composite_intent_recognition_display_v2(
     return CompositeIntentRecognitionDisplayV2(
         original_question=_single_line(original_question, 1000),
         completed_question=completed,
+        business_domains=(
+            _unique_text(list(business_domains))
+            or ["当前语义模型全部授权业务域"]
+        ),
         planner=plan.planner,
         tasks=tasks,
     )
@@ -677,10 +697,11 @@ def render_composite_intent_recognition_display_v2(
     ))
     task_intent = "、".join(intent_labels) or "待语义识别"
     lines = [
-        "### 1、意图识别",
+        "### ◉ 意图识别",
         "",
         f"用户原始问题：{view.original_question}",
         f"补全后的问题：{view.completed_question}",
+        f"业务域：{'、'.join(view.business_domains)}",
         f"任务意图：{task_intent}",
         (
             "意图判定依据：各项任务均按其实际业务目标识别，"

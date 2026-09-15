@@ -302,12 +302,31 @@ class CurrentAuthorizedCatalog:
         records, _coverage = self._modules[
             "catalog_generation"
         ].build_catalog_records(snapshot, lambda texts: [[0.1, 0.2] for _ in texts])
+        domain_labels_by_id = {}
+        for document in snapshot.get("documents") or []:
+            domain = document.get("business_domain")
+            if not isinstance(domain, dict):
+                continue
+            domain_id = domain.get("id")
+            domain_name = domain.get("name")
+            if (
+                type(domain_id) is int
+                and domain_id in domains
+                and isinstance(domain_name, str)
+                and domain_name.strip()
+            ):
+                domain_labels_by_id[domain_id] = domain_name.strip()
         return _CurrentCatalogSnapshotProvider(
             snapshot=snapshot,
             records=records,
             modules=self._modules,
             requested_business_domain_ids=requested_domains,
             resolved_business_domain_ids=domains,
+            business_domain_labels=tuple(
+                domain_labels_by_id[domain_id]
+                for domain_id in domains
+                if domain_id in domain_labels_by_id
+            ),
         )
 
     def pin(self, semantic_model_id: int, business_domain_ids=()):
@@ -326,12 +345,14 @@ class _CurrentCatalogSnapshotProvider:
         modules,
         requested_business_domain_ids=(),
         resolved_business_domain_ids=(),
+        business_domain_labels=(),
     ):
         self._snapshot = deepcopy(snapshot)
         self._records = deepcopy(records)
         self._modules = modules
         self.requested_business_domain_ids = tuple(requested_business_domain_ids)
         self.resolved_business_domain_ids = tuple(resolved_business_domain_ids)
+        self.business_domain_labels = tuple(business_domain_labels)
 
     def pin(self, semantic_model_id: int, business_domain_ids=()):
         expected = self._modules["catalog_release"].catalog_scope(

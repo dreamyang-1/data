@@ -129,6 +129,70 @@ EDIT_SLOTS = ('subject', 'metrics', 'dimensions', 'projection_spec', 'filter_exp
 DIRECT_EDIT_SLOTS = tuple(slot for slot in EDIT_SLOTS if slot not in {'relationship_spec', 'comparison_spec'})
 
 
+_EXTRACTION_SLOT_LABELS = {
+    'metrics': '指标',
+    'dimensions': '分组维度',
+    'projection_spec': '查询字段',
+    'filter_expression': '筛选条件',
+    'time_spec': '时间',
+    'ranking_spec': '排序数量',
+    'comparison_spec': '对比条件',
+    'subject': '业务对象',
+    'relationship_spec': '关系',
+    'delivery_spec': '交付要求',
+}
+
+_EXTRACTION_ROLE_LABELS = {
+    'MEASURE': '指标',
+    'GROUP_BY': '分组维度',
+    'PROJECTION_FIELD': '查询字段',
+    'FILTER_FIELD': '筛选字段',
+    'FILTER_VALUE': '筛选值',
+    'TIME_FIELD': '时间字段',
+    'TIME_RANGE': '时间范围',
+    'TIME_GRAIN': '时间粒度',
+    'COMPARISON_BASELINE': '对比基准',
+    'ORDER_BY': '排序字段',
+    'SORT_DIRECTION': '排序方向',
+    'LIMIT': '结果数量',
+    'SOURCE_ENTITY': '来源对象',
+    'TARGET_ENTITY': '目标对象',
+    'SUBJECT_ENTITY': '业务对象',
+    'RELATIONSHIP': '业务关系',
+    'RELATION_TARGET': '关系对象',
+    'DATASET_SOURCE': '数据集',
+    'DELIVERY_TARGET': '交付目标',
+}
+
+
+def _current_turn_extraction_summary(parse: CurrentTurnSemanticParse) -> str:
+    """Render only current-turn surface evidence already accepted by V2."""
+
+    slots_by_mention: dict[str, list[str]] = {}
+    for slot_name, mention_ids in parse.explicit_slot_mentions.items():
+        label = _EXTRACTION_SLOT_LABELS.get(slot_name)
+        if label is None:
+            continue
+        for mention_id in mention_ids:
+            slots_by_mention.setdefault(mention_id, []).append(label)
+
+    extracted = []
+    for mention in sorted(parse.mentions, key=lambda item: item.start_char):
+        labels = [
+            _EXTRACTION_ROLE_LABELS[str(role)]
+            for role in mention.candidate_roles
+            if str(role) in _EXTRACTION_ROLE_LABELS
+        ]
+        if not labels:
+            labels = slots_by_mention.get(mention.mention_id, [])
+        labels = list(dict.fromkeys(labels))
+        if labels:
+            extracted.append(f"{mention.surface}（{'/'.join(labels)}）")
+    if not extracted:
+        return "语义提取字段：未提取到可展示的业务字段。"
+    return f"语义提取字段：{'；'.join(extracted)}。"
+
+
 def current_turn_schema():
     """Generation may name only slots already accepted by the strict registry.
 
@@ -395,7 +459,11 @@ class RawTurnPlanner:
         await emit_progress(
             'INTENT_RECOGNITION',
             'RUNNING',
-            '当前问句和轮次关系已识别，正在匹配指标、维度、筛选条件和时间。',
+            (
+                '当前问句和轮次关系已识别。\n'
+                f'{_current_turn_extraction_summary(parse)}\n'
+                '正在匹配指标、维度、筛选条件和时间。'
+            ),
             progress_phase='V2_CURRENT_TURN_PARSED',
         )
         if allow_standalone_new_task_passthrough and self._is_standalone_new_task(

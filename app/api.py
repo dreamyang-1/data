@@ -1335,7 +1335,7 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
     normalized_scenario = scenario.strip().upper()
     if normalized_scenario == "CLARIFICATION":
         scenario_titles = {
-            "intent": "#### 1、意图识别",
+            "intent": "#### ◉ 意图识别",
             "planning": "#### 2、任务拆分与规划",
             "clarification_execution": "#### 3、调研执行",
             "clarification_result": "#### 4、结果生成",
@@ -1345,13 +1345,13 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
             return scenario_titles[section]
     if normalized_scenario == "CHAT":
         scenario_titles = {
-            "intent": "#### 1、意图识别",
+            "intent": "#### ◉ 意图识别",
             "final_output": "#### 2、最终输出",
         }
         if section in scenario_titles:
             return scenario_titles[section]
     return {
-        "intent": "#### 1、意图识别",
+        "intent": "#### ◉ 意图识别",
         "file": "#### ◉ 文件感知与解析",
         "planning": "#### ◉ 任务拆分与规划",
         "execution": "#### ◉ 调度执行",

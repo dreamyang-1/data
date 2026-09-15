@@ -865,6 +865,12 @@ class V2ContextV1ExecutionBridge:
                 progress_phase="V2_CONTEXT_START",
             )
             catalog = await self._request_catalog(context_chat)
+            business_domain_labels = tuple(
+                str(label).strip()
+                for label in getattr(catalog, "business_domain_labels", ())
+                if str(label).strip()
+            )
+            context_chat._business_domain_labels = business_domain_labels
             provenance = None
             try:
                 resolved, provenance = await self._resolve(
@@ -963,6 +969,7 @@ class V2ContextV1ExecutionBridge:
                 update={"question": resolved.completed_question, "history": []},
             )
             execution_chat._completed_question_execution = True
+            execution_chat._business_domain_labels = business_domain_labels
             response = await self.v1_executor(execution_chat, identity)
             response = await self._retry_for_result_availability(
                 chat=execution_chat,

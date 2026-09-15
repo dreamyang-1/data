@@ -670,6 +670,13 @@ class DataAnalysisOrchestrator:
                                 chat.question,
                                 plan,
                                 task_intents=task_intents,
+                                business_domains=(
+                                    chat._business_domain_labels
+                                    or tuple(
+                                        f"ID {domain_id}"
+                                        for domain_id in chat.business_domain_ids
+                                    )
+                                ),
                             )
                         )
                         await emit_progress(
@@ -4340,6 +4347,7 @@ class DataAnalysisOrchestrator:
                 request,
                 file_status=str(chat._file_inspection.get("status") or "NOT_PROVIDED"),
                 file_based=bool(chat._file_inspection.get("file_based")),
+                business_domain_labels=chat._business_domain_labels,
             ),
             intent=request.primary_intent.value,
             confidence=round(float(request.intent_confidence), 4),
@@ -8431,11 +8439,13 @@ class DataAnalysisOrchestrator:
         *,
         file_status: str = "NOT_PROVIDED",
         file_based: bool = False,
+        business_domain_labels: tuple[str, ...] | list[str] = (),
     ) -> str:
         view = build_intent_recognition_display_v2(
             request,
             file_status=file_status,
             file_based=file_based,
+            business_domain_labels=business_domain_labels,
         )
         return render_intent_recognition_display_v2(view)
 
