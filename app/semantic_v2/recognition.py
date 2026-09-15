@@ -165,8 +165,31 @@ _EXTRACTION_ROLE_LABELS = {
 }
 
 
-def _current_turn_extraction_summary(parse: CurrentTurnSemanticParse) -> str:
-    """Render only current-turn surface evidence already accepted by V2."""
+_CONTEXT_RELATION_LABELS = {
+    'NEW_TASK': '独立新问题',
+    'FOLLOW_UP': '当前主题追问',
+    'MODIFY': '当前主题条件修改',
+    'ADD': '当前主题条件补充',
+    'REPLACE': '当前主题条件替换',
+    'REMOVE': '当前主题条件删除',
+    'CLEAR': '当前主题条件清除',
+    'CORRECT': '纠正上一请求',
+    'CONTINUE': '当前主题追问',
+    'DRILL_DOWN': '当前主题下钻',
+    'RETURN_TO_TOPIC': '返回历史主题',
+    'ANSWER_CLARIFICATION': '澄清回复',
+}
+
+
+def current_turn_extraction_items(
+    parse: CurrentTurnSemanticParse,
+) -> tuple[dict[str, object], ...]:
+    """Project accepted current-turn mentions for presentation only.
+
+    The surface text and semantic roles come directly from the validated V2
+    parse.  This projection is passed to V1 only as a private display hint and
+    never participates in ASL generation or execution.
+    """
 
     slots_by_mention: dict[str, list[str]] = {}
     for slot_name, mention_ids in parse.explicit_slot_mentions.items():
@@ -176,7 +199,7 @@ def _current_turn_extraction_summary(parse: CurrentTurnSemanticParse) -> str:
         for mention_id in mention_ids:
             slots_by_mention.setdefault(mention_id, []).append(label)
 
-    extracted = []
+    extracted: list[dict[str, object]] = []
     for mention in sorted(parse.mentions, key=lambda item: item.start_char):
         labels = [
             _EXTRACTION_ROLE_LABELS[str(role)]
@@ -187,10 +210,14 @@ def _current_turn_extraction_summary(parse: CurrentTurnSemanticParse) -> str:
             labels = slots_by_mention.get(mention.mention_id, [])
         labels = list(dict.fromkeys(labels))
         if labels:
-            extracted.append(mention.surface)
-    if not extracted:
-        return "语义提取字段：未提取到可展示的业务字段。"
-    return f"语义提取字段：{'；'.join(extracted)}。"
+            extracted.append({
+                'surface': mention.surface,
+                'normalized_surface': mention.normalized_surface,
+                'labels': tuple(labels),
+                'start_char': mention.start_char,
+                'clause_id': mention.clause_id,
+            })
+    return tuple(extracted)
 
 
 def current_turn_schema():
@@ -459,11 +486,12 @@ class RawTurnPlanner:
         await emit_progress(
             'INTENT_RECOGNITION',
             'RUNNING',
-            (
-                '当前问句和轮次关系已识别。\n'
-                f'{_current_turn_extraction_summary(parse)}\n'
-                '正在匹配指标、维度、筛选条件和时间。'
-            ),
+            '当前问句和轮次关系已识别：'
+            + _CONTEXT_RELATION_LABELS.get(
+                str(context_trace.get('FINAL_RELATION') or ''),
+                '轮次关系待确认',
+            )
+            + '。',
             progress_phase='V2_CURRENT_TURN_PARSED',
         )
         if allow_standalone_new_task_passthrough and self._is_standalone_new_task(

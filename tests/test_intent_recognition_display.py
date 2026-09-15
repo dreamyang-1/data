@@ -44,6 +44,88 @@ def test_composite_display_lists_real_unique_child_intents_only():
     assert "复合查询" not in rendered
     assert "共享业务标识" not in rendered
     assert "结构化拆分" not in rendered
+    assert "参数规范化：已识别" not in rendered
+
+
+def test_composite_display_groups_typed_parameters_under_each_completed_question():
+    first = RuleBasedIntentClassifier().classify(
+        "查询空心纤维血液透析器产品合作的经销商名单",
+        IDENTITY,
+        "typed-composite-display",
+    )
+    second = RuleBasedIntentClassifier().classify(
+        "查询外周插管中心静脉导管合作的医院名单",
+        IDENTITY,
+        "typed-composite-display",
+    )
+    plan = TaskPlan(planner="STRUCTURED_MODEL", tasks=[
+        AtomicTask(
+            task_id="task-1",
+            question="查询空心纤维血液透析器产品合作的经销商名单",
+        ),
+        AtomicTask(
+            task_id="task-2",
+            question="查询外周插管中心静脉导管合作的医院名单",
+        ),
+    ])
+    semantic_extractions = (
+        {
+            "surface": "空心纤维血液透析器产品",
+            "normalized_surface": "空心纤维血液透析器产品",
+            "labels": ("筛选值",),
+            "start_char": 2,
+            "clause_id": "clause-1",
+        },
+        {
+            "surface": "经销商",
+            "normalized_surface": "经销商",
+            "labels": ("业务对象", "分组维度"),
+            "start_char": 17,
+            "clause_id": "clause-1",
+        },
+        {
+            "surface": "外周插管中心静脉导管",
+            "normalized_surface": "外周插管中心静脉导管",
+            "labels": ("筛选值",),
+            "start_char": 25,
+            "clause_id": "clause-2",
+        },
+        {
+            "surface": "医院",
+            "normalized_surface": "医院",
+            "labels": ("业务对象", "分组维度"),
+            "start_char": 39,
+            "clause_id": "clause-2",
+        },
+    )
+
+    rendered = render_composite_intent_recognition_display_v2(
+        build_composite_intent_recognition_display_v2(
+            "查询空心纤维血液透析器产品合作的经销商名单。"
+            "查询外周插管中心静脉导管合作的医院名单。",
+            plan,
+            task_intents=[
+                PrimaryIntent.DETAIL_QUERY,
+                PrimaryIntent.DETAIL_QUERY,
+            ],
+            task_requests=[first, second],
+            semantic_extractions=semantic_extractions,
+        )
+    )
+
+    assert "补全后的问题：\n\n1. 查询空心纤维血液透析器产品合作的经销商名单" in rendered
+    assert (
+        "结构化参数提取：空心纤维血液透析器产品（筛选值）；"
+        "经销商（业务对象/分组维度）。"
+    ) in rendered
+    assert (
+        "2. 查询外周插管中心静脉导管合作的医院名单\n"
+        "   结构化参数提取：外周插管中心静脉导管（筛选值）；"
+        "医院（业务对象/分组维度）。"
+    ) in rendered
+    assert rendered.count("结构化参数提取：") == 2
+    assert "语义提取字段：" not in rendered
+    assert "参数规范化：已识别" not in rendered
 
 
 def test_transaction_partner_list_displays_natural_completed_question():

@@ -14,7 +14,11 @@ from app.services.progress import progress_scope
 from app.semantic_v2.authorized_contract import ScopedArtifact, contract_digest
 from app.semantic_v2.context_proposal import ContextProposalFailure
 from app.semantic_v2.pipeline import CurrentTurnSemanticParse
-from app.semantic_v2.recognition import RawTurnPlanner, RecognizedStandaloneNewTask
+from app.semantic_v2.recognition import (
+    RawTurnPlanner,
+    RecognizedStandaloneNewTask,
+    current_turn_extraction_items,
+)
 from app.semantic_v2.recognition_client import RecognitionFailure, RecognitionModelClient
 from test_v2_authorized_catalog_bridge import IDENTITY, request, authority, publish, reseal, system
 
@@ -117,7 +121,16 @@ async def test_raw_input_reaches_model_catalog_and_plan(catalog):
         'V2_CURRENT_TURN_PARSED',
         'V2_SEMANTIC_CANDIDATES_READY',
     ]
-    assert '语义提取字段：销售额。' in progress[0]['message']
+    assert progress[0]['message'] == '当前问句和轮次关系已识别：独立新问题。'
+    assert '正在匹配指标、维度、筛选条件和时间' not in progress[0]['message']
+    assert '语义提取字段：' not in progress[0]['message']
+    assert current_turn_extraction_items(result.parse) == ({
+        'surface': '销售额',
+        'normalized_surface': '销售额',
+        'labels': ('指标',),
+        'start_char': 0,
+        'clause_id': None,
+    },)
     assert all(item['stage'] == 'INTENT_RECOGNITION' for item in progress)
     assert all(item['status'] == 'RUNNING' for item in progress)
 

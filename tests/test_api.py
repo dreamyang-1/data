@@ -1339,6 +1339,9 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert "复合查询" not in intent_content
     assert "共享业务标识" not in intent_content
     assert "结构化拆分" not in intent_content
+    assert "参数规范化：已识别" not in intent_content
+    assert "1. 查询 TDC-3 产品的主要适用科室" in intent_content
+    assert "2. 查询 TDC-3 产品的次要适用科室" in intent_content
     assert not intent["meta"].get("is_child_task")
     planning_content = "".join(
         event["content"] for event in events

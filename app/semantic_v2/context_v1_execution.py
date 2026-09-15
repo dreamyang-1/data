@@ -59,7 +59,11 @@ from .enums import CatalogType
 from .models import BoundSemanticRef
 from .pending_recognition import RecognizedClarification
 from .pipeline import AuthorizedLogicalPlan, collect_bound_refs
-from .recognition import RawTurnPlanner, RecognizedStandaloneNewTask
+from .recognition import (
+    RawTurnPlanner,
+    RecognizedStandaloneNewTask,
+    current_turn_extraction_items,
+)
 from .recognition_client import RecognitionFailure, RecognitionModelClient
 from .state_machine import ConversationState, StateTransitionError
 
@@ -86,6 +90,7 @@ class ResolvedContextTurn:
     bridge_route: str = "V2_RESOLVED_COMPLETED_QUESTION"
     understanding: str | None = None
     standalone_parse: Any = None
+    semantic_parse: Any = None
     fallback_reason: str | None = None
     publish_context_from_v1: bool = False
     source_question: str | None = None
@@ -723,6 +728,7 @@ class V2ContextV1ExecutionBridge:
                     plan_state=None,
                     bridge_route=result.execution_route,
                     standalone_parse=result.parse,
+                    semantic_parse=result.parse,
                     fallback_reason=result.fallback_reason,
                     publish_context_from_v1=True,
                     source_question=chat.question,
@@ -758,6 +764,7 @@ class V2ContextV1ExecutionBridge:
                 next_state=result.next_state,
                 plan_state=result.plan_state,
                 display=display,
+                semantic_parse=result.parse,
             ),
             provenance,
         )
@@ -970,6 +977,11 @@ class V2ContextV1ExecutionBridge:
             )
             execution_chat._completed_question_execution = True
             execution_chat._business_domain_labels = business_domain_labels
+            semantic_parse = resolved.semantic_parse or resolved.standalone_parse
+            if semantic_parse is not None:
+                execution_chat._semantic_extraction_items = (
+                    current_turn_extraction_items(semantic_parse)
+                )
             response = await self.v1_executor(execution_chat, identity)
             response = await self._retry_for_result_availability(
                 chat=execution_chat,
