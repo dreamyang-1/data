@@ -11,6 +11,7 @@ from app.domain.models import (
     ConversationControl,
     IntentCandidate,
     MetricRef,
+    SemanticDimensionBinding,
     SemanticFilterBinding,
     TimeRange,
     TaskPlan,
@@ -117,6 +118,20 @@ def canonical_request_from_semantic_decision(
             ),
         ))
     request.semantic_filter_bindings = semantic_bindings
+    trusted_dimension_bindings: list[SemanticDimensionBinding] = []
+    for item in task.dimensions:
+        if item.binding_status != "AUTHORIZED":
+            continue
+        domains = [int(value) for value in item.business_domain_ids]
+        trusted_dimension_bindings.append(SemanticDimensionBinding(
+            display_name=item.display_name,
+            canonical_code=str(item.canonical_code),
+            canonical_id=str(item.canonical_id),
+            semantic_model_id=chat.authorized_semantic_scope.semantic_model_id,
+            catalog_version=item.catalog_version,
+            business_domain_id=domains[0] if len(domains) == 1 else None,
+        ))
+    request.trusted_dimension_bindings = trusted_dimension_bindings
     if task.time_range is not None:
         if task.time_range.start is not None:
             request.time_range = TimeRange(

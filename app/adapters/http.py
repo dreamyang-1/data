@@ -3182,16 +3182,32 @@ class HttpDataRetrievalAdapter:
             ).strip()
             for item in dimensions
         ]
+
+        def dimension_satisfies_role(item: dict[str, Any], role: str) -> bool:
+            binding = cls._trusted_dimension_binding_for(request, role)
+            if binding is not None:
+                # A V2-authorized dimension closes only through its published
+                # canonical code.  Free alias text, including a correct display
+                # label attached to an unbound code, is not identity proof.
+                return cls._dimension_identity_matches(item, binding)
+            actual = " ".join(
+                str(item.get(key) or "")
+                for key in ("name", "alias", "attr", "field")
+            ).strip()
+            return cls._semantic_dimension_role_matches(role, actual)
+
         missing: list[str] = []
+        satisfied = [False] * len(dimensions)
         required_dimensions = cls._required_grouped_dimension_roles(request)
         for expected in required_dimensions:
             expected_text = str(expected).strip()
             if not expected_text:
                 continue
-            preserved = any(
-                cls._semantic_dimension_role_matches(expected_text, actual)
-                for actual in actual_references
-            )
+            preserved = False
+            for index, item in enumerate(dimensions):
+                if dimension_satisfies_role(item, expected_text):
+                    satisfied[index] = True
+                    preserved = True
             if not preserved:
                 missing.append(expected_text)
         if missing:
@@ -3206,12 +3222,8 @@ class HttpDataRetrievalAdapter:
             )
         unexpected = [
             actual
-            for actual in actual_references
-            if actual
-            and not any(
-                cls._semantic_dimension_role_matches(expected, actual)
-                for expected in required_dimensions
-            )
+            for index, actual in enumerate(actual_references)
+            if actual and not satisfied[index]
         ]
         if unexpected and "STRICT_GROUPING_DIMENSIONS" in request.assumptions:
             raise AdapterError(
@@ -3223,6 +3235,46 @@ class HttpDataRetrievalAdapter:
                     "projected_dimensions": dimensions,
                 },
             )
+
+    @classmethod
+    def _trusted_dimension_binding_for(
+        cls,
+        request: CanonicalAnalysisRequest,
+        expected: str,
+    ) -> Any | None:
+        """Return the trusted catalog binding for one requested dimension role.
+
+        The binding is matched by exact display-name equality: the V1 request
+        materializes ``dimensions`` from the same authorized display names, so
+        fuzzy role matching must not select another dimension's identity.
+        """
+
+        expected_text = str(expected).strip()
+        for binding in request.trusted_dimension_bindings:
+            if str(binding.display_name).strip() == expected_text:
+                return binding
+        return None
+
+    @classmethod
+    def _dimension_identity_matches(
+        cls,
+        item: dict[str, Any],
+        binding: Any,
+    ) -> bool:
+        """Prove one ASL dimension against a bound canonical dimension code."""
+
+        canonical_code = str(binding.canonical_code).strip()
+        if not canonical_code:
+            return False
+        for key in ("name", "field"):
+            value = str(item.get(key) or "").strip()
+            if not value:
+                continue
+            if value == canonical_code:
+                return True
+            if value.rsplit(".", 1)[-1] == canonical_code:
+                return True
+        return False
 
     @classmethod
     def _semantic_dimension_role_matches(
