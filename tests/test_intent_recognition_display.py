@@ -180,6 +180,39 @@ def test_transaction_partner_list_displays_natural_completed_question():
     )
 
 
+def test_catalog_selected_project_is_kept_in_completed_question():
+    request = RuleBasedIntentClassifier().classify(
+        "查询最近一年浙江省销售过巴德血透产品的经销商名单",
+        IDENTITY,
+        "catalog-project-completion",
+    )
+    request.filters = [
+        {"field": "省份名称", "operator": "EQ", "value": "浙江省"},
+        {
+            "field": "project.project_name",
+            "operator": "EQ",
+            "value": "巴德血透产品",
+        },
+    ]
+    request.semantic_entity_mentions = ["浙江省"]
+    request.assumptions = list(dict.fromkeys([
+        *request.assumptions,
+        "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE",
+        "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR",
+    ]))
+    request.rewritten_question = (
+        "查询明细；对象：经销商；返回字段：经销商名称；"
+        "筛选：省份名称 EQ 浙江省、project.project_name EQ 巴德血透产品"
+    )
+
+    view = build_intent_recognition_display_v2(request)
+
+    assert view.completed_question == (
+        "查询最近一年浙江省销售过巴德血透产品的经销商名单"
+    )
+    assert "浙江省产品" not in view.completed_question
+
+
 def test_contextual_metric_sort_displays_a_natural_completed_question():
     request = CanonicalAnalysisRequest(
         conversation_id="coverage-sort-display",

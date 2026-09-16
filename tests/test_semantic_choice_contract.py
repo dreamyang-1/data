@@ -93,6 +93,61 @@ class AmbiguousRetrieval:
         return await self.delegate.query(request, identity, **kwargs)
 
 
+class FilterAmbiguousRetrieval:
+    def __init__(self):
+        self.requests = []
+        self.delegate = MockDataRetrievalAdapter()
+        candidates = [
+            "hospital.hospital_name=江苏安馨血液透析中心有限公司",
+            "product.product_name=血液透析导管组",
+            "product.product_name=血液透析用干粉",
+            "product.product_name=血液透析设备",
+            "product_category.category_level1=03血液净化及腹膜透析设备",
+            "product_category.category_level1=04血液净化及腹膜透析器具",
+            "product_category.category_level2=01血液透析器具",
+            "product_category.category_level2=01血液透析设备",
+            "project.project_name=巴德血透产品",
+            "project.project_name=费森尤斯血透",
+        ]
+        self.ambiguity = SemanticAmbiguity(
+            type="filter",
+            phrase="血透",
+            ambiguity_id="catalog-filter-choice",
+            question="过滤值血透存在多个目录候选。",
+            candidates=candidates,
+            candidate_details=[
+                {
+                    "label": label,
+                    "canonical_name": label.split("=", 1)[0],
+                    "canonical_code": label.split("=", 1)[0],
+                    "canonical_value": label.split("=", 1)[1],
+                    "input_value": "血透",
+                    "operation": "UPSERT_FILTER",
+                    "operator": "EQ",
+                    "business_domain_id": 205,
+                }
+                for label in candidates
+            ],
+            affected_slots=["filters"],
+            semantic_model_id=81,
+        )
+
+    async def query(self, request, identity, **kwargs):
+        self.requests.append(request.model_copy(deep=True))
+        if not any(
+            item.get("field") == "project.project_name"
+            and item.get("value") == "巴德血透产品"
+            for item in request.filters
+        ):
+            details = [self.ambiguity.model_dump(mode="json")]
+            raise AdapterError(
+                "ASL_AMBIGUOUS",
+                json.dumps(details, ensure_ascii=False),
+                details=details,
+            )
+        return await self.delegate.query(request, identity, **kwargs)
+
+
 def service(retrieval):
     defaults = build_mock_adapters()
     return DataAnalysisOrchestrator(
@@ -119,6 +174,32 @@ async def test_real_clarification_round_preserves_second_metric():
     assert second.status == "COMPLETED"
     assert [m.input for m in retrieval.requests[-1].metrics] == ["含税销售额", "订单量"]
     assert retrieval.requests[-1].time_range == retrieval.requests[0].time_range
+
+
+@pytest.mark.asyncio
+async def test_real_filter_choice_round_applies_ninth_catalog_option():
+    retrieval = FilterAmbiguousRetrieval()
+    agent = service(retrieval)
+
+    first = await agent.handle(
+        chat("查询最近一年浙江省经销商名单"), IDENTITY
+    )
+    assert first.status == "NEEDS_CLARIFICATION"
+    assert first.clarification_items[0].options[8] == (
+        "project.project_name=巴德血透产品"
+    )
+
+    second = await agent.handle(chat("9", "message-2"), IDENTITY)
+
+    assert second.status == "COMPLETED"
+    executed = retrieval.requests[-1]
+    assert any(
+        item.get("field") == "project.project_name"
+        and item.get("value") == "巴德血透产品"
+        for item in executed.filters
+    )
+    assert "巴德血透产品" in executed.rewritten_question
+    assert "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER" in executed.assumptions
 
 
 @pytest.mark.parametrize("kind", ["metric", "dimension"])
@@ -197,6 +278,85 @@ def test_label_only_dimension_option_changes_only_its_target():
     request.semantic_ambiguities[0].candidate_details = []
     result = choose(request, "2")
     assert result.dimensions == ["城市", "渠道"]
+
+
+def test_catalog_filter_choice_adds_selected_scope_instead_of_dropping_it():
+    request = pending()
+    request.primary_intent = PrimaryIntent.DETAIL_QUERY
+    request.entity = "经销商"
+    request.fields = ["经销商名称"]
+    request.metrics = []
+    request.dimensions = ["经销商"]
+    request.filters = [{"field": "省份名称", "operator": "EQ", "value": "浙江省"}]
+    request.semantic_ambiguities = [SemanticAmbiguity(
+        type="filter",
+        phrase="血透",
+        ambiguity_id="catalog-filter-choice",
+        question="过滤值血透存在多个目录候选。",
+        candidates=[
+            "project.project_name=巴德血透产品",
+            "project.project_name=费森尤斯血透",
+        ],
+        candidate_details=[
+            {
+                "label": "project.project_name=巴德血透产品",
+                "canonical_name": "project.project_name",
+                "canonical_code": "project.project_name",
+                "canonical_value": "巴德血透产品",
+                "input_value": "血透",
+                "operation": "UPSERT_FILTER",
+                "operator": "EQ",
+                "business_domain_id": 205,
+            },
+            {
+                "label": "project.project_name=费森尤斯血透",
+                "canonical_name": "project.project_name",
+                "canonical_code": "project.project_name",
+                "canonical_value": "费森尤斯血透",
+                "input_value": "血透",
+                "operation": "UPSERT_FILTER",
+                "operator": "EQ",
+                "business_domain_id": 205,
+            },
+        ],
+        affected_slots=["filters"],
+        semantic_model_id=81,
+    )]
+
+    result = choose(request, "1")
+
+    assert result.filters == [
+        {"field": "省份名称", "operator": "EQ", "value": "浙江省"},
+        {
+            "field": "project.project_name",
+            "operator": "EQ",
+            "value": "巴德血透产品",
+        },
+    ]
+    assert result.semantic_filter_bindings[-1].canonical_value == "巴德血透产品"
+    assert result.semantic_filter_bindings[-1].input_value == "血透"
+    assert "巴德血透产品" in result.rewritten_question
+    assert not result.semantic_ambiguities
+    assert "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER" in result.assumptions
+
+
+def test_label_only_filter_choice_stays_pending_instead_of_claiming_success():
+    request = pending()
+    request.semantic_ambiguities = [SemanticAmbiguity(
+        type="filter",
+        question="过滤值血透存在多个目录候选。",
+        candidates=["project.project_name=巴德血透产品"],
+        candidate_details=[{}],
+        affected_slots=["filters"],
+    )]
+
+    result = choose(request)
+
+    assert result.filters == request.filters
+    assert result.semantic_ambiguities == request.semantic_ambiguities
+    assert result.missing_slots == ["semantic_ambiguity"]
+    assert "SEMANTIC_CHOICE_TARGET_UNRESOLVED" in result.assumptions
+    assert "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER" not in result.assumptions
 
 
 def test_two_independent_choices_preserve_previously_confirmed_member():

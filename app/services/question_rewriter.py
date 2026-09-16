@@ -1263,6 +1263,10 @@ class QuestionRewriter:
             )
 
         semantic_bindings: list[SemanticFilterBinding] = []
+        rebound_filter_indexes: set[int] = set()
+        prior_bindings_by_index: dict[int, list[SemanticFilterBinding]] = {}
+        for binding in request.semantic_filter_bindings:
+            prior_bindings_by_index.setdefault(binding.filter_index, []).append(binding)
         for filter_index, item in enumerate(request.filters):
             if not isinstance(item, dict):
                 grounded_filters.append(item)
@@ -1322,6 +1326,7 @@ class QuestionRewriter:
                         family_rebound = best["family"] != current_family
             if ranked and current_family is not None:
                 selected = ranked[0]
+                rebound_filter_indexes.add(filter_index)
                 current["field"] = selected["label"]
                 grounded_by_family[selected["family"]] = selected["label"]
                 canonical_value = selected["canonical_value"]
@@ -1340,9 +1345,19 @@ class QuestionRewriter:
                 attribute_code = selected["attribute_code"]
                 if attribute_code:
                     for required in sorted(required_values):
+                        prior_binding = next((
+                            binding
+                            for binding in prior_bindings_by_index.get(
+                                filter_index, []
+                            )
+                            if binding.canonical_value == canonical_value
+                        ), None)
                         semantic_bindings.append(SemanticFilterBinding(
                             filter_index=filter_index,
-                            input_value=required,
+                            input_value=(
+                                prior_binding.input_value
+                                if prior_binding is not None else required
+                            ),
                             canonical_value=canonical_value,
                             canonical_name=selected["label"],
                             attribute_code=attribute_code,
@@ -1355,8 +1370,31 @@ class QuestionRewriter:
 
         if not grounded_by_family and not canonicalized_literals:
             return request
+        preserved_bindings: list[SemanticFilterBinding] = []
+        for binding in request.semantic_filter_bindings:
+            if (
+                binding.filter_index in rebound_filter_indexes
+                or not 0 <= binding.filter_index < len(grounded_filters)
+            ):
+                continue
+            bound_filter = grounded_filters[binding.filter_index]
+            if not isinstance(bound_filter, dict):
+                continue
+            raw_values = bound_filter.get("value")
+            values = raw_values if isinstance(raw_values, list) else [raw_values]
+            field = str(bound_filter.get("field") or "").strip()
+            if (
+                binding.canonical_value in {
+                    str(value or "").strip() for value in values
+                }
+                and field in {binding.canonical_name, binding.attribute_code}
+            ):
+                preserved_bindings.append(binding.model_copy(deep=True))
         request.filters = grounded_filters
-        request.semantic_filter_bindings = semantic_bindings
+        request.semantic_filter_bindings = sorted(
+            [*preserved_bindings, *semantic_bindings],
+            key=lambda item: (item.filter_index, item.attribute_code),
+        )
         request.dimensions = list(dict.fromkeys(
             grounded_by_family.get(family(value) or "", value)
             for value in request.dimensions

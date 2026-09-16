@@ -2558,6 +2558,7 @@ def _normalize_relation_name_filters(
         catalog_choices: list[dict] = []
         catalog_evidence_fields: set[str] = set()
         catalog_ranked_choices: set[str] = set()
+        catalog_ranked_filter_choices: dict[str, tuple[str, str]] = {}
         catalog_candidates = _catalog_identity_candidates(
             broad_candidates, attributes_by_entity
         )
@@ -2605,6 +2606,18 @@ def _normalize_relation_name_filters(
                     and str(match.get("field") or "") in catalog_fields
                     and str(match.get("canonical_value") or "").strip()
                 )
+                for match in catalog_matches:
+                    if not isinstance(match, dict):
+                        continue
+                    matched_field = str(match.get("field") or "").strip()
+                    canonical_value = str(
+                        match.get("canonical_value") or ""
+                    ).strip()
+                    if matched_field in catalog_fields and canonical_value:
+                        catalog_ranked_filter_choices.setdefault(
+                            f"{matched_field}={canonical_value}",
+                            (matched_field, canonical_value),
+                        )
                 choice = _unique_catalog_match(catalog_matches, catalog_fields)
                 if choice is None:
                     catalog_choices = []
@@ -2652,20 +2665,40 @@ def _normalize_relation_name_filters(
             )
             for ambiguity in ambiguities
         ):
-            ambiguities.append({
-                "type": "filter",
-                "question": (
-                    f"过滤值 {'、'.join(natural_values)} 看起来不像关系键 {field} 的编码，"
-                    "且当前语义作用域"
-                    "无法唯一确定对应的名称属性。请确认使用编码还是名称过滤。"
-                ),
-                "candidates": sorted(
-                    catalog_ranked_choices
-                    or name_fields
-                    .union(broad_evidence_fields)
-                    .union(catalog_evidence_fields)
-                ),
-            })
+            question = (
+                f"过滤值 {'、'.join(natural_values)} 看起来不像关系键 {field} 的编码，"
+                "且当前语义作用域"
+                "无法唯一确定对应的名称属性。请确认使用编码还是名称过滤。"
+            )
+            candidate_labels = sorted(
+                catalog_ranked_choices
+                or name_fields
+                .union(broad_evidence_fields)
+                .union(catalog_evidence_fields)
+            )
+            if candidate_labels and len(natural_values) == 1:
+                input_value = natural_values[0]
+                _append_filter_ambiguity(
+                    ast,
+                    question,
+                    [
+                        (
+                            label,
+                            catalog_ranked_filter_choices.get(
+                                label, (label, input_value)
+                            )[0],
+                            catalog_ranked_filter_choices.get(
+                                label, (label, input_value)
+                            )[1],
+                        )
+                        for label in candidate_labels
+                    ],
+                    input_value=input_value,
+                    semantic_model_id=semantic_model_id,
+                    business_domain_id=business_domain_id,
+                )
+            else:
+                _append_ambiguity(ast, "filter", question, candidate_labels)
 
 
 def _literal_is_explicitly_mentioned(value: str, user_query: str) -> bool:
@@ -2833,27 +2866,29 @@ def _split_composite_brand_filter(
                 )
             ]
             continue
-        ranked_choices = sorted({
-            f"{candidate.get('field')}={candidate.get('canonical_value')}"
+        brand_choices = [
+            (
+                f"{candidate.get('field')}={candidate.get('canonical_value')}",
+                str(candidate.get("field") or ""),
+                str(candidate.get("canonical_value") or ""),
+            )
             for candidate in catalog_matches
             if isinstance(candidate, dict)
             and candidate.get("field") in brand_fields
             and str(candidate.get("canonical_value") or "").strip()
-        })
-        if ranked_choices and not any(
-            isinstance(ambiguity, dict)
-            and ambiguity.get("type") == "filter"
-            and ambiguity.get("candidates") == ranked_choices
-            for ambiguity in ambiguities
-        ):
-            ambiguities.append({
-                "type": "filter",
-                "question": (
+        ]
+        if brand_choices:
+            _append_filter_ambiguity(
+                ast,
+                (
                     f"品牌值 {raw_value} 对应多个同优先级目录字段或规范值，"
                     "请确认具体品牌口径。"
                 ),
-                "candidates": ranked_choices,
-            })
+                brand_choices,
+                input_value=raw_value,
+                semantic_model_id=semantic_model_id,
+                business_domain_id=business_domain_id,
+            )
 
     for item in list(filters):
         if not isinstance(item, dict):
@@ -3471,24 +3506,24 @@ def _normalize_entity_attribute_filters(
                         ambiguity for ambiguity in ambiguities
                         if not attribute_choice_ambiguity(ambiguity)
                     ]
-                    choices = sorted(
-                        f"{matched_field}={canonical_value}"
-                        for _, matched_field, canonical_value in best
+                    _append_filter_ambiguity(
+                        ast,
+                        (
+                            f"地区值 {raw_value} 在与结果对象等距的多个行政区字段中"
+                            "精确存在，请确认行政层级。"
+                        ),
+                        [
+                            (
+                                f"{matched_field}={canonical_value}",
+                                matched_field,
+                                canonical_value,
+                            )
+                            for _, matched_field, canonical_value in best
+                        ],
+                        input_value=raw_value,
+                        semantic_model_id=semantic_model_id,
+                        business_domain_id=business_domain_id,
                     )
-                    if not any(
-                        isinstance(ambiguity, dict)
-                        and ambiguity.get("type") == "filter"
-                        and ambiguity.get("candidates") == choices
-                        for ambiguity in ambiguities
-                    ):
-                        ambiguities.append({
-                            "type": "filter",
-                            "question": (
-                                f"地区值 {raw_value} 在与结果对象等距的多个行政区字段中"
-                                "精确存在，请确认行政层级。"
-                            ),
-                            "candidates": choices,
-                        })
                     continue
 
                 current_attribute = attributes_by_entity[entity_code][field]
@@ -3498,21 +3533,20 @@ def _normalize_entity_attribute_filters(
                     # Never execute a geographic slot against a name/address
                     # field merely because that free text happens to contain
                     # the same place name.
-                    choices = sorted(administrative_fields)
-                    if not any(
-                        isinstance(ambiguity, dict)
-                        and ambiguity.get("type") == "filter"
-                        and ambiguity.get("candidates") == choices
-                        for ambiguity in ambiguities
-                    ):
-                        ambiguities.append({
-                            "type": "filter",
-                            "question": (
-                                f"地区值 {raw_value} 未能在召回的行政区字段中唯一匹配，"
-                                "请确认地区名称或行政层级。"
-                            ),
-                            "candidates": choices,
-                        })
+                    _append_filter_ambiguity(
+                        ast,
+                        (
+                            f"地区值 {raw_value} 未能在召回的行政区字段中唯一匹配，"
+                            "请确认地区名称或行政层级。"
+                        ),
+                        [
+                            (candidate_field, candidate_field, raw_value)
+                            for candidate_field in administrative_fields
+                        ],
+                        input_value=raw_value,
+                        semantic_model_id=semantic_model_id,
+                        business_domain_id=business_domain_id,
+                    )
                     continue
 
         try:
@@ -3574,13 +3608,17 @@ def _normalize_entity_attribute_filters(
                 item["value"] = canonical_values[0]
                 continue
             if len(canonical_values) > 1:
-                ambiguities.append({
-                    "type": "filter",
-                    "question": (
-                        f"地区简称 {raw_value} 对应多个目录规范值，请确认具体地区。"
-                    ),
-                    "candidates": canonical_values,
-                })
+                _append_filter_ambiguity(
+                    ast,
+                    f"地区简称 {raw_value} 对应多个目录规范值，请确认具体地区。",
+                    [
+                        (canonical_value, field, canonical_value)
+                        for canonical_value in canonical_values
+                    ],
+                    input_value=raw_value,
+                    semantic_model_id=semantic_model_id,
+                    business_domain_id=business_domain_id,
+                )
                 continue
         if len(matched_fields) == 1:
             matched_field = next(iter(matched_fields))
@@ -3666,22 +3704,28 @@ def _normalize_entity_attribute_filters(
                     )
                 ]
                 continue
-            ranked_choices = sorted({
-                f"{match.get('field')}={match.get('canonical_value')}"
+            related_choices = [
+                (
+                    f"{match.get('field')}={match.get('canonical_value')}",
+                    str(match.get("field") or ""),
+                    str(match.get("canonical_value") or ""),
+                )
                 for match in catalog_matches
                 if isinstance(match, dict)
                 and str(match.get("field") or "") in related_fields
                 and str(match.get("canonical_value") or "").strip()
-            })
-            if ranked_choices:
-                _append_ambiguity(
+            ]
+            if related_choices:
+                _append_filter_ambiguity(
                     ast,
-                    "filter",
                     (
                         f"过滤值 {raw_value} 在关联实体目录中存在多个同等候选，"
                         "请确认具体商品、品牌或厂家口径。"
                     ),
-                    ranked_choices,
+                    related_choices,
+                    input_value=raw_value,
+                    semantic_model_id=semantic_model_id,
+                    business_domain_id=business_domain_id,
                 )
                 continue
         if len(matched_fields) > 1:
@@ -3700,14 +3744,20 @@ def _normalize_entity_attribute_filters(
                     require_value=True,
                 )
             ]
-            ambiguities.append({
-                "type": "filter",
-                "question": (
+            _append_filter_ambiguity(
+                ast,
+                (
                     f"过滤值 {raw_value} 在实体 {entity_code} 的多个属性中精确存在，"
                     "无法安全确定业务含义，请确认要筛选的属性。"
                 ),
-                "candidates": sorted(matched_fields),
-            })
+                [
+                    (matched_field, matched_field, raw_value)
+                    for matched_field in matched_fields
+                ],
+                input_value=raw_value,
+                semantic_model_id=semantic_model_id,
+                business_domain_id=business_domain_id,
+            )
 
 
 _DATE_TOKEN = re.compile(
@@ -3751,23 +3801,95 @@ def _append_ambiguity(
     ambiguity_type: str,
     question: str,
     candidates: list[str],
+    *,
+    phrase: str | None = None,
+    affected_slots: list[str] | None = None,
+    candidate_details: list[dict] | None = None,
+    semantic_model_id: int | None = None,
 ) -> None:
     ambiguities = ast.get("ambiguity")
     if not isinstance(ambiguities, list):
         return
     normalized_candidates = list(dict.fromkeys(map(str, candidates)))
-    if any(
-        isinstance(item, dict)
-        and str(item.get("type") or "") == ambiguity_type
-        and list(map(str, item.get("candidates") or [])) == normalized_candidates
-        for item in ambiguities
-    ):
-        return
-    ambiguities.append({
+    payload = {
         "type": ambiguity_type,
         "question": question,
         "candidates": normalized_candidates,
-    })
+    }
+    if phrase:
+        payload["phrase"] = phrase
+    if affected_slots:
+        payload["affected_slots"] = list(dict.fromkeys(affected_slots))
+    if candidate_details is not None:
+        if len(candidate_details) != len(normalized_candidates):
+            raise ValueError("candidate details must align with candidate labels")
+        payload["candidate_details"] = [dict(item) for item in candidate_details]
+    if type(semantic_model_id) is int:
+        payload["semantic_model_id"] = semantic_model_id
+    existing = next((
+        item for item in ambiguities
+        if isinstance(item, dict)
+        and str(item.get("type") or "") == ambiguity_type
+        and list(map(str, item.get("candidates") or [])) == normalized_candidates
+    ), None)
+    if existing is not None:
+        # A model-produced label-only ambiguity may precede catalog grounding.
+        # Upgrade the same visible options with the governed application
+        # contract instead of retaining a choice that cannot be executed.
+        existing.update(payload)
+        return
+    ambiguities.append(payload)
+
+
+def _append_filter_ambiguity(
+    ast: dict,
+    question: str,
+    choices: list[tuple[str, str, str]],
+    *,
+    input_value: str,
+    semantic_model_id: int | None,
+    business_domain_id: int | None,
+) -> None:
+    """Publish aligned filter choices that a downstream agent can apply."""
+
+    normalized: dict[str, tuple[str, str]] = {}
+    for label, field, canonical_value in choices:
+        clean_label = str(label or "").strip()
+        clean_field = str(field or "").strip()
+        clean_value = str(canonical_value or "").strip()
+        if clean_label and clean_field and clean_value:
+            normalized.setdefault(clean_label, (clean_field, clean_value))
+    labels = sorted(normalized)
+    if not labels:
+        return
+    details = []
+    for label in labels:
+        field, canonical_value = normalized[label]
+        detail = {
+            "label": label,
+            "canonical_name": field,
+            "canonical_code": field,
+            "attribute_name": field,
+            "attribute_code": field,
+            "value": canonical_value,
+            "canonical_value": canonical_value,
+            "input_value": input_value,
+            "operation": "UPSERT_FILTER",
+            "operator": "EQ",
+        }
+        if type(business_domain_id) is int:
+            detail["business_domain_id"] = business_domain_id
+        details.append(detail)
+    _append_ambiguity(
+        ast,
+        "filter",
+        question,
+        labels,
+        phrase=input_value,
+        affected_slots=["filters"],
+        candidate_details=details,
+        semantic_model_id=semantic_model_id,
+    )
 
 
 def _query_date_bounds(user_query: str) -> tuple[str, str, str] | None:

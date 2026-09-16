@@ -117,13 +117,11 @@ ANALYSIS_INTENTS = {
 # published semantic snapshot.  The second attempt receives the exact missing
 # fields/filters in ``SEMANTIC_QUERY_RETRY`` and is still fail-closed.
 SEMANTIC_QUERY_RETRY_CODES = frozenset({
-    "ASL_AMBIGUOUS",
     "ASL_DIMENSION_INVALID",
     "ASL_DETAIL_FIELDS_INCOMPLETE",
     "ASL_REQUIRED_FILTER_MISSING",
     "ASL_REQUIRED_DIMENSION_MISSING",
     "ASL_UNREQUESTED_DIMENSION",
-    "SQL_TRANSLATION_AMBIGUOUS",
     "SQL_QUERY_ENTITY_ALIGNMENT_FAILED",
     "SQL_QUERY_FILTER_OPERATOR_FAILED",
     "SQL_RELATIONSHIP_GRAPH_INCOMPLETE",
@@ -7405,7 +7403,8 @@ class DataAnalysisOrchestrator:
                         str(detail.get(key) or "").strip()
                         for key in (
                             "label", "canonical_name", "canonical_code",
-                            "attribute_name", "entity_name", "value",
+                            "attribute_name", "attribute_code", "entity_name",
+                            "value", "canonical_value", "attribute_value",
                         )
                     ),
                 }
@@ -7429,7 +7428,12 @@ class DataAnalysisOrchestrator:
         canonical_name = str(
             detail.get("canonical_name") or detail.get("attribute_name") or ""
         ).strip()
-        canonical_value = str(detail.get("value") or "").strip()
+        canonical_value = str(
+            detail.get("value")
+            or detail.get("canonical_value")
+            or detail.get("attribute_value")
+            or ""
+        ).strip()
         if ambiguity.ambiguity_id == 'LEGACY_BARE_NAME_OPERATION' and ambiguity.phrase:
             confirmation = ('列出' if detail.get('operation') == 'PROJECTION' else '按') + ambiguity.phrase
         elif ambiguity.type == "metric":
@@ -7478,6 +7482,15 @@ class DataAnalysisOrchestrator:
 
         ambiguity: SemanticAmbiguity = choice["ambiguity"]
         detail = choice["detail"]
+
+        def unresolved_choice() -> CanonicalAnalysisRequest:
+            unresolved = pending.model_copy(deep=True)
+            unresolved.assumptions = list(dict.fromkeys([
+                *unresolved.assumptions,
+                "SEMANTIC_CHOICE_TARGET_UNRESOLVED",
+            ]))
+            return unresolved
+
         member_index = None
         if ambiguity.type in {"metric", "dimension"}:
             members = (
@@ -7491,9 +7504,7 @@ class DataAnalysisOrchestrator:
                 # The selected candidate does not establish which old member
                 # it replaces. Keep Pending intact; the caller stops before
                 # planning instead of executing a guessed task or repeating it.
-                unresolved = pending.model_copy(deep=True)
-                unresolved.assumptions.append("SEMANTIC_CHOICE_TARGET_UNRESOLVED")
-                return unresolved
+                return unresolved_choice()
         # A semantic-choice turn changes only the ambiguous slot. Everything
         # else comes from the already admitted pending request.
         target.metrics = [item.model_copy(deep=True) for item in pending.metrics]
@@ -7520,17 +7531,26 @@ class DataAnalysisOrchestrator:
             detail.get("canonical_code") or detail.get("attribute_code")
             or detail.get("semantic_id") or ""
         ).strip()
-        canonical_value = str(detail.get("value") or ambiguity.phrase or "").strip()
+        canonical_value = str(
+            detail.get("value")
+            or detail.get("canonical_value")
+            or detail.get("attribute_value")
+            or ambiguity.phrase
+            or ""
+        ).strip()
+        applied = False
         if ambiguity.ambiguity_id == 'LEGACY_BARE_NAME_OPERATION' and ambiguity.phrase:
             if detail.get('operation') == 'PROJECTION':
                 target.primary_intent = PrimaryIntent.DETAIL_QUERY
                 target.fields = [ambiguity.phrase]
                 target.entity = ambiguity.phrase.removesuffix('名称')
                 target.dimensions = []
+                applied = True
             elif detail.get('operation') == 'GROUPING':
                 target.primary_intent = PrimaryIntent.METRIC_QUERY
                 target.dimensions = [ambiguity.phrase.removesuffix('名称')]
                 target.fields = []
+                applied = True
         elif ambiguity.type == "metric":
             metric_name = canonical_name or choice["label"]
             metric_id = str(detail.get("metric_id") or "").strip() or None
@@ -7548,12 +7568,17 @@ class DataAnalysisOrchestrator:
                 unit=(str(detail.get("unit")) if detail.get("unit") else None),
             )
             target.metrics[member_index:member_index + 1] = [selected_metric]
+            applied = True
         elif ambiguity.type == "dimension":
             target.dimensions[member_index:member_index + 1] = [canonical_name or choice["label"]]
+            applied = True
         elif ambiguity.type in {"subject"} and canonical_name:
             target.entity = canonical_name
+            applied = True
         elif canonical_name and canonical_code and canonical_value:
-            phrase = str(ambiguity.phrase or "").strip()
+            phrase = str(
+                detail.get("input_value") or ambiguity.phrase or ""
+            ).strip()
             matched_indexes: list[int] = []
             for index, item in enumerate(target.filters):
                 raw_values = item.get("value")
@@ -7562,12 +7587,32 @@ class DataAnalysisOrchestrator:
                     str(value or "").strip() in {phrase, canonical_value}
                     for value in values
                 ):
-                    item["field"] = canonical_name
-                    if not isinstance(raw_values, list):
-                        item["value"] = canonical_value
                     matched_indexes.append(index)
+            operation = str(detail.get("operation") or "").strip().upper()
+            if len(matched_indexes) > 1:
+                return unresolved_choice()
+            if not matched_indexes and operation == "UPSERT_FILTER" and phrase:
+                operator = str(detail.get("operator") or "EQ").strip().upper()
+                target.filters.append({
+                    "field": canonical_name,
+                    "operator": "EQ" if operator in {"=", "EQ"} else operator,
+                    "value": canonical_value,
+                })
+                matched_indexes.append(len(target.filters) - 1)
             if len(matched_indexes) == 1:
                 filter_index = matched_indexes[0]
+                selected_filter = target.filters[filter_index]
+                raw_values = selected_filter.get("value")
+                selected_filter["field"] = canonical_name
+                if isinstance(raw_values, list):
+                    selected_filter["value"] = [
+                        canonical_value
+                        if str(value or "").strip() in {phrase, canonical_value}
+                        else value
+                        for value in raw_values
+                    ]
+                else:
+                    selected_filter["value"] = canonical_value
                 target.semantic_filter_bindings = [
                     item for item in target.semantic_filter_bindings
                     if item.filter_index != filter_index
@@ -7592,6 +7637,13 @@ class DataAnalysisOrchestrator:
                 target.assumptions.append(
                     "SEMANTIC_AMBIGUITY_CONFIRMED_ATTRIBUTE=" + canonical_code
                 )
+                applied = True
+
+        if not applied:
+            # A visible option is not a successful clarification until its
+            # structured catalog identity has changed the affected slot.  Keep
+            # Pending intact when an older upstream returns labels only.
+            return unresolved_choice()
 
         remaining = [
             item.model_copy(deep=True)

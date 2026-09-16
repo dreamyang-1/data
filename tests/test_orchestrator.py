@@ -208,6 +208,8 @@ async def test_regeneration_replaces_stale_continuation_state_in_original_scope(
 def test_recoverable_asl_contract_failures_receive_one_semantic_retry():
     assert "ASL_DETAIL_FIELDS_INCOMPLETE" in SEMANTIC_QUERY_RETRY_CODES
     assert "ASL_REQUIRED_FILTER_MISSING" in SEMANTIC_QUERY_RETRY_CODES
+    assert "ASL_AMBIGUOUS" not in SEMANTIC_QUERY_RETRY_CODES
+    assert "SQL_TRANSLATION_AMBIGUOUS" not in SEMANTIC_QUERY_RETRY_CODES
 
 
 def test_vector_ambiguity_clarification_returns_all_canonical_candidate_details():

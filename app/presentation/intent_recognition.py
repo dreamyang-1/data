@@ -412,21 +412,29 @@ def _completed_question_for_display(
             "商品品牌", "品牌", "母品牌", "母厂牌", "parent_brand",
             "商品分类", "产品分类", "商品品类", "品类", "类别", "category",
             "厂家名称", "制造商名称", "生产厂家", "manufacturer",
+            "项目名称", "project_name", "project.project_name",
+        )
+        geographic_markers = (
+            "省份", "省名称", "城市", "市名称", "地区", "区域",
+            "province", "city", "region", "dim_city", "dim_province",
         )
         subject_values: list[str] = []
+        geographic_values: list[str] = []
         for item in request.filters:
             if not isinstance(item, dict):
                 continue
             field = str(item.get("field") or "").casefold()
-            if not any(marker.casefold() in field for marker in commercial_markers):
-                continue
             raw = item.get("value")
             values = raw if isinstance(raw, list) else [raw]
-            subject_values.extend(
+            normalized_values = [
                 str(value).strip()
                 for value in values
                 if value not in (None, "") and str(value).strip()
-            )
+            ]
+            if any(marker.casefold() in field for marker in commercial_markers):
+                subject_values.extend(normalized_values)
+            if any(marker.casefold() in field for marker in geographic_markers):
+                geographic_values.extend(normalized_values)
         if not subject_values:
             subject_values = [
                 str(value).strip()
@@ -464,7 +472,11 @@ def _completed_question_for_display(
                 )
             else:
                 time_text = ""
-            return f"查询{time_text}销售过{product_text}的{request.entity}名单"
+            geographic_text = "、".join(dict.fromkeys(geographic_values))
+            return (
+                f"查询{time_text}{geographic_text}销售过"
+                f"{product_text}的{request.entity}名单"
+            )
     candidate = request.rewritten_question or request.original_question
     if not re.match(
         r"^(?:查询指标|查询明细|分析趋势|执行比较分析|分析构成占比|"

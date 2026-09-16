@@ -808,6 +808,105 @@ def test_vector_canonical_value_replaces_model_entity_span_everywhere():
     )
 
 
+def test_grounding_preserves_unrelated_confirmed_filter_binding():
+    request = CanonicalAnalysisRequest(
+        conversation_id="preserve-confirmed-project-filter",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询浙江省巴德血透产品的经销商",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        filters=[
+            {"field": "地区", "operator": "EQ", "value": "浙江省"},
+            {
+                "field": "project.project_name",
+                "operator": "EQ",
+                "value": "巴德血透产品",
+            },
+        ],
+        semantic_filter_bindings=[SemanticFilterBinding(
+            filter_index=1,
+            input_value="血透",
+            canonical_value="巴德血透产品",
+            canonical_name="project.project_name",
+            attribute_code="project.project_name",
+            score=1.0,
+            business_domain_id=205,
+        )],
+    )
+    matches = [{
+        "score": 1.0,
+        "record_id": "province-zhejiang",
+        "entity_name": "省份",
+        "attribute_name": "省份名称",
+        "attribute_code": "province_name",
+        "attribute_value": "浙江省",
+        "business_domain_id": 205,
+    }]
+
+    grounded = QuestionRewriter.ground_request_dimensions(request, matches)
+
+    assert grounded.filters == [
+        {"field": "省份名称", "operator": "EQ", "value": "浙江省"},
+        {
+            "field": "project.project_name",
+            "operator": "EQ",
+            "value": "巴德血透产品",
+        },
+    ]
+    assert [
+        (item.filter_index, item.attribute_code, item.canonical_value)
+        for item in grounded.semantic_filter_bindings
+    ] == [
+        (0, "province_name", "浙江省"),
+        (1, "project.project_name", "巴德血透产品"),
+    ]
+
+
+def test_grounding_preserves_original_choice_phrase_when_rebinding_same_value():
+    request = CanonicalAnalysisRequest(
+        conversation_id="preserve-choice-phrase",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询血透产品",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        filters=[{
+            "field": "product.product_name",
+            "operator": "EQ",
+            "value": "血液透析设备",
+        }],
+        semantic_filter_bindings=[SemanticFilterBinding(
+            filter_index=0,
+            input_value="血透",
+            canonical_value="血液透析设备",
+            canonical_name="product.product_name",
+            attribute_code="product.product_name",
+            score=1.0,
+            business_domain_id=205,
+        )],
+    )
+
+    grounded = QuestionRewriter.ground_request_dimensions(request, [{
+        "score": 1.0,
+        "record_id": "product-dialysis-equipment",
+        "entity_name": "产品",
+        "attribute_name": "商品名称",
+        "attribute_code": "product_name",
+        "attribute_value": "血液透析设备",
+        "business_domain_id": 205,
+    }])
+
+    assert grounded.filters == [{
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "血液透析设备",
+    }]
+    assert len(grounded.semantic_filter_bindings) == 1
+    binding = grounded.semantic_filter_bindings[0]
+    assert binding.input_value == "血透"
+    assert binding.canonical_value == "血液透析设备"
+    assert binding.attribute_code == "product_name"
+
+
 def test_unmatched_model_entity_span_is_preserved_for_downstream_verification():
     request = CanonicalAnalysisRequest(
         conversation_id="semantic-value-no-hit",
