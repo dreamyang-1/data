@@ -53,22 +53,33 @@ def catalog(base_catalog):
 
 
 def initial(*,time_first=False,explicit_field=False,grain=None,fault=None):
-    text='2025年销售额'+('按过账日期' if explicit_field else '')+('按月' if grain else '')
+    # Fault injection needs the whole TimeSpec channel, which the current
+    # dynamic schema only keeps open when an explicit TIME_FIELD is present.
+    whole_slot=explicit_field or fault is not None
+    text='2025年销售额'+('按过账日期' if whole_slot else '')+('按月' if grain else '')
     specs=[('2025年','TIME_RANGE','time_spec','SET'),('销售额','MEASURE','metrics','SET')]
-    if explicit_field:specs.append(('过账日期','TIME_FIELD','time_spec','SET'))
+    if whole_slot:specs.append(('过账日期','TIME_FIELD','time_spec','SET'))
     if grain:specs.append(('按月','TIME_GRAIN','time_spec','SET'))
     parsed=parse(text,specs,shape='TIME_SERIES' if grain else 'SCALAR_AGGREGATE')
     def draft(c):
-        anchor=binding(c,'过账日期','TIME_FIELD','m2','ATTRIBUTE') if explicit_field else binding(c,'销售额','MEASURE','m1')
-        if fault=='foreign':anchor={'binding_handle':'foreign'}
-        if fault=='authority':anchor={'canonical_id':'invented'}
-        value=dict(anchor=anchor,range=dict(start='1990-01-01T00:00:00+00:00',end_exclusive='1991-01-01T00:00:00+00:00'),
-            grain='YEAR',timezone='+08:00',source='USER_EXPLICIT',as_of='1990-01-01T00:00:00+00:00')
-        if fault=='watermark':value['data_watermark']='2025-12-31T00:00:00+08:00'
-        if fault=='default':value['source']='SYSTEM_DEFAULT'
         metric=edit('metrics',[binding(c,'销售额','MEASURE','m1')],ids=('m1',))
-        time=edit('time_spec',value,ids=tuple('m'+str(i) for i in range(len(specs)) if i!=1))
-        return dict(payload_type='TIME_SERIES' if grain else 'SCALAR_AGGREGATE',edits=[time,metric] if time_first else [metric,time])
+        if whole_slot:
+            anchor=binding(c,'过账日期','TIME_FIELD','m2','ATTRIBUTE')
+            if fault=='foreign':anchor={'binding_handle':'foreign'}
+            if fault=='authority':anchor={'canonical_id':'invented'}
+            value=dict(anchor=anchor,range=dict(start='1990-01-01T00:00:00+00:00',end_exclusive='1991-01-01T00:00:00+00:00'),
+                grain='YEAR',timezone='+08:00',source='USER_EXPLICIT',as_of='1990-01-01T00:00:00+00:00')
+            if fault=='watermark':value['data_watermark']='2025-12-31T00:00:00+08:00'
+            if fault=='default':value['source']='SYSTEM_DEFAULT'
+            time=edit('time_spec',value,ids=tuple('m'+str(i) for i in range(len(specs)) if i!=1))
+            return dict(payload_type='TIME_SERIES' if grain else 'SCALAR_AGGREGATE',edits=[time,metric] if time_first else [metric,time])
+        # Bare current-range initialization: the exact schema no longer offers
+        # slot_path time_spec, so scripted output must use RANGE/GRAIN components.
+        components=[dict(component='RANGE',operation='SET',evidence_mention_ids=['m0'],
+            value=dict(start='1990-01-01T00:00:00+00:00',end_exclusive='1991-01-01T00:00:00+00:00'))]
+        if grain:components.append(dict(component='GRAIN',operation='SET',
+            evidence_mention_ids=['m'+str(len(specs)-1)],value=grain))
+        return dict(payload_type='TIME_SERIES' if grain else 'SCALAR_AGGREGATE',edits=[metric],temporal_edits=components)
     return text,parsed,draft
 
 
@@ -82,7 +93,7 @@ async def test_metric_anchor_and_dates_are_owned_by_catalog_and_current_expressi
     assert datetime.fromisoformat(time['range']['start'])==datetime.fromisoformat('2025-01-01T00:00:00+08:00')
     assert datetime.fromisoformat(time['range']['end_exclusive'])==datetime.fromisoformat('2026-01-01T00:00:00+08:00')
     op=next(o for o in result.resolution['task_patch']['sets'] if o['slot_path']=='time_spec')
-    assert op['reason_code']=='CURRENT_RANGE_NORMALIZED_WITH_GOVERNED_METRIC_ANCHOR'
+    assert op['reason_code']=='CURRENT_INITIAL_TIME_COMPONENTS'
     assert result.plan['backend_contract']['mode']=='SHADOW_ONLY'
 
 
@@ -136,7 +147,9 @@ async def test_explicit_range_clear_survives_a_later_metric_add(catalog):
     ({'boundary':'BOTH_CLOSED'},'V2_TIME_POLICY_EVIDENCE_REQUIRED'),
     ({'unrecognized_policy':True},'V2_EXPLICIT_TIME_EXTRA_FIELD')])
 async def test_normalization_cannot_silently_erase_other_policy_or_comparison_instructions(catalog,extra,reason):
-    text,parsed,original=initial()
+    # Policy faults need the whole TimeSpec channel; the exact schema keeps it
+    # open only with an explicit time field, which the policy guards still cover.
+    text,parsed,original=initial(explicit_field=True)
     def draft(c):
         value=original(c)
         next(e['value'] for e in value['edits'] if e['slot_path']=='time_spec').update(extra)
