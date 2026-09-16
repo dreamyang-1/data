@@ -45,6 +45,7 @@ from app.semantic_v2.context_v1_execution import (
     V2ContextV1ExecutionBridge,
     _revalidate_context_artifacts,
 )
+from app.semantic_v2.recognition import RawTurnPlanner
 from app.semantic_v2.recognition_client import RecognitionFailure
 from app.semantic_v2.state_machine import ConversationState
 from app.services.orchestrator import DataAnalysisOrchestrator
@@ -1306,6 +1307,109 @@ async def test_structured_task_filter_restriction_adds_then_replaces_one_family(
     ]
     assert frame.last_edit.operation == "REPLACE"
     assert frame.last_edit.slot == "filter_expression"
+
+
+@pytest.mark.asyncio
+async def test_possessive_only_region_fragment_completes_from_current_task_context(
+    context_catalog,
+):
+    first_step = context_case(4)[0]
+    scripted, transport = scripted_planner(context_catalog, [first_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return response(chat)
+
+    async def resolve_value(
+        _chat, _identity, surface, expected_family, preferred_attribute_code=None
+    ):
+        if surface != "上海市" or expected_family != "REGION":
+            return None
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name="省份名称",
+            attribute_code="province_name",
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    bridge = V2ContextV1ExecutionBridge(
+        store=RedisContextStateStore(
+            redis,
+            prefix="youo:data-analysis:v2-context-live:possessive-fragment",
+            ttl_seconds=3600,
+            idempotency_ttl_seconds=7200,
+        ),
+        catalog=context_catalog[0],
+        model=scripted.model,
+        v1_executor=v1,
+        v1_context_value_resolver=resolve_value,
+        clock=lambda: NOW,
+        startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
+    )
+    conversation_id = "possessive-only-region-fragment"
+
+    first = await bridge.handle(request(
+        question=first_step[0],
+        message_id="possessive-fragment-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    followup = await bridge.handle(request(
+        question="上海市的",
+        message_id="possessive-fragment-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert first.status == followup.status == "COMPLETED"
+    assert executions[-1].question == "查询2025年上海市的销售额。"
+    assert executions[-1].history == []
+    # The initial turn uses both recognition calls. The verified short edit
+    # reuses current task context and does not spend another model round-trip.
+    assert len(transport.calls) == 2
+    snapshot = await bridge.store.load(request(
+        question="上海市的",
+        message_id="possessive-fragment-inspect",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    frame = task.versions[-1].context_question
+    assert frame.execution_question == "查询2025年上海市的销售额。"
+    assert frame.last_edit.operation == "REPLACE"
+    assert [(item.surface, item.semantic_family) for item in frame.filters] == [
+        ("上海市", "REGION"),
+    ]
+    model_context = RawTurnPlanner._task_context(
+        None,
+        state,
+        {"task:current": task},
+        {},
+        context_trace={
+            "FINAL_RELATION": "MODIFY",
+            "FINAL_TARGET": task.task_id,
+        },
+    )
+    assert model_context[0]["context_question"] == {
+        "execution_question": "查询2025年上海市的销售额。",
+        "primary_intent": None,
+        "entity": None,
+        "metrics": ["销售额"],
+        "dimensions": [],
+        "fields": [],
+        "filters": [{"surface": "上海市", "semantic_family": "REGION"}],
+        "time": {"surface": "2025年"},
+    }
+    assert "v1_request_id" not in model_context[0]["context_question"]
+
+
+def test_possessive_only_fragment_requires_context_and_is_not_a_new_query():
+    assert is_contextual_ellipsis("上海市的") is True
+    assert is_self_contained_execution_question("上海市的") is False
+    assert is_contextual_ellipsis("查询上海市的销售额") is False
 
 
 @pytest.mark.asyncio

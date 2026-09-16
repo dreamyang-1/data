@@ -45,8 +45,11 @@ _CONTEXT_DEPENDENT_SURFACE = re.compile(
     r"^\s*(?:那|那么|这些|那些|上述|它|它们|该对象|这个对象|那个对象|"
     r"继续|再|不要|去掉|删除|取消|换|改|返回)"
 )
+# Spoken follow-ups often stop at the possessive connector (for example,
+# ``上海市的``). Callers still require an active task and one unique catalog
+# binding before this surface can modify conversation state.
 _ELLIPTICAL_VALUE = re.compile(
-    r"^\s*(?:那|那么)?\s*(?P<value>.+?)\s*(?:呢|怎么样|如何)\s*[？?。.]?\s*$"
+    r"^\s*(?:那|那么)?\s*(?P<value>.+?)\s*(?:呢|怎么样|如何|的)\s*[？?。.]?\s*$"
 )
 _EXPLICIT_FILTER_REPLACEMENT = re.compile(
     r"^\s*(?:那|那么)?\s*(?:把\s*)?"

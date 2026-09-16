@@ -766,9 +766,38 @@ class RawTurnPlanner:
             selected = {h:t for h,t in tasks.items() if t.task_id == reference.target_task_id}
         labels = cls._task_labels(selected)
         for label, task in zip(labels, selected.values()):
+            version = next(
+                item for item in task.versions
+                if item.version == task.active_version
+            )
             label['reference_kind'] = 'HISTORICAL_CANDIDATE' if historical else 'CURRENT_TASK'
             label['payload_type'] = plans[task.task_id].payload.payload_type if task.task_id in plans else None
             label['cleared_slots'] = sorted(task.clear_barriers)
+            if version.context_question is not None:
+                frame = version.context_question
+                # A V1-executed task can have no native V2 payload yet. Give
+                # the semantic-edit model the same scope-restored conversation
+                # meaning that the relation model already saw, without
+                # exposing V1 request IDs, authorization or execution state.
+                label['context_question'] = {
+                    'execution_question': frame.execution_question,
+                    'primary_intent': frame.primary_intent,
+                    'entity': frame.entity,
+                    'metrics': list(frame.metrics),
+                    'dimensions': list(frame.dimensions),
+                    'fields': list(frame.fields),
+                    'filters': [
+                        {
+                            'surface': item.surface,
+                            'semantic_family': item.semantic_family,
+                        }
+                        for item in frame.filters
+                    ],
+                    'time': (
+                        {'surface': frame.time.surface}
+                        if frame.time is not None else None
+                    ),
+                }
             if not historical:
                 label.pop('task_handle')
         return labels
