@@ -55,6 +55,26 @@ def test_resolved_context_and_intent_decision_render_as_nonduplicated_steps():
     assert "任务意图：趋势分析" in decision
 
 
+def test_missing_parameter_display_names_the_exact_missing_slots():
+    request = CanonicalAnalysisRequest(
+        conversation_id="missing-parameter-display",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="请查询明细",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["entity", "fields"],
+    )
+
+    view = build_intent_recognition_display_v2(request)
+    rendered = render_intent_recognition_display_v2(view)
+
+    assert "参数规范化：未执行，缺少：" in rendered
+    assert "返回的业务对象（例如经销商、医院、产品或科室）" in rendered
+    assert "明细返回字段" in rendered
+    assert "缺少必要参数" not in rendered
+    assert "尚未提供返回的业务对象" in view.clarification_reason
+
+
 def test_composite_display_lists_real_unique_child_intents_only():
     plan = TaskPlan(planner="DETERMINISTIC_RULE", tasks=[
         AtomicTask(task_id="task-1", question="查询产品明细"),

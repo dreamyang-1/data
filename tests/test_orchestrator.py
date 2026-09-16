@@ -106,6 +106,102 @@ async def test_completed_question_execution_does_not_restore_v1_semantic_context
 
 
 @pytest.mark.asyncio
+async def test_completed_question_replaces_stale_v1_pending_before_new_clarification():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    conversation_id = "completed-question-replaces-stale-pending"
+    stale = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id=conversation_id,
+        tenant_id="t1",
+        user_id="u1",
+        original_question="请提供旧产品使用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["entity", "fields"],
+    )
+    await agent.sessions.put_pending(
+        PendingState(request=stale, clarification_rounds=1, state_version=1),
+        expected_version=0,
+    )
+    chat = ChatRequest(
+        semantic_model_id=81,
+        application_id="app1",
+        conversation_id=conversation_id,
+        message_id="new-completed-question",
+        question="请查询明细",
+        history=[],
+    )
+
+    response = await agent.execute_v1_from_completed_question(chat, identity)
+    pending = await agent.sessions.get_pending(
+        "t1", "u1", "app1", conversation_id
+    )
+
+    assert response.status == "NEEDS_CLARIFICATION"
+    assert response.answer != "会话状态已被另一条消息更新，请基于最新追问重新回答。"
+    assert pending is not None
+    assert pending.request.original_question == "请查询明细"
+    assert pending.state_version == 1
+
+
+@pytest.mark.asyncio
+async def test_complete_product_department_question_executes_after_stale_pending():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    conversation_id = "complete-product-department-after-pending"
+    stale = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id=conversation_id,
+        tenant_id="t1",
+        user_id="u1",
+        original_question="旧的不完整问题",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["entity", "fields"],
+    )
+    await agent.sessions.put_pending(
+        PendingState(request=stale, clarification_rounds=1, state_version=1),
+        expected_version=0,
+    )
+    chat = ChatRequest(
+        semantic_model_id=81,
+        application_id="app1",
+        conversation_id=conversation_id,
+        message_id="complete-product-department",
+        question="请提供百特Prismaflex M60 set使用科室。",
+        history=[],
+    )
+
+    response = await agent.execute_v1_from_completed_question(chat, identity)
+
+    assert response.status == "COMPLETED"
+    assert response.missing_slots == []
+    assert "适用科室" in response.answer
+    assert await agent.sessions.get_pending(
+        "t1", "u1", "app1", conversation_id
+    ) is None
+
+
+def test_missing_slot_questions_name_the_parameter_and_give_examples():
+    request = CanonicalAnalysisRequest(
+        conversation_id="detailed-missing-slot-prompts",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询一下",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["entity", "fields", "time_range"],
+    )
+
+    questions = DataAnalysisOrchestrator._clarification_questions(request)
+
+    assert "缺少要返回的业务对象" in questions[0]
+    assert "经销商名单" in questions[0]
+    assert "缺少明细返回字段" in questions[1]
+    assert "产品名称和适用科室" in questions[1]
+    assert "缺少查询时间范围" in questions[2]
+    assert "2026年5月1日至5月10日" in questions[2]
+
+
+@pytest.mark.asyncio
 async def test_completed_question_execution_pins_all_v1_question_contracts():
     class CompletionChangingClassifier(RuleBasedIntentClassifier):
         async def classify(self, question, identity, conversation_id):

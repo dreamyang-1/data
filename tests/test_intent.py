@@ -861,6 +861,83 @@ def test_product_applicable_department_wording_is_detail_lookup():
     assert request.missing_slots == []
 
 
+@pytest.mark.parametrize(
+    ("question", "mentions"),
+    (
+        ("请提供百特Prismaflex M60 set使用科室。", ["百特", "Prismaflex M60 set"]),
+        ("请提供Prismaflex M60 set使用科室。", ["Prismaflex M60 set"]),
+        ("查询Prismaflex M60 set应用科室。", ["Prismaflex M60 set"]),
+    ),
+)
+def test_product_department_user_synonyms_are_complete_catalog_grounded_details(
+    question, mentions,
+):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "c-product-department-synonym"
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.entity == "产品"
+    assert request.fields == ["商品名称", "适用科室"]
+    assert request.semantic_entity_mentions == mentions
+    assert request.time_range is None
+    assert request.missing_slots == []
+    assert "PRODUCT_DEPARTMENT_SCOPE_REQUIRES_CATALOG_BINDING" in request.assumptions
+
+
+def test_bare_city_hospital_product_relationship_is_normalized_without_losing_scope():
+    request = RuleBasedIntentClassifier().classify(
+        "请提供南京哪些医院使用费森尤斯产品。",
+        IDENTITY,
+        "c-bare-city-hospital-product",
+    )
+
+    assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert request.entity == "医院"
+    assert request.fields == ["医院名称"]
+    assert {"field": "业务城市", "operator": "EQ", "value": "南京市"} in request.filters
+    assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in request.filters
+    assert request.semantic_entity_mentions == ["南京市", "费森尤斯"]
+    assert request.missing_slots == []
+
+
+def test_region_prefix_is_not_folded_into_relationship_product_surface():
+    request = RuleBasedIntentClassifier().classify(
+        "请提供浙江省 做费森尤斯血液透析产品的经销商",
+        IDENTITY,
+        "c-region-product-dealer",
+    )
+
+    assert {"field": "业务省份", "operator": "EQ", "value": "浙江省"} in request.filters
+    assert {
+        "field": "商品名称", "operator": "EQ", "value": "费森尤斯血液透析",
+    } in request.filters
+    assert "浙江省做费森尤斯血液透析" not in request.semantic_entity_mentions
+
+
+def test_region_group_is_not_invented_as_a_city_value():
+    request = RuleBasedIntentClassifier().classify(
+        "请提供华东地区哪些医院使用费森尤斯产品",
+        IDENTITY,
+        "c-region-group-hospital-product",
+    )
+
+    assert not any(
+        item.get("value") == "华东地区市" for item in request.filters
+    )
+    assert "华东地区市" not in request.semantic_entity_mentions
+
+
+def test_department_qualifier_is_not_sent_to_catalog_as_a_product_name():
+    request = RuleBasedIntentClassifier().classify(
+        "请提供主要适用科室",
+        IDENTITY,
+        "c-qualified-department-without-product",
+    )
+
+    assert "主要" not in request.semantic_entity_mentions
+
+
 @pytest.mark.parametrize("dash", ("-", "‑"))
 def test_specification_identifier_is_left_untyped_for_catalog_grounding(dash):
     request = RuleBasedIntentClassifier().classify(

@@ -352,6 +352,7 @@ def _clarification_reason(request: CanonicalAnalysisRequest) -> str:
         slot_labels = {
             "metric": "统计指标（例如销售额、销售数量）",
             "time_range": "查询时间范围",
+            "entity": "返回的业务对象（例如经销商、医院、产品或科室）",
             "dimension": "分析维度",
             "fields": "返回字段",
             "product": "产品范围",
@@ -383,6 +384,29 @@ def _clarification_reason(request: CanonicalAnalysisRequest) -> str:
     }:
         return "指标、维度、时间及筛选条件已满足当前分析要求，无缺失必填参数。"
     return "当前任务所需参数已经完整，无缺失必填参数。"
+
+
+def _normalization_status(request: CanonicalAnalysisRequest) -> str:
+    if not request.missing_slots:
+        return "已完成"
+    labels = {
+        "metric": "业务指标（例如销售额、销售数量）",
+        "time_range": "查询时间范围",
+        "entity": "返回的业务对象（例如经销商、医院、产品或科室）",
+        "fields": "明细返回字段",
+        "dimension": "分组维度",
+        "comparison_type": "比较方式",
+        "comparison_objects": "比较对象",
+        "product": "具体产品名称或型号",
+        "forecast_horizon": "预测周期",
+        "forecast_history_range": "预测所需历史时间范围",
+        "turn_relation": "与上一轮问题的关系",
+        "semantic_ambiguity": "待确认的业务口径或实体候选",
+    }
+    missing = list(dict.fromkeys(
+        labels.get(slot, slot) for slot in request.missing_slots
+    ))
+    return "未执行，缺少：" + "、".join(missing)
 
 
 def _completed_question_for_display(
@@ -728,9 +752,7 @@ def build_intent_recognition_display_v2(
         ),
         needs_clarification=bool(request.missing_slots),
         clarification_reason=_clarification_reason(request),
-        normalization_status=(
-            "未执行，缺少必要参数" if request.missing_slots else "已完成"
-        ),
+        normalization_status=_normalization_status(request),
     )
 
 

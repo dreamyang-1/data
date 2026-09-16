@@ -423,6 +423,56 @@ class DataAnalysisOrchestrator:
         transport history is neutralized and the internal context mode is set
         so legacy Pending/TaskFrame/LastRequest inheritance cannot run again.
         """
+        # V2 has already admitted this turn as a complete question. Any V1
+        # Pending entry belongs to an older clarification and must not occupy
+        # version 1 when this new request needs to create its own clarification.
+        # Clear by exact version so a newer concurrent turn is never deleted.
+        sessions = getattr(self, "sessions", None)
+        pending = (
+            await sessions.get_pending(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+            if sessions is not None else None
+        )
+        if pending is not None:
+            cleared = await sessions.clear_pending(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+                expected_version=pending.state_version,
+            )
+            if not cleared:
+                current = await sessions.get_pending(
+                    identity.tenant_id,
+                    identity.user_id,
+                    chat.application_id,
+                    chat.conversation_id,
+                )
+                if (
+                    current is not None
+                    and current.request.request_id == pending.request.request_id
+                ):
+                    cleared = await sessions.clear_pending(
+                        identity.tenant_id,
+                        identity.user_id,
+                        chat.application_id,
+                        chat.conversation_id,
+                        expected_version=current.state_version,
+                    )
+                elif current is None:
+                    cleared = True
+            if not cleared:
+                request = self._classify_with_rules(
+                    chat.question, identity, chat.conversation_id
+                )
+                return self._fallback(
+                    request,
+                    "当前会话已有更新正在处理，请稍后重新提交本问题。",
+                )
         execution_chat = chat.model_copy(deep=True, update={"history": []})
         execution_chat._completed_question_execution = True
         return await self.handle(execution_chat, identity)
@@ -10017,7 +10067,33 @@ class DataAnalysisOrchestrator:
     def _clarification_questions(
         cls, request: CanonicalAnalysisRequest
     ) -> list[str]:
-        prompts = {"turn_relation": "请确认这句话是在补充上一轮，还是一个独立新问题？", "metric": "要查询或分析哪个指标？", "time_range": "要分析哪个时间范围？", "entity": "要查询哪类业务明细？", "fields": "明细中需要哪些字段？", "comparison_type": "希望同比、环比、目标值还是对象间比较？", "comparison_objects": "请提供要对比的具体经销商或供应商名称，并用顿号或逗号分隔。", "dimension": "希望按哪个维度分析？", "product": "要计算哪个具体商品的科室匹配度？", "semantic_ambiguity": "请确认存在歧义的业务口径。"}
+        prompts = {
+            "turn_relation": "请确认这句话是在补充上一轮，还是一个独立新问题？",
+            "metric": (
+                "缺少要计算的业务指标。请说明具体指标，"
+                "例如：含税销售总额、销售数量、订单笔数或已合作医院数。"
+            ),
+            "time_range": (
+                "缺少查询时间范围。请提供起止日期或相对时间，"
+                "例如：2026年5月1日至5月10日、最近一年或本月。"
+            ),
+            "entity": (
+                "缺少要返回的业务对象。请说明希望返回哪类记录，"
+                "例如：经销商名单、医院名单、产品明细或科室明细。"
+            ),
+            "fields": (
+                "缺少明细返回字段。请说明结果中需要哪些字段，"
+                "例如：经销商名称和联系方式、医院名称和等级，或产品名称和适用科室。"
+            ),
+            "comparison_type": "请说明比较方式，例如同比、环比、目标值比较或对象间比较。",
+            "comparison_objects": "请提供要对比的具体经销商或供应商名称，并用顿号或逗号分隔。",
+            "dimension": (
+                "缺少分组维度。请说明希望按什么维度汇总，"
+                "例如：按月份、城市、医院、经销商或产品分组。"
+            ),
+            "product": "缺少具体产品。请提供产品名称、规格或型号，例如：TDC-3。",
+            "semantic_ambiguity": "请确认存在歧义的业务口径。",
+        }
         normalized_question = re.sub(r"\s+", "", request.original_question or "")
         if "推荐" in normalized_question or "画像" in normalized_question:
             prompts["metric"] = (
