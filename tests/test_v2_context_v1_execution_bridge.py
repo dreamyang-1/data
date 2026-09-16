@@ -65,6 +65,7 @@ from test_v2_limited_scalar_deployment import DeploymentRedis
 from test_v2_persisted_scalar_api import NOW
 from test_v2_raw_turn_recognition import (
     metric_step,
+    parse as semantic_parse_fixture,
     planner as scripted_planner,
 )
 
@@ -1404,6 +1405,182 @@ async def test_possessive_only_region_fragment_completes_from_current_task_conte
         "time": {"surface": "2025年"},
     }
     assert "v1_request_id" not in model_context[0]["context_question"]
+
+
+@pytest.mark.asyncio
+async def test_colloquial_fragment_continues_a_v1_executed_context_as_one_task(
+    context_catalog,
+):
+    first_question = "查询空心纤维血液透析器产品合作的经销商名单。"
+    followup_text = "那就看上海市这边的"
+    followup_step = (
+        followup_text,
+        semantic_parse_fixture(
+            followup_text,
+            [("上海市", "FILTER_VALUE", "filter_expression", None)],
+            follow=True,
+            shape="DETAIL_ROWS",
+        ),
+        {},
+    )
+    scripted, transport = scripted_planner(context_catalog, [followup_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return query_response(chat)
+
+    async def read_context(chat, _identity):
+        return v1_context(chat, filter_value="空心纤维血液透析器")
+
+    async def resolve_value(
+        _chat, _identity, surface, expected_family, _preferred_attribute_code=None
+    ):
+        if surface != "上海市" or expected_family != "REGION":
+            return None
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name="省份名称",
+            attribute_code="province_name",
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    bridge = handler(
+        context_catalog,
+        redis,
+        v1,
+        v1_context_reader=read_context,
+        v1_context_value_resolver=resolve_value,
+    )
+    install_fallback_resolution(bridge, context_catalog)
+    conversation_id = "unified-v1-executed-context"
+    first = request(
+        question=first_question,
+        message_id="unified-v1-context-first",
+        conversation_id=conversation_id,
+    )
+    assert (await bridge.handle(first, IDENTITY)).status == "COMPLETED"
+
+    del bridge._resolve
+    bridge.model = scripted.model
+    result = await bridge.handle(request(
+        question=followup_text,
+        message_id="unified-v1-context-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "COMPLETED", result.model_dump(mode="json")
+    assert executions[-1].question == (
+        "查询上海市空心纤维血液透析器产品合作的经销商名单。"
+    )
+    assert len(transport.calls) == 1
+    snapshot = await bridge.store.load(request(
+        question=followup_text,
+        message_id="unified-v1-context-inspect",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+    state = ConversationState.model_validate(snapshot.state.payload)
+    task = state.tasks[state.topics[state.active_topic_id].active_task_id]
+    assert len(state.tasks) == 1
+    assert task.active_version == 2
+    frame = task.versions[-1].context_question
+    assert frame.original_question == followup_text
+    assert frame.filters[-1].surface == "上海市"
+    assert frame.last_edit.evidence_surface == "上海市"
+
+
+def test_value_only_context_surface_does_not_hide_explicit_query_shape_words():
+    text = "那就看上海市这边的"
+    start = text.index("上海市")
+    assert RawTurnPlanner._is_value_only_context_surface(
+        text, "上海市", start, start + len("上海市")
+    )
+
+    shaped = "那就看上海市的明细"
+    shaped_start = shaped.index("上海市")
+    assert not RawTurnPlanner._is_value_only_context_surface(
+        shaped, "上海市", shaped_start, shaped_start + len("上海市")
+    )
+
+
+@pytest.mark.asyncio
+async def test_colloquial_filter_fragment_fails_closed_on_cross_family_ambiguity(
+    context_catalog,
+):
+    first_question = "查询空心纤维血液透析器产品合作的经销商名单。"
+    followup_text = "那就看同名值这边的"
+    followup_step = (
+        followup_text,
+        semantic_parse_fixture(
+            followup_text,
+            [("同名值", "FILTER_VALUE", "filter_expression", None)],
+            follow=True,
+        ),
+        {},
+    )
+    scripted, transport = scripted_planner(context_catalog, [followup_step])
+    redis = DeploymentRedis()
+    executions = []
+
+    async def v1(chat, _identity):
+        executions.append(chat.model_copy(deep=True))
+        return query_response(chat)
+
+    async def read_context(chat, _identity):
+        return v1_context(chat, filter_value="空心纤维血液透析器")
+
+    async def ambiguous_resolver(
+        _chat, _identity, surface, expected_family, _preferred_attribute_code=None
+    ):
+        fields = {
+            "REGION": ("省份名称", "province_name"),
+            "COMMERCIAL_PRODUCT": ("产品名称", "product_name"),
+        }
+        if surface != "同名值" or expected_family not in fields:
+            return None
+        name, code = fields[expected_family]
+        return SemanticFilterBinding(
+            filter_index=0,
+            input_value=surface,
+            canonical_value=surface,
+            canonical_name=name,
+            attribute_code=code,
+            score=1.0,
+            business_domain_id=205,
+        )
+
+    bridge = handler(
+        context_catalog,
+        redis,
+        v1,
+        v1_context_reader=read_context,
+        v1_context_value_resolver=ambiguous_resolver,
+    )
+    install_fallback_resolution(bridge, context_catalog)
+    conversation_id = "unified-ambiguous-filter"
+
+    assert (await bridge.handle(request(
+        question=first_question,
+        message_id="unified-ambiguous-first",
+        conversation_id=conversation_id,
+    ), IDENTITY)).status == "COMPLETED"
+    del bridge._resolve
+    bridge.model = scripted.model
+    result = await bridge.handle(request(
+        question=followup_text,
+        message_id="unified-ambiguous-second",
+        conversation_id=conversation_id,
+    ), IDENTITY)
+
+    assert result.status == "NEEDS_CLARIFICATION", result.model_dump(mode="json")
+    assert "地区、产品、医院或合作方" in result.answer
+    assert "地区改为同名值" in result.answer
+    assert len(executions) == 1
+    assert len(transport.calls) == 1
 
 
 def test_possessive_only_fragment_requires_context_and_is_not_a_new_query():

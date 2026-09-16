@@ -48,6 +48,7 @@ from .context_question import (
     build_context_question,
     canonical_matches_execution,
     has_active_context_question,
+    is_contextual_clear_edit,
     is_contextual_short_edit,
     is_self_contained_execution_question,
     publish_context_task,
@@ -64,6 +65,7 @@ from .pipeline import AuthorizedLogicalPlan, collect_bound_refs
 from .recognition import (
     RawTurnPlanner,
     RecognizedStandaloneNewTask,
+    RecognizedTaskContextEdit,
     current_turn_extraction_items,
 )
 from .recognition_client import RecognitionFailure, RecognitionModelClient
@@ -666,20 +668,20 @@ class V2ContextV1ExecutionBridge:
                 ),
                 provenance,
             )
-        if has_active_context_question(state) and is_contextual_short_edit(
+        if has_active_context_question(state) and is_contextual_clear_edit(
             chat.question
         ):
-            # A specific structural follow-up such as “最低的省份呢” also
-            # matches the broad ``X呢`` surface grammar. It must reach the
-            # reference resolver above before unresolved entity replacement is
-            # classified as ambiguous.
+            # A valid clear was already handled by the deterministic context
+            # resolver above. Repeating it has no remaining target and should
+            # be explained without asking a model to invent one.
             return (
                 ResolvedContextTurn(
                     completed_question=None,
                     next_state=None,
                     plan_state=None,
                     clarification_question=(
-                        "当前替换值无法唯一对应上一任务中的可编辑条件，请补充要替换的条件。"
+                        "当前任务中已没有可清除的对应条件。"
+                        "请说明要继续修改的条件和具体值。"
                     ),
                     bridge_route="V2_CONTEXT_QUESTION_AMBIGUOUS",
                 ),
@@ -702,6 +704,27 @@ class V2ContextV1ExecutionBridge:
                 ),
             )
         except (RecognitionFailure, ValueError) as exc:
+            if has_active_context_question(state) and is_contextual_short_edit(
+                chat.question
+            ):
+                # The joint model normally resolves colloquial fragments using
+                # the same task context.  This remains only a failure fallback:
+                # model/contract failure must not turn a context-dependent
+                # fragment into a standalone V1 request.
+                return (
+                    ResolvedContextTurn(
+                        completed_question=None,
+                        next_state=None,
+                        plan_state=None,
+                        clarification_question=(
+                            "当前补充内容无法唯一对应上一任务中的可编辑条件。"
+                            "请说明要修改的条件类型和具体值，"
+                            "例如“地区改为上海市”或“产品改为费森尤斯”。"
+                        ),
+                        bridge_route="V2_CONTEXT_QUESTION_AMBIGUOUS",
+                    ),
+                    provenance,
+                )
             if not (
                 is_self_contained_execution_question(chat.question)
                 and RawTurnPlanner._standalone_fallback_allows(exc)
@@ -750,6 +773,45 @@ class V2ContextV1ExecutionBridge:
                     fallback_reason=str(exc),
                     publish_context_from_v1=True,
                     source_question=chat.question,
+                ),
+                provenance,
+            )
+        if isinstance(result, RecognizedTaskContextEdit):
+            context_resolution = await resolve_context_question_followup(
+                chat=chat,
+                identity=identity,
+                state_artifact=state,
+                catalog=catalog,
+                resolved_business_domain_ids=resolved_business_domain_ids,
+                now=self.clock(),
+                resolve_value=resolve_value,
+                recognized_filter_surface=result.filter_surface,
+                recognized_relation=result.relation,
+            )
+            if context_resolution is not None:
+                return (
+                    ResolvedContextTurn(
+                        completed_question=context_resolution.completed_question,
+                        next_state=context_resolution.next_state,
+                        plan_state=None,
+                        bridge_route="V2_CONTEXT_QUESTION_COMPLETED",
+                        understanding=context_resolution.understanding,
+                        semantic_parse=result.parse,
+                    ),
+                    provenance,
+                )
+            return (
+                ResolvedContextTurn(
+                    completed_question=None,
+                    next_state=None,
+                    plan_state=None,
+                    clarification_question=(
+                        f"“{result.filter_surface}”无法在当前业务域中唯一匹配为当前任务的"
+                        "地区、产品、医院或合作方条件。请说明要修改哪类条件，"
+                        f"例如“地区改为{result.filter_surface}”。"
+                    ),
+                    bridge_route="V2_CONTEXT_QUESTION_AMBIGUOUS",
+                    semantic_parse=result.parse,
                 ),
                 provenance,
             )
@@ -1061,7 +1123,7 @@ class V2ContextV1ExecutionBridge:
                     answer=(
                         "当前语义目录已变化，请补充完整问题重新确认。"
                         if binding_failure
-                        else "V2 上下文理解未能形成可验证的完整问题。"
+                        else "当前问题理解结果未通过结构校验，请重新表述完整问题。"
                     ),
                 )
                 return await self._save_without_v1(

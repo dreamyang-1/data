@@ -245,6 +245,35 @@ async def test_standalone_new_task_passthrough_is_not_query_shape_specific(catal
 
 
 @pytest.mark.asyncio
+async def test_standalone_new_task_accepts_initial_filter_add_representation(catalog):
+    text = '查询浙江省产品合作的经销商名单'
+    step = (
+        text,
+        parse(
+            text,
+            [
+                ('经销商', 'SUBJECT_ENTITY', 'subject', 'SET'),
+                ('浙江省', 'FILTER_VALUE', 'filter_expression', 'ADD'),
+                ('产品', 'FILTER_VALUE', 'filter_expression', 'ADD'),
+            ],
+            shape='RELATION_LIST',
+        ),
+        {},
+    )
+    engine, transport = planner(catalog, [step])
+
+    result = await engine.run(
+        request(question=text, message_id='filter-add-new-task'),
+        IDENTITY,
+        allow_standalone_new_task_passthrough=True,
+    )
+
+    assert isinstance(result, RecognizedStandaloneNewTask)
+    assert result.completed_question == text
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
 async def test_successful_standalone_new_task_keeps_v2_state_and_plan(catalog):
     steps = [metric_step('查询销售额')]
     engine, transport = planner(catalog, steps)

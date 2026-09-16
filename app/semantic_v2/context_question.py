@@ -1767,6 +1767,12 @@ def is_contextual_short_edit(question: str) -> bool:
     )
 
 
+def is_contextual_clear_edit(question: str) -> bool:
+    """Whether the current surface explicitly clears one condition family."""
+
+    return _contextual_clear_family(question.strip()) is not None
+
+
 def is_self_contained_execution_question(question: str) -> bool:
     """Conservatively recognize a complete current-turn V1 request.
 
@@ -2364,9 +2370,16 @@ async def _replace_filter(
     frame: m.ContextQuestionState,
     question: str,
     resolve_value: ContextValueResolver | None,
+    *,
+    surface_override: str | None = None,
+    explicit_replace: bool = False,
 ):
-    surface = _contextual_filter_surface(question)
-    if surface is None:
+    surface = (
+        surface_override.strip()
+        if surface_override is not None
+        else _contextual_filter_surface(question)
+    )
+    if not surface:
         return None
     resolved = await _resolve_filter_surface(
         surface,
@@ -2396,7 +2409,7 @@ async def _replace_filter(
         filters = [replacement if item == previous else item for item in frame.filters]
         operation = "REPLACE"
     else:
-        if _EXPLICIT_FILTER_REPLACEMENT.fullmatch(question) is not None:
+        if explicit_replace or _EXPLICIT_FILTER_REPLACEMENT.fullmatch(question) is not None:
             # An explicit REPLACE without a prior condition in the same
             # semantic family has no safe target.  Do not silently turn it into
             # ADD and change two independent slots.
@@ -2419,11 +2432,18 @@ async def _structured_filter_edit_completion(
     version,
     question: str,
     resolve_value: ContextValueResolver | None,
+    *,
+    surface_override: str | None = None,
+    explicit_replace: bool = False,
 ) -> _DirectCompletion | None:
     """Render a filter-only edit from V2 TaskState without executing it in V2."""
 
-    surface = _contextual_filter_surface(question)
-    if surface is None:
+    surface = (
+        surface_override.strip()
+        if surface_override is not None
+        else _contextual_filter_surface(question)
+    )
+    if not surface:
         return None
     resolved = await _resolve_filter_surface(
         surface,
@@ -2448,7 +2468,7 @@ async def _structured_filter_edit_completion(
         filters = [replacement if item == prior[0] else item for item in current_filters]
         operation = "REPLACE"
     else:
-        if _EXPLICIT_FILTER_REPLACEMENT.fullmatch(question) is not None:
+        if explicit_replace or _EXPLICIT_FILTER_REPLACEMENT.fullmatch(question) is not None:
             return None
         filters = [*current_filters, replacement]
         operation = "ADD"
@@ -2633,6 +2653,8 @@ async def resolve_context_question_followup(
     resolved_business_domain_ids,
     now: datetime,
     resolve_value: ContextValueResolver | None = None,
+    recognized_filter_surface: str | None = None,
+    recognized_relation: str | None = None,
 ) -> ContextQuestionResolution | None:
     if state_artifact is None:
         return None
@@ -2649,6 +2671,79 @@ async def resolve_context_question_followup(
     if active is None:
         return None
     task, version = active
+    if recognized_filter_surface is not None:
+        surface = recognized_filter_surface.strip()
+        if (
+            not surface
+            or surface not in chat.question
+            or recognized_relation
+            not in {"CONTINUE", "MODIFY", "REPLACE", "CORRECT"}
+        ):
+            return None
+        explicit_replace = recognized_relation == "REPLACE"
+        frame = version.context_question
+        if frame is None:
+            completion = await _structured_filter_edit_completion(
+                version,
+                chat.question,
+                resolve_value,
+                surface_override=surface,
+                explicit_replace=explicit_replace,
+            )
+        else:
+            resolved_filter = await _replace_filter(
+                frame,
+                chat.question,
+                resolve_value,
+                surface_override=surface,
+                explicit_replace=explicit_replace,
+            )
+            if resolved_filter is None:
+                completion = None
+            else:
+                updated_frame, evidence_surface, operation = resolved_filter
+                matched = next(
+                    (
+                        item for item in updated_frame.filters
+                        if item.surface == evidence_surface
+                    ),
+                    None,
+                )
+                completion = _DirectCompletion(
+                    completed_question=updated_frame.execution_question,
+                    label=(
+                        _CONTEXT_FAMILY_LABELS.get(
+                            matched.semantic_family, "实体"
+                        )
+                        if matched is not None
+                        else "实体"
+                    ),
+                    filters=tuple(updated_frame.filters),
+                    operation=operation,
+                    evidence_surface=evidence_surface,
+                )
+        if completion is None:
+            return None
+        operation_verb = "替换" if completion.operation == "REPLACE" else "增加"
+        return ContextQuestionResolution(
+            completed_question=completion.completed_question,
+            next_state=_publish_context_continuation(
+                state=state,
+                task=task,
+                version=version,
+                chat=chat,
+                session=session,
+                completion=completion,
+                now=now,
+            ),
+            relation=recognized_relation,
+            operation=completion.operation or "REPLACE",
+            slot="filter_expression",
+            understanding=(
+                "已将本轮口语化补充识别为当前任务的条件修改，"
+                f"并{operation_verb}唯一匹配的{completion.label}条件。"
+            ),
+        )
     actor_metric = await _singular_relation_actor_metric_completion(
         session, version, chat.question, resolve_value
     )
