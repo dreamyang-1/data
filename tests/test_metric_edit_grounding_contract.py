@@ -34,7 +34,7 @@ class OfflineIntentModel:
         self.unavailable = unavailable
         self.operator_entity = operator_entity
 
-    async def classify(self, question):
+    async def classify(self, question, *, pre_resolved=False):
         self.calls.append(question)
         if self.unavailable:
             raise RuntimeError("Synthetic offline model unavailability")
