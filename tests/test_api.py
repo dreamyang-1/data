@@ -1869,3 +1869,28 @@ def test_chat_rejects_ambiguous_multiple_spreadsheets():
         )
     assert response.status_code == 422
     assert "一个CSV/XLSX" in response.json()["detail"]
+
+
+class TestRuntimeModeIsolation:
+    def test_conftest_pin_overrides_machine_dotenv_runtime_mode(self, tmp_path, monkeypatch):
+        """A developer .env selecting V2 must not leak into default tests."""
+        dotenv = tmp_path / "env"
+        dotenv.write_text(
+            "DATA_AGENT_RUNTIME_MODE=V2_CONTEXT_V1_EXECUTION\n", encoding="utf-8"
+        )
+
+        # Without the process pin, a machine .env selecting V2 leaks into
+        # Settings; this documents the drift tests/conftest.py isolates.
+        monkeypatch.delenv("DATA_AGENT_RUNTIME_MODE", raising=False)
+        assert Settings(_env_file=dotenv).runtime_mode == "V2_CONTEXT_V1_EXECUTION"
+
+        # With the conftest pin present, the same .env can no longer change
+        # the runtime mode observed by ordinary offline tests.
+        monkeypatch.setenv("DATA_AGENT_RUNTIME_MODE", "V1")
+        assert Settings(_env_file=dotenv).runtime_mode == "V1"
+        assert Settings().runtime_mode == "V1"
+
+    def test_explicit_v2_construction_still_wins(self):
+        """conftest pinning must not override tests that choose V2 explicitly."""
+        settings = Settings(runtime_mode="V2_CONTEXT_V1_EXECUTION")
+        assert settings.runtime_mode == "V2_CONTEXT_V1_EXECUTION"
