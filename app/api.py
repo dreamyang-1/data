@@ -885,6 +885,19 @@ async def chat_stream(
                 # first concurrently completed child as the public intent made
                 # composite requests appear truncated and race-dependent.
                 return []
+            if (
+                stage == "INTENT_RECOGNITION"
+                and str(event.get("progress_phase") or "") in {
+                    "V2_SEMANTIC_CATALOG_READY",
+                    "V2_CURRENT_TURN_MODEL_STREAM_STARTED",
+                    "V2_SEMANTIC_CANDIDATES_READY",
+                    "V2_SEMANTIC_BINDING_MODEL_STREAM_STARTED",
+                }
+            ):
+                # These events remain available to timing/telemetry handlers,
+                # but they describe catalog/model internals rather than user
+                # decisions and must not enter the public SSE document.
+                return []
             if stage == "TASK_PLANNING" and not planning_released:
                 # The document format presents one stable planning block. Keep
                 # the latest completed planner message and release it only once

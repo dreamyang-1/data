@@ -385,7 +385,8 @@ async def test_bridge_streams_context_progress_before_resolution(provider):
     assert resolved_context["status"] == "RUNNING"
     assert "用户原始问题：查询去年江苏省订单笔数" in resolved_context["message"]
     assert "补全后的问题：" in resolved_context["message"]
-    assert "业务域：" in resolved_context["message"]
+    assert "结构化参数提取：" not in resolved_context["message"]
+    assert "业务域：" not in resolved_context["message"]
 
 
 @pytest.mark.parametrize(
