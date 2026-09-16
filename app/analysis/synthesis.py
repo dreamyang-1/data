@@ -50,18 +50,29 @@ SYSTEM_PROMPT = """你是企业数据分析结果解释器。你不执行计算�
 
 强制规则：
 1. 只能使用输入 evidence 中已经出现的信息。禁止补充常识、行业猜测、外部知识或新原因。
-2. 不得修改、重新计算或创造任何数字。每个数字必须能在 deterministic_answer 或 facts 中找到。
-3. 每条 claim 必须引用输入中存在的 evidence_id。
+2. 不得修改、重新计算或创造任何数字。allowed_numbers_for_output 是唯一允许出现在 claim 中的数字清单；不在清单中的年份、月份、日期、比例、数量和序号一律不得输出。
+3. 每条 claim 必须引用输入中存在的 evidence_id；VERIFIED_FACT 的 evidence_ids 至少包含一个 kind=ANALYSIS_RESULT 的证据，不能只引用 QUERY_RESULT。
 4. VERIFIED_FACT 只能描述查询或算法已经验证的现象、变化、贡献、残差和覆盖度，不能使用“导致、造成、因为、根本原因”等因果词。
 5. SUPPORTED_HYPOTHESIS 只能描述知识库候选解释，必须使用“可能、候选、待核实、尚未验证、需验证”之一，不能声称已经证实。
 6. LIMITATION 必须明确说明数据或方法边界，不得弱化输入 warnings。
 7. 如果输入明确 causality_established=false，禁止声称任何因素是严格因果原因。
 8. 不输出 Markdown、标题、代码块或额外字段，只输出符合Schema的JSON。
 9. 优先顺序：先讲发生了什么，再讲数据验证的驱动，再讲待验证候选，最后讲限制。
-10. 必须结合 untrusted_user_question 回答用户真正问的问题，并对 deterministic_answer 做自然、简洁的中文润色，避免机械罗列字段名。
+10. 必须结合 untrusted_user_question 回答用户真正问的问题，并对 deterministic_answer 做自然、口语化的中文润色，避免机械罗列字段名。优先生成2至5条有信息量的结论；证据不足时可以更少，禁止为凑数量创造事实。
 11. 对趋势分析必须解释“哪一段变化对总体涨跌贡献最大、后续变化是否抵消”；这属于数值贡献解释，不得写成业务因果。若证据没有产品、地区、渠道等拆分，必须明确无法据此判断具体业务原因，并建议进一步拆分核验。
 12. 如果 facts 中存在 answer_plan，它是面向用户的信息取舍边界。只表达其中选中的结论、关键事实、判断、优先级和限制，不得把 omitted_internal_fields 或 internal_diagnostics 中的算法诊断字段重新输出给用户。
 13. 不得向用户机械罗列 slope、robust_slope、direction_consistency、coefficient_of_variation、max、min、volatility 等内部算法字段；这些字段只能用于支撑 answer_plan 已选择的业务判断。
+14. 对单一汇总值，一至两句话讲清查询范围和结果即可，不要为了增加条数反复描述字段数、行数、空值或截断状态。用户问题中的年份必须原样复述，不得自行展开成起止日期。
+"""
+
+
+SYNTHESIS_PROMPT_ADDENDUM = """
+Additional presentation rules:
+- When the input identifies a task number or task question, keep that task
+  boundary in every claim; never blend evidence from different tasks.
+- Preserve verified business object names and field labels exactly as supplied.
+- Do not create chart or image URLs. Image Markdown is rendered only from
+  trusted MCP/chart artifacts outside this synthesis model.
 """
 
 
@@ -112,6 +123,19 @@ class QwenAnalysisSynthesizer:
             "warnings": analysis.warnings,
             "evidence": allowed_evidence,
         }
+        numeric_source = json.dumps(
+            {
+                "user_question": request.original_question,
+                "answer": analysis.answer,
+                "facts": analysis.facts,
+                "warnings": analysis.warnings,
+            },
+            ensure_ascii=False,
+            default=str,
+        )
+        prompt_input["allowed_numbers_for_output"] = list(
+            dict.fromkeys(self._numbers(numeric_source))
+        )[:200]
         if context is not None:
             prompt_input["agent_context"] = context.prompt_payload()
         schema = SynthesisOutput.model_json_schema()
@@ -121,7 +145,7 @@ class QwenAnalysisSynthesizer:
                 {
                     "role": "system",
                     "content": (
-                        f"{SYSTEM_PROMPT}\n必须严格遵守JSON Schema："
+                        f"{SYSTEM_PROMPT}{SYNTHESIS_PROMPT_ADDENDUM}\n必须严格遵守JSON Schema："
                         f"{json.dumps(schema, ensure_ascii=False, separators=(',', ':'))}"
                     ),
                 },
@@ -148,36 +172,73 @@ class QwenAnalysisSynthesizer:
                 timeout=self.settings.analysis_synthesis_timeout_seconds,
                 transport=self._transport,
             ) as client:
-                payload: dict[str, Any] | None = None
-                for attempt in range(self.settings.analysis_synthesis_max_retries + 1):
+                for validation_attempt in range(
+                    self.settings.analysis_synthesis_validation_retries + 1
+                ):
+                    payload: dict[str, Any] | None = None
+                    for attempt in range(
+                        self.settings.analysis_synthesis_max_retries + 1
+                    ):
+                        try:
+                            response = await client.post(
+                                "/chat/completions", headers=headers, json=body
+                            )
+                            response.raise_for_status()
+                            payload = response.json()
+                            generation.set_response(payload)
+                            break
+                        except (httpx.TimeoutException, httpx.NetworkError):
+                            if attempt >= self.settings.analysis_synthesis_max_retries:
+                                raise
+                            await asyncio.sleep(0.2 * (2**attempt))
+                        except httpx.HTTPStatusError as exc:
+                            retryable = (
+                                exc.response.status_code == 429
+                                or exc.response.status_code >= 500
+                            )
+                            if (
+                                not retryable
+                                or attempt >= self.settings.analysis_synthesis_max_retries
+                            ):
+                                raise
+                            await asyncio.sleep(0.2 * (2**attempt))
+                    if payload is None:
+                        raise RuntimeError("analysis synthesis returned no payload")
+                    content = payload["choices"][0]["message"].get("content")
+                    if not content:
+                        raise SynthesisValidationError(
+                            "analysis synthesis returned empty content"
+                        )
+                    output = SynthesisOutput.model_validate(json.loads(content))
                     try:
-                        response = await client.post(
-                            "/chat/completions", headers=headers, json=body
+                        self._validate_claims(
+                            output,
+                            allowed_evidence,
+                            analysis,
+                            user_question=request.original_question,
                         )
-                        response.raise_for_status()
-                        payload = response.json()
-                        generation.set_response(payload)
-                        break
-                    except (httpx.TimeoutException, httpx.NetworkError):
-                        if attempt >= self.settings.analysis_synthesis_max_retries:
+                    except SynthesisValidationError as exc:
+                        if validation_attempt >= (
+                            self.settings.analysis_synthesis_validation_retries
+                        ):
                             raise
-                        await asyncio.sleep(0.2 * (2**attempt))
-                    except httpx.HTTPStatusError as exc:
-                        retryable = (
-                            exc.response.status_code == 429
-                            or exc.response.status_code >= 500
-                        )
-                        if not retryable or attempt >= self.settings.analysis_synthesis_max_retries:
-                            raise
-                        await asyncio.sleep(0.2 * (2**attempt))
-        if payload is None:
-            raise RuntimeError("analysis synthesis returned no payload")
-        content = payload["choices"][0]["message"].get("content")
-        if not content:
-            raise SynthesisValidationError("analysis synthesis returned empty content")
-        output = SynthesisOutput.model_validate(json.loads(content))
-        self._validate_claims(output, allowed_evidence, analysis)
-        return self._render(output), output
+                        body["messages"].extend([
+                            {"role": "assistant", "content": content},
+                            {
+                                "role": "user",
+                                "content": (
+                                    "上一个JSON未通过证据校验："
+                                    f"{exc}。请删除无依据内容并重新输出完整JSON。"
+                                    "数字只能来自allowed_numbers_for_output；"
+                                    "表述应紧贴deterministic_answer和facts，"
+                                    "不得展开日期、补算数字或新增业务判断；"
+                                    "VERIFIED_FACT必须引用ANALYSIS_RESULT证据。"
+                                ),
+                            },
+                        ])
+                        continue
+                    return self._render(output), output
+        raise RuntimeError("analysis synthesis validation loop ended unexpectedly")
 
     @classmethod
     def _validate_claims(
@@ -185,9 +246,16 @@ class QwenAnalysisSynthesizer:
         output: SynthesisOutput,
         allowed_evidence: dict[str, dict[str, Any]],
         analysis: AnalysisOutput,
+        *,
+        user_question: str,
     ) -> None:
         source_text = json.dumps(
-            {"answer": analysis.answer, "facts": analysis.facts, "warnings": analysis.warnings},
+            {
+                "user_question": user_question,
+                "answer": analysis.answer,
+                "facts": analysis.facts,
+                "warnings": analysis.warnings,
+            },
             ensure_ascii=False,
             default=str,
         )
@@ -200,8 +268,15 @@ class QwenAnalysisSynthesizer:
             if unknown:
                 raise SynthesisValidationError(f"claim references unknown evidence: {sorted(unknown)}")
             claim_numbers = cls._numbers(claim.statement)
-            if any(not cls._number_is_grounded(value, source_numbers) for value in claim_numbers):
-                raise SynthesisValidationError("claim contains an ungrounded number")
+            ungrounded_numbers = [
+                value
+                for value in claim_numbers
+                if not cls._number_is_grounded(value, source_numbers)
+            ]
+            if ungrounded_numbers:
+                raise SynthesisValidationError(
+                    f"claim contains an ungrounded number: {ungrounded_numbers[0]:g}"
+                )
             if claim.certainty == ClaimCertainty.VERIFIED_FACT and any(
                 marker in claim.statement for marker in causal_markers
             ):
@@ -213,7 +288,9 @@ class QwenAnalysisSynthesizer:
                 claim.certainty == ClaimCertainty.VERIFIED_FACT
                 and "ANALYSIS_RESULT" not in referenced_kinds
             ):
-                raise SynthesisValidationError("verified fact must cite data or analysis evidence")
+                raise SynthesisValidationError(
+                    "verified fact must cite ANALYSIS_RESULT evidence"
+                )
             if claim.certainty == ClaimCertainty.SUPPORTED_HYPOTHESIS:
                 if "ANALYSIS_KNOWLEDGE" not in referenced_kinds:
                     raise SynthesisValidationError("hypothesis must cite analysis knowledge")
@@ -231,6 +308,16 @@ class QwenAnalysisSynthesizer:
                     raise SynthesisValidationError(
                         "hypothesis was not selected by the deterministic matching algorithm"
                     )
+            if (
+                claim.certainty == ClaimCertainty.VERIFIED_FACT
+                and analysis.method == "validated_query_result_summary"
+            ):
+                cls._validate_query_summary_wording(
+                    claim.statement,
+                    analysis,
+                    source_text,
+                )
+                continue
             minimum_grounding = {
                 ClaimCertainty.VERIFIED_FACT: 0.75,
                 # Candidate selection has already been locked by the
@@ -278,6 +365,56 @@ class QwenAnalysisSynthesizer:
         )
 
     @staticmethod
+    def _validate_query_summary_wording(
+        statement: str,
+        analysis: AnalysisOutput,
+        source_text: str,
+    ) -> None:
+        unsupported_inference = (
+            "反映",
+            "意味着",
+            "驱动",
+            "原因",
+            "需求旺盛",
+            "采购意愿",
+            "经营改善",
+            "经营恶化",
+        )
+        if any(
+            marker in statement and marker not in source_text
+            for marker in unsupported_inference
+        ):
+            raise SynthesisValidationError(
+                "query summary must not add business interpretation"
+            )
+        columns = [
+            str(column)
+            for column in analysis.facts.get("columns", [])
+            if str(column).strip()
+        ]
+        mentions_result_field = any(column in statement for column in columns)
+        describes_result_contract = any(
+            marker in statement
+            for marker in (
+                "命中",
+                "返回",
+                "记录",
+                "结果",
+                "完整",
+                "截断",
+                "空值",
+                "缺失",
+                "平均",
+                "范围",
+                "不同值",
+            )
+        )
+        if not mentions_result_field and not describes_result_contract:
+            raise SynthesisValidationError(
+                "query summary claim does not describe a validated result fact"
+            )
+
+    @staticmethod
     def _lexical_grounding_ratio(statement: str, source_text: str) -> float:
         normalized_statement = re.sub(r"\s+", "", statement).casefold()
         normalized_source = re.sub(r"\s+", "", source_text).casefold()
@@ -317,14 +454,20 @@ class QwenAnalysisSynthesizer:
 
     @staticmethod
     def _render(output: SynthesisOutput) -> str:
-        labels = {
-            ClaimCertainty.VERIFIED_FACT: "已验证结论",
-            ClaimCertainty.SUPPORTED_HYPOTHESIS: "待验证原因",
-            ClaimCertainty.LIMITATION: "分析限制",
+        introductions = {
+            ClaimCertainty.VERIFIED_FACT: "从本次查询结果来看，",
+            ClaimCertainty.SUPPORTED_HYPOTHESIS: "结合已有业务资料，",
+            ClaimCertainty.LIMITATION: "需要注意的是，",
         }
-        grouped: list[str] = []
+        paragraphs: list[str] = []
         for certainty in ClaimCertainty:
-            statements = [item.statement for item in output.claims if item.certainty == certainty]
+            statements = [
+                item.statement.rstrip("。；; ")
+                for item in output.claims
+                if item.certainty == certainty
+            ]
             if statements:
-                grouped.append(f"{labels[certainty]}：" + "；".join(statements) + "。")
-        return "\n".join(grouped)
+                paragraphs.append(
+                    introductions[certainty] + "；".join(statements) + "。"
+                )
+        return "\n\n".join(paragraphs)

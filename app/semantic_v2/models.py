@@ -1544,6 +1544,76 @@ class TaskSemanticState(StrictModel):
     policy_decisions: list[ScopePolicyDecision] = Field(default_factory=list)
 
 
+class ContextQuestionFilter(StrictModel):
+    """One user-visible filter surface retained for contextual rewriting.
+
+    This is semantic context, not an executable predicate. The V1 execution
+    path remains responsible for resolving the current surface to its live
+    field/value binding on every completed question.
+    """
+
+    surface: str = Field(min_length=1, max_length=500)
+    canonical_value: str | None = Field(default=None, max_length=500)
+    canonical_name: str | None = Field(default=None, max_length=100)
+    attribute_code: str | None = Field(default=None, max_length=257)
+    semantic_family: str = Field(min_length=1, max_length=100)
+    evidence_source: Literal[
+        "V1_SUCCESSFUL_QUERY_EVIDENCE",
+        "CURRENT_EXPLICIT_SURFACE",
+        "V2_TASK_STATE",
+    ]
+
+
+class ContextQuestionTime(StrictModel):
+    """A bounded time expression attached to a context-only task."""
+
+    surface: str = Field(min_length=1, max_length=200)
+    start: date
+    end_exclusive: date
+    evidence_source: Literal[
+        "V1_SUCCESSFUL_QUERY_EVIDENCE",
+        "CURRENT_EXPLICIT_SURFACE",
+        "V2_TASK_STATE",
+    ]
+
+
+class ContextQuestionEdit(StrictModel):
+    operation: Literal["ADD", "REMOVE", "REPLACE", "CLEAR", "RETURN"]
+    slot: Literal["filter_expression", "time_spec"]
+    source_message_id: Identifier
+    evidence_surface: str = Field(min_length=1, max_length=500)
+
+
+class ContextQuestionState(StrictModel):
+    """V2-owned conversational meaning for a V1-executed opaque question.
+
+    It deliberately excludes authorization, database, knowledge-base,
+    dataset and execution fields. V1 evidence may seed only user-visible
+    semantic surfaces after the exact question has completed a real query.
+    """
+
+    schema_version: Literal["v2-context-question-v1"] = "v2-context-question-v1"
+    provenance: Literal[
+        "V2_CONTEXT_WITH_V1_QUERY_EVIDENCE", "V2_CONTEXT_RESOLUTION"
+    ] = (
+        "V2_CONTEXT_WITH_V1_QUERY_EVIDENCE"
+    )
+    completeness: Literal["PARTIAL"] = "PARTIAL"
+    original_question: str = Field(min_length=1, max_length=10000)
+    execution_question: str = Field(min_length=1, max_length=10000)
+    primary_intent: str | None = Field(default=None, max_length=100)
+    entity: str | None = Field(default=None, max_length=500)
+    metrics: list[str] = Field(default_factory=list, max_length=50)
+    dimensions: list[str] = Field(default_factory=list, max_length=50)
+    fields: list[str] = Field(default_factory=list, max_length=100)
+    filters: list[ContextQuestionFilter] = Field(default_factory=list, max_length=20)
+    time: ContextQuestionTime | None = None
+    source_message_id: Identifier
+    v1_request_id: Identifier | None = None
+    semantic_catalog_version: str | None = Field(default=None, max_length=128)
+    last_edit: ContextQuestionEdit | None = None
+
+
 class ExecutionAttemptRecord(StrictModel):
     execution_id: Identifier
     task_id: Identifier

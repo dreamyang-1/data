@@ -8,8 +8,10 @@ from app.config import Settings
 from app.domain.models import (
     AnalysisOperator,
     CanonicalAnalysisRequest,
+    ConversationControl,
     PrimaryIntent,
     TrustedIdentity,
+    TurnRelation,
 )
 from app.intent import HybridIntentClassifier, StructuredIntentModelClient
 
@@ -33,6 +35,40 @@ def model_response(output: dict) -> httpx.Response:
         200,
         json={"choices": [{"message": {"content": json.dumps(output, ensure_ascii=False)}}]},
     )
+
+
+def test_pre_resolved_contract_keeps_completed_question_authoritative():
+    question = "请提供百特Prismaflex M60 set使用科室。"
+    request = CanonicalAnalysisRequest(
+        conversation_id="pre-resolved-contract",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="错误的模型改写",
+        rewritten_question="错误的模型改写",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        conversation_control=ConversationControl.FOLLOW_UP,
+        turn_relation=TurnRelation.CURRENT_TOPIC_MODIFICATION,
+        slot_operations=[{
+            "operation": "REPLACE",
+            "slot": "region",
+            "new_value": "上海市",
+            "source": "CURRENT_EXPLICIT",
+        }],
+    )
+
+    result = HybridIntentClassifier._apply_pre_resolved_contract(
+        request,
+        question,
+        True,
+    )
+
+    assert result.original_question == question
+    assert result.rewritten_question == question
+    assert result.conversation_control == ConversationControl.NEW_REQUEST
+    assert result.turn_relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert result.model_turn_relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert result.slot_operations == []
+    assert "CONTEXT_AND_COMPLETION_OWNED_BY_UNIFIED_SEMANTIC_CONTRACT" in result.assumptions
 
 
 def test_metric_name_noun_is_not_query_entity_evidence():
@@ -151,6 +187,47 @@ async def test_short_followup_keeps_model_extracted_current_entity_value(
             "CURRENT_ENTITY_VALUE_RECOVERED_FROM_MODEL_EVIDENCE"
             in result.assumptions
         )
+
+
+@pytest.mark.asyncio
+async def test_named_product_trend_drops_model_span_contaminated_by_time_scaffolding():
+    output = {
+        "primary_intent": "TREND_ANALYSIS",
+        "secondary_intents": [],
+        "operators": ["AGGREGATE", "TIME_BUCKET", "FILTER"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.98,
+        "evidence": ["销售趋势", "最近一年", "费森尤斯产品"],
+        "metrics": ["销售额"],
+        "dimensions": [],
+        "entity": "产品",
+        "fields": [],
+        "current_entity_values": ["上海市", "费森尤斯", "费森尤斯产品最近一年"],
+        "comparison_type": None,
+        "ambiguities": [],
+        "completed_question": "分析上海市费森尤斯产品最近一年的销售趋势。",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "分析上海市费森尤斯产品最近一年的销售趋势。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "named-product-trend",
+    )
+
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in result.filters
+    assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in result.filters
+    assert result.semantic_entity_mentions == ["上海市", "费森尤斯"]
+    assert "费森尤斯产品最近一年" not in result.semantic_entity_mentions
 
 
 @pytest.mark.parametrize(

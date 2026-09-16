@@ -421,6 +421,195 @@ def test_required_filter_is_repaired_from_recalled_semantic_metadata():
     _validate_intent_asl_contract(validated, contract, knowledge)
 
 
+def _province_order_count_contract() -> dict:
+    return {
+        "intent": "METRIC_QUERY",
+        "query_object": None,
+        "metric_required": True,
+        "required_metric_codes": ["order_count"],
+        "required_projections": [],
+        "required_groupings": [],
+        "filters": [{"field": "省份名称", "operator": "EQ", "value": "江苏省"}],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+
+
+def test_unique_contract_filter_repair_clears_stale_field_only_ambiguity():
+    knowledge = {
+        "entities": [
+            _entity("province", "省份", "dim_province.province_name", "省份名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "order_count"}]
+    ast["ambiguity"] = [{
+        "type": "filter",
+        "question": (
+            "强制筛选条件中的‘省份名称’字段在当前召回实体元数据中"
+            "未找到对应属性映射，请确认正确字段。"
+        ),
+        "candidates": [],
+    }]
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        _province_order_count_contract(),
+    )
+    result = json.loads(repaired)
+
+    assert result["filters"] == [{
+        "field": "dim_province.province_name",
+        "operator": "=",
+        "value": "江苏省",
+    }]
+    assert result["ambiguity"] == []
+    assert any(
+        item["type"] == "ADD_REQUIRED_FILTER"
+        and item["cleared_stale_ambiguities"] == 1
+        for item in repairs
+    )
+    _validate_intent_asl_contract(repaired, _province_order_count_contract(), knowledge)
+
+
+def test_province_contract_rejects_recalled_city_binding_and_uses_published_level(
+    monkeypatch,
+):
+    knowledge = {
+        "entities": [],
+        "dimensions": [SimpleNamespace(metadata={
+            "dim_code": "province",
+            "dim_name": "省份名称",
+            "bind_entities": [{
+                "entity": "city",
+                "mappingTable": "dim_city",
+                "mappingColumn": "city_name",
+            }],
+        })],
+    }
+    monkeypatch.setattr(
+        agent,
+        "get_registered_entity_attributes",
+        lambda *_args: [{
+            "entity_code": "province",
+            "attr_code": "province_name",
+            "attr_name": "省份名称",
+            "field_mapping": "dim_province.province_name",
+            "is_main_attribute": True,
+        }],
+    )
+    monkeypatch.setattr(
+        agent,
+        "get_table_field_by_scope",
+        lambda **_kwargs: {
+            "tables": [{
+                "table_name": "dim_province",
+                "fields": [{"field_name": "province_name"}],
+            }],
+        },
+    )
+
+    candidates = _contract_filter_candidates(
+        "省份名称",
+        knowledge,
+        semantic_model_id=81,
+        domain_scope=205,
+        query_object="经销商",
+    )
+
+    assert candidates == ["dim_province.province_name"]
+
+
+def test_contract_filter_repair_keeps_unrelated_filter_ambiguity():
+    knowledge = {
+        "entities": [
+            _entity("province", "省份", "dim_province.province_name", "省份名称"),
+            _entity("product", "商品", "product.product_name", "商品名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "order_count"}]
+    unrelated = {
+        "type": "filter",
+        "question": "商品名称存在多个候选字段，请确认商品口径。",
+        "candidates": ["product.product_name", "product.short_name"],
+    }
+    ast["ambiguity"] = [unrelated]
+
+    repaired, _repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        _province_order_count_contract(),
+    )
+
+    assert json.loads(repaired)["ambiguity"] == [unrelated]
+
+
+def test_contract_filter_repair_does_not_match_generic_physical_field_tail():
+    knowledge = {
+        "entities": [
+            _entity("customer", "客户", "customer.name", "客户名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "order_count"}]
+    unrelated = {
+        "type": "filter",
+        "question": "另一个 name 字段存在歧义，请确认商品口径。",
+        "candidates": [],
+    }
+    ast["ambiguity"] = [unrelated]
+    contract = _province_order_count_contract()
+    contract["filters"] = [{
+        "field": "客户名称", "operator": "EQ", "value": "甲客户",
+    }]
+
+    repaired, _repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        contract,
+    )
+
+    assert json.loads(repaired)["ambiguity"] == [unrelated]
+
+
+def test_existing_exact_contract_filter_clears_stale_same_field_ambiguity():
+    knowledge = {
+        "entities": [
+            _entity("province", "省份", "dim_province.province_name", "省份名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "order_count"}]
+    ast["filters"] = [{
+        "field": "dim_province.province_name",
+        "operator": "EQ",
+        "value": "江苏省",
+    }]
+    ast["ambiguity"] = [{
+        "type": "filter",
+        "question": "province_name 字段未找到对应属性映射。",
+        "candidates": [],
+    }]
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        _province_order_count_contract(),
+    )
+    result = json.loads(repaired)
+
+    assert result["filters"] == [{
+        "field": "dim_province.province_name",
+        "operator": "=",
+        "value": "江苏省",
+    }]
+    assert result["ambiguity"] == []
+    assert repairs == []
+
+
 def test_filter_resolution_prefers_governed_name_over_synonym_collision():
     knowledge = {
         "entities": [SimpleNamespace(metadata={

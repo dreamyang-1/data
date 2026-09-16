@@ -602,9 +602,20 @@ class SkillConfig(StrictModel):
 class McpConfig(StrictModel):
     """MCP server declaration compatible with the platform agent contract."""
 
+    # Match the generic-agent transport contract.  The platform can add
+    # presentation/runtime metadata (for example a display name or timeout)
+    # without making an otherwise valid MCP server unusable.  Only the fields
+    # below are trusted by the data-agent runtime.
+    model_config = ConfigDict(extra="ignore")
+
     mcp_server_url: str = Field(min_length=8, max_length=2048)
     connect_type: Literal["sse", "streamable_http"] = "sse"
     headers: dict[str, str] | None = None
+    slug: str = Field(
+        default="",
+        max_length=100,
+        description="平台透传的MCP/Skill关联标识；不参与数据权限判定",
+    )
 
     @field_validator("mcp_server_url")
     @classmethod
@@ -622,6 +633,14 @@ class McpConfig(StrictModel):
 
 class ChatRequest(StrictModel):
     _file_inspection: dict[str, Any] = PrivateAttr(default_factory=dict)
+    # Presentation-only labels read from the same authorized catalog snapshot
+    # used for this turn. Transport JSON cannot set private attributes.
+    _business_domain_labels: tuple[str, ...] = PrivateAttr(default_factory=tuple)
+    # V2 current-turn surfaces and their accepted semantic roles.  This is a
+    # private presentation hint only: V1 ASL/SQL execution never consumes it.
+    _semantic_extraction_items: tuple[dict[str, Any], ...] = PrivateAttr(
+        default_factory=tuple
+    )
     # These flags are set only by the refresh endpoints.  Keeping them as
     # private attributes prevents transport-only refresh semantics from
     # leaking into ASL/SQL payloads or request fingerprints.
@@ -633,11 +652,22 @@ class ChatRequest(StrictModel):
     # planning and execution, but must not merge its own Pending/TaskFrame
     # state into an already resolved question a second time.
     _completed_question_execution: bool = PrivateAttr(default=False)
+    # Set only after the V2 bridge has published the validated question,
+    # semantic fields and business-domain block. V1 can then publish only the
+    # remaining intent decision instead of replaying the same visible facts.
+    _intent_context_progress_emitted: bool = PrivateAttr(default=False)
+    # Presentation-only record of a conversation relation that was already
+    # proven from persisted state and published before semantic model parsing.
+    # It never comes from transport JSON and never participates in planning.
+    _conversation_state_progress_relation: str = PrivateAttr(default="")
     # Populated only by the demo V2-context bridge from a same-conversation,
     # execution-backed envelope.  Transport JSON cannot set private attrs.
     _demo_execution_resolved_business_domain_ids: tuple[int, ...] = PrivateAttr(
         default_factory=tuple
     )
+    # Trusted in-process semantic handoff.  It is never accepted from request
+    # JSON and therefore cannot be used by callers to bypass scope validation.
+    _semantic_decision: Any = PrivateAttr(default=None)
     conversation_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=4000)
@@ -1151,6 +1181,7 @@ class AtomicTask(StrictModel):
     task_id: str = Field(min_length=1, max_length=32)
     question: str = Field(min_length=2, max_length=1000)
     depends_on: list[str] = Field(default_factory=list, max_length=5)
+    expected_output: str | None = Field(default=None, max_length=300)
 
 
 class TaskPlan(StrictModel):
@@ -1158,6 +1189,8 @@ class TaskPlan(StrictModel):
     planner: Literal["STRUCTURED_MODEL", "DETERMINISTIC_RULE"]
     tasks: list[AtomicTask] = Field(min_length=2, max_length=5)
     final_deliverable: Literal["COMBINED_REPORT"] | None = None
+    split_reason_code: str | None = Field(default=None, max_length=80)
+    shared_conditions: list[str] = Field(default_factory=list, max_length=20)
 
 
 class TaskExecutionResult(StrictModel):
@@ -1297,6 +1330,50 @@ class ClarificationDecisionTrace(StrictModel):
     decision: Literal['ASK', 'SUPPRESS']
 
 
+class OperationTiming(StrictModel):
+    """One content-free timing record for a real model, service, or tool call."""
+
+    sequence: int = Field(ge=1)
+    layer: Literal[
+        "V2_CONTEXT",
+        "V1_ORCHESTRATION",
+        "UPSTREAM",
+        "VALIDATION",
+        "ANALYSIS",
+        "EXTENSION",
+    ]
+    operation: str = Field(min_length=1, max_length=100)
+    started_after_ms: int = Field(ge=0)
+    first_result_after_ms: int | None = Field(default=None, ge=0)
+    duration_ms: int = Field(ge=0)
+    status: Literal["COMPLETED", "FAILED", "CANCELLED"]
+    error_type: str | None = Field(default=None, max_length=100)
+    attributes: dict[str, Any] = Field(default_factory=dict)
+
+
+class ProgressTiming(StrictModel):
+    """Relative time of a truthful internal progress milestone."""
+
+    sequence: int = Field(ge=1)
+    stage: str = Field(min_length=1, max_length=100)
+    status: str = Field(min_length=1, max_length=30)
+    occurred_after_ms: int = Field(ge=0)
+    progress_phase: str | None = Field(default=None, max_length=100)
+    task_index: int | None = Field(default=None, ge=0)
+
+
+class RequestPerformanceTrace(StrictModel):
+    """Bounded request trace used to locate silent time without user content."""
+
+    version: Literal["bridge-timing-v1"] = "bridge-timing-v1"
+    runtime_mode: str = Field(min_length=1, max_length=50)
+    total_duration_ms: int = Field(ge=0)
+    terminal_status: str = Field(min_length=1, max_length=50)
+    operations: list[OperationTiming] = Field(default_factory=list, max_length=100)
+    progress: list[ProgressTiming] = Field(default_factory=list, max_length=200)
+    slow_operations: list[str] = Field(default_factory=list, max_length=20)
+
+
 class AgentResponse(StrictModel):
     # Internal-only diagnostic passed from the V1 execution workflow to the
     # opt-in context bridge.  It is deliberately excluded from API payloads so
@@ -1376,6 +1453,7 @@ class AgentResponse(StrictModel):
     )
     requested_business_domain_ids: list[int] = Field(default_factory=list)
     business_domain_selection_mode: Literal["AUTO", "EXPLICIT"] = "AUTO"
+    performance_trace: RequestPerformanceTrace | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

@@ -271,6 +271,57 @@ def test_analysis_contract_does_not_pollute_semantic_retrieval(monkeypatch):
     assert json.loads(result)["analysis_contract"]["producer"] == "OAGNET"
 
 
+def test_intent_asl_contract_is_authoritative_in_model_prompt(monkeypatch):
+    observed = {}
+    contract = {
+        "intent": "DETAIL_QUERY",
+        "query_object": "科室",
+        "metric_required": False,
+        "required_projections": ["使用科室"],
+        "filters": [{"field": "产品名称", "operator": "EQ", "value": "Prismaflex M60 set"}],
+    }
+
+    class Builder:
+        last_knowledge = {}
+
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def build(self, retrieval_query):
+            observed["retrieval_query"] = retrieval_query
+            return "base semantic prompt"
+
+    class ModelAgent:
+        def invoke(self, payload):
+            observed["execution_query"] = payload["messages"]
+            return {"messages": [type("Message", (), {"content": '{"version":"2.0"}'})()]}
+
+    def create_agent(**kwargs):
+        observed["system_prompt"] = kwargs["system_prompt"]
+        return ModelAgent()
+
+    monkeypatch.setattr(agent, "PromptBuilder", Builder)
+    monkeypatch.setattr(agent, "create_deep_agent", create_agent)
+    monkeypatch.setattr(agent, "_normalize_semantic_references", lambda content, *_args: content)
+    monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda content, *_args: content)
+    monkeypatch.setattr(agent, "_validate_asl_output", lambda content, *_args: content)
+    monkeypatch.setattr(agent, "_apply_intent_asl_contract", lambda content, *_args: (content, []))
+    monkeypatch.setattr(agent, "_validate_intent_asl_contract", lambda *_args, **_kwargs: None)
+
+    agent.main(
+        "请提供百特Prismaflex M60 set使用科室。",
+        retrieval_query="请提供百特Prismaflex M60 set使用科室。",
+        store=object(),
+        semantic_model_id=81,
+        intent_asl_contract=contract,
+    )
+
+    assert observed["retrieval_query"] == "请提供百特Prismaflex M60 set使用科室。"
+    assert "Caller-owned Intent-ASL contract" in observed["system_prompt"]
+    assert "Do not change its intent, query_object" in observed["system_prompt"]
+    assert "intent_asl_contract=" in observed["execution_query"]
+
+
 def test_execution_constraints_do_not_pollute_semantic_date_validation(monkeypatch):
     observed = {}
 

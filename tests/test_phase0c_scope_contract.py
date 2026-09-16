@@ -231,12 +231,13 @@ async def test_explicit_dataset_selection_cannot_bypass_domain_scope():
         await agent._try_dataset_followup(new)
 
 
-def generated(domains):
+def generated(domains, *, resolved=None):
+    resolved = domains if resolved is None else resolved
     asl = json.dumps({'subject':{'entity':'sales'}, 'metrics':[{'name':'sales_amount'}]})
     evidence = dict(producer='OAGNET', evidence_version='1.0', semantic_model_id=81,
-        requested_business_domain_ids=domains, resolved_business_domain_ids=domains,
+        requested_business_domain_ids=domains, resolved_business_domain_ids=resolved,
         selected_metrics=[dict(canonical_code='sales_amount', canonical_name='销售额', semantic_model_id=81,
-            business_domain_id=domains[0] if domains else 205, sql_verified=True, metadata_source='MYSQL_SEMANTIC_LAYER',
+            business_domain_id=resolved[0] if resolved else 205, sql_verified=True, metadata_source='MYSQL_SEMANTIC_LAYER',
             calculation_formula='SUM(sales.amount)')], asl_signature='sha256:'+hashlib.sha256(asl.encode()).hexdigest())
     evidence['evidence_fingerprint'] = HttpDataRetrievalAdapter._semantic_evidence_fingerprint(evidence)
     return dict(success=True, result=asl, semantic_model_id=81, business_domain_ids=domains, semantic_evidence=evidence)
@@ -255,12 +256,9 @@ class Client:
 @pytest.mark.asyncio
 @pytest.mark.parametrize('domains', [[], [205], [205,206]])
 async def test_real_oagnet_adapter_transmits_and_confirms_exact_domain_set(domains):
-    execution_domains = [205] if not domains else domains
-    client = Client(generated(execution_domains))
+    client = Client(generated(domains, resolved=[205] if not domains else domains))
     adapter = HttpDataRetrievalAdapter(Settings(env='test'), client)
     request = canonical(chat(business_domain_ids=domains))
-    if not domains:
-        request.resolved_business_domain_ids = execution_domains
     if len(domains)>1:
         with pytest.raises(AdapterError) as failure:
             await adapter.discover_metrics(request, IDENTITY, semantic_model_id=81,
@@ -268,9 +266,12 @@ async def test_real_oagnet_adapter_transmits_and_confirms_exact_domain_set(domai
         assert failure.value.code == 'EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED'
         assert client.calls == []
     else:
-        discovery = await adapter.discover_metrics(request, IDENTITY, semantic_model_id=81, business_domain_id=execution_domains[0])
+        discovery = await adapter.discover_metrics(
+            request, IDENTITY, semantic_model_id=81,
+            business_domain_id=domains[0] if domains else None,
+        )
         assert discovery.metrics[0].metric_id == '81:sales_amount'
-        assert client.calls[0][1]['business_domain_ids'] == execution_domains
+        assert client.calls[0][1]['business_domain_ids'] == domains
 
 
 @pytest.mark.parametrize('tamper', ['echo_model', 'echo_domains', 'resolved_domain', 'metric_model', 'metric_domain'])
