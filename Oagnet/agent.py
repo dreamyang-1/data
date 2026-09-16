@@ -5296,6 +5296,23 @@ def _contract_label(value: object) -> str:
     return normalized
 
 
+_CONTRACT_ENTITY_LABEL_ALIASES = {
+    "产品": {"商品"},
+    "商品": {"产品"},
+    "厂家": {"制造商", "生产厂家"},
+    "制造商": {"厂家", "生产厂家"},
+}
+
+
+def _contract_entity_label_variants(value: object) -> set[str]:
+    """Return explicit business aliases used only for entity-label matching."""
+
+    label = _contract_label(value)
+    if not label:
+        return set()
+    return {label, *_CONTRACT_ENTITY_LABEL_ALIASES.get(label, set())}
+
+
 def _contract_projection_candidates(
     label: str,
     query_object: str | None,
@@ -5303,38 +5320,56 @@ def _contract_projection_candidates(
     preferred_fields: set[str] | None = None,
     *,
     prefer_physical: bool = False,
+    prefer_display: bool = False,
 ) -> list[str]:
     """Resolve a requested display label only from recalled semantic metadata."""
 
     target = _contract_label(label)
-    object_label = _contract_label(query_object)
+    object_labels = _contract_entity_label_variants(query_object)
     authorized = _known_physical_fields(knowledge)
     entities, attributes_by_entity = _scoped_entity_attributes(knowledge)
 
     exact_object_entities: set[str] = set()
     related_object_entities: set[str] = set()
-    if object_label:
+    if object_labels:
         for entity_code, metadata in entities.items():
-            labels = {_contract_label(entity_code)}
+            labels = _contract_entity_label_variants(entity_code)
             for key in ("entity_name", "entity_alias"):
-                labels.update(_contract_label(value) for value in _metadata_term_values(metadata.get(key)))
-            if object_label in labels:
+                for value in _metadata_term_values(metadata.get(key)):
+                    labels.update(_contract_entity_label_variants(value))
+            if object_labels.intersection(labels):
                 exact_object_entities.add(entity_code)
             elif any(
-                object_label and (object_label in value or value in object_label)
-                for value in labels if value
+                left and right and (left in right or right in left)
+                for left in object_labels
+                for right in labels
             ):
                 related_object_entities.add(entity_code)
 
     scored: list[tuple[int, str]] = []
+    display_fields: set[str] = set()
     entity_scope = (
         exact_object_entities or related_object_entities or set(attributes_by_entity)
     )
+    if prefer_display and target:
+        # A detail projection can ask for a related entity's visible label even
+        # when the result object's entity is different (for example a product's
+        # applicable department). Include only entities whose published label is
+        # explicitly present in that projection; do not broaden to every recalled
+        # entity or guess a relationship from a shared physical field.
+        for entity_code, metadata in entities.items():
+            labels = _contract_entity_label_variants(entity_code)
+            for key in ("entity_name", "entity_alias"):
+                for value in _metadata_term_values(metadata.get(key)):
+                    labels.update(_contract_entity_label_variants(value))
+            if any(label and (label in target or target in label) for label in labels):
+                entity_scope.add(entity_code)
     for entity_code in entity_scope:
-        entity_labels = {_contract_label(entity_code)}
+        entity_labels = _contract_entity_label_variants(entity_code)
         metadata = entities.get(entity_code, {})
         for key in ("entity_name", "entity_alias"):
-            entity_labels.update(_contract_label(value) for value in _metadata_term_values(metadata.get(key)))
+            for value in _metadata_term_values(metadata.get(key)):
+                entity_labels.update(_contract_entity_label_variants(value))
         for field, attribute in attributes_by_entity.get(entity_code, {}).items():
             if field not in authorized or _is_relationship_key_field(field, attributes_by_entity):
                 continue
@@ -5346,8 +5381,14 @@ def _contract_projection_candidates(
             )) or str(attribute.get("semantic_role") or "").casefold() in {
                 "name", "display_name", "primary_name", "title",
             }
+            if is_display:
+                display_fields.add(field)
             exact = target in terms
-            entity_display = is_display and target in entity_labels
+            entity_display = is_display and any(
+                entity_label
+                and (entity_label == target or entity_label in target)
+                for entity_label in entity_labels
+            )
             partial = any(
                 len(target) >= 2 and len(term) >= 2 and (target in term or term in target)
                 for term in terms
@@ -5356,6 +5397,19 @@ def _contract_projection_candidates(
                 scored.append((0, field))
             elif partial:
                 scored.append((1, field))
+
+    if prefer_display and scored:
+        best_display_score = min(
+            (score for score, field in scored if field in display_fields),
+            default=None,
+        )
+        if best_display_score is not None:
+            best_display = sorted({
+                field for score, field in scored
+                if score == best_display_score and field in display_fields
+            })
+            if len(best_display) == 1:
+                return best_display
 
     if prefer_physical and scored:
         best_physical_score = min(score for score, _field in scored)
@@ -6000,6 +6054,7 @@ def _apply_intent_asl_contract(
             contract.get("query_object"),
             knowledge,
             preferred_fields=selected_names,
+            prefer_display=True,
         )
         if len(candidates) != 1:
             raise ASLValidationError(
@@ -6628,6 +6683,7 @@ def _validate_intent_asl_contract(
                 contract.get("query_object"),
                 knowledge,
                 preferred_fields=selected_dimension_names,
+                prefer_display=True,
             )
             if len(candidates) != 1 or candidates[0] not in selected_dimension_names:
                 raise ASLValidationError(

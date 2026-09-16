@@ -904,7 +904,9 @@ async def test_qwen_synthesis_is_used_only_after_analysis_evidence_exists() -> N
         TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
     assert response.status == "COMPLETED"
-    assert response.answer == "模型整理后的证据化总结"
+    assert response.answer.startswith("模型整理后的证据化总结")
+    assert "#### 图表" in response.answer
+    assert "<svg" in response.answer
     assert response.chart_specs[0].chart_type == "LINE"
     assert response.chart_specs[0].point_count == 2
     kinds = [item.kind for item in response.evidence]
@@ -941,6 +943,8 @@ async def test_trend_chart_is_embedded_in_insight_progress_for_existing_web_clie
     assert "#### 图表" in insight["message"]
     assert '<svg style="max-width:100%;height:auto;display:block"' in insight["message"]
     assert "<title id=\"chart-title\">销售额趋势</title>" in insight["message"]
+    assert "#### 图表" in response.answer
+    assert '<svg style="max-width:100%;height:auto;display:block"' in response.answer
     assert "http://minio" not in insight["message"]
 
 
@@ -996,7 +1000,7 @@ async def test_configured_visualization_mcp_is_used_before_inline_fallback() -> 
     assert insight["chart_source"] == "PLATFORM_MCP"
     assert insight["chart_image_count"] == 1
     assert "![销售额趋势](https://charts.example/sales-trend.jpeg)" in insight["message"]
-    assert "![销售额趋势](https://charts.example/sales-trend.jpeg)" not in response.answer
+    assert "![销售额趋势](https://charts.example/sales-trend.jpeg)" in response.answer
     assert "<img" not in insight["message"]
     assert "<svg" not in insight["message"]
     assert response.extension_executions[0].name == "generate_line_chart"

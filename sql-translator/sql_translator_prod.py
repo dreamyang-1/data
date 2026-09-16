@@ -1379,6 +1379,7 @@ class SQLTranslatorProd:
     def __init__(self, redis_config: Optional[Dict] = None):
         self.loader = RedisDSLLoader(redis_config)
         self.catalog = SemanticCatalog()
+        self._base_entity_relationship_graphs = {}
 
     # ======================== DSL 查询方法 ========================
 
@@ -1388,7 +1389,14 @@ class SQLTranslatorProd:
         if value is None or not model_id or not callable(metadata_loader):
             return value
         try:
-            current = metadata_loader(model_id).get(entity_code)
+            snapshots = getattr(self, '_base_entity_relationship_graphs', None)
+            if snapshots is None:
+                snapshots = {}
+                self._base_entity_relationship_graphs = snapshots
+            model_key = str(model_id)
+            if model_key not in snapshots:
+                snapshots[model_key] = metadata_loader(model_id)
+            current = snapshots[model_key].get(entity_code)
         except (pymysql.MySQLError, OSError, TimeoutError, ConnectionError, ValueError):
             return value
         if not current:
@@ -2449,7 +2457,16 @@ class SQLTranslatorProd:
                     source_code = str(source_entity.get('entity_code') or '')
                     if not source_code or source_code == current:
                         continue
-                    for relation in source_entity.get('relations', []) or []:
+                    # Request-scoped translators overlay Redis entities with the
+                    # authoritative, domain-filtered MySQL relationship graph.
+                    # Reverse-path discovery must use that same view. Reading
+                    # relations directly from the loader can drop one endpoint
+                    # of a bridge during rolling Redis publication and make a
+                    # valid product -> bridge <- department path disappear.
+                    authoritative_source = self._get_entity(source_code, model_id)
+                    if not authoritative_source:
+                        continue
+                    for relation in authoritative_source.get('relations', []) or []:
                         if (
                             isinstance(relation, dict)
                             and str(relation.get('target_entity') or '') == current
@@ -2995,6 +3012,12 @@ class SQLTranslatorProd:
         :param model_id: 语义模型 id，用于联合查询 DSL 数据
         :return: 生成的 SQL 语句
         """
+        # A translation must use one relationship snapshot.  ``_get_entity``
+        # is called repeatedly while resolving projections and join paths; a
+        # fresh per-translation cache prevents repeated catalog round trips
+        # without allowing a long-lived server translator to retain stale
+        # topology across requests.
+        self._base_entity_relationship_graphs = {}
         try:
             ast = json.loads(ast_json)
         except json.JSONDecodeError as e:

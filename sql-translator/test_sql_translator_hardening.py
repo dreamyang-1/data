@@ -253,6 +253,134 @@ def base_ast(**updates):
 
 
 class TranslatorHardeningTests(unittest.TestCase):
+    def test_physical_department_name_projection_uses_declared_bridge_path(self):
+        value = translator()
+        value.loader.entities.update({
+            "product": {
+                "entity_code": "product",
+                "entity_name": "商品",
+                "physical_table_join": {"base_table": "product"},
+                "attributes": [
+                    {"field_mapping": "product.product_code"},
+                    {
+                        "field_mapping": "product.product_name",
+                        "attr_name": "商品名称",
+                        "is_main_attribute": True,
+                    },
+                ],
+                "relations": [],
+                "sub_table_mappings": [],
+                "data_source_id": 1,
+            },
+            "product_dept_relation": {
+                "entity_code": "product_dept_relation",
+                "entity_name": "商品适用科室关系",
+                "physical_table_join": {
+                    "base_table": "product_dept_relation",
+                },
+                "attributes": [
+                    {"field_mapping": "product_dept_relation.product_code"},
+                    {"field_mapping": "product_dept_relation.dept_code"},
+                ],
+                "relations": [],
+                "sub_table_mappings": [],
+                "data_source_id": 1,
+            },
+            "department": {
+                "entity_code": "department",
+                "entity_name": "科室",
+                "physical_table_join": {"base_table": "department"},
+                "attributes": [
+                    {"field_mapping": "department.dept_code"},
+                    {
+                        "field_mapping": "department.dept_name",
+                        "attr_name": "科室名称",
+                        "is_main_attribute": True,
+                    },
+                ],
+                "relations": [],
+                "sub_table_mappings": [],
+                "data_source_id": 1,
+            },
+        })
+
+        class CurrentRelationshipCatalog:
+            def __init__(self):
+                self.relationship_reads = 0
+
+            def entity_relationship_metadata(self, _model_id):
+                self.relationship_reads += 1
+                return {
+                    "product": {
+                        "base_table": "product",
+                        "relations": [{
+                            "relation_code": "product_department_bridge",
+                            "target_entity": "product_dept_relation",
+                            "join_key": (
+                                "product.product_code = "
+                                "product_dept_relation.product_code"
+                            ),
+                            "relation_type": "1:N",
+                        }],
+                        "sub_table_mappings": [],
+                    },
+                    "product_dept_relation": {
+                        "base_table": "product_dept_relation",
+                        "relations": [],
+                        "sub_table_mappings": [],
+                    },
+                    "department": {
+                        "base_table": "department",
+                        "relations": [{
+                            "relation_code": "department_product_bridge",
+                            "target_entity": "product_dept_relation",
+                            "join_key": (
+                                "department.dept_code = "
+                                "product_dept_relation.dept_code"
+                            ),
+                            "relation_type": "1:N",
+                        }],
+                        "sub_table_mappings": [],
+                    },
+                }
+
+            @staticmethod
+            def attribute_metadata(_model_id, fields):
+                return {
+                    field: [{
+                        "is_main_attribute": field.endswith("_name"),
+                    }]
+                    for field in fields
+                }
+
+        value.catalog = CurrentRelationshipCatalog()
+        ast = base_ast(
+            subject={"entity": "product"},
+            metrics=[],
+            dimensions=[
+                {"name": "product.product_name"},
+                {"name": "department.dept_name"},
+            ],
+            projection_mode="DISTINCT",
+            limit=None,
+        )
+
+        sql = value.translate(json.dumps(ast, ensure_ascii=False), "81")
+
+        self.assertIn(
+            "LEFT JOIN product_dept_relation ON "
+            "product.product_code = product_dept_relation.product_code",
+            sql,
+        )
+        self.assertIn(
+            "LEFT JOIN department ON "
+            "department.dept_code = product_dept_relation.dept_code",
+            sql,
+        )
+        self.assertIn("product.product_name AS `商品名称`", sql)
+        self.assertIn("department.dept_name AS `科室名称`", sql)
+        self.assertEqual(1, value.catalog.relationship_reads)
+
     def test_registered_temporal_field_can_be_projected_in_detail_rows(self):
         value = translator()
         value.catalog = FakeTemporalFieldCatalog()

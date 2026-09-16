@@ -2406,9 +2406,7 @@ class HttpDataRetrievalAdapter:
             "COMPLETED",
             f"{SQL_EXECUTION_TOOL_NAME}调用完成。\n"
             f"输出字段：{_compact_progress_value(raw.get('columns') or [], 500)}；"
-            f"返回行数：{raw.get('row_count', len(raw.get('rows') or []))}；"
-            f"数据预览：{_compact_progress_value((raw.get('data') or raw.get('preview_data') or [])[:2], 1000)}。\n"
-            "正在校验结果集契约和数据源范围。",
+            f"返回行数：{raw.get('row_count', len(raw.get('rows') or []))}。",
         )
         actual_data_source_id = str((raw.get("data_source") or {}).get("id") or "") or None
         if (

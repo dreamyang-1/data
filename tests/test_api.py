@@ -2,7 +2,7 @@ import asyncio
 import json
 import re
 import time
-from datetime import date, datetime, timezone
+from datetime import date
 from uuid import uuid4
 
 import pytest
@@ -23,8 +23,6 @@ from app.main import create_app
 from app.services.orchestrator import (
     DataAnalysisOrchestrator,
     QUERY_EXECUTION_CHAIN,
-    _business_datetime_text,
-    _quality_status_text,
 )
 from app.presentation import (
     SEMANTIC_QUERY_TOOL_NAME,
@@ -46,14 +44,6 @@ from app.api import (
     _thinking_section,
     _thinking_title,
 )
-
-
-def test_user_visible_dataset_summary_uses_chinese_status_and_beijing_time():
-    assert _quality_status_text("PASS") == "通过"
-    assert _quality_status_text("FAIL") == "不通过"
-    assert _business_datetime_text(
-        datetime(2026, 9, 7, 5, 11, 7, tzinfo=timezone.utc)
-    ) == "2026-09-07 13:11:07（北京时间）"
 
 
 def TestClient(app, **kwargs):
@@ -1548,15 +1538,14 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
         if event["meta"]["stage"] == "DATA_RETRIEVAL"
         and event["meta"]["status"] == "COMPLETED"
     )
-    assert "查询字段：" in completed_retrieval_text
+    assert "数据集输出：" not in completed_retrieval_text
+    assert "查询字段：" not in completed_retrieval_text
     assert "返回行数：" in completed_retrieval_text
     assert "结果总行数：" in completed_retrieval_text
     assert "数据质量：" not in completed_retrieval_text
-    assert re.search(
-        r"查询快照时间：\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}（北京时间）",
-        completed_retrieval_text,
-    )
-    assert "数据预览：" in completed_retrieval_text
+    assert "查询快照时间：" not in completed_retrieval_text
+    assert "数据预览：" not in completed_retrieval_text
+    assert "结果状态：" not in completed_retrieval_text
     for internal_label in (
         "columns=", "row_count=", "total_row_count=",
         "quality_status=", "data_as_of=", "rows_preview=",

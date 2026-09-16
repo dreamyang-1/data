@@ -16,7 +16,6 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import unquote, urlparse
 from uuid import uuid4
-from zoneinfo import ZoneInfo
 
 from app.adapters.base import AdapterBundle, AdapterError
 import httpx
@@ -130,16 +129,6 @@ _SALES_RECORD_TIME_ASSUMPTION = "TRANSACTION_TIME_SCOPE=SALES_RECORD"
 _INTERNAL_ASSUMPTIONS: ContextVar[tuple[str, ...]] = ContextVar(
     "data_agent_internal_assumptions", default=()
 )
-_BUSINESS_TIMEZONE = ZoneInfo("Asia/Shanghai")
-_QUALITY_STATUS_LABELS = {
-    "PASS": "通过",
-    "FAIL": "不通过",
-    "FAILED": "不通过",
-    "WARNING": "警告",
-    "WARN": "警告",
-    "DEGRADED": "降级",
-    "LIMITED": "受限",
-}
 _SORT_ONLY_FOLLOWUP_PATTERN = re.compile(
     r"(?:按)?[^，,。；;！!？?]{0,100}?(?:按)?"
     r"(?:从高到低|从低到高|由高到低|由低到高|"
@@ -165,17 +154,6 @@ def _sort_only_followup_direction(text: str) -> str | None:
     return "ASC" if _ASCENDING_SORT_PATTERN.search(compact) else "DESC"
 
 
-def _business_datetime_text(value: datetime) -> str:
-    """Render user-visible timestamps consistently in business local time."""
-
-    localized = value.astimezone(_BUSINESS_TIMEZONE)
-    return localized.strftime("%Y-%m-%d %H:%M:%S（北京时间）")
-
-
-def _quality_status_text(value: str) -> str:
-    return _QUALITY_STATUS_LABELS.get(value.strip().upper(), "待确认")
-
-
 def _requires_deterministic_analysis(request: CanonicalAnalysisRequest) -> bool:
     return (
         request.primary_intent in ANALYSIS_INTENTS
@@ -185,18 +163,6 @@ def _requires_deterministic_analysis(request: CanonicalAnalysisRequest) -> bool:
     )
 
 logger = logging.getLogger(__name__)
-
-
-def _compact_trace_value(value: Any, limit: int) -> str:
-    rendered = json.dumps(
-        value,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        default=str,
-    )
-    if len(rendered) <= limit:
-        return rendered
-    return f"{rendered[:limit]}…（已省略 {len(rendered) - limit} 字符）"
 
 
 def select_data_execution_question(
@@ -5057,13 +5023,8 @@ class DataAnalysisOrchestrator:
             "COMPLETED",
             (
                 "调度执行完成。\n"
-                "数据集输出：\n"
-                f"查询字段：{_compact_trace_value(query_result.dataset.columns, 800)}；\n"
                 f"返回行数：{query_result.dataset.row_count}；\n"
-                f"结果总行数：{query_result.dataset.total_row_count}；\n"
-                f"查询快照时间：{_business_datetime_text(query_result.dataset.data_as_of)}；\n"
-                f"数据预览：{_compact_trace_value(query_result.dataset.rows[:2], 1200)}。\n"
-                f"结果状态：{'结果已截断，完整数据通过结果文件提供。' if query_result.dataset.truncated else '当前结果未截断。'}"
+                f"结果总行数：{query_result.dataset.total_row_count}。"
             ),
             row_count=query_result.dataset.row_count,
             truncated=query_result.dataset.truncated,
@@ -5962,6 +5923,8 @@ class DataAnalysisOrchestrator:
         activity_definition_note = self._activity_definition_note(request)
         if activity_definition_note:
             answer += f"\n\n{activity_definition_note}"
+        if chart_display and chart_display not in answer:
+            answer += chart_display
         incomplete_result = bool(
             query_result.dataset.truncated and not query_result.result_file_url
         )

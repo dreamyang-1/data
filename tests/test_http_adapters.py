@@ -876,6 +876,15 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
         and message.startswith("调用工具：SQL 执行服务。")
         for stage, message in progress_messages
     )
+    completed_sql_message = next(
+        message
+        for stage, message in reversed(progress_messages)
+        if stage == "SQL_EXECUTION"
+    )
+    assert "输出字段：" in completed_sql_message
+    assert "返回行数：" in completed_sql_message
+    assert "数据预览：" not in completed_sql_message
+    assert "正在校验结果集契约和数据源范围。" not in completed_sql_message
 
 
 def test_dependency_constraint_field_family_keeps_join_key_kind() -> None:
@@ -1340,7 +1349,7 @@ async def test_relation_detail_sends_relationship_aware_projection_contract():
 
 @pytest.mark.asyncio
 async def test_acknowledged_contract_uses_canonical_projection_validation():
-    """A logical dimension code must not fail a second static synonym gate."""
+    """Physical display fields confirmed by Oagnet pass without a synonym gate."""
 
     class EchoContractClient:
         def __init__(self):
@@ -1356,11 +1365,8 @@ async def test_acknowledged_contract_uses_canonical_projection_validation():
                         "subject": {"entity": "product"},
                         "metrics": [],
                         "dimensions": [
-                            {"name": "product", "attr": None},
-                            {
-                                "name": "applicable_department",
-                                "attr": "2093646189935833090",
-                            },
+                            {"name": "product.product_name", "attr": None},
+                            {"name": "department.dept_name", "attr": None},
                         ],
                         "filters": [{
                             "field": "product.specification",
@@ -1396,11 +1402,17 @@ async def test_acknowledged_contract_uses_canonical_projection_validation():
         semantic_entity_mentions=["TDC-3"],
     )
 
+    client = EchoContractClient()
     dataset = await HttpDataRetrievalAdapter(
-        Settings(adapter_mode="http"), EchoContractClient()
+        Settings(adapter_mode="http"), client
     ).query(detail, IDENTITY, semantic_model_id=81, business_domain_id=205)
 
     assert dataset.dataset.row_count == 1
+    translated_asl = json.loads(client.calls[1][2]["asl"])
+    assert [item["name"] for item in translated_asl["dimensions"]] == [
+        "product.product_name",
+        "department.dept_name",
+    ]
 
 
 def test_transaction_detail_remains_row_shaped() -> None:

@@ -217,7 +217,7 @@ def test_metricless_attribute_detail_uses_registered_subject_event_time(monkeypa
             "start": "2026-07-02", "end": "2026-09-02",
         },
     }
-    monkeypatch.setattr(agent, "get_table_field_by_scope", lambda *_: {
+    monkeypatch.setattr(agent, "get_table_field_by_scope", lambda *_, **_kwargs: {
         "tables": [{
             "table_name": "device_daily",
             "semantic_model_id": 85,
@@ -292,6 +292,95 @@ def test_unique_logical_dimension_wins_over_multiple_equivalent_physical_fields(
     assert json.loads(repaired)["dimensions"] == [{
         "name": "dealer", "attr": None, "level": None, "granularity": None,
     }]
+
+
+def test_detail_name_projections_do_not_use_code_backed_dimensions():
+    def entity(code, name, attributes):
+        return SimpleNamespace(metadata={
+            "entity_code": code,
+            "entity_name": name,
+            "attributes": json.dumps(attributes, ensure_ascii=False),
+        })
+
+    knowledge = {
+        "entities": [
+            entity("product", "商品", [{
+                "attribute_id": "product-name-id",
+                "attr_code": "product_name",
+                "attr_name": "商品名称",
+                "field_mapping": "product.product_name",
+                "is_main_attribute": True,
+            }]),
+            entity("department", "科室", [
+                {
+                    "attribute_id": "department-code-id",
+                    "attr_code": "dept_code",
+                    "attr_name": "科室编码",
+                    "field_mapping": "department.dept_code",
+                },
+                {
+                    "attribute_id": "department-name-id",
+                    "attr_code": "dept_name",
+                    "attr_name": "科室名称",
+                    "field_mapping": "department.dept_name",
+                    "is_main_attribute": True,
+                },
+            ]),
+            entity("product_category", "产品分类", [{
+                "attr_code": "product_type",
+                "attr_name": "产品类别",
+                "field_mapping": "product_category.product_type",
+            }]),
+        ],
+        "dimensions": [
+            SimpleNamespace(metadata={
+                "dim_code": "product",
+                "dim_name": "商品",
+                "synonyms": ["产品", "商品名称"],
+                "bind_entities": [{
+                    "attr": "product-code-id", "attrName": "商品编码",
+                }],
+            }),
+            SimpleNamespace(metadata={
+                "dim_code": "applicable_department",
+                "dim_name": "适用科室",
+                "bind_entities": [{
+                    "attr": "department-code-id", "attrName": "科室编码",
+                }],
+            }),
+        ],
+    }
+    ast = json.loads(_detail_ast("product"))
+    ast["dimensions"] = [
+        {"name": "applicable_department", "attr": "department-code-id"},
+        {"name": "product_category.product_type", "attr": None},
+        {"name": "product.product_name", "attr": None},
+    ]
+    contract = {
+        "intent": "DETAIL_QUERY",
+        "query_object": "产品",
+        "metric_required": False,
+        "required_metric_codes": [],
+        "required_projections": ["商品名称", "适用科室"],
+        "required_groupings": [],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_dimension_required": False,
+    }
+
+    repaired, repairs = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+    )
+
+    assert [item["name"] for item in json.loads(repaired)["dimensions"]] == [
+        "product.product_name", "department.dept_name",
+    ]
+    assert any(
+        item.get("type") == "ADD_REQUIRED_PROJECTION"
+        and item.get("resolved_field") == "department.dept_name"
+        for item in repairs
+    )
 
 
 def test_selected_query_object_attribute_wins_over_overlapping_global_dimension():

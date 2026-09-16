@@ -279,12 +279,21 @@ class ScopedTranslator(SQLTranslatorProd):
         self.catalog = ScopedCatalog(scope, base.catalog.db_config)
         self.loader = ScopedLoader(scope, base.loader, self.catalog)
         self._metric_definitions = {}
+        self._entity_relationship_graph = None
 
     def _get_entity(self, code, model_id=None):
         value = self.loader.get_entity(code, model_id)
         if not value:
             return None
-        current = self.catalog.entity_relationship_metadata(model_id).get(code)
+        # This translator exists for exactly one request and one immutable
+        # RequestScope. Keep one authoritative graph snapshot for the complete
+        # plan so reverse-path searches neither repeat expensive catalog reads
+        # nor observe a different publication halfway through translation.
+        if self._entity_relationship_graph is None:
+            self._entity_relationship_graph = (
+                self.catalog.entity_relationship_metadata(model_id)
+            )
+        current = self._entity_relationship_graph.get(code)
         if not current:
             return None
         value = copy.deepcopy(value)
