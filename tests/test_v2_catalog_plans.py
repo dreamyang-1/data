@@ -207,8 +207,13 @@ def test_compiler_rejects_self_declared_relationship_evidence(catalog, fault):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('fault,code', [('authority', 'V2_MODEL_OUTPUT_INVALID'),
-    ('whole', 'V2_MODEL_OUTPUT_INVALID'), ('operation', 'V2_SLOT_OPERATION_CONFLICT'),
+# authority/whole shapes are unexpressible under the exact dynamic schema:
+# RelationshipEditDraft is additionalProperties:false (no cardinality authority
+# field) and relationship_spec is not in the whole-slot enum, so the schema
+# refusal is the stable fail-closed stage. operation/handle/role still reach
+# their runtime guards through schema-legal payloads.
+@pytest.mark.parametrize('fault,code', [('authority', 'V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'),
+    ('whole', 'V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'), ('operation', 'V2_SLOT_OPERATION_CONFLICT'),
     ('handle', 'V2_BINDING_HANDLE_NOT_OFFERED'), ('role', 'V2_RELATION_BINDING_ROLE_CONFLICT')])
 async def test_relation_model_output_cannot_supply_catalog_authority(catalog, fault, code):
     original = relation()
