@@ -203,6 +203,27 @@ def test_all_history_monthly_statistic_allows_time_projection_without_range():
     assert validate_intent_asl_contract_definition(contract) == []
 
 
+def test_province_filter_does_not_hide_city_grouping_or_query_object():
+    request = RuleBasedIntentClassifier().classify(
+        "查看2025年安徽省下各个城市每月销售趋势",
+        IDENTITY,
+        "province-city-trend-contract",
+    )
+    # Reproduce the structured model's provisional entity choice that used to
+    # override the explicit city grouping in the downstream ASL contract.
+    request.entity = "省份名称"
+    request.dimensions = ["城市"]
+    request.filters = [{
+        "field": "业务省份", "operator": "EQ", "value": "安徽省",
+    }]
+
+    contract = build_intent_asl_contract(request)
+
+    assert contract["query_object"] == "城市"
+    assert contract["required_groupings"] == ["城市"]
+    assert validate_intent_asl_contract_definition(contract) == []
+
+
 def test_canonical_detail_rewrite_does_not_disable_relationship_set_semantics():
     request = RuleBasedIntentClassifier().classify(
         "查询A产品合作经销商名单", IDENTITY, "canonical-detail-rewrite",

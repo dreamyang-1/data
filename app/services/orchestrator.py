@@ -3699,9 +3699,34 @@ class DataAnalysisOrchestrator:
                     "missing_slots": [],
                 },
             )
+        admission_current = raw_rule_request
+        if semantic_decision_request is not None:
+            # The accepted V2 plan has already bound the complete current
+            # semantic shape to an authorized catalog.  The early rule parse is
+            # still authoritative for turn relation, but must not overwrite the
+            # plan's metrics, dimensions or filters during slot protection.
+            self.turn_admission_gate.rebind_current_semantic_shape(
+                turn_decision,
+                request,
+                replace_filters=True,
+            )
+            admission_current = request
+        elif "MODEL_FILTER_EXTRACTION_AUTHORITATIVE" in request.assumptions:
+            # Turn admission is intentionally evaluated early from a cheap rule
+            # parse so it can decide whether history may be read.  Once the
+            # structured model has produced literal-grounded filters, refresh
+            # only the current semantic slots and protect those values instead
+            # of replaying the earlier phrase-shaped rule guess.  Relation and
+            # inheritance decisions remain unchanged.
+            self.turn_admission_gate.rebind_current_semantic_shape(
+                turn_decision,
+                request,
+                replace_filters=True,
+            )
+            admission_current = request
         request = self.turn_admission_gate.apply_explicit_slot_protection(
             admission_base,
-            raw_rule_request,
+            admission_current,
             turn_decision,
         )
         # A relationship qualifier replacement (for example ``主要科室`` ->
@@ -3996,7 +4021,10 @@ class DataAnalysisOrchestrator:
             )
             if callable(sanitize_mentions):
                 sanitize_mentions(request)
-        if self.question_rewriter is not None:
+        if (
+            self.question_rewriter is not None
+            and semantic_decision_request is None
+        ):
             # Resolve extracted filter literals separately from the whole
             # question.  A small whole-query top-k can otherwise omit an exact
             # entity value (for example 费森尤斯=母厂牌) and leave the model's
@@ -11021,6 +11049,10 @@ class DataAnalysisOrchestrator:
             'SEMANTIC_SCOPE_UNCONFIRMED': '查询服务暂时无法确认本次查询的数据范围，系统已停止查询或拒绝使用结果。请联系系统维护人员处理。',
             "SEMANTIC_CONTEXT_MISSING": "缺少 semantic_model_id，暂时无法确定使用哪套语义模型。business_domain_id 可不传，由语义模型自动选择业务域。",
             "ASL_GENERATION_FAILED": "自然语言转 ASL 服务暂时不可用。",
+            "INTENT_ASL_CONTRACT_INCOMPLETE": (
+                "当前问题在生成语义查询条件时，没有完整保留用户明确要求的查询对象或筛选条件。"
+                "系统已停止执行以避免查错数据，请检查意图识别结果或语义模型配置。"
+            ),
             "ASL_ANALYSIS_SHAPE_INVALID": "语义查询没有返回分析所需的分组维度，本次未执行可能产生误导的单值分析。",
             "SQL_TRANSLATION_FAILED": "ASL 转 SQL 服务未能生成可执行查询。",
             "SQL_EXECUTION_FAILED": "SQL 查询执行失败，本次不返回数据。",

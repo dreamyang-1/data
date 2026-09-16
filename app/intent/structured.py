@@ -5,7 +5,7 @@ import logging
 import re
 import asyncio
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -46,6 +46,20 @@ class StructuredSlotOperation(BaseModel):
     confidence: float = Field(default=0.8, ge=0, le=1)
 
 
+class StructuredFilter(BaseModel):
+    """Model-proposed semantic filter; the live catalog remains authoritative."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    field: str = Field(min_length=1, max_length=100)
+    operator: Literal[
+        "EQ", "NE", "GT", "GTE", "LT", "LTE", "IN", "NOT_IN",
+        "CONTAINS", "IS_NULL", "IS_NOT_NULL",
+    ] = "EQ"
+    value: str | int | float | list[str | int | float] | None = None
+    evidence_span: str = Field(min_length=1, max_length=500)
+
+
 class StructuredIntentOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -62,6 +76,7 @@ class StructuredIntentOutput(BaseModel):
     dimensions: list[str] = Field(default_factory=list)
     entity: str | None = None
     fields: list[str] = Field(default_factory=list)
+    filters: list[StructuredFilter] = Field(default_factory=list, max_length=30)
     current_entity_values: list[str] = Field(default_factory=list, max_length=20)
     comparison_type: str | None = None
     ambiguities: list[str] = Field(default_factory=list)
@@ -110,6 +125,11 @@ SYSTEM_PROMPT = """你是企业数据分析系统的意图分类器，只分类�
 38. 空筛选值应丢弃，但用户明确查询“为空、未填写、缺失”的情况除外；此时应保留 IS_NULL 语义。维度空值属于结果展示策略，不得反向生成筛选条件。
 39. 指标名称内部出现的业务对象词不构成 entity 证据。例如“区域医院覆盖率”中的“医院”属于指标名称；“经销商医院覆盖率”中的“经销商、医院”也不能单独决定查询对象。只有“各经销商、按经销商、经销商名单”等独立结果粒度或返回对象表达，才能把经销商识别为 entity。
 40. 当前问题仅重复上一轮指标并修改排序方向时（包括“从高到低/从低到高”“从大到小/从小到大”“升序/降序”），这是排序修改追问；必须继承上一轮已确认的查询对象、维度、筛选、时间口径和指标绑定，只修改排序，不得新增“医院”等指标名称内部对象、默认最近一年或其他条件，也不得要求用户确认轮次关系。
+41. filters 必须由语义理解提取，不得按固定句式截取。field 填业务语义角色（如商品名称、商品品牌、商品品类、厂家名称、业务省份、业务城市），value 只保留用户实际用于限定范围的值，不得包含“查一下、查询、查看、请、帮我”等请求动作，也不得包含“合作的经销商名单”等返回对象描述。
+42. 每个 filter 的 evidence_span 必须逐字来自当前用户问题，并覆盖该筛选值及足以判断其筛选角色的原文；筛选值必须能在 evidence_span 中找到。字段名可做语义规范化，但筛选值不得凭空规范化、补后缀或使用模型常识改写，后续目录服务会完成标准值和字段绑定。
+43. 具体名称同时可能属于商品、品牌、品类或厂家时，仍要根据整句业务含义给出最合理的临时 field；不得因为不确定就把请求动作并入 value。确实无法判断且不同解释会改变查询结果时，降低 confidence 并写入 ambiguities。
+44. filters 只表达业务筛选条件；时间范围继续放在 completed_question 的时间语义中，不要重复生成年/月/日期筛选。dimensions 表达结果展开粒度，entity/fields 表达返回对象，三者不得混入 filters。
+45. 示例：“查一下空心纤维血液透析器产品合作的经销商名单”应识别 entity=经销商、fields=[经销商名称]、filters=[{field:商品名称,operator:EQ,value:空心纤维血液透析器,evidence_span:空心纤维血液透析器产品}]；“查一下”不是筛选值的一部分。
 """
 
 
@@ -309,6 +329,9 @@ class HybridIntentClassifier:
         request.intent_source = "STRUCTURED_MODEL"
         request.intent_confidence = model.confidence
         semantic_extraction_applied = False
+        model_filters_declared = "filters" in model.model_fields_set
+        grounded_model_filters: list[dict[str, Any]] = []
+        model_filter_validation_failed = False
         current_entity_candidates = list(model.current_entity_values)
         current_fragment = question.split(
             "\n已确认的上一轮上下文", 1
@@ -341,6 +364,18 @@ class HybridIntentClassifier:
             if len(current_entity_values) != len(current_entity_candidates):
                 request.assumptions.append(
                     "UNGROUNDED_CURRENT_ENTITY_VALUE_DROPPED"
+                )
+        if model_filters_declared:
+            grounded_model_filters, filter_issues = self._grounded_model_filters(
+                model.filters,
+                question,
+            )
+            model_filter_validation_failed = bool(filter_issues)
+            if model_filter_validation_failed:
+                request.assumptions.append("INVALID_MODEL_FILTERS_DROPPED")
+            else:
+                semantic_extraction_applied = semantic_extraction_applied or bool(
+                    grounded_model_filters
                 )
         if model.metrics:
             grounded_metrics = self._grounded_metric_names(model.metrics, question)
@@ -418,6 +453,16 @@ class HybridIntentClassifier:
         # The structured model may otherwise downgrade a supplier list to a
         # metric query or treat recommendation wording as out of scope.
         self.rules.apply_business_query_shapes(request, question)
+        if model_filters_declared:
+            # Result-shape rules may classify a list as DETAIL_QUERY and add
+            # safety assumptions, but flexible language-to-filter extraction is
+            # owned by the structured model.  The live semantic catalog later
+            # verifies and may rebind each provisional field/value pair.
+            request.filters = (
+                [] if model_filter_validation_failed else grounded_model_filters
+            )
+            request.semantic_filter_bindings = []
+            request.assumptions.append("MODEL_FILTER_EXTRACTION_AUTHORITATIVE")
         self.rules.sanitize_semantic_entity_mentions(request)
         request.risk_level = (
             "HIGH"
@@ -425,6 +470,11 @@ class HybridIntentClassifier:
             else "MEDIUM"
         )
         request.missing_slots = self.rules.required_missing_slots(request)
+        if model_filter_validation_failed:
+            request.missing_slots = list(dict.fromkeys([
+                *request.missing_slots,
+                "semantic_ambiguity",
+            ]))
         # Model ambiguities are advisory and are only safe after the complete model
         # result has passed every deterministic gate.  Keep only ambiguities that
         # describe a slot which is still actually missing; otherwise stale or
@@ -433,6 +483,11 @@ class HybridIntentClassifier:
         request.ambiguities = self._filter_ambiguities(
             model.ambiguities, request.missing_slots
         )
+        if model_filter_validation_failed:
+            request.ambiguities = list(dict.fromkeys([
+                *request.ambiguities,
+                "当前问题中的筛选条件未能可靠对应到原文，请明确要筛选的业务名称及其类型。",
+            ]))
         return self._apply_pre_resolved_contract(request, question, pre_resolved)
 
     @staticmethod
@@ -964,6 +1019,87 @@ class HybridIntentClassifier:
             ):
                 grounded.append(candidate)
         return grounded
+
+    @staticmethod
+    def _grounded_model_filters(
+        filters: list[StructuredFilter], question: str
+    ) -> tuple[list[dict[str, Any]], list[str]]:
+        """Validate model filter proposals against literal current-turn evidence.
+
+        The model owns the linguistic decision.  This method only enforces that
+        no value was invented or copied from prior context; the current semantic
+        catalog remains responsible for binding the proposed field and value.
+        One invalid proposal rejects the complete model filter set so execution
+        cannot silently broaden the request by dropping only a difficult filter.
+        """
+
+        current = question.split("\n已确认的上一轮上下文", 1)[0]
+        compact_current = re.sub(r"\s+", "", current).casefold()
+        grounded: list[dict[str, Any]] = []
+        issues: list[str] = []
+        seen: set[tuple[str, str, str]] = set()
+        null_operators = {"IS_NULL", "IS_NOT_NULL"}
+
+        for index, item in enumerate(filters):
+            field = re.sub(r"\s+", "", item.field).strip()
+            evidence = re.sub(r"\s+", "", item.evidence_span).strip()
+            evidence_key = evidence.casefold()
+            if not field or not evidence or evidence_key not in compact_current:
+                issues.append(f"filter[{index}]:ungrounded_evidence")
+                continue
+
+            raw_values = item.value if isinstance(item.value, list) else [item.value]
+            if item.operator in null_operators:
+                if item.value is not None:
+                    issues.append(f"filter[{index}]:null_operator_with_value")
+                    continue
+            elif not raw_values or any(value is None for value in raw_values):
+                issues.append(f"filter[{index}]:missing_value")
+                continue
+
+            normalized_values: list[str | int | float] = []
+            value_invalid = False
+            for value in raw_values:
+                if value is None:
+                    continue
+                if isinstance(value, str):
+                    normalized = re.sub(r"\s+", " ", value).strip()
+                    compact_value = re.sub(r"\s+", "", normalized).casefold()
+                    if (
+                        not normalized
+                        or len(normalized) > 500
+                        or compact_value not in evidence_key
+                    ):
+                        value_invalid = True
+                        break
+                    normalized_values.append(normalized)
+                else:
+                    if str(value) not in evidence:
+                        value_invalid = True
+                        break
+                    normalized_values.append(value)
+            if value_invalid:
+                issues.append(f"filter[{index}]:ungrounded_value")
+                continue
+
+            value: Any
+            if item.operator in null_operators:
+                value = None
+            elif isinstance(item.value, list):
+                value = list(dict.fromkeys(normalized_values))
+            else:
+                value = normalized_values[0]
+            key = (field.casefold(), item.operator, repr(value))
+            if key in seen:
+                continue
+            seen.add(key)
+            grounded.append({
+                "field": field,
+                "operator": item.operator,
+                "value": value,
+            })
+
+        return (grounded, issues) if not issues else ([], issues)
 
     @staticmethod
     def _passes_deterministic_constraints(model: StructuredIntentOutput, question: str) -> bool:

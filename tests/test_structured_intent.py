@@ -143,6 +143,106 @@ async def test_model_metric_guess_cannot_turn_relationship_question_into_metric_
 
 
 @pytest.mark.asyncio
+async def test_model_filters_own_flexible_relationship_wording_without_rule_prefix_leak():
+    output = {
+        "primary_intent": "DETAIL_QUERY",
+        "secondary_intents": [],
+        "operators": ["FILTER", "RENDER_TABLE"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.98,
+        "evidence": ["空心纤维血液透析器产品", "经销商名单"],
+        "metrics": [],
+        "dimensions": [],
+        "entity": "经销商",
+        "fields": ["经销商名称"],
+        "filters": [{
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "空心纤维血液透析器",
+            "evidence_span": "空心纤维血液透析器产品",
+        }],
+        "current_entity_values": ["空心纤维血液透析器"],
+        "comparison_type": None,
+        "ambiguities": [],
+        "completed_question": "查询空心纤维血液透析器产品合作的经销商名单。",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "查一下空心纤维血液透析器产品合作的经销商名单。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "c-model-filter-authority",
+    )
+
+    assert result.primary_intent == PrimaryIntent.DETAIL_QUERY
+    assert result.entity == "经销商"
+    assert result.fields == ["经销商名称"]
+    assert result.filters == [{
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "空心纤维血液透析器",
+    }]
+    assert result.semantic_entity_mentions == ["空心纤维血液透析器"]
+    assert "MODEL_FILTER_EXTRACTION_AUTHORITATIVE" in result.assumptions
+    assert all("查一下" not in str(item.get("value")) for item in result.filters)
+
+
+@pytest.mark.asyncio
+async def test_invalid_model_filter_fails_closed_instead_of_reusing_rule_guess():
+    output = {
+        "primary_intent": "DETAIL_QUERY",
+        "secondary_intents": [],
+        "operators": ["FILTER", "RENDER_TABLE"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.98,
+        "evidence": ["经销商名单"],
+        "metrics": [],
+        "dimensions": [],
+        "entity": "经销商",
+        "fields": ["经销商名称"],
+        "filters": [{
+            "field": "商品名称",
+            "operator": "EQ",
+            "value": "模型臆造产品",
+            "evidence_span": "空心纤维血液透析器产品",
+        }],
+        "current_entity_values": ["空心纤维血液透析器"],
+        "comparison_type": None,
+        "ambiguities": [],
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "查一下空心纤维血液透析器产品合作的经销商名单。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "c-invalid-model-filter",
+    )
+
+    assert result.filters == []
+    assert "semantic_ambiguity" in result.missing_slots
+    assert "INVALID_MODEL_FILTERS_DROPPED" in result.assumptions
+    assert "查一下空心纤维血液透析器" not in str(result.filters)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("dedicated_field", [True, False])
 async def test_short_followup_keeps_model_extracted_current_entity_value(
     dedicated_field: bool,

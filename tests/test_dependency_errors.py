@@ -35,3 +35,19 @@ def test_time_anchor_configuration_error_does_not_tell_user_to_blindly_retry() -
     message = DataAnalysisOrchestrator._dependency_message(error)
     assert "时间字段绑定" in message
     assert "稍后重试" not in message
+
+
+def test_intent_contract_error_is_not_reported_as_upstream_outage() -> None:
+    error = AdapterError(
+        "DEPENDENCY_CONTRACT_REJECTED",
+        "sanitized",
+        status_code=422,
+        upstream_code="INTENT_ASL_CONTRACT_INCOMPLETE",
+    )
+
+    message = DataAnalysisOrchestrator._dependency_message(error)
+
+    assert "没有完整保留" in message
+    assert "停止执行" in message
+    assert "上游数据服务" not in message
+    assert "稍后重试" not in message

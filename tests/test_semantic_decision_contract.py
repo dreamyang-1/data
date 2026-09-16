@@ -245,6 +245,11 @@ async def test_orchestrator_skips_v1_intent_model_and_rewriter_for_accepted_cont
         async def rewrite(self, *args, **kwargs):
             raise AssertionError("accepted semantic contract must skip V1 rewrite")
 
+        async def ground_executable_filters(self, *args, **kwargs):
+            raise AssertionError(
+                "accepted semantic contract must skip V1 filter re-grounding"
+            )
+
     class PlannerTrap:
         async def plan(self, *_args, **_kwargs):
             raise AssertionError(

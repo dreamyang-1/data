@@ -136,8 +136,9 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         "品牌": "商品品牌", "品牌名称": "商品品牌", "母品牌": "商品品牌",
         "母厂牌": "商品品牌", "厂牌": "商品品牌",
         "品类": "商品品类", "商品分类": "商品品类", "产品分类": "商品品类",
-        "区域": "地区", "省份": "地区", "城市": "地区",
-        "业务省份": "地区", "业务城市": "地区",
+        "区域": "地区", "地区": "地区",
+        "省份": "省份", "业务省份": "省份",
+        "城市": "城市", "业务城市": "城市",
     }
 
     def normalized_role(value: str) -> str:
@@ -185,7 +186,12 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
     return {
         "version": CONTRACT_VERSION,
         "intent": request.primary_intent.value,
-        "query_object": _query_object(request, prefer_grouping_object=ranking),
+        "query_object": _query_object(
+            request,
+            prefer_grouping_object=(
+                ranking or (not detail_like and bool(required_groupings))
+            ),
+        ),
         "metric_required": metric_required,
         "required_metrics": [metric.canonical_name or metric.input for metric in request.metrics],
         "required_metric_codes": metric_codes,
