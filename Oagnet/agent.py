@@ -748,7 +748,40 @@ def _normalize_semantic_references(
     _normalize_time_context(ast, knowledge, user_query)
     _normalize_activity_semantics(ast, knowledge, user_query)
     _normalize_generic_sales_metric(ast, knowledge, user_query)
+    _complete_dimension_alias_from_recall(ast, knowledge)
     return json.dumps(ast, ensure_ascii=False)
+
+
+def _complete_dimension_alias_from_recall(ast: dict, knowledge: dict) -> None:
+    """Fill a logical dimension alias only from unique recalled metadata.
+
+    Model-generated aliases are not trusted.  A dimension receives its
+    canonical business label only when its name exactly matches one unique,
+    complete ``dim_code``/``dim_name`` record from the current scoped recall.
+    Any alias that cannot be proven this way is removed.
+    """
+    dimensions = ast.get("dimensions")
+    if not isinstance(dimensions, list):
+        return
+
+    complete_records: dict[str, list[str]] = {}
+    for result in knowledge.get("dimensions", []):
+        metadata = getattr(result, "metadata", {}) or {}
+        code = str(metadata.get("dim_code") or "").strip()
+        name = str(metadata.get("dim_name") or "").strip()
+        if code and name:
+            complete_records.setdefault(code, []).append(name)
+
+    for dimension in dimensions:
+        if not isinstance(dimension, dict):
+            continue
+        dimension_code = str(dimension.get("name") or "").strip()
+        names = complete_records.get(dimension_code) or []
+        proven_alias = names[0] if len(names) == 1 else None
+        if proven_alias:
+            dimension["alias"] = proven_alias
+        else:
+            dimension.pop("alias", None)
 
 
 def _known_codes(knowledge: dict, section: str, key: str) -> set[str]:
