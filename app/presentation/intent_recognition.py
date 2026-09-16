@@ -298,6 +298,7 @@ class CompositeIntentTaskDisplayV2:
     task_id: str
     question: str
     intent: str
+    confidence: float | None = None
     structured_parameters: list[str] = field(default_factory=list)
     depends_on: list[str] = field(default_factory=list)
 
@@ -791,8 +792,6 @@ def render_intent_recognition_display_v2(
         f"任务意图：{view.task_intent}",
         f"意图判定依据：{view.intent_basis}",
     ])
-    if view.show_structure:
-        lines.append(f"参数规范化：{view.normalization_status}")
     return "\n".join(lines)
 
 
@@ -871,6 +870,11 @@ def build_composite_intent_recognition_display_v2(
                 if index < len(intents)
                 else "待子任务语义校验"
             ),
+            confidence=(
+                float(requests[index].intent_confidence)
+                if index < len(requests)
+                else None
+            ),
             structured_parameters=_structured_parameters_for_question(
                 task.question,
                 requests[index] if index < len(requests) else None,
@@ -906,6 +910,13 @@ def render_composite_intent_recognition_display_v2(
         task.intent for task in view.tasks if task.intent
     ))
     task_intent = "、".join(intent_labels) or "待语义识别"
+    confidences = [
+        task.confidence
+        for task in view.tasks
+        if task.confidence is not None
+    ]
+    if confidences:
+        task_intent += f"（置信度 {min(confidences):.2f}）"
     lines = ["### ◉ 意图识别", ""]
     if include_resolved_context:
         lines.append(f"用户原始问题：{view.original_question}")

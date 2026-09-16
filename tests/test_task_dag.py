@@ -461,6 +461,42 @@ async def test_structured_model_plan_is_schema_validated() -> None:
 
 
 @pytest.mark.asyncio
+async def test_structured_model_plan_preserves_business_split_metadata() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        system_prompt = body["messages"][0]["content"]
+        assert "split_reason_code" in system_prompt
+        assert "expected_output" in system_prompt
+        assert "shared_conditions" in system_prompt
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": """
+            {"task_structure":"PARALLEL_TASKS",
+             "split_reason_code":"DISTINCT_DELIVERABLES",
+             "shared_conditions":["上海市"],
+             "tasks":[
+               {"question":"查询上海市经销商名单","depends_on":[],"expected_output":"经销商名单"},
+               {"question":"查询上海市医院名单","depends_on":[],"expected_output":"医院名单"}
+             ]}
+            """}}]
+        })
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    plan = await planner.plan("查询上海市经销商名单。查询上海市医院名单。")
+
+    assert plan is not None
+    assert plan.split_reason_code == "DISTINCT_DELIVERABLES"
+    assert plan.shared_conditions == ["上海市"]
+    assert [task.expected_output for task in plan.tasks] == ["经销商名单", "医院名单"]
+
+
+@pytest.mark.asyncio
 async def test_structured_model_dependency_decision_is_preserved() -> None:
     async def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={

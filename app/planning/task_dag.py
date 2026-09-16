@@ -49,6 +49,11 @@ class _ModelTask(BaseModel):
     depends_on: list[int] = Field(
         description="必填；并行或首个任务填空数组，依赖任务填从0开始的前序任务下标",
     )
+    expected_output: str | None = Field(
+        default=None,
+        max_length=300,
+        description="Short independently verifiable business deliverable",
+    )
 
 
 class _ModelPlan(BaseModel):
@@ -61,6 +66,22 @@ class _ModelPlan(BaseModel):
         max_length=5,
         description="必填；单任务填空数组，多任务填2到5个完整业务问题",
     )
+    split_reason_code: str | None = Field(default=None, max_length=80)
+    shared_conditions: list[str] = Field(default_factory=list, max_length=20)
+
+
+_PLANNING_CONTRACT_ADDENDUM = """
+Additional output contract:
+1. For a multi-task plan, split_reason_code must be one of
+   DISTINCT_DELIVERABLES, RESULT_DEPENDENCY, EXPLICIT_SEPARATE_RESULTS,
+   MUTUALLY_EXCLUSIVE_BUSINESS_BRANCHES, or COMPOSITE_REPORT_FACETS.
+2. Every task must provide expected_output as a short business deliverable,
+   never an internal ASL, SQL, retrieval, validation, or analysis step.
+3. shared_conditions may contain only conditions explicitly stated by the
+   user, and every affected task question must repeat those conditions.
+4. For SINGLE_TASK use tasks=[], split_reason_code=null, shared_conditions=[].
+Do not output private reasoning or chain-of-thought.
+"""
 
 
 _SYSTEM_PROMPT = """你是数据智能体的业务任务理解与拆分器。只输出符合JSON Schema的JSON，不回答用户问题，不调用工具。
@@ -342,7 +363,7 @@ class MultiQuestionPlanner:
             "messages": [
                 {
                     "role": "system",
-                    "content": _SYSTEM_PROMPT + "\nJSON Schema：" + json.dumps(
+                    "content": _SYSTEM_PROMPT + _PLANNING_CONTRACT_ADDENDUM + "\nJSON Schema：" + json.dumps(
                         schema, ensure_ascii=False, separators=(",", ":")
                     ),
                 },
@@ -394,10 +415,20 @@ class MultiQuestionPlanner:
                 task_id=f"task-{index + 1}",
                 question=item.question.strip(),
                 depends_on=[f"task-{value + 1}" for value in item.depends_on],
+                expected_output=(
+                    item.expected_output.strip()
+                    if item.expected_output and item.expected_output.strip()
+                    else None
+                ),
             )
             for index, item in enumerate(result.tasks)
         ]
-        return TaskPlan(tasks=tasks, planner="STRUCTURED_MODEL")
+        return TaskPlan(
+            tasks=tasks,
+            planner="STRUCTURED_MODEL",
+            split_reason_code=(result.split_reason_code or "UNSPECIFIED"),
+            shared_conditions=list(dict.fromkeys(result.shared_conditions)),
+        )
 
     def _rule_plan(self, question: str) -> TaskPlan | None:
         qualified_facet_plan = self._parallel_qualified_facet_plan(question)

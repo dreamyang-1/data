@@ -58,6 +58,10 @@ _FILE_ARGUMENT_NAMES = {
     "input_files",
 }
 _MAX_TOOL_RESULT_CHARS = 12 * 1024
+_IMAGE_URL = re.compile(
+    r"^https?://.+\.(?:png|jpe?g|gif|webp|svg)(?:\?[^\s]*)?$",
+    re.IGNORECASE,
+)
 
 
 class McpFileAnalysisOutcome(BaseModel):
@@ -254,6 +258,8 @@ class McpFileAnalysisRunner:
             final = await self._chat(messages, None)
             answer = str(final.get("content") or "").strip()
 
+        answer = self._normalize_artifact_markdown(answer, artifacts)
+
         outcome = McpFileAnalysisOutcome(
             applicable=True,
             answer=answer,
@@ -288,6 +294,9 @@ class McpFileAnalysisRunner:
             "按UTF-8原文提供，除非原文确实包含替换字符“�”，不得声称存在乱码或编码问题。"
             "只要工具结果已经满足用户问题，就直接给出结果，不得声称用户需求没有完整传达，"
             "也不要要求用户重新说明已经明确提出的需求。"
+            "\n输出格式必须遵守：工具返回图片URL时，必须输出Markdown图片语法"
+            "![简短说明](https://完整图片地址)；不得把图片URL输出成纯文本或普通链接。"
+            "普通网页、文档和下载地址直接保留完整URL，不要改写地址。"
         )
 
     async def _chat(
@@ -481,6 +490,32 @@ class McpFileAnalysisRunner:
 
         visit(value)
         return list(dict.fromkeys(ref.strip() for ref in references if ref.strip()))[:20]
+
+    @staticmethod
+    def _normalize_artifact_markdown(answer: str, artifacts: list[str]) -> str:
+        """Make image artifacts renderable even when a model emits a plain link."""
+
+        rendered = answer.strip()
+        if not rendered:
+            return rendered
+        for url in dict.fromkeys(artifacts):
+            if not _IMAGE_URL.match(url):
+                continue
+            escaped = re.escape(url)
+            image_pattern = rf"!\[[^\]]*\]\(\s*{escaped}\s*\)"
+            if re.search(image_pattern, rendered):
+                continue
+            normal_link = re.compile(
+                rf"(?<!!)\[([^\]]*)\]\(\s*{escaped}\s*\)"
+            )
+            rendered, count = normal_link.subn(
+                lambda match: f"![{match.group(1).strip() or '图表'}]({url})",
+                rendered,
+            )
+            if count or re.search(image_pattern, rendered):
+                continue
+            rendered = rendered.replace(url, f"![图表]({url})")
+        return rendered
 
 
 def pick_primary_artifact(urls: list[str]) -> str | None:

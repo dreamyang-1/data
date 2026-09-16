@@ -94,6 +94,28 @@ def settings(**updates) -> Settings:
     return Settings(**values)
 
 
+def test_image_artifact_urls_are_normalized_to_markdown_images():
+    image_url = "https://cdn.example.com/charts/sales-trend.png"
+    document_url = "https://files.example.com/report.xlsx"
+
+    assert McpFileAnalysisRunner._normalize_artifact_markdown(
+        image_url,
+        [image_url],
+    ) == f"![图表]({image_url})"
+    assert McpFileAnalysisRunner._normalize_artifact_markdown(
+        f"[销售趋势]({image_url})",
+        [image_url],
+    ) == f"![销售趋势]({image_url})"
+    assert McpFileAnalysisRunner._normalize_artifact_markdown(
+        f"![销售趋势]({image_url})",
+        [image_url],
+    ) == f"![销售趋势]({image_url})"
+    assert McpFileAnalysisRunner._normalize_artifact_markdown(
+        document_url,
+        [document_url],
+    ) == document_url
+
+
 @pytest.mark.asyncio
 async def test_model_drives_uploaded_file_mcp_and_file_argument_is_injected(monkeypatch):
     tool = ToolConfig(

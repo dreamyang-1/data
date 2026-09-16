@@ -66,6 +66,16 @@ SYSTEM_PROMPT = """你是企业数据分析结果解释器。你不执行计算�
 """
 
 
+SYNTHESIS_PROMPT_ADDENDUM = """
+Additional presentation rules:
+- When the input identifies a task number or task question, keep that task
+  boundary in every claim; never blend evidence from different tasks.
+- Preserve verified business object names and field labels exactly as supplied.
+- Do not create chart or image URLs. Image Markdown is rendered only from
+  trusted MCP/chart artifacts outside this synthesis model.
+"""
+
+
 class SynthesisValidationError(ValueError):
     pass
 
@@ -135,7 +145,7 @@ class QwenAnalysisSynthesizer:
                 {
                     "role": "system",
                     "content": (
-                        f"{SYSTEM_PROMPT}\n必须严格遵守JSON Schema："
+                        f"{SYSTEM_PROMPT}{SYNTHESIS_PROMPT_ADDENDUM}\n必须严格遵守JSON Schema："
                         f"{json.dumps(schema, ensure_ascii=False, separators=(',', ':'))}"
                     ),
                 },

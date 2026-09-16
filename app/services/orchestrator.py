@@ -822,7 +822,10 @@ class DataAnalysisOrchestrator:
                             intent=",".join(dict.fromkeys(
                                 item.value for item in task_intents
                             )),
-                            confidence=1.0,
+                            confidence=min(
+                                request.intent_confidence
+                                for request in task_requests
+                            ),
                             display_model="CompositeIntentRecognitionDisplayV2",
                             display_version="V2",
                             presentation_scenario="ANALYTIC",
@@ -3297,7 +3300,9 @@ class DataAnalysisOrchestrator:
             ),
         )
         await emit_progress(
-            "INTENT_RECOGNITION", "RUNNING", "正在识别查询意图和关键分析参数。"
+            "INTENT_RECOGNITION",
+            "RUNNING",
+            "正在进行任务意图分析、参数提取和规范化。",
         )
         model_entity_mentions: list[str] = []
         filter_semantic_ambiguities: list[SemanticAmbiguity] = []
@@ -3324,7 +3329,10 @@ class DataAnalysisOrchestrator:
                 )
                 if deterministic_slot_reply
                 else await self._classify(
-                    classification_question, identity, chat.conversation_id
+                    classification_question,
+                    identity,
+                    chat.conversation_id,
+                    pre_resolved=chat._completed_question_execution,
                 )
             )
             if (
@@ -3364,7 +3372,10 @@ class DataAnalysisOrchestrator:
                     )
                     if explicit_replacement_task
                     else await self._classify(
-                        chat.question, identity, chat.conversation_id
+                        chat.question,
+                        identity,
+                        chat.conversation_id,
+                        pre_resolved=chat._completed_question_execution,
                     )
                 )
                 rounds = 1
@@ -3415,7 +3426,10 @@ class DataAnalysisOrchestrator:
                 else raw_rule_request
                 if independent_chat or deterministic_business_fast_path
                 else await self._classify(
-                    classification_question, identity, chat.conversation_id
+                    classification_question,
+                    identity,
+                    chat.conversation_id,
+                    pre_resolved=chat._completed_question_execution,
                 )
             )
             current_request = request.model_copy(deep=True)
@@ -7377,14 +7391,26 @@ class DataAnalysisOrchestrator:
             return None
 
     async def _classify(
-        self, question: str, identity: TrustedIdentity, conversation_id: str
+        self,
+        question: str,
+        identity: TrustedIdentity,
+        conversation_id: str,
+        *,
+        pre_resolved: bool = False,
     ) -> CanonicalAnalysisRequest:
         with track_operation(
             "V1_ORCHESTRATION",
             "v1.intent_recognition",
         ) as timing:
-            classified = self.classifier.classify(
-                question, identity, conversation_id
+            classify = self.classifier.classify
+            supports_pre_resolved = (
+                "pre_resolved" in inspect.signature(classify).parameters
+            )
+            classified = classify(
+                question,
+                identity,
+                conversation_id,
+                **({"pre_resolved": True} if pre_resolved and supports_pre_resolved else {}),
             )
             result = (
                 await classified if inspect.isawaitable(classified) else classified

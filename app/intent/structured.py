@@ -118,7 +118,12 @@ class StructuredIntentModelClient:
         self.settings = settings
         self._transport = transport
 
-    async def classify(self, question: str) -> StructuredIntentOutput:
+    async def classify(
+        self,
+        question: str,
+        *,
+        pre_resolved: bool = False,
+    ) -> StructuredIntentOutput:
         if not self.settings.intent_model_api_key:
             raise RuntimeError("intent model API key is not configured")
         schema = StructuredIntentOutput.model_json_schema()
@@ -136,13 +141,23 @@ class StructuredIntentModelClient:
             response_format = {"type": "json_object"}
         schema_instruction = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
         business_today = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+        mode_instruction = (
+            "\nThe caller has already resolved conversation context and supplied a "
+            "standalone completed question. Do not reinterpret conversation history. "
+            "Set conversation_control=NEW_REQUEST, "
+            "turn_relation=STANDALONE_NEW_TOPIC, slot_operations=[], and copy the "
+            "input question verbatim into completed_question. Only classify intent "
+            "and extract business parameters from this completed question."
+            if pre_resolved
+            else ""
+        )
         body = {
             "model": self.settings.intent_model_name,
             "messages": [
                 {
                     "role": "system",
                     "content": (
-                        f"{SYSTEM_PROMPT}\n"
+                        f"{SYSTEM_PROMPT}{mode_instruction}\n"
                         f"当前业务日期（Asia/Shanghai）是 {business_today}。早于该日期的明确时间是历史，不是预测。\n"
                         f"必须严格遵守以下 JSON Schema：{schema_instruction}"
                     ),
@@ -213,26 +228,34 @@ class HybridIntentClassifier:
         self.model_client = model_client or StructuredIntentModelClient(settings)
 
     async def classify(
-        self, question: str, identity: TrustedIdentity, conversation_id: str
+        self,
+        question: str,
+        identity: TrustedIdentity,
+        conversation_id: str,
+        *,
+        pre_resolved: bool = False,
     ) -> CanonicalAnalysisRequest:
         request = self.rules.classify(question, identity, conversation_id)
         request.intent_candidates = [
             IntentCandidate(intent=request.primary_intent, confidence=0.65, evidence=[])
         ]
         if not self.settings.intent_model_enabled:
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
         if self._should_skip_model(request, question):
             request.intent_source = "RULE"
             request.intent_confidence = 0.95
             request.intent_candidates[0].confidence = 0.95
             request.assumptions.append("STRONG_RULE_MODEL_SKIPPED")
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
         try:
-            model = await self.model_client.classify(question)
+            model = await self.model_client.classify(
+                question,
+                pre_resolved=pre_resolved,
+            )
         except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
             logger.warning("structured intent model unavailable; using rule baseline: %s", type(exc).__name__)
             request.assumptions.append("STRUCTURED_MODEL_UNAVAILABLE_RULE_FALLBACK")
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
 
         request.intent_candidates.insert(
             0,
@@ -244,16 +267,16 @@ class HybridIntentClassifier:
         )
         if model.confidence < self.settings.intent_model_min_confidence:
             request.assumptions.append("LOW_MODEL_CONFIDENCE_RULE_FALLBACK")
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
         if not self._passes_deterministic_constraints(model, question):
             request.assumptions.append("MODEL_INTENT_FAILED_CONSTRAINT_RULE_FALLBACK")
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
         if (
             model.primary_intent != request.primary_intent
             and self._has_strong_rule_signal(request.primary_intent, question)
         ):
             request.assumptions.append("MODEL_CONFLICT_STRONG_RULE_FALLBACK")
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
 
         deterministic_control = request.conversation_control
         request.primary_intent = model.primary_intent
@@ -410,6 +433,35 @@ class HybridIntentClassifier:
         request.ambiguities = self._filter_ambiguities(
             model.ambiguities, request.missing_slots
         )
+        return self._apply_pre_resolved_contract(request, question, pre_resolved)
+
+    @staticmethod
+    def _apply_pre_resolved_contract(
+        request: CanonicalAnalysisRequest,
+        question: str,
+        enabled: bool,
+    ) -> CanonicalAnalysisRequest:
+        """Keep V2-owned context/completion authoritative during V1 execution.
+
+        The structured intent model may still enrich intent and business slots when
+        a V2 plan cannot be adapted, but it must not reopen conversation relation or
+        rewrite the already validated completed question.
+        """
+
+        if not enabled:
+            return request
+        request.original_question = question
+        request.rewritten_question = question
+        request.conversation_control = ConversationControl.NEW_REQUEST
+        request.turn_relation = TurnRelation.STANDALONE_NEW_TOPIC
+        request.model_turn_relation = TurnRelation.STANDALONE_NEW_TOPIC
+        request.model_turn_relation_confidence = 1.0
+        request.slot_operations = []
+        request.rewrite_context_applied = False
+        request.assumptions = list(dict.fromkeys([
+            *request.assumptions,
+            "CONTEXT_AND_COMPLETION_OWNED_BY_UNIFIED_SEMANTIC_CONTRACT",
+        ]))
         return request
 
     def merge_clarification(

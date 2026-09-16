@@ -137,6 +137,29 @@ must be the same offered target edited by this request in the selected task.
 Dataset operations may use only an offered dataset handle; LIMIT preserves existing order,
 and global ranking is never a local operation on a partial or unknown dataset.'''
 
+PARSE_PROMPT += '''
+Business-language examples:
+- “请提供百特Prismaflex M60 set使用科室。” is a complete NEW_TASK. The
+  product phrase is a FILTER_VALUE/business object value and “使用科室” is
+  the requested field or returned object; do not swap their roles.
+- After that task, “上海市的” is a current-task filter modification only when
+  the offered task context has one unique antecedent. Complete wording is not
+  required for a contextual edit.
+- Two complete clauses requesting different returned objects are a compound
+  task candidate even when joined only by punctuation or colloquial wording.
+Current-turn explicit words always override inherited context. Do not classify
+a complete current request as a clarification answer merely because an older
+Pending exists.
+'''
+
+DRAFT_PROMPT += '''
+The resolved relation and completed-question semantics produced by this stage
+are caller-owned for downstream execution. Bind current evidence to offered
+catalog handles, but do not ask a later intent model to reinterpret history.
+Keep concrete product, manufacturer, hospital, dealer and region names as
+filter values unless the user explicitly asks to return or group by them.
+'''
+
 EDIT_SLOTS = ('subject', 'metrics', 'dimensions', 'projection_spec', 'filter_expression',
     'time_spec', 'ranking_spec', 'comparison_spec', 'delivery_spec', 'relationship_spec')
 DIRECT_EDIT_SLOTS = tuple(slot for slot in EDIT_SLOTS if slot not in {'relationship_spec', 'comparison_spec'})

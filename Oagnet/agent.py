@@ -7202,6 +7202,21 @@ def main(
     # contract is an execution constraint, not retrieval evidence; embedding its
     # aliases and JSON can displace the actual metric and dimension candidates.
     mprompt = builder.build(semantic_user_query)
+    if intent_asl_contract is not None:
+        mprompt += """
+
+[Caller-owned Intent-ASL contract]
+The supplied intent_asl_contract is the authoritative query-shape contract
+already produced by the upstream conversation and intent layer. Use natural
+language only to resolve catalog labels that the contract leaves unresolved.
+Do not change its intent, query_object, required projections, filters, negative
+filters, sorting, ranking limit, comparison shape, or time policy. Do not add a
+metric, grouping dimension, default time range, or result entity merely because
+the natural-language wording could support an alternative interpretation.
+If recalled metadata cannot satisfy the contract, return a bounded ambiguity or
+validation failure; never silently reinterpret the user's task. The final ASL
+must pass the deterministic contract validator and echo the contract unchanged.
+"""
     # 提示词中可能包含实体属性值或业务元数据，禁止完整写入控制台和日志。
     logger.info(
         "已组装ASL提示词: sm=%s, bd=%s, prompt_chars=%s",

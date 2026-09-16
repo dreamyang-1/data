@@ -8,8 +8,10 @@ from app.config import Settings
 from app.domain.models import (
     AnalysisOperator,
     CanonicalAnalysisRequest,
+    ConversationControl,
     PrimaryIntent,
     TrustedIdentity,
+    TurnRelation,
 )
 from app.intent import HybridIntentClassifier, StructuredIntentModelClient
 
@@ -33,6 +35,40 @@ def model_response(output: dict) -> httpx.Response:
         200,
         json={"choices": [{"message": {"content": json.dumps(output, ensure_ascii=False)}}]},
     )
+
+
+def test_pre_resolved_contract_keeps_completed_question_authoritative():
+    question = "请提供百特Prismaflex M60 set使用科室。"
+    request = CanonicalAnalysisRequest(
+        conversation_id="pre-resolved-contract",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="错误的模型改写",
+        rewritten_question="错误的模型改写",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        conversation_control=ConversationControl.FOLLOW_UP,
+        turn_relation=TurnRelation.CURRENT_TOPIC_MODIFICATION,
+        slot_operations=[{
+            "operation": "REPLACE",
+            "slot": "region",
+            "new_value": "上海市",
+            "source": "CURRENT_EXPLICIT",
+        }],
+    )
+
+    result = HybridIntentClassifier._apply_pre_resolved_contract(
+        request,
+        question,
+        True,
+    )
+
+    assert result.original_question == question
+    assert result.rewritten_question == question
+    assert result.conversation_control == ConversationControl.NEW_REQUEST
+    assert result.turn_relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert result.model_turn_relation == TurnRelation.STANDALONE_NEW_TOPIC
+    assert result.slot_operations == []
+    assert "CONTEXT_AND_COMPLETION_OWNED_BY_UNIFIED_SEMANTIC_CONTRACT" in result.assumptions
 
 
 def test_metric_name_noun_is_not_query_entity_evidence():

@@ -68,10 +68,11 @@ def test_missing_parameter_display_names_the_exact_missing_slots():
     view = build_intent_recognition_display_v2(request)
     rendered = render_intent_recognition_display_v2(view)
 
-    assert "参数规范化：未执行，缺少：" in rendered
-    assert "返回的业务对象（例如经销商、医院、产品或科室）" in rendered
-    assert "明细返回字段" in rendered
+    assert "参数规范化：" not in rendered
+    assert "任务意图：明细查询（置信度 0.60）" in rendered
     assert "缺少必要参数" not in rendered
+    assert "返回的业务对象（例如经销商、医院、产品或科室）" in view.clarification_reason
+    assert "返回字段" in view.clarification_reason
     assert "尚未提供返回的业务对象" in view.clarification_reason
 
 
@@ -176,6 +177,7 @@ def test_composite_display_groups_typed_parameters_under_each_completed_question
         "医院（业务对象/分组维度）。"
     ) in rendered
     assert rendered.count("结构化参数提取：") == 2
+    assert "任务意图：明细查询（置信度 0.60）" in rendered
     assert "语义提取字段：" not in rendered
     assert "参数规范化：已识别" not in rendered
 

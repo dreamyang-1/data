@@ -704,7 +704,8 @@ def test_intent_summary_hides_internal_turn_and_clarification_diagnostics():
     assert "上下文补全：" not in standalone_summary
     assert "是否需要追问：" not in standalone_summary
     assert "不追问理由：" not in standalone_summary
-    assert "参数规范化：已完成" in standalone_summary
+    assert "参数规范化：" not in standalone_summary
+    assert "任务意图：趋势分析（置信度" in standalone_summary
 
     followup = standalone.model_copy(
         deep=True,

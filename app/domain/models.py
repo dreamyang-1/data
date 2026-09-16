@@ -1181,6 +1181,7 @@ class AtomicTask(StrictModel):
     task_id: str = Field(min_length=1, max_length=32)
     question: str = Field(min_length=2, max_length=1000)
     depends_on: list[str] = Field(default_factory=list, max_length=5)
+    expected_output: str | None = Field(default=None, max_length=300)
 
 
 class TaskPlan(StrictModel):
@@ -1188,6 +1189,8 @@ class TaskPlan(StrictModel):
     planner: Literal["STRUCTURED_MODEL", "DETERMINISTIC_RULE"]
     tasks: list[AtomicTask] = Field(min_length=2, max_length=5)
     final_deliverable: Literal["COMBINED_REPORT"] | None = None
+    split_reason_code: str | None = Field(default=None, max_length=80)
+    shared_conditions: list[str] = Field(default_factory=list, max_length=20)
 
 
 class TaskExecutionResult(StrictModel):
