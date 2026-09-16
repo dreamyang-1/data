@@ -823,25 +823,12 @@ def render_resolved_intent_context_v2(
 def render_asl_extraction_json(asl: dict[str, object]) -> str:
     """Render the exact validated ASL object without a display-side rewrite."""
 
-    rendered = (
+    return (
         "结构化提取（ASL）：\n"
         "```json\n"
         f"{json.dumps(asl, ensure_ascii=False, indent=2)}\n"
         "```"
     )
-    subject = asl.get("subject")
-    dimensions = asl.get("dimensions")
-    if (
-        isinstance(subject, dict)
-        and subject.get("entity")
-        and isinstance(dimensions, list)
-        and dimensions
-    ):
-        rendered += (
-            "\n\n字段说明：`subject.entity` 表示指标计算所基于的业务实体；"
-            "`dimensions` 表示结果的分组与展示粒度，两者可以不同。"
-        )
-    return rendered
 
 
 def build_composite_intent_recognition_display_v2(

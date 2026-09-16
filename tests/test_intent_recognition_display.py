@@ -336,10 +336,8 @@ def test_validated_asl_is_rendered_as_direct_json_without_field_reformatting():
     assert json.loads(json_text) == asl
     assert "指标：" not in rendered
     assert "筛选条件：" not in rendered
-    assert (
-        "字段说明：`subject.entity` 表示指标计算所基于的业务实体；"
-        "`dimensions` 表示结果的分组与展示粒度，两者可以不同。"
-    ) in rendered
+    assert "字段说明：" not in rendered
+    assert "subject.entity" not in rendered
 
 
 def test_control_enum_filter_is_not_promoted_to_display_entity():
