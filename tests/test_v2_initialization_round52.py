@@ -130,7 +130,12 @@ async def test_initial_filter_adapter_keeps_the_original_current_task_scope_requ
             evidence_mention_ids=predicate['evidence_mention_ids'],value=predicate['value'])]
         return result
     steps=[(text,parsed,draft)]
-    with pytest.raises(RecognitionFailure,match='V2_SLOT_OPERATION_CONFLICT'):
+    # The exported Predicate contract pins scope to CURRENT_TASK, so a
+    # CURRENT_DATASET predicate is refused by the exact dynamic schema before
+    # the unmarked initial-assignment adapter can lower it. The legitimate
+    # sibling (CURRENT_TASK scope, same unmarked markers) still proves the
+    # adapter keeps the original current-task requirement at runtime.
+    with pytest.raises(RecognitionFailure,match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
         await turns(planner(source_catalog,steps)[0],steps)
 
 
