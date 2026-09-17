@@ -229,14 +229,6 @@ def render_dependency_error(exc: AdapterError) -> str | None:
             "仅当存在明确的缺失证据时才能判定为未配置。"
         )
 
-    if code == "ASL_REQUIRED_NAME_NON_NULL_MISSING":
-        fields = _diagnostic_subject(details, "missing_name_fields")
-        target = _quote_join(fields) if fields else "本次名单查询的名称字段"
-        return (
-            f"ASL 没有为{target}保留非空约束，可能返回无名称记录，因此本次未执行。\n"
-            f"语义层需配置：将{target}发布为该实体的展示名称属性，并在名单查询中保留非空条件。"
-        )
-
     if code == "ASL_RELATIONSHIP_ANCHOR_INVALID":
         anchor = _diagnostic_subject(details, "relationship_anchor")
         target = _quote_join(anchor) if anchor else "本次关系查询的主体"

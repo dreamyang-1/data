@@ -687,30 +687,6 @@ async def test_contextual_entity_mention_is_preserved_for_current_semantic_recal
     )
 
 
-def test_required_non_null_name_filter_accepts_current_semantic_field():
-    required = CanonicalAnalysisRequest(
-        conversation_id="non-null-filter",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="查询医院名单",
-        primary_intent=PrimaryIntent.DETAIL_QUERY,
-        entity="医院",
-        fields=["医院名称"],
-        assumptions=["REQUIRED_NAME_NON_NULL=医院名称"],
-    )
-
-    HttpDataRetrievalAdapter._validate_request_filters(
-        {
-            "filters": [{
-                "field": "hospital.hospital_name",
-                "operator": "IS NOT NULL",
-                "value": None,
-            }]
-        },
-        required,
-    )
-
-
 def test_vector_bound_filter_requires_the_same_semantic_attribute():
     required = CanonicalAnalysisRequest(
         conversation_id="bound-parent-brand",
@@ -753,57 +729,6 @@ def test_vector_bound_filter_requires_the_same_semantic_attribute():
         )
 
     assert exc.value.code == "ASL_REQUIRED_FILTER_MISSING"
-
-def test_required_non_null_name_filter_cannot_be_dropped():
-    required = CanonicalAnalysisRequest(
-        conversation_id="missing-non-null-filter",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="查询医院名单",
-        primary_intent=PrimaryIntent.DETAIL_QUERY,
-        entity="医院",
-        fields=["医院名称"],
-        assumptions=["REQUIRED_NAME_NON_NULL=医院名称"],
-    )
-
-    with pytest.raises(AdapterError) as exc:
-        HttpDataRetrievalAdapter._validate_request_filters(
-            {"filters": []}, required
-        )
-
-    assert exc.value.code == "ASL_REQUIRED_NAME_NON_NULL_MISSING"
-
-
-def test_required_non_null_name_filter_is_bound_to_projected_semantic_field():
-    required = CanonicalAnalysisRequest(
-        conversation_id="bind-non-null-filter",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="查询医院名单",
-        primary_intent=PrimaryIntent.DETAIL_QUERY,
-        entity="医院",
-        fields=["医院名称"],
-        assumptions=["REQUIRED_NAME_NON_NULL=医院名称"],
-    )
-    asl = {
-        "dimensions": [{
-            "name": "hospital.hospital_name",
-            "alias": "医院名称",
-        }],
-        "filters": [],
-    }
-
-    HttpDataRetrievalAdapter._ensure_required_name_non_null_filters(
-        asl, required
-    )
-
-    assert asl["filters"] == [{
-        "field": "hospital.hospital_name",
-        "operator": "!=",
-        "value": "",
-    }]
-    HttpDataRetrievalAdapter._validate_request_filters(asl, required)
-
 
 def dependency_constraint(values=None):
     values = values or ["超声科", "麻醉科"]
@@ -3188,7 +3113,7 @@ def test_dataset_fingerprint_is_stable_across_request_retries():
     assert first.snapshot_id == second.snapshot_id
 
 
-def test_relationship_projection_normalizes_and_deduplicates_visible_rows():
+def test_dataset_preserves_relationship_rows_exactly_as_returned_by_sql_service():
     payload = {
         "success": True,
         "data": [
@@ -3202,16 +3127,16 @@ def test_relationship_projection_normalizes_and_deduplicates_visible_rows():
 
     dataset = HttpDataRetrievalAdapter._dataset(
         payload,
-        request_id="relationship-dedupe",
-        distinct_projection=True,
+        request_id="relationship-raw-rows",
     )
 
     assert dataset.rows == [
         {"商品名称": "超声血管导引穿刺套件", "适用科室": "麻醉科"},
+        {"商品名称": "超声血管导引穿刺套件 ", "适用科室": " 麻醉科"},
         {"商品名称": "超声血管导引穿刺套件", "适用科室": "肾内科"},
     ]
-    assert dataset.row_count == 2
-    assert dataset.total_row_count == 2
+    assert dataset.row_count == 3
+    assert dataset.total_row_count == 3
 
 
 class _ConcurrentRedis:

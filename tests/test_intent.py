@@ -797,7 +797,7 @@ def test_multidimensional_trend_separates_product_from_dimensions():
         ("查询医用外科口罩的供应商清单。", "供应商", "供应商名称"),
     ],
 )
-def test_master_name_lists_require_non_null_members(
+def test_master_name_lists_do_not_add_local_non_null_constraints(
     question: str, entity: str, field: str
 ):
     request = RuleBasedIntentClassifier().classify(
@@ -807,7 +807,7 @@ def test_master_name_lists_require_non_null_members(
     assert request.primary_intent == PrimaryIntent.DETAIL_QUERY
     assert request.entity == entity
     assert field in request.fields
-    assert f"REQUIRED_NAME_NON_NULL={field}" in request.assumptions
+    assert f"REQUIRED_NAME_NON_NULL={field}" not in request.assumptions
 
 
 def test_brand_comparison_uses_business_names_not_internal_codes():
@@ -2201,7 +2201,7 @@ def test_dated_sales_record_activity_does_not_request_partner_status_or_threshol
     assert "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE" in (
         request.assumptions
     )
-    assert "REQUIRED_NAME_NON_NULL=经销商名称" in request.assumptions
+    assert "REQUIRED_NAME_NON_NULL=经销商名称" not in request.assumptions
 
 
 def test_named_dealer_product_lookup_is_relationship_detail_without_metric():
@@ -2334,7 +2334,7 @@ def test_plain_active_partner_status_still_requires_an_explicit_activity_period(
 
     assert request.fields == ["经销商名称", "合作状态"]
     assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
-    assert "REQUIRED_NAME_NON_NULL=经销商名称" in request.assumptions
+    assert "REQUIRED_NAME_NON_NULL=经销商名称" not in request.assumptions
     assert request.missing_slots == []
 
 

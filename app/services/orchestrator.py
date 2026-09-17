@@ -93,9 +93,6 @@ from app.presentation import (
     render_intent_recognition_display_v2,
     render_reliability_validation,
 )
-from app.services.relationship_projection import (
-    requires_distinct_relationship_projection,
-)
 from app.skills import DynamicSkillLoader, skill_for_intent
 from minio_followup_store import (
     DatasetScope,
@@ -5151,9 +5148,6 @@ class DataAnalysisOrchestrator:
         dataset_id=None, external_search_mode=None,
     ):
         self._restore_projected_filter_columns(request, query_result.dataset)
-        query_result = self._enforce_name_projection_integrity(
-            request, query_result
-        )
         await emit_progress(
             "DATA_RETRIEVAL",
             "COMPLETED",
@@ -5547,27 +5541,6 @@ class DataAnalysisOrchestrator:
                     "quality_status": query_result.dataset.quality_status,
                     "result_fingerprint": query_result.dataset.snapshot_id,
                     **self._source_watermark_payload(request, query_result.dataset),
-                    **(
-                        {
-                            "presentation": {
-                                "mode": "UNIQUE_RELATIONSHIP_PROJECTION",
-                                "original_relationship_row_count": query_result.dataset.row_count,
-                                "unique_combination_count": len(unique_projection_rows),
-                            }
-                        }
-                        if (
-                            not query_result.dataset.truncated
-                            and (
-                                unique_projection_rows := self._relationship_projection_rows(
-                                    request,
-                                    query_result.dataset.columns,
-                                    query_result.dataset.rows,
-                                )
-                            )
-                            is not None
-                        )
-                        else {}
-                    ),
                 },
             )
         ]
@@ -9627,159 +9600,6 @@ class DataAnalysisOrchestrator:
             for field in restored:
                 row[field] = constants[field]
 
-    @classmethod
-    def _enforce_name_projection_integrity(
-        cls,
-        request: CanonicalAnalysisRequest,
-        query_result: DataQueryResult,
-    ) -> DataQueryResult:
-        """Remove invalid master-name members from complete list results.
-
-        The canonical/ASL constraint is the primary guard.  This deterministic
-        result gate protects against stale relationship rows, legacy translators
-        and dirty placeholder strings that still reach a complete result.  A
-        A truncated result cannot be repaired completely because unseen/file
-        rows may contain the same defect.  The verified preview is still useful,
-        so keep it with a warning while preventing callers from presenting it as
-        a complete clean list.
-        """
-
-        if request.primary_intent != PrimaryIntent.DETAIL_QUERY:
-            return query_result
-        required_fields = list(dict.fromkeys(
-            value.split("=", 1)[1].strip()
-            for value in request.assumptions
-            if value.startswith("REQUIRED_NAME_NON_NULL=")
-            and value.split("=", 1)[1].strip()
-        ))
-        if not required_fields or not query_result.dataset.rows:
-            return query_result
-
-        aliases = {
-            "医院名称": {"医院", "hospital", "hospitalname", "medicalinstitutionname"},
-            "经销商名称": {"经销商", "dealer", "dealername", "distributorname"},
-            "供应商名称": {"供应商", "supplier", "suppliername", "vendorname"},
-            "厂家名称": {"厂家", "厂商", "manufacturer", "manufacturername", "makername"},
-            "制造商名称": {"制造商", "manufacturer", "manufacturername", "makername"},
-            "商品名称": {"商品", "产品", "product", "productname", "goodsname", "itemname"},
-            "客户名称": {"客户", "customer", "customername", "clientname"},
-            "门店名称": {"门店", "store", "storename", "shopname"},
-            "科室名称": {"科室", "适用科室", "department", "departmentname", "deptname"},
-            "品牌名称": {"品牌", "brand", "brandname"},
-            "母品牌": {"母品牌名称", "parentbrand", "parentbrandname"},
-        }
-
-        def normalize(value: Any) -> str:
-            return re.sub(
-                r"[^0-9a-z\u4e00-\u9fff]", "", str(value or "").casefold()
-            )
-
-        resolved_columns: list[str] = []
-        for field in required_fields:
-            tokens = {
-                normalize(field),
-                *(normalize(value) for value in aliases.get(field, set())),
-            }
-            matches = [
-                column for column in query_result.dataset.columns
-                if normalize(column) in tokens
-            ]
-            if len(matches) == 1:
-                resolved_columns.append(matches[0])
-        if len(resolved_columns) != len(required_fields):
-            return query_result
-
-        invalid_markers = {
-            "", "-", "--", "—", "–", "－", "null", "none", "nil", "n/a",
-            "na", "未填写", "未知", "无",
-        }
-
-        def valid_row(row: dict[str, Any]) -> bool:
-            for column in resolved_columns:
-                value = row.get(column)
-                if value is None or str(value).strip().casefold() in invalid_markers:
-                    return False
-            return True
-
-        clean_rows = [row for row in query_result.dataset.rows if valid_row(row)]
-        removed_count = len(query_result.dataset.rows) - len(clean_rows)
-        if removed_count == 0:
-            return query_result
-
-        dataset_payload = query_result.dataset.model_dump()
-        dataset_payload["rows"] = clean_rows
-        dataset_payload["row_count"] = len(clean_rows)
-        if query_result.dataset.truncated:
-            dataset_payload["quality_status"] = "WARN"
-        else:
-            dataset_payload["total_row_count"] = len(clean_rows)
-        cleaned_dataset = Dataset.model_validate(dataset_payload)
-        transform = {
-            "type": "DROP_INVALID_NAME_PROJECTION_ROWS",
-            "fields": required_fields,
-            "removed_row_count": removed_count,
-            "verified_complete_result": not query_result.dataset.truncated,
-        }
-        assumption = f"INVALID_NAME_ROWS_REMOVED={removed_count}"
-        if assumption not in request.assumptions:
-            request.assumptions.append(assumption)
-        if query_result.dataset.truncated:
-            preview_assumption = "NAME_PROJECTION_VERIFIED_PREVIEW_ONLY"
-            if preview_assumption not in request.assumptions:
-                request.assumptions.append(preview_assumption)
-        return query_result.model_copy(update={
-            "dataset": cleaned_dataset,
-            "execution_transforms": [
-                *query_result.execution_transforms,
-                transform,
-            ],
-            "result_file_url": (
-                None if query_result.dataset.truncated
-                else query_result.result_file_url
-            ),
-        })
-
-    @staticmethod
-    def _relationship_projection_rows(
-        request: CanonicalAnalysisRequest,
-        columns: list[str],
-        rows: list[dict[str, Any]],
-    ) -> list[dict[str, Any]] | None:
-        """Deduplicate only a set-shaped relationship projection for display.
-
-        A physical relationship table can legitimately contain several source
-        rows that project to the same user-facing pair (for example, two source
-        objects related to the same target).  The underlying dataset remains
-        untouched.  Transaction/event detail is deliberately excluded because
-        identical projected facts can still be separate valid observations.
-        """
-
-        master_name_columns = {
-            "产品名称", "商品名称", "经销商名称", "供应商名称",
-            "医院名称", "客户名称", "门店名称", "品牌名称",
-        }
-        unambiguous_single_master_projection = (
-            len(columns) == 1 and columns[0] in master_name_columns
-        )
-        if len(rows) < 2 or not (
-            unambiguous_single_master_projection
-            or requires_distinct_relationship_projection(request)
-        ):
-            return None
-
-        unique_rows: list[dict[str, Any]] = []
-        seen: set[Any] = set()
-        for row in rows:
-            projection_key = tuple(
-                (column, DataAnalysisOrchestrator._projection_value_key(row.get(column)))
-                for column in columns
-            )
-            if projection_key in seen:
-                continue
-            seen.add(projection_key)
-            unique_rows.append(row)
-        return unique_rows if len(unique_rows) < len(rows) else None
-
     @staticmethod
     def _relationship_count_projection_request(
         request: CanonicalAnalysisRequest,
@@ -9970,25 +9790,6 @@ class DataAnalysisOrchestrator:
             # looking answer.  Truly larger results arrive as truncated/file
             # responses and are handled by the explicit preview branch.
             display_limit = 1000
-            unique_rows = (
-                None
-                if result_truncated
-                else DataAnalysisOrchestrator._relationship_projection_rows(
-                    request, columns, rows
-                )
-            )
-            if unique_rows is not None:
-                answer = (
-                    f"查询返回 {len(rows)} 条原始关系记录；"
-                    f"按当前投影字段完全相同的组合去重展示后，共 {len(unique_rows)} 个唯一组合。\n\n"
-                    f"{DataAnalysisOrchestrator._markdown_result_table(columns, unique_rows[:display_limit], question=request.rewritten_question or request.original_question)}\n\n"
-                )
-                if len(unique_rows) > display_limit:
-                    answer += (
-                        f"> 当前展示前 {display_limit} 个唯一组合，完整结果请使用附件下载。\n\n"
-                    )
-                answer += f"> 原始数据集及证据行数仍为 {len(rows)}。"
-                return answer
             answer = (
                 f"共查询到 {len(rows)} 条明细。\n\n"
                 f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit], question=request.rewritten_question or request.original_question)}"

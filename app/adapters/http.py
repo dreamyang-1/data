@@ -1413,20 +1413,6 @@ class HttpDataRetrievalAdapter:
                 + "。这些条件必须逐项出现在ASL filters中，字段可映射为已注册的语义字段，"
                 "但值、运算方向和业务含义不得省略、放宽或替换。"
             )
-        required_non_null_names = [
-            value.split("=", 1)[1]
-            for value in request.assumptions
-            if value.startswith("REQUIRED_NAME_NON_NULL=")
-            and value.split("=", 1)[1].strip()
-        ]
-        if required_non_null_names:
-            asl_query += (
-                "\n名单主名称完整性要求："
-                + "、".join(dict.fromkeys(required_non_null_names))
-                + "必须使用当前语义层注册的对应名称属性投影，并在ASL filters中保留"
-                "“名称 != 空字符串”约束；该约束通过SQL三值逻辑同时排除NULL和空字符串，"
-                "不得把空名称作为名单成员返回。"
-            )
         if request.dimensions:
             grouped_dimension_roles = self._required_grouped_dimension_roles(
                 request
@@ -2047,7 +2033,6 @@ class HttpDataRetrievalAdapter:
         )
         self._repair_required_model81_dimensions(asl, request, semantic_model_id)
         self._deduplicate_relationship_identity_dimensions(asl)
-        self._ensure_required_name_non_null_filters(asl, request)
         self._validate_semantic_entity_mentions(asl, request, asl_repairs)
         bound_metric_codes = {
             metric.metric_id.split(":", 1)[1]
@@ -2550,7 +2535,6 @@ class HttpDataRetrievalAdapter:
             raw,
             request_id=str(request.request_id),
             has_result_file=result_file_url is not None,
-            distinct_projection=requires_distinct_relationship_projection(request),
         )
         if analysis_contract is not None and not dataset.truncated:
             violation = validate_contract(
@@ -3085,35 +3069,6 @@ class HttpDataRetrievalAdapter:
                 "ASL did not preserve one or more caller-grounded filters",
                 details={"missing_filters": missing},
             )
-        required_name_fields = list(dict.fromkeys(
-            value.split("=", 1)[1].strip()
-            for value in request.assumptions
-            if value.startswith("REQUIRED_NAME_NON_NULL=")
-            and value.split("=", 1)[1].strip()
-        ))
-        missing_name_constraints = [
-            expected_field
-            for expected_field in required_name_fields
-            if not any(
-                is_non_null_constraint(item)
-                and not cls._missing_detail_fields(
-                    [expected_field],
-                    [{
-                        key: item.get(key)
-                        for key in ("field", "name", "attr", "alias")
-                        if item.get(key) is not None
-                    }],
-                )
-                for item in generated
-            )
-        ]
-        if missing_name_constraints:
-            raise AdapterError(
-                "ASL_REQUIRED_NAME_NON_NULL_MISSING",
-                "ASL omitted a required master-name non-null constraint",
-                details={"missing_name_fields": missing_name_constraints},
-            )
-
     @staticmethod
     def _validate_semantic_entity_mentions(
         asl: dict[str, Any],
@@ -3180,83 +3135,6 @@ class HttpDataRetrievalAdapter:
                 "ASL did not provide source-backed bindings for semantic entity mentions",
                 details={"unresolved_mentions": unresolved},
             )
-
-    @classmethod
-    def _ensure_required_name_non_null_filters(
-        cls,
-        asl: dict[str, Any],
-        request: CanonicalAnalysisRequest,
-    ) -> None:
-        """Bind list-name completeness to the currently projected ASL field.
-
-        The ASL model chooses the registered semantic attribute.  Once that
-        projection is present, adding a non-null predicate on the exact same
-        reference is deterministic and remains valid when physical schemas are
-        republished.  No table or column name is guessed by the application.
-        """
-
-        required_fields = list(dict.fromkeys(
-            value.split("=", 1)[1].strip()
-            for value in request.assumptions
-            if value.startswith("REQUIRED_NAME_NON_NULL=")
-            and value.split("=", 1)[1].strip()
-        ))
-        if not required_fields:
-            return
-        filters = [
-            item for item in (asl.get("filters") or []) if isinstance(item, dict)
-        ]
-        dimensions = [
-            item for item in (asl.get("dimensions") or []) if isinstance(item, dict)
-        ]
-        null_operators = {
-            "IS_NOT_NULL", "IS NOT NULL", "NOT_NULL", "NOT NULL",
-        }
-
-        negative_operators = {
-            "NE", "!=", "<>", "NOT_EQ", "NOT IN", "NOT_IN", "EXCLUDE",
-        }
-
-        def is_non_null_constraint(item: dict[str, Any]) -> bool:
-            operator = str(item.get("operator") or "").upper()
-            if operator in null_operators:
-                return True
-            return (
-                operator in negative_operators
-                and item.get("value") is not None
-                and str(item.get("value")).strip() == ""
-            )
-        for expected_field in required_fields:
-            if any(
-                is_non_null_constraint(item)
-                and not cls._missing_detail_fields([expected_field], [item])
-                for item in filters
-            ):
-                continue
-            candidates = [
-                item for item in dimensions
-                if not cls._missing_detail_fields([expected_field], [item])
-            ]
-            if len(candidates) != 1:
-                continue
-            dimension = candidates[0]
-            reference = next(
-                (
-                    str(dimension.get(key)).strip()
-                    for key in ("name", "field")
-                    if dimension.get(key) is not None
-                    and str(dimension.get(key)).strip()
-                ),
-                None,
-            )
-            if reference is None:
-                continue
-            filters.append({
-                "field": reference,
-                "operator": "!=",
-                "value": "",
-            })
-        asl["filters"] = filters
 
     @classmethod
     def _validate_no_synthetic_product_filter(
@@ -4584,7 +4462,6 @@ class HttpDataRetrievalAdapter:
     @staticmethod
     def _dataset(
         data: dict[str, Any], *, request_id: str, has_result_file: bool = False,
-        distinct_projection: bool = False,
     ) -> Dataset:
         rows_from_data = data.get("data")
         uses_preview = (
@@ -4641,34 +4518,6 @@ class HttpDataRetrievalAdapter:
                 "SQL_RESPONSE_INVALID",
                 "truncated=false conflicts with total_count greater than returned rows",
             )
-        if distinct_projection and rows:
-            # Relationship queries are sets.  Keep a final defensive boundary
-            # here because legacy translator versions and physical join paths
-            # can still return duplicate visible rows even when the ASL asks
-            # for DISTINCT.  Normalize only surrounding whitespace and dedupe
-            # the complete projected row; ordinary transaction detail never
-            # enters this branch.
-            normalized_rows: list[dict[str, Any]] = []
-            seen: set[str] = set()
-            for row in rows:
-                normalized = {
-                    key: value.strip() if isinstance(value, str) else value
-                    for key, value in row.items()
-                }
-                marker = json.dumps(
-                    normalized,
-                    ensure_ascii=False,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                    default=str,
-                )
-                if marker in seen:
-                    continue
-                seen.add(marker)
-                normalized_rows.append(normalized)
-            rows = normalized_rows
-            if not truncated:
-                total_count = len(rows)
         fingerprint = hashlib.sha256(
             json.dumps(
                 {"columns": columns, "rows": rows},

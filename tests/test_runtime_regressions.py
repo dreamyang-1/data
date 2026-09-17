@@ -151,7 +151,7 @@ def test_complete_217_row_product_list_is_not_silently_presented_as_preview() ->
     assert "当前展示前" not in answer
 
 
-def test_relationship_projection_is_deduplicated_only_for_answer_display() -> None:
+def test_relationship_projection_preserves_duplicate_sql_rows() -> None:
     request = request_for("某商品适用于哪些科室")
     columns = ["科室"]
     rows = [
@@ -168,16 +168,14 @@ def test_relationship_projection_is_deduplicated_only_for_answer_display() -> No
         KnowledgeContext(query=request.original_question, documents=[]),
     )
 
-    assert "4 条原始关系记录" in answer
-    assert "2 个唯一组合" in answer
-    assert "原始数据集及证据行数仍为 4" in answer
+    assert "共查询到 4 条明细" in answer
     assert "| 科室 |" in answer
-    assert answer.count("| 外科 |") == 1
-    assert answer.count("| 麻醉科 |") == 1
+    assert answer.count("| 外科 |") == 2
+    assert answer.count("| 麻醉科 |") == 2
     assert len(rows) == 4
 
 
-def test_implicit_product_dealer_list_deduplicates_repeated_fact_paths() -> None:
+def test_implicit_product_dealer_list_preserves_repeated_fact_paths() -> None:
     request = request_for("查询上海市医用外科口罩产品的经销商名单")
     request.entity = "经销商"
     request.fields = ["经销商名称"]
@@ -190,10 +188,9 @@ def test_implicit_product_dealer_list_deduplicates_repeated_fact_paths() -> None
         KnowledgeContext(query=request.original_question, documents=[]),
     )
 
-    assert "196 条原始关系记录" in answer
-    assert "1 个唯一组合" in answer
-    assert answer.count("| 上海德昶实业有限公司 |") == 1
-    assert "共查询到 196 条明细" not in answer
+    assert "共查询到 196 条明细" in answer
+    assert answer.count("| 上海德昶实业有限公司 |") == 196
+    assert "唯一组合" not in answer
 
 
 def test_identical_transaction_detail_rows_are_not_silently_deduplicated() -> None:
@@ -297,7 +294,7 @@ class RelationshipProjectionRetrieval:
 
 
 @pytest.mark.asyncio
-async def test_relationship_answer_keeps_query_evidence_at_physical_row_count() -> None:
+async def test_relationship_answer_preserves_all_sql_rows_including_duplicates() -> None:
     adapters = build_mock_adapters()
     adapters = type(adapters)(
         semantic=adapters.semantic,
@@ -330,13 +327,11 @@ async def test_relationship_answer_keeps_query_evidence_at_physical_row_count() 
     )
     assert query_evidence.payload["row_count"] == 4
     assert query_evidence.payload["returned_row_count"] == 4
-    assert query_evidence.payload["presentation"] == {
-        "mode": "UNIQUE_RELATIONSHIP_PROJECTION",
-        "original_relationship_row_count": 4,
-        "unique_combination_count": 2,
-    }
-    assert "4 条原始关系记录" in response.answer
-    assert "2 个唯一组合" in response.answer
+    assert "presentation" not in query_evidence.payload
+    assert "共查询到 4 条明细" in response.answer
+    assert response.answer.count("外科") == 2
+    assert response.answer.count("麻醉科") == 2
+    assert "唯一组合" not in response.answer
 
 
 class CapturingDatasetStore:
