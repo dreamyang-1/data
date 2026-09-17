@@ -178,6 +178,15 @@ def select_data_execution_question(
 
     canonical = render_execution_question(request)
     if (
+        "SEMANTIC_AMBIGUITY_CONFIRMED_SURFACE_ONLY" in request.assumptions
+        and request.rewritten_question
+    ):
+        return (
+            request.rewritten_question,
+            canonical,
+            "CONFIRMED_PENDING_COMPLETION",
+        )
+    if (
         decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
         and decision.context_mode == ContextMode.NONE
     ):
@@ -631,7 +640,34 @@ class DataAnalysisOrchestrator:
             raw_request = self._classify_with_rules(
                 chat.question, identity, chat.conversation_id
             )
-            independent_chat = raw_request.primary_intent == PrimaryIntent.CHAT
+            planning_question = chat.question
+            confirmed_pending_choice = None
+            if not (
+                chat._is_regeneration_execution
+                or chat._completed_question_execution
+            ):
+                planning_pending = await self.sessions.get_pending(
+                    identity.tenant_id,
+                    identity.user_id,
+                    chat.application_id,
+                    chat.conversation_id,
+                )
+                if (
+                    planning_pending is not None
+                    and self._pending_scope_matches(planning_pending.request, chat)
+                ):
+                    confirmed_pending_choice = self._semantic_clarification_choice(
+                        planning_pending.request, chat.question
+                    )
+                    if confirmed_pending_choice is not None:
+                        planning_question = render_execution_question(
+                            planning_pending.request,
+                            confirmation=confirmed_pending_choice["confirmation"],
+                        )
+            independent_chat = (
+                raw_request.primary_intent == PrimaryIntent.CHAT
+                and confirmed_pending_choice is None
+            )
             dag_pending = (
                 None
                 if (
@@ -708,13 +744,13 @@ class DataAnalysisOrchestrator:
                             authorized_scope=chat.authorized_semantic_scope,
                         ) is None
                     )
-                    if not semantic_decision_ready:
+                    if not semantic_decision_ready and confirmed_pending_choice is None:
                         try:
                             with track_operation(
                                 "V1_ORCHESTRATION",
                                 "v1.task_decomposition",
                             ) as timing:
-                                plan = await self.task_planner.plan(chat.question)
+                                plan = await self.task_planner.plan(planning_question)
                                 timing.mark_first_result()
                                 timing.set_attribute(
                                     "task_count",
@@ -811,7 +847,7 @@ class DataAnalysisOrchestrator:
                                 if plan is not None
                                 else (
                                     "当前问题无需拆分，按单任务执行。\n"
-                                    f"任务1：{chat.question}\n"
+                                    f"任务1：{planning_question}\n"
                                     f"规划调用：{QUERY_EXECUTION_CHAIN}"
                                 )
                             )
@@ -3355,6 +3391,20 @@ class DataAnalysisOrchestrator:
             )
             if semantic_choice is not None:
                 clarification_answer = semantic_choice["confirmation"]
+                turn_decision.relation = TurnRelation.CLARIFICATION_RESPONSE
+                turn_decision.context_mode = ContextMode.CLARIFICATION_RESUME
+                turn_decision.context_dependent = True
+                turn_decision.inherit_business_context = True
+                turn_decision.create_new_analysis_thread = False
+                turn_decision.selected_thread_id = (
+                    pending.request.analysis_thread_id
+                    or f"thread-{pending.request.request_id}"
+                )
+                turn_decision.selected_episode_id = str(pending.request.request_id)
+                turn_decision.reason_codes = list(dict.fromkeys([
+                    *turn_decision.reason_codes,
+                    "EXACT_PENDING_OPTION",
+                ]))
             incoming = (
                 self._classify_with_rules(
                     clarification_answer, identity, chat.conversation_id
@@ -7807,6 +7857,18 @@ class DataAnalysisOrchestrator:
                     "SEMANTIC_AMBIGUITY_CONFIRMED_ATTRIBUTE=" + canonical_code
                 )
                 applied = True
+
+        if not applied and ambiguity.type in {
+            "subject", "entity_role", "entity_value", "filter", "filter_slot",
+        }:
+            # A user-selected visible business meaning is authoritative even
+            # when the candidate does not yet expose a catalog field ID. Keep
+            # the exact choice in the completed question and let the scoped ASL
+            # planner perform final field binding from that wording.
+            target.assumptions.append(
+                "SEMANTIC_AMBIGUITY_CONFIRMED_SURFACE_ONLY"
+            )
+            applied = True
 
         if not applied:
             # A visible option is not a successful clarification until its

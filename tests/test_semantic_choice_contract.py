@@ -9,11 +9,12 @@ from app.adapters.base import AdapterBundle, AdapterError
 from app.adapters.mock import MockDataRetrievalAdapter
 from app.config import Settings
 from app.domain.models import (
-    CanonicalAnalysisRequest, ChatRequest, MetricRef, PrimaryIntent,
+    CanonicalAnalysisRequest, ChatRequest, MetricRef, PendingState, PrimaryIntent,
     SemanticAmbiguity, TimeRange, TrustedIdentity,
 )
 from app.intent import RuleBasedIntentClassifier
 from app.services import DataAnalysisOrchestrator
+from app.services.progress import progress_scope
 from app.stores import InMemorySessionStore
 
 
@@ -148,6 +149,32 @@ class FilterAmbiguousRetrieval:
         return await self.delegate.query(request, identity, **kwargs)
 
 
+class SurfaceOnlyRoleRetrieval:
+    def __init__(self):
+        self.requests = []
+        self.delegate = MockDataRetrievalAdapter()
+        self.ambiguity = SemanticAmbiguity(
+            type="entity_role",
+            phrase="费森尤斯产品",
+            ambiguity_id="product-brand-role",
+            question="请选择费森尤斯产品的匹配方式。",
+            candidates=["按商品名称模糊匹配", "按品牌/厂家字段过滤"],
+            candidate_details=[{}, {}],
+            affected_slots=["filters"],
+        )
+
+    async def query(self, request, identity, **kwargs):
+        self.requests.append(request.model_copy(deep=True))
+        if "按品牌/厂家字段过滤" not in request.rewritten_question:
+            details = [self.ambiguity.model_dump(mode="json")]
+            raise AdapterError(
+                "ASL_AMBIGUOUS",
+                json.dumps(details, ensure_ascii=False),
+                details=details,
+            )
+        return await self.delegate.query(request, identity, **kwargs)
+
+
 def service(retrieval):
     defaults = build_mock_adapters()
     return DataAnalysisOrchestrator(
@@ -200,6 +227,51 @@ async def test_real_filter_choice_round_applies_ninth_catalog_option():
     )
     assert "巴德血透产品" in executed.rewritten_question
     assert "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER" in executed.assumptions
+
+
+@pytest.mark.asyncio
+async def test_surface_only_choice_restores_full_task_before_planning():
+    retrieval = SurfaceOnlyRoleRetrieval()
+    agent = service(retrieval)
+
+    class NoSplitPlanner:
+        async def plan(self, question):
+            return None
+
+    agent.settings.multi_question_enabled = True
+    agent.task_planner = NoSplitPlanner()
+    request = pending()
+    request.primary_intent = PrimaryIntent.DETAIL_QUERY
+    request.entity = "医院"
+    request.fields = ["医院名称"]
+    request.metrics = []
+    request.dimensions = ["医院"]
+    request.filters = [{"field": "城市", "operator": "EQ", "value": "南京"}]
+    request.original_question = "请提供南京哪些医院使用费森尤斯产品。"
+    request.rewritten_question = request.original_question
+    request.missing_slots = ["semantic_ambiguity"]
+    request.semantic_ambiguities = [retrieval.ambiguity]
+    await agent.sessions.put_pending(
+        PendingState(request=request), expected_version=0,
+    )
+
+    events = []
+    with progress_scope(events.append):
+        second = await agent.handle(chat("2", "message-2"), IDENTITY)
+
+    assert second.status == "COMPLETED"
+    executed = retrieval.requests[-1]
+    assert "按品牌/厂家字段过滤" in executed.rewritten_question
+    planning = next(
+        event for event in events
+        if event["stage"] == "TASK_PLANNING" and event["status"] == "COMPLETED"
+    )
+    assert "任务1：2" not in planning["message"]
+    assert "按品牌/厂家字段过滤" in planning["message"]
+    assert await agent.sessions.get_pending(
+        IDENTITY.tenant_id, IDENTITY.user_id,
+        "choice-app", "choice-conversation",
+    ) is None
 
 
 @pytest.mark.parametrize("kind", ["metric", "dimension"])
@@ -340,7 +412,7 @@ def test_catalog_filter_choice_adds_selected_scope_instead_of_dropping_it():
     assert "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER" in result.assumptions
 
 
-def test_label_only_filter_choice_stays_pending_instead_of_claiming_success():
+def test_label_only_filter_choice_is_preserved_in_completed_question_for_asl():
     request = pending()
     request.semantic_ambiguities = [SemanticAmbiguity(
         type="filter",
@@ -353,10 +425,43 @@ def test_label_only_filter_choice_stays_pending_instead_of_claiming_success():
     result = choose(request)
 
     assert result.filters == request.filters
-    assert result.semantic_ambiguities == request.semantic_ambiguities
-    assert result.missing_slots == ["semantic_ambiguity"]
-    assert "SEMANTIC_CHOICE_TARGET_UNRESOLVED" in result.assumptions
-    assert "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER" not in result.assumptions
+    assert result.semantic_ambiguities == []
+    assert result.missing_slots == []
+    assert "project.project_name=巴德血透产品" in result.rewritten_question
+    assert "SEMANTIC_CHOICE_TARGET_UNRESOLVED" not in result.assumptions
+    assert "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER" in result.assumptions
+    assert "SEMANTIC_AMBIGUITY_CONFIRMED_SURFACE_ONLY" in result.assumptions
+
+
+def test_entity_role_choice_without_catalog_id_is_added_to_completed_question():
+    request = pending()
+    request.primary_intent = PrimaryIntent.DETAIL_QUERY
+    request.entity = "医院"
+    request.fields = ["医院名称"]
+    request.metrics = []
+    request.dimensions = ["医院"]
+    request.filters = [{"field": "城市", "operator": "EQ", "value": "南京"}]
+    request.semantic_ambiguities = [SemanticAmbiguity(
+        type="entity_role",
+        phrase="费森尤斯产品",
+        ambiguity_id="product-brand-role",
+        question="请选择费森尤斯产品的匹配方式。",
+        candidates=[
+            "按商品名称模糊匹配",
+            "按品牌/厂家字段过滤",
+        ],
+        candidate_details=[{}, {}],
+        affected_slots=["filters"],
+    )]
+
+    result = choose(request, "2")
+
+    assert result.semantic_ambiguities == []
+    assert result.missing_slots == []
+    assert "按品牌/厂家字段过滤" in result.rewritten_question
+    assert "南京" in result.rewritten_question
+    assert "医院名称" in result.rewritten_question
+    assert "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER" in result.assumptions
 
 
 def test_two_independent_choices_preserve_previously_confirmed_member():
