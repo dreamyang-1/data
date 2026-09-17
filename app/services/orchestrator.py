@@ -6372,7 +6372,14 @@ class DataAnalysisOrchestrator:
                     f"查询条件：规格型号 = `{identifier.group(0)}`；"
                     "“商品名称”列为该规格型号对应的规范商品名称。"
                 )
-        lines.extend(["", cls._markdown_result_table(display_columns, rows)])
+        lines.extend([
+            "",
+            cls._markdown_result_table(
+                display_columns,
+                rows,
+                question=root_question,
+            ),
+        ])
         return "\n".join(lines)
 
     @staticmethod
@@ -9969,7 +9976,7 @@ class DataAnalysisOrchestrator:
                 answer = (
                     f"查询返回 {len(rows)} 条原始关系记录；"
                     f"按当前投影字段完全相同的组合去重展示后，共 {len(unique_rows)} 个唯一组合。\n\n"
-                    f"{DataAnalysisOrchestrator._markdown_result_table(columns, unique_rows[:display_limit])}\n\n"
+                    f"{DataAnalysisOrchestrator._markdown_result_table(columns, unique_rows[:display_limit], question=request.rewritten_question or request.original_question)}\n\n"
                 )
                 if len(unique_rows) > display_limit:
                     answer += (
@@ -9979,7 +9986,7 @@ class DataAnalysisOrchestrator:
                 return answer
             answer = (
                 f"共查询到 {len(rows)} 条明细。\n\n"
-                f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit])}"
+                f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit], question=request.rewritten_question or request.original_question)}"
             )
             if len(rows) > display_limit:
                 answer += (
@@ -9987,7 +9994,11 @@ class DataAnalysisOrchestrator:
                 )
             return answer
         if len(rows) == 1:
-            return DataAnalysisOrchestrator._markdown_result_table(columns, rows)
+            return DataAnalysisOrchestrator._markdown_result_table(
+                columns,
+                rows,
+                question=request.rewritten_question or request.original_question,
+            )
         label = {
             PrimaryIntent.TREND_ANALYSIS: "趋势分析数据",
             PrimaryIntent.COMPARISON_ANALYSIS: "对比分析数据",
@@ -10000,7 +10011,7 @@ class DataAnalysisOrchestrator:
         display_limit = 200
         answer = (
             f"{label}，共 {len(rows)} 行。\n\n"
-            f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit])}"
+            f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit], question=request.rewritten_question or request.original_question)}"
         )
         if len(rows) > display_limit:
             answer += (
@@ -10043,21 +10054,111 @@ class DataAnalysisOrchestrator:
         return text.replace("|", "\\|").replace("\r", " ").replace("\n", "<br>")
 
     @staticmethod
-    def _markdown_result_table(columns: list[str], rows: list[dict[str, Any]]) -> str:
-        visible_columns = list(dict.fromkeys([
+    def _presentation_column_identity(column: str) -> tuple[str, str]:
+        """Return a comparable business base and presentation role.
+
+        SQL projections sometimes contain both an internal key and its readable
+        label (for example ``城市=340100`` and ``城市名称=合肥市``).  The key is
+        still useful in the dataset and audit evidence, but showing both makes
+        an ordinary business table look like an identifier report.
+        """
+        tail = str(column).rsplit(".", 1)[-1].casefold().strip()
+        compact = re.sub(r"[\s._-]+", "", tail)
+        for suffix in ("名称", "姓名", "name", "label"):
+            if compact.endswith(suffix) and len(compact) > len(suffix):
+                return compact[:-len(suffix)], "label"
+        for suffix in ("编码", "编号", "代码", "code", "id"):
+            if compact.endswith(suffix) and len(compact) > len(suffix):
+                return compact[:-len(suffix)], "identifier"
+        return compact, "value"
+
+    @staticmethod
+    def _column_values_look_like_identifiers(
+        column: str,
+        rows: list[dict[str, Any]],
+    ) -> bool:
+        values = [row.get(column) for row in rows if row.get(column) is not None][:50]
+        if not values:
+            return False
+        for value in values:
+            if isinstance(value, bool):
+                return False
+            if isinstance(value, int):
+                continue
+            if isinstance(value, float):
+                if value.is_integer():
+                    continue
+                return False
+            text = str(value).strip()
+            if not text or len(text) > 64 or not re.fullmatch(
+                r"[0-9A-Za-z][0-9A-Za-z._/-]*", text
+            ):
+                return False
+        return True
+
+    @classmethod
+    def _presentation_columns(
+        cls,
+        columns: list[str],
+        rows: list[dict[str, Any]],
+        *,
+        question: str = "",
+    ) -> list[str]:
+        available = list(dict.fromkeys([
             *columns,
             *(key for row in rows for key in row if key not in columns),
         ]))
+        label_bases = {
+            base
+            for column in available
+            for base, role in [cls._presentation_column_identity(column)]
+            if role == "label"
+        }
+        compact_question = re.sub(r"\s+", "", question or "").casefold()
+        visible: list[str] = []
+        for column in available:
+            base, role = cls._presentation_column_identity(column)
+            paired_with_label = bool(base and base in label_bases)
+            explicit_identifier_request = any(
+                marker in compact_question
+                for marker in (
+                    f"{base}编码", f"{base}编号", f"{base}代码",
+                    f"{base}code", f"{base}id",
+                )
+            )
+            hide_identifier = (
+                paired_with_label
+                and role in {"identifier", "value"}
+                and not explicit_identifier_request
+                and cls._column_values_look_like_identifiers(column, rows)
+            )
+            if not hide_identifier:
+                visible.append(column)
+        return visible
+
+    @classmethod
+    def _markdown_result_table(
+        cls,
+        columns: list[str],
+        rows: list[dict[str, Any]],
+        *,
+        question: str = "",
+    ) -> str:
+        visible_columns = cls._presentation_columns(
+            columns,
+            rows,
+            question=question,
+        )
         if not visible_columns:
             return "未返回可展示字段。"
-        headers = [DataAnalysisOrchestrator._display_column_name(item) for item in visible_columns]
+        headers = [cls._display_column_name(item) for item in visible_columns]
         lines = [
             "| " + " | ".join(headers) + " |",
             "| " + " | ".join("---" for _ in headers) + " |",
         ]
         lines.extend(
             "| " + " | ".join(
-                DataAnalysisOrchestrator._markdown_cell(row.get(column))
+                cls._markdown_cell(row.get(column))
                 for column in visible_columns
             ) + " |"
             for row in rows

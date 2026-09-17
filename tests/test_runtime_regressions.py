@@ -53,6 +53,56 @@ def test_query_answer_uses_business_markdown_table_and_hides_physical_prefix() -
     assert "product.product_name" not in answer
 
 
+def test_result_table_hides_paired_city_identifier_from_business_display() -> None:
+    request = request_for("查看2025年安徽省各个城市每月销售额")
+    columns = ["城市", "时间", "城市名称", "销售额"]
+    rows = [
+        {"城市": 340100, "时间": "2025-10", "城市名称": "合肥市", "销售额": 100},
+        {"城市": 340700, "时间": "2025-10", "城市名称": "铜陵市", "销售额": 80},
+    ]
+
+    answer = DataAnalysisOrchestrator._analyze(
+        request,
+        columns,
+        rows,
+        KnowledgeContext(query=request.original_question, documents=[]),
+    )
+
+    assert "| 时间 | 城市名称 | 销售额 |" in answer
+    assert "340100" not in answer
+    assert "340700" not in answer
+    assert "合肥市" in answer
+    assert "铜陵市" in answer
+    assert columns == ["城市", "时间", "城市名称", "销售额"]
+    assert rows[0]["城市"] == 340100
+
+
+def test_result_table_keeps_identifier_when_user_explicitly_requests_it() -> None:
+    request = request_for("按城市编号查看各城市销售额")
+    answer = DataAnalysisOrchestrator._analyze(
+        request,
+        ["城市", "城市名称", "销售额"],
+        [{"城市": 340100, "城市名称": "合肥市", "销售额": 100}],
+        KnowledgeContext(query=request.original_question, documents=[]),
+    )
+
+    assert "| 城市 | 城市名称 | 销售额 |" in answer
+    assert "340100" in answer
+
+
+def test_result_table_keeps_only_available_identifier_column() -> None:
+    request = request_for("按产线编号统计故障工单行数")
+    answer = DataAnalysisOrchestrator._analyze(
+        request,
+        ["产线编号", "故障工单行数"],
+        [{"产线编号": "LINE-01", "故障工单行数": 3}],
+        KnowledgeContext(query=request.original_question, documents=[]),
+    )
+
+    assert "| 产线编号 | 故障工单行数 |" in answer
+    assert "LINE-01" in answer
+
+
 def test_metric_table_displays_all_138_untruncated_rows() -> None:
     request = request_for(
         "统计每家医院承接的订单总金额（含税）及订单笔数，并关联医院等级"
