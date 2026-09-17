@@ -2164,6 +2164,48 @@ class SQLTranslatorProd:
             return field_ref
         raise ValueError(f"不支持的时间粒度: {granularity}")
 
+    def _dimension_display_companion(self, dimension: Dict, entity_code: str,
+                                     model_id: Optional[str]) -> Optional[tuple]:
+        """Keep a registered entity dimension's identity and expose its label.
+
+        Only an entity-named logical dimension is eligible. Explicit physical
+        projections and independently named code dimensions remain unchanged.
+        A companion must be uniquely declared on the same physical table, so
+        this cannot invent a join or replace the original grouping identity.
+        """
+        code = str(dimension.get('name') or '')
+        if '.' in code or dimension.get('granularity'):
+            return None
+        definition = self._get_dimension(code, model_id)
+        if not definition or definition.get('enum_list'):
+            return None
+        entity = self._get_entity(code, model_id)
+        if not entity:
+            return None
+        field = self._dimension_physical_field(dimension, entity_code, model_id)
+        if not field or '.' not in field:
+            return None
+        attrs = entity.get('attributes') or []
+        identity = [a for a in attrs if a.get('field_mapping') == field]
+        if not any(self._semantic_flag(a.get('is_primary_key')) or
+                   a.get('attr_code') in {code + '_id', code + '_code'}
+                   for a in identity):
+            return None
+        candidates = {}
+        for attribute in attrs:
+            mapped = str(attribute.get('field_mapping') or '')
+            if (mapped == field or mapped.split('.')[0] != field.split('.')[0]
+                    or not re.fullmatch(r'[A-Za-z_]\w*\.[A-Za-z_]\w*', mapped)):
+                continue
+            if (self._semantic_flag(attribute.get('is_main_attribute')) or
+                    attribute.get('attr_code') == code + '_name'):
+                label = attribute.get('attr_name')
+                if label:
+                    candidates[mapped] = str(label)
+        if len(candidates) != 1:
+            return None
+        return next(iter(candidates.items()))
+
     def _build_select_clause(self, metrics: List[Dict], dimensions: List[Dict], entity_code: str, model_id: Optional[str] = None) -> str:
         """构建 SELECT 子句"""
         select_parts = []
@@ -2207,10 +2249,19 @@ class SQLTranslatorProd:
 
             field_ref = self._apply_time_granularity(field_ref, granularity)
             expr, alias = self._build_dim_expression(dim_code, field_ref, dim_alias, model_id)
+            companion = self._dimension_display_companion(dim, entity_code, model_id)
+            if companion and not any(d.get('name') == companion[0] for d in dimensions):
+                display_field, display_alias = companion
+                if display_alias in output_aliases:
+                    raise ValueError(f"列别名重复: {display_alias}")
+                output_aliases.add(display_alias)
+                select_parts.append(f"{display_field} AS `{display_alias.replace('`', '``')}`")
+                alias = f"{alias}（编码）"
             if alias in output_aliases:
                 raise ValueError(f"列别名重复: {alias}")
             output_aliases.add(alias)
             select_parts.append(f"{expr} AS `{alias}`")
+
 
         # 再添加指标
         for metric in metrics:
@@ -2313,6 +2364,9 @@ class SQLTranslatorProd:
                     group_parts.append(self._apply_time_granularity(dim_code, granularity))
                 else:
                     group_parts.append(self._apply_time_granularity(f"{main_table}.{dim_code}", granularity))
+            companion = self._dimension_display_companion(dim, entity_code, model_id)
+            if companion and companion[0] not in group_parts:
+                group_parts.append(companion[0])
         return f"GROUP BY {', '.join(group_parts)}" if group_parts else ""
 
     def _build_having_clause(self, having_conditions: List[str]) -> str:
@@ -2416,6 +2470,9 @@ class SQLTranslatorProd:
                     dim_alias = self._dimension_alias(
                         field, dim_def, dim_item.get('alias'), model_id
                     )
+                    companion = self._dimension_display_companion(dim_item, '', model_id)
+                    if companion and not any(d.get('name') == companion[0] for d in dimensions):
+                        dim_alias = f"{dim_alias}（编码）"
                     sort_field = f"`{dim_alias}`"
                     break
             if not sort_field:
@@ -2434,6 +2491,9 @@ class SQLTranslatorProd:
                         dim_alias = self._dimension_alias(
                             field, dim_def, dim_item.get('alias'), model_id
                         )
+                        companion = self._dimension_display_companion(dim_item, '', model_id)
+                        if companion and not any(d.get('name') == companion[0] for d in dimensions):
+                            dim_alias = f"{dim_alias}（编码）"
                         sort_field = f"`{dim_alias}`"
                         break
             if not sort_field:
