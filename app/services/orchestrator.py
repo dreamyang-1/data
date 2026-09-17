@@ -744,7 +744,35 @@ class DataAnalysisOrchestrator:
                             authorized_scope=chat.authorized_semantic_scope,
                         ) is None
                     )
-                    if not semantic_decision_ready and confirmed_pending_choice is None:
+                    # A V2 surface handoff already proved this turn is a
+                    # self-contained single NEW_TASK (NEW_TASK relation,
+                    # exactly one task, scope/question identity-checked).
+                    # Skip only the duplicate planner model call; the V1
+                    # intent model, ASL field binding and the user-visible
+                    # planning node stay untouched.  Pending confirmations
+                    # (confirmed_pending_choice) and compound/uncertain turns
+                    # fall through to the original planning behavior.
+                    surface_single_task_evidence = bool(
+                        chat._completed_question_execution
+                        and semantic_decision is not None
+                        and callable(getattr(
+                            semantic_decision,
+                            "request_single_task_evidence_mismatch",
+                            None,
+                        ))
+                        and semantic_decision.request_single_task_evidence_mismatch(
+                            message_id=chat.message_id,
+                            conversation_id=chat.conversation_id,
+                            application_id=chat.application_id,
+                            completed_question=chat.question,
+                            authorized_scope=chat.authorized_semantic_scope,
+                        ) is None
+                    )
+                    if (
+                        not semantic_decision_ready
+                        and not surface_single_task_evidence
+                        and confirmed_pending_choice is None
+                    ):
                         try:
                             with track_operation(
                                 "V1_ORCHESTRATION",
@@ -3008,7 +3036,7 @@ class DataAnalysisOrchestrator:
         return await self._complete_query_result(chat, identity, request, result)
 
     async def _handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
-        if self.settings.surface_asl_execution_enabled and chat._completed_question_execution:
+        if getattr(self.settings, "surface_asl_execution_enabled", False) and chat._completed_question_execution:
             surface_response = await self._handle_surface_query(chat, identity)
             if surface_response is not None:
                 return surface_response

@@ -250,6 +250,58 @@ class SemanticDecision(StrictModel):
             and self.tasks[0].question == self.completed_question
         )
 
+    @property
+    def can_skip_v1_task_decomposition(self) -> bool:
+        """Verifiable single-task evidence carried by a V2 surface handoff.
+
+        Recognition already proved a self-contained NEW_TASK with exactly one
+        task and no pending clarification; ASL still owns field binding, so
+        only the duplicate V1 planner computation may be skipped while the
+        V1 intent model stays authoritative.  ``completed_question ==
+        question`` alone is deliberately insufficient: the NEW_TASK relation
+        evidence, the single-task shape and the fallback route are all
+        required before decomposition may be bypassed.
+        """
+        return bool(
+            self.source == SemanticDecisionSource.V1_SEMANTIC_FALLBACK
+            and self.status == "REQUIRES_V1_FALLBACK"
+            and not self.clarification_needed
+            and self.conversation_state == "NEW_TASK"
+            and len(self.tasks) == 1
+            and self.tasks[0].question == self.completed_question
+        )
+
+    def request_single_task_evidence_mismatch(
+        self,
+        *,
+        message_id: str,
+        conversation_id: str,
+        application_id: str,
+        completed_question: str,
+        authorized_scope: AuthorizedSemanticScope,
+    ) -> str | None:
+        """Scope identity gate accepting surface single-task evidence.
+
+        Mirrors ``request_mismatch_reason`` but does not require a complete
+        V2 authorized plan; it accepts ``can_skip_v1_task_decomposition``
+        instead, keeping every identity/scope check fail-closed.
+        """
+        if self.message_id != message_id:
+            return "SEMANTIC_DECISION_MESSAGE_MISMATCH"
+        if self.conversation_id != conversation_id:
+            return "SEMANTIC_DECISION_CONVERSATION_MISMATCH"
+        if self.application_id != application_id:
+            return "SEMANTIC_DECISION_APPLICATION_MISMATCH"
+        if self.completed_question != completed_question:
+            return "SEMANTIC_DECISION_QUESTION_MISMATCH"
+        if self.scope_proof.authorized_scope != authorized_scope:
+            return "SEMANTIC_DECISION_SCOPE_MISMATCH"
+        if self.scope_proof.authorized_scope_fingerprint != authorized_scope.fingerprint():
+            return "SEMANTIC_DECISION_SCOPE_FINGERPRINT_MISMATCH"
+        if not self.can_skip_v1_task_decomposition:
+            return self.fallback_reason or "SEMANTIC_DECISION_NOT_EXECUTION_READY"
+        return None
+
     def request_mismatch_reason(
         self,
         *,

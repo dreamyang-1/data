@@ -1428,7 +1428,9 @@ def build_context_v1_execution_handler(
         v1_pending_answer_probe=v1_pending_answer_probe,
         v1_pending_executor=v1_pending_executor,
         demo_mode=settings.demo_mode,
-        surface_asl_execution_enabled=settings.surface_asl_execution_enabled,
+        surface_asl_execution_enabled=getattr(
+            settings, "surface_asl_execution_enabled", False
+        ),
         clock=lambda: datetime.now(timezone.utc).astimezone(),
         startup_receipt={
             **receipt,
