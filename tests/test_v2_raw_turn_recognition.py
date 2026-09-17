@@ -94,6 +94,27 @@ class ScriptedTransport:
         return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':json.dumps(data)}}]})
 
 
+@pytest.mark.asyncio
+async def test_surface_handoff_does_not_bind_a_complete_new_question(catalog, monkeypatch):
+    step = metric_step('销售额')
+    engine, transport = planner(catalog, [step])
+    engine.defer_new_task_binding = True
+
+    def forbidden_binding(*args, **kwargs):
+        raise AssertionError('surface handoff must not match catalog candidates')
+
+    monkeypatch.setattr(engine, '_candidates', forbidden_binding)
+    monkeypatch.setattr('app.semantic_v2.recognition.recover_metric_spans', forbidden_binding)
+    result = await engine.run(request(question=step[0], message_id='surface-only'),
+                              IDENTITY, allow_standalone_new_task_passthrough=True)
+    assert isinstance(result, RecognizedStandaloneNewTask)
+    assert result.completed_question == step[0]
+    assert result.fallback_reason == 'ASL_OWNS_CATALOG_BINDING'
+    assert len(transport.calls) == 1
+    assert result.parse.mentions[0].surface == '销售额'
+    assert result.next_state.context.authorized_scope.business_domain_ids == (205,)
+
+
 def planner(catalog,steps):
     transport=ScriptedTransport(steps)
     settings=Settings(_env_file=None,intent_model_base_url='https://model.invalid/v1',

@@ -61,6 +61,12 @@ requests GROUPED_AGGREGATE (city grouping plus monthly time grain), not TIME_SER
 Decide from the requested deliverable and full context, not the presence of “每月”.
 Use explicit_slot_mentions and operation_markers to link every intended slot edit to current
 mention evidence. Slot names are the supplied registry names, not business field codes.
+Extract fine-grained business evidence, not registered catalog bindings. Preserve the exact
+surface for the object, requested value, grouping, time range and time grain separately.
+For “费森尤斯产品”, preserve the named value and its product-scope relationship; do not
+decide that the name must be a manufacturer, brand or product attribute. Candidate roles
+are hypotheses for downstream ASL interpretation, never confirmed physical fields or IDs.
+For “销售额”, retain that wording; do not silently replace it with a tax-specific measure.
 Mentions represent role-bearing semantic objects; do not create roleless mentions for bare
 operation or negation cue words. Operation markers reference the affected semantic mention.
 Negations and temporal_expressions contain existing mention IDs, never literal cue text.
@@ -436,11 +442,13 @@ def materialize_payload(kind, state):
 
 
 class RawTurnPlanner:
-    def __init__(self, model_client, catalog, *, clock=None, deterministic_grounding=True):
+    def __init__(self, model_client, catalog, *, clock=None, deterministic_grounding=True,
+                 defer_new_task_binding=False):
         self.model = model_client
         self.catalog = catalog
         self.clock = clock or (lambda: datetime.now(ZoneInfo('Asia/Shanghai')))
         self.deterministic_grounding = deterministic_grounding
+        self.defer_new_task_binding = defer_new_task_binding
 
     async def run(
         self,
@@ -565,7 +573,15 @@ class RawTurnPlanner:
                 extra={'message_id': request.message_id, 'parse_repairs': repairs})
         parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
             text_ref=request.message_id, parsed=parsed)
-        parsed, catalog_spans = recover_metric_spans(session, parsed, text=request.question)
+        surface_handoff = (
+            self.defer_new_task_binding
+            and allow_standalone_new_task_passthrough
+            and self._is_standalone_new_task(parse, context_trace)
+        )
+        if surface_handoff:
+            catalog_spans = []
+        else:
+            parsed, catalog_spans = recover_metric_spans(session, parsed, text=request.question)
         if catalog_spans:
             logging.getLogger(__name__).info('V2 catalog metric span recovered',
                 extra={'message_id': request.message_id, 'catalog_span_trace': catalog_spans})
@@ -595,6 +611,13 @@ class RawTurnPlanner:
                 'completed_question': request.question,
                 'barrier': barrier,
             })
+            # In the context-to-execution bridge, a complete new question needs
+            # surface evidence and a conversation barrier, not a second catalog
+            # binding pass. The downstream ASL service owns that binding.
+            if self.defer_new_task_binding:
+                return self._materialize_standalone_fallback(
+                    standalone_new_task_fallback[-1], 'ASL_OWNS_CATALOG_BINDING'
+                )
         if context_trace['FINAL_RELATION'] == 'ANSWER_CLARIFICATION':
             option=selected_option(current.pending,request.question)
             return self._answer_pending(session,current,state,pending,option,parsed,parse,now)
