@@ -3977,14 +3977,11 @@ class SQLTranslatorProd:
                 'semantic_validation_report': validation_report,
             }
         except Exception as e:
-            return {
-                'success': False, 'sql': None,
-                'error': f"SQL生成失败: {str(e)}",
-                'error_code': self._semantic_validation_error_code(str(e)),
-                'retryable': False,
-                'model_id': resolved_model_id,
-                'semantic_validation_report': self._failed_semantic_validation_report(str(e)),
-            }
+            # One shared, sanitized builder serves /api/translate; raw exception
+            # text never reaches the public error or the validation report.
+            payload = self._controlled_translation_failure(e, is_execute=False)
+            payload['model_id'] = resolved_model_id
+            return payload
 
     @staticmethod
     def _validation_check(code: str, status: str, message: str,
@@ -4028,6 +4025,73 @@ class SQLTranslatorProd:
             'errors': [{'code': code, 'layer': layer, 'message': message}],
             'warnings': [],
         }
+
+    @classmethod
+    def _controlled_translation_failure(cls, exc: Exception, is_execute: bool) -> Dict:
+        """Build the sanitized public payload for a translation failure.
+
+        Both translation exits share this single builder so the raw exception text
+        can never leak through one field while appearing controlled in another.
+        The public message is assembled exclusively from the fixed wording of the
+        mapped error class; arbitrary exception tail text is never echoed.
+        """
+        raw = str(exc)
+        code = cls._semantic_validation_error_code(raw)
+        identity: Optional[str] = None
+        confirmed = isinstance(exc, ValueError) and code != 'SEMANTIC_VALIDATION_FAILED'
+        if confirmed:
+            # Keep the unresolved catalog identifier only when the full message is
+            # exactly the known error format and the identifier is a single bounded
+            # canonical identifier. Arbitrary trailing text is rejected.
+            match = re.fullmatch(
+                r'不存在(实体|指标|维度|维度字段|过滤字段):\s*([A-Za-z0-9_\-:.]{1,64})',
+                raw,
+            )
+            if match is not None:
+                identity = f'不存在{match.group(1)}: {match.group(2)}'
+        category_messages = {
+            'SEMANTIC_ASSET_NOT_FOUND': '引用的实体、指标、维度或过滤字段不存在于当前语义模型',
+            'RELATIONSHIP_PATH_NOT_FOUND': '无法在已发布语义关系中找到所需的关联路径',
+            'JOIN_CARDINALITY_MISSING': '关系基数未配置，已阻止可能重复累计的Join',
+            'AGGREGATION_FANOUT_RISK': '一对多Join会导致指标重复累计，已阻止生成SQL',
+            'SEMANTIC_AMBIGUITY': 'DSL存在未解决的歧义',
+            'QUERY_SHAPE_INVALID': '查询形态不符合语义层约束',
+            'ASL_SYNTAX_INVALID': 'ASL结构不合法',
+            'SEMANTIC_VALIDATION_FAILED': '语义校验失败',
+        }
+        if confirmed:
+            category = category_messages.get(code, '语义校验失败')
+            if identity is not None:
+                public_message = f'SQL生成失败: {category}（{identity}）'
+            else:
+                public_message = f'SQL生成失败: {category}（标识无法安全提取，请管理员核对语义目录配置）'
+            report = cls._failed_semantic_validation_report(
+                identity if identity is not None else category
+            )
+            # Classification belongs to the original failure, not its sanitized
+            # presentation text. Re-parsing public wording can lose the code.
+            layer = ('SYNTAX' if code == 'ASL_SYNTAX_INVALID' else
+                     'BUSINESS' if code == 'QUERY_SHAPE_INVALID' else 'SEMANTIC')
+            report['errors'][0].update(code=code, layer=layer)
+            for name, details in report['layers'].items():
+                details['status'] = 'FAIL' if name.upper() == layer else 'NOT_RUN'
+        else:
+            # Unknown internal failure: controlled wording only; no raw text and no
+            # fabricated semantic confirmation.
+            public_message = 'SQL生成失败：内部处理错误，详情已记录，请稍后重试或联系管理员'
+            report = None
+        print(f"[SQL-TRANSLATE-ERROR] translation failure code={code} "
+              f"type={type(exc).__name__}: {exc}")
+        payload: Dict = {
+            'success': False, 'sql': None,
+            'error': public_message,
+            'error_code': 'SQL_TRANSLATION_FAILED' if is_execute else (
+                code if confirmed else 'SEMANTIC_VALIDATION_FAILED'),
+            'retryable': False,
+        }
+        if confirmed:
+            payload['semantic_validation_report'] = report
+        return payload
 
     def _semantic_sql_validation_report(
         self, ast: Dict, sql: str, model_id: Optional[str]
@@ -4243,8 +4307,9 @@ class SQLTranslatorProd:
                 'error_code': 'SEMANTIC_DSL_UNAVAILABLE', 'retryable': True,
             }
         except Exception as e:
-            return {'sql': None, 'success': False, 'error': f"SQL生成失败: {str(e)}",
-                    'error_code': 'SQL_TRANSLATION_FAILED', 'retryable': False}
+            # One shared, sanitized builder serves execute_query; raw exception
+            # text never reaches the public error or the validation report.
+            return self._controlled_translation_failure(e, is_execute=True)
 
         if not model_id and not data_source_id:
             return {
