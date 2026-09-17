@@ -50,6 +50,15 @@ def build_chart_specs(
 
     if intent in {PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.FORECAST_ANALYSIS}:
         label = temporal or (non_metrics[0] if non_metrics else None)
+        # A repeated time/series key cannot be rendered as a single trajectory.
+        # Missing grouping evidence must never connect unrelated business rows.
+        if label:
+            keys = [
+                (str(row.get(label)), str(row.get(categorical)) if categorical else "")
+                for row in rows
+            ]
+            if len(keys) != len(set(keys)):
+                return []
         return _one(
             "LINE", label, metric, rows, f"{metric}趋势",
             series_field=categorical if temporal else None,

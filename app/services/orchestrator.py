@@ -5966,6 +5966,20 @@ class DataAnalysisOrchestrator:
                 )
             )
         )
+        if (
+            analysis_output is not None
+            and request.dimensions
+            and analysis_output.method not in structured_table_methods
+        ):
+            # Analysis prose must not replace the requested grouped values.
+            # Render the validated dataset, preserving every returned dimension.
+            answer += "\n\n" + self._analyze(
+                request,
+                query_result.dataset.columns,
+                query_result.dataset.rows,
+                knowledge_context,
+                result_truncated=query_result.dataset.truncated,
+            )
         if analysis_output is not None and analysis_output.warnings:
             answer += "\n\n注意事项：" + "；".join(analysis_output.warnings) + "。"
         unavailable_fields = [
