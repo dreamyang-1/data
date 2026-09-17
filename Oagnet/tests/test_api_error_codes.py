@@ -1,12 +1,13 @@
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 import api
-from api import _asl_validation_error_code
+from api import _asl_validation_error_code, _candidate_scope_reason
 from asl_contract import ASLValidationError
 from capacity_control import (
     AslCapacityController,
@@ -14,6 +15,7 @@ from capacity_control import (
     AslGenerationDeadlineExceeded,
     AslUpstreamRateLimited,
 )
+from scope_contract import require_candidate_scope
 
 
 def test_time_anchor_validation_has_specific_code() -> None:
@@ -40,6 +42,35 @@ def test_structured_detail_projection_error_keeps_its_exact_code() -> None:
         field="dimensions",
     )
     assert _asl_validation_error_code(error) == "ASL_DETAIL_PROJECTION_MISSING"
+
+
+def test_agent_query_returns_bounded_structured_validation_context() -> None:
+    error = ASLValidationError(
+        "ASL_ENTITY_MENTION_UNRESOLVED",
+        "internal reason must stay private",
+        field="filters",
+        details={
+            "mention": "费森尤斯",
+            "candidate_field_count": 12,
+            "token": "must-not-be-exposed",
+        },
+    )
+
+    with patch("api.main", side_effect=error):
+        response = TestClient(api.app).post(
+            "/agent/query",
+            json={"query": "查询费森尤斯产品", "semantic_model_id": 81},
+        )
+
+    assert response.status_code == 502
+    payload = response.json()["detail"]
+    assert payload["code"] == "ASL_ENTITY_MENTION_UNRESOLVED"
+    assert payload["field"] == "filters"
+    assert payload["details"] == {
+        "mention": "费森尤斯",
+        "candidate_field_count": 12,
+    }
+    assert "internal reason" not in response.text
 
 
 def test_unknown_validation_keeps_generic_code() -> None:
@@ -137,3 +168,140 @@ def test_agent_query_deadline_has_stable_gateway_timeout_code() -> None:
 
     assert response.status_code == 504
     assert response.json()["detail"]["code"] == "ASL_GENERATION_DEADLINE_EXCEEDED"
+
+
+def test_candidate_scope_reason_maps_each_internal_stage() -> None:
+    cases = {
+        "candidate metadata is missing": "metadata_missing",
+        "candidate model is unproven or incompatible": "model_unproven",
+        "candidate domain is unproven or incompatible": "domain_unproven",
+        "unknown internal wording": "unverified",
+    }
+    for reason, stage in cases.items():
+        assert _candidate_scope_reason(
+            ValueError(f"SEMANTIC_SCOPE_MISMATCH: {reason}")
+        ) == stage
+
+
+def test_display_resolve_scope_mismatch_names_stage_and_candidate(monkeypatch) -> None:
+    metadata = {
+        "semantic_model_id": 82,
+        "business_domain_id": 206,
+        "metric_name": "revenue",
+        "metric_code": "revenue",
+    }
+    monkeypatch.setattr(api, "embed_query", lambda text: [])
+    monkeypatch.setattr(
+        api._store,
+        "search",
+        lambda *a, **kw: [SimpleNamespace(id="m", metadata=metadata, score=1)],
+    )
+    response = TestClient(api.app).post(
+        "/vector/semantic-elements/resolve",
+        json={
+            "semantic_model_id": 81,
+            "business_domain_ids": [205],
+            "candidates": [{"candidate_id": "c1", "slot": "metric", "value": "revenue"}],
+        },
+    )
+
+    assert response.status_code == 502
+    detail = response.json()["detail"]
+    assert detail["code"] == "SEMANTIC_SCOPE_MISMATCH"
+    assert detail["stage"] == "model_unproven"
+    assert detail["candidate"] == {"candidate_id": "c1", "slot": "metric"}
+    # Internal wording and raw retrieval metadata must stay private.
+    assert "unproven or incompatible" not in response.text
+    assert "82" not in response.text
+
+
+def test_display_resolve_domain_scope_mismatch_names_domain_stage(monkeypatch) -> None:
+    metadata = {
+        "semantic_model_id": 81,
+        "business_domain_id": 206,
+        "metric_name": "revenue",
+        "metric_code": "revenue",
+    }
+    monkeypatch.setattr(api, "embed_query", lambda text: [])
+    monkeypatch.setattr(
+        api._store,
+        "search",
+        lambda *a, **kw: [SimpleNamespace(id="m", metadata=metadata, score=1)],
+    )
+    response = TestClient(api.app).post(
+        "/vector/semantic-elements/resolve",
+        json={
+            "semantic_model_id": 81,
+            "business_domain_ids": [205],
+            "candidates": [{"candidate_id": "c2", "slot": "metric", "value": "revenue"}],
+        },
+    )
+
+    assert response.status_code == 502
+    detail = response.json()["detail"]
+    assert detail["code"] == "SEMANTIC_SCOPE_MISMATCH"
+    assert detail["stage"] == "domain_unproven"
+    assert detail["candidate"] == {"candidate_id": "c2", "slot": "metric"}
+
+
+def test_display_resolve_unknown_scope_failure_stays_bounded(monkeypatch) -> None:
+    metadata = {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "metric_name": "revenue",
+        "metric_code": "revenue",
+    }
+
+    def broken(*_args, **_kwargs):
+        raise ValueError("SEMANTIC_SCOPE_MISMATCH: totally unexpected wording")
+
+    monkeypatch.setattr(api, "embed_query", lambda text: [])
+    monkeypatch.setattr(
+        api._store,
+        "search",
+        lambda *a, **kw: [SimpleNamespace(id="m", metadata=metadata, score=1)],
+    )
+    monkeypatch.setattr(api, "require_candidate_scope", broken)
+    response = TestClient(api.app).post(
+        "/vector/semantic-elements/resolve",
+        json={
+            "semantic_model_id": 81,
+            "business_domain_ids": [205],
+            "candidates": [{"candidate_id": "c3", "slot": "metric", "value": "revenue"}],
+        },
+    )
+
+    assert response.status_code == 502
+    detail = response.json()["detail"]
+    assert detail["code"] == "SEMANTIC_SCOPE_MISMATCH"
+    assert detail["stage"] == "unverified"
+    assert "unexpected wording" not in response.text
+
+
+def test_display_resolve_proven_candidate_still_resolves(monkeypatch) -> None:
+    metadata = {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "metric_name": "revenue",
+        "metric_code": "revenue",
+    }
+    monkeypatch.setattr(api, "embed_query", lambda text: [])
+    monkeypatch.setattr(
+        api._store,
+        "search",
+        lambda *a, **kw: [SimpleNamespace(id="m", metadata=metadata, score=1)],
+    )
+    require_candidate_scope(metadata, 81, [205])
+    response = TestClient(api.app).post(
+        "/vector/semantic-elements/resolve",
+        json={
+            "semantic_model_id": 81,
+            "business_domain_ids": [205],
+            "candidates": [{"candidate_id": "ok", "slot": "metric", "value": "revenue"}],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["matches"][0]["candidate_id"] == "ok"

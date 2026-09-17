@@ -6,26 +6,115 @@ import json
 
 import httpx
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import SchemaError, ValidationError
+from jsonschema.exceptions import SchemaError, ValidationError, best_match
 from referencing.exceptions import Unresolvable
 
 from app.services.progress import emit_progress
 from app.observability.call_timing import OperationHandle, track_operation
 
 
+_DIAGNOSTIC_PATH_LIMIT = 16
+_DIAGNOSTIC_SEGMENT_LIMIT = 80
+
+
+def _bounded_diagnostic_path(path):
+    """Structural coordinates only; never instance values."""
+    segments = []
+    for segment in list(path)[:_DIAGNOSTIC_PATH_LIMIT]:
+        if isinstance(segment, int):
+            segments.append(segment)
+        else:
+            segments.append(str(segment)[:_DIAGNOSTIC_SEGMENT_LIMIT])
+    return tuple(segments)
+
+
 class RecognitionFailure(ValueError):
     """Bounded system reason; never convert transport/parser errors to slot asks."""
 
+    def __init__(self, code, *, stage=None, instance_path=(), schema_path=(), validator=None):
+        super().__init__(code)
+        self.stage = stage
+        self.instance_path = tuple(instance_path)
+        self.schema_path = tuple(schema_path)
+        self.validator = validator
 
-def _validate_exact_dynamic_schema(instance, schema) -> None:
+    def public_message(self) -> str:
+        """Explain the bounded failure without blaming a complete user query."""
+        code = str(self)
+        stage = {
+            "v2_current_turn": "当前问题要素提取",
+            "v2_semantic_edits": "语义字段绑定",
+            "v2_source_value_choice": "目录值确认",
+        }.get(self.stage, "结构化语义识别")
+        suffix = f"（错误码：{code}）"
+        if code == "V2_RECOGNITION_CONTEXT_TOO_LARGE":
+            return (
+                f"语义识别未能完成{stage}：本轮需要同时校验的语义目录候选和字段约束"
+                "超过结构化模型的输入上限。当前问题并非缺少信息，无需重复改写。"
+                "如需立即查询，可先按单个品牌分别查询；管理员需要压缩该业务域的候选目录，"
+                f"或将候选召回拆分后再执行。{suffix}"
+            )
+        if code == "V2_MODEL_DYNAMIC_SCHEMA_VIOLATION":
+            field = (
+                ".".join(str(part) for part in self.instance_path)
+                if self.instance_path
+                else "模型结构化结果（未定位到单一字段）"
+            )
+            rule = self.validator or "动态 JSON Schema"
+            return (
+                f"模型在{stage}阶段返回的结构化结果不符合约束；具体字段：{field}；"
+                f"未通过规则：{rule}。当前问题没有被判定为缺少业务参数，可直接重试原问题；"
+                "若持续出现，管理员需要检查该节点提示词、动态 JSON Schema 与当前模型的"
+                f"结构化输出兼容性。{suffix}"
+            )
+        if code == "V2_MODEL_DYNAMIC_SCHEMA_INVALID":
+            return (
+                f"系统在{stage}阶段生成的动态 JSON Schema 本身无效。用户无需补充业务内容；"
+                "管理员需要检查该业务域候选字段生成的 Schema 引用、必填项和组合约束。"
+                f"{suffix}"
+            )
+        if code == "V2_MODEL_OUTPUT_INCOMPLETE":
+            return (
+                f"语义模型在{stage}阶段的结构化响应被截断或未正常结束。请直接重试原问题；"
+                "若持续出现，管理员需要检查模型 finish_reason、输出长度和超时设置。"
+                f"{suffix}"
+            )
+        if code == "V2_MODEL_OUTPUT_INVALID":
+            return (
+                f"语义模型在{stage}阶段没有返回可解析且符合约束的 JSON。当前无法据此判断"
+                "用户缺少哪个业务参数，因此不会要求补充固定类别；管理员需要检查模型响应格式、"
+                f"节点提示词和 Schema。{suffix}"
+            )
+        if code == "V2_MODEL_TRANSPORT_FAILURE":
+            return (
+                f"{stage}阶段未能连接语义模型服务。请稍后重试；管理员需要检查模型接口、"
+                f"网络和超时配置。{suffix}"
+            )
+        if code == "V2_MODEL_NOT_CONFIGURED":
+            return (
+                f"{stage}阶段所需的语义模型尚未配置。用户无需补充问题；管理员需要配置"
+                f"模型地址、模型 ID 和访问凭据。{suffix}"
+            )
+        return (
+            f"{stage}阶段失败，系统尚未获得足够证据判断用户缺少哪个业务参数。"
+            "请直接重试原问题；管理员应根据错误码检查该阶段配置，不能让用户在未知原因下"
+            f"反复补充产品、品牌、医院、经销商或厂家。{suffix}"
+        )
+
+
+def _validate_exact_dynamic_schema(instance, schema, *, stage=None) -> None:
     """Fail closed on the exact schema issued for this model invocation."""
     try:
         Draft202012Validator.check_schema(schema)
         Draft202012Validator(schema).validate(instance)
     except (SchemaError, Unresolvable):
-        raise RecognitionFailure('V2_MODEL_DYNAMIC_SCHEMA_INVALID') from None
+        raise RecognitionFailure('V2_MODEL_DYNAMIC_SCHEMA_INVALID', stage=stage) from None
     except ValidationError:
-        raise RecognitionFailure('V2_MODEL_DYNAMIC_SCHEMA_VIOLATION') from None
+        detail = best_match(Draft202012Validator(schema).iter_errors(instance))
+        raise RecognitionFailure('V2_MODEL_DYNAMIC_SCHEMA_VIOLATION', stage=stage,
+            instance_path=_bounded_diagnostic_path(detail.absolute_path),
+            schema_path=_bounded_diagnostic_path(detail.absolute_schema_path),
+            validator=str(detail.validator)[:40] if detail.validator else None) from None
 
 
 class RecognitionModelClient:
@@ -209,9 +298,16 @@ class RecognitionModelClient:
                 raw_output = json.loads(content)
             except (json.JSONDecodeError, TypeError):
                 raise RecognitionFailure('V2_MODEL_OUTPUT_INVALID') from None
-            _validate_exact_dynamic_schema(raw_output, schema)
+            _validate_exact_dynamic_schema(raw_output, schema, stage=stage)
             return output_model.model_validate_json(content)
-        except RecognitionFailure:
+        except RecognitionFailure as exc:
+            if exc.stage is None:
+                exc.stage = stage
+            # Structural diagnostics only; never instance values or prompts.
+            if exc.instance_path or exc.schema_path or exc.validator:
+                timing.set_attribute('v2_schema_instance_path', json.dumps(list(exc.instance_path)))
+                timing.set_attribute('v2_schema_schema_path', json.dumps(list(exc.schema_path)))
+                timing.set_attribute('v2_schema_validator', exc.validator or '')
             raise
         except httpx.HTTPError:
             raise RecognitionFailure('V2_MODEL_TRANSPORT_FAILURE') from None

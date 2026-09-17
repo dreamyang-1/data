@@ -1646,6 +1646,49 @@ async def test_real_report_classifier_resumes_all_facets_with_one_period() -> No
         }
 
 
+def test_sales_record_time_is_only_trusted_for_proven_report_facets() -> None:
+    """负例：受信销售时间不得外溢到主数据/非组合报告/无销售事实分面。"""
+    internal = DataAnalysisOrchestrator._report_task_internal_assumptions
+
+    sales_report = TaskPlan(
+        planner="DETERMINISTIC_RULE",
+        final_deliverable="COMBINED_REPORT",
+        tasks=[
+            AtomicTask(task_id="task-1", question="分析产品销售额趋势"),
+            AtomicTask(task_id="task-2", question="查询产品适用科室名单"),
+            AtomicTask(task_id="task-3", question="统计产品合作医院覆盖数据"),
+        ],
+    )
+    # Positive control: the proven relationship facet keeps the trusted scope.
+    assert internal(sales_report, sales_report.tasks[2]) == (
+        "TRANSACTION_TIME_SCOPE=SALES_RECORD",
+    )
+    # Master-data facets (applicable departments) never inherit sales time.
+    assert internal(sales_report, sales_report.tasks[1]) == ()
+
+    # A report without any sales-fact facet gets no trusted sales time at all.
+    master_report = TaskPlan(
+        planner="DETERMINISTIC_RULE",
+        final_deliverable="COMBINED_REPORT",
+        tasks=[
+            AtomicTask(task_id="task-1", question="查询产品适用科室名单"),
+            AtomicTask(task_id="task-2", question="统计产品合作医院数量"),
+        ],
+    )
+    assert internal(master_report, master_report.tasks[1]) == ()
+
+    # Non-combined-report plans never receive the assumption.
+    parallel_plan = TaskPlan(
+        planner="DETERMINISTIC_RULE",
+        final_deliverable=None,
+        tasks=[
+            AtomicTask(task_id="task-1", question="分析产品销售额趋势"),
+            AtomicTask(task_id="task-2", question="统计产品合作医院覆盖数据"),
+        ],
+    )
+    assert internal(parallel_plan, parallel_plan.tasks[1]) == ()
+
+
 @pytest.mark.asyncio
 async def test_dag_resume_fails_closed_when_semantic_scope_changes() -> None:
     settings = Settings(env="test", multi_question_model_enabled=False)

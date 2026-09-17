@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     # bridge.  The default remains disabled so normal production behavior and
     # fail-closed execution-scope handling are unchanged.
     demo_mode: bool = False
+    surface_asl_execution_enabled: bool = False
     # Public thinking/progress text uses the same SSE ``message_chunk``
     # contract as the final answer.  These settings control presentation only;
     # model, ASL and SQL stages continue to consume complete validated values.

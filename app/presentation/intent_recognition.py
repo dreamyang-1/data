@@ -781,13 +781,13 @@ def render_intent_recognition_display_v2(
             f"{original_label}：{view.original_question}",
             f"补全后的问题：{view.completed_question}",
         ])
-        if view.structured_parameters:
-            lines.append(
-                "结构化参数提取：" + "；".join(view.structured_parameters) + "。"
-            )
-        lines.append(f"业务域：{'、'.join(view.business_domains)}")
-        if view.file_judgement:
-            lines.append(f"文件判断：{view.file_judgement}")
+    if view.structured_parameters:
+        lines.append(
+            "结构化参数提取：" + "；".join(view.structured_parameters) + "。"
+        )
+    lines.append(f"业务域：{'、'.join(view.business_domains)}")
+    if view.file_judgement:
+        lines.append(f"文件判断：{view.file_judgement}")
     lines.extend([
         f"任务意图：{view.task_intent}",
         f"意图判定依据：{view.intent_basis}",
@@ -804,20 +804,15 @@ def render_resolved_intent_context_v2(
 ) -> str:
     """Render V2 facts once context and semantic binding are validated."""
 
-    parameters = _semantic_extraction_parameters(
-        f"{original_question} {completed_question}", semantic_extractions
-    )
-    domain_labels = _unique_text(list(business_domains)) or [
-        "当前语义模型全部授权业务域"
-    ]
-    lines = [
+    # This milestone is emitted as soon as V2 has resolved the conversational
+    # question. Parameter and domain rows belong to the later intent-decision
+    # milestone, after the public "正在进行任务意图分析" message. Keeping the
+    # rows separate preserves the real streaming order without exposing model
+    # transport or catalog-loading milestones.
+    return "\n".join([
         f"用户原始问题：{_single_line(original_question)}",
         f"补全后的问题：{_single_line(completed_question)}",
-    ]
-    if parameters:
-        lines.append("结构化参数提取：" + "；".join(parameters) + "。")
-    lines.append(f"业务域：{'、'.join(domain_labels)}")
-    return "\n".join(lines)
+    ])
 
 
 def render_asl_extraction_json(asl: dict[str, object]) -> str:
@@ -919,8 +914,7 @@ def render_composite_intent_recognition_display_v2(
         if index < len(view.tasks):
             lines.append("")
     lines.append("")
-    if include_resolved_context:
-        lines.append(f"业务域：{'、'.join(view.business_domains)}")
+    lines.append(f"业务域：{'、'.join(view.business_domains)}")
     lines.extend([
         f"任务意图：{task_intent}",
         (

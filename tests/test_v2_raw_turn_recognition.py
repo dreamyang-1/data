@@ -94,12 +94,63 @@ class ScriptedTransport:
         return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':json.dumps(data)}}]})
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize('operation', ['SET', 'ADD'])
+async def test_surface_handoff_does_not_bind_a_complete_new_question(catalog, monkeypatch, operation):
+    step = metric_step('销售额')
+    step[1]['operation_markers'][0]['operation_hint'] = operation
+    engine, transport = planner(catalog, [step])
+    engine.defer_new_task_binding = True
+
+    def forbidden_binding(*args, **kwargs):
+        raise AssertionError('surface handoff must not match catalog candidates')
+
+    monkeypatch.setattr(engine, '_candidates', forbidden_binding)
+    monkeypatch.setattr('app.semantic_v2.recognition.recover_metric_spans', forbidden_binding)
+    result = await engine.run(request(question=step[0], message_id='surface-only'),
+                              IDENTITY, allow_standalone_new_task_passthrough=True)
+    assert isinstance(result, RecognizedStandaloneNewTask)
+    assert result.completed_question == step[0]
+    assert result.fallback_reason == 'ASL_OWNS_CATALOG_BINDING'
+    assert len(transport.calls) == 1
+    assert result.parse.mentions[0].surface == '销售额'
+    assert result.next_state.context.authorized_scope.business_domain_ids == (205,)
+
+
 def planner(catalog,steps):
     transport=ScriptedTransport(steps)
     settings=Settings(_env_file=None,intent_model_base_url='https://model.invalid/v1',
         intent_model_api_key='test-only-key',intent_model_name='existing-configured-model',intent_model_max_retries=0)
     client=RecognitionModelClient(settings,httpx.MockTransport(transport))
     return RawTurnPlanner(client,catalog[0],clock=lambda:NOW,deterministic_grounding=False),transport
+
+
+@pytest.mark.asyncio
+async def test_surface_context_completion_uses_offered_question_without_catalog_binding(catalog, monkeypatch):
+    from app.semantic_v2.context_question import publish_context_task
+    from app.semantic_v2.models import ContextQuestionState
+    first = request(question='查看2025年安徽省各城市每月销售额', message_id='surface-first')
+    engine, _ = planner(catalog, [(first.question, parse(first.question), {})])
+    engine.defer_new_task_binding = True
+    result = await engine.run(first, IDENTITY, allow_standalone_new_task_passthrough=True)
+    state = publish_context_task(result.next_state, chat=first, created_at=NOW,
+        frame=ContextQuestionState(original_question=first.question,
+            execution_question=first.question, source_message_id=first.message_id))
+    completed = '查看2025年上海市各城市每月销售额'
+    current = parse('上海市的', [('上海市','FILTER_VALUE','filter_expression','REPLACE')], follow=True)
+    current['completed_question'] = completed
+    engine, transport = planner(catalog, [('上海市的', current, {})])
+    engine.defer_new_task_binding = True
+    def no_binding(*args, **kwargs):
+        raise AssertionError('context completion must not bind catalog fields')
+    monkeypatch.setattr(engine, '_candidates', no_binding)
+    result = await engine.run(request(question='上海市的', message_id='surface-next'),
+        IDENTITY, state=state, allow_standalone_new_task_passthrough=True)
+    assert result.completed_question == completed
+    assert result.fallback_reason == 'ASL_OWNS_CONTEXT_BINDING'
+    assert len(transport.calls) == 1
+    sent = json.loads(transport.calls[0]['messages'][1]['content'])
+    assert sent['task_context']['candidate_tasks'][0]['context_question']['execution_question'] == first.question
 
 
 async def turns(engine,steps):

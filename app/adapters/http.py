@@ -235,6 +235,10 @@ class PlatformHttpClient:
                     )
                 if response.status_code == 429 or response.status_code >= 500:
                     upstream_code = self._upstream_error_code(response)
+                    error_details = {
+                        "path": path,
+                        **self._upstream_error_details(response),
+                    }
                     if upstream_code in _NON_RETRYABLE_UPSTREAM_CODES:
                         raise AdapterError(
                             "DEPENDENCY_CONTRACT_REJECTED",
@@ -242,7 +246,7 @@ class PlatformHttpClient:
                             retryable=False,
                             status_code=response.status_code,
                             upstream_code=upstream_code,
-                            details={"path": path},
+                            details=error_details,
                         )
                     effective_retryable = bool(
                         retryable
@@ -254,7 +258,7 @@ class PlatformHttpClient:
                         retryable=effective_retryable,
                         status_code=response.status_code,
                         upstream_code=upstream_code,
-                        details={"path": path},
+                        details=error_details,
                     )
                     if effective_retryable and attempt + 1 < attempts:
                         await asyncio.sleep(
@@ -269,7 +273,10 @@ class PlatformHttpClient:
                         f"dependency returned HTTP {response.status_code}",
                         status_code=response.status_code,
                         upstream_code=upstream_code,
-                        details={"path": path},
+                        details={
+                            "path": path,
+                            **self._upstream_error_details(response),
+                        },
                     )
                 return response.json()
             except AdapterError:
@@ -301,6 +308,62 @@ class PlatformHttpClient:
             if isinstance(value, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{1,63}", value):
                 return value
         return f"HTTP_{response.status_code}"
+
+    @staticmethod
+    def _upstream_error_details(response: httpx.Response) -> dict[str, Any]:
+        """Keep bounded structured diagnostics while discarding raw error text.
+
+        Upstream services own the exact failure subject (for example the
+        unresolved mention or candidate fields).  Dropping that subject at the
+        HTTP boundary forces the UI to ask vague, misleading questions.
+        """
+
+        try:
+            body = response.json()
+        except ValueError:
+            return {}
+        if not isinstance(body, dict):
+            return {}
+        detail = body.get("detail")
+        sources = [body]
+        if isinstance(detail, dict):
+            sources.insert(0, detail)
+
+        raw: dict[str, Any] = {}
+        for source in sources:
+            nested = source.get("details")
+            if isinstance(nested, dict):
+                raw.update(nested)
+            for key in ("field", "stage", "instance_path", "schema_path", "validator"):
+                if source.get(key) not in (None, ""):
+                    raw.setdefault(key, source[key])
+
+        def bounded(value: Any, *, depth: int = 0) -> Any:
+            if depth > 3:
+                return None
+            if isinstance(value, bool) or value is None:
+                return value
+            if isinstance(value, (int, float)):
+                return value
+            if isinstance(value, str):
+                return " ".join(value.split())[:300]
+            if isinstance(value, list):
+                return [bounded(item, depth=depth + 1) for item in value[:20]]
+            if isinstance(value, dict):
+                result: dict[str, Any] = {}
+                for key, item in list(value.items())[:30]:
+                    safe_key = str(key)[:80]
+                    if safe_key.casefold() in {
+                        "authorization", "api_key", "apikey", "token",
+                        "password", "secret", "credential", "sql",
+                    }:
+                        continue
+                    result[safe_key] = bounded(item, depth=depth + 1)
+                return result
+            return "<unsupported>"
+
+        sanitized = bounded(raw)
+        return sanitized if isinstance(sanitized, dict) else {}
 
 
 class HttpSemanticAdapter:
@@ -2172,6 +2235,67 @@ class HttpDataRetrievalAdapter:
                 copy.deepcopy(asl),
             )
 
+        return await self._execute_validated_asl(
+            request, identity, asl=asl, semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id,
+            analysis_contract=analysis_contract,
+            metric_definitions=metric_definitions,
+            metric_definition_fingerprints=metric_definition_fingerprints,
+        )
+
+    async def query_surface(
+        self, request: CanonicalAnalysisRequest, identity: TrustedIdentity,
+        *, mentions: list[dict],
+    ) -> DataQueryResult:
+        """Plan from wording and use the same guarded SQL execution boundary.
+
+        Confirmed choices and multi-task dependencies require their own envelope;
+        reject those shapes until that envelope is connected, never drop them.
+        """
+        from app.adapters.surface_asl import generate_surface_asl
+
+        scope = request.authorized_semantic_scope
+        if scope is None:
+            raise AdapterError("SEMANTIC_CONTEXT_MISSING", "trusted semantic scope is required")
+        self._enforce_bound_scope(request, scope.semantic_model_id,
+                                  scope.business_domain_ids[0] if scope.business_domain_ids else None)
+        if (request.semantic_filter_bindings or request.dependency_constraints
+                or request.trusted_dimension_bindings or request.lineage_target
+                or contract_for_request(request) is not None):
+            raise AdapterError("SURFACE_HANDOFF_CONSTRAINTS_UNSUPPORTED",
+                               "confirmed bindings or execution constraints require explicit handoff")
+        plan = await generate_surface_asl(
+            self.client, self.settings,
+            completed_question=request.rewritten_question or request.original_question,
+            mentions=mentions, authorized_scope=scope, identity=identity,
+            application_id=request.application_id, request_id=request.request_id,
+        )
+        asl = plan["asl"]
+        # Execution metadata is derived from this ASL, not the upstream role
+        # guesses. Keep the caller's request untouched for provenance.
+        execution = request.model_copy(deep=True)
+        execution.metrics = []
+        execution.dimensions = [str(item.get("name")) for item in asl.get("dimensions", [])
+                                if isinstance(item, dict) and item.get("name")]
+        execution.business_domain_ids = list(scope.business_domain_ids)
+        await emit_progress("ASL_GENERATION", "COMPLETED",
+                            render_asl_extraction_json(asl), message_limit=65536,
+                            display_model="OagentASL", display_version=str(asl.get("version") or "UNKNOWN"))
+        return await self._execute_validated_asl(
+            execution, identity, asl=asl, semantic_model_id=scope.semantic_model_id,
+            business_domain_id=scope.business_domain_ids[0] if scope.business_domain_ids else None,
+            analysis_contract=None, metric_definitions=[], metric_definition_fingerprints=[],
+        )
+
+    async def _execute_validated_asl(
+        self, request, identity, *, asl, semantic_model_id,
+        business_domain_id, analysis_contract, metric_definitions,
+        metric_definition_fingerprints,
+    ) -> DataQueryResult:
+        """Shared SQL boundary after planning and ASL validation.
+
+        Scope, read-only SQL and data-source checks apply to every planner.
+        """
         try:
             with track_operation(
                 "UPSTREAM",
@@ -3182,16 +3306,32 @@ class HttpDataRetrievalAdapter:
             ).strip()
             for item in dimensions
         ]
+
+        def dimension_satisfies_role(item: dict[str, Any], role: str) -> bool:
+            binding = cls._trusted_dimension_binding_for(request, role)
+            if binding is not None:
+                # A V2-authorized dimension closes only through its published
+                # canonical code.  Free alias text, including a correct display
+                # label attached to an unbound code, is not identity proof.
+                return cls._dimension_identity_matches(item, binding)
+            actual = " ".join(
+                str(item.get(key) or "")
+                for key in ("name", "alias", "attr", "field")
+            ).strip()
+            return cls._semantic_dimension_role_matches(role, actual)
+
         missing: list[str] = []
+        satisfied = [False] * len(dimensions)
         required_dimensions = cls._required_grouped_dimension_roles(request)
         for expected in required_dimensions:
             expected_text = str(expected).strip()
             if not expected_text:
                 continue
-            preserved = any(
-                cls._semantic_dimension_role_matches(expected_text, actual)
-                for actual in actual_references
-            )
+            preserved = False
+            for index, item in enumerate(dimensions):
+                if dimension_satisfies_role(item, expected_text):
+                    satisfied[index] = True
+                    preserved = True
             if not preserved:
                 missing.append(expected_text)
         if missing:
@@ -3206,12 +3346,8 @@ class HttpDataRetrievalAdapter:
             )
         unexpected = [
             actual
-            for actual in actual_references
-            if actual
-            and not any(
-                cls._semantic_dimension_role_matches(expected, actual)
-                for expected in required_dimensions
-            )
+            for index, actual in enumerate(actual_references)
+            if actual and not satisfied[index]
         ]
         if unexpected and "STRICT_GROUPING_DIMENSIONS" in request.assumptions:
             raise AdapterError(
@@ -3223,6 +3359,46 @@ class HttpDataRetrievalAdapter:
                     "projected_dimensions": dimensions,
                 },
             )
+
+    @classmethod
+    def _trusted_dimension_binding_for(
+        cls,
+        request: CanonicalAnalysisRequest,
+        expected: str,
+    ) -> Any | None:
+        """Return the trusted catalog binding for one requested dimension role.
+
+        The binding is matched by exact display-name equality: the V1 request
+        materializes ``dimensions`` from the same authorized display names, so
+        fuzzy role matching must not select another dimension's identity.
+        """
+
+        expected_text = str(expected).strip()
+        for binding in request.trusted_dimension_bindings:
+            if str(binding.display_name).strip() == expected_text:
+                return binding
+        return None
+
+    @classmethod
+    def _dimension_identity_matches(
+        cls,
+        item: dict[str, Any],
+        binding: Any,
+    ) -> bool:
+        """Prove one ASL dimension against a bound canonical dimension code."""
+
+        canonical_code = str(binding.canonical_code).strip()
+        if not canonical_code:
+            return False
+        for key in ("name", "field"):
+            value = str(item.get(key) or "").strip()
+            if not value:
+                continue
+            if value == canonical_code:
+                return True
+            if value.rsplit(".", 1)[-1] == canonical_code:
+                return True
+        return False
 
     @classmethod
     def _semantic_dimension_role_matches(

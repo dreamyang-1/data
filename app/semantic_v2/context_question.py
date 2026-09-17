@@ -2039,8 +2039,9 @@ def resolve_context_references(
             completed_question=None,
             next_state=None,
             clarification_question=(
-                "当前追问无法从上一任务中唯一确定要沿用的指标、维度或筛选条件，"
-                "请补充完整问题。"
+                f"当前追问“{chat.question[:80]}”没有说明要沿用上一任务中的哪项信息；"
+                "无法确认要沿用的是指标、分组维度还是筛选条件。"
+                "请把对象、指标和筛选范围写完整。"
             ),
         )
 
@@ -2049,11 +2050,17 @@ def resolve_context_references(
         candidates = _context_filter_surfaces(version, family)
         if len(candidates) != 1:
             label = _CONTEXT_FAMILY_LABELS[family]
+            candidate_text = "、".join(f"“{value}”" for value in candidates[:8])
+            reason = (
+                f"上一任务中的{label}有多个候选值：{candidate_text}"
+                if candidates
+                else f"上一任务中没有可沿用的{label}值"
+            )
             return ContextReferenceResolution(
                 completed_question=None,
                 next_state=None,
                 clarification_question=(
-                    f"上一任务中的{label}条件无法唯一确定，请补充完整的{label}。"
+                    f"{reason}。请在本轮问题中写明具体{label}。"
                 ),
                 referenced_families=tuple(references),
             )
@@ -2104,11 +2111,21 @@ def resolve_context_references(
                 generic_candidates.append((result_family, frame.entity))
         generic_candidates = list(dict.fromkeys(generic_candidates))
         if len(generic_candidates) != 1:
+            marker_text = "、".join(f"“{value}”" for value in generic_markers)
+            candidate_text = "、".join(
+                f"“{surface}”" for _, surface in generic_candidates[:8]
+            )
+            reason = (
+                f"可能指向：{candidate_text}"
+                if candidate_text
+                else "上一任务中没有找到可引用的具体业务对象"
+            )
             return ContextReferenceResolution(
                 completed_question=None,
                 next_state=None,
                 clarification_question=(
-                    "上一任务中可由当前指代引用的对象无法唯一确定，请补充完整对象。"
+                    f"当前追问中的指代词{marker_text}所指对象无法唯一确定，{reason}。"
+                    "请用完整业务名称替换该指代词。"
                 ),
                 referenced_families=tuple(references),
             )

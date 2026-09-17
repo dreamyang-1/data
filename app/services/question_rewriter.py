@@ -1295,15 +1295,55 @@ class QuestionRewriter:
                     for required in required_values
                 )
             )
-            ranked = sorted(
-                (
-                    candidate for candidate in candidates
-                    if candidate["family"] == current_family
-                    and value_matches(candidate)
-                ),
+            exact_by_field: dict[tuple[str, str], dict[str, Any]] = {}
+            for candidate in candidates:
+                if not (
+                    candidate["score"] >= 0.70
+                    and required_values
+                    and all(
+                        any(
+                            candidate_value.casefold() == required.casefold()
+                            for candidate_value in candidate["values"]
+                        )
+                        for required in required_values
+                    )
+                ):
+                    continue
+                field_identity = (
+                    candidate["family"],
+                    candidate["attribute_code"] or candidate["label"].casefold(),
+                )
+                previous = exact_by_field.get(field_identity)
+                if previous is None or candidate["score"] > previous["score"]:
+                    exact_by_field[field_identity] = candidate
+            exact_hits = sorted(
+                exact_by_field.values(),
                 key=lambda candidate: (-candidate["score"], candidate["label"]),
             )
-            if not ranked:
+            if len(exact_hits) == 1:
+                # A unique exact catalog value is authoritative over the
+                # model's provisional field family.  A lower-score same-family
+                # fuzzy/substring hit must not outrank it, otherwise the
+                # canonical replacement of that fuzzy hit silently overwrites
+                # the user's literal with an unrelated catalog value.
+                ranked = exact_hits
+                family_rebound = exact_hits[0]["family"] != current_family
+            elif exact_hits:
+                # The same literal is an exact catalog value on several
+                # attributes.  Binding by list order or family priority would
+                # guess; keep the provisional field and let the ambiguity
+                # gate fail closed instead.
+                ranked = []
+            else:
+                ranked = sorted(
+                    (
+                        candidate for candidate in candidates
+                        if candidate["family"] == current_family
+                        and value_matches(candidate)
+                    ),
+                    key=lambda candidate: (-candidate["score"], candidate["label"]),
+                )
+            if not ranked and not exact_hits:
                 # The completion model can identify the right literal but
                 # attach a provisional family (for example 商品名称=费森尤斯).
                 # Rebind only from high-confidence, current-model catalog

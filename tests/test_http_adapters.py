@@ -171,6 +171,53 @@ async def test_deterministic_semantic_5xx_is_not_retried_by_http_client(monkeypa
 
 
 @pytest.mark.asyncio
+async def test_http_client_preserves_bounded_upstream_contract_details(monkeypatch):
+    class FakeAsyncClient:
+        def __init__(self, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        async def request(self, method, path, **kwargs):
+            return httpx.Response(
+                502,
+                json={
+                    "success": False,
+                    "detail": {
+                        "code": "ASL_ENTITY_MENTION_UNRESOLVED",
+                        "message": "sanitized",
+                        "field": "filters",
+                        "details": {
+                            "mention": "费森尤斯",
+                            "candidate_field_count": 12,
+                            "token": "must-not-cross-boundary",
+                        },
+                    },
+                },
+                request=httpx.Request(method, "http://semantic.test" + path),
+            )
+
+    monkeypatch.setattr("app.adapters.http.httpx.AsyncClient", FakeAsyncClient)
+    client = PlatformHttpClient(Settings(http_max_retries=3))
+
+    with pytest.raises(AdapterError) as caught:
+        await client.post(
+            "http://semantic.test", "/agent/query", {"query": "test"}, retryable=True
+        )
+
+    assert caught.value.details == {
+        "path": "/agent/query",
+        "mention": "费森尤斯",
+        "candidate_field_count": 12,
+        "field": "filters",
+    }
+
+
+@pytest.mark.asyncio
 async def test_live_metric_discovery_accepts_sql_verified_published_metric():
     asl = {
         "version": "2.0",

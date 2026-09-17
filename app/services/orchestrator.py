@@ -67,6 +67,7 @@ from app.services.conversation_followup import (
 )
 from app.services.turn_admission import TurnAdmissionGate
 from app.services.clarification_policy import decide_clarification, restore_clarification_keys
+from app.services.dependency_error_messages import render_dependency_error
 from app.services.authorized_scope import bind_authorized_scope, state_scope_matches
 from app.services.semantic_decision import (
     canonical_request_from_semantic_decision,
@@ -2909,7 +2910,75 @@ class DataAnalysisOrchestrator:
             )
         )
 
+    async def _handle_surface_query(self, chat, identity):
+        """Execute a completed ordinary query with ASL-owned catalog binding."""
+        if not callable(getattr(self.adapters.query, "query_surface", None)):
+            return None
+        # Dataset selection and dependency envelopes still belong to the
+        # existing executor; never lose them in the ordinary-query shortcut.
+        if (chat.dataset_id is not None or chat.dependency_constraints
+                or chat.temp_file_paths or chat._is_regeneration_execution):
+            return None
+        decision = chat._semantic_decision
+        if decision is not None and str(decision.source) == 'V2_AUTHORIZED_PLAN':
+            # Previously confirmed/native plans retain their existing guarded
+            # execution envelope rather than being reduced to surface hints.
+            return None
+        request = await self._classify(chat.question, identity, chat.conversation_id,
+                                       pre_resolved=True)
+        if request.primary_intent not in {
+            PrimaryIntent.METRIC_QUERY, PrimaryIntent.DETAIL_QUERY,
+            PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
+        }:
+            return None
+        request.application_id = chat.application_id
+        request.original_question = chat.question
+        request.rewritten_question = chat.question
+        bind_authorized_scope(request, chat.authorized_semantic_scope)
+        mentions = [
+            {"text": str(item["surface"]),
+             "role_hint": "/".join(item.get("labels") or ()) or None}
+            for item in chat._semantic_extraction_items if item.get("surface")
+        ]
+        await emit_progress("INTENT_RECOGNITION", "COMPLETED", self._intent_think_summary(
+            request, business_domain_labels=chat._business_domain_labels,
+            semantic_extractions=chat._semantic_extraction_items,
+            include_resolved_context=not chat._intent_context_progress_emitted,
+        ))
+        try:
+            result = await self.adapters.query.query_surface(request, identity, mentions=mentions)
+        except AdapterError as exc:
+            if exc.code in {"ASL_AMBIGUOUS", "SQL_TRANSLATION_AMBIGUOUS"}:
+                request.semantic_ambiguities = self._semantic_ambiguities(exc)
+                request.ambiguities = self._ambiguity_texts(exc)
+                request.missing_slots = ["semantic_ambiguity"]
+                return await self._request_clarification(
+                    request, 1, source_stage="OAGNET_ASL_GENERATION")
+            return await self._finish_terminal(request, self._fallback(
+                request, self._dependency_message(exc), error_code=exc.code))
+        # Only the executed, scoped ASL supplies persisted query semantics.
+        request.filters = copy.deepcopy(result.asl.get("filters") or [])
+        request.dimensions = [str(item["name"]) for item in result.asl.get("dimensions", [])
+                              if isinstance(item, dict) and item.get("name")]
+        request.missing_slots = []
+        request.asl_template = copy.deepcopy(result.asl)
+        request.assumptions = [value for value in request.assumptions
+                               if not value.startswith("DEFAULT_TIME_")]
+        time_context = result.asl.get("time_context") or {}
+        request.time_range = None
+        if time_context.get("start") and time_context.get("end"):
+            request.time_range = TimeRange(
+                start=date.fromisoformat(str(time_context["start"])[:10]),
+                end_exclusive=date.fromisoformat(str(time_context["end"])[:10]) + timedelta(days=1),
+            )
+        await self.sessions.put_task_frame(request)
+        return await self._complete_query_result(chat, identity, request, result)
+
     async def _handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
+        if self.settings.surface_asl_execution_enabled and chat._completed_question_execution:
+            surface_response = await self._handle_surface_query(chat, identity)
+            if surface_response is not None:
+                return surface_response
         preserve_merged_question = False
         recalled_task_frame = False
         restore_legacy_semantic_context = not (
@@ -4610,11 +4679,41 @@ class DataAnalysisOrchestrator:
             ),
         )
         request.dependency_constraints = list(chat.dependency_constraints)
+        internal_assumptions = _INTERNAL_ASSUMPTIONS.get()
         request.assumptions = list(dict.fromkeys([
             *request.assumptions,
-            *_INTERNAL_ASSUMPTIONS.get(),
+            *internal_assumptions,
             *(["STRUCTURED_TASK_RECALL"] if recalled_task_frame else []),
         ]))
+        if (
+            _SALES_RECORD_TIME_ASSUMPTION in internal_assumptions
+            and request.time_range is None
+            and (
+                "TIME_SCOPE_SOURCE=BUSINESS_DEFAULT_ALL_AVAILABLE_HISTORY"
+                in request.assumptions
+            )
+        ):
+            # A relationship-detail facet proven to belong to the combined
+            # sales report must execute on one concrete sales-record period,
+            # shared by every sibling facet.  The deterministic splitter can
+            # append the all-history phrase to such child questions, which the
+            # classifier resolves to a business-default all-time scope; that
+            # scope contradicts the trusted sales-record time scope.  Replace
+            # it with the controlled default period.  Explicit user periods are
+            # never touched because ``time_range`` is already set for them.
+            rules = getattr(self.classifier, "rules", self.classifier)
+            parser = getattr(rules, "_time_range", None)
+            window = parser("最近一年") if callable(parser) else None
+            if window is not None:
+                request.time_range = window
+                request.assumptions = [
+                    value for value in request.assumptions
+                    if value not in {
+                        "TIME_SCOPE=ALL_TIME",
+                        "TIME_SCOPE_SOURCE=BUSINESS_DEFAULT_ALL_AVAILABLE_HISTORY",
+                    }
+                ]
+                request.assumptions.append("DEFAULT_TIME_RANGE=LATEST_ONE_YEAR")
         if (
             "LATEST_RESULT_DATASET_NOT_REUSABLE" in request.assumptions
             and re.search(
@@ -5042,6 +5141,15 @@ class DataAnalysisOrchestrator:
             chat,
             identity,
         )
+        return await self._complete_query_result(
+            chat, identity, request, query_result,
+            dataset_id=dataset_id, external_search_mode=external_search_mode,
+        )
+
+    async def _complete_query_result(
+        self, chat, identity, request, query_result, *,
+        dataset_id=None, external_search_mode=None,
+    ):
         self._restore_projected_filter_columns(request, query_result.dataset)
         query_result = self._enforce_name_projection_integrity(
             request, query_result
@@ -5935,6 +6043,20 @@ class DataAnalysisOrchestrator:
                 )
             )
         )
+        if (
+            analysis_output is not None
+            and request.dimensions
+            and analysis_output.method not in structured_table_methods
+        ):
+            # Analysis prose must not replace the requested grouped values.
+            # Render the validated dataset, preserving every returned dimension.
+            answer += "\n\n" + self._analyze(
+                request,
+                query_result.dataset.columns,
+                query_result.dataset.rows,
+                knowledge_context,
+                result_truncated=query_result.dataset.truncated,
+            )
         if analysis_output is not None and analysis_output.warnings:
             answer += "\n\n注意事项：" + "；".join(analysis_output.warnings) + "。"
         unavailable_fields = [
@@ -6250,7 +6372,14 @@ class DataAnalysisOrchestrator:
                     f"查询条件：规格型号 = `{identifier.group(0)}`；"
                     "“商品名称”列为该规格型号对应的规范商品名称。"
                 )
-        lines.extend(["", cls._markdown_result_table(display_columns, rows)])
+        lines.extend([
+            "",
+            cls._markdown_result_table(
+                display_columns,
+                rows,
+                question=root_question,
+            ),
+        ])
         return "\n".join(lines)
 
     @staticmethod
@@ -9847,7 +9976,7 @@ class DataAnalysisOrchestrator:
                 answer = (
                     f"查询返回 {len(rows)} 条原始关系记录；"
                     f"按当前投影字段完全相同的组合去重展示后，共 {len(unique_rows)} 个唯一组合。\n\n"
-                    f"{DataAnalysisOrchestrator._markdown_result_table(columns, unique_rows[:display_limit])}\n\n"
+                    f"{DataAnalysisOrchestrator._markdown_result_table(columns, unique_rows[:display_limit], question=request.rewritten_question or request.original_question)}\n\n"
                 )
                 if len(unique_rows) > display_limit:
                     answer += (
@@ -9857,7 +9986,7 @@ class DataAnalysisOrchestrator:
                 return answer
             answer = (
                 f"共查询到 {len(rows)} 条明细。\n\n"
-                f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit])}"
+                f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit], question=request.rewritten_question or request.original_question)}"
             )
             if len(rows) > display_limit:
                 answer += (
@@ -9865,7 +9994,11 @@ class DataAnalysisOrchestrator:
                 )
             return answer
         if len(rows) == 1:
-            return DataAnalysisOrchestrator._markdown_result_table(columns, rows)
+            return DataAnalysisOrchestrator._markdown_result_table(
+                columns,
+                rows,
+                question=request.rewritten_question or request.original_question,
+            )
         label = {
             PrimaryIntent.TREND_ANALYSIS: "趋势分析数据",
             PrimaryIntent.COMPARISON_ANALYSIS: "对比分析数据",
@@ -9878,7 +10011,7 @@ class DataAnalysisOrchestrator:
         display_limit = 200
         answer = (
             f"{label}，共 {len(rows)} 行。\n\n"
-            f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit])}"
+            f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit], question=request.rewritten_question or request.original_question)}"
         )
         if len(rows) > display_limit:
             answer += (
@@ -9921,21 +10054,111 @@ class DataAnalysisOrchestrator:
         return text.replace("|", "\\|").replace("\r", " ").replace("\n", "<br>")
 
     @staticmethod
-    def _markdown_result_table(columns: list[str], rows: list[dict[str, Any]]) -> str:
-        visible_columns = list(dict.fromkeys([
+    def _presentation_column_identity(column: str) -> tuple[str, str]:
+        """Return a comparable business base and presentation role.
+
+        SQL projections sometimes contain both an internal key and its readable
+        label (for example ``城市=340100`` and ``城市名称=合肥市``).  The key is
+        still useful in the dataset and audit evidence, but showing both makes
+        an ordinary business table look like an identifier report.
+        """
+        tail = str(column).rsplit(".", 1)[-1].casefold().strip()
+        compact = re.sub(r"[\s._-]+", "", tail)
+        for suffix in ("名称", "姓名", "name", "label"):
+            if compact.endswith(suffix) and len(compact) > len(suffix):
+                return compact[:-len(suffix)], "label"
+        for suffix in ("编码", "编号", "代码", "code", "id"):
+            if compact.endswith(suffix) and len(compact) > len(suffix):
+                return compact[:-len(suffix)], "identifier"
+        return compact, "value"
+
+    @staticmethod
+    def _column_values_look_like_identifiers(
+        column: str,
+        rows: list[dict[str, Any]],
+    ) -> bool:
+        values = [row.get(column) for row in rows if row.get(column) is not None][:50]
+        if not values:
+            return False
+        for value in values:
+            if isinstance(value, bool):
+                return False
+            if isinstance(value, int):
+                continue
+            if isinstance(value, float):
+                if value.is_integer():
+                    continue
+                return False
+            text = str(value).strip()
+            if not text or len(text) > 64 or not re.fullmatch(
+                r"[0-9A-Za-z][0-9A-Za-z._/-]*", text
+            ):
+                return False
+        return True
+
+    @classmethod
+    def _presentation_columns(
+        cls,
+        columns: list[str],
+        rows: list[dict[str, Any]],
+        *,
+        question: str = "",
+    ) -> list[str]:
+        available = list(dict.fromkeys([
             *columns,
             *(key for row in rows for key in row if key not in columns),
         ]))
+        label_bases = {
+            base
+            for column in available
+            for base, role in [cls._presentation_column_identity(column)]
+            if role == "label"
+        }
+        compact_question = re.sub(r"\s+", "", question or "").casefold()
+        visible: list[str] = []
+        for column in available:
+            base, role = cls._presentation_column_identity(column)
+            paired_with_label = bool(base and base in label_bases)
+            explicit_identifier_request = any(
+                marker in compact_question
+                for marker in (
+                    f"{base}编码", f"{base}编号", f"{base}代码",
+                    f"{base}code", f"{base}id",
+                )
+            )
+            hide_identifier = (
+                paired_with_label
+                and role in {"identifier", "value"}
+                and not explicit_identifier_request
+                and cls._column_values_look_like_identifiers(column, rows)
+            )
+            if not hide_identifier:
+                visible.append(column)
+        return visible
+
+    @classmethod
+    def _markdown_result_table(
+        cls,
+        columns: list[str],
+        rows: list[dict[str, Any]],
+        *,
+        question: str = "",
+    ) -> str:
+        visible_columns = cls._presentation_columns(
+            columns,
+            rows,
+            question=question,
+        )
         if not visible_columns:
             return "未返回可展示字段。"
-        headers = [DataAnalysisOrchestrator._display_column_name(item) for item in visible_columns]
+        headers = [cls._display_column_name(item) for item in visible_columns]
         lines = [
             "| " + " | ".join(headers) + " |",
             "| " + " | ".join("---" for _ in headers) + " |",
         ]
         lines.extend(
             "| " + " | ".join(
-                DataAnalysisOrchestrator._markdown_cell(row.get(column))
+                cls._markdown_cell(row.get(column))
                 for column in visible_columns
             ) + " |"
             for row in rows
@@ -10127,17 +10350,33 @@ class DataAnalysisOrchestrator:
                 if prompt not in questions:
                     questions.append(prompt)
             elif slot == "semantic_ambiguity" and (request.semantic_ambiguities or request.ambiguities):
-                semantic_questions = (
-                    [item.question for item in request.semantic_ambiguities if item.blocking]
-                    if request.semantic_ambiguities else request.ambiguities
-                )
-                questions.extend(
-                    text
-                    for value in semantic_questions
-                    if (
-                        text := cls._sanitize_clarification_text(value)
-                    ) not in questions
-                )
+                if request.semantic_ambiguities:
+                    for ambiguity in request.semantic_ambiguities:
+                        if not ambiguity.blocking:
+                            continue
+                        text = cls._sanitize_clarification_text(ambiguity.question)
+                        phrase = cls._sanitize_clarification_text(ambiguity.phrase or "")
+                        vague_markers = (
+                            "它", "该名称", "这个名称", "当前名称",
+                            "哪个业务字段", "存在歧义的业务口径",
+                            "请重新说明", "具体是什么", "具体指什么",
+                        )
+                        if (
+                            phrase
+                            and phrase not in text
+                            and any(marker in text for marker in vague_markers)
+                        ):
+                            text = f"关于“{phrase}”：{text}"
+                        if text and text not in questions:
+                            questions.append(text)
+                else:
+                    questions.extend(
+                        text
+                        for value in request.ambiguities
+                        if (
+                            text := cls._sanitize_clarification_text(value)
+                        ) not in questions
+                    )
             else:
                 prompt = prompts.get(slot, f"请补充 {slot}。")
                 if prompt not in questions:
@@ -11042,6 +11281,9 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _dependency_message(exc: AdapterError) -> str:
+        detailed = render_dependency_error(exc)
+        if detailed is not None:
+            return detailed
         known = {
             'EXPLICIT_DOMAIN_NOT_SUPPORTED': '当前查询服务尚不能严格限定本次授权业务域，本次未执行查询。需由服务维护方完善范围过滤。',
             'EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED': '当前查询服务尚不能严格限定本次授权的业务域集合，本次未执行查询。需由服务维护方完善范围过滤。',
@@ -11087,15 +11329,35 @@ class DataAnalysisOrchestrator:
         if diagnostic_code in known:
             return known[diagnostic_code]
         if exc.status_code in {401, 403}:
-            return "上游数据服务拒绝了当前可信身份，本次不返回数据。"
+            return (
+                f"上游数据服务拒绝了当前可信身份（错误码：{diagnostic_code}，"
+                f"HTTP {exc.status_code}），本次不返回数据。"
+                "用户无需修改查询内容；系统维护人员需检查服务身份、授权头和应用绑定。"
+            )
         if exc.status_code == 404:
-            return "上游数据服务没有找到请求的业务资源。"
+            return (
+                f"上游数据服务没有找到本次调用的资源或接口（错误码：{diagnostic_code}，HTTP 404）。"
+                "用户无需改写业务问题；系统维护人员需检查服务版本、接口路径和语义资源是否已发布。"
+            )
         if exc.status_code == 409:
-            return "上游数据状态发生冲突，请刷新后重试。"
+            return (
+                f"上游数据状态发生冲突（错误码：{diagnostic_code}，HTTP 409）。"
+                "请刷新当前会话后重试；若仍出现，系统维护人员需检查目录版本或会话状态冲突。"
+            )
         if exc.status_code == 422:
-            return "上游数据服务无法按当前条件完成查询，请调整条件后重试。"
+            return (
+                f"上游服务拒绝了当前查询合同（错误码：{diagnostic_code}，HTTP 422），"
+                "但响应没有提供可安全展示的具体字段或取值。"
+                "用户无需盲目改写问题；系统维护人员需根据该错误码补全结构化 details，"
+                "再明确判断应由用户补充条件还是由语义层修复配置。"
+            )
         safe_code = diagnostic_code
-        return f"上游数据服务暂时不可用（{safe_code}），请稍后重试。"
+        status = f"，HTTP {exc.status_code}" if exc.status_code is not None else ""
+        return (
+            f"上游调用失败（错误码：{safe_code}{status}），当前响应未提供更具体的可公开诊断信息。"
+            "用户无需重复输入同一问题；若错误可重试，请稍后重试，"
+            "否则由系统维护人员检查对应调用阶段并补充结构化错误详情。"
+        )
 
     @staticmethod
     def _analysis_contract_requirements(

@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, StrictInt, field_validator, model_validator
 
 from asl_contract import ASLValidationError, IntentASLContract
+from surface_evidence import SurfaceEvidence
 from scope_contract import CONTRACT_VERSION, normalize_domains, require_candidate_scope, semantic_record_types
 
 from capacity_control import (
@@ -463,7 +464,15 @@ def semantic_display_elements_resolve(
             try:
                 require_candidate_scope(metadata, req.semantic_model_id, domain_ids)
             except ValueError as exc:
-                raise HTTPException(502, detail={'code': 'SEMANTIC_SCOPE_MISMATCH'}) from exc
+                raise HTTPException(502, detail={
+                    'code': 'SEMANTIC_SCOPE_MISMATCH',
+                    'message': 'a retrieval candidate could not be verified against the requested semantic scope',
+                    'stage': _candidate_scope_reason(exc),
+                    'candidate': {
+                        'candidate_id': candidate.candidate_id,
+                        'slot': candidate.slot,
+                    },
+                }) from exc
             if (
                 candidate.slot == "filter"
                 and not _semantic_filter_field_matches(candidate.field_name, metadata)
@@ -1219,6 +1228,7 @@ def daily_table_status():
 
 class QueryRequest(BaseModel):
     query: str = Field(min_length=1, max_length=4000)
+    surface_evidence: SurfaceEvidence | None = None
     retrieval_query: str | None = Field(default=None, min_length=1, max_length=4000)
     semantic_model_id: StrictPositiveInt
     business_domain_id: StrictPositiveInt | None = None
@@ -1404,6 +1414,55 @@ def _asl_validation_error_code(exc: ValueError) -> str:
     return "ASL_OUTPUT_INVALID"
 
 
+def _public_asl_validation_context(exc: ValueError) -> dict[str, Any]:
+    """Expose only bounded, contract-owned facts needed for a useful repair."""
+
+    if not isinstance(exc, ASLValidationError):
+        return {}
+
+    def bounded(value: Any, *, depth: int = 0) -> Any:
+        if depth > 3:
+            return None
+        if isinstance(value, bool) or value is None:
+            return value
+        if isinstance(value, (int, float)):
+            return value
+        if isinstance(value, str):
+            return " ".join(value.split())[:300]
+        if isinstance(value, list):
+            return [bounded(item, depth=depth + 1) for item in value[:20]]
+        if isinstance(value, dict):
+            return {
+                str(key)[:80]: bounded(item, depth=depth + 1)
+                for key, item in list(value.items())[:30]
+                if str(key).casefold() not in {
+                    "authorization", "api_key", "apikey", "token",
+                    "password", "secret", "credential", "sql",
+                }
+            }
+        return "<unsupported>"
+
+    context: dict[str, Any] = {}
+    if exc.field:
+        context["field"] = str(exc.field)[:120]
+    details = bounded(exc.details)
+    if isinstance(details, dict) and details:
+        context["details"] = details
+    return context
+
+
+def _candidate_scope_reason(exc: ValueError) -> str:
+    """Map scope-verification failures to a bounded, non-sensitive stage."""
+    reason = str(exc)
+    if "metadata is missing" in reason:
+        return "metadata_missing"
+    if "model is unproven" in reason:
+        return "model_unproven"
+    if "domain is unproven" in reason:
+        return "domain_unproven"
+    return "unverified"
+
+
 @app.post("/agent/query", response_model=QueryResponse)
 def agent_query(req: QueryRequest):
     """自然语言提问生成 DSL，直接返回 agent 结果
@@ -1419,6 +1478,8 @@ def agent_query(req: QueryRequest):
             lambda: main(
                 req.query,
                 retrieval_query=req.retrieval_query,
+                surface_evidence=(req.surface_evidence.model_dump(mode="json")
+                                  if req.surface_evidence is not None else None),
                 store=_store,
                 semantic_model_id=req.semantic_model_id,
                 business_domain_id=req.business_domain_id,
@@ -1512,6 +1573,7 @@ def agent_query(req: QueryRequest):
             detail={
                 "code": error_code,
                 "message": "model output did not pass semantic/schema validation",
+                **_public_asl_validation_context(exc),
             },
         ) from exc
     except Exception as exc:

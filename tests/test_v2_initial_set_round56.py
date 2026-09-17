@@ -30,7 +30,10 @@ async def test_new_single_member_list_keeps_native_semantics(catalog):
 @pytest.mark.asyncio
 async def test_schema_fix_does_not_relax_native_scalar_set_rejection(catalog):
     current=step('object')
-    with pytest.raises(ValueError,match='V2_CONTRACT_VALIDATION_FAILURE'):
+    # The SET+metrics joint contract requires an array value, so a scalar
+    # object is refused at the exact schema stage before hydration; the
+    # rejection is still enforced, one stage earlier than the old runtime code.
+    with pytest.raises(ValueError,match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION'):
         await turns(planner(catalog,[current])[0],[current])
 
 
@@ -50,10 +53,12 @@ async def test_invalid_initial_object_never_becomes_a_valid_collection(catalog,f
             'forged_handle':{'binding_handle':'forged'},'unknown_field':{**operand,'unexpected':True},
             'scope':{**operand,'semantic_model_id':'82'}}[fault]
         value['edits'][0]['value']=replacement;return value
-    # A nested handle is already rejected by the existing mention-repair
-    # boundary (TypeError); do not hide that preexisting diagnostic limitation.
-    error = TypeError if fault == 'nested' else ValueError
-    with pytest.raises(error):await turns(planner(catalog,[(text,parsed,bad)])[0],[(text,parsed,bad)])
+    # The exact schema's binding_handle string contract now rejects a nested
+    # handle object at the schema stage, ahead of the mention-repair boundary
+    # that used to raise TypeError; other malformed shapes keep their runtime
+    # refusals. The negative guarantee (never a valid collection) is unchanged.
+    match='V2_MODEL_DYNAMIC_SCHEMA_VIOLATION' if fault=='nested' else None
+    with pytest.raises(ValueError,match=match):await turns(planner(catalog,[(text,parsed,bad)])[0],[(text,parsed,bad)])
 
 
 @pytest.mark.asyncio

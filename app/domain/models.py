@@ -288,6 +288,24 @@ class SemanticFilterBinding(StrictModel):
     source: Literal["ENTITY_ATTRIBUTE_VECTOR"] = "ENTITY_ATTRIBUTE_VECTOR"
 
 
+class SemanticDimensionBinding(StrictModel):
+    """Catalog identity proof for one authorized grouping dimension.
+
+    Only the trusted in-process V2 semantic decision may create these
+    bindings; the transport contract never parses them.  Keeping the
+    canonical dimension code on the canonical request lets ASL validation
+    prove a grouped dimension by its published identity instead of comparing
+    free-form display labels.
+    """
+
+    display_name: str = Field(min_length=1, max_length=500)
+    canonical_code: str = Field(min_length=1, max_length=256)
+    canonical_id: str = Field(min_length=1, max_length=256)
+    semantic_model_id: int = Field(gt=0)
+    catalog_version: str | None = Field(default=None, max_length=256)
+    business_domain_id: int | None = Field(default=None, gt=0)
+
+
 class SemanticAssetRef(StrictModel):
     """Versioned semantic asset retained as internal planning evidence."""
 
@@ -456,6 +474,14 @@ class CanonicalAnalysisRequest(StrictModel):
         default_factory=list,
         max_length=100,
         description="当前语义模型实体属性向量库确认的筛选字段和值",
+    )
+    trusted_dimension_bindings: list[SemanticDimensionBinding] = Field(
+        default_factory=list,
+        max_length=50,
+        description=(
+            "V2 授权语义决策物化的分组维度目录身份；"
+            "仅进程内受信物化可写入，传输层不解析该字段"
+        ),
     )
     time_range: TimeRange | None = None
     comparison_type: str | None = None

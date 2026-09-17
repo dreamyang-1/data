@@ -630,6 +630,127 @@ def test_character_pacing_does_not_block_background_execution():
     assert "对话状态识别：独立新问题。" in thinking
 
 
+def test_public_intent_stream_hides_internal_v2_milestones_and_keeps_field_order():
+    app = build_test_app(
+        env="test",
+        runtime_mode="V1",
+        session_store_mode="memory",
+        long_term_memory_mode="disabled",
+    )
+
+    class IntentContractWorkflow:
+        async def ainvoke(self, state):
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "正在理解当前问题，并核对本轮与会话上下文的关系。",
+            )
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "对话状态识别：独立新问题。",
+            )
+            for phase, message in (
+                (
+                    "V2_SEMANTIC_CATALOG_READY",
+                    "业务域语义目录已加载，正在提取当前问题的查询要素。",
+                ),
+                (
+                    "V2_CURRENT_TURN_MODEL_STREAM_STARTED",
+                    "语义识别模型已开始返回结构化结果，正在完成字段校验。",
+                ),
+                (
+                    "V2_SEMANTIC_CANDIDATES_READY",
+                    "关键词语义候选已提取，正在校验绑定。",
+                ),
+                (
+                    "V2_SEMANTIC_BINDING_MODEL_STREAM_STARTED",
+                    "语义绑定模型已开始返回结构化结果。",
+                ),
+            ):
+                await emit_progress(
+                    "INTENT_RECOGNITION",
+                    "RUNNING",
+                    message,
+                    progress_phase=phase,
+                )
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "用户原始问题：按月份分析上海地区产品最近一年的销售趋势。\n"
+                "补全后的问题：按月份分析上海地区产品最近一年的销售趋势。",
+                progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+            )
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "正在进行任务意图分析、参数提取和规范化。",
+            )
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "COMPLETED",
+                "结构化参数提取：月份（时间粒度）；上海地区（筛选值）；"
+                "销售趋势（指标）。\n业务域：医药销售域\n"
+                "任务意图：趋势分析（置信度 0.95）\n"
+                "意图判定依据：用户要求观察指标随时间的变化。",
+                display_model="IntentRecognitionDisplayV2",
+                display_version="V2",
+            )
+            chat = state["chat"]
+            return {"response": AgentResponse(
+                request_id=uuid4(),
+                conversation_id=chat.conversation_id,
+                status="COMPLETED",
+                intent=PrimaryIntent.TREND_ANALYSIS,
+                answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(app.state.container, "workflow", IntentContractWorkflow())
+        response = client.post(
+            "/agent_chat/stream",
+            json={
+                "semantic_model_id": 81,
+                "application_id": "app1",
+                "conversation_id": "public-intent-contract",
+                "message_id": "m1",
+                "question": "按月份分析上海地区产品最近一年的销售趋势。",
+            },
+        )
+
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    thinking = "".join(
+        event.get("content", "")
+        for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("step") == "step1"
+        and "已用时" not in event.get("content", "")
+    )
+    forbidden = (
+        "业务域语义目录已加载",
+        "语义识别模型已开始返回",
+        "关键词语义候选已提取",
+        "语义绑定模型已开始返回",
+    )
+    assert all(text not in thinking for text in forbidden)
+    ordered = (
+        "正在理解当前问题，并核对本轮与会话上下文的关系。",
+        "对话状态识别：独立新问题。",
+        "用户原始问题：按月份分析上海地区产品最近一年的销售趋势。",
+        "补全后的问题：按月份分析上海地区产品最近一年的销售趋势。",
+        "正在进行任务意图分析、参数提取和规范化。",
+        "结构化参数提取：月份（时间粒度）",
+        "业务域：医药销售域",
+        "任务意图：趋势分析（置信度 0.95）",
+        "意图判定依据：用户要求观察指标随时间的变化。",
+    )
+    positions = [thinking.index(text) for text in ordered]
+    assert positions == sorted(positions)
+
+
 def test_file_inspection_summary_reports_successful_parse_without_internal_path():
     summary = DataAnalysisOrchestrator._file_inspection_think_summary({
         "status": "READ_SUCCESS",
@@ -1748,3 +1869,28 @@ def test_chat_rejects_ambiguous_multiple_spreadsheets():
         )
     assert response.status_code == 422
     assert "一个CSV/XLSX" in response.json()["detail"]
+
+
+class TestRuntimeModeIsolation:
+    def test_conftest_pin_overrides_machine_dotenv_runtime_mode(self, tmp_path, monkeypatch):
+        """A developer .env selecting V2 must not leak into default tests."""
+        dotenv = tmp_path / "env"
+        dotenv.write_text(
+            "DATA_AGENT_RUNTIME_MODE=V2_CONTEXT_V1_EXECUTION\n", encoding="utf-8"
+        )
+
+        # Without the process pin, a machine .env selecting V2 leaks into
+        # Settings; this documents the drift tests/conftest.py isolates.
+        monkeypatch.delenv("DATA_AGENT_RUNTIME_MODE", raising=False)
+        assert Settings(_env_file=dotenv).runtime_mode == "V2_CONTEXT_V1_EXECUTION"
+
+        # With the conftest pin present, the same .env can no longer change
+        # the runtime mode observed by ordinary offline tests.
+        monkeypatch.setenv("DATA_AGENT_RUNTIME_MODE", "V1")
+        assert Settings(_env_file=dotenv).runtime_mode == "V1"
+        assert Settings().runtime_mode == "V1"
+
+    def test_explicit_v2_construction_still_wins(self):
+        """conftest pinning must not override tests that choose V2 explicitly."""
+        settings = Settings(runtime_mode="V2_CONTEXT_V1_EXECUTION")
+        assert settings.runtime_mode == "V2_CONTEXT_V1_EXECUTION"

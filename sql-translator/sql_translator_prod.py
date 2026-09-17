@@ -128,6 +128,28 @@ class SemanticCatalog:
         return [part.strip().strip('"\'') for part in text.split(',') if part.strip().strip('"\'')]
 
     @staticmethod
+    def _raw_global_filters(value: Any) -> List[Any]:
+        """Parse the published global_filters column preserving structure.
+
+        Unlike ``_list_value`` (which stringifies dict entries into repr
+        text), filter records must keep their dict/string shape so the SQL
+        adapter can verify the condition instead of concatenating dict text
+        into WHERE.
+        """
+        if value is None or value == '':
+            return []
+        if isinstance(value, list):
+            return list(value)
+        text = str(value).strip()
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                return list(parsed)
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return [text] if text else []
+
+    @staticmethod
     def _metric_scope(metric_id: str) -> tuple[int, str]:
         if not isinstance(metric_id, str) or ':' not in metric_id:
             raise ValueError('metric_id必须使用semantic_model_id:metric_code格式')
@@ -481,7 +503,7 @@ class SemanticCatalog:
             'synonyms': self._list_value(row.get('synonyms')),
             'applicable_scenarios': self._list_value(row.get('applicable_scenarios')),
             'calculation_formula': formula,
-            'global_filters': self._list_value(row.get('global_filters')),
+            'global_filters': self._raw_global_filters(row.get('global_filters')),
             'depend_metrics': self._list_value(row.get('dependence_atomic_indicator')),
             'bound_entities': bindings,
         }
@@ -612,6 +634,80 @@ class SemanticCatalog:
             'column_lineage': column_lineage,
             'metadata_warnings': warnings,
         }
+
+
+# Published filter_type contract (evidence in repo):
+# - include predicates: ``include`` (docs/phase2/semantic_catalog_inventory.json,
+#   docs/phase25/catalog_governance_overlay.json), ``IN`` and ``EQ``
+#   (same inventories and Oagnet/新旧数据对比.md legacy/new examples);
+# - exclusion: ``exclude`` (rendered as ``NOT (...)``).
+# Values are matched exactly; no case folding or spelling tolerance. Unknown,
+# empty, or non-string values must fail closed instead of defaulting to
+# include, which would silently invert a metric's caliber.
+_GLOBAL_FILTER_TYPE_MAP = {
+    'include': 'include',
+    'IN': 'include',
+    'EQ': 'include',
+    'exclude': 'exclude',
+}
+
+_GLOBAL_FILTER_TYPE_MISSING = object()
+
+
+def _normalize_global_filters(value: Any) -> List[Dict]:
+    """Normalize published metric global filters into executable entries.
+
+    Supported shapes: a plain string condition; a dict using the legacy
+    ``condition``/``filter_type`` keys or the camelCase ``filterCondition``/
+    ``filterType`` keys (extra metadata keys such as ``filterExplanation``
+    are ignored); a JSON string of either form.  Fail Closed: anything that
+    cannot be verified as a non-empty string condition with a filter_type in
+    the published allow-set is rejected instead of being stringified into
+    SQL.
+    """
+
+    filters = value
+    if isinstance(filters, str):
+        try:
+            filters = json.loads(filters)
+        except (json.JSONDecodeError, TypeError):
+            raise ValueError('global_filters 不是合法的 JSON 过滤器数组')
+    if filters is None:
+        filters = []
+    if not isinstance(filters, list):
+        raise ValueError('global_filters 必须是数组')
+
+    normalized: List[Dict] = []
+    for item in filters:
+        if isinstance(item, str):
+            condition: Any = item
+            filter_type: Any = _GLOBAL_FILTER_TYPE_MISSING
+        elif isinstance(item, dict):
+            condition = item.get('condition', item.get('filterCondition'))
+            filter_type = item.get('filter_type',
+                                   item.get('filterType', _GLOBAL_FILTER_TYPE_MISSING))
+        else:
+            raise ValueError('global_filters 条目必须是字符串或过滤器对象')
+        if not isinstance(condition, str) or not condition.strip():
+            raise ValueError('global_filters 条目缺少非空字符串 condition')
+        if filter_type is _GLOBAL_FILTER_TYPE_MISSING:
+            # Only a wholly absent filter_type key keeps the historical
+            # include default; explicit empty/non-string values fail closed.
+            filter_type = 'include'
+        if not isinstance(filter_type, str):
+            raise ValueError('global_filters 条目 filter_type 必须是非空字符串')
+        mapped = _GLOBAL_FILTER_TYPE_MAP.get(filter_type)
+        if mapped is None:
+            raise ValueError(
+                'global_filters 条目 filter_type 不在受支持的允许值集合中')
+        condition = condition.strip()
+        if condition.startswith('{') or condition.startswith('['):
+            raise ValueError('global_filters condition 不能是序列化对象文本')
+        normalized.append({
+            'condition': condition,
+            'filter_type': mapped,
+        })
+    return normalized
 
 
 class RedisDSLLoader:
@@ -1205,36 +1301,8 @@ class RedisDSLLoader:
         else:
             depend_metrics = depend or []
 
-        # 全局过滤器：处理不同格式的 global_filters
-        global_filters = data.get('global_filters', []) or []
-        processed_filters = []
-        
-        if global_filters:
-            # 如果是字符串，尝试解析 JSON
-            if isinstance(global_filters, str):
-                try:
-                    global_filters = json.loads(global_filters)
-                except (json.JSONDecodeError, TypeError):
-                    pass
-            
-            # 处理数组形式的过滤器
-            if isinstance(global_filters, list):
-                for gf in global_filters:
-                    if isinstance(gf, dict):
-                        # 处理标准格式
-                        if 'condition' in gf or 'filterCondition' in gf:
-                            condition = gf.get('condition', gf.get('filterCondition', ''))
-                            filter_type = gf.get('filter_type', gf.get('filterType', 'include'))
-                            processed_filters.append({
-                                'condition': condition,
-                                'filter_type': filter_type
-                            })
-                    elif isinstance(gf, str):
-                        # 直接是字符串条件
-                        processed_filters.append({
-                            'condition': gf,
-                            'filter_type': 'include'
-                        })
+        # 全局过滤器：统一规范化旧/新字段形态，非法结构直接拒绝
+        processed_filters = _normalize_global_filters(data.get('global_filters', []) or [])
 
         return {
             'metric_code': data.get('code', ''),
@@ -2096,6 +2164,48 @@ class SQLTranslatorProd:
             return field_ref
         raise ValueError(f"不支持的时间粒度: {granularity}")
 
+    def _dimension_display_companion(self, dimension: Dict, entity_code: str,
+                                     model_id: Optional[str]) -> Optional[tuple]:
+        """Keep a registered entity dimension's identity and expose its label.
+
+        Only an entity-named logical dimension is eligible. Explicit physical
+        projections and independently named code dimensions remain unchanged.
+        A companion must be uniquely declared on the same physical table, so
+        this cannot invent a join or replace the original grouping identity.
+        """
+        code = str(dimension.get('name') or '')
+        if '.' in code or dimension.get('granularity'):
+            return None
+        definition = self._get_dimension(code, model_id)
+        if not definition or definition.get('enum_list'):
+            return None
+        entity = self._get_entity(code, model_id)
+        if not entity:
+            return None
+        field = self._dimension_physical_field(dimension, entity_code, model_id)
+        if not field or '.' not in field:
+            return None
+        attrs = entity.get('attributes') or []
+        identity = [a for a in attrs if a.get('field_mapping') == field]
+        if not any(self._semantic_flag(a.get('is_primary_key')) or
+                   a.get('attr_code') in {code + '_id', code + '_code'}
+                   for a in identity):
+            return None
+        candidates = {}
+        for attribute in attrs:
+            mapped = str(attribute.get('field_mapping') or '')
+            if (mapped == field or mapped.split('.')[0] != field.split('.')[0]
+                    or not re.fullmatch(r'[A-Za-z_]\w*\.[A-Za-z_]\w*', mapped)):
+                continue
+            if (self._semantic_flag(attribute.get('is_main_attribute')) or
+                    attribute.get('attr_code') == code + '_name'):
+                label = attribute.get('attr_name')
+                if label:
+                    candidates[mapped] = str(label)
+        if len(candidates) != 1:
+            return None
+        return next(iter(candidates.items()))
+
     def _build_select_clause(self, metrics: List[Dict], dimensions: List[Dict], entity_code: str, model_id: Optional[str] = None) -> str:
         """构建 SELECT 子句"""
         select_parts = []
@@ -2139,10 +2249,19 @@ class SQLTranslatorProd:
 
             field_ref = self._apply_time_granularity(field_ref, granularity)
             expr, alias = self._build_dim_expression(dim_code, field_ref, dim_alias, model_id)
+            companion = self._dimension_display_companion(dim, entity_code, model_id)
+            if companion and not any(d.get('name') == companion[0] for d in dimensions):
+                display_field, display_alias = companion
+                if display_alias in output_aliases:
+                    raise ValueError(f"列别名重复: {display_alias}")
+                output_aliases.add(display_alias)
+                select_parts.append(f"{display_field} AS `{display_alias.replace('`', '``')}`")
+                alias = f"{alias}（编码）"
             if alias in output_aliases:
                 raise ValueError(f"列别名重复: {alias}")
             output_aliases.add(alias)
             select_parts.append(f"{expr} AS `{alias}`")
+
 
         # 再添加指标
         for metric in metrics:
@@ -2245,6 +2364,9 @@ class SQLTranslatorProd:
                     group_parts.append(self._apply_time_granularity(dim_code, granularity))
                 else:
                     group_parts.append(self._apply_time_granularity(f"{main_table}.{dim_code}", granularity))
+            companion = self._dimension_display_companion(dim, entity_code, model_id)
+            if companion and companion[0] not in group_parts:
+                group_parts.append(companion[0])
         return f"GROUP BY {', '.join(group_parts)}" if group_parts else ""
 
     def _build_having_clause(self, having_conditions: List[str]) -> str:
@@ -2265,21 +2387,20 @@ class SQLTranslatorProd:
                 return str(value)
             return "'" + str(value).replace("'", "''") + "'"
 
-        # 全局过滤条件
-        for gf in global_filters:
-            condition = gf.get('condition', '')
-            if condition:
-                # 只在字段名没有表前缀时才添加前缀
-                if '.order_status' not in condition:
-                    condition = condition.replace('order_status', f'{table_alias}.order_status')
-                if '.test_flag' not in condition:
-                    condition = condition.replace('test_flag', f'{table_alias}.test_flag')
-                if '.business_status' not in condition:
-                    condition = condition.replace('business_status', f'{table_alias}.business_status')
-                if gf.get('filter_type', 'include') == 'exclude':
-                    all_conditions.append(f"NOT ({condition})")
-                else:
-                    all_conditions.append(f"({condition})" if re.search(r'\bOR\b', condition, re.I) else condition)
+        # 全局过滤条件：统一规范化后拼接，不可验证结构在规范化处拒绝
+        for gf in _normalize_global_filters(global_filters):
+            condition = gf['condition']
+            # 只在字段名没有表前缀时才添加前缀
+            if '.order_status' not in condition:
+                condition = condition.replace('order_status', f'{table_alias}.order_status')
+            if '.test_flag' not in condition:
+                condition = condition.replace('test_flag', f'{table_alias}.test_flag')
+            if '.business_status' not in condition:
+                condition = condition.replace('business_status', f'{table_alias}.business_status')
+            if gf['filter_type'] == 'exclude':
+                all_conditions.append(f"NOT ({condition})")
+            else:
+                all_conditions.append(f"({condition})" if re.search(r'\bOR\b', condition, re.I) else condition)
 
         # AST 中的过滤条件
         for f in filters:
@@ -2349,6 +2470,9 @@ class SQLTranslatorProd:
                     dim_alias = self._dimension_alias(
                         field, dim_def, dim_item.get('alias'), model_id
                     )
+                    companion = self._dimension_display_companion(dim_item, '', model_id)
+                    if companion and not any(d.get('name') == companion[0] for d in dimensions):
+                        dim_alias = f"{dim_alias}（编码）"
                     sort_field = f"`{dim_alias}`"
                     break
             if not sort_field:
@@ -2367,6 +2491,9 @@ class SQLTranslatorProd:
                         dim_alias = self._dimension_alias(
                             field, dim_def, dim_item.get('alias'), model_id
                         )
+                        companion = self._dimension_display_companion(dim_item, '', model_id)
+                        if companion and not any(d.get('name') == companion[0] for d in dimensions):
+                            dim_alias = f"{dim_alias}（编码）"
                         sort_field = f"`{dim_alias}`"
                         break
             if not sort_field:
@@ -3850,14 +3977,11 @@ class SQLTranslatorProd:
                 'semantic_validation_report': validation_report,
             }
         except Exception as e:
-            return {
-                'success': False, 'sql': None,
-                'error': f"SQL生成失败: {str(e)}",
-                'error_code': self._semantic_validation_error_code(str(e)),
-                'retryable': False,
-                'model_id': resolved_model_id,
-                'semantic_validation_report': self._failed_semantic_validation_report(str(e)),
-            }
+            # One shared, sanitized builder serves /api/translate; raw exception
+            # text never reaches the public error or the validation report.
+            payload = self._controlled_translation_failure(e, is_execute=False)
+            payload['model_id'] = resolved_model_id
+            return payload
 
     @staticmethod
     def _validation_check(code: str, status: str, message: str,
@@ -3901,6 +4025,73 @@ class SQLTranslatorProd:
             'errors': [{'code': code, 'layer': layer, 'message': message}],
             'warnings': [],
         }
+
+    @classmethod
+    def _controlled_translation_failure(cls, exc: Exception, is_execute: bool) -> Dict:
+        """Build the sanitized public payload for a translation failure.
+
+        Both translation exits share this single builder so the raw exception text
+        can never leak through one field while appearing controlled in another.
+        The public message is assembled exclusively from the fixed wording of the
+        mapped error class; arbitrary exception tail text is never echoed.
+        """
+        raw = str(exc)
+        code = cls._semantic_validation_error_code(raw)
+        identity: Optional[str] = None
+        confirmed = isinstance(exc, ValueError) and code != 'SEMANTIC_VALIDATION_FAILED'
+        if confirmed:
+            # Keep the unresolved catalog identifier only when the full message is
+            # exactly the known error format and the identifier is a single bounded
+            # canonical identifier. Arbitrary trailing text is rejected.
+            match = re.fullmatch(
+                r'不存在(实体|指标|维度|维度字段|过滤字段):\s*([A-Za-z0-9_\-:.]{1,64})',
+                raw,
+            )
+            if match is not None:
+                identity = f'不存在{match.group(1)}: {match.group(2)}'
+        category_messages = {
+            'SEMANTIC_ASSET_NOT_FOUND': '引用的实体、指标、维度或过滤字段不存在于当前语义模型',
+            'RELATIONSHIP_PATH_NOT_FOUND': '无法在已发布语义关系中找到所需的关联路径',
+            'JOIN_CARDINALITY_MISSING': '关系基数未配置，已阻止可能重复累计的Join',
+            'AGGREGATION_FANOUT_RISK': '一对多Join会导致指标重复累计，已阻止生成SQL',
+            'SEMANTIC_AMBIGUITY': 'DSL存在未解决的歧义',
+            'QUERY_SHAPE_INVALID': '查询形态不符合语义层约束',
+            'ASL_SYNTAX_INVALID': 'ASL结构不合法',
+            'SEMANTIC_VALIDATION_FAILED': '语义校验失败',
+        }
+        if confirmed:
+            category = category_messages.get(code, '语义校验失败')
+            if identity is not None:
+                public_message = f'SQL生成失败: {category}（{identity}）'
+            else:
+                public_message = f'SQL生成失败: {category}（标识无法安全提取，请管理员核对语义目录配置）'
+            report = cls._failed_semantic_validation_report(
+                identity if identity is not None else category
+            )
+            # Classification belongs to the original failure, not its sanitized
+            # presentation text. Re-parsing public wording can lose the code.
+            layer = ('SYNTAX' if code == 'ASL_SYNTAX_INVALID' else
+                     'BUSINESS' if code == 'QUERY_SHAPE_INVALID' else 'SEMANTIC')
+            report['errors'][0].update(code=code, layer=layer)
+            for name, details in report['layers'].items():
+                details['status'] = 'FAIL' if name.upper() == layer else 'NOT_RUN'
+        else:
+            # Unknown internal failure: controlled wording only; no raw text and no
+            # fabricated semantic confirmation.
+            public_message = 'SQL生成失败：内部处理错误，详情已记录，请稍后重试或联系管理员'
+            report = None
+        print(f"[SQL-TRANSLATE-ERROR] translation failure code={code} "
+              f"type={type(exc).__name__}: {exc}")
+        payload: Dict = {
+            'success': False, 'sql': None,
+            'error': public_message,
+            'error_code': 'SQL_TRANSLATION_FAILED' if is_execute else (
+                code if confirmed else 'SEMANTIC_VALIDATION_FAILED'),
+            'retryable': False,
+        }
+        if confirmed:
+            payload['semantic_validation_report'] = report
+        return payload
 
     def _semantic_sql_validation_report(
         self, ast: Dict, sql: str, model_id: Optional[str]
@@ -4116,8 +4307,9 @@ class SQLTranslatorProd:
                 'error_code': 'SEMANTIC_DSL_UNAVAILABLE', 'retryable': True,
             }
         except Exception as e:
-            return {'sql': None, 'success': False, 'error': f"SQL生成失败: {str(e)}",
-                    'error_code': 'SQL_TRANSLATION_FAILED', 'retryable': False}
+            # One shared, sanitized builder serves execute_query; raw exception
+            # text never reaches the public error or the validation report.
+            return self._controlled_translation_failure(e, is_execute=True)
 
         if not model_id and not data_source_id:
             return {
