@@ -44,3 +44,55 @@ def test_generation_recalls_exact_question_without_advisory_json():
             agent.main(question, store=object(), semantic_model_id=81,
                        surface_evidence={"mentions": [{"text": "上海市"}]})
     builder.return_value.build.assert_called_once_with(question)
+
+
+def test_mention_recall_keeps_primary_question_and_identical_scope():
+    from prompt_build import PromptBuilder
+    calls, embedded = [], []
+    class Store:
+        def search(self, vector, *, top_k, where):
+            calls.append((vector, where))
+            return []
+    def embed(text):
+        embedded.append(text)
+        return [len(embedded)]
+    builder = PromptBuilder(Store(), embed, semantic_model_id=81,
+                            business_domain_ids=[205], surface_mentions=["甲牌", "Model X", "甲牌"])
+    builder.retrieve("查询甲牌Model X使用部门")
+    assert embedded == ["查询甲牌Model X使用部门", "甲牌", "Model X"]
+    for vector, where in calls:
+        assert where in [builder._build_where(kind) for kind in
+                         ["entity", "attribute", "relation", "metric", "dimension", "entity_attribute_value"]]
+    assert {tuple(vector) for vector, _ in calls} == {(1,), (2,), (3,)}
+
+
+def test_mention_candidate_survives_whole_question_reranking():
+    from prompt_build import PromptBuilder
+    from vector_store import SearchResult
+    hit = SearchResult(id='attribute:spec', score=0.8, text='specification',
+                       metadata={'type':'attribute', 'semantic_model_id':81,
+                                 'business_domain_id':205, 'attr_code':'spec'})
+    class Store:
+        def search(self, vector, *, top_k, where):
+            return [hit] if vector == [2] and where == builder._build_where('attribute') else []
+    builder = PromptBuilder(Store(), lambda text: [1] if text == 'whole' else [2],
+        semantic_model_id=81, business_domain_ids=[205], surface_mentions=['model'])
+    with patch.object(builder, '_rerank_exact_mentions', return_value=[]), \
+         patch.object(builder, '_complete_relational_scope', side_effect=lambda e,a,r,*args:(e,a,r,{})):
+        result = builder.retrieve('whole')
+    assert hit in result['attributes']
+
+
+def test_surface_time_is_not_erased_by_legacy_phrase_parser():
+    import json
+    import agent
+    time = {'type':'range','start':'2026-03-17','end':'2026-09-17',
+            'unit':'day','anchor':'orders.created_at'}
+    ast = {'version':'2.0','intent':'query','subject':{},'metrics':[],
+           'dimensions':[], 'filters':[], 'time_context':time,'ambiguity':[]}
+    with patch.object(agent, '_normalize_time_context', side_effect=AssertionError('legacy parser')):
+        actual = json.loads(agent._normalize_semantic_references(
+            json.dumps(ast), {}, '近半年', model_owned_time=True))
+    assert actual['time_context'] == time
+    with pytest.raises(ValueError, match='anchor'):
+        agent._validate_asl_output(json.dumps({**ast, 'having':[]}), {}, '近半年')

@@ -100,7 +100,7 @@ SYSTEM_PROMPT = """
 - `alias` 填用户原话，便于回溯；**但若指标的 `calc_formula` 已含 `as` 语句（已指定别名），则 `alias` 必须传 null**，避免与 SQL 别名冲突
 - `time_anchor` 默认 null（用指标默认锚点）；若用户明确说"按下单时间"或"按付款时间"则覆盖为 `表名.字段名` 格式（如 `order_info.create_time`）
 - **【强制】`name` 必须是 metrics.yml 中存在的 `metric_code`**，严禁使用 `表.字段` 格式（如 `goods_info.sales_volume`）；`表.字段` 格式仅用于 dimensions（实体属性作维度）和 filters.field
-- **metrics.yml 中无匹配指标时**：不要从实体的 `attributes[].field_mapping` 借用字段当 metric；应在 `ambiguity` 中列出语义最近的候选指标（如"购买量"无直接指标时，候选为 `product_count`/`I_AEA202608070004` 等可能相关的指标），并选择最接近的指标 code 作为 `metrics[0].name`，同时把 `alias` 填为用户原话
+- **用户要求统计且 metrics.yml 中无匹配指标时**：不要从实体属性借用字段当 metric，也不要将最接近的指标当成已选指标；仅列出有业务含义证据的候选并报告未绑定的具体计算要求。用户只要求实体名称、属性值或关系名单时，metrics=[]，直接使用已发布属性投影，不要求“对应的明细指标”。
 - **“明细/列表”只是展示方式，不是指标名称**：必须继续匹配用户明确说出的业务对象和字段。例如“订单明细，显示订单号和实付金额”应选“实付金额”对应指标，并将 `order_info.order_id` 作为展示维度；严禁因为出现“明细”二字而改选“商品明细”等其他实体的指标
 - 当用户原话明确命中某指标的 `metric_name` 或 `synonyms`（例如“销售额”命中实付金额指标）时，必须优先使用该精确命中的指标；不得用仅语义相近的“商品总金额”等指标替代。精确名称/别名命中已经完成消歧，除非存在多个指标共享同一个精确词，否则不得再添加“确认指标”的 ambiguity
 - “销售趋势 / 销售情况 / 销售分析”本身没有说明金额或数量。若召回中同时存在销售金额、销量等多个规范指标，必须在 `ambiguity` 中列出这些已召回候选并追问；不得静默默认其中一个。用户明确说“含税销售总额 / 销量”等规范名称后才可唯一选择
@@ -202,7 +202,7 @@ SYSTEM_PROMPT = """
   ]
 }
 ```
-即便只有部分章节为空（如 metrics.yml 为空但 entities.yml 有召回），也不得用臆造的 metric_code 填充 metrics，必须在 ambiguity 中说明缺失的元数据类型并追问。
+即便只有部分章节为空，也不得编造编码。只有完成当前问题确实需要该类元数据时，才报告该类元数据缺失。实体属性或关系名单查询允许 metrics=[]；不需要任何统计指标，不得因 metrics.yml 为空或没有对应的“明细指标”而追问。用户已明确要求名单/属性时直接选择已发布属性和关系路径，不再询问是否需要明细或统计。
 
 【输出格式】
 
@@ -409,6 +409,7 @@ class PromptBuilder:
         business_domain_ids: list[int] | tuple[int, ...] | None = None,
         preferred_metric_codes: list[str] | tuple[str, ...] | None = None,
         authoritative_entity_scope: bool = False,
+        surface_mentions: list[str] | None = None,
     ):
         """
         Args:
@@ -431,6 +432,7 @@ class PromptBuilder:
         )
         self.preferred_metric_codes = list(dict.fromkeys(preferred_metric_codes or []))
         self.authoritative_entity_scope = bool(authoritative_entity_scope)
+        self.surface_mentions = list(dict.fromkeys(surface_mentions or []))[:6]
 
     # -------- 检索 --------
 
@@ -975,6 +977,8 @@ class PromptBuilder:
                 "_relational_completion": {},
             }
         vec = self.embed_fn(user_query)
+        mention_vectors = [self.embed_fn(text) for text in self.surface_mentions
+                           if text and text != user_query]
         # Recall a small candidate pool, then deterministically put exact business
         # names/synonyms first. Pure vector top-3 previously omitted the canonical
         # “销售额” metric even when that exact synonym appeared in a cross-domain
@@ -990,6 +994,13 @@ class PromptBuilder:
                 where=self._build_where(type_name),
             )
             self._validate_record_scope(candidates)
+            mention_hits = []
+            for mention_vec in mention_vectors:
+                extra = self.store.search(mention_vec, top_k=self.top_k,
+                                          where=self._build_where(type_name))
+                self._validate_record_scope(extra)
+                mention_hits.extend(extra)
+                candidates = self._dedupe_results([*candidates, *extra])
             candidate_pools[type_name] = list(candidates)
             if type_name == "metric" and self.preferred_metric_codes:
                 allowed = set(self.preferred_metric_codes)
@@ -1000,7 +1011,13 @@ class PromptBuilder:
                 return self._rerank_exact_mentions(
                     user_query, candidates, max(self.top_k, len(allowed))
                 )
-            return self._rerank_exact_mentions(user_query, candidates, self.top_k)
+            # Keep the bounded per-mention recall in the generation context.
+            # Re-ranking only against the whole sentence would discard exactly
+            # the qualifier/specification candidates this recall was added for.
+            return self._dedupe_results([
+                *self._rerank_exact_mentions(user_query, candidates, self.top_k),
+                *mention_hits,
+            ])
 
         direct_entities = retrieve_type("entity")
         direct_attributes = retrieve_type("attribute")

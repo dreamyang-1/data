@@ -588,6 +588,7 @@ def _normalize_semantic_references(
     exact_value_resolver=None,
     exact_attribute_value_resolver=None,
     catalog_value_resolver=None,
+    model_owned_time: bool = False,
 ) -> str:
     """Correct uniquely resolvable semantic/physical references from recall."""
     try:
@@ -745,7 +746,8 @@ def _normalize_semantic_references(
         exact_attribute_value_resolver=exact_attribute_value_resolver,
         catalog_value_resolver=catalog_value_resolver,
     )
-    _normalize_time_context(ast, knowledge, user_query)
+    if not model_owned_time:
+        _normalize_time_context(ast, knowledge, user_query)
     _normalize_activity_semantics(ast, knowledge, user_query)
     _normalize_generic_sales_metric(ast, knowledge, user_query)
     _complete_dimension_alias_from_recall(ast, knowledge)
@@ -7235,6 +7237,8 @@ def main(
     )
     if store is None:
         store = globals()["store"]
+    from surface_evidence import advisory_prompt
+    surface_reference = advisory_prompt(surface_evidence)
     builder = PromptBuilder(
         store,
         embed_query,
@@ -7248,12 +7252,11 @@ def main(
         authoritative_entity_scope=(
             metric_selection_authoritative and not metric_codes
         ),
+        surface_mentions=[item["text"] for item in (surface_evidence or {}).get("mentions", [])],
     )
     execution_query = query
     # Validate and add advisory evidence only to generation; never embed it as
     # the user's question or feed it into deterministic contract repair.
-    from surface_evidence import advisory_prompt
-    surface_reference = advisory_prompt(surface_evidence)
     execution_query += surface_reference
     if (
         metric_selection_authoritative
@@ -7297,6 +7300,32 @@ def main(
     # contract is an execution constraint, not retrieval evidence; embedding its
     # aliases and JSON can displace the actual metric and dimension candidates.
     mprompt = builder.build(semantic_user_query)
+    if surface_evidence is not None:
+        mprompt += """
+
+[ASL owns semantic binding for this request]
+Use the completed question as the primary request. Upstream surface roles and
+retrieval relevance are hypotheses, not selected metrics or required fields.
+Infer whether the user wants a list, a grouped statistic, or trend analysis.
+An entity/attribute list without a requested calculation uses metrics=[];
+do not select a count metric merely because it is present in recalled metadata.
+Time grouping alone does not imply a request for trend analysis.
+Separate brand/manufacturer qualifiers from product/model wording when the
+question combines them. Match each concept against recalled catalog evidence;
+do not concatenate different concepts into a single exact/LIKE value unless
+the catalog demonstrates that combined value. Do not invent alternative values.
+Model/specification wording must be compared with specification attributes as
+well as product display names. A name qualifier is a separate constraint, not
+part of the model identifier. Inspect all recalled attributes of those entities.
+Preserve every requested grouping and filter. When the evidence cannot uniquely
+bind a concept, return a specific ambiguity naming that concept and evidenced
+candidates. Never silently omit a constraint to make the query executable.
+Before returning JSON, check requested time against time_context: an explicit
+period must use the selected metric's published time_caliber.time_anchor or an
+appropriate registered time dimension, even without a time grouping dimension.
+If no valid anchor exists, name the missing time binding in ambiguity; never
+answer an explicit-period request with an unrestricted all-time query.
+"""
     if intent_asl_contract is not None:
         mprompt += """
 
@@ -7404,6 +7433,7 @@ must pass the deterministic contract validator and echo the contract unchanged.
         semantic_user_query,
         semantic_model_id,
         domain_scope,
+        **({'model_owned_time': True} if surface_evidence is not None else {}),
     )
     if exploration_requirements is not None and not metric_codes:
         normalized = _normalize_exploration_metrics(
