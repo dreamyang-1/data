@@ -2910,7 +2910,75 @@ class DataAnalysisOrchestrator:
             )
         )
 
+    async def _handle_surface_query(self, chat, identity):
+        """Execute a completed ordinary query with ASL-owned catalog binding."""
+        if not callable(getattr(self.adapters.query, "query_surface", None)):
+            return None
+        # Dataset selection and dependency envelopes still belong to the
+        # existing executor; never lose them in the ordinary-query shortcut.
+        if (chat.dataset_id is not None or chat.dependency_constraints
+                or chat.temp_file_paths or chat._is_regeneration_execution):
+            return None
+        decision = chat._semantic_decision
+        if decision is not None and str(decision.source) == 'V2_AUTHORIZED_PLAN':
+            # Previously confirmed/native plans retain their existing guarded
+            # execution envelope rather than being reduced to surface hints.
+            return None
+        request = await self._classify(chat.question, identity, chat.conversation_id,
+                                       pre_resolved=True)
+        if request.primary_intent not in {
+            PrimaryIntent.METRIC_QUERY, PrimaryIntent.DETAIL_QUERY,
+            PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
+        }:
+            return None
+        request.application_id = chat.application_id
+        request.original_question = chat.question
+        request.rewritten_question = chat.question
+        bind_authorized_scope(request, chat.authorized_semantic_scope)
+        mentions = [
+            {"text": str(item["surface"]),
+             "role_hint": "/".join(item.get("labels") or ()) or None}
+            for item in chat._semantic_extraction_items if item.get("surface")
+        ]
+        await emit_progress("INTENT_RECOGNITION", "COMPLETED", self._intent_think_summary(
+            request, business_domain_labels=chat._business_domain_labels,
+            semantic_extractions=chat._semantic_extraction_items,
+            include_resolved_context=not chat._intent_context_progress_emitted,
+        ))
+        try:
+            result = await self.adapters.query.query_surface(request, identity, mentions=mentions)
+        except AdapterError as exc:
+            if exc.code in {"ASL_AMBIGUOUS", "SQL_TRANSLATION_AMBIGUOUS"}:
+                request.semantic_ambiguities = self._semantic_ambiguities(exc)
+                request.ambiguities = self._ambiguity_texts(exc)
+                request.missing_slots = ["semantic_ambiguity"]
+                return await self._request_clarification(
+                    request, 1, source_stage="OAGNET_ASL_GENERATION")
+            return await self._finish_terminal(request, self._fallback(
+                request, self._dependency_message(exc), error_code=exc.code))
+        # Only the executed, scoped ASL supplies persisted query semantics.
+        request.filters = copy.deepcopy(result.asl.get("filters") or [])
+        request.dimensions = [str(item["name"]) for item in result.asl.get("dimensions", [])
+                              if isinstance(item, dict) and item.get("name")]
+        request.missing_slots = []
+        request.asl_template = copy.deepcopy(result.asl)
+        request.assumptions = [value for value in request.assumptions
+                               if not value.startswith("DEFAULT_TIME_")]
+        time_context = result.asl.get("time_context") or {}
+        request.time_range = None
+        if time_context.get("start") and time_context.get("end"):
+            request.time_range = TimeRange(
+                start=date.fromisoformat(str(time_context["start"])[:10]),
+                end_exclusive=date.fromisoformat(str(time_context["end"])[:10]) + timedelta(days=1),
+            )
+        await self.sessions.put_task_frame(request)
+        return await self._complete_query_result(chat, identity, request, result)
+
     async def _handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
+        if self.settings.surface_asl_execution_enabled and chat._completed_question_execution:
+            surface_response = await self._handle_surface_query(chat, identity)
+            if surface_response is not None:
+                return surface_response
         preserve_merged_question = False
         recalled_task_frame = False
         restore_legacy_semantic_context = not (
@@ -5073,6 +5141,15 @@ class DataAnalysisOrchestrator:
             chat,
             identity,
         )
+        return await self._complete_query_result(
+            chat, identity, request, query_result,
+            dataset_id=dataset_id, external_search_mode=external_search_mode,
+        )
+
+    async def _complete_query_result(
+        self, chat, identity, request, query_result, *,
+        dataset_id=None, external_search_mode=None,
+    ):
         self._restore_projected_filter_columns(request, query_result.dataset)
         query_result = self._enforce_name_projection_integrity(
             request, query_result

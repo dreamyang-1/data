@@ -75,6 +75,13 @@ class CompositeSemanticQueryTool:
             business_domain_id=business_domain_id,
         )
 
+    async def query_surface(self, request, identity, *, mentions):
+        """Leave metric/dimension binding to the scoped ASL planner."""
+        generate = getattr(self.retrieval, "query_surface", None)
+        if not callable(generate):
+            raise AdapterError("SURFACE_ASL_UNAVAILABLE", "retrieval does not support surface planning")
+        return await generate(request, identity, mentions=mentions)
+
     async def query(
         self,
         request: CanonicalAnalysisRequest,

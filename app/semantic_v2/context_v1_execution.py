@@ -408,6 +408,7 @@ class V2ContextV1ExecutionBridge:
             [ChatRequest, TrustedIdentity], Awaitable[AgentResponse]
         ] | None = None,
         demo_mode: bool = False,
+        surface_asl_execution_enabled: bool = False,
     ):
         self.store = store
         self.catalog = catalog
@@ -420,6 +421,7 @@ class V2ContextV1ExecutionBridge:
         self.clock = clock
         self.startup_receipt = dict(startup_receipt)
         self.demo_mode = demo_mode
+        self.surface_asl_execution_enabled = surface_asl_execution_enabled
         self._locks: dict[str, asyncio.Lock] = {}
 
     async def _retry_for_result_availability(
@@ -614,81 +616,83 @@ class V2ContextV1ExecutionBridge:
                 preferred_attribute_code,
             )
 
-        context_resolution = await resolve_context_question_followup(
-            chat=chat,
-            identity=identity,
-            state_artifact=state,
-            catalog=catalog,
-            resolved_business_domain_ids=resolved_business_domain_ids,
-            now=self.clock(),
-            resolve_value=resolve_value,
-        )
-        if context_resolution is not None:
-            return (
-                ResolvedContextTurn(
-                    completed_question=context_resolution.completed_question,
-                    next_state=context_resolution.next_state,
-                    plan_state=None,
-                    bridge_route="V2_CONTEXT_QUESTION_COMPLETED",
-                    understanding=context_resolution.understanding,
-                ),
-                provenance,
+        if not self.surface_asl_execution_enabled:
+            context_resolution = await resolve_context_question_followup(
+                chat=chat,
+                identity=identity,
+                state_artifact=state,
+                catalog=catalog,
+                resolved_business_domain_ids=resolved_business_domain_ids,
+                now=self.clock(),
+                resolve_value=resolve_value,
             )
-        reference_resolution = resolve_context_references(
-            chat=chat,
-            identity=identity,
-            state_artifact=state,
-            catalog=catalog,
-            resolved_business_domain_ids=resolved_business_domain_ids,
-            now=self.clock(),
-        )
-        if reference_resolution is not None:
-            if reference_resolution.clarification_question is not None:
+            if context_resolution is not None:
+                return (
+                    ResolvedContextTurn(
+                        completed_question=context_resolution.completed_question,
+                        next_state=context_resolution.next_state,
+                        plan_state=None,
+                        bridge_route="V2_CONTEXT_QUESTION_COMPLETED",
+                        understanding=context_resolution.understanding,
+                    ),
+                    provenance,
+                )
+            reference_resolution = resolve_context_references(
+                chat=chat,
+                identity=identity,
+                state_artifact=state,
+                catalog=catalog,
+                resolved_business_domain_ids=resolved_business_domain_ids,
+                now=self.clock(),
+            )
+            if reference_resolution is not None:
+                if reference_resolution.clarification_question is not None:
+                    return (
+                        ResolvedContextTurn(
+                            completed_question=None,
+                            next_state=None,
+                            plan_state=None,
+                            clarification_question=(
+                                reference_resolution.clarification_question
+                            ),
+                            bridge_route="V2_CONTEXT_REFERENCE_AMBIGUOUS",
+                        ),
+                        provenance,
+                    )
+                return (
+                    ResolvedContextTurn(
+                        completed_question=reference_resolution.completed_question,
+                        next_state=reference_resolution.next_state,
+                        plan_state=None,
+                        bridge_route="V2_CONTEXT_REFERENCE_COMPLETED",
+                        understanding=reference_resolution.understanding,
+                        publish_context_from_v1=False,
+                        source_question=chat.question,
+                    ),
+                    provenance,
+                )
+            if has_active_context_question(state) and is_contextual_clear_edit(
+                chat.question
+            ):
+                # A valid clear was already handled by the deterministic context
+                # resolver above. Repeating it has no remaining target and should
+                # be explained without asking a model to invent one.
                 return (
                     ResolvedContextTurn(
                         completed_question=None,
                         next_state=None,
                         plan_state=None,
                         clarification_question=(
-                            reference_resolution.clarification_question
+                            "当前任务中已没有可清除的对应条件。"
+                            "请说明要继续修改的条件和具体值。"
                         ),
-                        bridge_route="V2_CONTEXT_REFERENCE_AMBIGUOUS",
+                        bridge_route="V2_CONTEXT_QUESTION_AMBIGUOUS",
                     ),
                     provenance,
                 )
-            return (
-                ResolvedContextTurn(
-                    completed_question=reference_resolution.completed_question,
-                    next_state=reference_resolution.next_state,
-                    plan_state=None,
-                    bridge_route="V2_CONTEXT_REFERENCE_COMPLETED",
-                    understanding=reference_resolution.understanding,
-                    publish_context_from_v1=False,
-                    source_question=chat.question,
-                ),
-                provenance,
-            )
-        if has_active_context_question(state) and is_contextual_clear_edit(
-            chat.question
-        ):
-            # A valid clear was already handled by the deterministic context
-            # resolver above. Repeating it has no remaining target and should
-            # be explained without asking a model to invent one.
-            return (
-                ResolvedContextTurn(
-                    completed_question=None,
-                    next_state=None,
-                    plan_state=None,
-                    clarification_question=(
-                        "当前任务中已没有可清除的对应条件。"
-                        "请说明要继续修改的条件和具体值。"
-                    ),
-                    bridge_route="V2_CONTEXT_QUESTION_AMBIGUOUS",
-                ),
-                provenance,
-            )
         engine = RawTurnPlanner(
-            self.model, self.catalog if catalog is None else catalog, clock=self.clock
+            self.model, self.catalog if catalog is None else catalog, clock=self.clock,
+            defer_new_task_binding=self.surface_asl_execution_enabled,
         )
         try:
             result = await engine.run(
@@ -1424,6 +1428,7 @@ def build_context_v1_execution_handler(
         v1_pending_answer_probe=v1_pending_answer_probe,
         v1_pending_executor=v1_pending_executor,
         demo_mode=settings.demo_mode,
+        surface_asl_execution_enabled=settings.surface_asl_execution_enabled,
         clock=lambda: datetime.now(timezone.utc).astimezone(),
         startup_receipt={
             **receipt,

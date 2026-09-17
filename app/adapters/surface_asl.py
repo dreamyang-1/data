@@ -8,6 +8,7 @@ import json
 
 from app.adapters.base import AdapterError
 from app.services.asl_surface_handoff import build_surface_asl_input
+from app.observability.call_timing import track_operation
 
 
 async def generate_surface_asl(
@@ -28,12 +29,15 @@ async def generate_surface_asl(
         business_domain_id=domains[0] if domains else None,
         business_domain_ids=domains,
     )
-    generated = await client.post(
-        settings.asl_generator_base_url, settings.asl_generator_path, payload,
-        identity=identity, application_id=application_id,
-        idempotency_key=f"{request_id}:surface-asl", retryable=True,
-        timeout=settings.asl_generation_timeout_seconds,
-    )
+    with track_operation('UPSTREAM', 'upstream.oagnet.asl_generation',
+                         attributes={'input_mode': 'SURFACE_ADVISORY'}) as timing:
+        generated = await client.post(
+            settings.asl_generator_base_url, settings.asl_generator_path, payload,
+            identity=identity, application_id=application_id,
+            idempotency_key=f"{request_id}:surface-asl", retryable=True,
+            timeout=settings.asl_generation_timeout_seconds,
+        )
+        timing.mark_first_result()
     if not isinstance(generated, dict) or generated.get("success") is not True:
         raise AdapterError("ASL_GENERATION_FAILED", "ASL generator rejected request")
     # Reuse the existing scope checks, including metric provenance. Do not make

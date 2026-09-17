@@ -1,7 +1,9 @@
 # Business surface extraction and ASL binding migration
 
-Status: foundation implemented; live route NOT switched. This is not end-to-end
-acceptance of the requested architecture.
+Status: integration implemented and validated behind
+`DATA_AGENT_SURFACE_ASL_EXECUTION_ENABLED`. The shared environment remains an
+explicit deployment switch; legacy execution stays available for unsupported or
+confirmed-plan shapes.
 
 ## Implemented
 
@@ -25,47 +27,48 @@ the user's metric wording with an inferred canonical measure.
 - The new test verifies one model invocation, original wording, raw metric
   mention, and unchanged authorized domain scope.
 
-## Remaining work before enabling
+## Integrated behavior
 
-Oagnet now accepts optional bounded `surface_evidence` separately from
-`intent_asl_contract`. It is generation-only advisory data; retrieval still sees
-the unchanged business question. The Agent caller is not wired yet. This does
-not complete or enable the migration.
+Oagnet accepts bounded `surface_evidence` separately from
+`intent_asl_contract`. The exact completed question remains the primary retrieval
+and generation input. Mention text gets an additional bounded vector recall, but
+role hints remain advisory and cannot authorize a field, metric, ID or scope.
 
-The Agent now has an internal `app.adapters.surface_asl.generate_surface_asl`
-HTTP planner using the reviewed exact-question assembler. It sends no guessed
-metric IDs or caller-owned intent contract, checks returned scope/evidence and
-ASL validation, rejects ambiguity, and returns the unmodified ASL. It performs
-no SQL execution. The formal orchestrator does not call it yet: explicit user
-choices, task dependencies, execution materialization and context publication
-must be wired before live activation. Existing query() remains unchanged.
+The Agent orchestrator calls this planner for completed ordinary analytical
+questions, then sends the unchanged validated ASL through the existing guarded
+translation, read-only execution, dataset validation, analysis, table and chart
+pipeline. Dataset/dependency/regeneration requests and authorized native plans
+continue through their existing envelopes so confirmed constraints are not lost.
 
 Transport validation: 167 passed (new planner, assembler and existing HTTP
 adapter tests). This is mocked transport validation, not live platform replay.
 
-SQL integration: `HttpDataRetrievalAdapter.query_surface` now calls the new
+SQL integration: `HttpDataRetrievalAdapter.query_surface` calls the new
 planner and the same `_execute_validated_asl` execution boundary used by legacy
 `query`. The execution boundary retains translator scope, read-only SQL,
 relationship, database selection and dataset validation. A three-hop mock
 regression confirms Oagnet -> translation -> execution with unchanged ASL.
 All 168 planner/assembler/HTTP tests pass after correcting a test fixture to use
 the real SQL response `data` key. Existing legacy query remains the default.
-Confirmed bindings, lineage, dependencies and analysis contracts are explicitly
-rejected by this new internal entry until their handoff is connected. It must
-not yet be enabled as the general platform route.
+Confirmed bindings, lineage, dependencies and analysis contracts are rejected by
+the surface entry and remain on the legacy/native guarded route.
 
-1. Define a bounded advisory evidence envelope separate from confirmed
-   constraints. Model-extracted fields must not acquire user-confirmed status.
-2. Pass the exact completed question to ASL retrieval and generation; remove
-   conflicting text rewriting for this route without losing explicit choices.
-3. Update both Oagnet's contract repair and the HTTP adapter's post-processing:
-   neither may silently overwrite a catalog-grounded ASL with upstream guesses.
-4. Preserve user-confirmed candidates and scope as hard constraints; validate
-   omission of requested grouping/filter/time using evidence, not guessed roles.
-5. Publish context after successful ASL binding; exercise new question, spoken
-   follow-up, pending option selection and a different business domain.
-6. Only then enable the bridge path and complete real platform replay. No .env
-   switch, service restart or live cutover was performed for this migration.
+Context recognition uses one model response for relation, literal surface
+mentions and the standalone completed question. It no longer performs catalog
+binding for this route. New tasks keep the exact current question. Accepted
+contextual turns receive only the selected prior task's completed question and
+produce a new standalone business question. Pending choices remain on the
+existing confirmed-choice handler.
 
-Integration: A's pending event-lifecycle candidate changes the bridge and
-orchestrator. Merge by reviewed diff; do not overwrite these changes wholesale.
+Live acceptance covered the original product/department request, city-by-month
+sales, the colloquial follow-up `上海市的`, and SSE output. The product request
+bound `百特` to the published parent-brand attribute and `Prismaflex M60 set` to
+the published specification attribute, producing eight department rows. The
+city query returned both city codes and names; its follow-up preserved year,
+monthly grain and sales measure. An EAM replay proved the requested half-year
+range is retained with the published time anchor; its independent published
+global filter `WorkType = A` remains a catalog configuration error and is not
+repaired in application code.
+
+Deployment requires matching Agent and Oagnet builds. The flag defaults to false;
+turn it on only after both services are restarted from these versions.
