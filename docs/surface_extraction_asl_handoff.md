@@ -32,6 +32,17 @@ Oagnet now accepts optional bounded `surface_evidence` separately from
 the unchanged business question. The Agent caller is not wired yet. This does
 not complete or enable the migration.
 
+The Agent now has an internal `app.adapters.surface_asl.generate_surface_asl`
+HTTP planner using the reviewed exact-question assembler. It sends no guessed
+metric IDs or caller-owned intent contract, checks returned scope/evidence and
+ASL validation, rejects ambiguity, and returns the unmodified ASL. It performs
+no SQL execution. The formal orchestrator does not call it yet: explicit user
+choices, task dependencies, execution materialization and context publication
+must be wired before live activation. Existing query() remains unchanged.
+
+Transport validation: 167 passed (new planner, assembler and existing HTTP
+adapter tests). This is mocked transport validation, not live platform replay.
+
 1. Define a bounded advisory evidence envelope separate from confirmed
    constraints. Model-extracted fields must not acquire user-confirmed status.
 2. Pass the exact completed question to ASL retrieval and generation; remove
