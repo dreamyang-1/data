@@ -998,13 +998,13 @@ async def chat_stream(
             nonlocal latest_progress_stage
             progress_event, rendered = item
             try:
-                candidate_progress_stage = str(
-                    progress_event.get("stage") or latest_progress_stage
-                ).strip().upper()
-                if _thinking_section(candidate_progress_stage) is not None:
-                    latest_progress_stage = candidate_progress_stage
                 visible_progress = ordered_progress(progress_event)
                 for event in visible_progress:
+                    candidate_progress_stage = str(
+                        event.get("stage") or latest_progress_stage
+                    ).strip().upper()
+                    if _thinking_section(candidate_progress_stage) is not None:
+                        latest_progress_stage = candidate_progress_stage
                     rendered_index = 0
                     async for rendered_event in stream_thinking(event):
                         yield rendered_event

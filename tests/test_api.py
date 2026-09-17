@@ -555,6 +555,72 @@ def test_slow_stream_emits_visible_progress_while_waiting():
     )["status"] == "COMPLETED"
 
 
+def test_deferred_planning_does_not_drive_heartbeat_before_intent_completion():
+    app = build_test_app(
+        runtime_mode="V1",
+        thinking_stream_heartbeat_seconds=0.05,
+    )
+
+    class PlanningBeforeIntentWorkflow:
+        async def ainvoke(self, state):
+            await emit_progress(
+                "TASK_PLANNING",
+                "RUNNING",
+                "正在生成任务拆分与调用计划",
+            )
+            await asyncio.sleep(0.12)
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "COMPLETED",
+                "意图识别完成",
+            )
+            chat = state["chat"]
+            return {"response": AgentResponse(
+                request_id=uuid4(),
+                conversation_id=chat.conversation_id,
+                status="COMPLETED",
+                intent=PrimaryIntent.CHAT,
+                answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(
+            app.state.container,
+            "workflow",
+            PlanningBeforeIntentWorkflow(),
+        )
+        response = client.post(
+            "/agent_chat/stream",
+            json={
+                "semantic_model_id": 81,
+                "application_id": "app1",
+                "conversation_id": "deferred-planning-heartbeat-order",
+                "message_id": "m1",
+                "question": "请处理这个问题",
+            },
+        )
+
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    intent_completed_index = next(
+        index for index, event in enumerate(events)
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
+        and event.get("meta", {}).get("status") == "COMPLETED"
+    )
+    planning_indexes = [
+        index for index, event in enumerate(events)
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "TASK_PLANNING"
+    ]
+
+    assert response.status_code == 200
+    assert planning_indexes
+    assert min(planning_indexes) > intent_completed_index
+
+
 def test_default_visible_progress_heartbeat_is_one_second():
     assert (
         Settings.model_fields["thinking_stream_heartbeat_seconds"].default
