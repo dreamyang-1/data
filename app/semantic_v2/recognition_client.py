@@ -6,26 +6,52 @@ import json
 
 import httpx
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import SchemaError, ValidationError
+from jsonschema.exceptions import SchemaError, ValidationError, best_match
 from referencing.exceptions import Unresolvable
 
 from app.services.progress import emit_progress
 from app.observability.call_timing import OperationHandle, track_operation
 
 
+_DIAGNOSTIC_PATH_LIMIT = 16
+_DIAGNOSTIC_SEGMENT_LIMIT = 80
+
+
+def _bounded_diagnostic_path(path):
+    """Structural coordinates only; never instance values."""
+    segments = []
+    for segment in list(path)[:_DIAGNOSTIC_PATH_LIMIT]:
+        if isinstance(segment, int):
+            segments.append(segment)
+        else:
+            segments.append(str(segment)[:_DIAGNOSTIC_SEGMENT_LIMIT])
+    return tuple(segments)
+
+
 class RecognitionFailure(ValueError):
     """Bounded system reason; never convert transport/parser errors to slot asks."""
 
+    def __init__(self, code, *, stage=None, instance_path=(), schema_path=(), validator=None):
+        super().__init__(code)
+        self.stage = stage
+        self.instance_path = tuple(instance_path)
+        self.schema_path = tuple(schema_path)
+        self.validator = validator
 
-def _validate_exact_dynamic_schema(instance, schema) -> None:
+
+def _validate_exact_dynamic_schema(instance, schema, *, stage=None) -> None:
     """Fail closed on the exact schema issued for this model invocation."""
     try:
         Draft202012Validator.check_schema(schema)
         Draft202012Validator(schema).validate(instance)
     except (SchemaError, Unresolvable):
-        raise RecognitionFailure('V2_MODEL_DYNAMIC_SCHEMA_INVALID') from None
+        raise RecognitionFailure('V2_MODEL_DYNAMIC_SCHEMA_INVALID', stage=stage) from None
     except ValidationError:
-        raise RecognitionFailure('V2_MODEL_DYNAMIC_SCHEMA_VIOLATION') from None
+        detail = best_match(Draft202012Validator(schema).iter_errors(instance))
+        raise RecognitionFailure('V2_MODEL_DYNAMIC_SCHEMA_VIOLATION', stage=stage,
+            instance_path=_bounded_diagnostic_path(detail.absolute_path),
+            schema_path=_bounded_diagnostic_path(detail.absolute_schema_path),
+            validator=str(detail.validator)[:40] if detail.validator else None) from None
 
 
 class RecognitionModelClient:
@@ -209,9 +235,16 @@ class RecognitionModelClient:
                 raw_output = json.loads(content)
             except (json.JSONDecodeError, TypeError):
                 raise RecognitionFailure('V2_MODEL_OUTPUT_INVALID') from None
-            _validate_exact_dynamic_schema(raw_output, schema)
+            _validate_exact_dynamic_schema(raw_output, schema, stage=stage)
             return output_model.model_validate_json(content)
-        except RecognitionFailure:
+        except RecognitionFailure as exc:
+            if exc.stage is None:
+                exc.stage = stage
+            # Structural diagnostics only; never instance values or prompts.
+            if exc.instance_path or exc.schema_path or exc.validator:
+                timing.set_attribute('v2_schema_instance_path', json.dumps(list(exc.instance_path)))
+                timing.set_attribute('v2_schema_schema_path', json.dumps(list(exc.schema_path)))
+                timing.set_attribute('v2_schema_validator', exc.validator or '')
             raise
         except httpx.HTTPError:
             raise RecognitionFailure('V2_MODEL_TRANSPORT_FAILURE') from None
