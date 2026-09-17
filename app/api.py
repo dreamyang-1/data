@@ -968,7 +968,11 @@ async def chat_stream(
                 # Completeness is expressed inside the document-defined intent
                 # and planning blocks; do not render an extra unlabeled line.
                 return ordered
-            if stage == "DATA_RETRIEVAL" and deferred_planning:
+            if _thinking_section(stage) == "execution" and deferred_planning:
+                # Public analytic sections have a fixed order. Some execution
+                # adapters emit ASL/SQL milestones before DATA_RETRIEVAL; release
+                # the completed planning block before the first such milestone
+                # instead of appending planning after tool output.
                 ordered = [deferred_planning[-1], event]
                 deferred_planning.clear()
                 planning_released = True

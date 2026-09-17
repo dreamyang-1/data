@@ -21,6 +21,7 @@
 - 已通过 Critical Suite 的 V1 多轮行为冻结，除非有可稳定复现的新 P0。Turn Referential Completeness 与 Execution Readiness 分开；Pending 不劫持新任务；状态操作由确定性 Reducer 执行。
 - V2 保持既有 Shadow 边界。没有评测证据和相应授权，不做生产切流。
 - 后续输入输出格式以现有代码为准，不自行设计新的请求字段、响应结构或 SSE 格式。达到能够替代 V1 的验收条件后，先与用户确认，再切换。
+- 面向用户的分析主节点及顺序是冻结合同：`意图识别 → 任务拆分与规划 → 调度执行 → 结果校验 → 数据洞察分析 → 最终输出`。快路径、并发、缓存、重试和性能优化只能减少节点内部工作，不得跳过应展示节点、交换顺序、把前序节点事后补发到后序节点之后，或修改既有节点名称。任何涉及 progress/SSE/编排的改动必须加入顺序回归断言。
 - 根因属于 Oagnet 或 SQL Translator 时修改对应服务；不能在 DataAnalysis 加错误补偿。每个服务分别记录文件、根因、测试及提交。未知或不支持的 Scope/计划继续 Fail Closed。
 - 优先修 Contract、Schema、State、Reducer 和 Grounding。Prompt 或 Regex 变更必须有根因、正反例和回归证据，不能通过猜测语义减少追问。
 - 失败先分类；仅凭正式合同才能修改旧断言，并记录 `STALE_TEST`。记录 baseline/final、collection errors、old-pass → new-fail、old-fail → new-pass 和新增测试。

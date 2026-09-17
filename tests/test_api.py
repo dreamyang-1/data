@@ -168,7 +168,14 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
         f"{SEMANTIC_QUERY_TOOL_NAME} → {SQL_TRANSLATION_TOOL_NAME} → "
         f"{SQL_EXECUTION_TOOL_NAME} → 数据集输出 → 结果校验 → 洞察分析"
     )
+    planning_event = next(
+        event for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "TASK_PLANNING"
+        and event.get("meta", {}).get("status") == "COMPLETED"
+    )
     asl_index = events.index(asl_event)
+    assert events.index(intent) < events.index(planning_event) < asl_index
     retrieval_completed_index = next(
         index for index, event in enumerate(events)
         if event.get("type") == "message_chunk"
