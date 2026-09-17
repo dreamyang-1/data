@@ -889,14 +889,17 @@ async def chat_stream(
                 stage == "INTENT_RECOGNITION"
                 and str(event.get("progress_phase") or "") in {
                     "V2_SEMANTIC_CATALOG_READY",
-                    "V2_CURRENT_TURN_MODEL_STREAM_STARTED",
                     "V2_SEMANTIC_CANDIDATES_READY",
                     "V2_SEMANTIC_BINDING_MODEL_STREAM_STARTED",
                 }
             ):
                 # These events remain available to timing/telemetry handlers,
-                # but they describe catalog/model internals rather than user
-                # decisions and must not enter the public SSE document.
+                # but they describe catalog/binding internals rather than
+                # user decisions and must not enter the public SSE document.
+                # ``V2_CURRENT_TURN_MODEL_STREAM_STARTED`` is deliberately NOT
+                # filtered: it is the first true progress after the intent
+                # model's first response packet arrives and stays inside the
+                # intent-recognition section.
                 return []
             if stage == "TASK_PLANNING" and not planning_released:
                 # The document format presents one stable planning block. Keep

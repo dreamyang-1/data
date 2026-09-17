@@ -637,7 +637,7 @@ def test_character_pacing_does_not_block_background_execution():
     assert "对话状态识别：独立新问题。" in thinking
 
 
-def test_public_intent_stream_hides_internal_v2_milestones_and_keeps_field_order():
+def test_public_intent_stream_hides_internal_v2_milestones_but_releases_first_packet_progress():
     app = build_test_app(
         env="test",
         runtime_mode="V1",
@@ -738,14 +738,18 @@ def test_public_intent_stream_hides_internal_v2_milestones_and_keeps_field_order
     )
     forbidden = (
         "业务域语义目录已加载",
-        "语义识别模型已开始返回",
         "关键词语义候选已提取",
         "语义绑定模型已开始返回",
     )
     assert all(text not in thinking for text in forbidden)
+    # The intent model's first stream packet gives one true progress update
+    # inside the intent section: visible exactly once, not duplicated.
+    first_packet = "语义识别模型已开始返回"
+    assert thinking.count(first_packet) == 1
     ordered = (
         "正在理解当前问题，并核对本轮与会话上下文的关系。",
         "对话状态识别：独立新问题。",
+        first_packet,
         "用户原始问题：按月份分析上海地区产品最近一年的销售趋势。",
         "补全后的问题：按月份分析上海地区产品最近一年的销售趋势。",
         "正在进行任务意图分析、参数提取和规范化。",
