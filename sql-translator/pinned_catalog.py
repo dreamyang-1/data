@@ -11,7 +11,7 @@ import json
 import math
 
 from semantic_scope import RequestScope, ScopedTranslator, ScopeError
-from sql_translator_prod import RedisDSLLoader, SQLTranslatorProd, SemanticCatalog
+from sql_translator_prod import RedisDSLLoader, SQLTranslatorProd, SemanticCatalog, _normalize_global_filters
 from bound_sql import parameterize_sql, statement_fingerprint
 
 
@@ -188,9 +188,14 @@ class _SnapshotLoader(RedisDSLLoader):
             filters = rule.get('global_filters') or []
             if isinstance(filters, str):
                 filters = json.loads(filters)
-            _require(isinstance(filters, list) and all(isinstance(f, str) or
-                     (isinstance(f, dict) and ('condition' in f or 'filterCondition' in f)) for f in filters),
-                     'PINNED_METRIC_FILTER_UNSUPPORTED')
+            # Live and pinned paths share one governed normalization contract.
+            try:
+                _normalize_global_filters(filters)
+            except ValueError:
+                filters_valid = False
+            else:
+                filters_valid = True
+            _require(filters_valid, 'PINNED_METRIC_FILTER_UNSUPPORTED')
             self.metrics[code] = self._adapt_metric(dict(code=code, name=metric.get('metric_name'),
                 semantic_model_id=scope.semantic_model_id,
                 # The SQL generator dispatches dependency expansion using a

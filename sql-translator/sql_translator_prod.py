@@ -128,6 +128,28 @@ class SemanticCatalog:
         return [part.strip().strip('"\'') for part in text.split(',') if part.strip().strip('"\'')]
 
     @staticmethod
+    def _raw_global_filters(value: Any) -> List[Any]:
+        """Parse the published global_filters column preserving structure.
+
+        Unlike ``_list_value`` (which stringifies dict entries into repr
+        text), filter records must keep their dict/string shape so the SQL
+        adapter can verify the condition instead of concatenating dict text
+        into WHERE.
+        """
+        if value is None or value == '':
+            return []
+        if isinstance(value, list):
+            return list(value)
+        text = str(value).strip()
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                return list(parsed)
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return [text] if text else []
+
+    @staticmethod
     def _metric_scope(metric_id: str) -> tuple[int, str]:
         if not isinstance(metric_id, str) or ':' not in metric_id:
             raise ValueError('metric_id必须使用semantic_model_id:metric_code格式')
@@ -481,7 +503,7 @@ class SemanticCatalog:
             'synonyms': self._list_value(row.get('synonyms')),
             'applicable_scenarios': self._list_value(row.get('applicable_scenarios')),
             'calculation_formula': formula,
-            'global_filters': self._list_value(row.get('global_filters')),
+            'global_filters': self._raw_global_filters(row.get('global_filters')),
             'depend_metrics': self._list_value(row.get('dependence_atomic_indicator')),
             'bound_entities': bindings,
         }
@@ -612,6 +634,80 @@ class SemanticCatalog:
             'column_lineage': column_lineage,
             'metadata_warnings': warnings,
         }
+
+
+# Published filter_type contract (evidence in repo):
+# - include predicates: ``include`` (docs/phase2/semantic_catalog_inventory.json,
+#   docs/phase25/catalog_governance_overlay.json), ``IN`` and ``EQ``
+#   (same inventories and Oagnet/新旧数据对比.md legacy/new examples);
+# - exclusion: ``exclude`` (rendered as ``NOT (...)``).
+# Values are matched exactly; no case folding or spelling tolerance. Unknown,
+# empty, or non-string values must fail closed instead of defaulting to
+# include, which would silently invert a metric's caliber.
+_GLOBAL_FILTER_TYPE_MAP = {
+    'include': 'include',
+    'IN': 'include',
+    'EQ': 'include',
+    'exclude': 'exclude',
+}
+
+_GLOBAL_FILTER_TYPE_MISSING = object()
+
+
+def _normalize_global_filters(value: Any) -> List[Dict]:
+    """Normalize published metric global filters into executable entries.
+
+    Supported shapes: a plain string condition; a dict using the legacy
+    ``condition``/``filter_type`` keys or the camelCase ``filterCondition``/
+    ``filterType`` keys (extra metadata keys such as ``filterExplanation``
+    are ignored); a JSON string of either form.  Fail Closed: anything that
+    cannot be verified as a non-empty string condition with a filter_type in
+    the published allow-set is rejected instead of being stringified into
+    SQL.
+    """
+
+    filters = value
+    if isinstance(filters, str):
+        try:
+            filters = json.loads(filters)
+        except (json.JSONDecodeError, TypeError):
+            raise ValueError('global_filters 不是合法的 JSON 过滤器数组')
+    if filters is None:
+        filters = []
+    if not isinstance(filters, list):
+        raise ValueError('global_filters 必须是数组')
+
+    normalized: List[Dict] = []
+    for item in filters:
+        if isinstance(item, str):
+            condition: Any = item
+            filter_type: Any = _GLOBAL_FILTER_TYPE_MISSING
+        elif isinstance(item, dict):
+            condition = item.get('condition', item.get('filterCondition'))
+            filter_type = item.get('filter_type',
+                                   item.get('filterType', _GLOBAL_FILTER_TYPE_MISSING))
+        else:
+            raise ValueError('global_filters 条目必须是字符串或过滤器对象')
+        if not isinstance(condition, str) or not condition.strip():
+            raise ValueError('global_filters 条目缺少非空字符串 condition')
+        if filter_type is _GLOBAL_FILTER_TYPE_MISSING:
+            # Only a wholly absent filter_type key keeps the historical
+            # include default; explicit empty/non-string values fail closed.
+            filter_type = 'include'
+        if not isinstance(filter_type, str):
+            raise ValueError('global_filters 条目 filter_type 必须是非空字符串')
+        mapped = _GLOBAL_FILTER_TYPE_MAP.get(filter_type)
+        if mapped is None:
+            raise ValueError(
+                'global_filters 条目 filter_type 不在受支持的允许值集合中')
+        condition = condition.strip()
+        if condition.startswith('{') or condition.startswith('['):
+            raise ValueError('global_filters condition 不能是序列化对象文本')
+        normalized.append({
+            'condition': condition,
+            'filter_type': mapped,
+        })
+    return normalized
 
 
 class RedisDSLLoader:
@@ -1205,36 +1301,8 @@ class RedisDSLLoader:
         else:
             depend_metrics = depend or []
 
-        # 全局过滤器：处理不同格式的 global_filters
-        global_filters = data.get('global_filters', []) or []
-        processed_filters = []
-        
-        if global_filters:
-            # 如果是字符串，尝试解析 JSON
-            if isinstance(global_filters, str):
-                try:
-                    global_filters = json.loads(global_filters)
-                except (json.JSONDecodeError, TypeError):
-                    pass
-            
-            # 处理数组形式的过滤器
-            if isinstance(global_filters, list):
-                for gf in global_filters:
-                    if isinstance(gf, dict):
-                        # 处理标准格式
-                        if 'condition' in gf or 'filterCondition' in gf:
-                            condition = gf.get('condition', gf.get('filterCondition', ''))
-                            filter_type = gf.get('filter_type', gf.get('filterType', 'include'))
-                            processed_filters.append({
-                                'condition': condition,
-                                'filter_type': filter_type
-                            })
-                    elif isinstance(gf, str):
-                        # 直接是字符串条件
-                        processed_filters.append({
-                            'condition': gf,
-                            'filter_type': 'include'
-                        })
+        # 全局过滤器：统一规范化旧/新字段形态，非法结构直接拒绝
+        processed_filters = _normalize_global_filters(data.get('global_filters', []) or [])
 
         return {
             'metric_code': data.get('code', ''),
@@ -2265,21 +2333,20 @@ class SQLTranslatorProd:
                 return str(value)
             return "'" + str(value).replace("'", "''") + "'"
 
-        # 全局过滤条件
-        for gf in global_filters:
-            condition = gf.get('condition', '')
-            if condition:
-                # 只在字段名没有表前缀时才添加前缀
-                if '.order_status' not in condition:
-                    condition = condition.replace('order_status', f'{table_alias}.order_status')
-                if '.test_flag' not in condition:
-                    condition = condition.replace('test_flag', f'{table_alias}.test_flag')
-                if '.business_status' not in condition:
-                    condition = condition.replace('business_status', f'{table_alias}.business_status')
-                if gf.get('filter_type', 'include') == 'exclude':
-                    all_conditions.append(f"NOT ({condition})")
-                else:
-                    all_conditions.append(f"({condition})" if re.search(r'\bOR\b', condition, re.I) else condition)
+        # 全局过滤条件：统一规范化后拼接，不可验证结构在规范化处拒绝
+        for gf in _normalize_global_filters(global_filters):
+            condition = gf['condition']
+            # 只在字段名没有表前缀时才添加前缀
+            if '.order_status' not in condition:
+                condition = condition.replace('order_status', f'{table_alias}.order_status')
+            if '.test_flag' not in condition:
+                condition = condition.replace('test_flag', f'{table_alias}.test_flag')
+            if '.business_status' not in condition:
+                condition = condition.replace('business_status', f'{table_alias}.business_status')
+            if gf['filter_type'] == 'exclude':
+                all_conditions.append(f"NOT ({condition})")
+            else:
+                all_conditions.append(f"({condition})" if re.search(r'\bOR\b', condition, re.I) else condition)
 
         # AST 中的过滤条件
         for f in filters:
