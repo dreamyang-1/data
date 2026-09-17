@@ -43,6 +43,17 @@ must be wired before live activation. Existing query() remains unchanged.
 Transport validation: 167 passed (new planner, assembler and existing HTTP
 adapter tests). This is mocked transport validation, not live platform replay.
 
+SQL integration: `HttpDataRetrievalAdapter.query_surface` now calls the new
+planner and the same `_execute_validated_asl` execution boundary used by legacy
+`query`. The execution boundary retains translator scope, read-only SQL,
+relationship, database selection and dataset validation. A three-hop mock
+regression confirms Oagnet -> translation -> execution with unchanged ASL.
+All 168 planner/assembler/HTTP tests pass after correcting a test fixture to use
+the real SQL response `data` key. Existing legacy query remains the default.
+Confirmed bindings, lineage, dependencies and analysis contracts are explicitly
+rejected by this new internal entry until their handoff is connected. It must
+not yet be enabled as the general platform route.
+
 1. Define a bounded advisory evidence envelope separate from confirmed
    constraints. Model-extracted fields must not acquire user-confirmed status.
 2. Pass the exact completed question to ASL retrieval and generation; remove

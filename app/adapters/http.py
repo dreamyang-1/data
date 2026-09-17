@@ -2235,6 +2235,67 @@ class HttpDataRetrievalAdapter:
                 copy.deepcopy(asl),
             )
 
+        return await self._execute_validated_asl(
+            request, identity, asl=asl, semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id,
+            analysis_contract=analysis_contract,
+            metric_definitions=metric_definitions,
+            metric_definition_fingerprints=metric_definition_fingerprints,
+        )
+
+    async def query_surface(
+        self, request: CanonicalAnalysisRequest, identity: TrustedIdentity,
+        *, mentions: list[dict],
+    ) -> DataQueryResult:
+        """Plan from wording and use the same guarded SQL execution boundary.
+
+        Confirmed choices and multi-task dependencies require their own envelope;
+        reject those shapes until that envelope is connected, never drop them.
+        """
+        from app.adapters.surface_asl import generate_surface_asl
+
+        scope = request.authorized_semantic_scope
+        if scope is None:
+            raise AdapterError("SEMANTIC_CONTEXT_MISSING", "trusted semantic scope is required")
+        self._enforce_bound_scope(request, scope.semantic_model_id,
+                                  scope.business_domain_ids[0] if scope.business_domain_ids else None)
+        if (request.semantic_filter_bindings or request.dependency_constraints
+                or request.trusted_dimension_bindings or request.lineage_target
+                or contract_for_request(request) is not None):
+            raise AdapterError("SURFACE_HANDOFF_CONSTRAINTS_UNSUPPORTED",
+                               "confirmed bindings or execution constraints require explicit handoff")
+        plan = await generate_surface_asl(
+            self.client, self.settings,
+            completed_question=request.rewritten_question or request.original_question,
+            mentions=mentions, authorized_scope=scope, identity=identity,
+            application_id=request.application_id, request_id=request.request_id,
+        )
+        asl = plan["asl"]
+        # Execution metadata is derived from this ASL, not the upstream role
+        # guesses. Keep the caller's request untouched for provenance.
+        execution = request.model_copy(deep=True)
+        execution.metrics = []
+        execution.dimensions = [str(item.get("name")) for item in asl.get("dimensions", [])
+                                if isinstance(item, dict) and item.get("name")]
+        execution.business_domain_ids = list(scope.business_domain_ids)
+        await emit_progress("ASL_GENERATION", "COMPLETED",
+                            render_asl_extraction_json(asl), message_limit=65536,
+                            display_model="OagentASL", display_version=str(asl.get("version") or "UNKNOWN"))
+        return await self._execute_validated_asl(
+            execution, identity, asl=asl, semantic_model_id=scope.semantic_model_id,
+            business_domain_id=scope.business_domain_ids[0] if scope.business_domain_ids else None,
+            analysis_contract=None, metric_definitions=[], metric_definition_fingerprints=[],
+        )
+
+    async def _execute_validated_asl(
+        self, request, identity, *, asl, semantic_model_id,
+        business_domain_id, analysis_contract, metric_definitions,
+        metric_definition_fingerprints,
+    ) -> DataQueryResult:
+        """Shared SQL boundary after planning and ASL validation.
+
+        Scope, read-only SQL and data-source checks apply to every planner.
+        """
         try:
             with track_operation(
                 "UPSTREAM",

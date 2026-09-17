@@ -87,3 +87,42 @@ def test_empty_domains_stay_model_wide():
     payload = client.calls[0][0][2]
     assert payload["business_domain_ids"] == []
     assert payload["business_domain_id"] is None
+
+
+def test_surface_plan_reaches_shared_translation_and_execution_without_asl_repair():
+    import json
+    from app.adapters.http import HttpDataRetrievalAdapter
+    from app.config import Settings
+    from app.domain.models import CanonicalAnalysisRequest, PrimaryIntent, TrustedIdentity
+
+    scope = AuthorizedSemanticScope(semantic_model_id=81, scope_mode="MODEL_WIDE")
+    request = CanonicalAnalysisRequest(conversation_id="surface", tenant_id="t", user_id="u",
+        original_question="请提供使用科室", primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=81, authorized_semantic_scope=scope)
+    planned = response()
+    planned["business_domain_ids"] = []
+    planned["semantic_evidence"]["requested_business_domain_ids"] = []
+    planned["result"]["projection_mode"] = "DISTINCT"
+
+    class PipelineClient:
+        def __init__(self):
+            self.calls = []
+            self.responses = iter([planned,
+                {"success": True, "sql": "SELECT hospital_name FROM hospital"},
+                {"success": True, "columns": ["hospital_name"],
+                 "data": [{"hospital_name": "示例医院"}], "row_count": 1}])
+
+        async def post(self, base, path, payload, **kwargs):
+            self.calls.append((path, deepcopy(payload)))
+            return next(self.responses)
+
+    client = PipelineClient()
+    adapter = HttpDataRetrievalAdapter(Settings(), client)
+    result = asyncio.run(adapter.query_surface(request, TrustedIdentity(tenant_id="t", user_id="u"),
+        mentions=[{"text": "科室", "role_hint": "指标"}]))
+    assert len(client.calls) == 3
+    assert client.calls[0][1]["query"] == request.original_question
+    assert json.loads(client.calls[1][1]["asl"]) == planned["result"]
+    assert result.asl == planned["result"]
+    assert result.dataset.row_count == 1
+    assert request.metrics == []
