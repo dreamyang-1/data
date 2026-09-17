@@ -364,6 +364,15 @@ SURFACE_COMPLETION_PROMPT = '''
 This execution mode delegates catalog matching to the downstream ASL model.
 Extract literal business mentions and tentative roles only; do not resolve IDs,
 metrics, dimensions, physical columns, or reject wording for missing catalog matches.
+Use semantic phrase granularity: emit separate mentions for a concrete business
+name/value, its generic object type, the relationship phrase, and the requested
+output when they are separately expressed. For example, in
+“查询外周插管中心静脉导管产品合作的医院名单”, keep “外周插管中心静脉导管”,
+“产品”, “合作”, and “医院名称” as separate evidence. Do not merge the entire
+phrase into one value, but keep real product models such as “Prismaflex M60 set”
+intact. A name such as “费森尤斯” may stay role-ambiguous; downstream ASL catalog
+retrieval decides brand versus manufacturer. These mentions are advisory evidence,
+not authoritative catalog bindings.
 Also return completed_question. For NEW_TASK copy the current question exactly.
 For an accepted contextual relation use ONLY the selected offered task's
 context_question.execution_question and the current turn to form a standalone

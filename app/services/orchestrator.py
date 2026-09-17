@@ -9638,9 +9638,10 @@ class DataAnalysisOrchestrator:
         The canonical/ASL constraint is the primary guard.  This deterministic
         result gate protects against stale relationship rows, legacy translators
         and dirty placeholder strings that still reach a complete result.  A
-        truncated result cannot be repaired locally because unseen/file rows
-        may contain the same defect, so it is marked failed instead of silently
-        claiming a complete clean list.
+        A truncated result cannot be repaired completely because unseen/file
+        rows may contain the same defect.  The verified preview is still useful,
+        so keep it with a warning while preventing callers from presenting it as
+        a complete clean list.
         """
 
         if request.primary_intent != PrimaryIntent.DETAIL_QUERY:
@@ -9709,7 +9710,7 @@ class DataAnalysisOrchestrator:
         dataset_payload["rows"] = clean_rows
         dataset_payload["row_count"] = len(clean_rows)
         if query_result.dataset.truncated:
-            dataset_payload["quality_status"] = "FAIL"
+            dataset_payload["quality_status"] = "WARN"
         else:
             dataset_payload["total_row_count"] = len(clean_rows)
         cleaned_dataset = Dataset.model_validate(dataset_payload)
@@ -9722,6 +9723,10 @@ class DataAnalysisOrchestrator:
         assumption = f"INVALID_NAME_ROWS_REMOVED={removed_count}"
         if assumption not in request.assumptions:
             request.assumptions.append(assumption)
+        if query_result.dataset.truncated:
+            preview_assumption = "NAME_PROJECTION_VERIFIED_PREVIEW_ONLY"
+            if preview_assumption not in request.assumptions:
+                request.assumptions.append(preview_assumption)
         return query_result.model_copy(update={
             "dataset": cleaned_dataset,
             "execution_transforms": [

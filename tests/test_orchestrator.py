@@ -592,7 +592,7 @@ def test_complete_name_list_drops_null_and_placeholder_members():
     assert "INVALID_NAME_ROWS_REMOVED=2" in request.assumptions
 
 
-def test_truncated_name_list_with_invalid_members_fails_closed():
+def test_truncated_name_list_returns_verified_preview_with_warning():
     request = CanonicalAnalysisRequest(
         conversation_id="name-integrity-truncated",
         tenant_id="t1",
@@ -622,10 +622,11 @@ def test_truncated_name_list_with_invalid_members_fails_closed():
         request, result
     )
 
-    assert cleaned.dataset.quality_status == "FAIL"
+    assert cleaned.dataset.quality_status == "WARN"
     assert cleaned.dataset.rows == [{"经销商名称": "有效公司"}]
     assert cleaned.dataset.total_row_count == 20
     assert cleaned.result_file_url is None
+    assert "NAME_PROJECTION_VERIFIED_PREVIEW_ONLY" in request.assumptions
 
 
 def test_singular_product_pronoun_is_bound_from_previous_result_table():
