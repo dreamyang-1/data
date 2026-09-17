@@ -463,7 +463,15 @@ def semantic_display_elements_resolve(
             try:
                 require_candidate_scope(metadata, req.semantic_model_id, domain_ids)
             except ValueError as exc:
-                raise HTTPException(502, detail={'code': 'SEMANTIC_SCOPE_MISMATCH'}) from exc
+                raise HTTPException(502, detail={
+                    'code': 'SEMANTIC_SCOPE_MISMATCH',
+                    'message': 'a retrieval candidate could not be verified against the requested semantic scope',
+                    'stage': _candidate_scope_reason(exc),
+                    'candidate': {
+                        'candidate_id': candidate.candidate_id,
+                        'slot': candidate.slot,
+                    },
+                }) from exc
             if (
                 candidate.slot == "filter"
                 and not _semantic_filter_field_matches(candidate.field_name, metadata)
@@ -1439,6 +1447,18 @@ def _public_asl_validation_context(exc: ValueError) -> dict[str, Any]:
     if isinstance(details, dict) and details:
         context["details"] = details
     return context
+
+
+def _candidate_scope_reason(exc: ValueError) -> str:
+    """Map scope-verification failures to a bounded, non-sensitive stage."""
+    reason = str(exc)
+    if "metadata is missing" in reason:
+        return "metadata_missing"
+    if "model is unproven" in reason:
+        return "model_unproven"
+    if "domain is unproven" in reason:
+        return "domain_unproven"
+    return "unverified"
 
 
 @app.post("/agent/query", response_model=QueryResponse)
