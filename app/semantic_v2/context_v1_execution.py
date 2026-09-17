@@ -44,6 +44,7 @@ from .completed_question import (
 )
 from .context_proposal import ContextProposalFailure
 from .context_question import (
+    _active_task_version,
     build_result_availability_question,
     build_context_question,
     canonical_matches_execution,
@@ -148,6 +149,43 @@ def _completed_question_step(
         title="补全后的完整问题",
         summary=summary,
     )
+
+
+def _verified_context_filter_bindings(
+    resolved: ResolvedContextTurn,
+) -> tuple[tuple[str, str, str, str], ...]:
+    """Collect proven filter bindings from the completed question's frame.
+
+    A contextual completion reuses the previous successful turn's filters as
+    user-visible surfaces.  Those values were already proven executable, so the
+    follow-up V1 recall must not be allowed to re-bind them to a different
+    field family.  Only frame evidence persisted with a catalog attribute code
+    qualifies; everything else keeps the normal recall path.
+    """
+
+    state_artifact = resolved.next_state
+    if state_artifact is None:
+        return ()
+    try:
+        state = ConversationState.model_validate(state_artifact.payload)
+    except Exception:
+        return ()
+    active = _active_task_version(state)
+    if active is None:
+        return ()
+    _task, version = active
+    frame = version.context_question
+    if frame is None:
+        return ()
+    bindings: list[tuple[str, str, str, str]] = []
+    for item in frame.filters:
+        surface = str(item.surface or "").strip()
+        attribute_code = str(item.attribute_code or "").strip()
+        canonical_name = str(item.canonical_name or "").strip()
+        canonical_value = str(item.canonical_value or item.surface or "").strip()
+        if surface and attribute_code and canonical_name and canonical_value:
+            bindings.append((surface, canonical_value, canonical_name, attribute_code))
+    return tuple(dict.fromkeys(bindings))
 
 
 def _attach_completed_question(
@@ -1232,6 +1270,9 @@ class V2ContextV1ExecutionBridge:
                 update={"question": resolved.completed_question, "history": []},
             )
             execution_chat._completed_question_execution = True
+            execution_chat._context_verified_filter_bindings = (
+                _verified_context_filter_bindings(resolved)
+            )
             execution_chat._intent_context_progress_emitted = (
                 intent_context_progress_emitted
             )

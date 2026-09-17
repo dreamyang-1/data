@@ -71,7 +71,7 @@ _TIME_RANGE_SURFACE = re.compile(
 )
 _TIME_GRAIN_FOLLOWUP = re.compile(
     r"^\s*(?P<replace>换成|改成|改为|换为)?\s*按\s*"
-    r"(?P<grain>年|年度|季度|季|月|月份|周|星期|日|天)\s*"
+    r"(?P<grain>年度|年|季度|季|月份|月|星期|周|日|天)\s*"
     r"(?P<verb>看|查看|查询|统计|汇总|分析|展示|显示)?\s*"
     r"(?P<body>.*?)\s*[？?。.]?\s*$"
 )
@@ -1212,11 +1212,15 @@ def _metric_only_completed_question(
         return None
 
     previous_metrics = _context_metric_surfaces(version)
+    filters = _context_filters_from_version(version)
     frame = version.context_question
     if frame is not None and len(previous_metrics) == 1:
         base = frame.execution_question.rstrip("。.!！?？")
         previous_metric = previous_metrics[0]
-        if base.count(previous_metric) == 1:
+        if (
+            base.count(previous_metric) == 1
+            and all(item.surface in base for item in filters)
+        ):
             return _DirectCompletion(
                 completed_question=base.replace(previous_metric, metric, 1) + "。",
                 label=metric,
@@ -1224,7 +1228,6 @@ def _metric_only_completed_question(
                 reset_detail_shape=True,
             )
 
-    filters = _context_filters_from_version(version)
     qualifiers = _context_qualifiers_from_filters(filters)
     if qualifiers is None:
         return None
@@ -1392,7 +1395,16 @@ def _opaque_unique_result_followup(
 
 def _context_filters_from_version(version) -> list[m.ContextQuestionFilter]:
     if version.context_question is not None:
-        return list(version.context_question.filters)
+        frame = version.context_question
+        if frame.filters:
+            return list(frame.filters)
+        last_edit = frame.last_edit
+        if (
+            last_edit is not None
+            and last_edit.slot == "filter_expression"
+            and last_edit.operation == "CLEAR"
+        ):
+            return []
     result: list[m.ContextQuestionFilter] = []
     for family in ("REGION", "COMMERCIAL_PRODUCT", "HOSPITAL", "PARTNER"):
         for surface in _structured_filter_surfaces(version, family):
@@ -1665,7 +1677,9 @@ def _grain_completed_question(session, version, question: str) -> _DirectComplet
     match = _TIME_GRAIN_FOLLOWUP.fullmatch(question)
     if match is None:
         return None
-    body = match.group("body").strip().strip("的")
+    body = match.group("body").strip().strip("的？?。.")
+    if body in {"呢", "吗", "吧"}:
+        body = ""
     if body:
         metric = _unique_catalog_surface(session, CatalogType.METRIC, body)
         if metric is None:
@@ -1691,16 +1705,13 @@ def _grain_completed_question(session, version, question: str) -> _DirectComplet
     }.get(match.group("grain"), match.group("grain"))
     qualifier = "".join(qualifiers)
     completed = f"按{grain}统计{qualifier}的{metric}。"
-    dimensions = [
-        value for value in _context_dimension_surfaces(version)
-        if value not in {"时间", "日期", "年", "季度", "季", "月", "月份", "周", "星期", "日", "天"}
-    ]
-    dimensions.append(grain)
     return _DirectCompletion(
         completed_question=completed,
         label=grain,
         metrics=(metric,),
-        dimensions=tuple(dict.fromkeys(dimensions)),
+        # A grain-only follow-up changes the result grain. Retaining the prior
+        # grouping would turn “by month” into an unintended compound grouping.
+        dimensions=(grain,),
     )
 
 

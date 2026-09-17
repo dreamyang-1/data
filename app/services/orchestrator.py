@@ -66,7 +66,11 @@ from app.services.conversation_followup import (
     resolve_conversation_temporal_context,
 )
 from app.services.turn_admission import TurnAdmissionGate
-from app.services.clarification_policy import decide_clarification, restore_clarification_keys
+from app.services.clarification_policy import (
+    decide_clarification,
+    restore_clarification_keys,
+    semantic_ambiguity_has_safe_time_default,
+)
 from app.services.dependency_error_messages import render_dependency_error
 from app.services.authorized_scope import bind_authorized_scope, state_scope_matches
 from app.services.semantic_decision import (
@@ -74,7 +78,7 @@ from app.services.semantic_decision import (
     semantic_decision_for_task_plan,
     semantic_decision_with_v1_fallback,
 )
-from app.services.legacy_guards import pending_answer_admissibility, apply_snapshot_display_default, apply_region_clear_barrier
+from app.services.legacy_guards import pending_answer_admissibility, extract_quoted_choice_candidate, apply_snapshot_display_default, apply_region_clear_barrier
 from app.services.history_compaction import compact_history
 from app.services.working_memory import recalls_prior_task, requires_prior_task_resolution, select_recalled_task_frame
 from app.services.extension_dispatcher import ExtensionDispatcher
@@ -4179,6 +4183,9 @@ class DataAnalysisOrchestrator:
                     semantic_model_id=chat.semantic_model_id,
                     business_domain_id=self._effective_business_domain_id(chat),
                     business_domain_ids=list(chat.business_domain_ids),
+                    verified_filter_bindings=getattr(
+                        chat, "_context_verified_filter_bindings", ()
+                    ),
                 )
             )
             if callable(sanitize_mentions):
@@ -5111,7 +5118,31 @@ class DataAnalysisOrchestrator:
                         if first_error.upstream_code in SEMANTIC_QUERY_RETRY_CODES
                         else first_error.code
                     )
-                    if first_error.code == "ANALYSIS_RESULT_CONTRACT_INVALID":
+                    optional_time_ambiguities = (
+                        self._semantic_ambiguities(first_error)
+                        if first_error.code == "ASL_AMBIGUOUS"
+                        else []
+                    )
+                    if semantic_ambiguity_has_safe_time_default(
+                        retrieval_request,
+                        optional_time_ambiguities,
+                    ):
+                        await emit_progress(
+                            "DATA_RETRIEVAL",
+                            "RUNNING",
+                            "时间范围已有受控默认值，正在按该口径重新规划一次。",
+                            error_code=first_error.code,
+                        )
+                        retry_assumption = (
+                            "SEMANTIC_QUERY_RETRY:"
+                            + json.dumps(
+                                first_error.details,
+                                ensure_ascii=False,
+                                separators=(",", ":"),
+                                default=str,
+                            )[:4000]
+                        )
+                    elif first_error.code == "ANALYSIS_RESULT_CONTRACT_INVALID":
                         await emit_progress(
                             "DATA_RETRIEVAL",
                             "RUNNING",
@@ -5494,11 +5525,14 @@ class DataAnalysisOrchestrator:
             if scope:
                 message += f"当前筛选条件：{scope}。"
                 if request.semantic_filter_bindings:
-                    message += "筛选字段和值已经按当前语义模型的实体属性向量库规范化。"
+                    message += (
+                        "筛选字段和值已按当前语义模型核验；该结果表示在此条件下"
+                        "没有匹配的业务记录，可调整时间范围或筛选条件后重试。"
+                    )
                 else:
                     message += (
-                        "本次没有获得可核验的实体属性向量绑定；"
-                        "请使用更完整的业务名称重新查询。"
+                        "筛选条件中的实体名称未能匹配到可核验的业务属性；"
+                        "请使用更完整的业务名称或表述重新查询。"
                     )
             response = self._fallback(request, message)
             response.dataset_id = dataset_id
@@ -7621,6 +7655,12 @@ class DataAnalysisOrchestrator:
         if ambiguity is None or not ambiguity.candidates:
             return None
         compact = re.sub(r"\s+", "", answer).strip("，,。.!！?？;；：:")
+        # Pending prompts tell users they may reply with the full candidate
+        # name wrapped in quote marks (``就按「…」这个来吧``).  Match the
+        # quoted span itself, never the surrounding discourse.
+        quoted_choice = extract_quoted_choice_candidate(answer)
+        if quoted_choice is not None:
+            compact = re.sub(r"\s+", "", quoted_choice).strip("，,。.!！?？;；：:")
         chinese_numbers = {
             "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
             "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
@@ -11193,6 +11233,12 @@ class DataAnalysisOrchestrator:
             ),
             "ASL_ANALYSIS_SHAPE_INVALID": "语义查询没有返回分析所需的分组维度，本次未执行可能产生误导的单值分析。",
             "SQL_TRANSLATION_FAILED": "ASL 转 SQL 服务未能生成可执行查询。",
+            "SEMANTIC_VALIDATION_FAILED": (
+                "本次语义查询未通过语义校验：查询条件无法在已发布的语义模型中"
+                "唯一确定查询主体或其实体关系路径，为避免返回错误数据，本次未执行查询。"
+                "请在完整问题中写明查询对象（例如“某经销商销售了哪些产品”）后重试；"
+                "若反复出现，需系统维护人员检查该模型的实体、关系路径与主体绑定配置。"
+            ),
             "SQL_EXECUTION_FAILED": "SQL 查询执行失败，本次不返回数据。",
             "SQL_TRANSLATION_ENDPOINT_UNAVAILABLE": "SQL服务尚未部署独立翻译接口，请先发布或重启新版SQL Translator。",
             "SQL_EXECUTION_ENDPOINT_UNAVAILABLE": "SQL服务尚未部署独立执行接口，请先发布或重启新版SQL Translator。",
@@ -11209,6 +11255,11 @@ class DataAnalysisOrchestrator:
                 "请检查语义模型中的字段角色和实体关系配置。"
             ),
             "ASL_REQUIRED_FILTER_MISSING": "语义查询未保留当前问题要求的筛选条件，本次未执行可能扩大范围的查询。",
+            "ASL_SORT_ALIAS_UNRESOLVED": (
+                "语义查询为排序指标生成的展示别名为空，无法生成可执行的排序列，"
+                "本次未执行查询。请换用指标的完整业务名称重试；"
+                "系统维护人员需检查该指标的别名与排序字段配置。"
+            ),
             "ASL_REQUIRED_DIMENSION_MISSING": "语义查询未保留当前问题要求的分组维度，本次未执行不完整查询。",
             "ASL_DETAIL_FIELDS_INCOMPLETE": "语义查询未返回用户明确要求的全部明细字段。",
             "ASL_DETAIL_PROJECTION_MISSING": "当前语义模型无法唯一确定所请求明细字段的投影。",

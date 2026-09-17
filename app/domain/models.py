@@ -694,6 +694,14 @@ class ChatRequest(StrictModel):
     # Trusted in-process semantic handoff.  It is never accepted from request
     # JSON and therefore cannot be used by callers to bypass scope validation.
     _semantic_decision: Any = PrivateAttr(default=None)
+    # Filter values already proven executable by a same-conversation successful
+    # query (context frame provenance).  Recall re-grounding for these values
+    # is bounded to their proven attribute so unstable vector recall cannot
+    # degrade a verified filter on a follow-up turn.  Never set from JSON.
+    # Each item is (surface, canonical_value, canonical_name, attribute_code).
+    _context_verified_filter_bindings: tuple[tuple[str, str, str, str], ...] = PrivateAttr(
+        default_factory=tuple
+    )
     conversation_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=4000)

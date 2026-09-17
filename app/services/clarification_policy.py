@@ -61,6 +61,32 @@ def restore_clarification_keys(previous: CanonicalAnalysisRequest, asked_keys: s
     return restored
 
 
+def semantic_ambiguity_has_safe_time_default(
+    request: CanonicalAnalysisRequest,
+    ambiguities=None,
+) -> bool:
+    """Return whether an optional time-range choice is already governed.
+
+    A time-anchor ambiguity about a date field or grouping dimension remains a
+    real business choice.  Only range/context ambiguities are covered by the
+    existing all-history contract.
+    """
+    blocking = list(ambiguities) if ambiguities is not None else [
+        item for item in request.semantic_ambiguities if item.blocking
+    ]
+    return bool(
+        request.time_range is None
+        and "TIME_SCOPE=ALL_TIME" in request.assumptions
+        and blocking
+        and all(
+            item.blocking
+            and item.type == "time_anchor"
+            and set(item.affected_slots) <= {"time_range", "time_context"}
+            for item in blocking
+        )
+    )
+
+
 def decide_clarification(request: CanonicalAnalysisRequest, slot: str, *, source_stage: str, asked_keys: set[str]):
     ambiguities = [a for a in request.semantic_ambiguities if a.blocking]
     semantic = slot in {'semantic_ambiguity', 'turn_relation'}
@@ -81,7 +107,16 @@ def decide_clarification(request: CanonicalAnalysisRequest, slot: str, *, source
         reason, is_user, system_repair = 'SYSTEM_FAILURE', False, True
     if already:
         reason = 'REPEATED_QUESTION'
-    safe_default = slot == 'time_range' and (request.time_range is not None or 'TIME_SCOPE=ALL_TIME' in request.assumptions)
+    safe_default = (
+        slot == 'time_range'
+        and (
+            request.time_range is not None
+            or 'TIME_SCOPE=ALL_TIME' in request.assumptions
+        )
+    ) or (
+        slot == 'semantic_ambiguity'
+        and semantic_ambiguity_has_safe_time_default(request, ambiguities)
+    )
     allowed = is_user and not system_repair and not already and not safe_default
     trace = ClarificationDecisionTrace(
         conversation_id=request.conversation_id, source_stage=source_stage, reason_type=reason,

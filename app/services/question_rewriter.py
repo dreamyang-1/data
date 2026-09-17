@@ -398,6 +398,7 @@ class QuestionRewriter:
         semantic_model_id: int | None,
         business_domain_id: int | None,
         business_domain_ids: list[int] | None = None,
+        verified_filter_bindings=None,
     ) -> list[SemanticAmbiguity]:
         """Resolve each filter literal independently against the live catalog.
 
@@ -471,6 +472,32 @@ class QuestionRewriter:
         if not literals:
             return []
 
+        # A filter value already proven executable by a same-conversation
+        # successful query keeps its attribute binding on follow-up turns.
+        # Re-running unstable vector recall for that exact value can demote a
+        # verified name to a wrong field family; the carried provenance is
+        # authoritative and needs no retrieval round trip.
+        verified_by_literal: dict[str, dict[str, str]] = {}
+        for item in verified_filter_bindings or ():
+            surface, canonical_value, canonical_name, attribute_code = item
+            surface = str(surface or "").strip()
+            canonical_value = str(canonical_value or "").strip()
+            canonical_name = str(canonical_name or "").strip()
+            attribute_code = str(attribute_code or "").strip()
+            if not (surface and canonical_value and canonical_name and attribute_code):
+                continue
+            for key in dict.fromkeys((surface, canonical_value)):
+                folded = key.strip("%").casefold()
+                if folded:
+                    verified_by_literal.setdefault(folded, {
+                        "attribute_code": attribute_code,
+                        "canonical_value": canonical_value,
+                        "canonical_name": canonical_name,
+                    })
+        recall_literals = [
+            literal for literal in literals
+            if literal.casefold() not in verified_by_literal
+        ]
         results = await asyncio.gather(*[
             self.searcher.search(
                 literal,
@@ -478,7 +505,7 @@ class QuestionRewriter:
                 business_domain_id=business_domain_id,
                 business_domain_ids=business_domain_ids,
             )
-            for literal in literals
+            for literal in recall_literals
         ], return_exceptions=True)
         confirmed_attribute_codes = {
             value.split("=", 1)[1].strip()
@@ -488,7 +515,17 @@ class QuestionRewriter:
         }
         matches: list[dict[str, Any]] = []
         ambiguities: list[SemanticAmbiguity] = []
-        for literal, result in zip(literals, results, strict=True):
+        for literal in literals:
+            verified = verified_by_literal.get(literal.casefold())
+            if verified is not None:
+                matches.append({
+                    "score": 1.0,
+                    "attribute_code": verified["attribute_code"],
+                    "attribute_name": verified["canonical_name"],
+                    "attribute_value": verified["canonical_value"],
+                    "canonical_value": verified["canonical_value"],
+                })
+        for literal, result in zip(recall_literals, results, strict=True):
             if isinstance(result, Exception):
                 logger.warning(
                     "isolated entity filter grounding skipped safely: literal=%r error=%s",
