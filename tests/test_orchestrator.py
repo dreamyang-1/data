@@ -350,6 +350,27 @@ def test_vector_ambiguity_clarification_returns_all_canonical_candidate_details(
     assert items[0]["multi_select"] is False
 
 
+def test_semantic_clarification_names_the_ambiguous_phrase() -> None:
+    request = CanonicalAnalysisRequest(
+        conversation_id="specific-ambiguity-question",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询费森尤斯产品",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["semantic_ambiguity"],
+        semantic_ambiguities=[SemanticAmbiguity(
+            type="entity_role",
+            phrase="费森尤斯",
+            question="请确认需要使用哪个业务字段。",
+            candidates=["母厂牌", "厂家名称"],
+        )],
+    )
+
+    questions = DataAnalysisOrchestrator._clarification_questions(request)
+
+    assert questions == ["关于“费森尤斯”：请确认需要使用哪个业务字段。"]
+
+
 def _shanghai_region_ambiguity_request() -> CanonicalAnalysisRequest:
     return CanonicalAnalysisRequest(
         conversation_id="shanghai-region-choice",

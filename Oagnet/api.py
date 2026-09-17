@@ -1404,6 +1404,43 @@ def _asl_validation_error_code(exc: ValueError) -> str:
     return "ASL_OUTPUT_INVALID"
 
 
+def _public_asl_validation_context(exc: ValueError) -> dict[str, Any]:
+    """Expose only bounded, contract-owned facts needed for a useful repair."""
+
+    if not isinstance(exc, ASLValidationError):
+        return {}
+
+    def bounded(value: Any, *, depth: int = 0) -> Any:
+        if depth > 3:
+            return None
+        if isinstance(value, bool) or value is None:
+            return value
+        if isinstance(value, (int, float)):
+            return value
+        if isinstance(value, str):
+            return " ".join(value.split())[:300]
+        if isinstance(value, list):
+            return [bounded(item, depth=depth + 1) for item in value[:20]]
+        if isinstance(value, dict):
+            return {
+                str(key)[:80]: bounded(item, depth=depth + 1)
+                for key, item in list(value.items())[:30]
+                if str(key).casefold() not in {
+                    "authorization", "api_key", "apikey", "token",
+                    "password", "secret", "credential", "sql",
+                }
+            }
+        return "<unsupported>"
+
+    context: dict[str, Any] = {}
+    if exc.field:
+        context["field"] = str(exc.field)[:120]
+    details = bounded(exc.details)
+    if isinstance(details, dict) and details:
+        context["details"] = details
+    return context
+
+
 @app.post("/agent/query", response_model=QueryResponse)
 def agent_query(req: QueryRequest):
     """自然语言提问生成 DSL，直接返回 agent 结果
@@ -1512,6 +1549,7 @@ def agent_query(req: QueryRequest):
             detail={
                 "code": error_code,
                 "message": "model output did not pass semantic/schema validation",
+                **_public_asl_validation_context(exc),
             },
         ) from exc
     except Exception as exc:

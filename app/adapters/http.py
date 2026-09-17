@@ -235,6 +235,10 @@ class PlatformHttpClient:
                     )
                 if response.status_code == 429 or response.status_code >= 500:
                     upstream_code = self._upstream_error_code(response)
+                    error_details = {
+                        "path": path,
+                        **self._upstream_error_details(response),
+                    }
                     if upstream_code in _NON_RETRYABLE_UPSTREAM_CODES:
                         raise AdapterError(
                             "DEPENDENCY_CONTRACT_REJECTED",
@@ -242,7 +246,7 @@ class PlatformHttpClient:
                             retryable=False,
                             status_code=response.status_code,
                             upstream_code=upstream_code,
-                            details={"path": path},
+                            details=error_details,
                         )
                     effective_retryable = bool(
                         retryable
@@ -254,7 +258,7 @@ class PlatformHttpClient:
                         retryable=effective_retryable,
                         status_code=response.status_code,
                         upstream_code=upstream_code,
-                        details={"path": path},
+                        details=error_details,
                     )
                     if effective_retryable and attempt + 1 < attempts:
                         await asyncio.sleep(
@@ -269,7 +273,10 @@ class PlatformHttpClient:
                         f"dependency returned HTTP {response.status_code}",
                         status_code=response.status_code,
                         upstream_code=upstream_code,
-                        details={"path": path},
+                        details={
+                            "path": path,
+                            **self._upstream_error_details(response),
+                        },
                     )
                 return response.json()
             except AdapterError:
@@ -301,6 +308,62 @@ class PlatformHttpClient:
             if isinstance(value, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{1,63}", value):
                 return value
         return f"HTTP_{response.status_code}"
+
+    @staticmethod
+    def _upstream_error_details(response: httpx.Response) -> dict[str, Any]:
+        """Keep bounded structured diagnostics while discarding raw error text.
+
+        Upstream services own the exact failure subject (for example the
+        unresolved mention or candidate fields).  Dropping that subject at the
+        HTTP boundary forces the UI to ask vague, misleading questions.
+        """
+
+        try:
+            body = response.json()
+        except ValueError:
+            return {}
+        if not isinstance(body, dict):
+            return {}
+        detail = body.get("detail")
+        sources = [body]
+        if isinstance(detail, dict):
+            sources.insert(0, detail)
+
+        raw: dict[str, Any] = {}
+        for source in sources:
+            nested = source.get("details")
+            if isinstance(nested, dict):
+                raw.update(nested)
+            for key in ("field", "stage", "instance_path", "schema_path", "validator"):
+                if source.get(key) not in (None, ""):
+                    raw.setdefault(key, source[key])
+
+        def bounded(value: Any, *, depth: int = 0) -> Any:
+            if depth > 3:
+                return None
+            if isinstance(value, bool) or value is None:
+                return value
+            if isinstance(value, (int, float)):
+                return value
+            if isinstance(value, str):
+                return " ".join(value.split())[:300]
+            if isinstance(value, list):
+                return [bounded(item, depth=depth + 1) for item in value[:20]]
+            if isinstance(value, dict):
+                result: dict[str, Any] = {}
+                for key, item in list(value.items())[:30]:
+                    safe_key = str(key)[:80]
+                    if safe_key.casefold() in {
+                        "authorization", "api_key", "apikey", "token",
+                        "password", "secret", "credential", "sql",
+                    }:
+                        continue
+                    result[safe_key] = bounded(item, depth=depth + 1)
+                return result
+            return "<unsupported>"
+
+        sanitized = bounded(raw)
+        return sanitized if isinstance(sanitized, dict) else {}
 
 
 class HttpSemanticAdapter:

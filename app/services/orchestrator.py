@@ -67,6 +67,7 @@ from app.services.conversation_followup import (
 )
 from app.services.turn_admission import TurnAdmissionGate
 from app.services.clarification_policy import decide_clarification, restore_clarification_keys
+from app.services.dependency_error_messages import render_dependency_error
 from app.services.authorized_scope import bind_authorized_scope, state_scope_matches
 from app.services.semantic_decision import (
     canonical_request_from_semantic_decision,
@@ -10157,17 +10158,33 @@ class DataAnalysisOrchestrator:
                 if prompt not in questions:
                     questions.append(prompt)
             elif slot == "semantic_ambiguity" and (request.semantic_ambiguities or request.ambiguities):
-                semantic_questions = (
-                    [item.question for item in request.semantic_ambiguities if item.blocking]
-                    if request.semantic_ambiguities else request.ambiguities
-                )
-                questions.extend(
-                    text
-                    for value in semantic_questions
-                    if (
-                        text := cls._sanitize_clarification_text(value)
-                    ) not in questions
-                )
+                if request.semantic_ambiguities:
+                    for ambiguity in request.semantic_ambiguities:
+                        if not ambiguity.blocking:
+                            continue
+                        text = cls._sanitize_clarification_text(ambiguity.question)
+                        phrase = cls._sanitize_clarification_text(ambiguity.phrase or "")
+                        vague_markers = (
+                            "它", "该名称", "这个名称", "当前名称",
+                            "哪个业务字段", "存在歧义的业务口径",
+                            "请重新说明", "具体是什么", "具体指什么",
+                        )
+                        if (
+                            phrase
+                            and phrase not in text
+                            and any(marker in text for marker in vague_markers)
+                        ):
+                            text = f"关于“{phrase}”：{text}"
+                        if text and text not in questions:
+                            questions.append(text)
+                else:
+                    questions.extend(
+                        text
+                        for value in request.ambiguities
+                        if (
+                            text := cls._sanitize_clarification_text(value)
+                        ) not in questions
+                    )
             else:
                 prompt = prompts.get(slot, f"请补充 {slot}。")
                 if prompt not in questions:
@@ -11072,6 +11089,9 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _dependency_message(exc: AdapterError) -> str:
+        detailed = render_dependency_error(exc)
+        if detailed is not None:
+            return detailed
         known = {
             'EXPLICIT_DOMAIN_NOT_SUPPORTED': '当前查询服务尚不能严格限定本次授权业务域，本次未执行查询。需由服务维护方完善范围过滤。',
             'EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED': '当前查询服务尚不能严格限定本次授权的业务域集合，本次未执行查询。需由服务维护方完善范围过滤。',
@@ -11117,15 +11137,35 @@ class DataAnalysisOrchestrator:
         if diagnostic_code in known:
             return known[diagnostic_code]
         if exc.status_code in {401, 403}:
-            return "上游数据服务拒绝了当前可信身份，本次不返回数据。"
+            return (
+                f"上游数据服务拒绝了当前可信身份（错误码：{diagnostic_code}，"
+                f"HTTP {exc.status_code}），本次不返回数据。"
+                "用户无需修改查询内容；系统维护人员需检查服务身份、授权头和应用绑定。"
+            )
         if exc.status_code == 404:
-            return "上游数据服务没有找到请求的业务资源。"
+            return (
+                f"上游数据服务没有找到本次调用的资源或接口（错误码：{diagnostic_code}，HTTP 404）。"
+                "用户无需改写业务问题；系统维护人员需检查服务版本、接口路径和语义资源是否已发布。"
+            )
         if exc.status_code == 409:
-            return "上游数据状态发生冲突，请刷新后重试。"
+            return (
+                f"上游数据状态发生冲突（错误码：{diagnostic_code}，HTTP 409）。"
+                "请刷新当前会话后重试；若仍出现，系统维护人员需检查目录版本或会话状态冲突。"
+            )
         if exc.status_code == 422:
-            return "上游数据服务无法按当前条件完成查询，请调整条件后重试。"
+            return (
+                f"上游服务拒绝了当前查询合同（错误码：{diagnostic_code}，HTTP 422），"
+                "但响应没有提供可安全展示的具体字段或取值。"
+                "用户无需盲目改写问题；系统维护人员需根据该错误码补全结构化 details，"
+                "再明确判断应由用户补充条件还是由语义层修复配置。"
+            )
         safe_code = diagnostic_code
-        return f"上游数据服务暂时不可用（{safe_code}），请稍后重试。"
+        status = f"，HTTP {exc.status_code}" if exc.status_code is not None else ""
+        return (
+            f"上游调用失败（错误码：{safe_code}{status}），当前响应未提供更具体的可公开诊断信息。"
+            "用户无需重复输入同一问题；若错误可重试，请稍后重试，"
+            "否则由系统维护人员检查对应调用阶段并补充结构化错误详情。"
+        )
 
     @staticmethod
     def _analysis_contract_requirements(

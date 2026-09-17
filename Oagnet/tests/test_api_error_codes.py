@@ -42,6 +42,35 @@ def test_structured_detail_projection_error_keeps_its_exact_code() -> None:
     assert _asl_validation_error_code(error) == "ASL_DETAIL_PROJECTION_MISSING"
 
 
+def test_agent_query_returns_bounded_structured_validation_context() -> None:
+    error = ASLValidationError(
+        "ASL_ENTITY_MENTION_UNRESOLVED",
+        "internal reason must stay private",
+        field="filters",
+        details={
+            "mention": "费森尤斯",
+            "candidate_field_count": 12,
+            "token": "must-not-be-exposed",
+        },
+    )
+
+    with patch("api.main", side_effect=error):
+        response = TestClient(api.app).post(
+            "/agent/query",
+            json={"query": "查询费森尤斯产品", "semantic_model_id": 81},
+        )
+
+    assert response.status_code == 502
+    payload = response.json()["detail"]
+    assert payload["code"] == "ASL_ENTITY_MENTION_UNRESOLVED"
+    assert payload["field"] == "filters"
+    assert payload["details"] == {
+        "mention": "费森尤斯",
+        "candidate_field_count": 12,
+    }
+    assert "internal reason" not in response.text
+
+
 def test_unknown_validation_keeps_generic_code() -> None:
     assert _asl_validation_error_code(ValueError("invalid envelope")) == "ASL_OUTPUT_INVALID"
 

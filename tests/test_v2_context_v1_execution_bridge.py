@@ -2407,7 +2407,10 @@ async def test_full_contextual_reference_requires_one_prior_slot_per_family(prov
     ), IDENTITY)
 
     assert result.status == "NEEDS_CLARIFICATION"
-    assert result.answer == "上一任务中的地区条件无法唯一确定，请补充完整的地区。"
+    assert result.answer == (
+        "上一任务中的地区有多个候选值：“山西省”、“陕西省”。"
+        "请在本轮问题中写明具体地区。"
+    )
     assert calls == 1
 
 
