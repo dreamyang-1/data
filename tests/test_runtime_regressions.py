@@ -182,7 +182,11 @@ def test_relationship_wording_does_not_deduplicate_order_facts() -> None:
 
     assert "共查询到 2 条明细" in answer
     assert "唯一组合" not in answer
-    assert "| 订单号 | 商品 |" in answer
+    # The display layer normalizes the physical alias "商品" to the official
+    # display field "商品名称"; values, row count and the non-deduplicated
+    # wording must stay unchanged, and no code/ID column may appear.
+    assert "| 订单号 | 商品名称 |" in answer
+    assert "商品编码" not in answer
     assert answer.count("| A-1 | 甲 |") == 2
 
 
