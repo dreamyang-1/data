@@ -140,29 +140,31 @@ def render_dependency_error(exc: AdapterError) -> str | None:
         )
 
     if code in {"ASL_FILTER_INVALID", "ASL_REQUIRED_FILTER_MISSING"}:
-        filters = _filter_descriptions(
+        raw_filters = (
             details.get("expected_filter")
             or details.get("missing_filters")
             or details.get("filters")
         )
+        filters = _filter_descriptions(raw_filters)
         semantic_field = _clean_text(details.get("semantic_field"))
         if semantic_field and semantic_field not in filters:
             filters.insert(0, semantic_field)
-        candidates = [_field_label(item) for item in _texts(details.get("candidates"))]
         target = _quote_join(filters) if filters else "当前筛选条件"
-        message = (
+        # Upstream does not currently produce candidate evidence carrying a
+        # business semantic identity, and matching generic roles/types does
+        # not prove relevance.  Never display unconfirmed candidates here;
+        # the raw details stay untouched for operator inspection.
+        return (
             f"筛选条件{target}没有绑定到唯一且可执行的语义字段，"
             "因此本次未继续生成 SQL。"
+            " 当前无法确认可用的候选字段：诊断信息中没有能证明候选与"
+            "该失败项相关的业务语义身份证据，系统不会用邻近字段充当候选。"
+            "\n用户可补充：如原问题中该字段的业务含义不明确，可进一步说明其含义；"
+            "已经给出的字段和值无需重复提供。"
+            f"\n语义层需检查：请管理员核对{target}的目录映射与召回信息，"
+            "确认是否存在对应业务语义角色的已发布属性、别名和关系路径；"
+            "仅当存在明确的缺失证据时才能判定为未配置。"
         )
-        if candidates:
-            message += f" 当前召回到的候选字段为：{_quote_join(candidates)}。"
-        message += (
-            "\n用户可补充：写明筛选值对应的字段名称，并保留完整值；"
-            "例如使用“厂牌为……”而不是只写一个无法判定角色的名称。"
-            "\n语义层需配置：为上述筛选项发布唯一的属性代码、字段角色和关系路径；"
-            "若多个候选都有效，应把这些真实候选作为澄清选项返回。"
-        )
-        return message
 
     if code == "INTENT_ASL_CONTRACT_INCOMPLETE":
         errors = _diagnostic_subject(details, "errors", "missing_constraints")
@@ -182,19 +184,19 @@ def render_dependency_error(exc: AdapterError) -> str | None:
         "ASL_REQUIRED_DIMENSION_MISSING",
         "ASL_GROUPING_DIMENSION_MISSING",
     }:
-        dimensions = _diagnostic_subject(
+        raw_dimensions = _diagnostic_subject(
             details, "missing_dimensions", "grouping", "required_dimensions"
         )
-        candidates = [_field_label(item) for item in _texts(details.get("candidates"))]
-        target = _quote_join(dimensions) if dimensions else "本次要求的分组维度"
-        message = f"语义查询没有保留或无法唯一绑定{target}，因此未执行不完整查询。"
-        if candidates:
-            message += f" 当前候选字段为：{_quote_join(candidates)}。"
+        target = _quote_join(raw_dimensions) if raw_dimensions else "本次要求的分组维度"
         return (
-            message
-            + "\n用户可补充：明确写出分组字段，例如“按产线编号分组”。"
-            + f"\n语义层需配置：为{target}发布可分组属性及其实体关系路径，"
-            "并确保 ASL dimensions 返回该规范字段。"
+            f"语义查询没有保留或无法唯一绑定{target}，因此未执行不完整查询。"
+            " 当前无法确认可用的候选字段：诊断信息中没有能证明候选与"
+            "该维度相关的业务语义身份证据，系统不会用邻近字段充当候选。"
+            "\n用户可补充：仅当原问题确实没有写明分组字段时才需要补充；"
+            "已经给出的分组无需重复提供。"
+            f"\n语义层需检查：请管理员核对{target}的目录映射与召回信息，"
+            "确认是否存在对应业务语义角色的可分组属性及其实体关系路径；"
+            "仅当存在明确的缺失证据时才能判定为未配置。"
         )
 
     if code == "ASL_UNREQUESTED_DIMENSION":
@@ -215,16 +217,16 @@ def render_dependency_error(exc: AdapterError) -> str | None:
         fields = _diagnostic_subject(
             details, "missing_fields", "projection", "requested_fields", "query_object"
         )
-        candidates = [_field_label(item) for item in _texts(details.get("candidates"))]
         target = _quote_join(fields) if fields else "本次要求返回的明细字段"
-        message = f"语义查询无法完整投影{target}，因此未执行可能漏列的查询。"
-        if candidates:
-            message += f" 当前候选字段为：{_quote_join(candidates)}。"
         return (
-            message
-            + "\n用户可补充：明确写出需要返回的字段名称。"
-            + f"\n语义层需配置：为{target}发布可查询属性和正确关系路径，"
-            "并确保明细 ASL 的 dimensions 使用该规范字段。"
+            f"语义查询无法完整投影{target}，因此未执行可能漏列的查询。"
+            " 当前无法确认可用的候选字段：诊断信息中没有能证明候选与"
+            "该字段相关的业务语义身份证据，系统不会用邻近字段充当候选。"
+            "\n用户可补充：仅当原问题确实没有写明需要返回的字段时才需要补充；"
+            "已经给出的字段无需重复提供。"
+            f"\n语义层需检查：请管理员核对{target}的目录映射与召回信息，"
+            "确认是否存在对应业务语义角色的可查询属性和正确关系路径；"
+            "仅当存在明确的缺失证据时才能判定为未配置。"
         )
 
     if code == "ASL_REQUIRED_NAME_NON_NULL_MISSING":
@@ -237,15 +239,16 @@ def render_dependency_error(exc: AdapterError) -> str | None:
 
     if code == "ASL_RELATIONSHIP_ANCHOR_INVALID":
         anchor = _diagnostic_subject(details, "relationship_anchor")
-        candidates = _diagnostic_subject(details, "candidates")
         target = _quote_join(anchor) if anchor else "本次关系查询的主体"
-        message = f"关系查询主体{target}无法唯一绑定到语义实体。"
-        if candidates:
-            message += f" 当前候选实体为：{_quote_join(candidates)}。"
         return (
-            message
-            + "\n用户可补充：明确写出关系两端的业务对象。"
-            + "\n语义层需配置：发布唯一的关系主体、目标实体和连接路径；多候选时返回候选实体供确认。"
+            f"关系查询主体{target}无法唯一绑定到语义实体。"
+            " 当前无法确认可用的候选实体：诊断信息中没有能证明候选与"
+            "该关系主体相关的业务语义身份证据，系统不会拿邻近实体凑数。"
+            "\n用户可补充：仅当原问题确实没有写明关系两端的业务对象时才需要补充；"
+            "已经给出的内容无需重复提供。"
+            f"\n语义层需检查：请管理员核对{target}的目录映射与召回信息，"
+            "确认是否存在唯一的关系主体、目标实体和连接路径；"
+            "仅当存在明确的缺失证据时才能判定为未配置。"
         )
 
     if code == "ASL_METRIC_SELECTION_INVALID":
