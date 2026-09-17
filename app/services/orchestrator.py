@@ -4610,11 +4610,41 @@ class DataAnalysisOrchestrator:
             ),
         )
         request.dependency_constraints = list(chat.dependency_constraints)
+        internal_assumptions = _INTERNAL_ASSUMPTIONS.get()
         request.assumptions = list(dict.fromkeys([
             *request.assumptions,
-            *_INTERNAL_ASSUMPTIONS.get(),
+            *internal_assumptions,
             *(["STRUCTURED_TASK_RECALL"] if recalled_task_frame else []),
         ]))
+        if (
+            _SALES_RECORD_TIME_ASSUMPTION in internal_assumptions
+            and request.time_range is None
+            and (
+                "TIME_SCOPE_SOURCE=BUSINESS_DEFAULT_ALL_AVAILABLE_HISTORY"
+                in request.assumptions
+            )
+        ):
+            # A relationship-detail facet proven to belong to the combined
+            # sales report must execute on one concrete sales-record period,
+            # shared by every sibling facet.  The deterministic splitter can
+            # append the all-history phrase to such child questions, which the
+            # classifier resolves to a business-default all-time scope; that
+            # scope contradicts the trusted sales-record time scope.  Replace
+            # it with the controlled default period.  Explicit user periods are
+            # never touched because ``time_range`` is already set for them.
+            rules = getattr(self.classifier, "rules", self.classifier)
+            parser = getattr(rules, "_time_range", None)
+            window = parser("最近一年") if callable(parser) else None
+            if window is not None:
+                request.time_range = window
+                request.assumptions = [
+                    value for value in request.assumptions
+                    if value not in {
+                        "TIME_SCOPE=ALL_TIME",
+                        "TIME_SCOPE_SOURCE=BUSINESS_DEFAULT_ALL_AVAILABLE_HISTORY",
+                    }
+                ]
+                request.assumptions.append("DEFAULT_TIME_RANGE=LATEST_ONE_YEAR")
         if (
             "LATEST_RESULT_DATASET_NOT_REUSABLE" in request.assumptions
             and re.search(
