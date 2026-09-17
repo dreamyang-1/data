@@ -1110,6 +1110,20 @@ class V2ContextV1ExecutionBridge:
             except (RecognitionFailure, ValueError) as exc:
                 reason = str(exc)
                 binding_failure = reason.startswith("V2_CONTEXT_")
+                failure_answer = (
+                    exc.public_message()
+                    if isinstance(exc, RecognitionFailure)
+                    else (
+                        "已保存的会话语义绑定与当前发布目录不一致，无法确认本轮引用的具体字段或目录值。"
+                        "请在本轮写明要查询的业务对象、字段和筛选值；管理员需要检查会话版本与语义目录"
+                        f"发布版本是否一致。（错误码：{reason}）"
+                        if binding_failure
+                        else (
+                            "上下文解析阶段发生内部校验失败，系统没有证据认定用户缺少业务参数。"
+                            f"请直接重试原问题；管理员需要根据错误码检查上下文状态转换。（错误码：{reason}）"
+                        )
+                    )
+                )
                 response = self._response(
                     chat,
                     status=(
@@ -1120,11 +1134,7 @@ class V2ContextV1ExecutionBridge:
                         if binding_failure
                         else reason
                     ),
-                    answer=(
-                        "当前语义目录已变化，请补充完整问题重新确认。"
-                        if binding_failure
-                        else "当前问题理解结果未通过结构校验，请重新表述完整问题。"
-                    ),
+                    answer=failure_answer,
                 )
                 return await self._save_without_v1(
                     snapshot,
