@@ -27,6 +27,11 @@ the user's metric wording with an inferred canonical measure.
 
 ## Remaining work before enabling
 
+Oagnet now accepts optional bounded `surface_evidence` separately from
+`intent_asl_contract`. It is generation-only advisory data; retrieval still sees
+the unchanged business question. The Agent caller is not wired yet. This does
+not complete or enable the migration.
+
 1. Define a bounded advisory evidence envelope separate from confirmed
    constraints. Model-extracted fields must not acquire user-confirmed status.
 2. Pass the exact completed question to ASL retrieval and generation; remove

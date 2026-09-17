@@ -7208,6 +7208,7 @@ def main(
     result_contract: dict | None = None,
     exploration_requirements: dict | None = None,
     include_evidence: bool = False,
+    surface_evidence: dict | None = None,
 ):
     """自然语言 → DSL
 
@@ -7249,6 +7250,11 @@ def main(
         ),
     )
     execution_query = query
+    # Validate and add advisory evidence only to generation; never embed it as
+    # the user's question or feed it into deterministic contract repair.
+    from surface_evidence import advisory_prompt
+    surface_reference = advisory_prompt(surface_evidence)
+    execution_query += surface_reference
     if (
         metric_selection_authoritative
         and not metric_codes
