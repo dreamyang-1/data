@@ -3223,6 +3223,18 @@ def _administrative_query_level(raw_value: str, user_query: str) -> str | None:
     return None
 
 
+def _administrative_suffix_completion(surface: str, canonical: str) -> bool:
+    """Accept only a standard administrative suffix added by source data."""
+    surface_key = re.sub(r"\s+", "", str(surface or "")).casefold()
+    canonical_key = re.sub(r"\s+", "", str(canonical or "")).casefold()
+    if not surface_key or not canonical_key.startswith(surface_key):
+        return False
+    suffix = canonical_key[len(surface_key):]
+    return bool(suffix and suffix in {
+        str(value).casefold() for value in _ADMINISTRATIVE_SUFFIXES
+    })
+
+
 def _administrative_value_candidates(
     raw_value: str,
     attribute: dict,
@@ -6357,14 +6369,32 @@ def _apply_intent_asl_contract(
             if not literal:
                 continue
             literal_key = re.sub(r"\s+", "", literal).casefold()
-            if any(
-                isinstance(item, dict)
+            surface_filters = [
+                item for item in ast.get("filters") or []
+                if isinstance(item, dict)
                 and re.sub(
                     r"\s+", "", str(item.get("value") or "").strip()
                 ).casefold() == literal_key
-                for item in ast.get("filters") or []
+            ]
+            surface_fields = {
+                str(item.get("field") or "").strip()
+                for item in surface_filters
+                if str(item.get("field") or "").strip()
+            }
+            if surface_filters and not any(
+                str(item.get("value") or "").strip() == literal
+                for item in surface_filters
             ):
+                # A role-bound filter may preserve a formatting-only variant
+                # (for example whitespace) of the same literal.  That predicate
+                # is already bound by the typed-filter contract path; running a
+                # second source lookup here would re-resolve an agreed value.
                 continue
+            mention_candidates = [
+                item for item in candidates
+                if not surface_fields
+                or str(item.get("field") or "").strip() in surface_fields
+            ]
             def catalog_resolution(
                 candidate_fields: list[dict],
             ) -> tuple[list[str], list[dict[str, Any]]]:
@@ -6426,12 +6456,22 @@ def _apply_intent_asl_contract(
                     return next(iter(unique_exact))
                 fuzzy_matches = [
                     item for item in catalog_items
-                    if item.get("match_type") == "ORDERED_SUBSEQUENCE"
-                    and SequenceMatcher(
-                        None,
-                        str(mention).casefold(),
-                        str(item.get("canonical_value") or "").casefold(),
-                    ).ratio() >= 0.86
+                    if item.get("match_type") in {
+                        "CANONICAL_CONTAINS_MENTION",
+                        "MENTION_CONTAINS_CANONICAL",
+                        "ORDERED_SUBSEQUENCE",
+                    }
+                    and (
+                        SequenceMatcher(
+                            None,
+                            str(mention).casefold(),
+                            str(item.get("canonical_value") or "").casefold(),
+                        ).ratio() >= 0.86
+                        or _administrative_suffix_completion(
+                            str(mention),
+                            str(item.get("canonical_value") or ""),
+                        )
+                    )
                 ]
                 fuzzy_matches.sort(
                     key=lambda item: len(str(item.get("canonical_value") or ""))
@@ -6447,7 +6487,7 @@ def _apply_intent_asl_contract(
                     str(fuzzy_matches[0].get("canonical_value") or ""),
                 )
 
-            matched_fields, catalog_matches = catalog_resolution(candidates)
+            matched_fields, catalog_matches = catalog_resolution(mention_candidates)
             resolved = selected_resolution(matched_fields, catalog_matches)
             if resolved is None:
                 # Top-k semantic recall is a relevance optimization, not an
@@ -6463,19 +6503,24 @@ def _apply_intent_asl_contract(
                     )
                 known = {
                     (str(item.get("entity_code") or ""), str(item.get("field") or ""))
-                    for item in candidates
+                    for item in mention_candidates
                 }
                 expanded = [
-                    *candidates,
+                    *mention_candidates,
                     *(
                         item for item in published_candidates
                         if (
                             str(item.get("entity_code") or ""),
                             str(item.get("field") or ""),
                         ) not in known
+                        and (
+                            not surface_fields
+                            or str(item.get("field") or "").strip()
+                            in surface_fields
+                        )
                     ),
                 ]
-                if len(expanded) > len(candidates):
+                if len(expanded) > len(mention_candidates):
                     matched_fields, catalog_matches = catalog_resolution(expanded)
                     resolved = selected_resolution(matched_fields, catalog_matches)
 
@@ -6487,7 +6532,9 @@ def _apply_intent_asl_contract(
                     field="filters",
                     details={
                         "mention": literal,
-                        "candidate_field_count": len(published_candidates or candidates),
+                        "candidate_field_count": len(
+                            published_candidates or mention_candidates
+                        ),
                     },
                 )
             field, canonical_value = resolved
@@ -6503,18 +6550,39 @@ def _apply_intent_asl_contract(
             )
             if field not in published_authorized:
                 published_authorized.append(field)
-            if any(
+            matching_filters = [
+                item for item in ast.get("filters") or []
+                if isinstance(item, dict)
+                and re.sub(
+                    r"\s+", "", str(item.get("value") or "").strip()
+                ).casefold() == literal_key
+            ]
+            if matching_filters:
+                # A model-produced filter is still only surface evidence.  A
+                # unique source-value result owns both its physical field and
+                # canonical stored value, so normalize the existing predicate
+                # in place instead of treating its literal as already bound.
+                for item in matching_filters:
+                    item["field"] = field
+                    item["value"] = canonical_value
+            elif not any(
                 isinstance(item, dict)
                 and str(item.get("field") or "") == field
                 and str(item.get("value") or "") == canonical_value
                 for item in ast.get("filters") or []
             ):
-                continue
-            ast.setdefault("filters", []).append({
-                "field": field,
-                "operator": "=",
-                "value": canonical_value,
-            })
+                ast.setdefault("filters", []).append({
+                    "field": field,
+                    "operator": "=",
+                    "value": canonical_value,
+                })
+            # Keep the caller-owned contract immutable. Record the unique
+            # source normalization separately so final validation compares
+            # the generated ASL with the canonical stored value while the
+            # response can still echo the original user contract verbatim.
+            knowledge.setdefault("_source_canonical_values", {})[
+                literal_key
+            ] = canonical_value
             ambiguities = ast.get("ambiguity")
             if isinstance(ambiguities, list):
                 literal_folded = literal.casefold()
@@ -6774,7 +6842,29 @@ def _validate_intent_asl_contract(
                         "selected_dimensions": sorted(selected_dimension_names),
                     },
                 )
+    source_canonical_values = (
+        (knowledge or {}).get("_source_canonical_values", {})
+        if isinstance(knowledge, dict)
+        else {}
+    )
+
+    def canonical_expected_filter(expected: dict) -> dict:
+        normalized = dict(expected)
+        raw_value = expected.get("value")
+
+        def canonical(value: object) -> object:
+            key = re.sub(r"\s+", "", str(value or "")).casefold()
+            return source_canonical_values.get(key, value)
+
+        normalized["value"] = (
+            [canonical(value) for value in raw_value]
+            if isinstance(raw_value, list)
+            else canonical(raw_value)
+        )
+        return normalized
+
     for expected in contract.get("filters") or []:
+        validation_expected = canonical_expected_filter(expected)
         candidates = _contract_filter_candidates(
             str(expected.get("field") or ""), knowledge or {},
             query_object=contract.get("query_object"),
@@ -6783,7 +6873,7 @@ def _validate_intent_asl_contract(
             knowledge is not None and not candidates
         ) or not _contract_filter_present(
             ast,
-            expected,
+            validation_expected,
             negative=False,
             allowed_fields=set(candidates) if knowledge is not None else None,
         ):
@@ -6792,6 +6882,7 @@ def _validate_intent_asl_contract(
                 field="filters", details={"expected_filter": expected},
             )
     for expected in contract.get("negative_filters") or []:
+        validation_expected = canonical_expected_filter(expected)
         candidates = _contract_filter_candidates(
             str(expected.get("field") or ""), knowledge or {},
             query_object=contract.get("query_object"),
@@ -6800,7 +6891,7 @@ def _validate_intent_asl_contract(
             knowledge is not None and not candidates
         ) or not _contract_filter_present(
             ast,
-            expected,
+            validation_expected,
             negative=True,
             allowed_fields=set(candidates) if knowledge is not None else None,
         ):

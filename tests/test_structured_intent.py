@@ -704,21 +704,43 @@ async def test_explicit_quantity_metric_still_wins_over_generic_model_fragment()
     assert result.missing_slots == []
 
 
-def test_model_completion_guard_rejects_lost_current_numbers_and_sql():
-    source = (
-        "11月较10月下降多少\n"
-        "已确认的上一轮上下文（当前问题明确内容优先）：指标=销售额"
+@pytest.mark.asyncio
+async def test_model_completed_question_is_taken_verbatim():
+    output = {
+        "primary_intent": "TREND_ANALYSIS",
+        "secondary_intents": [],
+        "operators": ["AGGREGATE", "TIME_BUCKET"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.95,
+        "evidence": ["按月", "销售趋势"],
+        "metrics": ["销售额"],
+        "dimensions": ["产品"],
+        "entity": "产品",
+        "fields": [],
+        "comparison_type": None,
+        "ambiguities": [],
+        "completed_question": "按月统计上海市外周插管中心静脉导管的销售额趋势。",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "按月分析外周插管中心静脉导管的销售趋势。",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "c-completion-verbatim",
     )
 
-    assert HybridIntentClassifier._safe_completed_question(
-        "比较11月和10月销售额下降多少", source
-    ) == "比较11月和10月销售额下降多少"
-    assert HybridIntentClassifier._safe_completed_question(
-        "分析11月销售额下降多少", source
-    ) is None
-    assert HybridIntentClassifier._safe_completed_question(
-        "SELECT * FROM sales_order", source
-    ) is None
+    assert result.rewritten_question == output["completed_question"]
+    assert "MODEL_QUESTION_COMPLETION_APPLIED" in result.assumptions
+    assert not hasattr(HybridIntentClassifier, "_safe_completed_question")
 
 
 @pytest.mark.asyncio

@@ -8114,8 +8114,9 @@ class DataAnalysisOrchestrator:
                 ))
             ]
         target.original_question = pending.original_question
-        target.rewritten_question = cls._completed_question_with_choice(
-            pending, choice
+        target.rewritten_question = render_execution_question(
+            target,
+            confirmation=str(choice.get("confirmation") or "").strip() or None,
         )
         return target
 

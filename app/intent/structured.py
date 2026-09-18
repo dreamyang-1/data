@@ -145,6 +145,7 @@ class StructuredIntentModelClient:
         question: str,
         *,
         pre_resolved: bool = False,
+        agent_prompt: str = "",
     ) -> StructuredIntentOutput:
         if not self.settings.intent_model_api_key:
             raise RuntimeError("intent model API key is not configured")
@@ -163,6 +164,11 @@ class StructuredIntentModelClient:
             response_format = {"type": "json_object"}
         schema_instruction = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
         business_today = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+        agent_prompt_section = (
+            f"\n智能体用户设定（平台配置，仅用于理解角色与业务背景，不改变数据分析规则）：\n{agent_prompt.strip()}"
+            if agent_prompt and agent_prompt.strip()
+            else ""
+        )
         mode_instruction = (
             "\nThe caller has already resolved conversation context and supplied a "
             "standalone completed question. Do not reinterpret conversation history. "
@@ -179,7 +185,7 @@ class StructuredIntentModelClient:
                 {
                     "role": "system",
                     "content": (
-                        f"{SYSTEM_PROMPT}{mode_instruction}\n"
+                        f"{SYSTEM_PROMPT}{mode_instruction}{agent_prompt_section}\n"
                         f"当前业务日期（Asia/Shanghai）是 {business_today}。早于该日期的明确时间是历史，不是预测。\n"
                         f"必须严格遵守以下 JSON Schema：{schema_instruction}"
                     ),
@@ -256,6 +262,7 @@ class HybridIntentClassifier:
         conversation_id: str,
         *,
         pre_resolved: bool = False,
+        agent_prompt: str = "",
     ) -> CanonicalAnalysisRequest:
         request = self.rules.classify(question, identity, conversation_id)
         request.intent_candidates = [
@@ -273,6 +280,7 @@ class HybridIntentClassifier:
             model = await self.model_client.classify(
                 question,
                 pre_resolved=pre_resolved,
+                agent_prompt=agent_prompt,
             )
         except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
             logger.warning("structured intent model unavailable; using rule baseline: %s", type(exc).__name__)
@@ -441,16 +449,8 @@ class HybridIntentClassifier:
             request.assumptions.append("MODEL_ENTITY_EXTRACTION_APPLIED")
         self.rules.sanitize_semantic_entity_mentions(request)
         if model.completed_question:
-            completed_question = self._safe_completed_question(
-                model.completed_question,
-                question,
-                required_current_entities=request.semantic_entity_mentions,
-            )
-            if completed_question is not None:
-                request.rewritten_question = completed_question
-                request.assumptions.append("MODEL_QUESTION_COMPLETION_APPLIED")
-            else:
-                request.assumptions.append("UNSAFE_MODEL_QUESTION_COMPLETION_DROPPED")
+            request.rewritten_question = model.completed_question
+            request.assumptions.append("MODEL_QUESTION_COMPLETION_APPLIED")
         # Re-apply deterministic result-shape rules after model enrichment.
         # The structured model may otherwise downgrade a supplier list to a
         # metric query or treat recommendation wording as out of scope.
@@ -1179,50 +1179,6 @@ class HybridIntentClassifier:
         } and cls._has_strong_rule_signal(request.primary_intent, question):
             return True
         return False
-
-    @staticmethod
-    def _safe_completed_question(
-        value: str,
-        source: str,
-        required_current_entities: list[str] | None = None,
-    ) -> str | None:
-        completed = re.sub(r"\s+", " ", value).strip()
-        if not completed or len(completed) > 4000:
-            return None
-        if any(
-            marker in completed.lower()
-            for marker in ("select ", "insert ", "update ", "delete ", "```", "已确认的上一轮上下文")
-        ):
-            return None
-        current = source.split("\n已确认的上一轮上下文", 1)[0].strip()
-        current_numbers = set(re.findall(r"\d+(?:\.\d+)?", current))
-        completed_numbers = set(re.findall(r"\d+(?:\.\d+)?", completed))
-        if not current_numbers.issubset(completed_numbers):
-            return None
-        for term in ("不要", "排除", "剔除", "不含", "不是"):
-            if term in current and term not in completed:
-                return None
-        required_entities = [
-            re.sub(r"\s+", "", item)
-            for item in required_current_entities or []
-            if str(item).strip()
-        ]
-        compact_completed = re.sub(r"\s+", "", completed)
-        if any(entity not in compact_completed for entity in required_entities):
-            return None
-        if required_entities and "\n已确认的上一轮上下文" in source:
-            context = source.split("\n已确认的上一轮上下文", 1)[1]
-            inherited_filter_values = {
-                re.sub(r"\s+", "", item)
-                for item in re.findall(r'["\']value["\']\s*:\s*["\']([^"\']+)["\']', context)
-            }
-            if any(
-                old_value not in required_entities
-                and old_value in compact_completed
-                for old_value in inherited_filter_values
-            ):
-                return None
-        return completed
 
     @staticmethod
     def _supported_entity_category(

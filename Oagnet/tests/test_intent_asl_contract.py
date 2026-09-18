@@ -1515,6 +1515,58 @@ def test_untyped_entity_mention_is_bound_to_unique_source_catalog_value(monkeypa
     assert repairs[-1]["type"] == "ADD_SOURCE_RESOLVED_ENTITY_FILTER"
 
 
+def test_existing_surface_filter_is_replaced_by_source_canonical_value(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity("dim_city", "城市", "dim_city.city_name", "城市名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["filters"] = [{
+        "field": "dim_city.city_name",
+        "operator": "=",
+        "value": "上海",
+    }]
+    contract = {
+        "intent": "METRIC_QUERY",
+        "query_object": "sales order",
+        "metric_required": True,
+        "required_metrics": ["销售数量"],
+        "required_metric_codes": ["sales_total_quantity"],
+        "required_projections": [],
+        "required_groupings": [],
+        "semantic_entity_mentions": ["上海"],
+        "filters": [],
+        "negative_filters": [],
+        "sorting": None,
+        "time_policy": "OPTIONAL",
+    }
+    monkeypatch.setattr(
+        agent, "resolve_exact_entity_attribute_value_fields", lambda *_args: [],
+    )
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [{
+            "field": "dim_city.city_name",
+            "canonical_value": "上海市",
+            "match_type": "CANONICAL_CONTAINS_MENTION",
+        }],
+    )
+
+    repaired, _ = _apply_intent_asl_contract(
+        json.dumps(ast, ensure_ascii=False), knowledge, contract,
+        semantic_model_id=81, domain_scope=205,
+    )
+
+    assert json.loads(repaired)["filters"] == [{
+        "field": "dim_city.city_name",
+        "operator": "=",
+        "value": "上海市",
+    }]
+
+
 def test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter(
     monkeypatch,
 ):

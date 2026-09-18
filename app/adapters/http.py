@@ -1905,9 +1905,10 @@ class HttpDataRetrievalAdapter:
         if asl is None and asl_cache_key is not None:
             cached = self._asl_plan_cache.get(asl_cache_key)
             if cached is not None:
-                expires_at, cached_asl = cached
+                expires_at, cached_asl, cached_repairs = cached
                 if expires_at > time.monotonic():
                     asl = copy.deepcopy(cached_asl)
+                    asl_repairs = copy.deepcopy(cached_repairs)
                     intent_contract_confirmed = intent_asl_contract is not None
                 else:
                     self._asl_plan_cache.pop(asl_cache_key, None)
@@ -2112,6 +2113,7 @@ class HttpDataRetrievalAdapter:
             asl,
             request,
             exact_operator_contract=intent_contract_confirmed,
+            repairs=asl_repairs,
         )
         self._validate_no_synthetic_product_filter(asl, request)
         self._validate_dependency_constraints(asl, request)
@@ -2237,6 +2239,7 @@ class HttpDataRetrievalAdapter:
             self._asl_plan_cache[asl_cache_key] = (
                 time.monotonic() + self.settings.asl_plan_cache_ttl_seconds,
                 copy.deepcopy(asl),
+                copy.deepcopy(asl_repairs),
             )
 
         return await self._execute_validated_asl(
@@ -2963,6 +2966,7 @@ class HttpDataRetrievalAdapter:
         request: CanonicalAnalysisRequest,
         *,
         exact_operator_contract: bool = False,
+        repairs: list[dict[str, Any]] | None = None,
     ) -> None:
         """Fail closed when generated ASL drops a caller-grounded filter value."""
         generated = [
@@ -2974,6 +2978,20 @@ class HttpDataRetrievalAdapter:
         null_operators = {
             "IS_NOT_NULL", "IS NOT NULL", "NOT_NULL", "NOT NULL",
         }
+        # Source-catalog normalization evidence returned by Oagnet: a caller
+        # literal such as 上海 is allowed to appear as its registered standard
+        # value 上海市 in the generated ASL while the caller contract keeps the
+        # original wording. Only repair-backed mappings qualify.
+        canonical_values: dict[str, set[str]] = {}
+        for repair in repairs or []:
+            if not isinstance(repair, dict):
+                continue
+            if repair.get("type") != "ADD_SOURCE_RESOLVED_ENTITY_FILTER":
+                continue
+            mention = str(repair.get("mention") or "").strip()
+            canonical = str(repair.get("canonical_value") or "").strip()
+            if mention and canonical:
+                canonical_values.setdefault(mention, set()).add(canonical)
 
         def is_non_null_constraint(item: dict[str, Any]) -> bool:
             operator = str(item.get("operator") or "").upper()
@@ -3024,6 +3042,11 @@ class HttpDataRetrievalAdapter:
                 required.get("operator") or "EQ"
             ).upper().replace("_", " ")
             required_negative = required_operator in negative_operators
+            # Expand each caller literal with its source-catalog standard value
+            # (for example 上海 → 上海市). Only repair-backed mappings apply.
+            acceptable_text = set(required_text)
+            for required_value in required_text:
+                acceptable_text.update(canonical_values.get(required_value, ()))
             preserved = False
             for item in generated:
                 if binding is not None:
@@ -3066,7 +3089,8 @@ class HttpDataRetrievalAdapter:
                 if exact_operator_contract and (
                     required_exact
                     and candidate_exact
-                    and required_text == candidate_text
+                    and candidate_text <= acceptable_text
+                    and len(candidate_text) == len(required_text)
                 ) or (
                     (not exact_operator_contract or not required_exact)
                     and all(

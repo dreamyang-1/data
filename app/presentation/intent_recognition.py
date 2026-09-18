@@ -597,14 +597,10 @@ def _completed_question_for_display(
             if field_text else f"查询{time_text}{scope_text}{entity}明细"
         )
 
-    # For less common analytical intents, retain the user's wording and make
-    # context completion explicit without leaking semicolon-delimited protocol
-    # syntax into the public trace.
-    original = _single_line(request.original_question)
-    return (
-        f"{original}（已结合上一轮业务条件补全）"
-        if request.context_mode != ContextMode.NONE else original
-    )
+    # For less common analytical intents, retain the user's wording. Context
+    # completion is owned by the structured model's completed_question and
+    # must not be annotated with display-side explanations.
+    return _single_line(request.original_question)
 
 
 def build_intent_recognition_display_v2(
