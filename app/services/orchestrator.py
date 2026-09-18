@@ -2990,7 +2990,8 @@ class DataAnalysisOrchestrator:
             # execution envelope rather than being reduced to surface hints.
             return None
         request = await self._classify(chat.question, identity, chat.conversation_id,
-                                       pre_resolved=True)
+                                       pre_resolved=True,
+                                       agent_prompt=self._agent_prompt_text(chat))
         if request.primary_intent not in {
             PrimaryIntent.METRIC_QUERY, PrimaryIntent.DETAIL_QUERY,
             PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
@@ -3000,14 +3001,20 @@ class DataAnalysisOrchestrator:
         request.original_question = chat.question
         request.rewritten_question = chat.question
         bind_authorized_scope(request, chat.authorized_semantic_scope)
+        # This classifier read ``chat.question``, which is the completed
+        # question supplied by the context bridge.  Raw-turn extraction (for
+        # example only “上海市” from “上海市呢”) must never constrain ASL.
         mentions = [
-            {"text": str(item["surface"]),
-             "role_hint": "/".join(item.get("labels") or ()) or None}
-            for item in chat._semantic_extraction_items if item.get("surface")
+            {
+                "text": str(item),
+                "role_hint": None,
+            }
+            for item in request.semantic_entity_mentions
+            if str(item).strip()
         ]
         await emit_progress("INTENT_RECOGNITION", "COMPLETED", self._intent_think_summary(
             request, business_domain_labels=chat._business_domain_labels,
-            semantic_extractions=chat._semantic_extraction_items,
+            semantic_extractions=(),
             include_resolved_context=not chat._intent_context_progress_emitted,
         ))
         try:
@@ -3447,6 +3454,7 @@ class DataAnalysisOrchestrator:
                     identity,
                     chat.conversation_id,
                     pre_resolved=chat._completed_question_execution,
+                    agent_prompt=self._agent_prompt_text(chat),
                 )
             )
             if (
@@ -3490,6 +3498,7 @@ class DataAnalysisOrchestrator:
                         identity,
                         chat.conversation_id,
                         pre_resolved=chat._completed_question_execution,
+                        agent_prompt=self._agent_prompt_text(chat),
                     )
                 )
                 rounds = 1
@@ -3544,6 +3553,7 @@ class DataAnalysisOrchestrator:
                     identity,
                     chat.conversation_id,
                     pre_resolved=chat._completed_question_execution,
+                    agent_prompt=self._agent_prompt_text(chat),
                 )
             )
             current_request = request.model_copy(deep=True)
@@ -5844,7 +5854,8 @@ class DataAnalysisOrchestrator:
                 ) as timing:
                     synthesized_answer, synthesis = (
                         await self.analysis_synthesizer.synthesize(
-                            request, insight_output, evidence
+                            request, insight_output, evidence,
+                            agent_prompt=self._agent_prompt_text(chat),
                         )
                     )
                     timing.mark_first_result()
@@ -11104,6 +11115,7 @@ class DataAnalysisOrchestrator:
                 try:
                     answer = await self.chat_responder.respond(
                         request.original_question,
+                        agent_prompt=self._agent_prompt_text(chat),
                         history=(
                             [
                                 {"role": item.role, "content": item.content}

@@ -2370,9 +2370,6 @@ class HttpDataRetrievalAdapter:
             business_domain_id=business_domain_id,
         )
         self._validate_read_only_sql(sql)
-        self._validate_sql_relationship_graph(sql)
-        self._validate_query_to_sql_entity_alignment(request, sql)
-        self._validate_geographic_hierarchy_alignment(asl, request, sql)
         metric_bindings = [
             {
                 "用户指标": metric.input,

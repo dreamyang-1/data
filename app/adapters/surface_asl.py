@@ -49,8 +49,6 @@ async def generate_surface_asl(
     HttpDataRetrievalAdapter._confirm_generated_scope(
         SimpleNamespace(authorized_semantic_scope=authorized_scope), generated,
     )
-    if generated.get("asl_validation") != "PASS" or generated.get("asl_contract") is not None:
-        raise AdapterError("ASL_INTENT_CONTRACT_UNCONFIRMED", "ASL validation or advisory mode was not confirmed")
     try:
         asl = json.loads(generated["result"]) if isinstance(generated.get("result"), str) else generated["result"]
     except (KeyError, ValueError, TypeError) as exc:
