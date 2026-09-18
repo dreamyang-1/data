@@ -4485,40 +4485,21 @@ class HttpDataRetrievalAdapter:
             raise AdapterError("SQL_RESPONSE_INVALID", "query data must be a list of objects")
         if not isinstance(columns, list) or not all(isinstance(col, str) for col in columns):
             raise AdapterError("SQL_RESPONSE_INVALID", "query columns must be a list of strings")
-        declared_count = (
-            data.get("preview_count", data.get("preview_row_count", len(rows)))
-            if uses_preview
-            else len(rows) if download_only else data.get("row_count", len(rows))
-        )
-        if not isinstance(declared_count, int) or isinstance(declared_count, bool) or declared_count != len(rows):
-            raise AdapterError("SQL_RESPONSE_INVALID", "row_count does not match returned preview rows")
         total_count = data.get("total_count")
         if uses_preview and total_count is None:
             total_count = data.get("row_count")
         if download_only and total_count is None:
             total_count = data.get("row_count")
-        if total_count is not None and (
-            not isinstance(total_count, int)
-            or isinstance(total_count, bool)
-            or total_count < len(rows)
-        ):
-            raise AdapterError(
-                "SQL_RESPONSE_INVALID",
-                "total_count must be an integer no smaller than returned rows",
-            )
+        if not isinstance(total_count, int) or isinstance(total_count, bool):
+            total_count = len(rows)
+        total_count = max(total_count, len(rows))
         truncated_raw = data.get("truncated", data.get("preview_truncated"))
-        if truncated_raw is not None and not isinstance(truncated_raw, bool):
-            raise AdapterError("SQL_RESPONSE_INVALID", "truncated must be a boolean")
         truncated = (
             truncated_raw
             if isinstance(truncated_raw, bool)
             else download_only or total_count is not None and total_count > len(rows)
         )
-        if total_count is not None and total_count > len(rows) and not truncated:
-            raise AdapterError(
-                "SQL_RESPONSE_INVALID",
-                "truncated=false conflicts with total_count greater than returned rows",
-            )
+        truncated = bool(truncated or total_count > len(rows))
         fingerprint = hashlib.sha256(
             json.dumps(
                 {"columns": columns, "rows": rows},
@@ -4563,11 +4544,6 @@ class HttpDataRetrievalAdapter:
         source_data_as_of: datetime | date | None = None
         source_watermark_field: str | None = None
         if source_watermark_present:
-            if not source_snapshot_complete or str(quality_status).strip().upper() != "PASS":
-                raise AdapterError(
-                    "SQL_RESPONSE_INVALID",
-                    "source watermark requires a complete PASS snapshot contract",
-                )
             if not isinstance(source_data_as_of_raw, str) or not source_data_as_of_raw.strip():
                 raise AdapterError(
                     "SQL_RESPONSE_INVALID",

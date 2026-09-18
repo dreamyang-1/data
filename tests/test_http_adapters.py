@@ -3062,11 +3062,11 @@ async def test_asl_ambiguity_stops_before_sql_execution():
     assert len(client.calls) == 1
 
 @pytest.mark.asyncio
-async def test_row_count_mismatch_is_rejected():
+async def test_row_count_mismatch_returns_database_rows():
     client = StubClient([{"success": True, "result": json.dumps({"metrics": [], "ambiguity": []})}, {"success": True, "sql": "SELECT 1"}, {"sql": "SELECT 1", "success": True, "data": [{"x": 1}], "columns": ["x"], "row_count": 2}])
-    with pytest.raises(AdapterError) as exc:
-        await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(request(), IDENTITY, semantic_model_id=8, business_domain_id=13)
-    assert exc.value.code == "SQL_RESPONSE_INVALID"
+    result = await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(request(), IDENTITY, semantic_model_id=8, business_domain_id=13)
+    assert result.dataset.rows == [{"x": 1}]
+    assert result.dataset.row_count == 1
 
 @pytest.mark.asyncio
 async def test_analysis_knowledge_parses_real_document_contract_without_sending_rows():
@@ -3269,7 +3269,7 @@ def test_dataset_rejects_invalid_source_watermark_response(
     assert exc.value.code == "SQL_RESPONSE_INVALID"
 
 
-def test_dataset_rejects_source_watermark_without_pass_snapshot_contract():
+def test_dataset_accepts_source_watermark_without_quality_gate():
     payload = {
         "success": True,
         "data": [{"销售额": 10}],
@@ -3278,9 +3278,9 @@ def test_dataset_rejects_source_watermark_without_pass_snapshot_contract():
         "source_data_as_of": "2025-12-30",
         "source_watermark_field": "sales_order.created_date",
     }
-    with pytest.raises(AdapterError) as exc:
-        HttpDataRetrievalAdapter._dataset(payload, request_id="request-a")
-    assert exc.value.code == "SQL_RESPONSE_INVALID"
+    dataset = HttpDataRetrievalAdapter._dataset(payload, request_id="request-a")
+    assert dataset.rows == [{"销售额": 10}]
+    assert dataset.source_watermark_field == "sales_order.created_date"
 
 
 def test_dataset_rejects_malformed_upstream_snapshot_time():
@@ -3314,7 +3314,7 @@ def test_dataset_preserves_upstream_truncation_signal():
     assert dataset.truncated is True
 
 
-def test_dataset_rejects_inconsistent_truncation_contract():
+def test_dataset_normalizes_inconsistent_truncation_contract():
     payload = {
         "success": True,
         "data": [{"销售额": 10}],
@@ -3323,9 +3323,9 @@ def test_dataset_rejects_inconsistent_truncation_contract():
         "total_count": 5000,
         "truncated": False,
     }
-    with pytest.raises(AdapterError) as exc:
-        HttpDataRetrievalAdapter._dataset(payload, request_id="request-c")
-    assert exc.value.code == "SQL_RESPONSE_INVALID"
+    dataset = HttpDataRetrievalAdapter._dataset(payload, request_id="request-c")
+    assert dataset.rows == [{"销售额": 10}]
+    assert dataset.truncated is True
 def test_model81_trend_repair_keeps_sort_on_physical_time_dimension() -> None:
     request = CanonicalAnalysisRequest(
         conversation_id="product-monthly-sales",

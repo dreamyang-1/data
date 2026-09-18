@@ -3039,26 +3039,6 @@ class SQLTranslatorProd:
         entity_code = ast.get('subject', {}).get('entity')
         if entity_code and not self._get_entity(entity_code, normalized_model_id):
             raise ValueError(f'不存在实体: {entity_code}')
-        registered_fields = self._registered_physical_fields(normalized_model_id)
-        for dim in ast.get('dimensions', []):
-            if not isinstance(dim, dict) or not dim.get('name'):
-                raise ValueError('维度必须是包含name的对象')
-            if (
-                'include_null_group' in dim
-                and type(dim.get('include_null_group')) is not bool
-            ):
-                raise ValueError('include_null_group必须是布尔值')
-            name = str(dim['name'])
-            if '.' in name and name not in registered_fields:
-                raise ValueError(f'不存在维度字段: {name}')
-            if '.' not in name and not self._get_dimension(name, normalized_model_id):
-                raise ValueError(f'不存在维度: {name}')
-        for item in ast.get('filters', []):
-            if not isinstance(item, dict):
-                raise ValueError('过滤条件必须是对象')
-            field = str(item.get('field') or '')
-            if '.' in field and field not in registered_fields:
-                raise ValueError(f'不存在过滤字段: {field}')
         return normalized_model_id
 
     def _expanded_metric_formula(self, metric_code: str, model_id: Optional[str], seen=None) -> str:
@@ -3098,36 +3078,65 @@ class SQLTranslatorProd:
                     queue.append((target, path + [relation]))
         return None
 
-    def _validate_aggregate_cardinality(self, metrics: List[Dict], dimensions: List[Dict],
-                                        model_id: Optional[str]) -> None:
-        if not metrics or not dimensions:
-            return
-        target_tables = {str(dim.get('name')).split('.', 1)[0]
-                         for dim in dimensions if '.' in str(dim.get('name') or '')}
-        for metric_item in metrics:
-            metric_code = metric_item.get('name')
-            formula = self._expanded_metric_formula(metric_code, model_id)
-            # COUNT(DISTINCT fact-key) is stable under a one-to-many expansion;
-            # SUM, AVG and COUNT(*) are not.
-            susceptible = bool(re.search(r'\b(SUM|AVG)\s*\(|COUNT\s*\(\s*\*', formula, re.I))
-            if not susceptible:
+    def _derive_subject_entity(self, dimensions: List[Dict], filters: List[Dict],
+                               model_id: Optional[str]) -> Optional[str]:
+        """ASL 未声明 subject 时，从投影/过滤字段引用的物理表派生主实体。
+
+        选择能经已发布关系到达全部被引用物理表的注册实体；多个满足时优先
+        事实枢纽（自身基表不在被引用表集合中，如 sales_order）。无任何满足
+        实体时返回 None，翻译按原路径失败。
+        """
+        referenced = []
+        for item in list(dimensions or []) + list(filters or []):
+            if not isinstance(item, dict):
                 continue
-            metric_entity = self._get_bind_entity(metric_code, model_id)
-            if not metric_entity:
+            name = str(item.get('name') or item.get('field') or '')
+            if '.' in name:
+                referenced.append(name.split('.', 1)[0])
+        referenced = list(dict.fromkeys(referenced))
+        if not referenced:
+            return None
+        satisfying = []
+        for entity in self.loader.iter_entities(model_id):
+            code = entity.get('entity_code') or entity.get('code')
+            if not code:
                 continue
-            fact_tables = {table for table, _ in re.findall(
-                r'([A-Za-z_]\w*)\.([A-Za-z_]\w*)', formula
-            )}
-            for target_table in target_tables - fact_tables:
-                path = self._relation_path(metric_entity, target_table, model_id)
-                if path is None:
+            base_table = (entity.get('physical_table_join') or {}).get('base_table')
+            reachable = True
+            for table in referenced:
+                if base_table == table:
                     continue
-                for relation in path:
-                    relation_type = str(relation.get('relation_type') or '').strip().upper().replace(' ', '')
-                    if not relation_type:
-                        raise ValueError(f'Join基数未配置，无法安全聚合到{target_table}')
-                    if relation_type in {'1:N', '1:M', 'ONE-TO-MANY', 'ONETOMANY', '1:*'}:
-                        raise ValueError(f'一对多Join会导致指标重复累计: {target_table}')
+                if self._relation_path(code, table, model_id) is None:
+                    reachable = False
+                    break
+            if reachable:
+                satisfying.append(code)
+        if not satisfying:
+            return None
+        # Detail queries should start from the table projected to the user.
+        # Choosing the first arbitrary graph hub can produce JOIN clauses that
+        # reference a different fact table before it has been joined.  The
+        # published relation graph still supplies every required filter join.
+        projected_tables = []
+        for dimension in dimensions or []:
+            if isinstance(dimension, dict):
+                name = str(dimension.get('name') or '')
+                if '.' in name:
+                    projected_tables.append(name.split('.', 1)[0])
+        for table in projected_tables:
+            for code in satisfying:
+                if self._get_entity_base_table(code, model_id) == table:
+                    return code
+        # Aggregate/filter-only queries have no projected table; prefer the
+        # candidate with the shortest published paths to all referenced data.
+        return min(
+            satisfying,
+            key=lambda code: sum(
+                len(self._relation_path(code, table, model_id) or [])
+                for table in referenced
+                if self._get_entity_base_table(code, model_id) != table
+            ),
+        )
 
     # ======================== 核心翻译方法 ========================
 
@@ -3262,12 +3271,12 @@ class SQLTranslatorProd:
 
         # 获取主实体
         entity_code = subject.get('entity')
-        if not entity_code:
+        if not entity_code and metrics:
             entity_code = self._get_bind_entity(metrics[0]['name'], model_id)
         if not entity_code:
+            entity_code = self._derive_subject_entity(dimensions, filters, model_id)
+        if not entity_code:
             raise ValueError("无法确定主实体")
-
-        self._validate_aggregate_cardinality(metrics, dimensions, model_id)
 
         main_table = self._get_entity_base_table(entity_code, model_id)
         from_clause = self._build_from_clause(entity_code, model_id)

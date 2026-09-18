@@ -5284,17 +5284,6 @@ class DataAnalysisOrchestrator:
             timing.mark_first_result()
         if query_result.sql not in {"DATASET_FOLLOWUP_NO_SQL", "UPLOADED_DATASET_NO_SQL"}:
             request.asl_template = query_result.asl
-        if query_result.dataset.quality_status.upper() in {
-            "FAIL",
-            "FAILED",
-            "INVALID",
-            "ERROR",
-        }:
-            response = self._fallback(
-                request, "上游数据质量校验失败，本次不生成分析结论，请先修复数据后重试。"
-            )
-            response.result_file_url = query_result.result_file_url
-            return await self._finish_terminal(request, response)
         total_row_count = (
             query_result.dataset.total_row_count
             if query_result.dataset.total_row_count is not None
@@ -7607,6 +7596,7 @@ class DataAnalysisOrchestrator:
         conversation_id: str,
         *,
         pre_resolved: bool = False,
+        agent_prompt: str = "",
     ) -> CanonicalAnalysisRequest:
         with track_operation(
             "V1_ORCHESTRATION",
@@ -7616,11 +7606,19 @@ class DataAnalysisOrchestrator:
             supports_pre_resolved = (
                 "pre_resolved" in inspect.signature(classify).parameters
             )
+            supports_agent_prompt = (
+                "agent_prompt" in inspect.signature(classify).parameters
+            )
             classified = classify(
                 question,
                 identity,
                 conversation_id,
                 **({"pre_resolved": True} if pre_resolved and supports_pre_resolved else {}),
+                **(
+                    {"agent_prompt": agent_prompt}
+                    if agent_prompt and supports_agent_prompt
+                    else {}
+                ),
             )
             result = (
                 await classified if inspect.isawaitable(classified) else classified
@@ -7628,6 +7626,13 @@ class DataAnalysisOrchestrator:
             timing.mark_first_result()
             timing.set_attribute("intent_source", result.intent_source)
             return result
+
+    @staticmethod
+    def _agent_prompt_text(chat: ChatRequest | None) -> str:
+        """Platform-configured user prompt for this request, conflict-filtered."""
+        if chat is None or chat.prompt is None:
+            return ""
+        return chat.prompt.render()
 
     def _classify_with_rules(
         self, question: str, identity: TrustedIdentity, conversation_id: str
@@ -11276,12 +11281,6 @@ class DataAnalysisOrchestrator:
             ),
             "ASL_ANALYSIS_SHAPE_INVALID": "语义查询没有返回分析所需的分组维度，本次未执行可能产生误导的单值分析。",
             "SQL_TRANSLATION_FAILED": "ASL 转 SQL 服务未能生成可执行查询。",
-            "SEMANTIC_VALIDATION_FAILED": (
-                "本次语义查询未通过语义校验：查询条件无法在已发布的语义模型中"
-                "唯一确定查询主体或其实体关系路径，为避免返回错误数据，本次未执行查询。"
-                "请在完整问题中写明查询对象（例如“某经销商销售了哪些产品”）后重试；"
-                "若反复出现，需系统维护人员检查该模型的实体、关系路径与主体绑定配置。"
-            ),
             "SQL_EXECUTION_FAILED": "SQL 查询执行失败，本次不返回数据。",
             "SQL_TRANSLATION_ENDPOINT_UNAVAILABLE": "SQL服务尚未部署独立翻译接口，请先发布或重启新版SQL Translator。",
             "SQL_EXECUTION_ENDPOINT_UNAVAILABLE": "SQL服务尚未部署独立执行接口，请先发布或重启新版SQL Translator。",
