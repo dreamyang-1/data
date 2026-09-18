@@ -31,6 +31,7 @@ from app.analysis import (
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
 from app.analysis.visualization import render_chart_svg
 from app.services.chat_responder import QwenChatResponder
+from app.services.memory_manager import MemoryManager
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
 from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
@@ -88,6 +89,7 @@ from app.services.mcp_file_analysis import (
 )
 from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress, task_progress_scope
+from app.observability import TraceSummary
 from app.observability.call_timing import track_operation
 from app.presentation import (
     QUERY_EXECUTION_CHAIN,
@@ -256,6 +258,9 @@ class DataAnalysisOrchestrator:
         self.adapters = adapters
         self.sessions = sessions
         self.memories = memories
+        self.memory_manager = (
+            MemoryManager(memories) if memories is not None else None
+        )
         self.analysis_engine = analysis_engine or AnalysisEngine()
         self.analysis_planner = AnalysisPlanner()
         self.insight_interpreter = InsightInterpretationLayer()
@@ -315,8 +320,20 @@ class DataAnalysisOrchestrator:
         identity: TrustedIdentity,
         event_type: SessionEventType,
         payload: dict[str, Any],
-        trace_id: str,
     ) -> None:
+        # An internal V1 retry under the V2_CONTEXT_V1_EXECUTION bridge stays
+        # completely silent: the main execution already recorded the
+        # structural events and the bridge closes the trace once.
+        if getattr(chat, "_external_lifecycle_silent", False):
+            return
+        # One external request owns one canonical request-UUID trace id; the
+        # user-facing message id stays an independent per-event correlation
+        # field.  The first event of the request lazily creates the trace id
+        # and every later event reuses it, including bridge-internal retries.
+        trace_id = getattr(chat, "_trace_id", None)
+        if trace_id is None:
+            trace_id = str(uuid4())
+            object.__setattr__(chat, "_trace_id", trace_id)
         try:
             await self.event_store.append(SessionEvent(
                 session_id=chat.conversation_id,
@@ -371,12 +388,24 @@ class DataAnalysisOrchestrator:
                 chat, cancelled_count, cancelled_intent
             )
 
+        replayable_turn = not (
+            chat._is_regeneration_execution
+            or chat._completed_question_execution
+            # In the official V2_CONTEXT_V1_EXECUTION runtime the bridge owns
+            # the external request lifecycle and emits the entry/closing
+            # events itself; the internal V1 execution stays silent.
+            or getattr(chat, "_external_lifecycle_owner", False)
+        )
+        turn_started = time.monotonic()
+        if replayable_turn:
+            await self.open_external_turn(chat, identity)
+
         cancelled_by_user = asyncio.Event()
         execution = asyncio.create_task(self._handle_request(chat, identity))
         async with self._running_lock:
             self._running_requests.setdefault(scope, {})[execution] = cancelled_by_user
         try:
-            return await execution
+            response = await execution
         except asyncio.CancelledError:
             # A cancellation command from the same trusted conversation should
             # become a normal terminal response.  Transport disconnects and
@@ -384,7 +413,7 @@ class DataAnalysisOrchestrator:
             if not cancelled_by_user.is_set():
                 execution.cancel()
                 raise
-            return self._running_cancelled_response(chat)
+            response = self._running_cancelled_response(chat)
         finally:
             async with self._running_lock:
                 running = self._running_requests.get(scope)
@@ -392,6 +421,107 @@ class DataAnalysisOrchestrator:
                     running.pop(execution, None)
                     if not running:
                         self._running_requests.pop(scope, None)
+        if replayable_turn:
+            await self._record_turn_lifecycle_events(
+                chat, identity, response, turn_started
+            )
+        return response
+
+    async def _record_turn_lifecycle_events(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        response: AgentResponse,
+        started: float,
+    ) -> None:
+        """Emit the replayable closing events of one request.
+
+        ``INTENT_RESULT`` and ``FINAL_INSIGHT`` describe the terminal response;
+        ``TRACE_SUMMARY`` must always be the last event of the request so a
+        replay can close the trace deterministically.  Every append is
+        fail-open and never affects the business response.
+        """
+        await self._append_session_event(
+            chat=chat,
+            identity=identity,
+            event_type=SessionEventType.INTENT_RESULT,
+            payload={
+                "intent": response.intent.value,
+                "intent_source": response.intent_source,
+                "intent_confidence": response.intent_confidence,
+                "status": response.status,
+            },
+        )
+        await self._append_session_event(
+            chat=chat,
+            identity=identity,
+            event_type=SessionEventType.FINAL_INSIGHT,
+            payload={
+                "status": response.status,
+                "intent": response.intent.value,
+                "answer_length": len(response.answer or ""),
+                "evidence_count": len(response.evidence),
+            },
+        )
+        latency_ms = max(0, int((time.monotonic() - started) * 1000))
+        prior_events: list[SessionEvent] = []
+        try:
+            prior_events = await self.event_store.list_events(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+                trace_id=getattr(chat, "_trace_id", None),
+            )
+        except Exception as exc:  # pragma: no cover - backend-specific failure
+            # Reading the replay log only enriches the summary spans.  A
+            # failing read falls back to response-derived spans and must
+            # never discard the business response.
+            logger.warning(
+                "trace summary event read failed: message_id=%s error=%s",
+                chat.message_id,
+                exc,
+            )
+        summary = TraceSummary.from_response(
+            trace_id=getattr(chat, "_trace_id", chat.message_id),
+            session_id=chat.conversation_id,
+            response=response,
+            latency_ms=latency_ms,
+            events=prior_events,
+        )
+        await self._append_session_event(
+            chat=chat,
+            identity=identity,
+            event_type=SessionEventType.TRACE_SUMMARY,
+            payload=summary.model_dump(mode="json"),
+        )
+
+    async def open_external_turn(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> None:
+        """Establish the request-level canonical trace id for one external turn.
+
+        The direct V1 ingress and the V2_CONTEXT_V1_EXECUTION bridge share this
+        owner hook.  It creates the per-request UUID trace id (when missing) so
+        the outer request object and every internal ``model_copy`` reuse one
+        canonical trace; the entry and structural events are then appended by
+        the execution path in replay order.  No event is appended here, keeping
+        the lifecycle owner independent of the structural ``TURN_ADMISSION``
+        event that must remain the first recorded event.
+        """
+        _ = identity
+        if getattr(chat, "_trace_id", None) is None:
+            object.__setattr__(chat, "_trace_id", str(uuid4()))
+
+    async def close_external_turn(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        response: AgentResponse,
+        started: float,
+    ) -> None:
+        """Record the closing lifecycle events of one external request."""
+        await self._record_turn_lifecycle_events(chat, identity, response, started)
 
     async def execute_v1_from_completed_question(
         self, chat: ChatRequest, identity: TrustedIdentity
@@ -3352,12 +3482,15 @@ class DataAnalysisOrchestrator:
             # proved this is a complete new topic, old task state must not be
             # supplied to the rewriter or the later merge path.
             previous_for_rewrite = None
+        # Structural admission opens every replayable request, including
+        # standalone chat turns; the replay contract keys on it first and the
+        # entry event follows it.
         await self._append_session_event(
             chat=chat,
             identity=identity,
             event_type=SessionEventType.TURN_ADMISSION,
-            trace_id=str(raw_rule_request.request_id),
             payload={
+                "request_id": str(raw_rule_request.request_id),
                 "turn_relation": turn_decision.relation.value,
                 "context_mode": turn_decision.context_mode.value,
                 "self_contained": turn_decision.current_turn_facts.is_self_contained,
@@ -3375,6 +3508,16 @@ class DataAnalysisOrchestrator:
                 "selected_thread": turn_decision.selected_thread_id,
                 "new_thread_created": turn_decision.create_new_analysis_thread,
                 "reason_codes": turn_decision.reason_codes,
+            },
+        )
+        await self._append_session_event(
+            chat=chat,
+            identity=identity,
+            event_type=SessionEventType.USER_QUERY,
+            payload={
+                "question_length": len(chat.question or ""),
+                "semantic_model_id": chat.semantic_model_id,
+                "use_longterm_memory": chat.use_longterm_memory,
             },
         )
         await emit_progress(
@@ -4732,12 +4875,14 @@ class DataAnalysisOrchestrator:
             )
         )
         request.turn_admission = turn_decision
+        # CONTEXT_MERGE is a mandatory structural event for every request,
+        # including standalone chat turns; it closes the replayable admission.
         await self._append_session_event(
             chat=chat,
             identity=identity,
             event_type=SessionEventType.CONTEXT_MERGE,
-            trace_id=str(request.request_id),
             payload={
+                "request_id": str(request.request_id),
                 "turn_relation": turn_decision.relation.value,
                 "context_mode": turn_decision.context_mode.value,
                 "inheritance_allowed": turn_decision.inherit_business_context,
@@ -4763,7 +4908,9 @@ class DataAnalysisOrchestrator:
                     request.resolved_comparison.model_dump(mode="json")
                     if request.resolved_comparison else None
                 ),
-                "canonical_query": canonical_question,
+                # Only the bounded length is replayable; the full
+                # question text never enters an event payload.
+                "canonical_query_length": len(canonical_question or ""),
                 "execution_query_source": execution_source,
             },
         )
@@ -4900,6 +5047,50 @@ class DataAnalysisOrchestrator:
                 "MEMORY_RETRIEVAL", "RUNNING", "正在加载用户确认过的长期记忆。"
             )
             await self._apply_confirmed_memories(request)
+            await self._append_session_event(
+                chat=chat,
+                identity=identity,
+                event_type=SessionEventType.MEMORY_RECALL,
+                payload={
+                    "request_id": str(request.request_id),
+                    "recalled_memory_ids": request.confirmed_memory_ids,
+                    "recall_available": (
+                        "LONG_TERM_MEMORY_UNAVAILABLE" not in request.assumptions
+                    ),
+                },
+            )
+            if self.memory_manager is not None:
+                try:
+                    written = await self.memory_manager.remember_explicit_defaults(
+                        request,
+                        question=chat.question,
+                        scope=MemoryScope(
+                            tenant_id=request.tenant_id,
+                            user_id=request.user_id,
+                            application_id=request.application_id,
+                        ),
+                        session_id=chat.conversation_id,
+                        message_id=chat.message_id,
+                        actor=identity.user_id,
+                    )
+                except Exception as exc:
+                    # Remembering a preference is enrichment only; a memory
+                    # backend outage must never discard the business answer.
+                    written = []
+                    logger.warning("long-term memory write failed: %s", exc)
+                for memory in written:
+                    await self._append_session_event(
+                        chat=chat,
+                        identity=identity,
+                        event_type=SessionEventType.MEMORY_WRITE,
+                        payload={
+                            "request_id": str(request.request_id),
+                            "memory_id": memory.memory_id,
+                            "memory_type": memory.memory_type.value,
+                            "memory_key": memory.memory_key,
+                            "summary": memory.summary,
+                        },
+                    )
             await emit_progress(
                 "MEMORY_RETRIEVAL", "COMPLETED", "长期记忆加载完成。"
             )
@@ -4963,9 +5154,11 @@ class DataAnalysisOrchestrator:
                 chat=chat,
                 identity=identity,
                 event_type=SessionEventType.QUERY_RESOLUTION,
-                trace_id=str(request.request_id),
                 payload={
-                    "raw_query": chat.question,
+                    "request_id": str(request.request_id),
+                    # Only the bounded length is replayable; the full
+                    # question text never enters an event payload.
+                    "raw_query_length": len(chat.question or ""),
                     "turn_relation": (
                         request.turn_relation.value
                         if request.turn_relation else None

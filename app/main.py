@@ -61,6 +61,12 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
                     app.state.container.orchestrator
                     .execute_v1_pending_clarification_answer
                 ),
+                v1_lifecycle_open=(
+                    app.state.container.orchestrator.open_external_turn
+                ),
+                v1_lifecycle_close=(
+                    app.state.container.orchestrator.close_external_turn
+                ),
                 external=context_v1_external,
             )
         app.state.isolated_chat_handler = handler

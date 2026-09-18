@@ -11,6 +11,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import logging
+import time
 from typing import Any, Awaitable, Callable
 from uuid import uuid4
 
@@ -445,6 +446,12 @@ class V2ContextV1ExecutionBridge:
         v1_pending_executor: Callable[
             [ChatRequest, TrustedIdentity], Awaitable[AgentResponse]
         ] | None = None,
+        v1_lifecycle_open: Callable[
+            [ChatRequest, TrustedIdentity], Awaitable[None]
+        ] | None = None,
+        v1_lifecycle_close: Callable[
+            [ChatRequest, TrustedIdentity, AgentResponse, float], Awaitable[None]
+        ] | None = None,
         demo_mode: bool = False,
         surface_asl_execution_enabled: bool = False,
     ):
@@ -456,11 +463,59 @@ class V2ContextV1ExecutionBridge:
         self.v1_context_value_resolver = v1_context_value_resolver
         self.v1_pending_answer_probe = v1_pending_answer_probe
         self.v1_pending_executor = v1_pending_executor
+        self.v1_lifecycle_open = v1_lifecycle_open
+        self.v1_lifecycle_close = v1_lifecycle_close
         self.clock = clock
         self.startup_receipt = dict(startup_receipt)
         self.demo_mode = demo_mode
         self.surface_asl_execution_enabled = surface_asl_execution_enabled
         self._locks: dict[str, asyncio.Lock] = {}
+
+    async def _open_external_lifecycle(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> None:
+        # The bridge is the external request-level lifecycle owner in
+        # V2_CONTEXT_V1_EXECUTION.  Event failures are fail-open and must
+        # never disturb the business response.
+        if self.v1_lifecycle_open is None:
+            return
+        try:
+            await self.v1_lifecycle_open(chat, identity)
+        except Exception as exc:  # pragma: no cover - backend-specific failure
+            logger.warning(
+                "external lifecycle open failed: message_id=%s error=%s",
+                chat.message_id,
+                exc,
+            )
+
+    async def _close_external_lifecycle(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        response: AgentResponse,
+        started: float,
+    ) -> None:
+        if self.v1_lifecycle_close is None:
+            return
+        try:
+            await self.v1_lifecycle_close(chat, identity, response, started)
+        except Exception as exc:  # pragma: no cover - backend-specific failure
+            logger.warning(
+                "external lifecycle close failed: message_id=%s error=%s",
+                chat.message_id,
+                exc,
+            )
+
+    async def _finalize_turn(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        response: AgentResponse,
+        started: float,
+    ) -> AgentResponse:
+        """Close the external lifecycle and hand back the business response."""
+        await self._close_external_lifecycle(chat, identity, response, started)
+        return response
 
     async def _retry_for_result_availability(
         self,
@@ -507,6 +562,9 @@ class V2ContextV1ExecutionBridge:
             },
         )
         retry_chat._completed_question_execution = True
+        # An internal retry must never emit lifecycle or structural events:
+        # the bridge closes the external trace exactly once.
+        object.__setattr__(retry_chat, "_external_lifecycle_silent", True)
         retried = await self.v1_executor(retry_chat, identity)
         if not (
             retried.status == "COMPLETED"
@@ -971,6 +1029,14 @@ class V2ContextV1ExecutionBridge:
                     answer="原会话状态已过期，请使用新的消息标识重新提出完整问题。",
                 )
 
+            # The bridge is the external request-level lifecycle owner: one
+            # entry event here and one closing set after the final response,
+            # so an external message gets exactly one replayable lifecycle
+            # even when the internal V1 execution is retried.  Idempotent
+            # replays above never reach this point.
+            turn_started = time.monotonic()
+            await self._open_external_lifecycle(chat, identity)
+
             if chat.temp_file_paths:
                 # An uploaded file is already a concrete V1 execution input;
                 # business-semantic completion cannot add meaning to a bare
@@ -1008,7 +1074,9 @@ class V2ContextV1ExecutionBridge:
                     response=response,
                     v1_execution_called=True,
                 )
-                return response
+                return await self._finalize_turn(
+                    chat, identity, response, turn_started
+                )
 
             if (
                 self.v1_pending_answer_probe is not None
@@ -1031,8 +1099,16 @@ class V2ContextV1ExecutionBridge:
                     "bridge.v1_execution",
                     attributes={"route": "pending_clarification"},
                 ) as timing:
+                    pending_chat = chat.model_copy(
+                        deep=True, update={"history": []}
+                    )
+                    # The bridge owns this request's lifecycle: the internal
+                    # V1 clarification continuation must not emit events.
+                    object.__setattr__(
+                        pending_chat, "_external_lifecycle_owner", True
+                    )
                     response = await self.v1_pending_executor(
-                        chat.model_copy(deep=True, update={"history": []}),
+                        pending_chat,
                         identity,
                     )
                     timing.mark_first_result()
@@ -1044,7 +1120,9 @@ class V2ContextV1ExecutionBridge:
                     response=response,
                     v1_execution_called=True,
                 )
-                return response
+                return await self._finalize_turn(
+                    chat, identity, response, turn_started
+                )
 
             context_chat = chat.model_copy(deep=True, update={"history": []})
             await emit_progress(
@@ -1093,14 +1171,19 @@ class V2ContextV1ExecutionBridge:
                         "请检查实体编码、字段映射，以及指标与维度的绑定后重试。"
                     ),
                 )
-                return await self._save_without_v1(
-                    snapshot,
-                    chat=chat,
-                    identity=identity,
-                    fingerprint=fingerprint,
-                    resolved=ResolvedContextTurn(None, None, None),
-                    response=response,
-                    provenance=None,
+                return await self._finalize_turn(
+                    chat,
+                    identity,
+                    await self._save_without_v1(
+                        snapshot,
+                        chat=chat,
+                        identity=identity,
+                        fingerprint=fingerprint,
+                        resolved=ResolvedContextTurn(None, None, None),
+                        response=response,
+                        provenance=None,
+                    ),
+                    turn_started,
                 )
             business_domain_labels = tuple(
                 str(label).strip()
@@ -1140,14 +1223,19 @@ class V2ContextV1ExecutionBridge:
                         else "当前追问无法安全确定所引用的任务，请补充完整问题。"
                     ),
                 )
-                return await self._save_without_v1(
-                    snapshot,
-                    chat=chat,
-                    identity=identity,
-                    fingerprint=fingerprint,
-                    resolved=ResolvedContextTurn(None, None, None),
-                    response=response,
-                    provenance=provenance,
+                return await self._finalize_turn(
+                    chat,
+                    identity,
+                    await self._save_without_v1(
+                        snapshot,
+                        chat=chat,
+                        identity=identity,
+                        fingerprint=fingerprint,
+                        resolved=ResolvedContextTurn(None, None, None),
+                        response=response,
+                        provenance=provenance,
+                    ),
+                    turn_started,
                 )
             except (RecognitionFailure, ValueError) as exc:
                 reason = str(exc)
@@ -1178,14 +1266,19 @@ class V2ContextV1ExecutionBridge:
                     ),
                     answer=failure_answer,
                 )
-                return await self._save_without_v1(
-                    snapshot,
-                    chat=chat,
-                    identity=identity,
-                    fingerprint=fingerprint,
-                    resolved=ResolvedContextTurn(None, None, None),
-                    response=response,
-                    provenance=provenance,
+                return await self._finalize_turn(
+                    chat,
+                    identity,
+                    await self._save_without_v1(
+                        snapshot,
+                        chat=chat,
+                        identity=identity,
+                        fingerprint=fingerprint,
+                        resolved=ResolvedContextTurn(None, None, None),
+                        response=response,
+                        provenance=provenance,
+                    ),
+                    turn_started,
                 )
 
             if resolved.clarification_question is not None:
@@ -1195,14 +1288,19 @@ class V2ContextV1ExecutionBridge:
                     answer=resolved.clarification_question,
                     clarification_trace=resolved.clarification_trace,
                 )
-                return await self._save_without_v1(
-                    snapshot,
-                    chat=chat,
-                    identity=identity,
-                    fingerprint=fingerprint,
-                    resolved=resolved,
-                    response=response,
-                    provenance=provenance,
+                return await self._finalize_turn(
+                    chat,
+                    identity,
+                    await self._save_without_v1(
+                        snapshot,
+                        chat=chat,
+                        identity=identity,
+                        fingerprint=fingerprint,
+                        resolved=resolved,
+                        response=response,
+                        provenance=provenance,
+                    ),
+                    turn_started,
                 )
             if not resolved.completed_question:
                 raise ValueError("V2_COMPLETED_QUESTION_REQUIRED")
@@ -1392,7 +1490,9 @@ class V2ContextV1ExecutionBridge:
                 v1_execution_called=True,
                 final_state=final_state,
             )
-            return response
+            return await self._finalize_turn(
+                chat, identity, response, turn_started
+            )
 
     async def aclose(self) -> None:
         await self.store.aclose()
@@ -1438,6 +1538,12 @@ def build_context_v1_execution_handler(
     v1_pending_executor: Callable[
         [ChatRequest, TrustedIdentity], Awaitable[AgentResponse]
     ] | None = None,
+    v1_lifecycle_open: Callable[
+        [ChatRequest, TrustedIdentity], Awaitable[None]
+    ] | None = None,
+    v1_lifecycle_close: Callable[
+        [ChatRequest, TrustedIdentity, AgentResponse, float], Awaitable[None]
+    ] | None = None,
     external: ContextV1ExternalDependencies | None = None,
 ) -> V2ContextV1ExecutionBridge:
     receipt = validate_context_v1_settings(settings)
@@ -1468,6 +1574,8 @@ def build_context_v1_execution_handler(
         v1_context_value_resolver=v1_context_value_resolver,
         v1_pending_answer_probe=v1_pending_answer_probe,
         v1_pending_executor=v1_pending_executor,
+        v1_lifecycle_open=v1_lifecycle_open,
+        v1_lifecycle_close=v1_lifecycle_close,
         demo_mode=settings.demo_mode,
         surface_asl_execution_enabled=getattr(
             settings, "surface_asl_execution_enabled", False
