@@ -4298,8 +4298,21 @@ class RuleBasedIntentClassifier:
         # Preserve the raw turn sequence for audit only. The executable text is
         # rebuilt from final canonical slots below and must never be old text
         # with a correction appended to it.
+        base_completed_question = pending.rewritten_question or pending.original_question
         original_question = pending.original_question
         pending.original_question = f"{original_question}\n补充：{answer}"
+        all_time_answer = bool(re.fullmatch(
+            r"\s*(?:4[\.、]?\s*)?(?:不限时间|不限制时间|历史全部|全部历史|全部时间)\s*[。.!！]?",
+            answer,
+        ))
+        if all_time_answer:
+            pending.time_range = None
+            pending.temporal_anchor = None
+            pending.assumptions = [
+                value for value in pending.assumptions
+                if not value.startswith(("DEFAULT_TIME_RANGE=", "ACTIVE_TIME_DEFAULT="))
+            ]
+            pending.assumptions.append("TIME_SCOPE=ALL_TIME")
         negated_metrics = {
             metric.input
             for metric in pending.metrics
@@ -4564,6 +4577,8 @@ class RuleBasedIntentClassifier:
         pending.rewritten_question = render_execution_question(
             pending, confirmation=confirmation
         )
+        if all_time_answer:
+            pending.rewritten_question = base_completed_question
         from app.services.legacy_guards import apply_region_clear_barrier, update_product_clear_barrier
         if answer.strip().rstrip('。？！?!') in {'不限地区', '不限制地区', '不限区域', '不限制区域'}:
             pending.cleared_filter_families = ['region']
@@ -4574,6 +4589,8 @@ class RuleBasedIntentClassifier:
         update_product_clear_barrier(pending, parsed, answer)
         apply_region_clear_barrier(pending)
         pending.rewritten_question = render_execution_question(pending, confirmation=confirmation)
+        if all_time_answer:
+            pending.rewritten_question = base_completed_question
         return pending
 
     @staticmethod

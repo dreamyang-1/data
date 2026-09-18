@@ -401,18 +401,7 @@ class SurfaceContextParse(ContextAwareParse):
 
 
 SURFACE_COMPLETION_PROMPT = '''
-This execution mode delegates catalog matching to the downstream ASL model.
-Extract literal business mentions and tentative roles only; do not resolve IDs,
-metrics, dimensions, physical columns, or reject wording for missing catalog matches.
-Use semantic phrase granularity: emit separate mentions for a concrete business
-name/value, its generic object type, the relationship phrase, and the requested
-output when they are separately expressed. For example, in
-“查询外周插管中心静脉导管产品合作的医院名单”, keep “外周插管中心静脉导管”,
-“产品”, “合作”, and “医院名称” as separate evidence. Do not merge the entire
-phrase into one value, but keep real product models such as “Prismaflex M60 set”
-intact. A name such as “费森尤斯” may stay role-ambiguous; downstream ASL catalog
-retrieval decides brand versus manufacturer. These mentions are advisory evidence,
-not authoritative catalog bindings.
+对下面的完整问题进行细粒度结构化提取，由你根据句子本身判断应提取的内容。
 Also return completed_question. For NEW_TASK copy the current question exactly.
 For an accepted contextual relation use ONLY the selected offered task's
 context_question.execution_question and the current turn to form a standalone
@@ -584,6 +573,12 @@ class RawTurnPlanner:
         resolved_business_domain_ids=None,
         published_context_relation=None,
     ):
+        # Platform user prompt is read from the original request before the
+        # defensive session copy (private/excluded fields do not survive it).
+        _original_prompt = getattr(request, "prompt", None)
+        agent_prompt_text = (
+            _original_prompt.render() if _original_prompt is not None else ""
+        )
         session = ScopedPlanSession(
             request,
             identity,
@@ -635,14 +630,18 @@ class RawTurnPlanner:
             and current.pending is None
             and published_context_relation == 'NEW_TASK'
         )
+        agent_prompt_section = (
+            '\n智能体用户设定（平台配置，仅用于理解角色与业务背景）：\n' + agent_prompt_text
+            if agent_prompt_text else ''
+        )
         if lightweight:
             schema = lightweight_proposal_schema(current_turn_schema())
             instruction = LIGHTWEIGHT_CURRENT_TURN_PROMPT + (
-                SURFACE_COMPLETION_PROMPT if self.defer_new_task_binding else '')
+                SURFACE_COMPLETION_PROMPT if self.defer_new_task_binding else '') + agent_prompt_section
         else:
             schema = proposal_schema(discovered.model_context, current_turn_schema())
             instruction = PARSE_PROMPT + (
-                SURFACE_COMPLETION_PROMPT if self.defer_new_task_binding else '')
+                SURFACE_COMPLETION_PROMPT if self.defer_new_task_binding else '') + agent_prompt_section
         if self.defer_new_task_binding:
             schema['properties']['completed_question'] = SurfaceContextParse.model_json_schema()['properties']['completed_question']
         recognized = await self.model.complete(stage='v2_current_turn', instruction=instruction,

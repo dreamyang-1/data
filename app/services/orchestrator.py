@@ -3014,7 +3014,7 @@ class DataAnalysisOrchestrator:
         ]
         await emit_progress("INTENT_RECOGNITION", "COMPLETED", self._intent_think_summary(
             request, business_domain_labels=chat._business_domain_labels,
-            semantic_extractions=(),
+            semantic_extractions=chat._semantic_extraction_items,
             include_resolved_context=not chat._intent_context_progress_emitted,
         ))
         try:
