@@ -2083,6 +2083,25 @@ class HttpDataRetrievalAdapter:
         ambiguities = asl.get("ambiguity") or []
         if not isinstance(ambiguities, list):
             raise AdapterError("ASL_RESPONSE_INVALID", "ASL ambiguity must be a list")
+        if bound_metric_codes and ambiguities:
+            metric_ambiguity_types = {
+                "metric", "metric_selection", "indicator", "指标",
+            }
+            ambiguities = [
+                item for item in ambiguities
+                if not (
+                    isinstance(item, dict)
+                    and (
+                        str(item.get("type") or "").strip().casefold()
+                        in metric_ambiguity_types
+                        or "metric" in {
+                            str(slot).strip().casefold()
+                            for slot in (item.get("affected_slots") or [])
+                        }
+                    )
+                )
+            ]
+            asl["ambiguity"] = ambiguities
         if ambiguities:
             raise AdapterError(
                 "ASL_AMBIGUOUS",

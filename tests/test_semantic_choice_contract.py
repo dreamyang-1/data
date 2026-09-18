@@ -68,6 +68,49 @@ def test_metric_choice_keeps_other_metric_and_metadata():
     assert request.metrics[0].input == "销售额"
 
 
+def test_rewrite_cannot_reopen_a_confirmed_metric_choice():
+    result = choose(pending())
+    result.semantic_ambiguities = [ambiguity()]
+    result.ambiguities = [result.semantic_ambiguities[0].question]
+    result.missing_slots = ["metric", "semantic_ambiguity"]
+
+    DataAnalysisOrchestrator._suppress_confirmed_slot_ambiguities(result)
+
+    assert result.semantic_ambiguities == []
+    assert result.ambiguities == []
+    assert result.missing_slots == []
+
+
+def test_metric_id_is_recovered_from_visible_candidate_label():
+    request = pending()
+    request.semantic_model_id = 81
+    request.semantic_ambiguities[0].semantic_model_id = 999
+    request.semantic_ambiguities[0].candidates = [
+        "含税销售总额（sales_total_including_tax）",
+    ]
+    request.semantic_ambiguities[0].candidate_details = [{}]
+
+    result = choose(request)
+
+    assert result.metrics[0].canonical_name == "含税销售总额"
+    assert result.metrics[0].metric_id == "81:sales_total_including_tax"
+
+
+def test_one_metric_choice_closes_duplicate_ambiguities_for_same_slot():
+    request = pending()
+    duplicate = ambiguity()
+    duplicate.ambiguity_id = "duplicate-wording-for-same-metric"
+    duplicate.phrase = "销售"
+    duplicate.affected_slots = ["metric"]
+    request.semantic_ambiguities.append(duplicate)
+
+    result = choose(request)
+
+    assert result.semantic_ambiguities == []
+    assert result.ambiguities == []
+    assert result.missing_slots == []
+
+
 def test_dimension_choice_keeps_other_grouping():
     request = pending("dimension", "区域")
     result = choose(request)

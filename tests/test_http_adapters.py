@@ -3061,6 +3061,39 @@ async def test_asl_ambiguity_stops_before_sql_execution():
     assert exc.value.code == "ASL_AMBIGUOUS"
     assert len(client.calls) == 1
 
+
+@pytest.mark.asyncio
+async def test_confirmed_metric_ignores_repeated_asl_metric_ambiguity():
+    bound = request().model_copy(update={
+        "metrics": [MetricRef(
+            input="sales_total_including_tax",
+            canonical_name="sales_total_including_tax",
+            metric_id="8:sales_total_including_tax",
+        )],
+    })
+    client = StubClient([
+        {"success": True, "result": json.dumps({
+            "version": "2.0",
+            "metrics": [{"name": "sales_total_including_tax"}],
+            "dimensions": [],
+            "filters": [],
+            "ambiguity": [{
+                "type": "metric",
+                "affected_slots": ["metric"],
+                "question": "choose metric again",
+            }],
+        })},
+        {"success": True, "sql": "SELECT 1"},
+        {"success": True, "sql": "SELECT 1", "data": [{"x": 1}], "columns": ["x"]},
+    ])
+
+    result = await HttpDataRetrievalAdapter(
+        Settings(adapter_mode="http"), client
+    ).query(bound, IDENTITY, semantic_model_id=8, business_domain_id=13)
+
+    assert result.dataset.rows == [{"x": 1}]
+    assert len(client.calls) == 3
+
 @pytest.mark.asyncio
 async def test_row_count_mismatch_returns_database_rows():
     client = StubClient([{"success": True, "result": json.dumps({"metrics": [], "ambiguity": []})}, {"success": True, "sql": "SELECT 1"}, {"sql": "SELECT 1", "success": True, "data": [{"x": 1}], "columns": ["x"], "row_count": 2}])

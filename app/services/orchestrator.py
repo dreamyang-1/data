@@ -33,7 +33,7 @@ from app.analysis.visualization import render_chart_svg
 from app.services.chat_responder import QwenChatResponder
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
-from app.domain.models import AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
+from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
 from app.planning import MultiQuestionPlanner, TaskPlanningError
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
@@ -249,6 +249,7 @@ class DataAnalysisOrchestrator:
         chat_responder: QwenChatResponder | None = None,
         event_store: SessionEventStore | None = None,
         turn_admission_gate: TurnAdmissionGate | None = None,
+        agent_prompt_store: Any | None = None,
     ) -> None:
         self.settings = settings
         self.classifier = classifier
@@ -295,6 +296,7 @@ class DataAnalysisOrchestrator:
             and settings.intent_model_api_key is not None
             else None
         )
+        self.agent_prompt_store = agent_prompt_store
 
         # Running requests are process-local because asyncio tasks cannot be
         # transferred between service instances.  The scope includes the
@@ -2990,7 +2992,7 @@ class DataAnalysisOrchestrator:
             return None
         request = await self._classify(chat.question, identity, chat.conversation_id,
                                        pre_resolved=True,
-                                       agent_prompt=self._agent_prompt_text(chat))
+                                       agent_prompt=await self._agent_prompt_text(chat))
         if request.primary_intent not in {
             PrimaryIntent.METRIC_QUERY, PrimaryIntent.DETAIL_QUERY,
             PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
@@ -3453,7 +3455,7 @@ class DataAnalysisOrchestrator:
                     identity,
                     chat.conversation_id,
                     pre_resolved=chat._completed_question_execution,
-                    agent_prompt=self._agent_prompt_text(chat),
+                    agent_prompt=await self._agent_prompt_text(chat),
                 )
             )
             if (
@@ -3497,7 +3499,7 @@ class DataAnalysisOrchestrator:
                         identity,
                         chat.conversation_id,
                         pre_resolved=chat._completed_question_execution,
-                        agent_prompt=self._agent_prompt_text(chat),
+                        agent_prompt=await self._agent_prompt_text(chat),
                     )
                 )
                 rounds = 1
@@ -3552,7 +3554,7 @@ class DataAnalysisOrchestrator:
                     identity,
                     chat.conversation_id,
                     pre_resolved=chat._completed_question_execution,
-                    agent_prompt=self._agent_prompt_text(chat),
+                    agent_prompt=await self._agent_prompt_text(chat),
                 )
             )
             current_request = request.model_copy(deep=True)
@@ -4664,6 +4666,7 @@ class DataAnalysisOrchestrator:
             ]
             if request.semantic_ambiguities and "semantic_ambiguity" not in request.missing_slots:
                 request.missing_slots.append("semantic_ambiguity")
+        self._suppress_confirmed_slot_ambiguities(request)
         if turn_decision.relation == TurnRelation.AMBIGUOUS_RELATION:
             relation_ambiguity = SemanticAmbiguity(
                 ambiguity_id=f"turn-relation-{request.request_id}",
@@ -5854,7 +5857,7 @@ class DataAnalysisOrchestrator:
                     synthesized_answer, synthesis = (
                         await self.analysis_synthesizer.synthesize(
                             request, insight_output, evidence,
-                            agent_prompt=self._agent_prompt_text(chat),
+                            agent_prompt=await self._agent_prompt_text(chat),
                         )
                     )
                     timing.mark_first_result()
@@ -7637,12 +7640,27 @@ class DataAnalysisOrchestrator:
             timing.set_attribute("intent_source", result.intent_source)
             return result
 
-    @staticmethod
-    def _agent_prompt_text(chat: ChatRequest | None) -> str:
-        """Platform-configured user prompt for this request, conflict-filtered."""
-        if chat is None or chat.prompt is None:
+    async def _agent_prompt_text(self, chat: ChatRequest | None) -> str:
+        """Platform-configured user prompt for this request, conflict-filtered.
+
+        A transport-provided prompt wins; otherwise the latest platform
+        version row is read live (New_Agent contract) so prompt edits apply
+        to the next request without redeploying this service.
+        """
+        if chat is None:
             return ""
-        return chat.prompt.render()
+        if chat.prompt is not None:
+            return chat.prompt.render()
+        store = getattr(self, "agent_prompt_store", None)
+        if store is None:
+            return ""
+        try:
+            latest = await store.resolve(chat.application_id)
+        except Exception:
+            return ""
+        if not latest:
+            return ""
+        return AgentPromptConfig(**latest).render()
 
     def _classify_with_rules(
         self, question: str, identity: TrustedIdentity, conversation_id: str
@@ -7899,19 +7917,24 @@ class DataAnalysisOrchestrator:
             metric_name = canonical_name or choice["label"]
             metric_id = str(detail.get("metric_id") or "").strip() or None
             label_metric = re.fullmatch(
-                r"\s*(.+?)\s*[（(]([A-Za-z_][A-Za-z0-9_.:-]*)[）)]\s*",
+                r"\s*(.+?)\s*[\uFF08(]([A-Za-z_][A-Za-z0-9_.:-]*)[\uFF09)]\s*",
                 str(choice["label"]),
             )
             if label_metric:
                 metric_name = label_metric.group(1).strip()
                 metric_id = metric_id or label_metric.group(2).strip()
-            if metric_id and ":" not in metric_id and ambiguity.semantic_model_id:
-                metric_id = f"{ambiguity.semantic_model_id}:{metric_id}"
+            binding_model_id = (
+                target.semantic_model_id
+                or pending.semantic_model_id
+                or ambiguity.semantic_model_id
+            )
+            if metric_id and ":" not in metric_id and binding_model_id:
+                metric_id = f"{binding_model_id}:{metric_id}"
             if metric_id is None and canonical_code:
                 metric_id = (
                     canonical_code
-                    if ":" in canonical_code or ambiguity.semantic_model_id is None
-                    else f"{ambiguity.semantic_model_id}:{canonical_code}"
+                    if ":" in canonical_code or binding_model_id is None
+                    else f"{binding_model_id}:{canonical_code}"
                 )
             selected_metric = MetricRef(
                 input=metric_name,
@@ -8040,11 +8063,30 @@ class DataAnalysisOrchestrator:
             # Pending intact when an older upstream returns labels only.
             return unresolved_choice()
 
+        def resolved_by_same_choice(item: SemanticAmbiguity) -> bool:
+            if (
+                item.ambiguity_id == ambiguity.ambiguity_id
+                and item.ambiguity_id is not None
+            ) or (item.ambiguity_id is None and item is ambiguity):
+                return True
+            affected = {
+                str(slot).strip().lower() for slot in item.affected_slots
+            }
+            item_type = str(item.type or "").strip().lower()
+            if ambiguity.type == "metric":
+                return item_type in {
+                    "metric", "metric_selection", "indicator", "指标",
+                } or bool(affected & {"metric", "metrics"})
+            if ambiguity.type == "dimension":
+                return item_type in {
+                    "dimension", "dimension_selection", "维度",
+                } or bool(affected & {"dimension", "dimensions"})
+            return False
+
         remaining = [
             item.model_copy(deep=True)
             for item in pending.semantic_ambiguities
-            if item.ambiguity_id != ambiguity.ambiguity_id
-            or item.ambiguity_id is None and item is not ambiguity
+            if not resolved_by_same_choice(item)
         ]
         target.semantic_ambiguities = remaining
         target.ambiguities = [item.question for item in remaining]
@@ -8076,6 +8118,54 @@ class DataAnalysisOrchestrator:
             pending, choice
         )
         return target
+
+    @staticmethod
+    def _suppress_confirmed_slot_ambiguities(
+        request: CanonicalAnalysisRequest,
+    ) -> None:
+        """Do not reopen a catalog slot that the user just confirmed.
+
+        The rewrite model is allowed to propose ambiguities, but its output can
+        arrive after a Pending candidate has already been applied.  A metric
+        with a catalog id is stronger evidence than a fresh wording-level
+        ambiguity and must survive the remainder of the same turn.
+        """
+        confirmed_slots: set[str] = set()
+        metric_choice_confirmed = (
+            "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER" in request.assumptions
+            or any(metric.metric_id for metric in request.metrics)
+        )
+        if request.metrics and metric_choice_confirmed:
+            confirmed_slots.add("metric")
+        if not confirmed_slots:
+            return
+
+        metric_types = {"metric", "metric_selection", "indicator"}
+
+        def affects_confirmed_slot(item: SemanticAmbiguity) -> bool:
+            affected = {str(slot).strip().lower() for slot in item.affected_slots}
+            ambiguity_type = str(item.type or "").strip().lower()
+            return bool(
+                "metric" in confirmed_slots
+                and (ambiguity_type in metric_types or "metric" in affected)
+            )
+
+        request.semantic_ambiguities = [
+            item for item in request.semantic_ambiguities
+            if not affects_confirmed_slot(item)
+        ]
+        request.ambiguities = [
+            item.question for item in request.semantic_ambiguities
+        ]
+        request.missing_slots = [
+            slot for slot in request.missing_slots
+            if not (slot == "metric" and "metric" in confirmed_slots)
+        ]
+        if not request.semantic_ambiguities:
+            request.missing_slots = [
+                slot for slot in request.missing_slots
+                if slot != "semantic_ambiguity"
+            ]
 
     @staticmethod
     def _is_deterministic_pending_reply(
@@ -11166,7 +11256,7 @@ class DataAnalysisOrchestrator:
                 try:
                     answer = await self.chat_responder.respond(
                         request.original_question,
-                        agent_prompt=self._agent_prompt_text(chat),
+                        agent_prompt=await self._agent_prompt_text(chat),
                         history=(
                             [
                                 {"role": item.role, "content": item.content}
