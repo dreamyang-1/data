@@ -464,6 +464,38 @@ def test_entity_role_choice_without_catalog_id_is_added_to_completed_question():
     assert "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER" in result.assumptions
 
 
+def test_time_option_applies_without_catalog_field_id_and_restores_task():
+    request = pending()
+    request.time_range = TimeRange(
+        start=date(2025, 9, 18), end_exclusive=date(2026, 9, 19)
+    )
+    request.assumptions = [
+        "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE"
+    ]
+    request.semantic_ambiguities = [SemanticAmbiguity(
+        type="time_anchor",
+        ambiguity_id="time-range-choice",
+        question="请选择需要统计的时间段。",
+        candidates=["本月", "最近30天", "今年", "全部时间（全部历史）"],
+        candidate_details=[{}, {}, {}, {}],
+        affected_slots=["time_range"],
+    )]
+
+    result = choose(request, "3")
+
+    assert result.time_range == TimeRange(
+        start=date(date.today().year, 1, 1),
+        end_exclusive=date(date.today().year + 1, 1, 1),
+    )
+    assert result.semantic_ambiguities == []
+    assert result.missing_slots == []
+    assert "今年" in result.rewritten_question
+    assert "TIME_SCOPE=USER_CONFIRMED_OPTION" in result.assumptions
+    assert not any(
+        value.startswith("ACTIVE_TIME_DEFAULT=") for value in result.assumptions
+    )
+
+
 def test_two_independent_choices_preserve_previously_confirmed_member():
     request = pending()
     second = ambiguity("dimension", "区域")

@@ -1,5 +1,6 @@
 import asyncio
 from copy import deepcopy
+from datetime import date
 from types import SimpleNamespace
 
 import pytest
@@ -75,6 +76,40 @@ def test_missing_scope_rejected_before_network():
     with pytest.raises(AdapterError):
         run(client, authorized_scope=None)
     assert client.calls == []
+
+
+def test_governed_default_time_resolves_only_time_ambiguity_with_metric_anchor():
+    data = response()
+    data["result"]["metrics"] = [{"name": "sales_total_including_tax"}]
+    data["result"]["ambiguity"] = [{
+        "type": "time_anchor",
+        "question": "正在销售缺少可执行的时间范围",
+        "candidates": ["本月", "最近30天", "今年"],
+    }]
+    data["semantic_evidence"]["selected_metrics"] = [{
+        "canonical_code": "sales_total_including_tax",
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "time_anchor": "sales_order.created_date",
+    }]
+
+    result = run(
+        Client(data),
+        time_range=SimpleNamespace(
+            start=date(2025, 9, 18),
+            end_exclusive=date(2026, 9, 19),
+        ),
+    )
+
+    assert result["asl"]["ambiguity"] == []
+    assert result["asl"]["time_context"] == {
+        "type": "range",
+        "start": "2025-09-18",
+        "end": "2026-09-18",
+        "value": None,
+        "unit": "day",
+        "anchor": "sales_order.created_date",
+    }
 
 
 def test_empty_domains_stay_model_wide():

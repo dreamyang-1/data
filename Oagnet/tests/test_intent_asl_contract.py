@@ -7,6 +7,7 @@ import agent
 from agent import (
     _apply_intent_asl_contract,
     _contract_filter_candidates,
+    _repair_contract_filter,
     _validate_asl_output,
     _validate_intent_asl_contract,
 )
@@ -992,6 +993,61 @@ def test_filter_contract_prefers_unique_published_main_attribute_for_value_tie(
         "value": "四川省",
     }]
     assert any(item["type"] == "ADD_REQUIRED_FILTER" for item in repairs)
+
+
+def test_filter_contract_uses_registry_main_attribute_when_value_payload_omits_it(
+    monkeypatch,
+):
+    ast = json.loads(_detail_ast("sales_order"))
+    expected = {"field": "商品名称", "operator": "EQ", "value": "血液净化管路"}
+    candidates = ["product.product_code", "product.product_name"]
+    monkeypatch.setattr(
+        agent, "_contract_filter_candidates", lambda *_args, **_kwargs: candidates,
+    )
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args: [
+            {"entity_code": "product", "field": field} for field in candidates
+        ],
+    )
+    monkeypatch.setattr(
+        agent,
+        "resolve_exact_entity_attribute_value_fields",
+        lambda _model, _domains, batch, _literal: [
+            item["field"] for item in batch
+        ],
+    )
+    monkeypatch.setattr(
+        agent,
+        "get_registered_entity_attributes",
+        lambda *_args: [
+            {
+                "field_mapping": "product.product_code",
+                "is_main_attribute": False,
+            },
+            {
+                "field_mapping": "product.product_name",
+                "is_main_attribute": True,
+            },
+        ],
+    )
+
+    repaired = _repair_contract_filter(
+        ast,
+        expected,
+        {},
+        negative=False,
+        semantic_model_id=81,
+    )
+
+    assert repaired["type"] == "ADD_REQUIRED_FILTER"
+    assert repaired["resolved_field"] == "product.product_name"
+    assert ast["filters"] == [{
+        "field": "product.product_name",
+        "operator": "=",
+        "value": "血液净化管路",
+    }]
 
 
 def test_contract_removes_unrequested_main_identity_filter_from_asl_draft(

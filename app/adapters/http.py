@@ -2254,6 +2254,7 @@ class HttpDataRetrievalAdapter:
             completed_question=request.rewritten_question or request.original_question,
             mentions=mentions, authorized_scope=scope, identity=identity,
             application_id=request.application_id, request_id=request.request_id,
+            time_range=request.time_range,
         )
         asl = plan["asl"]
         # Execution metadata is derived from this ASL, not the upstream role

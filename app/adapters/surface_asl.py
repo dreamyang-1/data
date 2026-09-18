@@ -4,7 +4,9 @@ This internal client only plans. Execution entry points must separately provide
 user-confirmed constraints before replacing the legacy query route.
 """
 from copy import deepcopy
+from datetime import timedelta
 import json
+import re
 
 from app.adapters.base import AdapterError
 from app.services.asl_surface_handoff import build_surface_asl_input
@@ -13,7 +15,7 @@ from app.observability.call_timing import track_operation
 
 async def generate_surface_asl(
     client, settings, *, completed_question, mentions, authorized_scope,
-    identity, application_id, request_id,
+    identity, application_id, request_id, time_range=None,
 ):
     """Return validated Oagnet evidence without rewriting the generated ASL."""
     from app.domain.semantic_scope import AuthorizedSemanticScope
@@ -58,6 +60,41 @@ async def generate_surface_asl(
     ambiguities = asl.get("ambiguity", [])
     if not isinstance(ambiguities, list):
         raise AdapterError("ASL_RESPONSE_INVALID", "ASL ambiguity must be a list")
+    if time_range is not None and ambiguities:
+        remaining = [
+            item for item in ambiguities
+            if not (
+                isinstance(item, dict)
+                and (
+                    str(item.get("type") or "") in {"time", "time_anchor"}
+                    or re.search(
+                        r"时间|日期|time|date",
+                        str(item.get("question") or ""),
+                        re.IGNORECASE,
+                    )
+                )
+            )
+        ]
+        anchors = {
+            str(item.get("time_anchor") or "").strip()
+            for item in generated["semantic_evidence"].get("selected_metrics", [])
+            if isinstance(item, dict) and item.get("time_anchor")
+        }
+        if not remaining and len(anchors) == 1:
+            # The completed question remains the ASL model's primary input.
+            # A governed business default such as "正在销售=最近一年" is an
+            # execution boundary already resolved by the caller; bind only
+            # its dates to the selected metric's published time anchor.
+            asl["time_context"] = {
+                "type": "range",
+                "start": time_range.start.isoformat(),
+                "end": (time_range.end_exclusive - timedelta(days=1)).isoformat(),
+                "value": None,
+                "unit": "day",
+                "anchor": next(iter(anchors)),
+            }
+            asl["ambiguity"] = []
+            ambiguities = []
     if ambiguities:
         raise AdapterError("ASL_AMBIGUOUS", "ASL requires clarification", details=ambiguities)
     return {"asl": deepcopy(asl), "semantic_evidence": deepcopy(generated["semantic_evidence"])}

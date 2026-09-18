@@ -1354,6 +1354,10 @@ class MetricSemanticEvidence(BaseModel):
     ]
     formula_signature: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     global_filters: Any = None
+    time_anchor: str | None = Field(
+        default=None,
+        pattern=r"^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*$",
+    )
     metadata_fingerprint: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     metadata_source: Literal["MYSQL_SEMANTIC_LAYER", "VECTOR_INDEX_FALLBACK"]
     sql_verified: bool

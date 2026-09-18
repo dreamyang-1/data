@@ -754,7 +754,8 @@ async def test_ranked_partner_shape_restores_sort_after_model_operator_overwrite
         "c-ranked-partner",
     )
 
-    assert result.primary_intent == PrimaryIntent.COMPARISON_ANALYSIS
-    assert result.comparison_type == "对象间比较"
+    assert result.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert result.comparison_type is None
     assert AnalysisOperator.GROUP_BY in result.operators
     assert AnalysisOperator.SORT in result.operators
+    assert AnalysisOperator.COMPARE not in result.operators

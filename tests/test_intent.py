@@ -1719,7 +1719,7 @@ def test_sales_trend_facet_uses_auditable_sales_amount_metric():
     assert "SALES_TREND_METRIC=销售额" in request.assumptions
 
 
-def test_partner_list_ranked_by_snapshot_metric_is_complete_comparison():
+def test_partner_list_ranked_by_snapshot_metric_is_grouped_metric_query():
     question = (
         "请列出上海市医用外科口罩产品的经销商名单，排除上海洁安厂家，"
         "并按他们现有的整体业务规模排序"
@@ -1728,11 +1728,11 @@ def test_partner_list_ranked_by_snapshot_metric_is_complete_comparison():
         question, IDENTITY, "ranked-partner-list"
     )
 
-    assert request.primary_intent == PrimaryIntent.COMPARISON_ANALYSIS
-    assert request.comparison_type == "对象间比较"
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert request.comparison_type is None
     assert [metric.input for metric in request.metrics] == ["整体业务规模"]
     assert "经销商" in request.dimensions
-    assert AnalysisOperator.COMPARE in request.operators
+    assert AnalysisOperator.COMPARE not in request.operators
     assert AnalysisOperator.GROUP_BY in request.operators
     assert AnalysisOperator.SORT in request.operators
     assert request.missing_slots == []
@@ -2166,7 +2166,7 @@ def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
         "ranked-active-partner-list",
     )
 
-    assert request.primary_intent == PrimaryIntent.COMPARISON_ANALYSIS
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
     assert [metric.input for metric in request.metrics] == ["整体业务规模"]
     assert AnalysisOperator.SORT in request.operators
     assert request.missing_slots == []
@@ -2185,6 +2185,37 @@ def test_partner_activity_filter_defaults_to_latest_year_for_current_sales():
         {"field": "商品品牌", "operator": "EQ", "value": "振德医疗"},
         {"field": "商品名称", "operator": "EQ", "value": "医用外科口罩"},
     ]
+
+
+def test_competitor_brand_ranked_partner_list_is_not_comparison_analysis():
+    request = RuleBasedIntentClassifier().classify(
+        "帮我找出上海地区正在销售竞争品牌万益特的血液净化管路的"
+        "经销商名单，并按他们现有的销售额排序。",
+        IDENTITY,
+        "competitor-brand-ranked-partners",
+    )
+
+    assert request.primary_intent == PrimaryIntent.METRIC_QUERY
+    assert request.comparison_type is None
+    assert [metric.input for metric in request.metrics] == ["销售额"]
+    assert request.entity == "经销商"
+    assert request.dimensions == ["经销商"]
+    assert AnalysisOperator.GROUP_BY in request.operators
+    assert AnalysisOperator.SORT in request.operators
+    assert AnalysisOperator.COMPARE not in request.operators
+    assert request.time_range is not None
+    assert "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE" in request.assumptions
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert {"field": "母品牌", "operator": "EQ", "value": "万益特"} in request.filters
+    assert {
+        "field": "商品名称",
+        "operator": "EQ",
+        "value": "血液净化管路",
+    } in request.filters
+    assert all(
+        item.get("value") not in {"竞争", "万益特的血液净化管路"}
+        for item in request.filters
+    )
 
 def test_dated_sales_record_activity_does_not_request_partner_status_or_threshold():
     request = RuleBasedIntentClassifier().classify(

@@ -1368,8 +1368,15 @@ class RuleBasedIntentClassifier:
         )
         if ranked_partner_list:
             partner = "经销商" if "经销商" in compact else "供应商"
-            request.primary_intent = PrimaryIntent.COMPARISON_ANALYSIS
-            request.comparison_type = "对象间比较"
+            # A ranked list is one grouped metric query.  Words such as
+            # ``竞争品牌`` describe a filter role; ordering partner rows by a
+            # metric does not ask the system to compare two named objects or
+            # periods.  Treating every ranking as COMPARISON_ANALYSIS adds a
+            # false comparison axis and can trigger an unnecessary time
+            # clarification even when the request already has a governed
+            # activity window.
+            request.primary_intent = PrimaryIntent.METRIC_QUERY
+            request.comparison_type = None
             request.risk_level = "MEDIUM"
             request.dimensions = [
                 dimension for dimension in request.dimensions
@@ -1384,12 +1391,16 @@ class RuleBasedIntentClassifier:
             for operator in (
                 AnalysisOperator.FILTER,
                 AnalysisOperator.GROUP_BY,
-                AnalysisOperator.COMPARE,
+                AnalysisOperator.AGGREGATE,
                 AnalysisOperator.SORT,
                 AnalysisOperator.RENDER_TABLE,
             ):
                 if operator not in request.operators:
                     request.operators.append(operator)
+            request.operators = [
+                operator for operator in request.operators
+                if operator != AnalysisOperator.COMPARE
+            ]
             cls._apply_ranked_partner_scope(request, compact)
 
         # A phrase such as ``<brand>品牌<category>的经销商清单`` contains
@@ -3909,20 +3920,34 @@ class RuleBasedIntentClassifier:
                 region += "市"
             scope = scope[region_match.end():]
 
-        brand_marker = scope.find("品牌")
-        if brand_marker < 0:
-            return
-        brand = scope[:brand_marker]
-        brand = re.sub(
-            r"^(?:限定|在|做|经营|经销|代理|供应|正在销售|目前销售|销售)+",
-            "",
-            brand,
-        ).strip("的，,；;、")
+        # ``竞争品牌万益特的血液净化管路`` means brand=万益特 and
+        # product=血液净化管路. Splitting only on the first ``品牌`` would
+        # instead produce brand=竞争 and fold the real brand into the product.
+        competitor_scope = re.match(
+            r"^(?:(?:正在|目前)?销售)?(?:竞争|竞品)品牌"
+            r"(?P<brand>[^的，,；;、]{1,80})的(?P<catalog>.+)$",
+            scope,
+        )
+        if competitor_scope:
+            brand = competitor_scope.group("brand").strip("的，,；;、")
+            catalog_value = competitor_scope.group("catalog").strip("的，,；;、")
+            brand_field = "母品牌"
+        else:
+            brand_marker = scope.find("品牌")
+            if brand_marker < 0:
+                return
+            brand = scope[:brand_marker]
+            brand = re.sub(
+                r"^(?:限定|在|做|经营|经销|代理|供应|正在销售|目前销售|销售)+",
+                "",
+                brand,
+            ).strip("的，,；;、")
+            catalog_value = scope[brand_marker + len("品牌"):]
+            catalog_value = catalog_value.strip("的，,；;、")
+            brand_field = "商品品牌"
         if not 1 <= len(brand) <= 80 or any(ord(char) < 32 for char in brand):
             return
 
-        catalog_value = scope[brand_marker + len("品牌"):]
-        catalog_value = catalog_value.strip("的，,；;、")
         catalog_value = re.sub(r"(?:的)?(?:所有|全部)$", "", catalog_value).strip("的")
         catalog_value = re.sub(r"产品$", "", catalog_value).strip("的")
 
@@ -3962,7 +3987,9 @@ class RuleBasedIntentClassifier:
                 },
             )
         replace_filter(
-            "商品品牌", brand, {"品牌", "品牌名称", "商品品牌", "母品牌"}
+            brand_field,
+            brand,
+            {"品牌", "品牌名称", "商品品牌", "母品牌", "母厂牌"},
         )
 
         # Remove the broad ``商品名称=<brand>品牌<category>`` guess produced by

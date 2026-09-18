@@ -545,6 +545,7 @@ def _build_semantic_evidence(
             "canonical_name": canonical_name,
             "calculation_formula": formula,
             "global_filters": global_filters,
+            "time_anchor": _metric_time_anchor(vector_meta),
         }
         selected_metrics.append({
             **stable_metadata,
@@ -5917,6 +5918,27 @@ def _repair_contract_filter(
                 field for field, item in published_by_field.items()
                 if bool(item.get("is_main_attribute"))
             }
+            if len(main_fields) != 1:
+                # The compact source-value candidate payload intentionally
+                # omits some catalog metadata.  Resolve a remaining
+                # name/code tie from the current entity registry, where the
+                # published main/display attribute is authoritative.  This is
+                # generic semantic metadata (not a product-field heuristic),
+                # and still fails closed when governance leaves zero or more
+                # than one main attribute.
+                registered_by_field = {
+                    str(item.get("field_mapping") or "").strip(): item
+                    for item in get_registered_entity_attributes(
+                        semantic_model_id, domain_scope
+                    )
+                    if str(item.get("field_mapping") or "").strip() in common
+                }
+                governed_main_fields = {
+                    field for field, item in registered_by_field.items()
+                    if bool(item.get("is_main_attribute"))
+                }
+                if len(governed_main_fields) == 1:
+                    main_fields = governed_main_fields
             if len(main_fields) == 1:
                 candidates = [next(iter(main_fields))]
 
@@ -7314,6 +7336,10 @@ Separate brand/manufacturer qualifiers from product/model wording when the
 question combines them. Match each concept against recalled catalog evidence;
 do not concatenate different concepts into a single exact/LIKE value unless
 the catalog demonstrates that combined value. Do not invent alternative values.
+In Chinese wording such as “竞争品牌X的Y” or “竞品品牌X的Y”, “竞争/竞品” describes
+the business role, X is the brand value, and Y is the product or category.
+Resolve X and Y independently against recalled catalog attributes; never use
+“竞争” as a literal filter value and never omit X merely because Y matched.
 Model/specification wording must be compared with specification attributes as
 well as product display names. A name qualifier is a separate constraint, not
 part of the model identifier. Inspect all recalled attributes of those entities.

@@ -131,6 +131,7 @@ Extract business wording at semantic phrase granularity. Keep these elements sep
 43. 具体名称同时可能属于商品、品牌、品类或厂家时，仍要根据整句业务含义给出最合理的临时 field；不得因为不确定就把请求动作并入 value。确实无法判断且不同解释会改变查询结果时，降低 confidence 并写入 ambiguities。
 44. filters 只表达业务筛选条件；时间范围继续放在 completed_question 的时间语义中，不要重复生成年/月/日期筛选。dimensions 表达结果展开粒度，entity/fields 表达返回对象，三者不得混入 filters。
 45. 示例：“查一下空心纤维血液透析器产品合作的经销商名单”应识别 entity=经销商、fields=[经销商名称]、filters=[{field:商品名称,operator:EQ,value:空心纤维血液透析器,evidence_span:空心纤维血液透析器产品}]；“查一下”不是筛选值的一部分。
+46. “竞争品牌、竞品品牌”描述品牌的业务角色，本身不表示用户要求执行比较分析；“经销商名单按销售额排序”是按经销商分组并排序的指标查询。只有用户明确要求比较两个对象、两个时期或差异时才使用 COMPARISON_ANALYSIS。
 """
 
 

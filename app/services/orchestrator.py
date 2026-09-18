@@ -5113,6 +5113,7 @@ class DataAnalysisOrchestrator:
                             request, query_result
                         )
                 except AdapterError as first_error:
+                    retry_question: str | None = None
                     retry_code = (
                         first_error.upstream_code
                         if first_error.upstream_code in SEMANTIC_QUERY_RETRY_CODES
@@ -5141,6 +5142,9 @@ class DataAnalysisOrchestrator:
                                 separators=(",", ":"),
                                 default=str,
                             )[:4000]
+                        )
+                        retry_question = render_execution_question(
+                            retrieval_request
                         )
                     elif first_error.code == "ANALYSIS_RESULT_CONTRACT_INVALID":
                         await emit_progress(
@@ -5179,6 +5183,7 @@ class DataAnalysisOrchestrator:
                     retry_request = retrieval_request.model_copy(deep=True, update={
                         "request_id": uuid4(),
                         "asl_template": None,
+                        **({"rewritten_question": retry_question} if retry_question else {}),
                         "assumptions": [
                             *retrieval_request.assumptions,
                             retry_assumption,
@@ -7862,6 +7867,36 @@ class DataAnalysisOrchestrator:
         elif ambiguity.type in {"subject"} and canonical_name:
             target.entity = canonical_name
             applied = True
+        elif (
+            ambiguity.type == "time_anchor"
+            and set(ambiguity.affected_slots) <= {"time_range", "time_context"}
+        ):
+            # A visible period choice is a deterministic temporal value, not a
+            # catalog field binding.  Applying it must not require a semantic
+            # attribute ID.  The ASL planner remains responsible for choosing
+            # the authorized date field after the range is fixed.
+            period = canonical_value or canonical_name or str(choice["label"])
+            parsed_range = RuleBasedIntentClassifier._time_range(period)
+            all_time = bool(re.search(
+                r"全部(?:时间|历史)|全量历史|所有历史|历史全部|不限时间",
+                period,
+            ))
+            if parsed_range is not None or all_time:
+                target.assumptions = [
+                    value for value in target.assumptions
+                    if not value.startswith((
+                        "ACTIVE_TIME_DEFAULT=",
+                        "DEFAULT_TIME_RANGE=",
+                        "TIME_SCOPE=",
+                    ))
+                ]
+                target.time_range = parsed_range
+                target.assumptions.append(
+                    "TIME_SCOPE=ALL_TIME"
+                    if all_time
+                    else "TIME_SCOPE=USER_CONFIRMED_OPTION"
+                )
+                applied = True
         elif canonical_name and canonical_code and canonical_value:
             phrase = str(
                 detail.get("input_value") or ambiguity.phrase or ""
@@ -7962,6 +7997,14 @@ class DataAnalysisOrchestrator:
             *target.assumptions,
             "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER",
         ]))
+        if ambiguity.type == "time_anchor":
+            target.assumptions = [
+                value for value in target.assumptions
+                if not value.startswith((
+                    "ACTIVE_TIME_DEFAULT=",
+                    "DEFAULT_TIME_RANGE=",
+                ))
+            ]
         target.rewritten_question = render_execution_question(
             target, confirmation=choice["confirmation"]
         )

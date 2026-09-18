@@ -74,9 +74,22 @@ def semantic_ambiguity_has_safe_time_default(
     blocking = list(ambiguities) if ambiguities is not None else [
         item for item in request.semantic_ambiguities if item.blocking
     ]
-    return bool(
+    all_time_default = (
         request.time_range is None
         and "TIME_SCOPE=ALL_TIME" in request.assumptions
+    )
+    bounded_default = (
+        request.time_range is not None
+        and any(
+            value.startswith((
+                "ACTIVE_TIME_DEFAULT=",
+                "DEFAULT_TIME_RANGE=",
+            ))
+            for value in request.assumptions
+        )
+    )
+    return bool(
+        (all_time_default or bounded_default)
         and blocking
         and all(
             item.blocking
