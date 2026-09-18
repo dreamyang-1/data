@@ -1614,6 +1614,11 @@ class ContextQuestionState(StrictModel):
     fields: list[str] = Field(default_factory=list, max_length=100)
     filters: list[ContextQuestionFilter] = Field(default_factory=list, max_length=20)
     time: ContextQuestionTime | None = None
+    # The window V1 actually executed when the question carried no explicit
+    # time surface (for example the disclosed "最近一年" default). It is never
+    # rendered into completions; it only lets a deterministic relative edit
+    # such as "换成去年同期" shift the true previous window.
+    default_time_window: ContextQuestionTime | None = None
     source_message_id: Identifier
     v1_request_id: Identifier | None = None
     semantic_catalog_version: str | None = Field(default=None, max_length=128)

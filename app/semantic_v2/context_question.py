@@ -9,7 +9,7 @@ retrieval, database, dataset or execution contracts.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import re
 from typing import Awaitable, Callable
 from zoneinfo import ZoneInfo
@@ -64,6 +64,18 @@ _FILTER_RESTRICTION = re.compile(
 _TIME_ONLY = re.compile(
     r"^\s*(?:(?:把)?时间)?\s*(?:换成|改成|改为|换到|改到|换|改)?\s*"
     r"(?P<value>(?:19|20)\d{2}年?|今年|去年|明年)\s*(?:呢)?\s*[？?。.]?\s*$"
+)
+# A closed-form "换成…去年同期…" edit shifts the previous turn's resolved
+# window back by one calendar year. Only this deterministic sentence family is
+# handled here; ambiguous comparison wording still reaches the normal path.
+_PREVIOUS_YEAR_YOY_SHIFT = re.compile(
+    r"^\s*(?:(?:把|将)\s*)?"
+    r"(?:(?:上一轮|之前|刚才|上面)\s*(?:的)?\s*(?:结果|数据|查询|统计)?\s*)?"
+    r"(?:(?:把|将)\s*)?(?:时间\s*)?"
+    r"(?:换成|改成|改为|换为|换到|改到)\s*去年同期\s*"
+    r"(?:的)?\s*(?:口径|时间范围|时间|窗口)?\s*"
+    r"(?:[，,]\s*(?:重新|再次|帮我)?\s*(?:算|计算|统计|查询|跑|出|查)\s*"
+    r"(?:一下|一次|一遍)?)?\s*[？?。.]?\s*$"
 )
 _TIME_RANGE_SURFACE = re.compile(
     r"(?:19|20)\d{2}年|今年|去年|明年|本年|"
@@ -396,11 +408,24 @@ def build_context_question(
 ) -> m.ContextQuestionState:
     request = v1_request
     time = None
+    default_time_window = None
     if request is not None and request.time_range is not None:
         surface = _time_surface(parse, chat.question)
         if surface is not None:
             time = m.ContextQuestionTime(
                 surface=surface,
+                start=request.time_range.start,
+                end_exclusive=request.time_range.end_exclusive,
+                evidence_source="V1_SUCCESSFUL_QUERY_EVIDENCE",
+            )
+        else:
+            # The executed default window (for example the disclosed
+            # "最近一年") is retained without a display surface so a later
+            # closed-form relative edit can shift the true previous window.
+            default_time_window = m.ContextQuestionTime(
+                surface=_window_label(
+                    request.time_range.start, request.time_range.end_exclusive
+                ),
                 start=request.time_range.start,
                 end_exclusive=request.time_range.end_exclusive,
                 evidence_source="V1_SUCCESSFUL_QUERY_EVIDENCE",
@@ -421,6 +446,7 @@ def build_context_question(
         fields=list(request.fields) if request is not None else [],
         filters=_filters_from_v1(chat.question, request),
         time=time,
+        default_time_window=default_time_window,
         source_message_id=chat.message_id,
         v1_request_id=str(request.request_id) if request is not None else None,
         semantic_catalog_version=catalog_version,
@@ -1613,6 +1639,9 @@ def _publish_context_continuation(
             else _context_filters_from_version(version)
         ),
         time=_context_time_from_version(version),
+        default_time_window=(
+            previous.default_time_window if previous is not None else None
+        ),
         source_message_id=chat.message_id,
         semantic_catalog_version=session.context.catalog_pin.catalog_version,
         last_edit=(
@@ -2249,6 +2278,65 @@ def _calendar_label(value, surface: str, now: datetime) -> str:
     return surface
 
 
+def _shift_years(value: date, years: int = -1) -> date:
+    try:
+        return date(value.year + years, value.month, value.day)
+    except ValueError:  # 2月29日平移到平年时收敛到2月28日
+        return date(value.year + years, value.month, value.day - 1)
+
+
+def _window_label(start: date, end_exclusive: date) -> str:
+    if start.month == start.day == 1 and end_exclusive == date(start.year + 1, 1, 1):
+        return f"{start.year}年"
+    inclusive_end = end_exclusive - timedelta(days=1)
+    if inclusive_end == start:
+        return f"{start.year}年{start.month}月{start.day}日"
+    return (
+        f"{start.year}年{start.month}月{start.day}日"
+        f"至{inclusive_end.year}年{inclusive_end.month}月{inclusive_end.day}日"
+    )
+
+
+def _replace_yoy_window(frame: m.ContextQuestionState, question: str, now: datetime):
+    """Shift the previous turn's resolved window back one calendar year.
+
+    "换成…去年同期…" is a closed-form relative edit: the whole previous window
+    moves back one year. It never reuses the default window unchanged and never
+    reinterprets the wording as a natural year, so the result cannot equal the
+    previous turn's query when the previous window crossed a year boundary.
+    """
+
+    match = _PREVIOUS_YEAR_YOY_SHIFT.fullmatch(question)
+    if match is None:
+        return None
+    source = frame.time if frame.time is not None else frame.default_time_window
+    if source is None:
+        return None
+    start = _shift_years(source.start)
+    end_exclusive = _shift_years(source.end_exclusive)
+    if end_exclusive <= start:
+        return None
+    label = _window_label(start, end_exclusive)
+    completed = frame.execution_question
+    if frame.time is not None:
+        if completed.count(frame.time.surface) != 1:
+            return None
+        completed = completed.replace(frame.time.surface, label, 1)
+    else:
+        completed = _insert_time_surface(completed, label)
+    updated = frame.model_copy(deep=True, update={
+        "execution_question": completed,
+        "time": m.ContextQuestionTime(
+            surface=label,
+            start=start,
+            end_exclusive=end_exclusive,
+            evidence_source="CURRENT_EXPLICIT_SURFACE",
+        ),
+        "default_time_window": None,
+    })
+    return updated, question.strip().strip("？?。.")
+
+
 def _replace_time(frame: m.ContextQuestionState, question: str, now: datetime):
     match = _TIME_ONLY.fullmatch(question)
     if match is None:
@@ -2852,10 +2940,16 @@ async def resolve_context_question_followup(
                 f"本轮明确指定的{completion.label}条件。"
             ),
         )
-    resolved = _replace_time(frame, chat.question, now)
+    resolved = _replace_yoy_window(frame, chat.question, now)
     slot = "time_spec"
     operation = "REPLACE"
-    understanding = "沿用上一轮查询目标和条件，仅替换本轮明确指定的时间。"
+    understanding = (
+        "沿用上一轮查询目标和条件，"
+        "将上一轮时间窗整体平移至去年同期重新计算。"
+    )
+    if resolved is None:
+        resolved = _replace_time(frame, chat.question, now)
+        understanding = "沿用上一轮查询目标和条件，仅替换本轮明确指定的时间。"
     if resolved is None:
         resolved = _clear_context_filter(frame, chat.question)
         slot = "filter_expression"
