@@ -136,7 +136,13 @@ class Mention(StrictModel):
     normalized_surface: str = Field(min_length=1, max_length=1000)
     start_char: int = Field(ge=0)
     end_char: int = Field(gt=0)
-    candidate_roles: list[SemanticRole] = Field(min_length=1, max_length=20)
+    # Free-form role labels: the extraction model names what each span is
+    # (city, time, product name, relation word, ...) without being forced
+    # into the governed vocabulary; downstream vector matching decides the
+    # catalog binding. Enum values remain valid labels for governed paths.
+    candidate_roles: list[Annotated[str, Field(min_length=1, max_length=40)]] = Field(
+        min_length=1, max_length=20
+    )
     explicit: bool = True
     negated: bool = False
     clause_id: Identifier | None = None

@@ -9,6 +9,7 @@ from app.domain.models import (
     PrimaryIntent,
     TaskPlan,
     TrustedIdentity,
+    TurnRelation,
 )
 from app.intent import RuleBasedIntentClassifier
 from app.presentation.intent_recognition import (
@@ -48,6 +49,55 @@ def test_completed_question_displays_classifier_structure_before_catalog_binding
     assert "南京（筛选值）" in rendered
     assert "费森尤斯产品（筛选值）" in rendered
     assert "医院（业务对象）" in rendered
+
+
+def test_pending_merged_display_renders_final_slots_not_stale_rewrite():
+    # The rewritten question was produced before the clarification answer
+    # merged and still carries the pre-choice default one-year range. The
+    # display must render the final slots instead of replaying that stale text.
+    request = CanonicalAnalysisRequest(
+        conversation_id="pending-merged-display",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="4",
+        rewritten_question="查询最近一年上海、万益特经销商的经销商名称明细",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="经销商",
+        fields=["经销商名称"],
+        filters=[
+            {"field": "城市", "operator": "EQ", "value": "上海"},
+            {"field": "产品名称", "operator": "EQ", "value": "万益特"},
+        ],
+        turn_relation=TurnRelation.CLARIFICATION_RESPONSE,
+        context_mode=ContextMode.CURRENT_THREAD,
+    )
+
+    view = build_intent_recognition_display_v2(request, semantic_extractions=())
+
+    assert "最近一年" not in view.completed_question
+    assert "上海" in view.completed_question
+    assert "万益特" in view.completed_question
+    assert "经销商" in view.completed_question
+
+
+def test_standalone_rewrite_without_pending_merge_is_kept_verbatim():
+    request = CanonicalAnalysisRequest(
+        conversation_id="standalone-rewrite-display",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="帮我找出上海地区血液净化管路的经销商名单",
+        rewritten_question="查询最近一年上海销售过血液净化管路的经销商名单",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="经销商",
+        fields=["经销商名称"],
+        filters=[{"field": "城市", "operator": "EQ", "value": "上海"}],
+    )
+
+    view = build_intent_recognition_display_v2(request, semantic_extractions=())
+
+    assert view.completed_question == (
+        "查询最近一年上海销售过血液净化管路的经销商名单"
+    )
 
 
 def test_resolved_context_and_intent_decision_render_as_nonduplicated_steps():

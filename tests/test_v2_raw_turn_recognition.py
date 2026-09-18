@@ -870,6 +870,75 @@ async def test_scope_change_rejected_before_history_reaches_model(catalog):
     assert len(transport.calls)==2
 
 
+def test_completed_question_prefix_parser_handles_partial_json_and_escapes():
+    from app.semantic_v2.recognition_client import _completed_question_prefix
+    assert _completed_question_prefix('{"mentions": []') is None
+    assert _completed_question_prefix('{"completed_question": "abc') == 'abc'
+    assert _completed_question_prefix('{"completed_question": "a\\nb') == 'a\nb'
+    assert _completed_question_prefix('{"completed_question": "a\\u4e') == 'a'
+    assert _completed_question_prefix('{"completed_question": "a\\u4e0a') == 'a上'
+    assert _completed_question_prefix('{"completed_question": "') is None
+
+
+@pytest.mark.asyncio
+async def test_streaming_completed_question_prefix_is_published_once():
+    completed = '查询南京哪些医院使用费森尤斯产品。'
+    full = json.dumps(
+        {'completed_question': completed, 'mentions': []}, ensure_ascii=False
+    )
+    chunks = [full[i:i + 7] for i in range(0, len(full), 7)]
+    body = ''.join(
+        'data: ' + json.dumps(
+            {'choices': [{'delta': {'content': part}, 'finish_reason': None}]}
+        ) + '\n\n'
+        for part in chunks
+    ) + 'data: ' + json.dumps(
+        {'choices': [{'delta': {}, 'finish_reason': 'stop'}]}
+    ) + '\n\ndata: [DONE]\n\n'
+
+    def handler(request):
+        return httpx.Response(
+            200, headers={'content-type': 'text/event-stream'}, content=body.encode()
+        )
+
+    class CompletedQuestionOutput(BaseModel):
+        completed_question: str = ''
+        mentions: list = []
+
+    settings = Settings(
+        _env_file=None,
+        intent_model_base_url='https://model.invalid/v1',
+        intent_model_api_key='test-only-key',
+        intent_model_name='existing-configured-model',
+        intent_model_max_retries=0,
+    )
+    client = RecognitionModelClient(
+        settings, httpx.MockTransport(handler), force_stream=True
+    )
+    progress = []
+    with progress_scope(progress.append):
+        result = await client.complete(
+            stage='v2_current_turn',
+            instruction='Return JSON.',
+            context={'question': '南京哪些医院使用费森尤斯产品'},
+            output_model=CompletedQuestionOutput,
+        )
+
+    assert result.completed_question == completed
+    phases = [item.get('progress_phase') for item in progress]
+    assert phases.index('V2_CURRENT_TURN_MODEL_STREAM_STARTED') < phases.index(
+        'V2_CURRENT_TURN_COMPLETED_QUESTION_STREAMING'
+    )
+    streaming = [
+        item for item in progress
+        if item.get('progress_phase') == 'V2_CURRENT_TURN_COMPLETED_QUESTION_STREAMING'
+    ]
+    assert len(streaming) == 1
+    assert streaming[0]['stage'] == 'INTENT_RECOGNITION'
+    prefix = streaming[0]['message'][len('补全后的问题：'):]
+    assert prefix and completed.startswith(prefix)
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize('kind',['MODEL_TRANSPORT','MODEL_OUTPUT','MODEL_INCOMPLETE','PARSE_SPAN'])
 async def test_model_system_failures_are_bounded_and_never_user_asks(catalog,kind):

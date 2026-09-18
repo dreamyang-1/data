@@ -8,7 +8,8 @@ import json
 
 import pytest
 
-from app.semantic_v2.recognition import LIGHTWEIGHT_CURRENT_TURN_PROMPT, PARSE_PROMPT
+from app.semantic_v2.recognition import (LIGHTWEIGHT_CURRENT_TURN_PROMPT,
+    PARSE_PROMPT, SURFACE_ONLY_EXTRACTION_PROMPT)
 from test_v2_raw_turn_recognition import (planner, metric_step, parse, request,
     IDENTITY, turns)
 from test_v2_pending_recognition import ask, catalog
@@ -74,6 +75,58 @@ async def test_second_turn_with_history_keeps_full_contract(catalog):
     assert proposal['properties']['target_task_id'] != {'type': 'null'}
     context = json.loads(second_turn_call['messages'][1]['content'])
     assert context['task_context']['candidate_tasks']
+
+
+@pytest.mark.asyncio
+async def test_deferred_empty_context_uses_surface_only_extraction_prompt(catalog):
+    steps = [metric_step('销售额')]
+    engine, transport = planner(catalog, steps)
+    engine.defer_new_task_binding = True
+    results = await turns(engine, steps)
+
+    instruction, schema = split_instruction_and_schema(transport.calls[0])
+    # The deferred-binding path delegates catalog matching to ASL, so it uses
+    # the short surface-only extraction contract, not the long completion
+    # prompt and not the full lightweight contract.
+    assert instruction.startswith(SURFACE_ONLY_EXTRACTION_PROMPT)
+    assert '对下面的完整问题进行细粒度结构化提取' not in instruction
+    assert 'scope-checked summary' not in instruction
+    proposal = schema['$defs']['ContextProposal']
+    assert proposal['properties']['target_task_id'] == {'type': 'null'}
+    # Role labels are free-form: the model names what each span is (city, time,
+    # product name, ...) instead of being squeezed into the governed enum.
+    roles = schema['$defs']['Mention']['properties']['candidate_roles']
+    assert roles['items'] == {'type': 'string', 'minLength': 1, 'maxLength': 40}
+    assert 'enum' not in roles['items']
+    result = results[0]
+    assert result.context_trace['FINAL_STATUS'] == 'ACCEPTED'
+    assert result.context_trace['FINAL_RELATION'] == 'NEW_TASK'
+
+
+@pytest.mark.asyncio
+async def test_free_form_role_labels_pass_through_extraction_items():
+    from app.semantic_v2.pipeline import CurrentTurnSemanticParse
+    from app.semantic_v2.recognition import current_turn_extraction_items
+
+    parse = CurrentTurnSemanticParse.model_validate({
+        'mentions': [
+            {'mention_id': 'm0', 'surface': '南京', 'normalized_surface': '南京',
+             'start_char': 0, 'end_char': 2, 'candidate_roles': ['城市'],
+             'source_turn_id': 't1'},
+            {'mention_id': 'm1', 'surface': '费森尤斯', 'normalized_surface': '费森尤斯',
+             'start_char': 2, 'end_char': 6, 'candidate_roles': ['品牌', '厂家'],
+             'source_turn_id': 't1'},
+            {'mention_id': 'm2', 'surface': '销售额', 'normalized_surface': '销售额',
+             'start_char': 6, 'end_char': 9, 'candidate_roles': ['MEASURE'],
+             'source_turn_id': 't1'},
+        ],
+    })
+    items = current_turn_extraction_items(parse)
+    assert [item['surface'] for item in items] == ['南京', '费森尤斯', '销售额']
+    assert items[0]['labels'] == ('城市',)
+    assert items[1]['labels'] == ('品牌', '厂家')
+    # Governed enum labels still map to Chinese display text.
+    assert items[2]['labels'] == ('指标',)
 
 
 @pytest.mark.asyncio
