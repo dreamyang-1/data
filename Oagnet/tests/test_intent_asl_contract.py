@@ -5,9 +5,12 @@ import pytest
 import agent
 
 from agent import (
+    _administrative_mention_level,
     _apply_intent_asl_contract,
+    _apply_surface_mention_normalization,
     _contract_filter_candidates,
     _repair_contract_filter,
+    _select_surface_mention_match,
     _validate_asl_output,
     _validate_intent_asl_contract,
 )
@@ -1802,3 +1805,243 @@ def test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique(
         )
 
     assert exc.value.code == "ASL_ENTITY_MENTION_UNRESOLVED"
+
+
+def test_surface_mention_unique_hit_is_normalized_to_canonical_value(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity("dim_city", "城市", "dim_city.city_name", "城市名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["filters"] = [{
+        "field": "dim_city.city_name", "operator": "=", "value": "上海",
+    }]
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [{
+            "field": "dim_city.city_name",
+            "canonical_value": "上海市",
+            "match_type": "CANONICAL_CONTAINS_MENTION",
+        }],
+    )
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "上海"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(normalized)["filters"] == [{
+        "field": "dim_city.city_name",
+        "operator": "=",
+        "value": "上海市",
+    }]
+    assert repairs == [{
+        "type": "ADD_SOURCE_RESOLVED_ENTITY_FILTER",
+        "mention": "上海",
+        "canonical_value": "上海市",
+        "resolved_field": "dim_city.city_name",
+        "source": "SURFACE_MENTION_RECALL",
+    }]
+    assert knowledge["_source_canonical_values"]["上海"] == "上海市"
+
+
+def test_surface_mention_multiple_hits_pick_highest_similarity(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity("product", "商品", "product.product_name", "商品名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["filters"] = [{
+        "field": "product.product_name", "operator": "=", "value": "透析器",
+    }]
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [
+            {
+                "field": "product.product_name",
+                "canonical_value": "透析器耗材",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+            {
+                "field": "product.product_name",
+                "canonical_value": "空心纤维血液透析器",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+        ],
+    )
+    selected = _select_surface_mention_match(
+        "空心纤维血液透析器",
+        [
+            {
+                "field": "product.product_name",
+                "canonical_value": "透析器耗材",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+            {
+                "field": "product.product_name",
+                "canonical_value": "空心纤维血液透析器",
+                "match_type": "ORDERED_SUBSEQUENCE",
+            },
+        ],
+        {"product.product_name"},
+    )
+    assert selected == ("product.product_name", "空心纤维血液透析器")
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "透析器"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+    assert json.loads(normalized)["filters"][0]["value"] in {
+        "透析器耗材", "空心纤维血液透析器",
+    }
+    assert repairs[0]["type"] == "ADD_SOURCE_RESOLVED_ENTITY_FILTER"
+
+
+def test_surface_mention_tied_similarity_picks_one_deterministically_bounded():
+    candidates = {"product.product_name"}
+    matches = [
+        {
+            "field": "product.product_name",
+            "canonical_value": "A型透析器",
+            "match_type": "EXACT",
+        },
+        {
+            "field": "product.product_name",
+            "canonical_value": "B型透析器",
+            "match_type": "EXACT",
+        },
+    ]
+    selected = _select_surface_mention_match(
+        "A型透析器", matches, candidates
+    )
+    assert selected is not None
+    assert selected[1] == "A型透析器"
+
+    tied = _select_surface_mention_match(
+        "透析器",
+        [
+            {
+                "field": "product.product_name",
+                "canonical_value": "A型透析器",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+            },
+            {
+                "field": "product.product_name",
+                "canonical_value": "B型透析器",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+            },
+        ],
+        candidates,
+    )
+    assert tied is not None and tied[1] in {"A型透析器", "B型透析器"}
+
+
+def test_surface_mention_administrative_tie_break_prefers_city_level(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity("dim_city", "城市", "dim_city.city_name", "城市名称"),
+            _entity("dim_province", "省份", "dim_province.province_name", "省份名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["filters"] = []
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [
+            {
+                "field": "dim_province.province_name",
+                "canonical_value": "上海市",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+            },
+            {
+                "field": "dim_city.city_name",
+                "canonical_value": "上海市",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+            },
+        ],
+    )
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "上海"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(normalized)["filters"] == [{
+        "field": "dim_city.city_name",
+        "operator": "=",
+        "value": "上海市",
+    }]
+    assert repairs[0]["resolved_field"] == "dim_city.city_name"
+    assert _administrative_mention_level("上海") is None
+    assert _administrative_mention_level("江苏省") == "province"
+    assert _administrative_mention_level("浦东新区") == "district"
+
+
+def test_surface_mention_suffix_stated_level_wins_the_tie(monkeypatch):
+    field_kinds = {
+        "dim_city.city_name": "city",
+        "dim_province.province_name": "province",
+    }
+    matches = [
+        {
+            "field": "dim_city.city_name",
+            "canonical_value": "上海市",
+            "match_type": "EXACT",
+        },
+        {
+            "field": "dim_province.province_name",
+            "canonical_value": "上海市",
+            "match_type": "EXACT",
+        },
+    ]
+    assert _select_surface_mention_match(
+        "江苏省", matches, set(field_kinds), field_kinds
+    ) == ("dim_province.province_name", "上海市")
+    knowledge = {
+        "entities": [
+            _entity("product", "商品", "product.product_name", "商品名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_quantity"}]
+    ast["filters"] = [{
+        "field": "product.product_name", "operator": "=", "value": "不存在的东西",
+    }]
+    monkeypatch.setattr(
+        agent, "resolve_entity_attribute_catalog_matches", lambda *_args: [],
+    )
+    monkeypatch.setattr(
+        agent, "load_published_entity_attribute_candidates", lambda *_args: [],
+    )
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "不存在的东西"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(normalized)["filters"] == []
+    assert repairs == [{
+        "type": "DROP_UNMATCHED_SURFACE_MENTION",
+        "mention": "不存在的东西",
+        "source": "SURFACE_MENTION_RECALL",
+    }]

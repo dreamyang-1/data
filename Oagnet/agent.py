@@ -1,5 +1,6 @@
 import hashlib
 import json
+import random
 import re
 from datetime import date
 from difflib import SequenceMatcher
@@ -6052,14 +6053,266 @@ def _repair_contract_filter(
     return repair
 
 
+def _administrative_mention_level(mention: str) -> str | None:
+    """Return the administrative level stated by the mention's own suffix."""
+    text = re.sub(r"\s+", "", str(mention or ""))
+    if text.endswith(("特别行政区", "自治区", "省")):
+        return "province"
+    if text.endswith("市"):
+        return "city"
+    if text.endswith(("区", "县")):
+        return "district"
+    return None
+
+
+def _select_surface_mention_match(
+    mention: str,
+    matches: list[dict[str, Any]],
+    allowed_fields: set[str],
+    field_kinds: dict[str, str | None] | None = None,
+) -> tuple[str, str] | None:
+    """Pick the best catalog hit for an advisory mention.
+
+    Multiple hits are never dropped: the highest similarity wins.  A
+    similarity tie between different administrative levels (for example 上海市
+    existing as both a city value and a province value) is resolved by the
+    level stated in the mention, defaulting to city level; a remaining tie is
+    resolved randomly so repeated runs stay bounded.
+    """
+    rank = {
+        "EXACT": 0,
+        "CANONICAL_CONTAINS_MENTION": 1,
+        "MENTION_CONTAINS_CANONICAL": 1,
+        "ORDERED_SUBSEQUENCE": 2,
+    }
+    best_key: tuple[int, float] | None = None
+    best: list[dict[str, Any]] = []
+    for match in matches:
+        if not isinstance(match, dict):
+            continue
+        field = str(match.get("field") or "")
+        canonical = str(match.get("canonical_value") or "").strip()
+        match_type = str(match.get("match_type") or "")
+        if field not in allowed_fields or not canonical or match_type not in rank:
+            continue
+        ratio = SequenceMatcher(
+            None, str(mention).casefold(), canonical.casefold()
+        ).ratio()
+        if _administrative_suffix_completion(mention, canonical):
+            ratio = 1.0
+        key = (-rank[match_type], round(ratio, 6))
+        if best_key is None or key > best_key:
+            best_key = key
+            best = [match]
+        elif key == best_key:
+            best.append(match)
+    if not best:
+        return None
+    if len(best) > 1 and field_kinds:
+        preferred_level = _administrative_mention_level(mention) or "city"
+        leveled = [
+            match for match in best
+            if field_kinds.get(str(match.get("field") or "")) == preferred_level
+        ]
+        if leveled:
+            best = leveled
+    selected = random.choice(best)
+    return (
+        str(selected.get("field") or ""),
+        str(selected.get("canonical_value") or "").strip(),
+    )
+
+
+def _apply_surface_mention_normalization(
+    content: str,
+    knowledge: dict,
+    surface_evidence: dict | None,
+    semantic_model_id: int | None,
+    domain_scope: int | list[int] | None,
+) -> tuple[str, list[dict]]:
+    """Normalize advisory surface mentions against the current source catalog.
+
+    Structured extraction is reference evidence for ASL planning, not an
+    authoritative binding.  Each mention is matched against the source value
+    catalog recalled for this scope: a hit rewrites the filter to the
+    standard field and standard stored value, and an unmatched mention is
+    dropped instead of failing the request.
+    """
+    mentions = list(dict.fromkeys(
+        str(item.get("text") or "").strip()
+        for item in (surface_evidence or {}).get("mentions", [])
+        if isinstance(item, dict) and str(item.get("text") or "").strip()
+    ))
+    if not mentions or semantic_model_id is None:
+        return content, []
+    try:
+        ast = json.loads(content)
+    except (TypeError, ValueError):
+        return content, []
+    if not isinstance(ast, dict):
+        return content, []
+
+    entities, attributes_by_entity = _scoped_entity_attributes(knowledge)
+    authorized_fields = _known_physical_fields(knowledge)
+    candidates = _catalog_identity_candidates(
+        _all_non_key_attribute_candidates(
+            set(entities), entities, attributes_by_entity,
+            authorized_fields, "",
+        ),
+        attributes_by_entity,
+    )
+    allowed_fields = {
+        str(item.get("field") or "")
+        for item in candidates
+        if str(item.get("field") or "")
+    }
+    if not allowed_fields:
+        return content, []
+    # Administrative level per candidate field, used only to break exact
+    # similarity ties between same-value levels (上海市 as city vs province).
+    field_kinds: dict[str, str | None] = {}
+    for item in candidates:
+        field = str(item.get("field") or "")
+        attribute = (
+            attributes_by_entity.get(str(item.get("entity_code") or ""), {})
+            .get(field)
+        )
+        if field and isinstance(attribute, dict):
+            field_kinds[field] = _administrative_attribute_kind(field, attribute)
+
+    filters = ast.setdefault("filters", [])
+    if not isinstance(filters, list):
+        ast["filters"] = filters = []
+    repairs: list[dict] = []
+    published_candidates: list[dict] | None = None
+
+    for mention in mentions:
+        literal_key = re.sub(r"\s+", "", mention).casefold()
+        matches: list[dict[str, Any]] = []
+        for offset in range(0, len(candidates), 32):
+            matches.extend(resolve_entity_attribute_catalog_matches(
+                semantic_model_id, domain_scope,
+                candidates[offset : offset + 32], mention,
+            ))
+        resolved = _select_surface_mention_match(
+            mention, matches, allowed_fields, field_kinds
+        )
+        if resolved is None:
+            # Top-k recall may miss newly published attributes. Retry once
+            # against every published attribute in the same model/domain.
+            if published_candidates is None:
+                published_candidates = (
+                    load_published_entity_attribute_candidates(
+                        semantic_model_id, domain_scope
+                    )
+                )
+            expanded_fields = {
+                str(item.get("field") or "") for item in published_candidates
+                if str(item.get("field") or "")
+            }
+            extra = [
+                item for item in published_candidates
+                if str(item.get("field") or "") in expanded_fields - allowed_fields
+            ]
+            if extra:
+                expanded_matches: list[dict[str, Any]] = []
+                for offset in range(0, len(extra), 32):
+                    expanded_matches.extend(
+                        resolve_entity_attribute_catalog_matches(
+                            semantic_model_id, domain_scope,
+                            extra[offset : offset + 32], mention,
+                        )
+                    )
+                resolved = _select_surface_mention_match(
+                    mention, expanded_matches, allowed_fields | expanded_fields,
+                    field_kinds,
+                )
+        if resolved is None:
+            # An unmatched mention is reference noise: drop any filter the
+            # model built from it and keep the rest of the request intact.
+            kept = [
+                item for item in filters
+                if not (
+                    isinstance(item, dict)
+                    and re.sub(
+                        r"\s+", "", str(item.get("value") or "").strip()
+                    ).casefold() == literal_key
+                )
+            ]
+            if len(kept) != len(filters):
+                ast["filters"] = filters = kept
+            repairs.append({
+                "type": "DROP_UNMATCHED_SURFACE_MENTION",
+                "mention": mention,
+                "source": "SURFACE_MENTION_RECALL",
+            })
+            continue
+        field, canonical_value = resolved
+        if not field or not canonical_value:
+            continue
+        published_authorized = knowledge.setdefault(
+            "_published_authorized_fields", []
+        )
+        if field not in published_authorized:
+            published_authorized.append(field)
+        canonical_key = re.sub(r"\s+", "", canonical_value).casefold()
+        # The draft may already contain the raw mention or its standard value.
+        # Rewrite every occurrence to the resolved field/value in place; never
+        # append a second predicate for the same mention.
+        matching_filters = [
+            item for item in filters
+            if isinstance(item, dict)
+            and re.sub(
+                r"\s+", "", str(item.get("value") or "").strip()
+            ).casefold() in {literal_key, canonical_key}
+        ]
+        if matching_filters:
+            for item in matching_filters:
+                item["field"] = field
+                item["value"] = canonical_value
+        elif not any(
+            isinstance(item, dict)
+            and str(item.get("field") or "") == field
+            and str(item.get("value") or "") == canonical_value
+            for item in filters
+        ):
+            filters.append({
+                "field": field,
+                "operator": "=",
+                "value": canonical_value,
+            })
+        knowledge.setdefault("_source_canonical_values", {})[
+            literal_key
+        ] = canonical_value
+        repairs.append({
+            "type": "ADD_SOURCE_RESOLVED_ENTITY_FILTER",
+            "mention": mention,
+            "canonical_value": canonical_value,
+            "resolved_field": field,
+            "source": "SURFACE_MENTION_RECALL",
+        })
+
+    if not repairs:
+        return content, []
+    return json.dumps(ast, ensure_ascii=False), repairs
+
+
 def _apply_intent_asl_contract(
     content: str,
     knowledge: dict,
     contract: dict | None,
     semantic_model_id: int | None = None,
     domain_scope: int | list[int] | None = None,
+    *,
+    mentions_advisory: bool = False,
 ) -> tuple[str, list[dict]]:
-    """Perform at most one deterministic metadata-backed contract repair."""
+    """Perform at most one deterministic metadata-backed contract repair.
+
+    ``mentions_advisory`` marks surface-handoff requests without a caller
+    contract: entity mentions are still resolved against the source catalog,
+    but an unproven mention is skipped instead of failing the whole request,
+    and the uncontracted identity-filter upper bound stays inactive.
+    """
 
     if not contract:
         return content, []
@@ -7584,6 +7837,18 @@ must pass the deterministic contract validator and echo the contract unchanged.
         semantic_model_id,
         domain_scope,
     )
+    if intent_asl_contract is None and surface_evidence is not None:
+        # Without a caller contract the structured extraction is advisory
+        # reference material only: resolve each mention against the source
+        # catalog, keep the best standard hit, and drop unmatched wording.
+        normalized, surface_repairs = _apply_surface_mention_normalization(
+            normalized,
+            getattr(builder, "last_knowledge", {}),
+            surface_evidence,
+            semantic_model_id,
+            domain_scope,
+        )
+        contract_repairs.extend(surface_repairs)
     if intent_asl_contract is not None:
         repaired_ast = json.loads(normalized)
         _dedupe_equivalent_dimensions(
