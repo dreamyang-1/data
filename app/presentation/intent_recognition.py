@@ -188,6 +188,7 @@ def _request_extraction_parameters(
     """Fallback projection from the already normalized canonical request."""
 
     display = dict(request.semantic_display_slots or {})
+    grounded = bool(display)
     if not display:
         # The intent model reads the completed standalone question. Its
         # fine-grained extraction is a display aid rather than a catalog
@@ -256,6 +257,11 @@ def _request_extraction_parameters(
         compact_surface = re.sub(r"\s+", "", surface).casefold()
         position = compact_question.find(compact_surface)
         if position < 0:
+            if not grounded:
+                # Without accepted display evidence, a value absent from the
+                # visible question is a model guess and must not leak into
+                # the public trace (frozen display contract).
+                continue
             position = len(compact_question) + sequence
         ordered.append((position, sequence, f"{surface}（{'/'.join(labels)}）"))
     return list(dict.fromkeys(item[2] for item in sorted(ordered)))
