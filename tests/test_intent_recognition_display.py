@@ -24,6 +24,32 @@ from app.presentation.intent_recognition import (
 IDENTITY = TrustedIdentity(tenant_id="tenant", user_id="user")
 
 
+def test_completed_question_displays_classifier_structure_before_catalog_binding():
+    request = CanonicalAnalysisRequest(
+        conversation_id="completed-structure-display",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="请提供南京哪些医院使用费森尤斯产品。",
+        rewritten_question="请提供南京哪些医院使用费森尤斯产品。",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="医院",
+        fields=["医院名称"],
+        filters=[
+            {"field": "城市", "operator": "EQ", "value": "南京"},
+            {"field": "产品", "operator": "EQ", "value": "费森尤斯"},
+        ],
+    )
+
+    rendered = render_intent_recognition_display_v2(
+        build_intent_recognition_display_v2(request, semantic_extractions=())
+    )
+
+    assert "结构化参数提取：" in rendered
+    assert "南京（筛选值）" in rendered
+    assert "费森尤斯产品（筛选值）" in rendered
+    assert "医院（业务对象）" in rendered
+
+
 def test_resolved_context_and_intent_decision_render_as_nonduplicated_steps():
     semantic_extractions = [{
         "surface": "上海",

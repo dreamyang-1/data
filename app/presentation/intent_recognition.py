@@ -189,10 +189,20 @@ def _request_extraction_parameters(
 
     display = dict(request.semantic_display_slots or {})
     if not display:
-        # Raw classifier fields are candidates, not catalog-grounded facts.
-        # Keep them out of the public trace when neither V2 nor the display
-        # resolver supplied accepted semantic evidence.
-        return []
+        # The intent model reads the completed standalone question. Its
+        # fine-grained extraction is a display aid rather than a catalog
+        # binding contract, so show it before ASL resolves physical fields.
+        display = {
+            "metrics": [
+                metric.canonical_name or metric.input
+                for metric in request.metrics
+                if metric.canonical_name or metric.input
+            ],
+            "dimensions": list(request.dimensions),
+            "entity": request.entity,
+            "fields": list(request.fields),
+            "filters": list(request.filters),
+        }
     metrics = _unique_text(display.get("metrics"))
     dimensions = _unique_text(display.get("dimensions"))
     entity = _single_line(display.get("entity"), 120)
