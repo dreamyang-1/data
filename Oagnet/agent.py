@@ -6100,6 +6100,12 @@ def _select_surface_mention_match(
         ).ratio()
         if _administrative_suffix_completion(mention, canonical):
             ratio = 1.0
+        if match_type != "EXACT" and ratio < 0.5:
+            # A weak containment/subsequence hit (for example the digit "2"
+            # of a date range like "2025年10月至12月" matching an enum code)
+            # must not inject an unrelated filter; only exact or strong hits
+            # are adopted.  The mention then falls back to the unmatched path.
+            continue
         key = (-rank[match_type], round(ratio, 6))
         if best_key is None or key > best_key:
             best_key = key
