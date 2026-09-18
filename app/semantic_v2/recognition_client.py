@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 
 import httpx
 from jsonschema import Draft202012Validator
@@ -102,6 +103,42 @@ class RecognitionFailure(ValueError):
         )
 
 
+def _completed_question_prefix(buffer: str) -> str | None:
+    """Best-effort prefix of a still-streaming ``completed_question`` value.
+
+    The public progress event only needs the visible prefix, so an unfinished
+    escape sequence simply ends the prefix instead of failing the stream.
+    """
+    match = re.search(r'"completed_question"\s*:\s*"', buffer)
+    if match is None:
+        return None
+    escapes = {'n': '\n', 't': '\t', 'r': '\r', '"': '"', '\\': '\\', '/': '/',
+               'b': '\b', 'f': '\f'}
+    value = []
+    index = match.end()
+    while index < len(buffer):
+        char = buffer[index]
+        if char == '"':
+            break
+        if char == '\\' and index + 1 < len(buffer):
+            nxt = buffer[index + 1]
+            if nxt == 'u':
+                digits = buffer[index + 2:index + 6]
+                if len(digits) == 4 and all(c in '0123456789abcdefABCDEF' for c in digits):
+                    value.append(chr(int(digits, 16)))
+                    index += 6
+                    continue
+                break
+            if nxt in escapes:
+                value.append(escapes[nxt])
+                index += 2
+                continue
+            break
+        value.append(char)
+        index += 1
+    return ''.join(value) or None
+
+
 def _validate_exact_dynamic_schema(instance, schema, *, stage=None) -> None:
     """Fail closed on the exact schema issued for this model invocation."""
     try:
@@ -168,6 +205,26 @@ class RecognitionModelClient:
             progress_phase=phase,
         )
 
+    @staticmethod
+    async def _emit_completed_question_prefix(stage: str, buffer: str) -> None:
+        """Publish the visible completed-question prefix while streaming.
+
+        The intent section otherwise stays silent until the full structured
+        JSON finishes. The prefix is display-only progress; the authoritative
+        value still comes from the validated final parse.
+        """
+        if stage != 'v2_current_turn':
+            return
+        prefix = _completed_question_prefix(buffer)
+        if not prefix:
+            return
+        await emit_progress(
+            'INTENT_RECOGNITION',
+            'RUNNING',
+            f'补全后的问题：{prefix}',
+            progress_phase='V2_CURRENT_TURN_COMPLETED_QUESTION_STREAMING',
+        )
+
     async def _stream_choice(self, client, *, headers, body, stage, timing):
         async with client.stream(
             'POST', '/chat/completions', headers=headers,
@@ -184,6 +241,7 @@ class RecognitionModelClient:
             finish_reason = None
             refusal = None
             published_start = False
+            published_prefix = False
             async for line in response.aiter_lines():
                 if not line.startswith('data:'):
                     continue
@@ -209,6 +267,11 @@ class RecognitionModelClient:
                         timing.mark_first_result()
                         await self._emit_stream_started(stage)
                         published_start = True
+                    if not published_prefix:
+                        buffer = ''.join(fragments)
+                        if _completed_question_prefix(buffer) is not None:
+                            await self._emit_completed_question_prefix(stage, buffer)
+                            published_prefix = True
             return ''.join(fragments), finish_reason, refusal
 
     async def complete(self, *, stage, instruction, context, output_model, schema=None):
