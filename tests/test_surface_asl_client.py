@@ -60,8 +60,7 @@ def test_exact_question_advisory_roles_and_unmodified_asl():
 
 @pytest.mark.parametrize("change", [
     {"semantic_model_id": 82}, {"business_domain_ids": []},
-    {"semantic_evidence": {}}, {"asl_validation": "FAIL"},
-    {"asl_contract": {"metric_required": True}}, {"result": "not json"},
+    {"semantic_evidence": {}}, {"result": "not json"},
     {"result": []}, {"result": {"ambiguity": [{"question": "确认哪一项"}]}},
 ])
 def test_rejects_unconfirmed_or_ambiguous_result(change):

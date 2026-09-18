@@ -15,7 +15,7 @@ from app.observability.call_timing import track_operation
 
 async def generate_surface_asl(
     client, settings, *, completed_question, mentions, authorized_scope,
-    identity, application_id, request_id, time_range=None,
+    identity, application_id, request_id, time_range=None, confirmed_metrics=(),
 ):
     """Return validated Oagnet evidence without rewriting the generated ASL."""
     from app.domain.semantic_scope import AuthorizedSemanticScope
@@ -58,6 +58,26 @@ async def generate_surface_asl(
     ambiguities = asl.get("ambiguity", [])
     if not isinstance(ambiguities, list):
         raise AdapterError("ASL_RESPONSE_INVALID", "ASL ambiguity must be a list")
+    if confirmed_metrics and ambiguities:
+        remaining = [
+            item for item in ambiguities
+            if not (
+                isinstance(item, dict)
+                and str(item.get("type") or "").casefold() in {
+                    "metric", "metric_selection", "indicator", "指标",
+                }
+            )
+        ]
+        if len(remaining) != len(ambiguities):
+            asl["metrics"] = [
+                {
+                    "name": str(metric.metric_id or metric.canonical_name or metric.input).split(":")[-1],
+                    "alias": metric.canonical_name or metric.input,
+                }
+                for metric in confirmed_metrics
+            ]
+            asl["ambiguity"] = remaining
+            ambiguities = remaining
     if time_range is not None and ambiguities:
         remaining = [
             item for item in ambiguities

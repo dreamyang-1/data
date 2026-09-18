@@ -664,9 +664,8 @@ class DataAnalysisOrchestrator:
                         planning_pending.request, chat.question
                     )
                     if confirmed_pending_choice is not None:
-                        planning_question = render_execution_question(
-                            planning_pending.request,
-                            confirmation=confirmed_pending_choice["confirmation"],
+                        planning_question = self._completed_question_with_choice(
+                            planning_pending.request, confirmed_pending_choice
                         )
             independent_chat = (
                 raw_request.primary_intent == PrimaryIntent.CHAT
@@ -7779,6 +7778,43 @@ class DataAnalysisOrchestrator:
         matches = [index for index, aliases in enumerate(members) if surface in aliases]
         return matches[0] if len(matches) == 1 else None
 
+    @staticmethod
+    def _completed_question_with_choice(
+        pending: CanonicalAnalysisRequest, choice: dict[str, Any]
+    ) -> str:
+        ambiguity: SemanticAmbiguity = choice["ambiguity"]
+        detail = choice.get("detail") or {}
+        completed = pending.rewritten_question or pending.original_question
+        selected = str(
+            detail.get("canonical_value")
+            or detail.get("value")
+            or detail.get("canonical_name")
+            or choice.get("label")
+            or ""
+        ).strip()
+        phrase = str(ambiguity.phrase or "").strip()
+        missing_values: list[str] = []
+        for item in pending.filters:
+            raw = item.get("value") if isinstance(item, dict) else None
+            values = raw if isinstance(raw, list) else [raw]
+            for value in values:
+                text = str(value or "").strip()
+                if text and text not in completed and text not in missing_values:
+                    missing_values.append(text)
+        if missing_values:
+            completed = completed.rstrip("。.!！") + "，范围：" + "、".join(missing_values) + "。"
+        missing_outputs = [
+            str(value).strip() for value in pending.fields
+            if str(value).strip() and str(value).strip() not in completed
+        ]
+        if missing_outputs:
+            completed = completed.rstrip("。.!！") + "，返回：" + "、".join(missing_outputs) + "。"
+        if phrase and selected and phrase in completed:
+            return completed.replace(phrase, selected, 1)
+        if selected and selected not in completed:
+            return completed.rstrip("。.!！") + f"，已确认{selected}。"
+        return completed
+
     @classmethod
     def _apply_semantic_clarification_choice(
         cls,
@@ -7862,6 +7898,15 @@ class DataAnalysisOrchestrator:
         elif ambiguity.type == "metric":
             metric_name = canonical_name or choice["label"]
             metric_id = str(detail.get("metric_id") or "").strip() or None
+            label_metric = re.fullmatch(
+                r"\s*(.+?)\s*[（(]([A-Za-z_][A-Za-z0-9_.:-]*)[）)]\s*",
+                str(choice["label"]),
+            )
+            if label_metric:
+                metric_name = label_metric.group(1).strip()
+                metric_id = metric_id or label_metric.group(2).strip()
+            if metric_id and ":" not in metric_id and ambiguity.semantic_model_id:
+                metric_id = f"{ambiguity.semantic_model_id}:{metric_id}"
             if metric_id is None and canonical_code:
                 metric_id = (
                     canonical_code
@@ -8003,8 +8048,13 @@ class DataAnalysisOrchestrator:
         ]
         target.semantic_ambiguities = remaining
         target.ambiguities = [item.question for item in remaining]
+        resolved_slots = {"semantic_ambiguity"}
+        if ambiguity.type == "metric":
+            resolved_slots.add("metric")
+        elif ambiguity.type == "dimension":
+            resolved_slots.add("dimension")
         target.missing_slots = [
-            slot for slot in pending.missing_slots if slot != "semantic_ambiguity"
+            slot for slot in pending.missing_slots if slot not in resolved_slots
         ]
         if remaining:
             target.missing_slots.append("semantic_ambiguity")
@@ -8021,8 +8071,9 @@ class DataAnalysisOrchestrator:
                     "DEFAULT_TIME_RANGE=",
                 ))
             ]
-        target.rewritten_question = render_execution_question(
-            target, confirmation=choice["confirmation"]
+        target.original_question = pending.original_question
+        target.rewritten_question = cls._completed_question_with_choice(
+            pending, choice
         )
         return target
 
