@@ -512,8 +512,12 @@ def _completed_question_for_display(
                 f"查询{time_text}{geographic_text}销售过"
                 f"{product_text}的{request.entity}名单"
             )
+    pending_merged = (
+        request.turn_relation == TurnRelation.CLARIFICATION_RESPONSE
+        and request.context_mode != ContextMode.NONE
+    )
     candidate = request.rewritten_question or request.original_question
-    if not re.match(
+    if not pending_merged and not re.match(
         r"^(?:查询指标|查询明细|分析趋势|执行比较分析|分析构成占比|"
         r"检测异常|执行归因分析|执行预测|生成分析报告|查询指标口径|"
         r"查询数据血缘|检查数据质量)[；;]",
@@ -521,10 +525,22 @@ def _completed_question_for_display(
     ):
         return candidate
 
+    if pending_merged:
+        # The rewritten question was produced before the clarification answer
+        # merged; it still carries the pre-choice time/filters (for example a
+        # default one-year range the user just cleared). Render the final
+        # slots instead of replaying that stale text.
+        return _natural_question_from_slots(request)
+
     # The text above is an internal execution contract, not a completed user
     # question. Render common analytical shapes as natural Chinese from the
     # final slots. This projection remains presentation-only and never changes
     # the ASL-facing ``rewritten_question``.
+    return _natural_question_from_slots(request)
+
+
+def _natural_question_from_slots(request: CanonicalAnalysisRequest) -> str:
+    """Render common analytical shapes as natural Chinese from final slots."""
     display = request.semantic_display_slots or {}
     metric_names = _unique_text(display.get("metrics")) or list(dict.fromkeys(
         metric.canonical_name or metric.input
