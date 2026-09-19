@@ -24,14 +24,19 @@ async def test_completed_question_uses_surface_executor_and_shared_result_pipeli
                 quality_status="PASS", snapshot_id="surface-test"))
 
     orchestrator.adapters.query.retrieval.query_surface = query_surface
-    chat = ChatRequest(question="请提供医院名称明细", conversation_id="surface-test",
+    chat = ChatRequest(question="请提供南京市哪些医院使用费森尤斯产品。", conversation_id="surface-test",
         semantic_model_id=81, message_id="m1", application_id="app")
     chat._completed_question_execution = True
+    # This represents the raw short follow-up parse.  It must not replace the
+    # entities extracted from the completed standalone question above.
     chat._semantic_extraction_items = ({"surface": "医院", "labels": ("业务对象",)},)
     result = await orchestrator._handle(chat, TrustedIdentity(tenant_id="t", user_id="u"))
     assert len(calls) == 1
     assert calls[0][0] == chat.question
-    assert calls[0][1] == [{"text": "医院", "role_hint": "业务对象"}]
+    assert calls[0][1] == [
+        {"text": "南京市", "role_hint": None},
+        {"text": "费森尤斯", "role_hint": None},
+    ]
     assert result.status == "COMPLETED"
     assert "示例医院" in result.answer
 

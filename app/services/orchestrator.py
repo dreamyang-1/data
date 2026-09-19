@@ -3133,24 +3133,11 @@ class DataAnalysisOrchestrator:
         request.rewritten_question = chat.question
         bind_authorized_scope(request, chat.authorized_semantic_scope)
         # This classifier read ``chat.question``, which is the completed
-        # question supplied by the context bridge.  Raw-turn extraction (for
-        # example only “上海市” from “上海市呢”) must never constrain ASL.
-        # Fine-grained surface extraction with free role labels is advisory
-        # evidence for downstream vector matching; it never binds fields.
-        extraction_mentions = [
-            {
-                "text": str(item.get("surface") or "").strip(),
-                "role_hint": (
-                    "、".join(str(label) for label in item.get("labels") or [])[:80]
-                    or None
-                ),
-            }
-            for item in (chat._semantic_extraction_items or ())
-            if isinstance(item, dict)
-            and str(item.get("surface") or "").strip()
-            and len(str(item.get("surface") or "").strip()) <= 300
-        ][:50]
-        mentions = extraction_mentions or [
+        # question supplied by the context bridge.  Build every advisory ASL
+        # mention from that same completed question.  Raw-turn extraction (for
+        # example only “上海市” from “上海市呢”) must never replace inherited
+        # product, metric, result-object or time evidence.
+        mentions = [
             {
                 "text": str(item),
                 "role_hint": None,

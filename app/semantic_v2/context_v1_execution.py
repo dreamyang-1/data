@@ -68,7 +68,6 @@ from .recognition import (
     RawTurnPlanner,
     RecognizedStandaloneNewTask,
     RecognizedTaskContextEdit,
-    current_turn_extraction_items,
 )
 from .recognition_client import RecognitionFailure, RecognitionModelClient
 from .semantic_decision import build_semantic_decision
@@ -1331,12 +1330,6 @@ class V2ContextV1ExecutionBridge:
                     "fallback_reason", semantic_decision.fallback_reason
                 )
             step = _completed_question_step(resolved)
-            semantic_parse = resolved.semantic_parse or resolved.standalone_parse
-            semantic_extractions = (
-                current_turn_extraction_items(semantic_parse)
-                if semantic_parse is not None
-                else ()
-            )
             intent_context_progress_emitted = step is not None
             if step is not None:
                 await emit_progress(
@@ -1346,7 +1339,6 @@ class V2ContextV1ExecutionBridge:
                         original_question=chat.question,
                         completed_question=resolved.completed_question,
                         business_domains=business_domain_labels,
-                        semantic_extractions=semantic_extractions,
                     ),
                     progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
                     display_model="IntentRecognitionContextProgressV2",
@@ -1375,7 +1367,13 @@ class V2ContextV1ExecutionBridge:
                 intent_context_progress_emitted
             )
             execution_chat._business_domain_labels = business_domain_labels
-            execution_chat._semantic_extraction_items = semantic_extractions
+            # The V2 parse describes the raw current turn.  On a follow-up it
+            # may contain only a fragment such as ``上海市``.  Passing those
+            # mentions downstream made the fragment override entities that
+            # were correctly retained in the completed question.  V1 now
+            # extracts display fields and ASL hints only from the completed
+            # standalone question it actually executes.
+            execution_chat._semantic_extraction_items = ()
             execution_chat._semantic_decision = semantic_decision
             with track_operation(
                 "V1_ORCHESTRATION",
