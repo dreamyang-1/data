@@ -45,7 +45,12 @@ from app.stores.long_memory import (
 
 def service() -> DataAnalysisOrchestrator:
     return DataAnalysisOrchestrator(
-        settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
+        settings=Settings(
+            _env_file=None,
+            env="test",
+            adapter_mode="mock",
+            intent_model_enabled=False,
+        ),
         classifier=RuleBasedIntentClassifier(),
         adapters=build_mock_adapters(),
         sessions=InMemorySessionStore(),
