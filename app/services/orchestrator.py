@@ -11643,6 +11643,12 @@ class DataAnalysisOrchestrator:
             ),
             "ASL_ANALYSIS_SHAPE_INVALID": "语义查询没有返回分析所需的分组维度，本次未执行可能产生误导的单值分析。",
             "SQL_TRANSLATION_FAILED": "ASL 转 SQL 服务未能生成可执行查询。",
+            "SEMANTIC_VALIDATION_FAILED": (
+                "本次语义查询未通过语义校验：查询条件无法在已发布的语义模型中"
+                "唯一确定查询主体或其实体关系路径，为避免返回错误数据，本次未执行查询。"
+                "请在完整问题中写明查询对象后重试；若反复出现，需系统维护人员检查"
+                "该模型的实体、关系路径与主体绑定配置。"
+            ),
             "SQL_EXECUTION_FAILED": "SQL 查询执行失败，本次不返回数据。",
             "SQL_TRANSLATION_ENDPOINT_UNAVAILABLE": "SQL服务尚未部署独立翻译接口，请先发布或重启新版SQL Translator。",
             "SQL_EXECUTION_ENDPOINT_UNAVAILABLE": "SQL服务尚未部署独立执行接口，请先发布或重启新版SQL Translator。",

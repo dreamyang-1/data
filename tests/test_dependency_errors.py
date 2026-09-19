@@ -72,6 +72,10 @@ def test_unresolved_entity_message_names_the_exact_unresolved_value() -> None:
 
 
 def test_filter_error_reports_actual_filter_and_candidates() -> None:
+    # STALE_TEST(2026-09-18): ISSUE-010200 / ISSUE-231600 changed the contract.
+    # Unconfirmed candidates no longer render as authoritative field labels and
+    # internal "语义层需配置" guidance is stripped from user-facing text. The
+    # assertion now pins the frozen wording instead of the old candidate dump.
     error = AdapterError(
         "DEPENDENCY_CONTRACT_REJECTED",
         "sanitized",
@@ -86,9 +90,43 @@ def test_filter_error_reports_actual_filter_and_candidates() -> None:
     message = DataAnalysisOrchestrator._dependency_message(error)
 
     assert "“商品品类”" in message
-    assert "产品名称（product.product_name）" in message
-    assert "产品编码（product.product_code）" in message
-    assert "字段角色和关系路径" in message
+    assert "没有绑定到唯一且可执行的语义字段" in message
+    assert "语义层需检查" in message
+    assert "语义层需配置" not in message
+
+
+def test_metric_selection_invalid_message_keeps_actionable_guidance() -> None:
+    error = AdapterError(
+        "DEPENDENCY_CONTRACT_REJECTED",
+        "sanitized",
+        status_code=422,
+        upstream_code="ASL_METRIC_SELECTION_INVALID",
+        details={"expected_metric_codes": ["amount_with_tax_total"]},
+    )
+
+    message = DataAnalysisOrchestrator._dependency_message(error)
+
+    assert "指标口径没有通过语义合同校验" in message
+    assert "本次要求的指标为" in message
+    assert "语义层需配置" not in message
+    assert "规范代码" not in message
+    assert "所属业务域" not in message
+
+
+def test_semantic_validation_failure_never_leaks_internal_error_code() -> None:
+    error = AdapterError(
+        "SQL_TRANSLATION_FAILED",
+        "SQL生成失败: 无法确定主实体",
+        status_code=400,
+        upstream_code="SEMANTIC_VALIDATION_FAILED",
+    )
+
+    message = DataAnalysisOrchestrator._dependency_message(error)
+
+    assert "SEMANTIC_VALIDATION_FAILED" not in message
+    assert "未提供更具体的可公开诊断信息" not in message
+    assert "未通过语义校验" in message
+    assert "查询主体" in message
 
 
 def test_sql_operator_error_explains_the_preserved_filter() -> None:

@@ -14,6 +14,10 @@ from app.domain.models import (
 )
 from app.intent import RuleBasedIntentClassifier
 from app.services import DataAnalysisOrchestrator
+from app.services.legacy_guards import (
+    extract_quoted_choice_candidate,
+    pending_answer_admissibility,
+)
 from app.services.progress import progress_scope
 from app.stores import InMemorySessionStore
 

@@ -1686,6 +1686,36 @@ class RuleBasedIntentClassifier:
                 )
                 if assumption not in request.assumptions
             )
+        # Vague casual sales phrases ("销售数据/卖得怎么样/收入") carry no
+        # explicit measure.  When no metric is already bound and the question
+        # does not name a concrete caliber (含税/不含税/销售额/销量/数量/订单数/
+        # 毛利/利润), bind the conventional amount metric so downstream ASL
+        # generation does not ask the user to restate a standard shape.
+        # Real ambiguity (user explicitly choosing between calibers) is
+        # preserved because the exclusion regex matches those utterances.
+        if (
+            request.primary_intent in {
+                PrimaryIntent.METRIC_QUERY,
+                PrimaryIntent.TREND_ANALYSIS,
+                PrimaryIntent.DETAIL_QUERY,
+            }
+            and not request.metrics
+            and re.search(
+                r"销售数据|卖得怎么样|卖得如何|带来了多少收入|多少收入|收入(?:是|有)?多少",
+                compact,
+            )
+            and not re.search(
+                r"含税|不含税|销售(?:总)?额|销售金额|销量|销售(?:总)?数量|"
+                r"订单(?:数|笔数)|销售成本|毛利|利润|单价|走货量",
+                compact,
+            )
+        ):
+            request.metrics = [MetricRef(input="含税销售总额")]
+            if "SALES_PHRASE_DEFAULT_METRIC=含税销售总额" not in request.assumptions:
+                request.assumptions.append("SALES_PHRASE_DEFAULT_METRIC=含税销售总额")
+            request.missing_slots = [
+                slot for slot in request.missing_slots if slot != "metric"
+            ]
         cls._apply_precomputed_metric_windows(request, compact)
 
         if (

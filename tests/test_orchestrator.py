@@ -452,6 +452,40 @@ async def test_semantic_ambiguity_choices_are_visible_in_clarification_answer():
     ]
 
 
+@pytest.mark.asyncio
+async def test_all_time_default_suppresses_optional_time_range_pending():
+    agent = service()
+    request = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id="optional-time-range-pending",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询销售额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        assumptions=["TIME_SCOPE=ALL_TIME"],
+        missing_slots=["semantic_ambiguity"],
+        semantic_ambiguities=[SemanticAmbiguity(
+            type="time_anchor",
+            question="请选择查询时间范围。",
+            candidates=["this_month", "last_month", "this_year", "custom"],
+            affected_slots=["time_range"],
+        )],
+    )
+
+    response = await agent._request_clarification(
+        request,
+        rounds=1,
+        source_stage="OAGNET_ASL_GENERATION",
+    )
+
+    assert response.status == "SAFE_FALLBACK"
+    assert response.clarification_decision_traces[0].safe_default_available is True
+    assert response.clarification_decision_traces[0].decision == "SUPPRESS"
+    assert await agent.sessions.get_pending(
+        "t1", "u1", "app1", "optional-time-range-pending"
+    ) is None
+
+
 def test_semantic_ambiguity_numeric_choice_binds_selected_catalog_attribute():
     pending = _shanghai_region_ambiguity_request()
     choice = DataAnalysisOrchestrator._semantic_clarification_choice(pending, "选2")
@@ -1304,6 +1338,84 @@ async def test_unqualified_sales_metric_uses_auditable_default_time_range():
     assert first.intent == PrimaryIntent.METRIC_QUERY
     assert first.reliability and first.reliability.level == "HIGH"
     assert first.reliability.gates["query_succeeded"] is True
+
+
+@pytest.mark.asyncio
+async def test_all_time_default_retries_optional_time_anchor_ambiguity_once():
+    base = build_mock_adapters()
+
+    class OptionalTimeAmbiguityOnce:
+        def __init__(self):
+            self.calls = 0
+            self.retry_request = None
+
+        async def health(self):
+            return True
+
+        async def rewrite_health(self):
+            return True
+
+        async def query(
+            self, request, identity, *, semantic_model_id, business_domain_id
+        ):
+            self.calls += 1
+            if self.calls == 1:
+                raise AdapterError(
+                    "ASL_AMBIGUOUS",
+                    "optional time scope was treated as blocking",
+                    details=[{
+                        "type": "time_anchor",
+                        "question": "请选择查询时间范围。",
+                        "candidates": [
+                            "this_month", "last_month", "this_year", "custom",
+                        ],
+                        "affected_slots": ["time_range"],
+                    }],
+                )
+            self.retry_request = request.model_copy(deep=True)
+            return await base.retrieval.query(
+                request,
+                identity,
+                semantic_model_id=semantic_model_id,
+                business_domain_id=business_domain_id,
+            )
+
+    retrieval = OptionalTimeAmbiguityOnce()
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=AdapterBundle(
+            semantic=base.semantic,
+            retrieval=retrieval,
+            knowledge=base.knowledge,
+            policy=base.policy,
+            analysis=base.analysis,
+        ),
+        sessions=InMemorySessionStore(),
+    )
+
+    response = await agent.handle(
+        ChatRequest(
+            semantic_model_id=81,
+            application_id="app1",
+            conversation_id="optional-time-anchor-default",
+            message_id="m1",
+            question="帮我查一下销售额",
+        ),
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+    )
+
+    assert response.status == "COMPLETED"
+    assert retrieval.calls == 2
+    assert retrieval.retry_request is not None
+    assert "TIME_SCOPE=ALL_TIME" in retrieval.retry_request.assumptions
+    assert any(
+        value.startswith("SEMANTIC_QUERY_RETRY:")
+        for value in retrieval.retry_request.assumptions
+    )
+    assert await agent.sessions.get_pending(
+        "t1", "u1", "app1", "optional-time-anchor-default"
+    ) is None
 
 
 @pytest.mark.asyncio

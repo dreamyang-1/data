@@ -7248,6 +7248,64 @@ def _get_chat_model():
     )
 
 
+def _detail_projection_subject_candidate(ast: dict, knowledge: dict) -> str | None:
+    """Pick one proven subject for a metricless detail projection.
+
+    Detail projections have no metric dependency to bind the subject, so an
+    omitted model value would otherwise reach the translator unresolved.  The
+    replacement must still be a recalled entity whose single registered table
+    reaches every table referenced by the projected and filtered fields
+    through the recalled relation graph.  The unique nearest hub wins; ties
+    and unreachable tables stay unresolved so validation fails closed.
+    """
+    entities, attributes_by_entity = _scoped_entity_attributes(knowledge)
+    if not entities:
+        return None
+    referenced = _ast_referenced_tables(ast, knowledge)
+    for key in ("dimensions", "filters"):
+        for item in ast.get(key) or []:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name") or item.get("field") or "").strip()
+            if name in entities:
+                referenced.update(
+                    field.split(".", 1)[0]
+                    for field in attributes_by_entity.get(name, {})
+                    if _PHYSICAL_FIELD.fullmatch(field)
+                )
+    if not referenced:
+        return None
+    graph = _recalled_relation_table_graph(knowledge)
+    best: list[tuple[int, str]] = []
+    for entity_code, fields in attributes_by_entity.items():
+        tables = {
+            field.split(".", 1)[0]
+            for field in fields
+            if _PHYSICAL_FIELD.fullmatch(field)
+        }
+        if len(tables) != 1:
+            continue
+        table = next(iter(tables))
+        distances = {table: 0}
+        frontier = [table]
+        while frontier:
+            current = frontier.pop(0)
+            for neighbor in graph.get(current, ()):
+                if neighbor not in distances:
+                    distances[neighbor] = distances[current] + 1
+                    frontier.append(neighbor)
+        if any(referenced_table not in distances for referenced_table in referenced):
+            continue
+        worst = max(distances[referenced_table] for referenced_table in referenced)
+        best.append((worst, entity_code))
+    if not best:
+        return None
+    best.sort()
+    if len(best) > 1 and best[0][0] == best[1][0]:
+        return None
+    return best[0][1]
+
+
 def _normalize_dynamic_subject(
     content: str,
     semantic_model_id: int,
@@ -7361,6 +7419,28 @@ def _normalize_dynamic_subject(
                 subject["entity"] = entity_code
                 remember_subject(entity_code)
             break
+
+    # A metricless detail projection carries no metric dependency or time
+    # anchor to bind the subject.  When the model omits it, recover the single
+    # proven hub from the recalled scope; otherwise leave it unresolved so
+    # validation fails closed.
+    current_subject = ast.get("subject")
+    current_entity = (
+        str(current_subject.get("entity") or "").strip()
+        if isinstance(current_subject, dict)
+        else ""
+    )
+    has_projection = any(
+        isinstance(item, dict) and str(item.get("name") or "").strip()
+        for item in ast.get("dimensions") or []
+    )
+    if not current_entity and not selected_metrics and has_projection:
+        fallback_entity = _detail_projection_subject_candidate(ast, knowledge or {})
+        if fallback_entity:
+            subject = ast.setdefault("subject", {})
+            if isinstance(subject, dict):
+                subject["entity"] = fallback_entity
+                remember_subject(fallback_entity)
     return json.dumps(ast, ensure_ascii=False)
 
 # Runtime objects are read-only on import. Index rebuilds must be explicit API calls.

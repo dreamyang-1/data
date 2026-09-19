@@ -533,6 +533,103 @@ async def test_region_and_named_product_values_are_independently_grounded():
 
 
 @pytest.mark.asyncio
+async def test_verified_context_filter_skips_unstable_recall_rebinding():
+    # A follow-up turn carrying a previously executed dealer filter must keep
+    # its proven attribute even when vector recall returns a wrong family.
+    request = CanonicalAnalysisRequest(
+        conversation_id="verified-context-followup",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="杭州琅骏医疗科技有限公司主要向哪些医院供货？",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="经销商",
+        fields=["经销商名称"],
+        filters=[{
+            "field": "经销商名称",
+            "operator": "EQ",
+            "value": "杭州琅骏医疗科技有限公司",
+        }],
+    )
+    searcher = FakeSearcher([{
+        "record_id": "wrong-family-category",
+        "score": 0.99,
+        "entity_name": "商品主数据",
+        "attribute_name": "商品品类",
+        "attribute_code": "product_category",
+        "attribute_value": "低值耗材",
+        "business_domain_id": 205,
+        "semantic_model_id": 81,
+    }])
+
+    ambiguities = await QuestionRewriter(searcher).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+        verified_filter_bindings=((
+            "杭州琅骏医疗科技有限公司",
+            "杭州琅骏医疗科技有限公司",
+            "经销商名称",
+            "dealer_name",
+        ),),
+    )
+
+    assert ambiguities == []
+    assert searcher.calls == []
+    assert request.filters == [{
+        "field": "经销商名称",
+        "operator": "EQ",
+        "value": "杭州琅骏医疗科技有限公司",
+    }]
+    assert len(request.semantic_filter_bindings) == 1
+    binding = request.semantic_filter_bindings[0]
+    assert binding.attribute_code == "dealer_name"
+    assert binding.canonical_value == "杭州琅骏医疗科技有限公司"
+
+
+@pytest.mark.asyncio
+async def test_unverified_filter_still_goes_through_recall():
+    # Independent new questions carry no proven bindings; recall keeps its
+    # normal ambiguity/binding behavior.
+    request = CanonicalAnalysisRequest(
+        conversation_id="unverified-new-question",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询胸腹腔内窥镜手术系统用手术器械的销售总额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        entity="产品",
+        fields=["商品名称"],
+        filters=[{"field": "商品名称", "operator": "EQ", "value": "新引入产品"}],
+    )
+    searcher = FakeSearcher([{
+        "record_id": "product-hit",
+        "score": 1.0,
+        "entity_name": "商品主数据",
+        "attribute_name": "商品名称",
+        "attribute_code": "product_name",
+        "attribute_value": "新引入产品",
+        "business_domain_id": 205,
+        "semantic_model_id": 81,
+        "semantic_model_version": "published-81",
+    }])
+
+    ambiguities = await QuestionRewriter(searcher).ground_executable_filters(
+        request,
+        semantic_model_id=81,
+        business_domain_id=None,
+        business_domain_ids=[],
+    )
+
+    assert ambiguities == []
+    assert searcher.calls == [("新引入产品", 81, None, [])]
+    assert request.filters == [
+        {"field": "商品名称", "operator": "EQ", "value": "新引入产品"},
+    ]
+    assert len(request.semantic_filter_bindings) == 1
+    assert request.semantic_filter_bindings[0].attribute_code == "product_name"
+
+
+@pytest.mark.asyncio
 async def test_context_value_resolution_reuses_v1_entity_retrieval_across_product_attributes():
     searcher = FakeSearcher([
         {

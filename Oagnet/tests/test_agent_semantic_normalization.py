@@ -119,6 +119,112 @@ class SemanticReferenceNormalizationTests(unittest.TestCase):
 
         self.assertEqual("sales_order", result["subject"]["entity"])
 
+    @staticmethod
+    def _entity(code: str, table: str, column: str):
+        return SimpleNamespace(metadata={
+            "entity_code": code,
+            "entity_name": code,
+            "attributes": json.dumps([{
+                "attr_code": column,
+                "field_mapping": {"mappingTable": table, "mappingColumn": column},
+            }]),
+        })
+
+    @staticmethod
+    def _relation(source_field: str, target_field: str):
+        return SimpleNamespace(metadata={
+            "join_key": json.dumps({
+                "source_field": source_field,
+                "target_field": target_field,
+            }),
+        })
+
+    def test_detail_projection_recovers_unique_hub_subject(self):
+        knowledge = {
+            "entities": [
+                self._entity("sales_order", "sales_order", "order_id"),
+                self._entity("product", "product", "product_name"),
+                self._entity("dealer", "dealer", "dealer_name"),
+            ],
+            "relations": [
+                self._relation("sales_order.product_id", "product.product_id"),
+                self._relation("sales_order.dealer_id", "dealer.dealer_id"),
+            ],
+        }
+        content = json.dumps({
+            "subject": {"entity": None},
+            "metrics": [],
+            "dimensions": [{"name": "product.product_name"}],
+            "filters": [{
+                "field": "dealer.dealer_name",
+                "operator": "=",
+                "value": "南京大乾医疗用品有限公司",
+            }],
+        })
+        result = json.loads(_normalize_dynamic_subject(
+            content, 81, [205], knowledge, resolver=lambda *_args: None,
+        ))
+        self.assertEqual("sales_order", result["subject"]["entity"])
+        self.assertIn("sales_order", knowledge["_resolved_subjects"])
+
+    def test_detail_projection_ambiguous_hubs_fail_closed(self):
+        knowledge = {
+            "entities": [
+                self._entity("hub_a", "hub_a", "key_id"),
+                self._entity("hub_b", "hub_b", "key_id"),
+                self._entity("product", "product", "product_name"),
+                self._entity("dealer", "dealer", "dealer_name"),
+            ],
+            "relations": [
+                self._relation("hub_a.product_id", "product.product_id"),
+                self._relation("hub_a.dealer_id", "dealer.dealer_id"),
+                self._relation("hub_b.product_id", "product.product_id"),
+                self._relation("hub_b.dealer_id", "dealer.dealer_id"),
+            ],
+        }
+        content = json.dumps({
+            "subject": {"entity": None},
+            "metrics": [],
+            "dimensions": [{"name": "product.product_name"}],
+            "filters": [{"field": "dealer.dealer_name", "operator": "=", "value": "X"}],
+        })
+        result = json.loads(_normalize_dynamic_subject(
+            content, 81, [205], knowledge, resolver=lambda *_args: None,
+        ))
+        self.assertIsNone(result["subject"]["entity"])
+
+    def test_detail_projection_keeps_existing_subject_and_metric_queries(self):
+        knowledge = {
+            "entities": [
+                self._entity("sales_order", "sales_order", "order_id"),
+                self._entity("product", "product", "product_name"),
+            ],
+            "relations": [
+                self._relation("sales_order.product_id", "product.product_id"),
+            ],
+        }
+        kept = json.dumps({
+            "subject": {"entity": "product"},
+            "metrics": [],
+            "dimensions": [{"name": "product.product_name"}],
+            "filters": [],
+        })
+        self.assertEqual(
+            "product",
+            json.loads(_normalize_dynamic_subject(
+                kept, 81, [205], knowledge, resolver=lambda *_args: None,
+            ))["subject"]["entity"],
+        )
+        metric_query = json.dumps({
+            "subject": {"entity": None},
+            "metrics": [{"name": "actual_payment_amount"}],
+            "dimensions": [{"name": "product.product_name"}],
+            "filters": [],
+        })
+        self.assertIsNone(json.loads(_normalize_dynamic_subject(
+            metric_query, 81, [205], knowledge, resolver=lambda *_args: None,
+        ))["subject"]["entity"])
+
 
 if __name__ == "__main__":
     unittest.main()

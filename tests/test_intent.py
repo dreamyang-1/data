@@ -1615,6 +1615,34 @@ def test_product_sales_overview_uses_auditable_defaults():
     assert "DEFAULT_TIME_GRANULARITY=month" in request.assumptions
 
 
+@pytest.mark.parametrize("question", [
+    "老板要看空心纤维血液透析器的销售数据",
+    "空心纤维血液透析器在各省卖得怎么样？",
+    "空心纤维血液透析器给公司带来了多少收入？",
+])
+def test_vague_sales_phrase_binds_default_amount_metric(question):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "vague-sales-phrase",
+    )
+
+    assert [metric.input for metric in request.metrics] == ["含税销售总额"]
+    assert "metric" not in request.missing_slots
+    assert "SALES_PHRASE_DEFAULT_METRIC=含税销售总额" in request.assumptions
+
+
+@pytest.mark.parametrize("question", [
+    "空心纤维血液透析器的含税销售额是多少？",
+    "空心纤维血液透析器的走货量怎么样？",
+    "空心纤维血液透析器卖了多少笔订单？",
+])
+def test_explicit_caliber_questions_keep_their_own_metric_path(question):
+    request = RuleBasedIntentClassifier().classify(
+        question, IDENTITY, "explicit-caliber",
+    )
+
+    assert "SALES_PHRASE_DEFAULT_METRIC=含税销售总额" not in request.assumptions
+
+
 def test_report_coverage_facets_infer_concrete_row_entities_and_fields():
     classifier = RuleBasedIntentClassifier()
     hospital = classifier.classify(

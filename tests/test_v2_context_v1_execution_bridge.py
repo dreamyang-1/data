@@ -1,7 +1,7 @@
 from dataclasses import replace
 import inspect
 import json
-from types import MethodType
+from types import MethodType, SimpleNamespace
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -36,9 +36,16 @@ from app.semantic_v2.context_question import (
     canonical_matches_execution,
     is_contextual_ellipsis,
     is_self_contained_execution_question,
+    _grain_completed_question,
+    _metric_only_completed_question,
+    _relation_target_completed_question,
     resolve_context_references,
 )
-from app.semantic_v2.models import ContextQuestionFilter, ContextQuestionState
+from app.semantic_v2.models import (
+    ContextQuestionEdit,
+    ContextQuestionFilter,
+    ContextQuestionState,
+)
 from app.semantic_v2.current_catalog import CurrentAuthorizedCatalog
 from app.semantic_v2.context_v1_execution import (
     ResolvedContextTurn,
@@ -2975,6 +2982,88 @@ async def test_grain_only_followup_uses_prior_task_without_inventing_time_range(
     assert executions[-1].question == expected
     assert executions[-1].history == []
     assert len(transport.calls) == 2
+
+
+def test_grain_followup_replaces_the_previous_grouping_dimension():
+    frame = ContextQuestionState(
+        original_question="按城市统计上海的销售额。",
+        execution_question="按城市统计上海的销售额。",
+        metrics=["销售额"],
+        dimensions=["城市"],
+        filters=[ContextQuestionFilter(
+            surface="上海",
+            canonical_value="上海市",
+            canonical_name="业务省份",
+            attribute_code="business_province",
+            semantic_family="REGION",
+            evidence_source="V1_SUCCESSFUL_QUERY_EVIDENCE",
+        )],
+        source_message_id="grain-prior",
+    )
+
+    for question in ("按月看。", "按月份呢？"):
+        completion = _grain_completed_question(
+            None,
+            SimpleNamespace(context_question=frame),
+            question,
+        )
+
+        assert completion is not None
+        assert completion.completed_question == "按月统计上海的销售额。"
+        assert completion.dimensions == ("月",)
+
+
+def test_relationship_followup_uses_structured_filter_when_frame_lost_it(
+    monkeypatch,
+):
+    frame = ContextQuestionState(
+        original_question="按月统计医院销售额。",
+        execution_question="按月统计医院销售额。",
+        metrics=["销售额"],
+        dimensions=["月"],
+        filters=[],
+        source_message_id="hospital-grain",
+    )
+    version = SimpleNamespace(
+        context_question=frame,
+        semantics=SimpleNamespace(filter_expression=object()),
+    )
+    monkeypatch.setattr(
+        "app.semantic_v2.context_question._structured_filter_surfaces",
+        lambda _version, family: ["测试医院"] if family == "HOSPITAL" else [],
+    )
+
+    completion = _relation_target_completed_question(
+        version, "采购了哪些产品？"
+    )
+
+    assert completion is not None
+    assert completion.completed_question == "查询测试医院采购了哪些产品。"
+    assert completion.filters is None
+
+    monkeypatch.setattr(
+        "app.semantic_v2.context_question._unique_catalog_surface",
+        lambda _session, _catalog_type, _surface: "订单笔数",
+    )
+    metric_completion = _metric_only_completed_question(
+        None, version, "订单笔数是多少？"
+    )
+    assert metric_completion is not None
+    assert metric_completion.completed_question == (
+        "查询测试医院的订单笔数，按月分组。"
+    )
+
+    version.context_question = frame.model_copy(update={
+        "last_edit": ContextQuestionEdit(
+            operation="CLEAR",
+            slot="filter_expression",
+            source_message_id="clear-hospital",
+            evidence_surface="不限医院",
+        ),
+    })
+    assert _relation_target_completed_question(
+        version, "采购了哪些产品？"
+    ) is None
 
 
 @pytest.mark.asyncio

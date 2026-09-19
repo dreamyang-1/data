@@ -1604,6 +1604,11 @@ def test_chat_stream_uses_document_chat_section_format():
 
 
 def test_missing_parameter_stream_uses_document_clarification_section_format():
+    # STALE_TEST(2026-09-18): ISSUE-20260918-020000 bound the vague phrase
+    # "销售数据" to the default metric 含税销售总额, so the old question now
+    # completes instead of clarifying. The format contract this test pins is
+    # "missing parameter -> document clarification sections"; the question is
+    # switched to one that still genuinely lacks a metric ("统计经销商").
     with TestClient(build_test_app()) as client:
         response = client.post(
             "/agent_chat/stream",
@@ -1612,7 +1617,7 @@ def test_missing_parameter_stream_uses_document_clarification_section_format():
                 "application_id": "app1",
                 "conversation_id": "document-clarification-format",
                 "message_id": "m1",
-                "question": "查询经销商销售数据",
+                "question": "统计经销商",
             },
         )
 
@@ -1628,7 +1633,7 @@ def test_missing_parameter_stream_uses_document_clarification_section_format():
 
     assert completed["status"] == "NEEDS_CLARIFICATION"
     assert "#### ◉ 意图识别" in thinking
-    assert "用户原始问句：查询经销商销售数据" in thinking
+    assert "用户原始问句：统计经销商" in thinking
     assert "#### 2、任务拆分与规划" in thinking
     assert "当前任务参数不完整，暂停子任务拆分" in thinking
     assert "#### 3、调研执行" in thinking

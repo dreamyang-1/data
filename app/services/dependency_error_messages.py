@@ -248,16 +248,13 @@ def render_dependency_error(exc: AdapterError) -> str | None:
             details, "expected_metric_codes", "required_metrics", "metric"
         )
         selected = _diagnostic_subject(details, "selected_metric_codes")
-        message = "指标口径没有通过语义合同校验。"
+        message = "指标口径没有通过语义合同校验，为避免返回错误数据，本次未执行查询。"
         if expected:
             message += f" 本次要求的指标为：{_quote_join(expected)}。"
-        if selected:
-            message += f" ASL 实际返回：{_quote_join(selected)}。"
         return (
             message
-            + "\n用户可补充：使用指标的完整业务名称和计算口径。"
-            + "\n语义层需配置：检查该指标的规范代码、别名、公式和所属业务域，"
-            "确保模型只能选择当前已绑定的指标。"
+            + "\n用户可补充：在问题中使用指标的完整业务名称重试；已经给出的内容无需重复提供。"
+            + "\n若反复失败，需系统维护人员核对该问题对应指标的绑定配置后重新发布。"
         )
 
     if code in {
