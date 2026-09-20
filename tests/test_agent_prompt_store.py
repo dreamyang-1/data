@@ -2,6 +2,7 @@ import pytest
 
 from app.services.agent_prompt_store import AgentPromptStore
 from app.domain.models import (
+    AgentPromptConfig,
     CanonicalAnalysisRequest,
     ChatRequest,
     MetricRef,
@@ -116,6 +117,19 @@ async def test_orchestrator_freezes_one_platform_prompt_snapshot_per_turn():
     assert "平台业务背景" in resolved.prompt.render()
     assert repeated is resolved
     assert store.calls == 1
+
+
+def test_platform_prompt_accepts_published_long_form_role_setting():
+    role_setting = "业务口径说明。" * 1300
+
+    prompt = AgentPromptConfig(
+        user=role_setting,
+        Aagent_background="平台背景",
+    )
+
+    rendered = prompt.render()
+    assert role_setting in rendered
+    assert "平台背景" in rendered
 
 
 @pytest.mark.parametrize(

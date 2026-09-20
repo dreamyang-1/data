@@ -685,12 +685,15 @@ class AgentPromptConfig(StrictModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    user: str = Field(default="", max_length=8000, description="用户提示词，如角色设定")
+    # Platform role settings are stored as long-form text and may legitimately
+    # exceed the 8,000-character limit used by ordinary chat fields.  Keep a
+    # bounded limit for request safety, but size it for the platform contract.
+    user: str = Field(default="", max_length=65535, description="用户提示词，如角色设定")
     Aagent_background: str = Field(
-        default="", max_length=8000, description="智能体背景描述"
+        default="", max_length=65535, description="智能体背景描述"
     )
     concise_instruct: str = Field(
-        default="", max_length=8000, description="简洁指令，存在时替代user和Aagent_background"
+        default="", max_length=65535, description="简洁指令，存在时替代user和Aagent_background"
     )
 
     @staticmethod
