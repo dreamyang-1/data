@@ -2056,6 +2056,84 @@ def test_surface_brand_role_falls_back_within_manufacturer_not_project(monkeypat
     assert repairs[0]["resolved_field"] == "manufacturer.manufacturer_name"
 
 
+def test_surface_product_name_hint_finds_published_specification(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity(
+                "product", "product",
+                "product.product_name", "product name",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_including_tax"}]
+    ast["filters"] = [{
+        "field": "product.product_name",
+        "operator": "=",
+        "value": "MMT-866A",
+    }]
+    seen_batches = []
+
+    def resolve(_model, _domains, candidates, _literal):
+        fields = [item["field"] for item in candidates]
+        seen_batches.append(fields)
+        if "product.specification" in fields:
+            return [{
+                "field": "product.specification",
+                "canonical_value": "MMT-866A",
+                "match_type": "EXACT",
+                "is_main_attribute": False,
+            }]
+        return []
+
+    monkeypatch.setattr(
+        agent,
+        "_contract_filter_candidates",
+        lambda role, *_args, **_kwargs: (
+            ["product.product_name"] if role == "product name" else []
+        ),
+    )
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args: [
+            {
+                "entity_code": "product",
+                "business_domain_id": 205,
+                "field": "product.product_name",
+            },
+            {
+                "entity_code": "product",
+                "business_domain_id": 205,
+                "field": "product.specification",
+            },
+            {
+                "entity_code": "project",
+                "business_domain_id": 205,
+                "field": "project.project_name",
+            },
+        ],
+    )
+    monkeypatch.setattr(agent, "resolve_entity_attribute_catalog_matches", resolve)
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "MMT-866A", "role_hint": "product name"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert any("product.specification" in batch for batch in seen_batches)
+    assert all("project.project_name" not in batch for batch in seen_batches)
+    assert json.loads(normalized)["filters"] == [{
+        "field": "product.specification",
+        "operator": "=",
+        "value": "MMT-866A",
+    }]
+    assert repairs[-1]["resolved_field"] == "product.specification"
+
+
 def test_surface_mention_multiple_hits_pick_highest_similarity(monkeypatch):
     knowledge = {
         "entities": [

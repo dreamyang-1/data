@@ -6357,13 +6357,32 @@ def _apply_surface_mention_normalization(
                 str(item.get("field") or "") for item in published_candidates
                 if str(item.get("field") or "")
             }
+            # ``role_hint`` is an upstream semantic guess.  It may identify the
+            # correct entity but the wrong descriptive attribute, e.g. a model
+            # number labelled as product name while the exact value is stored
+            # in product.specification.  Keep the hint's governed table as the
+            # boundary, then allow every published attribute on that table to
+            # participate in the source-backed exact lookup.  This mirrors the
+            # same-table fallback above even when that attribute was outside
+            # vector top-k, without opening unrelated entities.
+            expanded_role_fields = set(mention_allowed_fields)
+            if role_hint and mention_allowed_fields:
+                role_tables = {
+                    field.partition(".")[0]
+                    for field in mention_allowed_fields
+                    if "." in field
+                }
+                expanded_role_fields.update(
+                    field for field in expanded_fields
+                    if field.partition(".")[0] in role_tables
+                )
             extra = [
                 item for item in published_candidates
                 if str(item.get("field") or "") in expanded_fields - allowed_fields
                 and (
                     not role_hint
                     or not mention_allowed_fields
-                    or str(item.get("field") or "") in mention_allowed_fields
+                    or str(item.get("field") or "") in expanded_role_fields
                 )
             ]
             if extra:
@@ -6377,8 +6396,13 @@ def _apply_surface_mention_normalization(
                     )
                 resolved = _select_surface_mention_match(
                     mention, expanded_matches,
-                    mention_allowed_fields | expanded_fields,
+                    (
+                        expanded_role_fields
+                        if role_hint and mention_allowed_fields
+                        else mention_allowed_fields | expanded_fields
+                    ),
                     field_kinds,
+                    allow_role_containment=bool(role_hint),
                 )
         if resolved is None:
             # An unmatched mention is reference noise: drop any filter the
