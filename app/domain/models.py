@@ -1567,6 +1567,7 @@ class AgentResponse(StrictModel):
 class PendingState(StrictModel):
     asked_clarification_keys: list[str] = Field(default_factory=list)
     request: CanonicalAnalysisRequest
+    semantic_extractions: list[dict[str, Any]] = Field(default_factory=list)
     clarification_rounds: int = 1
     state_version: int = 1
     remaining_questions: list[str] = Field(default_factory=list, max_length=100)

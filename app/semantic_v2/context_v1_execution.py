@@ -151,6 +151,43 @@ def _completed_question_step(
     )
 
 
+def _surface_extraction_items(
+    resolved: ResolvedContextTurn,
+) -> tuple[dict[str, Any], ...]:
+    """Expose model mentions only when they describe the executed question.
+
+    Mention spans belong to the raw text passed to the recognition model.  A
+    short contextual follow-up therefore must not replace the fields retained
+    in its completed question.  A standalone question is different: its raw
+    text and completed execution text are identical, so the model's
+    fine-grained surface extraction is the correct public display evidence.
+    """
+
+    parse = resolved.semantic_parse
+    completed = str(resolved.completed_question or "").strip()
+    source = str(resolved.source_question or "").strip()
+    if parse is None or not completed or source != completed:
+        return ()
+    items: list[dict[str, Any]] = []
+    for mention in getattr(parse, "mentions", ()):
+        surface = str(getattr(mention, "surface", "") or "").strip()
+        normalized = str(
+            getattr(mention, "normalized_surface", "") or ""
+        ).strip()
+        labels = tuple(
+            str(value).strip()
+            for value in getattr(mention, "candidate_roles", ())
+            if str(value).strip()
+        )
+        if surface and labels:
+            items.append({
+                "surface": surface,
+                "normalized_surface": normalized or surface,
+                "labels": labels,
+            })
+    return tuple(items)
+
+
 def _verified_context_filter_bindings(
     resolved: ResolvedContextTurn,
 ) -> tuple[tuple[str, str, str, str], ...]:
@@ -1367,13 +1404,13 @@ class V2ContextV1ExecutionBridge:
                 intent_context_progress_emitted
             )
             execution_chat._business_domain_labels = business_domain_labels
-            # The V2 parse describes the raw current turn.  On a follow-up it
-            # may contain only a fragment such as ``上海市``.  Passing those
-            # mentions downstream made the fragment override entities that
-            # were correctly retained in the completed question.  V1 now
-            # extracts display fields and ASL hints only from the completed
-            # standalone question it actually executes.
-            execution_chat._semantic_extraction_items = ()
+            # Preserve the recognition model's fine-grained extraction for a
+            # standalone complete question. Contextual fragments remain
+            # excluded because their mention spans do not describe the
+            # completed execution question.
+            execution_chat._semantic_extraction_items = (
+                _surface_extraction_items(resolved)
+            )
             execution_chat._semantic_decision = semantic_decision
             with track_operation(
                 "V1_ORCHESTRATION",

@@ -3181,7 +3181,9 @@ class DataAnalysisOrchestrator:
                 request.ambiguities = self._ambiguity_texts(exc)
                 request.missing_slots = ["semantic_ambiguity"]
                 return await self._request_clarification(
-                    request, 1, source_stage="OAGNET_ASL_GENERATION")
+                    request, 1, source_stage="OAGNET_ASL_GENERATION",
+                    semantic_extractions=chat._semantic_extraction_items,
+                )
             return await self._finish_terminal(request, self._fallback(
                 request, self._dependency_message(exc), error_code=exc.code))
         # Only the executed, scoped ASL supplies persisted query semantics.
@@ -3234,6 +3236,14 @@ class DataAnalysisOrchestrator:
                 chat.conversation_id,
             )
         )
+        if (
+            pending is not None
+            and not chat._semantic_extraction_items
+            and pending.semantic_extractions
+        ):
+            chat._semantic_extraction_items = tuple(
+                copy.deepcopy(pending.semantic_extractions)
+            )
         # Recognize an unmistakable standalone chat turn before applying any
         # business task frame. Otherwise a previous data query can rewrite a
         # later lifestyle question back into the old product/dealer task.
@@ -3746,6 +3756,7 @@ class DataAnalysisOrchestrator:
                     )
                     return await self._request_clarification(
                         request, rounds, source_stage="SLOT_MERGE",
+                        semantic_extractions=chat._semantic_extraction_items,
                     )
             if deterministic_slot_reply:
                 request.assumptions.append("DETERMINISTIC_SLOT_FAST_PATH")
@@ -5335,7 +5346,11 @@ class DataAnalysisOrchestrator:
                 "生成自然语言追问文本，引导用户补充缺失条件。",
                 missing_slots=list(request.missing_slots),
             )
-            return await self._request_clarification(request, rounds)
+            return await self._request_clarification(
+                request,
+                rounds,
+                semantic_extractions=chat._semantic_extraction_items,
+            )
 
         await emit_progress(
             "COMPLETENESS_CHECK", "COMPLETED", "执行所需的关键信息已满足。"
@@ -5473,7 +5488,12 @@ class DataAnalysisOrchestrator:
                     request.semantic_ambiguities = self._semantic_ambiguities(exc)
                     request.ambiguities = self._ambiguity_texts(exc)
                     request.missing_slots = ["semantic_ambiguity"]
-                    return await self._request_clarification(request, rounds, source_stage='SQL_TRANSLATOR' if exc.code == 'SQL_TRANSLATION_AMBIGUOUS' else 'OAGNET_ASL_GENERATION')
+                    return await self._request_clarification(
+                        request,
+                        rounds,
+                        source_stage='SQL_TRANSLATOR' if exc.code == 'SQL_TRANSLATION_AMBIGUOUS' else 'OAGNET_ASL_GENERATION',
+                        semantic_extractions=chat._semantic_extraction_items,
+                    )
                 if exc.code == "ANALYSIS_RESULT_CONTRACT_INVALID":
                     requirements = self._analysis_contract_requirements(exc)
                     response = self._fallback(
@@ -9435,7 +9455,15 @@ class DataAnalysisOrchestrator:
             trace.conversation_id = chat.conversation_id
             trace.message_id = chat.message_id
 
-    async def _request_clarification(self, request: CanonicalAnalysisRequest, rounds: int, *, source_stage: str = 'INTENT_ASL_CONTRACT') -> AgentResponse:
+    async def _request_clarification(
+        self,
+        request: CanonicalAnalysisRequest,
+        rounds: int,
+        *,
+        source_stage: str = 'INTENT_ASL_CONTRACT',
+        semantic_extractions: tuple[dict[str, Any], ...]
+        | list[dict[str, Any]] = (),
+    ) -> AgentResponse:
         previous = await self.sessions.get_pending(request.tenant_id, request.user_id, request.application_id, request.conversation_id)
         asked_keys = set(previous.asked_clarification_keys) if previous is not None and request.pending_state_version else set()
         if previous is not None and asked_keys:
@@ -9496,6 +9524,11 @@ class DataAnalysisOrchestrator:
                 PendingState(
                     asked_clarification_keys=list(dict.fromkeys([*asked_keys, *(key for key, trace in decisions if trace.decision == 'ASK')])),
                     request=request,
+                    semantic_extractions=[
+                        copy.deepcopy(item)
+                        for item in semantic_extractions
+                        if isinstance(item, dict)
+                    ],
                     clarification_rounds=rounds,
                     state_version=rounds,
                     remaining_questions=remaining_questions,

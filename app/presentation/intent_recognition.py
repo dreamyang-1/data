@@ -152,11 +152,23 @@ def _surface_in_question(value: Any, question: str) -> str:
 def _semantic_extraction_parameters(
     question: str,
     semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]],
+    request: CanonicalAnalysisRequest | None = None,
 ) -> list[str]:
     """Select V2-accepted current-turn fields that belong to one task."""
 
     compact_question = re.sub(r"\s+", "", question).casefold()
-    parameters: list[str] = []
+    extracted: list[tuple[int, int, str, list[str]]] = []
+    preferred_label_order = {
+        "请求输出": 0,
+        "关系词": 0,
+        "城市": 0,
+        "产品名": 0,
+        "厂牌": 0,
+        "业务状态": 1,
+        "品牌类型": 1,
+        "地区": 1,
+        "产品类型": 1,
+    }
     for item in semantic_extractions:
         if not isinstance(item, dict):
             continue
@@ -170,8 +182,69 @@ def _semantic_extraction_parameters(
         if not candidates or not any(value in compact_question for value in candidates):
             continue
         labels = _unique_text(item.get("labels"))
+        if request is not None:
+            matching_fields = {
+                _single_line(filter_item.get("field"), 120)
+                for filter_item in request.filters
+                if isinstance(filter_item, dict)
+                and _single_line(filter_item.get("value"), 200) in {
+                    surface, normalized
+                }
+            }
+            if any(
+                marker in field_name
+                for field_name in matching_fields
+                for marker in ("品牌", "厂牌", "母品牌", "母厂牌")
+            ):
+                labels = ["厂牌"]
+            elif any(
+                marker in field_name
+                for field_name in matching_fields
+                for marker in ("产品", "商品", "品类")
+            ):
+                labels = [
+                    "产品类型" if label == "泛化对象类型" else label
+                    for label in labels
+                ]
         if not surface or not labels:
             continue
+        labels = list(dict.fromkeys(labels))
+        labels.sort(key=lambda label: preferred_label_order.get(label, 10))
+        start = question.find(surface)
+        extracted.append((start, start + len(surface), surface, labels))
+
+    merged: list[tuple[int, int, str, list[str]]] = []
+    index = 0
+    while index < len(extracted):
+        current = extracted[index]
+        if index + 1 < len(extracted):
+            following = extracted[index + 1]
+            output_suffix = following[2] in {"名单", "列表", "清单"}
+            adjacent = current[1] == following[0]
+            entity_labels = [
+                label
+                for label in current[3]
+                if label not in {"实体类型", "业务对象", "分组维度"}
+            ]
+            if (
+                output_suffix
+                and adjacent
+                and "请求输出" in following[3]
+                and entity_labels
+            ):
+                merged.append((
+                    current[0],
+                    following[1],
+                    current[2] + following[2],
+                    list(dict.fromkeys(["请求输出", *entity_labels])),
+                ))
+                index += 2
+                continue
+        merged.append(current)
+        index += 1
+
+    parameters: list[str] = []
+    for _start, _end, surface, labels in merged:
         rendered = f"{surface}（{'/'.join(labels)}）"
         if rendered not in parameters:
             parameters.append(rendered)
@@ -295,7 +368,9 @@ def _structured_parameters_for_question(
     request: CanonicalAnalysisRequest | None,
     semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]],
 ) -> list[str]:
-    semantic = _semantic_extraction_parameters(question, semantic_extractions)
+    semantic = _semantic_extraction_parameters(
+        question, semantic_extractions, request
+    )
     if semantic:
         return semantic
     return _request_extraction_parameters(request, question) if request is not None else []

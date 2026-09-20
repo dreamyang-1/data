@@ -90,17 +90,71 @@ def test_all_time_partner_list_preserves_region_brand_product_and_output():
         },
     )
 
+    semantic_extractions = (
+        {"surface": "上海地区", "labels": ("城市", "地区")},
+        {"surface": "正在销售", "labels": ("关系词", "业务状态")},
+        {"surface": "竞争品牌", "labels": ("关系词", "品牌类型")},
+        {"surface": "万益特", "labels": ("品牌",)},
+        {"surface": "血液净化管路", "labels": ("产品名", "产品类型")},
+        {"surface": "经销商名单", "labels": ("请求输出", "经销商")},
+    )
     rendered = render_intent_recognition_display_v2(
-        build_intent_recognition_display_v2(request, semantic_extractions=())
+        build_intent_recognition_display_v2(
+            request, semantic_extractions=semantic_extractions
+        )
     )
 
     assert "补全后的问题：查询不限时间（全部历史）内上海市" in rendered
     assert "竞争品牌万益特的血液净化管路产品的经销商名单" in rendered
     assert "最近一年" not in rendered
-    assert "上海市（筛选值）" in rendered
-    assert "万益特（母品牌/筛选值）" in rendered
-    assert "血液净化管路（筛选值）" in rendered
-    assert "经销商（业务对象/分组维度）" in rendered
+    assert (
+        "结构化参数提取：上海地区（城市/地区）；"
+        "正在销售（关系词/业务状态）；竞争品牌（关系词/品牌类型）；"
+        "万益特（厂牌）；血液净化管路（产品名/产品类型）；"
+        "经销商名单（请求输出/经销商）。"
+    ) in rendered
+
+
+def test_partner_list_model_mentions_have_stable_public_labels():
+    question = "帮我找出上海地区正在销售竞争品牌万益特的血液净化管路的经销商名单"
+    request = CanonicalAnalysisRequest(
+        conversation_id="partner-list-model-display",
+        tenant_id="tenant",
+        user_id="user",
+        original_question=question,
+        rewritten_question=question,
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="经销商",
+        fields=["经销商名称"],
+        dimensions=["经销商"],
+        filters=[
+            {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+            {"field": "母品牌", "operator": "EQ", "value": "万益特"},
+            {"field": "商品名称", "operator": "EQ", "value": "血液净化管路"},
+        ],
+    )
+    semantic_extractions = (
+        {"surface": "上海地区", "labels": ("城市", "地区")},
+        {"surface": "正在销售", "labels": ("业务状态", "关系词")},
+        {"surface": "竞争品牌", "labels": ("品牌类型", "关系词")},
+        {"surface": "万益特", "labels": ("品牌",)},
+        {"surface": "血液净化管路", "labels": ("产品名", "泛化对象类型")},
+        {"surface": "经销商", "labels": ("经销商", "实体类型")},
+        {"surface": "名单", "labels": ("请求输出",)},
+    )
+
+    rendered = render_intent_recognition_display_v2(
+        build_intent_recognition_display_v2(
+            request, semantic_extractions=semantic_extractions
+        )
+    )
+
+    assert (
+        "结构化参数提取：上海地区（城市/地区）；"
+        "正在销售（关系词/业务状态）；竞争品牌（关系词/品牌类型）；"
+        "万益特（厂牌）；血液净化管路（产品名/产品类型）；"
+        "经销商名单（请求输出/经销商）。"
+    ) in rendered
 
 
 def test_pending_merged_display_renders_final_slots_not_stale_rewrite():
