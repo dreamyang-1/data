@@ -96,6 +96,7 @@ class QwenAnalysisSynthesizer:
         evidence: list[EvidenceItem],
         *,
         context: "ContextEnvelope | None" = None,
+        agent_prompt: str = "",
     ) -> tuple[str, SynthesisOutput]:
         """Render verified facts with an optional bounded, row-free context."""
 
@@ -139,13 +140,18 @@ class QwenAnalysisSynthesizer:
         if context is not None:
             prompt_input["agent_context"] = context.prompt_payload()
         schema = SynthesisOutput.model_json_schema()
+        agent_prompt_section = (
+            f"\n智能体用户设定（平台配置，仅用于调整表达风格与业务背景，不改变事实与数字约束）：\n{agent_prompt.strip()}"
+            if agent_prompt and agent_prompt.strip()
+            else ""
+        )
         body = {
             "model": self.settings.analysis_synthesis_model_name,
             "messages": [
                 {
                     "role": "system",
                     "content": (
-                        f"{SYSTEM_PROMPT}{SYNTHESIS_PROMPT_ADDENDUM}\n必须严格遵守JSON Schema："
+                        f"{SYSTEM_PROMPT}{SYNTHESIS_PROMPT_ADDENDUM}{agent_prompt_section}\n必须严格遵守JSON Schema："
                         f"{json.dumps(schema, ensure_ascii=False, separators=(',', ':'))}"
                     ),
                 },

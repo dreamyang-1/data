@@ -1,6 +1,8 @@
 import pytest
 
 from app.services.agent_prompt_store import AgentPromptStore
+from app.domain.models import ChatRequest
+from app.services.orchestrator import DataAnalysisOrchestrator
 
 
 class _Cursor:
@@ -69,3 +71,43 @@ async def test_prompt_store_does_not_guess_when_semantic_model_has_two_agents():
 
     assert await store.resolve("data-analysis", semantic_model_id=81) is None
     assert connection.closed is True
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_freezes_one_platform_prompt_snapshot_per_turn():
+    class Store:
+        def __init__(self):
+            self.calls = 0
+
+        async def resolve(self, application_id, *, semantic_model_id=None):
+            self.calls += 1
+            assert application_id == "data-analysis"
+            assert semantic_model_id == 81
+            return {
+                "user": "平台角色设定",
+                "Aagent_background": "平台业务背景",
+                "concise_instruct": "",
+            }
+
+    store = Store()
+    owner = type("Owner", (), {"agent_prompt_store": store})()
+    chat = ChatRequest(
+        conversation_id="prompt-snapshot",
+        message_id="message-1",
+        question="查询销售额",
+        application_id="data-analysis",
+        semantic_model_id=81,
+    )
+
+    resolved = await DataAnalysisOrchestrator._with_platform_agent_prompt(
+        owner, chat
+    )
+    repeated = await DataAnalysisOrchestrator._with_platform_agent_prompt(
+        owner, resolved
+    )
+
+    assert resolved.prompt is not None
+    assert "平台角色设定" in resolved.prompt.render()
+    assert "平台业务背景" in resolved.prompt.render()
+    assert repeated is resolved
+    assert store.calls == 1

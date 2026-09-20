@@ -37,6 +37,31 @@ def model_response(output: dict) -> httpx.Response:
     )
 
 
+@pytest.mark.asyncio
+async def test_intent_model_loads_platform_user_prompt_into_system_message():
+    captured = {}
+    output = {
+        "primary_intent": "DETAIL_QUERY",
+        "confidence": 0.95,
+    }
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        captured["system"] = body["messages"][0]["content"]
+        return model_response(output)
+
+    client = StructuredIntentModelClient(
+        settings(), httpx.MockTransport(handler)
+    )
+    await client.classify(
+        "查询上海经销商",
+        agent_prompt="平台角色设定：只使用国药业务口径。",
+    )
+
+    assert "智能体用户设定（平台配置" in captured["system"]
+    assert "平台角色设定：只使用国药业务口径。" in captured["system"]
+
+
 def test_pre_resolved_contract_keeps_completed_question_authoritative():
     question = "请提供百特Prismaflex M60 set使用科室。"
     request = CanonicalAnalysisRequest(

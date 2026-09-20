@@ -388,6 +388,14 @@ class DataAnalysisOrchestrator:
                 chat, cancelled_count, cancelled_intent
             )
 
+        # Resolve the platform's data_ask_agent_version prompt once per turn.
+        # The same immutable request snapshot is then consumed by both model
+        # boundaries: intent recognition and data-insight
+        # synthesis.  Loading it lazily inside each node could make the two
+        # nodes observe different prompt versions (or let a routed fast path
+        # miss the platform prompt altogether).
+        chat = await self._with_platform_agent_prompt(chat)
+
         replayable_turn = not (
             chat._is_regeneration_execution
             or chat._completed_question_execution
@@ -426,6 +434,31 @@ class DataAnalysisOrchestrator:
                 chat, identity, response, turn_started
             )
         return response
+
+    async def _with_platform_agent_prompt(self, chat: ChatRequest) -> ChatRequest:
+        """Attach the latest platform user prompt to one request snapshot."""
+
+        if chat.prompt is not None:
+            return chat
+        store = getattr(self, "agent_prompt_store", None)
+        if store is None:
+            return chat
+        try:
+            latest = await store.resolve(
+                chat.application_id,
+                semantic_model_id=chat.semantic_model_id,
+            )
+        except Exception as exc:
+            logger.warning(
+                "agent prompt lookup failed before model nodes: %s", exc
+            )
+            return chat
+        if not latest:
+            return chat
+        return chat.model_copy(
+            deep=True,
+            update={"prompt": AgentPromptConfig(**latest)},
+        )
 
     async def _record_turn_lifecycle_events(
         self,

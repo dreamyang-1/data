@@ -78,6 +78,43 @@ def sequence_transport(outputs: list[dict], call_count: list[int]) -> httpx.Mock
     return httpx.MockTransport(handler)
 
 
+@pytest.mark.asyncio
+async def test_data_insight_model_loads_platform_user_prompt_into_system_message() -> None:
+    captured = {}
+    output = {"claims": [
+        {
+            "statement": "销售额下降50，华东贡献-80，华南贡献30。",
+            "certainty": "VERIFIED_FACT",
+            "evidence_ids": ["analysis:a1"],
+        },
+        {
+            "statement": "当前归因不足以证明因果关系。",
+            "certainty": "LIMITATION",
+            "evidence_ids": ["analysis:a1"],
+        },
+    ]}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        captured["system"] = body["messages"][0]["content"]
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": json.dumps(output)}}]},
+        )
+
+    await QwenAnalysisSynthesizer(
+        settings(), httpx.MockTransport(handler)
+    ).synthesize(
+        request(),
+        analysis(),
+        evidence(),
+        agent_prompt="平台表达设定：面向医药业务人员说明。",
+    )
+
+    assert "智能体用户设定（平台配置" in captured["system"]
+    assert "平台表达设定：面向医药业务人员说明。" in captured["system"]
+
+
 def settings() -> Settings:
     return Settings(env="test", intent_model_api_key="test-key", analysis_synthesis_enabled=True, analysis_synthesis_max_retries=0)
 
