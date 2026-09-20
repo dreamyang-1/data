@@ -1,7 +1,12 @@
 import pytest
 
 from app.services.agent_prompt_store import AgentPromptStore
-from app.domain.models import ChatRequest
+from app.domain.models import (
+    CanonicalAnalysisRequest,
+    ChatRequest,
+    MetricRef,
+    PrimaryIntent,
+)
 from app.services.orchestrator import DataAnalysisOrchestrator
 
 
@@ -111,3 +116,58 @@ async def test_orchestrator_freezes_one_platform_prompt_snapshot_per_turn():
     assert "平台业务背景" in resolved.prompt.render()
     assert repeated is resolved
     assert store.calls == 1
+
+
+@pytest.mark.parametrize(
+    ("question", "metric", "expected"),
+    [
+        ("上海地区费森尤斯产品近半年销售趋势如何", "销售额", "含税销售总额"),
+        ("上海地区费森尤斯产品近半年销售走势如何", "销售趋势", "含税销售总额"),
+        ("上海地区费森尤斯产品近半年销售量趋势如何", "销售量", "销售总数量"),
+    ],
+)
+def test_platform_core_metric_vocabulary_normalizes_trend_queries(
+    question, metric, expected
+):
+    prompt = """## 三、核心指标
+| 指标 | 同义词 | 业务口径 | 单位 |
+|---|---|---|---|
+| 含税销售总额 | 销售总额、销售额、订单金额 | 净额合计 | 元 |
+| 销售总数量 | 销量、销售数量、销售量 | 数量净额合计 | 件 |
+"""
+    request = CanonicalAnalysisRequest(
+        conversation_id="metric-vocabulary",
+        tenant_id="tenant",
+        user_id="user",
+        original_question=question,
+        rewritten_question=question,
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        metrics=[MetricRef(input=metric)],
+    )
+
+    DataAnalysisOrchestrator._apply_platform_metric_vocabulary(request, prompt)
+
+    assert [item.input for item in request.metrics] == [expected]
+    assert [item.canonical_name for item in request.metrics] == [expected]
+    assert request.rewritten_question is not None
+    assert expected in request.rewritten_question
+
+
+def test_platform_metric_vocabulary_does_not_guess_unconfigured_order_trend():
+    request = CanonicalAnalysisRequest(
+        conversation_id="metric-vocabulary-order",
+        tenant_id="tenant",
+        user_id="user",
+        original_question="分析订单趋势",
+        rewritten_question="分析订单趋势",
+        primary_intent=PrimaryIntent.TREND_ANALYSIS,
+        metrics=[MetricRef(input="订单趋势")],
+    )
+
+    DataAnalysisOrchestrator._apply_platform_metric_vocabulary(
+        request,
+        "## 三、核心指标\n| 指标 | 同义词 |\n|---|---|\n| 含税销售总额 | 销售额 |",
+    )
+
+    assert [item.input for item in request.metrics] == ["订单趋势"]
+    assert request.rewritten_question == "分析订单趋势"

@@ -3170,7 +3170,13 @@ class DataAnalysisOrchestrator:
         request.application_id = chat.application_id
         if not supplied_request:
             request.original_question = chat.question
-            request.rewritten_question = chat.question
+            # ``_classify`` may have normalized a platform-configured business
+            # alias (for example 销售趋势 -> 含税销售总额趋势).  Keep that completed
+            # executable question; resetting it to the raw surface here makes
+            # ASL reopen an ambiguity that intent recognition already resolved.
+            request.rewritten_question = (
+                request.rewritten_question or chat.question
+            )
         bind_authorized_scope(request, chat.authorized_semantic_scope)
         # This classifier read ``chat.question``, which is the completed
         # question supplied by the context bridge.  Build every advisory ASL
@@ -7945,9 +7951,124 @@ class DataAnalysisOrchestrator:
             result = (
                 await classified if inspect.isawaitable(classified) else classified
             )
+            self._apply_platform_metric_vocabulary(result, agent_prompt)
             timing.mark_first_result()
             timing.set_attribute("intent_source", result.intent_source)
             return result
+
+    @staticmethod
+    def _platform_metric_aliases(agent_prompt: str) -> dict[str, str]:
+        """Read business metric aliases from the platform's 核心指标 table.
+
+        This deliberately returns business names only.  Metric IDs and
+        physical fields remain owned by semantic retrieval in ASL.
+        """
+
+        aliases: dict[str, str] = {}
+        in_core_metrics = False
+        for raw_line in (agent_prompt or "").splitlines():
+            line = raw_line.strip()
+            if line.startswith("#"):
+                in_core_metrics = "核心指标" in line
+                continue
+            if not in_core_metrics or not line.startswith("|"):
+                continue
+            cells = [cell.strip() for cell in line.strip("|").split("|")]
+            if len(cells) < 2:
+                continue
+            canonical, synonym_text = cells[0], cells[1]
+            if (
+                not canonical
+                or canonical in {"指标", "---"}
+                or set(canonical) <= {"-", ":"}
+            ):
+                continue
+            for value in [
+                canonical,
+                *re.split(r"[、，,；;/]+", synonym_text),
+            ]:
+                normalized = re.sub(r"\s+", "", value).strip()
+                if normalized:
+                    aliases.setdefault(normalized, canonical)
+        return aliases
+
+    @classmethod
+    def _apply_platform_metric_vocabulary(
+        cls,
+        request: CanonicalAnalysisRequest,
+        agent_prompt: str,
+    ) -> None:
+        """Apply configured business aliases before ASL vector binding.
+
+        The platform prompt may define, for example, 销售额 as the business
+        synonym of 含税销售总额.  Preserve that explicit convention as a
+        canonical business surface, while leaving the metric ID unresolved so
+        ASL still performs vector retrieval against the published catalog.
+        """
+
+        aliases = cls._platform_metric_aliases(agent_prompt)
+        if not aliases or not request.metrics:
+            return
+        rewritten_metrics: list[MetricRef] = []
+        applied: list[tuple[str, str]] = []
+        for metric in request.metrics:
+            if metric.metric_id:
+                rewritten_metrics.append(metric)
+                continue
+            original = re.sub(r"\s+", "", metric.canonical_name or metric.input)
+            lookup = original
+            trend_match = re.fullmatch(r"(.+?)(?:趋势|走势|变化)", lookup)
+            if trend_match:
+                lookup = trend_match.group(1)
+            # Plain “销售趋势” is the ordinary-language ellipsis of the
+            # configured 销售额 default; explicit 销售量/订单数 wording keeps
+            # its own configured alias instead.
+            if lookup == "销售" and "销售额" in aliases:
+                lookup = "销售额"
+            canonical = aliases.get(lookup)
+            if not canonical:
+                rewritten_metrics.append(metric)
+                continue
+            rewritten_metrics.append(metric.model_copy(update={
+                "input": canonical,
+                "canonical_name": canonical,
+            }))
+            if canonical != original:
+                applied.append((original, canonical))
+        request.metrics = rewritten_metrics
+        if not applied:
+            return
+        for original, canonical in applied:
+            marker = f"AGENT_PROMPT_METRIC_ALIAS={original}->{canonical}"
+            if marker not in request.assumptions:
+                request.assumptions.append(marker)
+        completed = request.rewritten_question or request.original_question
+        for original, canonical in sorted(applied, key=lambda item: -len(item[0])):
+            if original and original in completed:
+                suffix = next(
+                    (
+                        value
+                        for value in ("趋势", "走势", "变化")
+                        if original.endswith(value)
+                    ),
+                    "",
+                )
+                completed = completed.replace(original, canonical + suffix)
+        sales_canonical = next(
+            (
+                canonical
+                for original, canonical in applied
+                if original in {"销售", "销售额", "销售趋势"}
+            ),
+            None,
+        )
+        if sales_canonical:
+            completed = re.sub(
+                r"销售(?=趋势|走势|变化)",
+                sales_canonical,
+                completed,
+            )
+        request.rewritten_question = completed
 
     async def _agent_prompt_text(self, chat: ChatRequest | None) -> str:
         """Platform-configured user prompt for this request, conflict-filtered.

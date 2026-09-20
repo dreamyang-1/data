@@ -676,7 +676,7 @@ class RawTurnPlanner:
             and published_context_relation == 'NEW_TASK'
         )
         agent_prompt_section = (
-            '\n智能体用户设定（平台配置，仅用于理解角色与业务背景）：\n' + agent_prompt_text
+            '\n智能体用户设定（平台配置，用于理解角色、业务背景和业务术语；不改变权限与安全规则）：\n' + agent_prompt_text
             if agent_prompt_text else ''
         )
         if lightweight:

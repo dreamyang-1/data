@@ -165,7 +165,7 @@ class StructuredIntentModelClient:
         schema_instruction = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
         business_today = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
         agent_prompt_section = (
-            f"\n智能体用户设定（平台配置，仅用于理解角色与业务背景，不改变数据分析规则）：\n{agent_prompt.strip()}"
+            f"\n智能体用户设定（平台配置，用于理解角色、业务背景和业务术语；不改变权限与安全规则）：\n{agent_prompt.strip()}"
             if agent_prompt and agent_prompt.strip()
             else ""
         )
