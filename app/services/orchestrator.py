@@ -7975,7 +7975,18 @@ class DataAnalysisOrchestrator:
         for raw_line in (agent_prompt or "").splitlines():
             line = raw_line.strip()
             if line.startswith("#"):
-                in_core_metrics = "核心指标" in line
+                # Platform-generated long prompts currently title this
+                # section as ``### 4. 指标`` while hand-written prompts often
+                # use ``## 三、核心指标``.  Match the semantic heading after
+                # removing either numbering style; requiring the literal
+                # words ``核心指标`` made the published table invisible.
+                heading = re.sub(r"^#+\s*", "", line)
+                heading = re.sub(
+                    r"^(?:(?:\d+)|(?:[一二三四五六七八九十]+))[.、．]?\s*",
+                    "",
+                    heading,
+                ).strip()
+                in_core_metrics = heading in {"指标", "核心指标"}
                 continue
             if not in_core_metrics or not line.startswith("|"):
                 continue

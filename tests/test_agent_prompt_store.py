@@ -132,6 +132,25 @@ def test_platform_prompt_accepts_published_long_form_role_setting():
     assert "平台背景" in rendered
 
 
+def test_platform_metric_vocabulary_reads_generated_numbered_metric_section():
+    prompt = """### 4. 指标
+| 指标 | 同义词 | 业务口径 | 单位 |
+|---|---|---|---|
+| 含税销售总额 | 销售总额、销售额、订单金额 | 净额合计 | 元 |
+| 销售总数量 | 销量、销售数量、销售量 | 数量净额合计 | 件 |
+### 5. 维度
+| 维度 | 同义词 |
+|---|---|
+| 商品 | 产品 |
+"""
+
+    aliases = DataAnalysisOrchestrator._platform_metric_aliases(prompt)
+
+    assert aliases["销售额"] == "含税销售总额"
+    assert aliases["销售量"] == "销售总数量"
+    assert "产品" not in aliases
+
+
 @pytest.mark.parametrize(
     ("question", "metric", "expected"),
     [
