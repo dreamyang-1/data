@@ -645,6 +645,38 @@ async def test_standalone_new_task_passthrough_reaches_v1_byte_for_byte(provider
 
 
 @pytest.mark.asyncio
+async def test_model_wide_catalog_resolution_is_forwarded_to_v1(provider):
+    seen = []
+
+    async def v1(chat, _identity):
+        seen.append(chat)
+        return response(chat)
+
+    class ModelWideCatalog:
+        def for_request(self, semantic_model_id, business_domain_ids):
+            assert semantic_model_id == 81
+            assert business_domain_ids == ()
+            return SimpleNamespace(
+                resolved_business_domain_ids=(205,),
+                business_domain_labels=("医药销售域",),
+            )
+
+    bridge = handler((ModelWideCatalog(),), DeploymentRedis(), v1)
+    install_resolution(bridge, provider)
+    chat = request(
+        [],
+        question="上海地区费森尤斯产品近半年销售趋势如何",
+        message_id="model-wide-v1-scope",
+    )
+
+    await bridge.handle(chat, IDENTITY)
+
+    assert chat.business_domain_ids == []
+    assert seen[0].business_domain_ids == []
+    assert seen[0]._demo_execution_resolved_business_domain_ids == (205,)
+
+
+@pytest.mark.asyncio
 async def test_successful_v2_plan_attaches_authorized_semantic_decision(provider):
     question = "查询销售额"
     engine, _transport = scripted_planner(provider, [metric_step(question)])

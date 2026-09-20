@@ -3552,19 +3552,25 @@ class RuleBasedIntentClassifier:
         match = re.search(
             r"(?P<scope>[^，,。；;？?]{2,80}?)产品"
             r"(?=(?:(?:最近|近|过去)"
-            r"(?:一|二|三|四|五|六|七|八|九|十|\d+)(?:个)?(?:年|月|季度)"
+            r"(?:半(?:个)?(?:年|月)|"
+            r"(?:一|二|三|四|五|六|七|八|九|十|\d+)(?:个)?(?:年|月|季度))"
             r"|本年度|今年|去年|前年|明年|20\d{2}年)?"
             r"(?:的)?(?:销售|含税|不含税|订单|趋势))",
             text,
         )
         if match is None:
             return
+        explicit_product_grouping = bool(re.search(
+            r"(?:按|分|各(?:个)?|每(?:个|种)?|不同)(?:产品|商品)",
+            text,
+        ))
         brand = re.sub(
             r"^(?:请|麻烦|帮我|给我|请帮我)?"
             r"(?:分析|查询|查找|找出|列出|展示|显示|查看|看看|统计|汇总)?",
             "",
             match.group("scope"),
         ).strip("的")
+        brand = re.sub(r"(?:各(?:个)?|每(?:个|种)?|不同|分)$", "", brand)
         if re.search(r"(?:与|和|及|、|对比|比较)", brand):
             # Coordinated named values belong to the comparison/list rules.
             # They must not be collapsed into one provisional literal.
@@ -3652,9 +3658,10 @@ class RuleBasedIntentClassifier:
         request.assumptions.append(
             "NAMED_PRODUCT_SCOPE_REQUIRES_CURRENT_CATALOG_BINDING"
         )
-        request.dimensions = [
-            item for item in request.dimensions if item not in {"产品", "商品"}
-        ]
+        if not explicit_product_grouping:
+            request.dimensions = [
+                item for item in request.dimensions if item not in {"产品", "商品"}
+            ]
 
     @staticmethod
     def _apply_explicit_dealer_metric_scope(

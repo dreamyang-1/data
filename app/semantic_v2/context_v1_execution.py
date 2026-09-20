@@ -1417,6 +1417,15 @@ class V2ContextV1ExecutionBridge:
                 intent_context_progress_emitted
             )
             execution_chat._business_domain_labels = business_domain_labels
+            # MODEL_WIDE requests intentionally keep the caller's domain list
+            # empty, while the current catalog resolves that authorization to
+            # the model's published domain for this execution.  Carry the
+            # resolved scope into V1 so ASL retrieval uses the same catalog
+            # that V2 recognition just used.  Without this handoff V1 sent an
+            # empty domain list to Oagnet and could reject valid dimensions.
+            execution_chat._demo_execution_resolved_business_domain_ids = tuple(
+                getattr(catalog, "resolved_business_domain_ids", ()) or ()
+            )
             # Preserve the recognition model's fine-grained extraction for a
             # standalone complete question. Contextual fragments remain
             # excluded because their mention spans do not describe the

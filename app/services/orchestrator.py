@@ -3177,7 +3177,13 @@ class DataAnalysisOrchestrator:
             request.rewritten_question = (
                 request.rewritten_question or chat.question
             )
-        bind_authorized_scope(request, chat.authorized_semantic_scope)
+        bind_authorized_scope(
+            request,
+            chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=(
+                chat._demo_execution_resolved_business_domain_ids
+            ),
+        )
         # This classifier read ``chat.question``, which is the completed
         # question supplied by the context bridge.  Build every advisory ASL
         # mention from that same completed question.  Raw-turn extraction (for

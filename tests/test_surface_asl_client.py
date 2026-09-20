@@ -123,6 +123,21 @@ def test_empty_domains_stay_model_wide():
     assert payload["business_domain_id"] is None
 
 
+def test_model_wide_uses_unique_current_catalog_domain_for_execution():
+    client = Client(response())
+    run(
+        client,
+        authorized_scope=AuthorizedSemanticScope(
+            semantic_model_id=81, scope_mode="MODEL_WIDE"
+        ),
+        resolved_business_domain_ids=(205,),
+    )
+
+    payload = client.calls[0][0][2]
+    assert payload["business_domain_ids"] == [205]
+    assert payload["business_domain_id"] == 205
+
+
 def test_surface_plan_reaches_shared_translation_and_execution_without_asl_repair():
     import json
     from app.adapters.http import HttpDataRetrievalAdapter

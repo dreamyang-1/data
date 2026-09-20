@@ -688,7 +688,6 @@ class HttpDataRetrievalAdapter:
         scope = request.authorized_semantic_scope
         requested_domains = list(request.business_domain_ids)
         resolved_domains = list(request.resolved_business_domain_ids)
-
         if scope is None:
             # Isolated adapter utilities do not represent a public request and
             # retain their legacy payload shape. Public orchestration always
@@ -711,13 +710,21 @@ class HttpDataRetrievalAdapter:
             resolved_domains = requested_domains
             execution_domain = resolved_domains[0]
         elif business_domain_id is None:
-            # Preserve the platform/V1 contract exactly.  Oagent supports an
-            # empty domain list as MODEL_WIDE and proves the domains selected
-            # by the generated ASL in ``semantic_evidence``.
-            return {
-                "business_domain_id": None,
-                "business_domain_ids": [],
-            }
+            if len(resolved_domains) == 1:
+                # MODEL_WIDE is still the caller's authorization mode.  The
+                # request-scoped published catalog may, however, prove that
+                # this model currently resolves to one domain. Forward that
+                # proven execution scope so Oagent searches the same catalog
+                # V2 used, while keeping the authorized request itself empty.
+                execution_domain = resolved_domains[0]
+            else:
+                # Preserve the platform/V1 contract exactly when the current
+                # catalog did not prove a unique execution domain. Oagent then
+                # resolves MODEL_WIDE and reports its choice in evidence.
+                return {
+                    "business_domain_id": None,
+                    "business_domain_ids": [],
+                }
         else:
             if resolved_domains != [business_domain_id]:
                 raise AdapterError(
@@ -2292,6 +2299,9 @@ class HttpDataRetrievalAdapter:
             confirmed_metrics=tuple(
                 metric for metric in request.metrics if metric.metric_id
             ),
+            resolved_business_domain_ids=tuple(
+                request.resolved_business_domain_ids
+            ),
         )
         asl = plan["asl"]
         # Execution metadata is derived from this ASL, not the upstream role
@@ -2304,9 +2314,16 @@ class HttpDataRetrievalAdapter:
         await emit_progress("ASL_GENERATION", "COMPLETED",
                             render_asl_extraction_json(asl), message_limit=65536,
                             display_model="OagentASL", display_version=str(asl.get("version") or "UNKNOWN"))
+        execution_domains = (
+            list(scope.business_domain_ids)
+            or list(request.resolved_business_domain_ids)
+        )
+        execution_domain = (
+            execution_domains[0] if len(execution_domains) == 1 else None
+        )
         return await self._execute_validated_asl(
             execution, identity, asl=asl, semantic_model_id=scope.semantic_model_id,
-            business_domain_id=scope.business_domain_ids[0] if scope.business_domain_ids else None,
+            business_domain_id=execution_domain,
             analysis_contract=None, metric_definitions=[], metric_definition_fingerprints=[],
         )
 

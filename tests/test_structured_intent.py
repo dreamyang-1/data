@@ -13,7 +13,11 @@ from app.domain.models import (
     TrustedIdentity,
     TurnRelation,
 )
-from app.intent import HybridIntentClassifier, StructuredIntentModelClient
+from app.intent import (
+    HybridIntentClassifier,
+    RuleBasedIntentClassifier,
+    StructuredIntentModelClient,
+)
 
 
 def settings(**updates) -> Settings:
@@ -353,6 +357,57 @@ async def test_named_product_trend_drops_model_span_contaminated_by_time_scaffol
     assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in result.filters
     assert result.semantic_entity_mentions == ["上海市", "费森尤斯"]
     assert "费森尤斯产品最近一年" not in result.semantic_entity_mentions
+
+
+@pytest.mark.asyncio
+async def test_brand_scoped_half_year_trend_does_not_require_product_grouping():
+    output = {
+        "primary_intent": "TREND_ANALYSIS",
+        "secondary_intents": [],
+        "operators": ["AGGREGATE", "TIME_BUCKET", "FILTER"],
+        "conversation_control": "NEW_REQUEST",
+        "confidence": 0.98,
+        "evidence": ["销售趋势", "近半年", "费森尤斯产品"],
+        "metrics": ["销售额"],
+        "dimensions": ["产品"],
+        "entity": "产品",
+        "fields": [],
+        "current_entity_values": ["上海", "费森尤斯"],
+        "comparison_type": None,
+        "ambiguities": [],
+        "completed_question": "上海地区费森尤斯产品近半年销售趋势如何",
+    }
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return model_response(output)
+
+    configured = settings()
+    classifier = HybridIntentClassifier(
+        configured,
+        model_client=StructuredIntentModelClient(
+            configured, httpx.MockTransport(handler)
+        ),
+    )
+    result = await classifier.classify(
+        "上海地区费森尤斯产品近半年销售趋势如何",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "brand-half-year-trend",
+    )
+
+    assert result.dimensions == []
+    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in result.filters
+    assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in result.filters
+
+
+def test_explicit_each_product_half_year_trend_keeps_product_grouping():
+    result = RuleBasedIntentClassifier().classify(
+        "上海地区费森尤斯各产品近半年销售趋势如何",
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+        "brand-each-product-half-year-trend",
+    )
+
+    assert "产品" in result.dimensions
+    assert {"field": "商品名称", "operator": "EQ", "value": "费森尤斯"} in result.filters
 
 
 @pytest.mark.parametrize(

@@ -13,6 +13,7 @@ from app.adapters.http import (
 from app.config import Settings
 from datetime import date, datetime, timezone
 from app.domain.models import AnalysisOperator, CanonicalAnalysisRequest, Dataset, DependencyConstraint, MetricRef, PrimaryIntent, SemanticFilterBinding, TimeRange, TrustedIdentity
+from app.domain.semantic_scope import AuthorizedSemanticScope
 from app.services.knowledge_retrieval import RedisKnowledgeSearchCache
 from app.services.relationship_projection import (
     requires_distinct_relationship_projection,
@@ -2843,6 +2844,25 @@ async def test_missing_business_domain_uses_semantic_model_wide_asl_routing():
     assert client.calls[0][2]["semantic_model_id"] == 8
     assert client.calls[0][2]["business_domain_id"] is None
     assert client.calls[0][2]["business_domain_ids"] == []
+
+
+def test_model_wide_request_uses_unique_catalog_resolved_domain_for_asl():
+    req = request().model_copy(update={
+        "semantic_model_id": 81,
+        "business_domain_ids": [],
+        "resolved_business_domain_ids": [205],
+        "authorized_semantic_scope": AuthorizedSemanticScope(
+            semantic_model_id=81,
+            scope_mode="MODEL_WIDE",
+        ),
+    })
+
+    execution_scope = HttpDataRetrievalAdapter._materialize_oagent_execution_scope(
+        req, None
+    )
+
+    assert execution_scope["business_domain_id"] == 205
+    assert execution_scope["business_domain_ids"] == [205]
 
 
 @pytest.mark.asyncio

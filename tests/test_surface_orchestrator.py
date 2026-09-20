@@ -57,6 +57,7 @@ async def test_surface_executor_keeps_platform_metric_normalization():
         calls.append((
             request.rewritten_question,
             [metric.input for metric in request.metrics],
+            list(request.resolved_business_domain_ids),
         ))
         return DataQueryResult(
             asl={
@@ -92,6 +93,7 @@ async def test_surface_executor_keeps_platform_metric_normalization():
 """),
     )
     chat._completed_question_execution = True
+    chat._demo_execution_resolved_business_domain_ids = (205,)
 
     result = await orchestrator._handle(
         chat, TrustedIdentity(tenant_id="t", user_id="u")
@@ -103,6 +105,7 @@ async def test_surface_executor_keeps_platform_metric_normalization():
         "上海地区费森尤斯产品近半年含税销售总额趋势如何"
     )
     assert calls[0][1] == ["含税销售总额"]
+    assert calls[0][2] == [205]
 
 
 @pytest.mark.asyncio
