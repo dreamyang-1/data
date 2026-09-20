@@ -1930,6 +1930,85 @@ def test_surface_mention_unique_hit_is_normalized_to_canonical_value(monkeypatch
     assert knowledge["_source_canonical_values"]["上海"] == "上海市"
 
 
+@pytest.mark.parametrize(
+    ("surface", "canonical", "semantic_field", "resolved_field", "entity_name"),
+    (
+        ("上海", "上海市", "城市", "dim_city.city_name", "城市"),
+        ("北京", "北京市", "城市", "dim_city.city_name", "城市"),
+        ("安徽", "安徽省", "省份", "dim_province.province_name", "省份"),
+    ),
+)
+def test_contract_filter_uses_source_canonical_administrative_value(
+    monkeypatch, surface, canonical, semantic_field, resolved_field, entity_name,
+):
+    entity_code = resolved_field.split(".", 1)[0]
+    knowledge = {
+        "entities": [
+            _entity(
+                entity_code,
+                entity_name,
+                resolved_field,
+                f"{entity_name}名称",
+            ),
+        ],
+        "dimensions": [SimpleNamespace(metadata={
+            "dim_code": "administrative_area",
+            "dim_name": semantic_field,
+            "bind_entities": [{
+                "entity": entity_code,
+                "mappingTable": resolved_field.split(".", 1)[0],
+                "mappingColumn": resolved_field.split(".", 1)[1],
+            }],
+        })],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["filters"] = [{
+        "field": resolved_field, "operator": "=", "value": surface,
+    }]
+    expected = {"field": semantic_field, "operator": "EQ", "value": surface}
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args, **_kwargs: [{
+            "entity_code": entity_code,
+            "field": resolved_field,
+            "is_main_attribute": True,
+        }],
+    )
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [{
+            "field": resolved_field,
+            "canonical_value": canonical,
+            "match_type": "CANONICAL_CONTAINS_MENTION",
+        }],
+    )
+
+    repair = _repair_contract_filter(
+        ast,
+        expected,
+        knowledge,
+        negative=False,
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert repair == {
+        "type": "ADD_SOURCE_RESOLVED_ENTITY_FILTER",
+        "mention": surface,
+        "canonical_value": canonical,
+        "resolved_field": resolved_field,
+        "source": "SOURCE_CATALOG_CONTRACT_NORMALIZATION",
+    }
+    assert ast["filters"] == [{
+        "field": resolved_field,
+        "operator": "=",
+        "value": canonical,
+    }]
+    assert knowledge["_source_canonical_values"][surface] == canonical
+
+
 def test_surface_mention_role_hint_prefers_brand_over_project(monkeypatch):
     knowledge = {
         "entities": [

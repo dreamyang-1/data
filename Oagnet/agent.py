@@ -5897,6 +5897,63 @@ def _unique_human_name_candidate(
     return None
 
 
+def _canonical_contract_filter_value(
+    value: object,
+    resolved_field: str,
+    semantic_model_id: int | None,
+    domain_scope: int | list[int] | tuple[int, ...] | None,
+) -> object:
+    """Return a uniquely proven source value for one contract predicate.
+
+    Intent contracts retain the user's surface wording. Once their semantic
+    field has been bound, the executable predicate must still use the value
+    stored by that field (for example ``上海`` -> ``上海市``). Only an exact
+    source hit or a unique administrative-suffix completion is accepted.
+    """
+    if type(semantic_model_id) is not int or not isinstance(value, str):
+        return value
+    surface = value.strip()
+    if len(surface) < 2 or not resolved_field:
+        return value
+    published = [
+        item for item in load_published_entity_attribute_candidates(
+            semantic_model_id, domain_scope,
+        )
+        if str(item.get("field") or "") == resolved_field
+    ]
+    if len(published) != 1:
+        return value
+    try:
+        matches = resolve_entity_attribute_catalog_matches(
+            semantic_model_id, domain_scope, published, surface,
+        )
+    except Exception as exc:
+        logger.warning(
+            "contract filter value normalization unavailable: sm=%s, error_type=%s",
+            semantic_model_id,
+            type(exc).__name__,
+        )
+        return value
+    exact = {
+        str(item.get("canonical_value") or "").strip()
+        for item in matches
+        if str(item.get("field") or "") == resolved_field
+        and item.get("match_type") == "EXACT"
+        and str(item.get("canonical_value") or "").strip()
+    }
+    if len(exact) == 1:
+        return next(iter(exact))
+    administrative = {
+        str(item.get("canonical_value") or "").strip()
+        for item in matches
+        if str(item.get("field") or "") == resolved_field
+        and _administrative_suffix_completion(
+            surface, str(item.get("canonical_value") or "")
+        )
+    }
+    return next(iter(administrative)) if len(administrative) == 1 else value
+
+
 def _repair_contract_filter(
     ast: dict,
     expected: dict,
@@ -6040,24 +6097,64 @@ def _repair_contract_filter(
         if name_candidate is not None:
             candidates = [name_candidate]
 
+    resolved = candidates[0] if len(candidates) == 1 else ""
+    natural_values = (
+        list(expected_value) if isinstance(expected_value, list)
+        else [expected_value]
+    )
+    canonical_values = [
+        _canonical_contract_filter_value(
+            value, resolved, semantic_model_id, domain_scope,
+        )
+        for value in natural_values
+    ]
+    canonical_expected_value = (
+        canonical_values if isinstance(expected_value, list)
+        else canonical_values[0]
+    )
+    source_canonical_values = knowledge.setdefault(
+        "_source_canonical_values", {}
+    )
+    for surface, canonical in zip(natural_values, canonical_values):
+        if isinstance(surface, str) and canonical != surface:
+            source_canonical_values[
+                re.sub(r"\s+", "", surface).casefold()
+            ] = canonical
+    canonical_repair = None
+    if (
+        isinstance(expected_value, str)
+        and isinstance(canonical_expected_value, str)
+        and canonical_expected_value != expected_value
+    ):
+        canonical_repair = {
+            "type": "ADD_SOURCE_RESOLVED_ENTITY_FILTER",
+            "mention": expected_value,
+            "canonical_value": canonical_expected_value,
+            "resolved_field": resolved,
+            "source": "SOURCE_CATALOG_CONTRACT_NORMALIZATION",
+        }
+
     matching: list[dict] = []
     for item in filters:
-        if not isinstance(item, dict) or item.get("value") != expected_value:
+        if not isinstance(item, dict) or item.get("value") not in (
+            expected_value, canonical_expected_value,
+        ):
             continue
         actual_negative = str(item.get("operator") or "").upper() in negative_ops
         if actual_negative == negative and str(item.get("field") or "") in candidates:
             matching.append(item)
     if len(matching) == 1:
         matching[0]["operator"] = expected_operator
+        matching[0]["value"] = canonical_expected_value
         if len(candidates) == 1:
             _clear_resolved_contract_filter_ambiguities(
                 ast,
                 semantic_field=str(expected.get("field") or ""),
                 resolved_field=str(matching[0].get("field") or ""),
-                value=expected_value,
+                value=canonical_expected_value,
                 candidate_fields=set(candidates),
             )
-        return None
+        return canonical_repair
 
     if len(candidates) != 1:
         raise ASLValidationError(
@@ -6071,7 +6168,6 @@ def _repair_contract_filter(
             },
         )
 
-    resolved = candidates[0]
     published_authorized = knowledge.setdefault(
         "_published_authorized_fields", []
     )
@@ -6086,7 +6182,7 @@ def _repair_contract_filter(
         item for item in filters
         if not (
             isinstance(item, dict)
-            and item.get("value") == expected_value
+            and item.get("value") in (expected_value, canonical_expected_value)
             and (
                 str(item.get("operator") or "").upper() in negative_ops
             ) == negative
@@ -6095,13 +6191,13 @@ def _repair_contract_filter(
     filters.append({
         "field": resolved,
         "operator": expected_operator,
-        "value": expected_value,
+        "value": canonical_expected_value,
     })
     cleared_ambiguities = _clear_resolved_contract_filter_ambiguities(
         ast,
         semantic_field=str(expected.get("field") or ""),
         resolved_field=resolved,
-        value=expected_value,
+        value=canonical_expected_value,
         candidate_fields=set(candidates),
     )
     repair = {
@@ -6113,7 +6209,7 @@ def _repair_contract_filter(
     }
     if cleared_ambiguities:
         repair["cleared_stale_ambiguities"] = cleared_ambiguities
-    return repair
+    return canonical_repair or repair
 
 
 def _administrative_mention_level(mention: str) -> str | None:
@@ -6749,7 +6845,17 @@ def _apply_intent_asl_contract(
         raw_value = expected.get("value") if isinstance(expected, dict) else None
         values = raw_value if isinstance(raw_value, list) else [raw_value]
         typed_filter_values.update(
-            re.sub(r"\s+", "", str(value or "")).casefold()
+            re.sub(
+                r"\s+",
+                "",
+                str(
+                    knowledge.get("_source_canonical_values", {}).get(
+                        re.sub(r"\s+", "", str(value or "")).casefold(),
+                        value,
+                    )
+                    or ""
+                ),
+            ).casefold()
             for value in values
             if isinstance(value, str) and value.strip()
         )
