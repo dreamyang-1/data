@@ -6170,10 +6170,11 @@ def _select_surface_mention_match(
             and ratio < 0.5
             and not (
                 allow_role_containment
-                and match_type in {
-                    "CANONICAL_CONTAINS_MENTION",
-                    "MENTION_CONTAINS_CANONICAL",
-                }
+                # A longer canonical business name may legitimately contain a
+                # short alias (e.g. a brand alias inside a legal company name).
+                # The reverse direction is unsafe for codes: otherwise one
+                # digit from ``AT75242`` can bind to product.id=7.
+                and match_type == "CANONICAL_CONTAINS_MENTION"
             )
         ):
             # A weak containment/subsequence hit (for example the digit "2"
@@ -6284,7 +6285,40 @@ def _apply_surface_mention_normalization(
         literal_key = re.sub(r"\s+", "", mention).casefold()
         mention_candidates = candidates
         mention_allowed_fields = allowed_fields
-        if role_hint:
+        # An exact entity-attribute-value vector hit already carries the
+        # governed entity and attribute identity.  Prefer that evidence over
+        # the upstream role hint, which is only a model hypothesis and may call
+        # a specification/model number a product name.  The physical source is
+        # still queried below, so a stale vector record cannot authorize a
+        # filter by itself.
+        exact_value_candidates: list[dict[str, Any]] = []
+        for result in knowledge.get("entity_attribute_values", []):
+            metadata = getattr(result, "metadata", {}) or {}
+            stored_value = str(
+                metadata.get("canonical_value")
+                or metadata.get("attr_value")
+                or ""
+            ).strip()
+            if re.sub(r"\s+", "", stored_value).casefold() != literal_key:
+                continue
+            entity_code = str(metadata.get("entity_code") or "").strip()
+            attr_code = str(metadata.get("attr_code") or "").strip()
+            for field, attribute in attributes_by_entity.get(entity_code, {}).items():
+                if str(attribute.get("attr_code") or "").strip() != attr_code:
+                    continue
+                exact_value_candidates.append({
+                    "entity_code": entity_code,
+                    "field": field,
+                    "is_main_attribute": bool(
+                        attribute.get("is_main_attribute")
+                    ),
+                })
+        if exact_value_candidates:
+            mention_candidates = exact_value_candidates
+            mention_allowed_fields = {
+                str(item["field"]) for item in exact_value_candidates
+            }
+        elif role_hint:
             role_fields = set(_contract_filter_candidates(
                 role_hint,
                 knowledge,

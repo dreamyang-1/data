@@ -2134,6 +2134,93 @@ def test_surface_product_name_hint_finds_published_specification(monkeypatch):
     assert repairs[-1]["resolved_field"] == "product.specification"
 
 
+def test_exact_vector_value_identity_overrides_wrong_surface_role(monkeypatch):
+    product = _entity(
+        "product", "product", "product.product_name", "product name",
+    )
+    product_attributes = json.loads(product.metadata["attributes"])
+    product_attributes.append({
+        "attr_code": "specification",
+        "attr_name": "specification",
+        "field_mapping": {
+            "mappingTable": "product",
+            "mappingColumn": "specification",
+        },
+        "is_main_attribute": False,
+    })
+    product.metadata["attributes"] = json.dumps(product_attributes)
+    knowledge = {
+        "entities": [
+            product,
+            _entity(
+                "manufacturer", "manufacturer",
+                "manufacturer.parent_brand", "brand",
+            ),
+        ],
+        "entity_attribute_values": [SimpleNamespace(metadata={
+            "entity_code": "product",
+            "attr_code": "specification",
+            "canonical_value": "MMT-866A",
+        })],
+    }
+    ast = json.loads(_detail_ast("sales_order"))
+    ast["metrics"] = [{"name": "sales_total_including_tax"}]
+    ast["filters"] = [{
+        "field": "product.product_name",
+        "operator": "=",
+        "value": "MMT-866A",
+    }]
+    seen_fields = []
+
+    def resolve(_model, _domains, candidates, _literal):
+        fields = [item["field"] for item in candidates]
+        seen_fields.extend(fields)
+        return [{
+            "field": "product.specification",
+            "canonical_value": "MMT-866A",
+            "match_type": "EXACT",
+            "is_main_attribute": False,
+        }] if "product.specification" in fields else []
+
+    monkeypatch.setattr(
+        agent,
+        "_contract_filter_candidates",
+        lambda *_args, **_kwargs: ["manufacturer.parent_brand"],
+    )
+    monkeypatch.setattr(agent, "resolve_entity_attribute_catalog_matches", resolve)
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast),
+        knowledge,
+        {"mentions": [{"text": "MMT-866A", "role_hint": "product name"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert seen_fields == ["product.specification"]
+    assert json.loads(normalized)["filters"] == [{
+        "field": "product.specification",
+        "operator": "=",
+        "value": "MMT-866A",
+    }]
+    assert repairs[-1]["resolved_field"] == "product.specification"
+
+
+def test_surface_role_containment_does_not_bind_short_id_inside_model_code():
+    selected = _select_surface_mention_match(
+        "AT75242",
+        [{
+            "field": "product.id",
+            "canonical_value": "7",
+            "match_type": "MENTION_CONTAINS_CANONICAL",
+        }],
+        {"product.id"},
+        allow_role_containment=True,
+    )
+
+    assert selected is None
+
+
 def test_surface_mention_multiple_hits_pick_highest_similarity(monkeypatch):
     knowledge = {
         "entities": [
