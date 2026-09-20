@@ -654,6 +654,20 @@ def test_semantic_entity_mention_rejects_missing_source_binding_proof():
     assert exc.value.code == "ASL_ENTITY_MENTION_UNRESOLVED"
 
 
+def test_typed_filter_value_is_not_sent_again_as_untyped_mention():
+    req = request().model_copy(update={
+        "filters": [
+            {"field": "商品品牌", "operator": "EQ", "value": "万益特"},
+            {"field": "商品名称", "operator": "EQ", "value": "血液净化管路"},
+        ],
+        "semantic_entity_mentions": ["万益特", "血液净化管路", "尚未分类的型号"],
+    })
+
+    assert HttpDataRetrievalAdapter._untyped_semantic_mentions(req) == [
+        "尚未分类的型号"
+    ]
+
+
 @pytest.mark.asyncio
 async def test_contextual_entity_mention_is_preserved_for_current_semantic_recall():
     req = CanonicalAnalysisRequest(

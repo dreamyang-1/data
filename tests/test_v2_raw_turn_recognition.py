@@ -881,7 +881,7 @@ def test_completed_question_prefix_parser_handles_partial_json_and_escapes():
 
 
 @pytest.mark.asyncio
-async def test_streaming_completed_question_prefix_is_published_once():
+async def test_streaming_completed_question_prefix_is_not_published_before_validation():
     completed = '查询南京哪些医院使用费森尤斯产品。'
     full = json.dumps(
         {'completed_question': completed, 'mentions': []}, ensure_ascii=False
@@ -926,17 +926,12 @@ async def test_streaming_completed_question_prefix_is_published_once():
 
     assert result.completed_question == completed
     phases = [item.get('progress_phase') for item in progress]
-    assert phases.index('V2_CURRENT_TURN_MODEL_STREAM_STARTED') < phases.index(
-        'V2_CURRENT_TURN_COMPLETED_QUESTION_STREAMING'
-    )
+    assert 'V2_CURRENT_TURN_MODEL_STREAM_STARTED' in phases
     streaming = [
         item for item in progress
         if item.get('progress_phase') == 'V2_CURRENT_TURN_COMPLETED_QUESTION_STREAMING'
     ]
-    assert len(streaming) == 1
-    assert streaming[0]['stage'] == 'INTENT_RECOGNITION'
-    prefix = streaming[0]['message'][len('补全后的问题：'):]
-    assert prefix and completed.startswith(prefix)
+    assert streaming == []
 
 
 @pytest.mark.asyncio

@@ -207,23 +207,14 @@ class RecognitionModelClient:
 
     @staticmethod
     async def _emit_completed_question_prefix(stage: str, buffer: str) -> None:
-        """Publish the visible completed-question prefix while streaming.
+        """Do not publish an unfinished JSON string as user-visible wording.
 
-        The intent section otherwise stays silent until the full structured
-        JSON finishes. The prefix is display-only progress; the authoritative
-        value still comes from the validated final parse.
+        The model may have streamed only a few characters (for example
+        ``帮我``) when this hook runs.  The finalized, schema-validated value is
+        rendered by the normal intent summary, so exposing the prefix creates
+        a duplicate and sometimes contradictory completed-question row.
         """
-        if stage != 'v2_current_turn':
-            return
-        prefix = _completed_question_prefix(buffer)
-        if not prefix:
-            return
-        await emit_progress(
-            'INTENT_RECOGNITION',
-            'RUNNING',
-            f'补全后的问题：{prefix}',
-            progress_phase='V2_CURRENT_TURN_COMPLETED_QUESTION_STREAMING',
-        )
+        _ = stage, buffer
 
     async def _stream_choice(self, client, *, headers, body, stage, timing):
         async with client.stream(

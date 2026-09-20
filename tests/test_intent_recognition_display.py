@@ -98,7 +98,7 @@ def test_all_time_partner_list_preserves_region_brand_product_and_output():
     assert "竞争品牌万益特的血液净化管路产品的经销商名单" in rendered
     assert "最近一年" not in rendered
     assert "上海市（筛选值）" in rendered
-    assert "万益特（筛选值）" in rendered
+    assert "万益特（母品牌/筛选值）" in rendered
     assert "血液净化管路（筛选值）" in rendered
     assert "经销商（业务对象/分组维度）" in rendered
 

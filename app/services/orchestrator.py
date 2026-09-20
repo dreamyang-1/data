@@ -3106,7 +3106,7 @@ class DataAnalysisOrchestrator:
             )
         )
 
-    async def _handle_surface_query(self, chat, identity):
+    async def _handle_surface_query(self, chat, identity, *, request=None):
         """Execute a completed ordinary query with ASL-owned catalog binding."""
         if not callable(getattr(self.adapters.query, "query_surface", None)):
             return None
@@ -3120,17 +3120,24 @@ class DataAnalysisOrchestrator:
             # Previously confirmed/native plans retain their existing guarded
             # execution envelope rather than being reduced to surface hints.
             return None
-        request = await self._classify(chat.question, identity, chat.conversation_id,
-                                       pre_resolved=True,
-                                       agent_prompt=await self._agent_prompt_text(chat))
+        supplied_request = request is not None
+        if request is None:
+            request = await self._classify(
+                chat.question,
+                identity,
+                chat.conversation_id,
+                pre_resolved=True,
+                agent_prompt=await self._agent_prompt_text(chat),
+            )
         if request.primary_intent not in {
             PrimaryIntent.METRIC_QUERY, PrimaryIntent.DETAIL_QUERY,
             PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
         }:
             return None
         request.application_id = chat.application_id
-        request.original_question = chat.question
-        request.rewritten_question = chat.question
+        if not supplied_request:
+            request.original_question = chat.question
+            request.rewritten_question = chat.question
         bind_authorized_scope(request, chat.authorized_semantic_scope)
         # This classifier read ``chat.question``, which is the completed
         # question supplied by the context bridge.  Build every advisory ASL
@@ -3672,6 +3679,10 @@ class DataAnalysisOrchestrator:
                     incoming=incoming,
                     completed_before_pending=completed_before_pending,
                 )
+                # Any terminal response produced while resuming this exact
+                # Pending version must clear it. Set the CAS version before a
+                # temporal choice can take the surface-ASL fast path.
+                request.pending_state_version = pending.state_version
                 if semantic_choice is not None:
                     request = self._apply_semantic_clarification_choice(
                         pending.request,
@@ -3683,8 +3694,42 @@ class DataAnalysisOrchestrator:
                             request,
                             "当前语义目录尚未明确该选项对应的原有查询项，原任务保持待确认状态。",
                         )
+                    if (
+                        getattr(self.settings, "surface_asl_execution_enabled", False)
+                        and self._semantic_choice_is_temporal(semantic_choice)
+                    ):
+                        # A time option changes only the temporal scope. Resume
+                        # the already complete business question through the
+                        # same surface-ASL boundary used by a standalone turn,
+                        # retaining the typed city/brand/product roles from
+                        # Pending. The legacy contract path represented those
+                        # values a second time as untyped mentions and could
+                        # reject 万益特 after its 商品品牌 filter was valid.
+                        surface_request = request.model_copy(deep=True)
+                        surface_request.rewritten_question = (
+                            build_intent_recognition_display_v2(
+                                surface_request,
+                                business_domain_labels=chat._business_domain_labels,
+                                semantic_extractions=chat._semantic_extraction_items,
+                            ).completed_question
+                        )
+                        surface_request.semantic_filter_bindings = []
+                        surface_request.trusted_dimension_bindings = []
+                        bind_authorized_scope(
+                            surface_request,
+                            chat.authorized_semantic_scope,
+                            execution_resolved_business_domain_ids=(
+                                chat._demo_execution_resolved_business_domain_ids
+                            ),
+                        )
+                        surface_response = await self._handle_surface_query(
+                            chat,
+                            identity,
+                            request=surface_request,
+                        )
+                        if surface_response is not None:
+                            return surface_response
                 preserve_merged_question = True
-                request.pending_state_version = pending.state_version
                 rounds = pending.clarification_rounds + 1
                 if semantic_choice is not None and any(
                     item.blocking for item in request.semantic_ambiguities
@@ -8008,6 +8053,33 @@ class DataAnalysisOrchestrator:
         return matches[0] if len(matches) == 1 else None
 
     @staticmethod
+    def _semantic_choice_is_temporal(choice: dict[str, Any]) -> bool:
+        ambiguity: SemanticAmbiguity = choice["ambiguity"]
+        detail = choice.get("detail") or {}
+        selected = str(
+            detail.get("value")
+            or detail.get("canonical_value")
+            or detail.get("attribute_value")
+            or detail.get("canonical_name")
+            or detail.get("attribute_name")
+            or choice.get("label")
+            or ""
+        ).strip()
+        affected = {
+            str(slot).strip().lower() for slot in ambiguity.affected_slots
+        }
+        return bool(
+            affected and affected <= {"time_range", "time_context"}
+        ) or bool(
+            re.search(r"时间|时段|期间|正在销售|在售", ambiguity.question or "")
+            and re.search(
+                r"不限时间|全部历史|所有历史|历史所有|最近\s*\d+\s*天|"
+                r"本月|本年|今年|\d{4}年至今|自定义时间",
+                selected,
+            )
+        )
+
+    @staticmethod
     def _completed_question_with_choice(
         pending: CanonicalAnalysisRequest, choice: dict[str, Any]
     ) -> str:
@@ -8111,6 +8183,8 @@ class DataAnalysisOrchestrator:
             or ambiguity.phrase
             or ""
         ).strip()
+        selected_period = canonical_value or canonical_name or str(choice["label"])
+        temporal_choice = cls._semantic_choice_is_temporal(choice)
         applied = False
         if ambiguity.ambiguity_id == 'LEGACY_BARE_NAME_OPERATION' and ambiguity.phrase:
             if detail.get('operation') == 'PROJECTION':
@@ -8162,15 +8236,13 @@ class DataAnalysisOrchestrator:
         elif ambiguity.type in {"subject"} and canonical_name:
             target.entity = canonical_name
             applied = True
-        elif set(ambiguity.affected_slots) and set(
-            ambiguity.affected_slots
-        ) <= {"time_range", "time_context"}:
+        elif temporal_choice:
             # A visible period choice is a deterministic temporal value, not a
             # catalog field binding.  Some upstreams label this ambiguity as
             # ``context`` instead of ``time_anchor``; the affected slot is the
             # stable contract. Applying it must not require a semantic field
             # ID. The ASL planner chooses the authorized date field later.
-            period = canonical_value or canonical_name or str(choice["label"])
+            period = selected_period
             parsed_range = RuleBasedIntentClassifier._time_range(period)
             all_time = bool(re.search(
                 r"全部(?:时间|历史)|全量历史|所有历史|历史全部|不限时间",
@@ -8316,9 +8388,7 @@ class DataAnalysisOrchestrator:
             *target.assumptions,
             "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER",
         ]))
-        if set(ambiguity.affected_slots) and set(
-            ambiguity.affected_slots
-        ) <= {"time_range", "time_context"}:
+        if temporal_choice:
             target.assumptions = [
                 value for value in target.assumptions
                 if not value.startswith((

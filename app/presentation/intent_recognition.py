@@ -227,7 +227,26 @@ def _request_extraction_parameters(
             ):
                 surface += filter_field
             if surface:
-                candidates.append((surface, ("筛选值",)))
+                # The structured model already supplied the fine-grained
+                # business role in ``field``.  Preserve that role in the
+                # public extraction instead of flattening every value to the
+                # generic label “筛选值”.  This changes presentation only; ASL
+                # still performs the final catalog-field binding.
+                role_is_material = any(
+                    marker in filter_field
+                    for marker in ("品牌", "厂牌", "厂家", "制造商", "生产商")
+                )
+                labels = tuple(dict.fromkeys(
+                    [
+                        label
+                        for label in (
+                            filter_field if role_is_material else "",
+                            "筛选值",
+                        )
+                        if label
+                    ]
+                ))
+                candidates.append((surface, labels))
     for metric in metrics:
         candidates.append((_surface_in_question(metric, question), ("指标",)))
     if entity:

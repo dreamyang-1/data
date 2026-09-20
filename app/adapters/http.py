@@ -1332,6 +1332,18 @@ class HttpDataRetrievalAdapter:
                 "semantic_model_id is required",
             )
 
+        # A literal that already belongs to a typed filter is not an untyped
+        # entity mention as well.  Keeping both representations makes Oagnet
+        # resolve the same word twice: once with its business role and once
+        # without it.  The second pass can become ambiguous even after the
+        # role-bound filter was resolved correctly (for example 万益特 as
+        # 商品品牌).  Work on a local copy so provenance stored by the caller is
+        # unchanged.
+        request = request.model_copy(deep=True)
+        request.semantic_entity_mentions = self._untyped_semantic_mentions(
+            request
+        )
+
         self._enforce_bound_scope(request, semantic_model_id, business_domain_id)
         self._require_supported_retrieval_scope(request)
         oagent_execution_scope = self._materialize_oagent_execution_scope(
@@ -3113,6 +3125,38 @@ class HttpDataRetrievalAdapter:
                 "ASL did not preserve one or more caller-grounded filters",
                 details={"missing_filters": missing},
             )
+    @staticmethod
+    def _untyped_semantic_mentions(
+        request: CanonicalAnalysisRequest,
+    ) -> list[str]:
+        """Return mentions that are not already represented by typed filters."""
+
+        def literal_key(value: object) -> str:
+            normalized = str(value or "").translate(str.maketrans({
+                "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+                "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
+                "\uff0d": "-",
+            }))
+            return re.sub(r"\s+", "", normalized.strip()).casefold()
+
+        typed_values: set[str] = set()
+        for item in request.filters:
+            if not isinstance(item, dict) or not str(item.get("field") or "").strip():
+                continue
+            raw = item.get("value")
+            values = raw if isinstance(raw, list) else [raw]
+            typed_values.update(
+                literal_key(value)
+                for value in values
+                if value not in (None, "") and literal_key(value)
+            )
+        return list(dict.fromkeys(
+            text
+            for value in request.semantic_entity_mentions
+            if (text := str(value).strip())
+            and literal_key(text) not in typed_values
+        ))
+
     @staticmethod
     def _validate_semantic_entity_mentions(
         asl: dict[str, Any],

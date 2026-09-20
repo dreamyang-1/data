@@ -225,11 +225,22 @@ class SurfaceOnlyRoleRetrieval:
 class CapturingSuccessfulRetrieval:
     def __init__(self):
         self.requests = []
+        self.surface_mentions = []
         self.delegate = MockDataRetrievalAdapter()
 
     async def query(self, request, identity, **kwargs):
         self.requests.append(request.model_copy(deep=True))
         return await self.delegate.query(request, identity, **kwargs)
+
+    async def query_surface(self, request, identity, *, mentions):
+        self.requests.append(request.model_copy(deep=True))
+        self.surface_mentions.append([dict(item) for item in mentions])
+        return await self.delegate.query(
+            request,
+            identity,
+            semantic_model_id=81,
+            business_domain_id=None,
+        )
 
 
 def service(retrieval):
@@ -593,6 +604,7 @@ async def test_all_time_reply_restores_complete_partner_query_before_execution()
             return None
 
     agent.settings.multi_question_enabled = True
+    agent.settings.surface_asl_execution_enabled = True
     agent.task_planner = NoSplitPlanner()
     original = (
         "帮我找出上海地区正在销售竞争品牌万益特的血液净化管路的"
@@ -624,12 +636,15 @@ async def test_all_time_reply_restores_complete_partner_query_before_execution()
         ],
         missing_slots=["semantic_ambiguity"],
         semantic_ambiguities=[SemanticAmbiguity(
-            type="context",
+            # Production may return a generic filter ambiguity without
+            # affected_slots even though its wording and candidates are
+            # entirely temporal. The visible choice must still update time.
+            type="filter",
             ambiguity_id="active-sales-time-range",
             question="请选择查询时间范围。",
             candidates=["最近30天", "本月", "2026年至今", "不限时间（全部历史）"],
             candidate_details=[{}, {}, {}, {}],
-            affected_slots=["time_range"],
+            affected_slots=[],
         )],
     )
     await agent.sessions.put_pending(PendingState(request=request), expected_version=0)
@@ -655,8 +670,13 @@ async def test_all_time_reply_restores_complete_partner_query_before_execution()
     assert "补全后的问题：查询不限时间（全部历史）内上海市" in intent_message
     assert "竞争品牌万益特" in intent_message
     assert "血液净化管路产品的经销商名单" in intent_message
-    assert "万益特（筛选值）" in intent_message
+    assert "万益特（母品牌/筛选值）" in intent_message
     assert "血液净化管路（筛选值）" in intent_message
+    assert retrieval.surface_mentions == [[
+        {"text": "上海市", "role_hint": "业务城市"},
+        {"text": "万益特", "role_hint": "母品牌"},
+        {"text": "血液净化管路", "role_hint": "商品名称"},
+    ]]
     planning_events = [
         event for event in events
         if event["stage"] == "TASK_PLANNING" and event["status"] == "COMPLETED"
@@ -667,6 +687,12 @@ async def test_all_time_reply_restores_complete_partner_query_before_execution()
     planning_event = planning_events[0]
     assert original in planning_event["message"]
     assert "已确认不限时间（全部历史）" in planning_event["message"]
+    assert await agent.sessions.get_pending(
+        IDENTITY.tenant_id,
+        IDENTITY.user_id,
+        "choice-app",
+        "choice-conversation",
+    ) is None
 
 
 def test_two_independent_choices_preserve_previously_confirmed_member():
