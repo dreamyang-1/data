@@ -5619,6 +5619,14 @@ def _contract_filter_candidates(
 
     target_administrative_role = administrative_role(target)
 
+    def semantic_role(value: str) -> str | None:
+        compact = _contract_label(value)
+        if any(token in compact for token in (
+            _contract_label("品牌"), _contract_label("厂牌"),
+        )):
+            return "brand"
+        return None
+
     def match_score(
         identity_terms: set[str], descriptive_terms: set[str]
     ) -> int | None:
@@ -5630,6 +5638,12 @@ def _contract_filter_candidates(
         target_role = administrative_role(target)
         if target_role and any(
             administrative_role(term) == target_role
+            for term in identity_terms | descriptive_terms
+        ):
+            return 1
+        target_semantic_role = semantic_role(target)
+        if target_semantic_role and any(
+            semantic_role(term) == target_semantic_role
             for term in identity_terms | descriptive_terms
         ):
             return 1
@@ -5845,6 +5859,44 @@ def _contract_operator(operator: object, *, negative: bool) -> str:
     return aliases.get(normalized, normalized or "=")
 
 
+def _unique_human_name_candidate(
+    candidates: list[str], semantic_field: object,
+) -> str | None:
+    """Resolve a physical name/id pair from the semantic role itself.
+
+    Catalog recall can legitimately return both ``city_id`` and
+    ``city_name`` for a role such as ``业务城市``.  A human-readable filter
+    value belongs to the sole name/display attribute when every competing
+    candidate is an identifier.  Multiple name attributes remain ambiguous.
+    """
+
+    label = _contract_label(str(semantic_field or ""))
+    if any(token in label for token in ("编码", "代码", "编号", "标识", "id")):
+        return None
+
+    def column(field: str) -> str:
+        return field.rsplit(".", 1)[-1].casefold()
+
+    def is_name(field: str) -> bool:
+        value = column(field)
+        return any(token in value for token in (
+            "name", "label", "title", "名称", "姓名", "简称",
+        ))
+
+    def is_identifier(field: str) -> bool:
+        value = column(field)
+        return bool(
+            re.search(r"(?:^|_)(?:id|code|key|no)(?:$|_)", value)
+            or any(token in value for token in ("编码", "代码", "编号", "标识"))
+        )
+
+    names = [field for field in candidates if is_name(field)]
+    others = [field for field in candidates if field not in names]
+    if len(names) == 1 and others and all(is_identifier(field) for field in others):
+        return names[0]
+    return None
+
+
 def _repair_contract_filter(
     ast: dict,
     expected: dict,
@@ -5977,6 +6029,17 @@ def _repair_contract_filter(
         if len(subject_candidates) == 1:
             candidates = subject_candidates
 
+    if len(candidates) > 1:
+        # Value lookup can be unavailable for a newly published catalog or can
+        # return the same literal for both a display column and its identifier.
+        # The semantic role still proves a name/id pair when there is exactly
+        # one human-readable name field and every alternative is an ID/code.
+        name_candidate = _unique_human_name_candidate(
+            candidates, expected.get("field")
+        )
+        if name_candidate is not None:
+            candidates = [name_candidate]
+
     matching: list[dict] = []
     for item in filters:
         if not isinstance(item, dict) or item.get("value") != expected_value:
@@ -6070,6 +6133,8 @@ def _select_surface_mention_match(
     matches: list[dict[str, Any]],
     allowed_fields: set[str],
     field_kinds: dict[str, str | None] | None = None,
+    *,
+    allow_role_containment: bool = False,
 ) -> tuple[str, str] | None:
     """Pick the best catalog hit for an advisory mention.
 
@@ -6100,7 +6165,17 @@ def _select_surface_mention_match(
         ).ratio()
         if _administrative_suffix_completion(mention, canonical):
             ratio = 1.0
-        if match_type != "EXACT" and ratio < 0.5:
+        if (
+            match_type != "EXACT"
+            and ratio < 0.5
+            and not (
+                allow_role_containment
+                and match_type in {
+                    "CANONICAL_CONTAINS_MENTION",
+                    "MENTION_CONTAINS_CANONICAL",
+                }
+            )
+        ):
             # A weak containment/subsequence hit (for example the digit "2"
             # of a date range like "2025年10月至12月" matching an enum code)
             # must not inject an unrelated filter; only exact or strong hits
@@ -6122,6 +6197,12 @@ def _select_surface_mention_match(
         ]
         if leveled:
             best = leveled
+    if len(best) > 1:
+        main_attributes = [
+            match for match in best if bool(match.get("is_main_attribute"))
+        ]
+        if len(main_attributes) == 1:
+            best = main_attributes
     selected = random.choice(best)
     return (
         str(selected.get("field") or ""),
@@ -6144,11 +6225,17 @@ def _apply_surface_mention_normalization(
     standard field and standard stored value, and an unmatched mention is
     dropped instead of failing the request.
     """
-    mentions = list(dict.fromkeys(
-        str(item.get("text") or "").strip()
-        for item in (surface_evidence or {}).get("mentions", [])
-        if isinstance(item, dict) and str(item.get("text") or "").strip()
-    ))
+    mentions_by_text: dict[str, str | None] = {}
+    for item in (surface_evidence or {}).get("mentions", []):
+        if not isinstance(item, dict):
+            continue
+        text = str(item.get("text") or "").strip()
+        if not text:
+            continue
+        role_hint = str(item.get("role_hint") or "").strip() or None
+        if text not in mentions_by_text or role_hint is not None:
+            mentions_by_text[text] = role_hint
+    mentions = list(mentions_by_text)
     if not mentions or semantic_model_id is None:
         return content, []
     try:
@@ -6193,16 +6280,70 @@ def _apply_surface_mention_normalization(
     published_candidates: list[dict] | None = None
 
     for mention in mentions:
+        role_hint = mentions_by_text.get(mention)
         literal_key = re.sub(r"\s+", "", mention).casefold()
+        mention_candidates = candidates
+        mention_allowed_fields = allowed_fields
+        if role_hint:
+            role_fields = set(_contract_filter_candidates(
+                role_hint,
+                knowledge,
+                semantic_model_id=semantic_model_id,
+                domain_scope=domain_scope,
+            ))
+            scoped_candidates = [
+                item for item in candidates
+                if str(item.get("field") or "") in role_fields
+            ]
+            if scoped_candidates:
+                mention_candidates = scoped_candidates
+                mention_allowed_fields = role_fields
         matches: list[dict[str, Any]] = []
-        for offset in range(0, len(candidates), 32):
+        for offset in range(0, len(mention_candidates), 32):
             matches.extend(resolve_entity_attribute_catalog_matches(
                 semantic_model_id, domain_scope,
-                candidates[offset : offset + 32], mention,
+                mention_candidates[offset : offset + 32], mention,
             ))
         resolved = _select_surface_mention_match(
-            mention, matches, allowed_fields, field_kinds
+            mention,
+            matches,
+            mention_allowed_fields,
+            field_kinds,
+            allow_role_containment=bool(role_hint),
         )
+        if resolved is None and role_hint and mention_allowed_fields:
+            # A role field can be correctly identified while its own source
+            # column has no value (for example a sparse parent_brand). Search
+            # other descriptive attributes on that same governed table before
+            # considering unrelated entities such as a similarly named project.
+            role_tables = {
+                field.partition(".")[0] for field in mention_allowed_fields
+                if "." in field
+            }
+            related_candidates = [
+                item for item in candidates
+                if str(item.get("field") or "").partition(".")[0]
+                in role_tables
+            ]
+            related_fields = {
+                str(item.get("field") or "") for item in related_candidates
+                if str(item.get("field") or "")
+            }
+            related_matches: list[dict[str, Any]] = []
+            for offset in range(0, len(related_candidates), 32):
+                related_matches.extend(resolve_entity_attribute_catalog_matches(
+                    semantic_model_id,
+                    domain_scope,
+                    related_candidates[offset : offset + 32],
+                    mention,
+                ))
+            resolved = _select_surface_mention_match(
+                mention,
+                related_matches,
+                related_fields,
+                field_kinds,
+                allow_role_containment=True,
+            )
         if resolved is None:
             # Top-k recall may miss newly published attributes. Retry once
             # against every published attribute in the same model/domain.
@@ -6219,6 +6360,11 @@ def _apply_surface_mention_normalization(
             extra = [
                 item for item in published_candidates
                 if str(item.get("field") or "") in expanded_fields - allowed_fields
+                and (
+                    not role_hint
+                    or not mention_allowed_fields
+                    or str(item.get("field") or "") in mention_allowed_fields
+                )
             ]
             if extra:
                 expanded_matches: list[dict[str, Any]] = []
@@ -6230,7 +6376,8 @@ def _apply_surface_mention_normalization(
                         )
                     )
                 resolved = _select_surface_mention_match(
-                    mention, expanded_matches, allowed_fields | expanded_fields,
+                    mention, expanded_matches,
+                    mention_allowed_fields | expanded_fields,
                     field_kinds,
                 )
         if resolved is None:

@@ -146,9 +146,6 @@ def _surface_in_question(value: Any, question: str) -> str:
     compact_text = re.sub(r"\s+", "", text)
     if not compact_text or compact_text not in compact_question:
         return text
-    for suffix in ("产品", "商品"):
-        if not compact_text.endswith(suffix) and compact_text + suffix in compact_question:
-            return text + suffix
     return text
 
 
@@ -185,25 +182,27 @@ def _request_extraction_parameters(
     request: CanonicalAnalysisRequest,
     question: str,
 ) -> list[str]:
-    """Fallback projection from the already normalized canonical request."""
+    """Project the classifier result for the completed standalone question.
 
-    display = dict(request.semantic_display_slots or {})
-    grounded = bool(display)
-    if not display:
-        # The intent model reads the completed standalone question. Its
-        # fine-grained extraction is a display aid rather than a catalog
-        # binding contract, so show it before ASL resolves physical fields.
-        display = {
-            "metrics": [
-                metric.canonical_name or metric.input
-                for metric in request.metrics
-                if metric.canonical_name or metric.input
-            ],
-            "dimensions": list(request.dimensions),
-            "entity": request.entity,
-            "fields": list(request.fields),
-            "filters": list(request.filters),
-        }
+    ``semantic_display_slots`` is a later catalog-grounding projection and may
+    legitimately contain only the fields that already matched a published
+    attribute.  Treating that partial projection as the extraction source made
+    brand or category words disappear from the public trace.  Structured
+    extraction instead reflects the complete-question classifier output; ASL
+    remains responsible for final physical field binding.
+    """
+
+    display = {
+        "metrics": [
+            metric.canonical_name or metric.input
+            for metric in request.metrics
+            if metric.canonical_name or metric.input
+        ],
+        "dimensions": list(request.dimensions),
+        "entity": request.entity,
+        "fields": list(request.fields),
+        "filters": list(request.filters),
+    }
     metrics = _unique_text(display.get("metrics"))
     dimensions = _unique_text(display.get("dimensions"))
     entity = _single_line(display.get("entity"), 120)
@@ -215,10 +214,18 @@ def _request_extraction_parameters(
 
     candidates: list[tuple[str, tuple[str, ...]]] = []
     for item in filter_items:
+        filter_field = _single_line(item.get("field"), 120)
         raw_value = item.get("value")
         values = raw_value if isinstance(raw_value, list) else [raw_value]
         for value in values:
             surface = _surface_in_question(value, question)
+            if (
+                filter_field in {"产品", "商品"}
+                and surface
+                and not surface.endswith(("产品", "商品"))
+                and surface + filter_field in re.sub(r"\s+", "", question)
+            ):
+                surface += filter_field
             if surface:
                 candidates.append((surface, ("筛选值",)))
     for metric in metrics:
@@ -257,12 +264,9 @@ def _request_extraction_parameters(
         compact_surface = re.sub(r"\s+", "", surface).casefold()
         position = compact_question.find(compact_surface)
         if position < 0:
-            if not grounded:
-                # Without accepted display evidence, a value absent from the
-                # visible question is a model guess and must not leak into
-                # the public trace (frozen display contract).
-                continue
-            position = len(compact_question) + sequence
+            # A value absent from both the original and completed wording is a
+            # model/rule guess and must not appear as user-provided extraction.
+            continue
         ordered.append((position, sequence, f"{surface}（{'/'.join(labels)}）"))
     return list(dict.fromkeys(item[2] for item in sorted(ordered)))
 
@@ -459,7 +463,9 @@ def _completed_question_for_display(
             "省份", "省名称", "城市", "市名称", "地区", "区域",
             "province", "city", "region", "dim_city", "dim_province",
         )
-        subject_values: list[str] = []
+        brand_values: list[str] = []
+        product_values: list[str] = []
+        other_subject_values: list[str] = []
         geographic_values: list[str] = []
         for item in request.filters:
             if not isinstance(item, dict):
@@ -472,32 +478,42 @@ def _completed_question_for_display(
                 for value in values
                 if value not in (None, "") and str(value).strip()
             ]
-            if any(marker.casefold() in field for marker in commercial_markers):
-                subject_values.extend(normalized_values)
+            if any(marker in field for marker in (
+                "商品品牌", "品牌", "母品牌", "母厂牌", "parent_brand",
+            )):
+                brand_values.extend(normalized_values)
+            elif any(marker in field for marker in (
+                "商品名称", "产品名称", "product_name", "goods_name",
+                "商品分类", "产品分类", "商品品类", "品类", "类别", "category",
+            )):
+                product_values.extend(normalized_values)
+            elif any(marker.casefold() in field for marker in commercial_markers):
+                other_subject_values.extend(normalized_values)
             if any(marker.casefold() in field for marker in geographic_markers):
                 geographic_values.extend(normalized_values)
-        if not subject_values:
-            subject_values = [
+        if not brand_values and not product_values and not other_subject_values:
+            other_subject_values = [
                 str(value).strip()
                 for value in request.semantic_entity_mentions
                 if str(value).strip()
             ]
-        subject_values = list(dict.fromkeys(subject_values))
-        if len(subject_values) == 1:
-            subject = subject_values[0]
-            product_text = subject if subject.endswith(("产品", "商品")) else f"{subject}产品"
+        brand_values = list(dict.fromkeys(brand_values))
+        product_values = list(dict.fromkeys(product_values))
+        other_subject_values = list(dict.fromkeys(other_subject_values))
+        if brand_values or product_values or other_subject_values:
             rolling_year_days = (
                 (request.time_range.end_exclusive - request.time_range.start).days
                 if request.time_range is not None else None
             )
-            relative_year_wording = bool(re.search(
+            if "TIME_SCOPE=ALL_TIME" in request.assumptions:
+                time_text = "不限时间（全部历史）内"
+            elif bool(re.search(
                 r"最近一年|近一年|过去一年",
                 request.original_question or "",
             )) or bool(
                 request.context_mode != ContextMode.NONE
                 and rolling_year_days in {365, 366, 367}
-            )
-            if relative_year_wording or any(
+            ) or any(
                 value in {
                     "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR",
                     "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE",
@@ -514,9 +530,22 @@ def _completed_question_for_display(
             else:
                 time_text = ""
             geographic_text = "、".join(dict.fromkeys(geographic_values))
+            if geographic_text and not geographic_text.endswith(
+                ("省", "市", "县", "区", "地区", "区域")
+            ):
+                geographic_text += "地区"
+            brand_prefix = "竞争品牌" if "竞争品牌" in request.original_question else "品牌"
+            brand_text = (
+                brand_prefix + "、".join(brand_values) + "的"
+                if brand_values else ""
+            )
+            products = [*product_values, *other_subject_values]
+            product_text = "、".join(products)
+            if product_text and not product_text.endswith(("产品", "商品")):
+                product_text += "产品"
             return (
                 f"查询{time_text}{geographic_text}销售过"
-                f"{product_text}的{request.entity}名单"
+                f"{brand_text}{product_text}的{request.entity}名单"
             )
     pending_merged = (
         request.turn_relation == TurnRelation.CLARIFICATION_RESPONSE

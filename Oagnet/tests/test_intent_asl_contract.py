@@ -1053,6 +1053,85 @@ def test_filter_contract_uses_registry_main_attribute_when_value_payload_omits_i
     }]
 
 
+def test_filter_contract_resolves_human_city_role_to_name_not_id(monkeypatch):
+    ast = json.loads(_detail_ast("dealer"))
+    expected = {"field": "业务城市", "operator": "EQ", "value": "上海市"}
+    candidates = ["dim_city.city_id", "dim_city.city_name"]
+    monkeypatch.setattr(
+        agent, "_contract_filter_candidates", lambda *_args, **_kwargs: candidates,
+    )
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args: [{"field": field} for field in candidates],
+    )
+    monkeypatch.setattr(
+        agent, "resolve_exact_entity_attribute_value_fields", lambda *_args: [],
+    )
+
+    repaired = _repair_contract_filter(
+        ast,
+        expected,
+        {},
+        negative=False,
+        semantic_model_id=81,
+    )
+
+    assert repaired["resolved_field"] == "dim_city.city_name"
+    assert ast["filters"] == [{
+        "field": "dim_city.city_name",
+        "operator": "=",
+        "value": "上海市",
+    }]
+
+
+def test_product_brand_role_prefers_published_brand_attribute():
+    knowledge = {
+        "entities": [
+            _entity(
+                "manufacturer", "厂家",
+                "manufacturer.parent_brand", "母品牌",
+            ),
+            _entity(
+                "product", "商品",
+                "product.product_name", "商品名称",
+            ),
+        ],
+    }
+
+    assert _contract_filter_candidates("商品品牌", knowledge) == [
+        "manufacturer.parent_brand"
+    ]
+
+
+def test_filter_contract_keeps_multiple_human_name_fields_ambiguous(monkeypatch):
+    ast = json.loads(_detail_ast("dealer"))
+    expected = {"field": "商品", "operator": "EQ", "value": "透析器"}
+    candidates = ["product.product_name", "product.short_name"]
+    monkeypatch.setattr(
+        agent, "_contract_filter_candidates", lambda *_args, **_kwargs: candidates,
+    )
+    monkeypatch.setattr(
+        agent,
+        "load_published_entity_attribute_candidates",
+        lambda *_args: [{"field": field} for field in candidates],
+    )
+    monkeypatch.setattr(
+        agent, "resolve_exact_entity_attribute_value_fields", lambda *_args: [],
+    )
+
+    with pytest.raises(ASLValidationError) as exc:
+        _repair_contract_filter(
+            ast,
+            expected,
+            {},
+            negative=False,
+            semantic_model_id=81,
+        )
+
+    assert exc.value.code == "ASL_FILTER_INVALID"
+
+
 def test_contract_removes_unrequested_main_identity_filter_from_asl_draft(
     monkeypatch,
 ):
@@ -1849,6 +1928,132 @@ def test_surface_mention_unique_hit_is_normalized_to_canonical_value(monkeypatch
         "source": "SURFACE_MENTION_RECALL",
     }]
     assert knowledge["_source_canonical_values"]["上海"] == "上海市"
+
+
+def test_surface_mention_role_hint_prefers_brand_over_project(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity(
+                "manufacturer", "厂家",
+                "manufacturer.parent_brand", "母品牌",
+            ),
+            _entity(
+                "project", "项目",
+                "project.project_name", "项目名称",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    ast["filters"] = []
+    seen_fields = []
+
+    def resolve(_model, _domains, candidates, _literal):
+        seen_fields.extend(item["field"] for item in candidates)
+        return [{
+            "field": "manufacturer.parent_brand",
+            "canonical_value": "万益特",
+            "match_type": "EXACT",
+        }]
+
+    monkeypatch.setattr(
+        agent,
+        "_contract_filter_candidates",
+        lambda role, *_args, **_kwargs: (
+            ["manufacturer.parent_brand"] if role == "母品牌" else []
+        ),
+    )
+    monkeypatch.setattr(agent, "resolve_entity_attribute_catalog_matches", resolve)
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "万益特", "role_hint": "母品牌"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert seen_fields == ["manufacturer.parent_brand"]
+    assert json.loads(normalized)["filters"] == [{
+        "field": "manufacturer.parent_brand",
+        "operator": "=",
+        "value": "万益特",
+    }]
+    assert repairs[0]["resolved_field"] == "manufacturer.parent_brand"
+
+
+def test_surface_brand_role_falls_back_within_manufacturer_not_project(monkeypatch):
+    manufacturer = _entity(
+        "manufacturer", "厂家", "manufacturer.parent_brand", "母品牌"
+    )
+    manufacturer_attributes = json.loads(manufacturer.metadata["attributes"])
+    manufacturer_attributes.append({
+        "attr_code": "manufacturer_name",
+        "attr_name": "厂家名称",
+        "field_mapping": {
+            "mappingTable": "manufacturer",
+            "mappingColumn": "manufacturer_name",
+        },
+        "is_display_name": True,
+    })
+    manufacturer.metadata["attributes"] = json.dumps(
+        manufacturer_attributes, ensure_ascii=False
+    )
+    knowledge = {
+        "entities": [
+            manufacturer,
+            _entity("project", "项目", "project.project_name", "项目名称"),
+        ],
+    }
+    ast = json.loads(_detail_ast("dealer"))
+    seen_batches = []
+
+    def resolve(_model, _domains, candidates, _literal):
+        fields = [item["field"] for item in candidates]
+        seen_batches.append(fields)
+        if "manufacturer.manufacturer_name" in fields:
+            return [{
+                "field": "manufacturer.manufacturer_name",
+                "canonical_value": "万益特医疗用品有限公司",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+                "is_main_attribute": True,
+            }]
+        if "project.project_name" in fields:
+            return [{
+                "field": "project.project_name",
+                "canonical_value": "万益特急重症",
+                "match_type": "CANONICAL_CONTAINS_MENTION",
+                "is_main_attribute": True,
+            }]
+        return []
+
+    monkeypatch.setattr(
+        agent,
+        "_contract_filter_candidates",
+        lambda role, *_args, **_kwargs: (
+            ["manufacturer.parent_brand"] if role == "商品品牌" else []
+        ),
+    )
+    monkeypatch.setattr(agent, "resolve_entity_attribute_catalog_matches", resolve)
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{"text": "万益特", "role_hint": "商品品牌"}]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert ["manufacturer.parent_brand"] in seen_batches
+    assert any(
+        "manufacturer.manufacturer_name" in batch for batch in seen_batches
+    )
+    assert all("project.project_name" not in batch for batch in seen_batches)
+    assert json.loads(normalized)["filters"] == [{
+        "field": "manufacturer.manufacturer_name",
+        "operator": "=",
+        "value": "万益特医疗用品有限公司",
+    }]
+    assert repairs[0]["resolved_field"] == "manufacturer.manufacturer_name"
 
 
 def test_surface_mention_multiple_hits_pick_highest_similarity(monkeypatch):

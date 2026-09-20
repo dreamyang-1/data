@@ -3137,13 +3137,29 @@ class DataAnalysisOrchestrator:
         # mention from that same completed question.  Raw-turn extraction (for
         # example only “上海市” from “上海市呢”) must never replace inherited
         # product, metric, result-object or time evidence.
+        # The second classifier reads the completed standalone question. Pass
+        # its fine-grained filter roles as advisory hints so Oagnet can
+        # distinguish a brand value from an equally similar project/product
+        # value. Oagnet still owns catalog binding and may correct these hints.
+        mention_roles: dict[str, str | None] = {}
+        completed_compact = re.sub(r"\s+", "", request.rewritten_question)
+        for item in request.filters:
+            if not isinstance(item, dict):
+                continue
+            role_hint = str(item.get("field") or "").strip() or None
+            raw_values = item.get("value")
+            values = raw_values if isinstance(raw_values, list) else [raw_values]
+            for value in values:
+                text = str(value or "").strip()
+                if text and re.sub(r"\s+", "", text) in completed_compact:
+                    mention_roles[text] = role_hint
+        for item in request.semantic_entity_mentions:
+            text = str(item).strip()
+            if text:
+                mention_roles.setdefault(text, None)
         mentions = [
-            {
-                "text": str(item),
-                "role_hint": None,
-            }
-            for item in request.semantic_entity_mentions
-            if str(item).strip()
+            {"text": text, "role_hint": role_hint}
+            for text, role_hint in mention_roles.items()
         ]
         await emit_progress("INTENT_RECOGNITION", "COMPLETED", self._intent_think_summary(
             request, business_domain_labels=chat._business_domain_labels,
@@ -8146,14 +8162,14 @@ class DataAnalysisOrchestrator:
         elif ambiguity.type in {"subject"} and canonical_name:
             target.entity = canonical_name
             applied = True
-        elif (
-            ambiguity.type == "time_anchor"
-            and set(ambiguity.affected_slots) <= {"time_range", "time_context"}
-        ):
+        elif set(ambiguity.affected_slots) and set(
+            ambiguity.affected_slots
+        ) <= {"time_range", "time_context"}:
             # A visible period choice is a deterministic temporal value, not a
-            # catalog field binding.  Applying it must not require a semantic
-            # attribute ID.  The ASL planner remains responsible for choosing
-            # the authorized date field after the range is fixed.
+            # catalog field binding.  Some upstreams label this ambiguity as
+            # ``context`` instead of ``time_anchor``; the affected slot is the
+            # stable contract. Applying it must not require a semantic field
+            # ID. The ASL planner chooses the authorized date field later.
             period = canonical_value or canonical_name or str(choice["label"])
             parsed_range = RuleBasedIntentClassifier._time_range(period)
             all_time = bool(re.search(
@@ -8300,7 +8316,9 @@ class DataAnalysisOrchestrator:
             *target.assumptions,
             "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER",
         ]))
-        if ambiguity.type == "time_anchor":
+        if set(ambiguity.affected_slots) and set(
+            ambiguity.affected_slots
+        ) <= {"time_range", "time_context"}:
             target.assumptions = [
                 value for value in target.assumptions
                 if not value.startswith((

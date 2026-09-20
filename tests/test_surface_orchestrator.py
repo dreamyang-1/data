@@ -34,8 +34,8 @@ async def test_completed_question_uses_surface_executor_and_shared_result_pipeli
     assert len(calls) == 1
     assert calls[0][0] == chat.question
     assert calls[0][1] == [
-        {"text": "南京市", "role_hint": None},
-        {"text": "费森尤斯", "role_hint": None},
+        {"text": "南京市", "role_hint": "业务城市"},
+        {"text": "费森尤斯", "role_hint": "商品名称"},
     ]
     assert result.status == "COMPLETED"
     assert "示例医院" in result.answer

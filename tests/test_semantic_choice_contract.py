@@ -222,6 +222,16 @@ class SurfaceOnlyRoleRetrieval:
         return await self.delegate.query(request, identity, **kwargs)
 
 
+class CapturingSuccessfulRetrieval:
+    def __init__(self):
+        self.requests = []
+        self.delegate = MockDataRetrievalAdapter()
+
+    async def query(self, request, identity, **kwargs):
+        self.requests.append(request.model_copy(deep=True))
+        return await self.delegate.query(request, identity, **kwargs)
+
+
 def service(retrieval):
     defaults = build_mock_adapters()
     return DataAnalysisOrchestrator(
@@ -541,6 +551,122 @@ def test_time_option_applies_without_catalog_field_id_and_restores_task():
     assert not any(
         value.startswith("ACTIVE_TIME_DEFAULT=") for value in result.assumptions
     )
+
+
+def test_all_time_option_uses_affected_slot_when_upstream_type_is_generic():
+    request = pending()
+    request.time_range = TimeRange(
+        start=date(2025, 9, 20), end_exclusive=date(2026, 9, 21)
+    )
+    request.assumptions = [
+        "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE",
+        "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE",
+    ]
+    request.semantic_ambiguities = [SemanticAmbiguity(
+        type="context",
+        ambiguity_id="generic-time-range-choice",
+        question="请选择查询时间范围。",
+        candidates=["最近30天", "本月", "2026年至今", "不限时间（全部历史）"],
+        candidate_details=[{}, {}, {}, {}],
+        affected_slots=["time_range"],
+    )]
+
+    result = choose(request, "4")
+
+    assert result.time_range is None
+    assert "TIME_SCOPE=ALL_TIME" in result.assumptions
+    assert not any(
+        value.startswith("ACTIVE_TIME_DEFAULT=") for value in result.assumptions
+    )
+    assert "不限时间（全部历史）" in result.rewritten_question
+    assert result.semantic_ambiguities == []
+    assert result.missing_slots == []
+
+
+@pytest.mark.asyncio
+async def test_all_time_reply_restores_complete_partner_query_before_execution():
+    retrieval = CapturingSuccessfulRetrieval()
+    agent = service(retrieval)
+
+    class NoSplitPlanner:
+        async def plan(self, question):
+            return None
+
+    agent.settings.multi_question_enabled = True
+    agent.task_planner = NoSplitPlanner()
+    original = (
+        "帮我找出上海地区正在销售竞争品牌万益特的血液净化管路的"
+        "经销商名单"
+    )
+    request = CanonicalAnalysisRequest(
+        application_id="choice-app",
+        conversation_id="choice-conversation",
+        tenant_id=IDENTITY.tenant_id,
+        user_id=IDENTITY.user_id,
+        original_question=original,
+        rewritten_question=original,
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        semantic_model_id=81,
+        entity="经销商",
+        fields=["经销商名称"],
+        dimensions=["经销商"],
+        filters=[
+            {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+            {"field": "母品牌", "operator": "EQ", "value": "万益特"},
+            {"field": "商品名称", "operator": "EQ", "value": "血液净化管路"},
+        ],
+        time_range=TimeRange(
+            start=date(2025, 9, 20), end_exclusive=date(2026, 9, 21)
+        ),
+        assumptions=[
+            "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE",
+            "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE",
+        ],
+        missing_slots=["semantic_ambiguity"],
+        semantic_ambiguities=[SemanticAmbiguity(
+            type="context",
+            ambiguity_id="active-sales-time-range",
+            question="请选择查询时间范围。",
+            candidates=["最近30天", "本月", "2026年至今", "不限时间（全部历史）"],
+            candidate_details=[{}, {}, {}, {}],
+            affected_slots=["time_range"],
+        )],
+    )
+    await agent.sessions.put_pending(PendingState(request=request), expected_version=0)
+
+    events = []
+    with progress_scope(events.append):
+        response = await agent.handle(chat("4", "all-time-answer"), IDENTITY)
+
+    assert response.status == "COMPLETED"
+    executed = retrieval.requests[-1]
+    assert executed.original_question == original
+    assert executed.time_range is None
+    assert "TIME_SCOPE=ALL_TIME" in executed.assumptions
+    assert {item["value"] for item in executed.filters} == {
+        "上海市", "万益特", "血液净化管路",
+    }
+    intent_event = next(
+        event for event in events
+        if event["stage"] == "INTENT_RECOGNITION"
+        and event["status"] == "COMPLETED"
+    )
+    intent_message = intent_event["message"]
+    assert "补全后的问题：查询不限时间（全部历史）内上海市" in intent_message
+    assert "竞争品牌万益特" in intent_message
+    assert "血液净化管路产品的经销商名单" in intent_message
+    assert "万益特（筛选值）" in intent_message
+    assert "血液净化管路（筛选值）" in intent_message
+    planning_events = [
+        event for event in events
+        if event["stage"] == "TASK_PLANNING" and event["status"] == "COMPLETED"
+    ]
+    assert planning_events, [
+        (event["stage"], event["status"]) for event in events
+    ]
+    planning_event = planning_events[0]
+    assert original in planning_event["message"]
+    assert "已确认不限时间（全部历史）" in planning_event["message"]
 
 
 def test_two_independent_choices_preserve_previously_confirmed_member():
