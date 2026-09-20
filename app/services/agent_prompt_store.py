@@ -38,7 +38,9 @@ class AgentPromptStore:
     ) -> None:
         self._connection_factory = connection_factory
         self._cache_ttl_seconds = max(0.0, float(cache_ttl_seconds))
-        self._cache: dict[str, tuple[float, dict[str, str] | None]] = {}
+        self._cache: dict[
+            tuple[str, int | None], tuple[float, dict[str, str] | None]
+        ] = {}
         self._lock = asyncio.Lock()
 
     @classmethod
@@ -73,7 +75,12 @@ class AgentPromptStore:
 
         return cls(connect, cache_ttl_seconds=cache_ttl_seconds)
 
-    async def resolve(self, application_id: str) -> dict[str, str] | None:
+    async def resolve(
+        self,
+        application_id: str,
+        *,
+        semantic_model_id: int | None = None,
+    ) -> dict[str, str] | None:
         """Return the latest prompt dict for the agent code, or None.
 
         The dict uses the New_Agent field names (``user`` /
@@ -83,45 +90,35 @@ class AgentPromptStore:
         code = (application_id or "").strip()
         if not code:
             return None
+        cache_key = (code, semantic_model_id)
         now = time.monotonic()
-        cached = self._cache.get(code)
+        cached = self._cache.get(cache_key)
         if cached is not None and now - cached[0] < self._cache_ttl_seconds:
             return cached[1]
         async with self._lock:
-            cached = self._cache.get(code)
+            cached = self._cache.get(cache_key)
             if cached is not None and time.monotonic() - cached[0] < self._cache_ttl_seconds:
                 return cached[1]
             try:
-                prompt = await asyncio.to_thread(self._lookup_latest, code)
+                prompt = await asyncio.to_thread(
+                    self._lookup_latest, code, semantic_model_id
+                )
             except Exception as exc:
                 logger.warning(
                     "agent prompt lookup failed for %s: %s: %s",
                     code, type(exc).__name__, exc,
                 )
                 prompt = None
-            self._cache[code] = (time.monotonic(), prompt)
+            self._cache[cache_key] = (time.monotonic(), prompt)
             return prompt
 
-    def _lookup_latest(self, code: str) -> dict[str, str] | None:
-        connection = self._connection_factory()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT instruction_type, role_setting, background "
-                    "FROM data_ask_agent_version "
-                    "WHERE agent_code = %s "
-                    "ORDER BY version DESC LIMIT 1",
-                    (code,),
-                )
-                row = cursor.fetchone()
-        finally:
-            connection.close()
+    @staticmethod
+    def _prompt_from_row(row: dict[str, Any] | None) -> dict[str, str] | None:
         if not row:
             return None
         instruction_type = row.get("instruction_type")
         role_setting = str(row.get("role_setting") or "")
         background = str(row.get("background") or "")
-        # Same mapping as the platform New_Agent request builder.
         if instruction_type == 0:
             return {
                 "concise_instruct": role_setting,
@@ -133,3 +130,47 @@ class AgentPromptStore:
             "Aagent_background": background,
             "concise_instruct": "",
         }
+
+    def _lookup_latest(
+        self, code: str, semantic_model_id: int | None
+    ) -> dict[str, str] | None:
+        connection = self._connection_factory()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT instruction_type, role_setting, background "
+                    "FROM data_ask_agent_version "
+                    "WHERE agent_code = %s "
+                    "ORDER BY version DESC LIMIT 1",
+                    (code,),
+                )
+                row = cursor.fetchone()
+                if row or semantic_model_id is None:
+                    return self._prompt_from_row(row)
+
+                # Some platform routes use a stable service application ID
+                # (for example ``data-analysis``) instead of the generated
+                # agent_code. Resolve that transport alias only when the
+                # request's semantic model belongs to exactly one published
+                # active agent; ambiguity deliberately yields no prompt.
+                cursor.execute(
+                    "SELECT DISTINCT a.id, a.agent_code "
+                    "FROM data_ask_agent a "
+                    "JOIN data_ask_agent_semantic_model sm ON sm.agent_id = a.id "
+                    "WHERE sm.semantic_model_id = %s AND a.status = 2 "
+                    "ORDER BY a.publish_time DESC LIMIT 2",
+                    (semantic_model_id,),
+                )
+                agents = cursor.fetchall() or []
+                if len(agents) != 1:
+                    return None
+                cursor.execute(
+                    "SELECT instruction_type, role_setting, background "
+                    "FROM data_ask_agent_version "
+                    "WHERE agent_id = %s AND COALESCE(is_deleted, 0) = 0 "
+                    "ORDER BY version DESC LIMIT 1",
+                    (agents[0]["id"],),
+                )
+                return self._prompt_from_row(cursor.fetchone())
+        finally:
+            connection.close()

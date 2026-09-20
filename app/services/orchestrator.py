@@ -7931,7 +7931,10 @@ class DataAnalysisOrchestrator:
         if store is None:
             return ""
         try:
-            latest = await store.resolve(chat.application_id)
+            latest = await store.resolve(
+                chat.application_id,
+                semantic_model_id=chat.semantic_model_id,
+            )
         except Exception:
             return ""
         if not latest:

@@ -19,6 +19,7 @@ from redis.asyncio import Redis
 
 from app.config import Settings
 from app.domain.models import (
+    AgentPromptConfig,
     AgentResponse,
     AnalysisProcessStep,
     CanonicalAnalysisRequest,
@@ -490,6 +491,7 @@ class V2ContextV1ExecutionBridge:
         ] | None = None,
         demo_mode: bool = False,
         surface_asl_execution_enabled: bool = False,
+        agent_prompt_store: Any | None = None,
     ):
         self.store = store
         self.catalog = catalog
@@ -505,6 +507,7 @@ class V2ContextV1ExecutionBridge:
         self.startup_receipt = dict(startup_receipt)
         self.demo_mode = demo_mode
         self.surface_asl_execution_enabled = surface_asl_execution_enabled
+        self.agent_prompt_store = agent_prompt_store
         self._locks: dict[str, asyncio.Lock] = {}
 
     async def _open_external_lifecycle(
@@ -1035,6 +1038,16 @@ class V2ContextV1ExecutionBridge:
     async def handle(
         self, chat: ChatRequest, identity: TrustedIdentity
     ) -> AgentResponse:
+        if chat.prompt is None and self.agent_prompt_store is not None:
+            latest = await self.agent_prompt_store.resolve(
+                chat.application_id,
+                semantic_model_id=chat.semantic_model_id,
+            )
+            if latest:
+                chat = chat.model_copy(
+                    deep=True,
+                    update={"prompt": AgentPromptConfig(**latest)},
+                )
         lock_key = self.store.key(chat, identity)
         lock = self._locks.setdefault(lock_key, asyncio.Lock())
         async with lock:
@@ -1580,6 +1593,7 @@ def build_context_v1_execution_handler(
         [ChatRequest, TrustedIdentity, AgentResponse, float], Awaitable[None]
     ] | None = None,
     external: ContextV1ExternalDependencies | None = None,
+    agent_prompt_store: Any | None = None,
 ) -> V2ContextV1ExecutionBridge:
     receipt = validate_context_v1_settings(settings)
     dependencies = external or ContextV1ExternalDependencies(
@@ -1615,6 +1629,7 @@ def build_context_v1_execution_handler(
         surface_asl_execution_enabled=getattr(
             settings, "surface_asl_execution_enabled", False
         ),
+        agent_prompt_store=agent_prompt_store,
         clock=lambda: datetime.now(timezone.utc).astimezone(),
         startup_receipt={
             **receipt,
