@@ -9,7 +9,8 @@ import json
 import pytest
 
 from app.semantic_v2.recognition import (LIGHTWEIGHT_CURRENT_TURN_PROMPT,
-    PARSE_PROMPT, SURFACE_ONLY_EXTRACTION_PROMPT)
+    BUSINESS_SEMANTIC_EXTRACTION_RULES, PARSE_PROMPT,
+    SURFACE_ONLY_EXTRACTION_PROMPT)
 from test_v2_raw_turn_recognition import (planner, metric_step, parse, request,
     IDENTITY, turns)
 from test_v2_pending_recognition import ask, catalog
@@ -91,6 +92,10 @@ async def test_deferred_empty_context_uses_surface_only_extraction_prompt(catalo
     assert instruction.startswith(SURFACE_ONLY_EXTRACTION_PROMPT)
     assert '对下面的完整问题进行细粒度结构化提取' not in instruction
     assert 'scope-checked summary' not in instruction
+    assert BUSINESS_SEMANTIC_EXTRACTION_RULES in instruction
+    assert '不得创造目录中不存在的业务' in instruction
+    assert '筛选值不是分组维度' in instruction
+    assert '结构化\n提取必须以它为唯一业务内容来源' in instruction
     proposal = schema['$defs']['ContextProposal']
     assert proposal['properties']['target_task_id'] == {'type': 'null'}
     # Role labels are free-form: the model names what each span is (city, time,
@@ -148,6 +153,7 @@ async def test_pending_resume_keeps_full_contract_not_lightweight(catalog):
     instruction, schema = split_instruction_and_schema(transport.calls[0])
     assert instruction.startswith(PARSE_PROMPT)
     assert 'scope-checked summary' in instruction
+    assert BUSINESS_SEMANTIC_EXTRACTION_RULES in instruction
     proposal = schema['$defs']['ContextProposal']
     assert proposal['properties']['pending_id'] != {'type': 'null'}
     assert result.resolution['dialogue_act'] == 'ANSWER_CLARIFICATION'
