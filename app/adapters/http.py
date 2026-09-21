@@ -2414,6 +2414,17 @@ class HttpDataRetrievalAdapter:
                 "SQL_RESPONSE_INVALID", "SQL translation response did not contain SQL"
             )
         sql = sql.strip()
+        effective_filter_summary = translated.get("effective_filter_summary")
+        if not isinstance(effective_filter_summary, dict):
+            effective_filter_summary = {}
+        applied_metric_filters = effective_filter_summary.get(
+            "metric_global_filters"
+        )
+        if not isinstance(applied_metric_filters, list):
+            applied_metric_filters = []
+        applied_metric_filters = [
+            item for item in applied_metric_filters if isinstance(item, dict)
+        ]
         sql = self._apply_current_metric_formulas(sql, metric_definitions)
         sql = self._apply_shared_region_hospital_coverage_policy(
             sql,
@@ -2447,7 +2458,9 @@ class HttpDataRetrievalAdapter:
             f"输入：已验证 ASL（版本={asl.get('version') or 'UNKNOWN'}，"
             f"指标绑定={_compact_progress_value(metric_bindings, 500)}，"
             f"查询结构={_compact_progress_value(query_shape, 500)}，"
-            f"筛选条件={_compact_progress_value(asl.get('filters') or [], 500)}）；"
+            f"ASL筛选条件={_compact_progress_value(asl.get('filters') or [], 500)}，"
+            f"指标固定口径（SQL自动合并）="
+            f"{_compact_progress_value(applied_metric_filters, 700)}）；"
             f"输出：只读 SQL 已生成（{len(sql)}字符），安全校验：通过。",
         )
 

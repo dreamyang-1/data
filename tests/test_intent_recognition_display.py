@@ -520,6 +520,8 @@ def test_validated_asl_is_rendered_as_direct_json_without_field_reformatting():
 
     assert rendered.startswith("结构化提取（ASL）：\n```json\n")
     assert json.loads(json_text) == asl
+    assert "`filters` 仅记录本次查询显式提出的筛选" in rendered
+    assert "指标定义自带的固定口径由 SQL 翻译服务合并" in rendered
     assert "指标：" not in rendered
     assert "筛选条件：" not in rendered
     assert "字段说明：" not in rendered

@@ -973,7 +973,10 @@ def render_asl_extraction_json(asl: dict[str, object]) -> str:
         "结构化提取（ASL）：\n"
         "```json\n"
         f"{json.dumps(asl, ensure_ascii=False, indent=2)}\n"
-        "```"
+        "```\n"
+        "说明：`filters` 仅记录本次查询显式提出的筛选；"
+        "指标定义自带的固定口径由 SQL 翻译服务合并，"
+        "并在下一步单独展示。"
     )
 
 

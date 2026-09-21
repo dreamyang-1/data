@@ -810,7 +810,19 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
     }
     client = StubClient([
         {"success": True, "result": json.dumps(asl, ensure_ascii=False)},
-        {"success": True, "sql": "SELECT dealer_name FROM dealer_result WHERE dept_name IN (?, ?)"},
+        {
+            "success": True,
+            "sql": "SELECT dealer_name FROM dealer_result WHERE dept_name IN (?, ?)",
+            "effective_filter_summary": {
+                "asl_filters": asl["filters"],
+                "metric_global_filters": [{
+                    "metric": "fault_count",
+                    "filter_type": "include",
+                    "condition": "repair_order.work_type = 'A'",
+                    "source": "METRIC_DEFINITION",
+                }],
+            },
+        },
         {
             "success": True,
             "sql": "SELECT dealer_name FROM dealer_result WHERE dept_name IN (?, ?)",
@@ -858,6 +870,14 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
         and message.startswith("调用工具：SQL 翻译服务。")
         for stage, message in progress_messages
     )
+    translation_message = next(
+        message
+        for stage, message in progress_messages
+        if stage == "SEMANTIC_QUERY_PLANNING"
+    )
+    assert "ASL筛选条件=" in translation_message
+    assert "指标固定口径（SQL自动合并）=" in translation_message
+    assert "repair_order.work_type = 'A'" in translation_message
     assert any(
         stage == "SQL_EXECUTION"
         and message.startswith("调用工具：SQL 执行服务。")

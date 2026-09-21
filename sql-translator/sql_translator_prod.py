@@ -3974,8 +3974,11 @@ class SQLTranslatorProd:
         # 生成SQL
         try:
             sql = self.translate(asl_str, resolved_model_id)
+            effective_filter_summary = self._effective_filter_summary(
+                ast_data, resolved_model_id
+            )
             validation_report = self._semantic_sql_validation_report(
-                ast_data, sql, resolved_model_id
+                ast_data, sql, resolved_model_id, effective_filter_summary
             )
             return {
                 'success': True,
@@ -3983,6 +3986,7 @@ class SQLTranslatorProd:
                 'error': None,
                 'model_id': resolved_model_id,
                 'data_source_id': resolved_data_source_id,
+                'effective_filter_summary': effective_filter_summary,
                 'semantic_validation_report': validation_report,
             }
         except Exception as e:
@@ -4102,12 +4106,54 @@ class SQLTranslatorProd:
             payload['semantic_validation_report'] = report
         return payload
 
+    def _effective_filter_summary(
+        self, ast: Dict, model_id: Optional[str]
+    ) -> Dict:
+        """Expose the two sources of WHERE predicates without rewriting ASL.
+
+        ``asl_filters`` are caller/query predicates. ``metric_global_filters``
+        are governed predicates expanded from the selected metric definitions.
+        Keeping them separate prevents callers from executing the same metric
+        rule twice while making the final SQL provenance reviewable.
+        """
+
+        asl_filters = [
+            dict(item) for item in (ast.get('filters') or [])
+            if isinstance(item, dict)
+        ]
+        metric_global_filters = []
+        for metric in ast.get('metrics') or []:
+            if not isinstance(metric, dict):
+                continue
+            metric_code = str(metric.get('name') or '').strip()
+            if not metric_code:
+                continue
+            for rule in _normalize_global_filters(
+                self._get_metric_global_filters(metric_code, model_id)
+            ):
+                metric_global_filters.append({
+                    'metric': metric_code,
+                    'filter_type': rule['filter_type'],
+                    'condition': rule['condition'],
+                    'source': 'METRIC_DEFINITION',
+                })
+        return {
+            'asl_filters': asl_filters,
+            'metric_global_filters': metric_global_filters,
+        }
+
     def _semantic_sql_validation_report(
-        self, ast: Dict, sql: str, model_id: Optional[str]
+        self, ast: Dict, sql: str, model_id: Optional[str],
+        effective_filter_summary: Optional[Dict] = None,
     ) -> Dict:
         self.validate_read_only_sql(sql)
         metrics = ast.get('metrics') or []
         dimensions = ast.get('dimensions') or []
+        filter_summary = (
+            effective_filter_summary
+            if isinstance(effective_filter_summary, dict)
+            else self._effective_filter_summary(ast, model_id)
+        )
         syntax_checks = [
             self._validation_check(
                 'READ_ONLY_SINGLE_STATEMENT', 'PASS',
@@ -4141,6 +4187,7 @@ class SQLTranslatorProd:
             self._validation_check(
                 'GLOBAL_FILTER_RULES_APPLIED', 'PASS' if metrics else 'NOT_APPLICABLE',
                 '所选指标的全局业务过滤规则已合并到查询' if metrics else '明细投影无指标全局规则',
+                filter_summary,
             ),
             self._validation_check(
                 'TIME_CONTEXT_APPLIED', 'PASS' if ast.get('time_context') else 'NOT_APPLICABLE',

@@ -176,6 +176,36 @@ class GlobalFilterNormalizationTests(unittest.TestCase):
         self.assertNotIn("{'filterType'", sql)
         self.assertNotIn('"filterType"', sql)
 
+    def test_translate_only_discloses_asl_and_metric_filter_sources(self):
+        filters = [
+            {"filterType": "IN", "filterCondition": "order_info.status = 1"},
+            {"filterType": "IN", "filterCondition": "order_info.kind = 'A'"},
+        ]
+        ast = base_ast()
+        ast["filters"] = [{
+            "field": "order_info.channel", "operator": "=", "value": "online",
+        }]
+
+        result = translator(filters).translate_only(json.dumps(ast), "6")
+
+        self.assertTrue(result["success"])
+        self.assertEqual(ast["filters"], result["effective_filter_summary"]["asl_filters"])
+        self.assertEqual(
+            ["order_info.status = 1", "order_info.kind = 'A'"],
+            [
+                item["condition"]
+                for item in result["effective_filter_summary"]["metric_global_filters"]
+            ],
+        )
+        global_filter_check = next(
+            item
+            for item in result["semantic_validation_report"]["layers"]["business"]["checks"]
+            if item["code"] == "GLOBAL_FILTER_RULES_APPLIED"
+        )
+        self.assertEqual(
+            result["effective_filter_summary"], global_filter_check["details"]
+        )
+
     def test_missing_condition_is_rejected_without_sql(self):
         with self.assertRaisesRegex(ValueError, "condition"):
             translator([])._build_filter_clause(

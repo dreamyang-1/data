@@ -409,6 +409,9 @@ class APIHandler(BaseHTTPRequestHandler):
                     'dataSourceId': result.get('data_source_id'),
                     'analysis_contract': analysis_contract,
                     'contract_accepted': analysis_contract is not None,
+                    'effective_filter_summary': result.get(
+                        'effective_filter_summary'
+                    ),
                     'semantic_validation_report': result.get('semantic_validation_report'),
                 }))
             else:
