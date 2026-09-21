@@ -474,20 +474,58 @@ class SemanticCatalog:
             raise ValueError(f'不存在指标: {code}')
         return rows[0]
 
+    @staticmethod
+    def _missing_binding_column(exc: Exception, column: str) -> bool:
+        """Return whether a binding query failed only because a column is absent.
+
+        Production schemas currently use ``entity_id`` while older deployments
+        used ``entity_code``.  Limit fallback to the database's missing-column
+        error so connection, permission and syntax failures still fail closed.
+        SQLite wording is accepted for the isolated contract tests.
+        """
+        message = str(exc).lower()
+        code = exc.args[0] if getattr(exc, "args", ()) else None
+        return (
+            code == 1054
+            or "unknown column" in message
+            or "no such column" in message
+        ) and column.lower() in message
+
+    def _metric_bindings(self, model_id: int, metric_code: str) -> List[Dict]:
+        """Load metric bindings across the legacy and current table layouts."""
+        last_missing_column: Exception | None = None
+        for reference_column in ("entity_id", "entity_code"):
+            try:
+                return self._query(
+                    f"SELECT b.{reference_column} AS entity_reference, "
+                    f"COALESCE(e.code, CAST(b.{reference_column} AS CHAR)) AS entity_code, "
+                    "e.code AS resolved_entity_code, e.id AS resolved_entity_id, "
+                    "b.indicator_logic, e.name AS entity_name, "
+                    "e.main_table_name, e.data_source_id "
+                    "FROM semantic_model_entity_bind_indicator b "
+                    "LEFT JOIN semantic_model_entity_type e "
+                    "ON e.semantic_model_id=b.semantic_model_id "
+                    f"AND (e.code=CAST(b.{reference_column} AS CHAR) "
+                    f"OR CAST(e.id AS CHAR)=CAST(b.{reference_column} AS CHAR)) "
+                    "AND e.is_deleted=0 "
+                    "WHERE b.semantic_model_id=%s "
+                    "AND b.indicator_code=%s AND b.is_deleted=0",
+                    (model_id, metric_code),
+                )
+            except Exception as exc:
+                if not self._missing_binding_column(exc, reference_column):
+                    raise
+                last_missing_column = exc
+        if last_missing_column is not None:
+            raise last_missing_column
+        return []
+
     def definition(self, metric_id: str, version: str, model_id: Any = None) -> Dict:
         scoped_model_id, code = self._metric_scope(metric_id)
         if model_id is not None and _positive_int(model_id) != scoped_model_id:
             raise ValueError('metric_id与semantic_model_id作用域不一致')
         row = self._metric_row(scoped_model_id, code)
-        bindings = self._query(
-            "SELECT b.entity_code, COALESCE(e.code, b.entity_code) AS resolved_entity_code, b.indicator_logic, "
-            "e.name AS entity_name, e.main_table_name, e.data_source_id "
-            "FROM semantic_model_entity_bind_indicator b "
-            "LEFT JOIN semantic_model_entity_type e ON e.semantic_model_id=b.semantic_model_id "
-            "AND e.code=b.entity_code AND e.is_deleted=0 "
-            "WHERE b.semantic_model_id=%s AND b.indicator_code=%s AND b.is_deleted=0",
-            (scoped_model_id, code),
-        )
+        bindings = self._metric_bindings(scoped_model_id, code)
         formula = row.get('calculation_formula') or row.get('indicator_logic') or ''
         return {
             'metric_id': metric_id,

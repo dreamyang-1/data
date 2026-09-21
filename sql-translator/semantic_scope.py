@@ -128,12 +128,18 @@ class ScopedCatalog(SemanticCatalog):
             predicate = f'{base} AND s.business_domain_id={domain} AND s.status=1'
             for endpoint in ('source_entity_type_id', 'target_entity_type_id'):
                 predicate += f' AND EXISTS (SELECT 1 FROM semantic_model_entity_type e WHERE {entity} AND e.id=s.{endpoint})'
-        elif table in {'semantic_model_attribute_config', 'semantic_model_entity_sub_table_mapping', 'semantic_model_entity_bind_indicator'}:
-            owner = 'e.code=s.entity_code' if table.endswith('bind_indicator') else 'e.id=s.entity_type_id'
-            predicate = f'{base} AND EXISTS (SELECT 1 FROM semantic_model_entity_type e WHERE {entity} AND {owner})'
-            if table.endswith('bind_indicator'):
-                predicate += (f' AND EXISTS (SELECT 1 FROM semantic_model_indicator i WHERE i.semantic_model_id={model}'
-                              f' AND i.business_domain_id={domain} AND i.is_deleted=0 AND i.indicator_code=s.indicator_code)')
+        elif table in {'semantic_model_attribute_config', 'semantic_model_entity_sub_table_mapping'}:
+            predicate = (f'{base} AND EXISTS (SELECT 1 FROM semantic_model_entity_type e '
+                         f'WHERE {entity} AND e.id=s.entity_type_id)')
+        elif table == 'semantic_model_entity_bind_indicator':
+            # Current deployments store the owner in entity_id while legacy
+            # schemas used entity_code.  The outer catalog query resolves that
+            # reference against the already scoped entity table.  Restrict this
+            # derived table by the governed indicator here without naming a
+            # layout-specific owner column.
+            predicate = (f'{base} AND EXISTS (SELECT 1 FROM semantic_model_indicator i '
+                         f'WHERE i.semantic_model_id={model} AND i.business_domain_id={domain} '
+                         'AND i.is_deleted=0 AND i.indicator_code=s.indicator_code)')
         elif table in {'semantic_model_table', 'semantic_model_field'}:
             physical = 's' if table.endswith('_table') else 't'
             owned = (f'EXISTS (SELECT 1 FROM semantic_model_entity_type e WHERE {entity} '
@@ -167,6 +173,12 @@ class ScopedCatalog(SemanticCatalog):
     def definition(self, metric_id, version, model_id=None):
         self.scope.check_model(metric_id.split(':', 1)[0])
         result = super().definition(metric_id, version, model_id)
+        if any(binding.get('resolved_entity_id') is None
+               for binding in result.get('bound_entities', [])):
+            raise ScopeError(
+                'SEMANTIC_SCOPE_MISMATCH',
+                'Metric binding references an unavailable or out-of-scope entity',
+            )
         allowed = {r['name'] for r in self._query(
             'SELECT name FROM semantic_model_table WHERE semantic_model_id=%s', (self.scope.semantic_model_id,))}
         tables = {field.split('.', 1)[0] for field in self._formula_fields(result.get('calculation_formula') or '')}

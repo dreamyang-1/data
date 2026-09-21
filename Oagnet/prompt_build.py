@@ -633,6 +633,27 @@ class PromptBuilder:
         return bool(re.search(r"时间|日期|time|date", semantic_text, re.IGNORECASE))
 
     @staticmethod
+    def _requires_time_dimension_recall(user_query: str) -> bool:
+        """Return whether the question explicitly requires a time dimension.
+
+        The caller marker remains authoritative for sales-record semantics.  A
+        trend, comparison, time grouping, or explicit relative period also
+        requires a scoped time dimension even when the caller did not add that
+        marker.  This only widens the time-dimension slice; it never authorizes
+        records outside the current model/domain.
+        """
+        text = str(user_query or "")
+        if "TRANSACTION_TIME_SCOPE=SALES_RECORD" in text:
+            return True
+        return bool(re.search(
+            r"趋势|走势|同比|环比|按(?:日|天|周|月|季度|季|年)|"
+            r"(?:最近|近|过去|本|上)(?:[一二三四五六七八九十两\d]+)?"
+            r"(?:天|日|周|月|季度|季|年)",
+            text,
+            re.IGNORECASE,
+        ))
+
+    @staticmethod
     def _dedupe_results(results: list[SearchResult]) -> list[SearchResult]:
         deduped: dict[str, SearchResult] = {}
         for result in results:
@@ -1094,12 +1115,11 @@ class PromptBuilder:
                 [*exact_dimensions, *dimensions],
                 max(self.top_k, min(len(exact_dimensions), 12)),
             )
-        if "TRANSACTION_TIME_SCOPE=SALES_RECORD" in str(user_query or ""):
-            # Relationship-detail tasks need a registered transaction timestamp
-            # even when long entity/product wording pushes that dimension outside
-            # vector top-k.  Load only time dimensions from the same caller scope,
-            # then keep a bounded, exact-term-ranked set for deterministic anchor
-            # selection in the validator.
+        if self._requires_time_dimension_recall(user_query):
+            # Time-bound aggregates and trends need a registered timestamp even
+            # when geographic/product wording pushes it outside vector top-k.
+            # Load only time dimensions from the same caller scope, then keep a
+            # bounded set for deterministic prompt and validation reuse.
             scoped_time_dimensions = [
                 item
                 for item in scoped_dimensions

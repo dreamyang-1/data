@@ -556,6 +556,48 @@ def test_transaction_scope_loads_registered_time_dimension_outside_vector_top_k(
     )
 
 
+def test_explicit_trend_loads_registered_time_dimension_without_internal_marker():
+    dimensions = [
+        _result(
+            "dimension",
+            "profile_created_date",
+            dim_name="档案创建日期",
+            dim_type="时间维度",
+            granularity_support=["day"],
+        ),
+        _result(
+            "dimension",
+            "business_date",
+            dim_name="业务日期",
+            synonyms=["销售日期", "交易日期"],
+            dim_type="时间维度",
+            granularity_support=["day", "month"],
+            bind_entities=[{
+                "mappingTable": "sales_order",
+                "mappingColumn": "created_date",
+            }],
+        ),
+    ]
+    builder = PromptBuilder(
+        _ScopedTimeDimensionStore(
+            [_metric("sales_total", "含税销售总额", ["销售额"])],
+            dimensions,
+        ),
+        lambda _query: [0.1],
+        top_k=1,
+        semantic_model_id=81,
+    )
+
+    knowledge = builder.retrieve(
+        "分析上海地区费森尤斯产品最近一年的销售趋势。"
+    )
+
+    assert "business_date" in {
+        item.metadata["dim_code"] for item in knowledge["dimensions"]
+    }
+    assert not PromptBuilder._requires_time_dimension_recall("列出全部产品名称")
+
+
 def _snapshot_metric(code: str, name: str, synonyms: list[str]):
     return _result(
         "metric",

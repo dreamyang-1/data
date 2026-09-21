@@ -121,6 +121,62 @@ class SemanticCatalogTests(unittest.TestCase):
         self.assertEqual("SUM(order_info.pay_amount)", result["calculation_formula"].split("=", 1)[1])
         self.assertEqual("ent_order", result["bound_entities"][0]["entity_code"])
 
+    def test_definition_prefers_current_entity_id_binding_column(self):
+        catalog = FakeCatalog()
+        calls = []
+        original = catalog._query
+
+        def query(sql, params=()):
+            if "FROM semantic_model_entity_bind_indicator" in sql:
+                calls.append(sql)
+                self.assertIn("b.entity_id", sql)
+                return [{
+                    "entity_reference": "ent_order",
+                    "entity_code": "ent_order",
+                    "resolved_entity_code": "ent_order",
+                    "resolved_entity_id": "entity-uuid",
+                    "indicator_logic": None,
+                    "entity_name": "订单",
+                    "main_table_name": "order_info",
+                    "data_source_id": 5,
+                }]
+            return original(sql, params)
+
+        catalog._query = query
+        result = catalog.definition("6:actual_payment_amount", "current")
+
+        self.assertEqual(1, len(calls))
+        self.assertEqual("ent_order", result["bound_entities"][0]["resolved_entity_code"])
+
+    def test_definition_falls_back_to_legacy_entity_code_column_only_when_missing(self):
+        catalog = FakeCatalog()
+        calls = []
+        original = catalog._query
+
+        def query(sql, params=()):
+            if "FROM semantic_model_entity_bind_indicator" in sql:
+                calls.append(sql)
+                if "b.entity_id" in sql:
+                    raise RuntimeError("Unknown column 'b.entity_id' in 'field list'")
+                return [{
+                    "entity_reference": "ent_order",
+                    "entity_code": "ent_order",
+                    "resolved_entity_code": "ent_order",
+                    "resolved_entity_id": "entity-uuid",
+                    "indicator_logic": None,
+                    "entity_name": "订单",
+                    "main_table_name": "order_info",
+                    "data_source_id": 5,
+                }]
+            return original(sql, params)
+
+        catalog._query = query
+        result = catalog.definition("6:actual_payment_amount", "current")
+
+        self.assertEqual(2, len(calls))
+        self.assertIn("b.entity_code", calls[-1])
+        self.assertEqual("ent_order", result["bound_entities"][0]["resolved_entity_code"])
+
     def test_lineage_is_deterministic_and_grounded_in_formula(self):
         result = FakeCatalog().lineage("6:actual_payment_amount", "current")
         self.assertEqual(["order_info"], result["source_tables"])
