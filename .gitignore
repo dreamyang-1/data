@@ -14,7 +14,10 @@ build/
 .env.*
 !.env.example
 *.log
+*.out
+*.err
 logs/
+/.runtime/
 _backups/
 *.bak
 .tmp*/
