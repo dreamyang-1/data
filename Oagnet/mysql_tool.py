@@ -1188,6 +1188,23 @@ def _is_newer(row: dict, existing: dict) -> bool:
     return row_ts > exist_ts
 
 
+def _execute_metric_binding_query(cursor, sql: str, args: tuple):
+    """Read metric bindings across the two published binding schemas.
+
+    Current production still stores the bound entity in ``entity_id`` while
+    newer catalog fixtures use ``entity_code``.  Prefer the newer name and
+    fall back only for MySQL's explicit unknown-column error; unrelated SQL
+    failures must remain visible.
+    """
+    try:
+        cursor.execute(sql, args)
+    except pymysql.err.OperationalError as exc:
+        if not exc.args or exc.args[0] != 1054 or "bi.entity_code" not in str(exc):
+            raise
+        cursor.execute(sql.replace("bi.entity_code", "bi.entity_id"), args)
+    return cursor.fetchall()
+
+
 def get_entity(business_domain_id: int):
     """获取指定业务域下的实体信息（聚合实体类型、属性、关系、绑定指标）。
 
@@ -1275,8 +1292,11 @@ def get_entity(business_domain_id: int):
                 cur.execute(sql_relation, (business_domain_id,))
                 relation_rows = cur.fetchall()
 
-                cur.execute(sql_bind_metric, (business_domain_id,))
-                bind_metric_rows = cur.fetchall()
+                bind_metric_rows = _execute_metric_binding_query(
+                    cur,
+                    sql_bind_metric,
+                    (business_domain_id,),
+                )
 
         # Versioned metadata tables can contain repeated physical rows with the
         # same semantic ID. Collapse them before assembling the graph. A bridge
