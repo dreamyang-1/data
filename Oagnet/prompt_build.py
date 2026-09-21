@@ -399,6 +399,12 @@ class PromptBuilder:
     将业务知识结构化注入 prompt，供 LLM 生成 AST。
     """
 
+    # Surface evidence contains business phrases extracted from the completed
+    # question, not arbitrary tokenizer words. Recall each phrase separately
+    # while keeping both embedding cost and prompt size bounded.
+    MAX_SURFACE_MENTIONS = 12
+    MAX_PROMPT_RESULTS_PER_TYPE = 12
+
     def __init__(
         self,
         store: ChromaVectorStore,
@@ -432,7 +438,9 @@ class PromptBuilder:
         )
         self.preferred_metric_codes = list(dict.fromkeys(preferred_metric_codes or []))
         self.authoritative_entity_scope = bool(authoritative_entity_scope)
-        self.surface_mentions = list(dict.fromkeys(surface_mentions or []))[:6]
+        self.surface_mentions = list(dict.fromkeys(surface_mentions or []))[
+            :self.MAX_SURFACE_MENTIONS
+        ]
 
     # -------- 检索 --------
 
@@ -1032,13 +1040,15 @@ class PromptBuilder:
                 return self._rerank_exact_mentions(
                     user_query, candidates, max(self.top_k, len(allowed))
                 )
-            # Keep the bounded per-mention recall in the generation context.
-            # Re-ranking only against the whole sentence would discard exactly
-            # the qualifier/specification candidates this recall was added for.
-            return self._dedupe_results([
-                *self._rerank_exact_mentions(user_query, candidates, self.top_k),
-                *mention_hits,
-            ])
+            # Every business phrase contributes its own top-k search above.
+            # Fuse those hits with the whole-question pool, then apply one
+            # prompt-facing cap per semantic type. The full fused pool remains
+            # available in ``_ambiguity_candidates`` for deterministic checks.
+            return self._rerank_exact_mentions(
+                user_query,
+                self._dedupe_results([*mention_hits, *candidates]),
+                max(self.MAX_PROMPT_RESULTS_PER_TYPE, self.top_k),
+            )
 
         direct_entities = retrieve_type("entity")
         direct_attributes = retrieve_type("attribute")
@@ -1128,7 +1138,7 @@ class PromptBuilder:
             dimensions = self._rerank_exact_mentions(
                 user_query,
                 [*scoped_time_dimensions, *dimensions],
-                max(8, self.top_k),
+                max(self.MAX_PROMPT_RESULTS_PER_TYPE, self.top_k),
             )
         entity_attribute_values = retrieve_type("entity_attribute_value")
         entities, attributes, relations, completion = self._complete_relational_scope(

@@ -51,19 +51,68 @@ def test_mention_recall_keeps_primary_question_and_identical_scope():
     calls, embedded = [], []
     class Store:
         def search(self, vector, *, top_k, where):
-            calls.append((vector, where))
+            calls.append((vector, top_k, where))
             return []
     def embed(text):
         embedded.append(text)
         return [len(embedded)]
-    builder = PromptBuilder(Store(), embed, semantic_model_id=81,
+    builder = PromptBuilder(Store(), embed, top_k=3, semantic_model_id=81,
                             business_domain_ids=[205], surface_mentions=["甲牌", "Model X", "甲牌"])
     builder.retrieve("查询甲牌Model X使用部门")
     assert embedded == ["查询甲牌Model X使用部门", "甲牌", "Model X"]
-    for vector, where in calls:
+    for vector, _, where in calls:
         assert where in [builder._build_where(kind) for kind in
                          ["entity", "attribute", "relation", "metric", "dimension", "entity_attribute_value"]]
-    assert {tuple(vector) for vector, _ in calls} == {(1,), (2,), (3,)}
+    assert {tuple(vector) for vector, _, _ in calls} == {(1,), (2,), (3,)}
+    ordinary_where = builder._build_where("dimension")
+    assert {(tuple(vector), top_k) for vector, top_k, where in calls
+            if where == ordinary_where} == {((1,), 12), ((2,), 3), ((3,), 3)}
+
+
+def test_business_phrase_recall_uses_twelve_mentions_and_caps_prompt_results():
+    from prompt_build import PromptBuilder
+    from vector_store import SearchResult
+
+    mentions = [f"phrase-{index}" for index in range(14)]
+    vectors = {text: [index + 2] for index, text in enumerate(mentions)}
+
+    class Store:
+        def search(self, vector, *, top_k, where):
+            if where != builder._build_where("dimension") or vector == [1]:
+                return []
+            return [
+                SearchResult(
+                    id=f"dimension:{vector[0]}:{rank}",
+                    score=1.0 - rank / 10,
+                    text=f"candidate-{vector[0]}-{rank}",
+                    metadata={
+                        "type": "dimension",
+                        "semantic_model_id": 81,
+                        "business_domain_id": 205,
+                        "dimension_code": f"d-{vector[0]}-{rank}",
+                    },
+                )
+                for rank in range(top_k)
+            ]
+
+    builder = PromptBuilder(
+        Store(),
+        lambda text: [1] if text == "whole" else vectors[text],
+        top_k=3,
+        semantic_model_id=81,
+        business_domain_ids=[205],
+        surface_mentions=mentions,
+    )
+    with patch.object(
+        builder,
+        "_complete_relational_scope",
+        side_effect=lambda e, a, r, *args: (e, a, r, {}),
+    ):
+        result = builder.retrieve("whole")
+
+    assert builder.surface_mentions == mentions[:12]
+    assert len(result["_ambiguity_candidates"]["dimension"]) == 36
+    assert len(result["dimensions"]) == 12
 
 
 def test_mention_candidate_survives_whole_question_reranking():
@@ -77,8 +126,7 @@ def test_mention_candidate_survives_whole_question_reranking():
             return [hit] if vector == [2] and where == builder._build_where('attribute') else []
     builder = PromptBuilder(Store(), lambda text: [1] if text == 'whole' else [2],
         semantic_model_id=81, business_domain_ids=[205], surface_mentions=['model'])
-    with patch.object(builder, '_rerank_exact_mentions', return_value=[]), \
-         patch.object(builder, '_complete_relational_scope', side_effect=lambda e,a,r,*args:(e,a,r,{})):
+    with patch.object(builder, '_complete_relational_scope', side_effect=lambda e,a,r,*args:(e,a,r,{})):
         result = builder.retrieve('whole')
     assert hit in result['attributes']
 
