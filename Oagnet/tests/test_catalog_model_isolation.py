@@ -108,7 +108,30 @@ def test_metric_binding_query_falls_back_to_current_entity_id_column():
 
     assert rows == [{"indicator_code": "metric"}]
     assert "bi.entity_code" in cursor.queries[0][0]
-    assert "bi.entity_id" in cursor.queries[1][0]
+    assert "CAST(bi.entity_id AS CHAR)" in cursor.queries[1][0]
+
+
+def test_metric_binding_loader_falls_back_to_current_entity_id_column(monkeypatch):
+    queries = []
+
+    def query(sql, args):
+        queries.append((sql, args))
+        if "bi.entity_code" in sql:
+            raise mysql.pymysql.err.OperationalError(
+                1054,
+                "Unknown column 'bi.entity_code' in 'on clause'",
+            )
+        return [{"indicator_code": "metric"}]
+
+    monkeypatch.setattr(mysql, "_query", query)
+    rows = mysql._query_metric_binding_rows(
+        "SELECT * FROM bindings bi WHERE bi.entity_code = %s",
+        ("sales_order",),
+    )
+
+    assert rows == [{"indicator_code": "metric"}]
+    assert "bi.entity_code" in queries[0][0]
+    assert "CAST(bi.entity_id AS CHAR)" in queries[1][0]
 
 
 @pytest.mark.parametrize('domains', [None, 205])

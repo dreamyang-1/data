@@ -1188,6 +1188,19 @@ def _is_newer(row: dict, existing: dict) -> bool:
     return row_ts > exist_ts
 
 
+def _metric_binding_uses_missing_entity_code(exc: Exception) -> bool:
+    return (
+        isinstance(exc, pymysql.err.OperationalError)
+        and bool(exc.args)
+        and exc.args[0] == 1054
+        and "bi.entity_code" in str(exc)
+    )
+
+
+def _metric_binding_entity_id_sql(sql: str) -> str:
+    return sql.replace("bi.entity_code", "CAST(bi.entity_id AS CHAR)")
+
+
 def _execute_metric_binding_query(cursor, sql: str, args: tuple):
     """Read metric bindings across the two published binding schemas.
 
@@ -1199,10 +1212,19 @@ def _execute_metric_binding_query(cursor, sql: str, args: tuple):
     try:
         cursor.execute(sql, args)
     except pymysql.err.OperationalError as exc:
-        if not exc.args or exc.args[0] != 1054 or "bi.entity_code" not in str(exc):
+        if not _metric_binding_uses_missing_entity_code(exc):
             raise
-        cursor.execute(sql.replace("bi.entity_code", "bi.entity_id"), args)
+        cursor.execute(_metric_binding_entity_id_sql(sql), args)
     return cursor.fetchall()
+
+
+def _query_metric_binding_rows(sql: str, args: tuple):
+    try:
+        return _query(sql, args)
+    except pymysql.err.OperationalError as exc:
+        if not _metric_binding_uses_missing_entity_code(exc):
+            raise
+        return _query(_metric_binding_entity_id_sql(sql), args)
 
 
 def get_entity(business_domain_id: int):
@@ -1557,7 +1579,7 @@ def get_metric(semantic_model_id: int, business_domain_id: int = None):
             if code not in table_entities[table]:
                 table_entities[table].append(code)
 
-        binding_rows = _query(
+        binding_rows = _query_metric_binding_rows(
             """
             SELECT bi.indicator_code, e.code AS entity_code,
                    e.business_domain_id
