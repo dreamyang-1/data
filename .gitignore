@@ -21,6 +21,9 @@ logs/
 _backups/
 *.bak
 .tmp*/
+/_tmp_*
+/.inspect_*
+/.live_verify*
 实际业务问题.md
 
 # Local instruction inputs and uncurated evaluation output.

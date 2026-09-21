@@ -3143,18 +3143,22 @@ class HttpDataRetrievalAdapter:
                 details={"missing_filters": missing},
             )
     @staticmethod
+    def _semantic_literal_key(value: object) -> str:
+        """Normalize formatting-only variants of the same semantic literal."""
+
+        normalized = str(value or "").translate(str.maketrans({
+            "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+            "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
+            "\uff0d": "-",
+        }))
+        return re.sub(r"\s+", "", normalized.strip()).casefold()
+
+    @classmethod
     def _untyped_semantic_mentions(
+        cls,
         request: CanonicalAnalysisRequest,
     ) -> list[str]:
         """Return mentions that are not already represented by typed filters."""
-
-        def literal_key(value: object) -> str:
-            normalized = str(value or "").translate(str.maketrans({
-                "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
-                "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
-                "\uff0d": "-",
-            }))
-            return re.sub(r"\s+", "", normalized.strip()).casefold()
 
         typed_values: set[str] = set()
         for item in request.filters:
@@ -3163,19 +3167,20 @@ class HttpDataRetrievalAdapter:
             raw = item.get("value")
             values = raw if isinstance(raw, list) else [raw]
             typed_values.update(
-                literal_key(value)
+                cls._semantic_literal_key(value)
                 for value in values
-                if value not in (None, "") and literal_key(value)
+                if value not in (None, "") and cls._semantic_literal_key(value)
             )
         return list(dict.fromkeys(
             text
             for value in request.semantic_entity_mentions
             if (text := str(value).strip())
-            and literal_key(text) not in typed_values
+            and cls._semantic_literal_key(text) not in typed_values
         ))
 
-    @staticmethod
+    @classmethod
     def _validate_semantic_entity_mentions(
+        cls,
         asl: dict[str, Any],
         request: CanonicalAnalysisRequest,
         repairs: list[dict[str, Any]],
@@ -3193,22 +3198,10 @@ class HttpDataRetrievalAdapter:
             item for item in asl.get("filters") or [] if isinstance(item, dict)
         ]
         unresolved: list[str] = []
-        def literal_key(value: object) -> str:
-            # Structured extraction may preserve or remove spaces inside the
-            # same bilingual legal name.  Once the role-bound filter has been
-            # source-validated, that formatting-only variant is already bound
-            # and must not trigger a second untyped-entity lookup.
-            normalized = str(value or "").translate(str.maketrans({
-                "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
-                "\u2014": "-", "\u2212": "-", "\ufe58": "-", "\ufe63": "-",
-                "\uff0d": "-",
-            }))
-            return re.sub(r"\s+", "", normalized.strip()).casefold()
-
         for mention in mentions:
             direct = any(
-                literal_key(str(item.get("value") or "").strip("%"))
-                == literal_key(mention)
+                cls._semantic_literal_key(str(item.get("value") or "").strip("%"))
+                == cls._semantic_literal_key(mention)
                 for item in generated_filters
             )
             resolved = False
