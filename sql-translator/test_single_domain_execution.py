@@ -261,6 +261,50 @@ def test_explicit_plan_rejects_more_than_one_physical_source(backend,catalog_db)
     assert result['code']=='DATA_SOURCE_SCOPE_MISMATCH' and not executed
 
 
+def test_subjectless_detail_plan_uses_dimension_and_filter_source(backend):
+    body = {
+        'subject': {'entity': None},
+        'metrics': [],
+        'dimensions': [{'name': 'sales_date'}],
+        'filters': [{'field': 'sales.amount', 'operator': '>', 'value': 0}],
+        'having': [],
+        'ambiguity': [],
+    }
+    result = ScopedTranslator(grant(), backend[0]).translate_only(
+        json.dumps(body), '81'
+    )
+    assert result['success'], result
+    assert result['data_source_id'] == '10'
+    assert 'FROM sales' in result['sql']
+
+
+def test_subjectless_detail_plan_still_rejects_cross_source_fields(
+        backend, catalog_db):
+    base, _, executed = backend
+    catalog_db.execute(
+        'UPDATE semantic_model_entity_type SET business_domain_id=205 WHERE code=?',
+        ('inventory',),
+    )
+    base.loader.redis.payloads[
+        'semantic_model:81:entity:inventory'
+    ]['business_domain_id'] = '205'
+    body = {
+        'subject': {'entity': None},
+        'metrics': [],
+        'dimensions': [{'name': 'sales.amount'}],
+        'filters': [
+            {'field': 'inventory.amount', 'operator': '>', 'value': 0},
+        ],
+        'having': [],
+        'ambiguity': [],
+    }
+    result = ScopedTranslator(grant(), base).translate_only(
+        json.dumps(body), '81'
+    )
+    assert result['code'] == 'DATA_SOURCE_SCOPE_MISMATCH'
+    assert not executed
+
+
 @pytest.mark.parametrize('claim',[{'model_id':82},{'semantic_model_id':82},{'business_domain_ids':[]},{'business_domain_id':206}])
 def test_asl_scope_claim_cannot_override_current_request(backend,claim):
     ast=json.loads(asl());ast.update(claim)

@@ -8,6 +8,7 @@ from agent import (
     _administrative_mention_level,
     _apply_intent_asl_contract,
     _apply_surface_mention_normalization,
+    _normalize_surface_detail_projections,
     _contract_filter_candidates,
     _repair_contract_filter,
     _select_surface_mention_match,
@@ -327,7 +328,6 @@ def test_detail_name_projections_do_not_use_code_backed_dimensions():
                     "attr_code": "dept_name",
                     "attr_name": "科室名称",
                     "field_mapping": "department.dept_name",
-                    "is_main_attribute": True,
                 },
             ]),
             entity("product_category", "产品分类", [{
@@ -385,6 +385,70 @@ def test_detail_name_projections_do_not_use_code_backed_dimensions():
         and item.get("resolved_field") == "department.dept_name"
         for item in repairs
     )
+
+
+def test_surface_detail_projection_uses_unique_display_attribute():
+    def entity(code, name, attributes):
+        return SimpleNamespace(metadata={
+            "entity_code": code,
+            "entity_name": name,
+            "attributes": json.dumps(attributes, ensure_ascii=False),
+        })
+
+    knowledge = {
+        "entities": [
+            entity("department", "科室", [
+                {
+                    "attribute_id": "department-code-id",
+                    "attr_code": "dept_code",
+                    "attr_name": "科室编码",
+                    "field_mapping": "department.dept_code",
+                },
+                {
+                    "attribute_id": "department-name-id",
+                    "attr_code": "dept_name",
+                    "attr_name": "科室名称",
+                    "field_mapping": "department.dept_name",
+                },
+            ]),
+        ],
+        "dimensions": [SimpleNamespace(metadata={
+            "dim_code": "applicable_department",
+            "dim_name": "适用科室",
+            "bind_entities": [{
+                "attr": "department-code-id",
+                "attrName": "科室编码",
+            }],
+        })],
+    }
+    ast = json.loads(_detail_ast("product"))
+    ast["dimensions"] = [{
+        "name": "applicable_department",
+        "attr": "department-code-id",
+        "level": None,
+        "granularity": None,
+        "alias": "适用科室",
+    }]
+
+    repaired, repairs = _normalize_surface_detail_projections(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        "请提供百特Prismaflex M60 set使用科室。",
+    )
+
+    assert json.loads(repaired)["dimensions"] == [{
+        "name": "department.dept_name",
+        "attr": None,
+        "level": None,
+        "granularity": None,
+        "alias": "适用科室",
+    }]
+    assert repairs == [{
+        "type": "REPLACE_CODE_BACKED_DETAIL_PROJECTION",
+        "original_dimension": "applicable_department",
+        "resolved_field": "department.dept_name",
+        "source": "SURFACE_CATALOG_DISPLAY_ATTRIBUTE",
+    }]
 
 
 def test_selected_query_object_attribute_wins_over_overlapping_global_dimension():

@@ -5429,7 +5429,7 @@ def _contract_projection_candidates(
                 "is_main_attribute", "is_primary_name", "is_display_name", "is_name",
             )) or str(attribute.get("semantic_role") or "").casefold() in {
                 "name", "display_name", "primary_name", "title",
-            }
+            } or str(attribute.get("attr_code") or "").casefold().endswith("_name")
             if is_display:
                 display_fields.add(field)
             exact = target in terms
@@ -6597,6 +6597,92 @@ def _apply_surface_mention_normalization(
             "canonical_value": canonical_value,
             "resolved_field": field,
             "source": "SURFACE_MENTION_RECALL",
+        })
+
+    if not repairs:
+        return content, []
+    return json.dumps(ast, ensure_ascii=False), repairs
+
+
+def _normalize_surface_detail_projections(
+    content: str,
+    knowledge: dict,
+    user_query: str,
+) -> tuple[str, list[dict]]:
+    """Use visible attributes for metricless surface detail projections.
+
+    A published logical dimension can be backed by a relationship key even
+    though the user asked for a business-name list. In the surface handoff
+    there is no upstream projection contract to correct that choice. Resolve
+    only registered dimension codes and replace them only when the recalled
+    catalog yields one unique display attribute for the same business label.
+    """
+    try:
+        ast = json.loads(content)
+    except (TypeError, ValueError):
+        return content, []
+    if not isinstance(ast, dict) or ast.get("metrics"):
+        return content, []
+    if re.search(r"(?:编码|代码|编号|\b(?:id|code)\b)", str(user_query or ""), re.IGNORECASE):
+        return content, []
+    dimensions = ast.get("dimensions")
+    if not isinstance(dimensions, list):
+        return content, []
+
+    dimension_metadata: dict[str, dict] = {}
+    for item in knowledge.get("dimensions", []):
+        metadata = getattr(item, "metadata", {}) or {}
+        code = str(metadata.get("dim_code") or "").strip()
+        if code:
+            dimension_metadata[code] = metadata
+
+    repairs: list[dict] = []
+    selected = {
+        str(item.get("name") or "")
+        for item in dimensions if isinstance(item, dict)
+    }
+    for dimension in dimensions:
+        if not isinstance(dimension, dict):
+            continue
+        old_name = str(dimension.get("name") or "").strip()
+        metadata = dimension_metadata.get(old_name)
+        if metadata is None or dimension.get("granularity"):
+            continue
+        labels = [
+            value
+            for key in ("dim_name", "synonyms", "business_definition", "dim_description")
+            for value in _metadata_term_values(metadata.get(key))
+            if str(value or "").strip()
+        ]
+        candidates: list[str] = []
+        for label in labels:
+            candidates = _contract_projection_candidates(
+                str(label), None, knowledge,
+                preferred_fields=selected,
+                prefer_display=True,
+            )
+            if len(candidates) == 1 and candidates[0] != old_name:
+                break
+        if len(candidates) != 1 or candidates[0] == old_name:
+            continue
+        replacement = candidates[0]
+        dimension.update({
+            "name": replacement,
+            "attr": None,
+            "level": None,
+            "granularity": None,
+        })
+        selected.discard(old_name)
+        selected.add(replacement)
+        sort = ast.get("sort")
+        if isinstance(sort, dict) and str(sort.get("field") or "") == old_name:
+            sort["field"] = replacement
+            sort["field_type"] = "dimension"
+        repairs.append({
+            "type": "REPLACE_CODE_BACKED_DETAIL_PROJECTION",
+            "original_dimension": old_name,
+            "resolved_field": replacement,
+            "source": "SURFACE_CATALOG_DISPLAY_ATTRIBUTE",
         })
 
     if not repairs:
@@ -8246,6 +8332,12 @@ must pass the deterministic contract validator and echo the contract unchanged.
             domain_scope,
         )
         contract_repairs.extend(surface_repairs)
+        normalized, surface_projection_repairs = _normalize_surface_detail_projections(
+            normalized,
+            getattr(builder, "last_knowledge", {}),
+            semantic_user_query,
+        )
+        contract_repairs.extend(surface_projection_repairs)
     if intent_asl_contract is not None:
         repaired_ast = json.loads(normalized)
         _dedupe_equivalent_dimensions(
