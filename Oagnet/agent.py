@@ -6295,6 +6295,8 @@ def _select_surface_mention_match(
     field_kinds: dict[str, str | None] | None = None,
     *,
     allow_role_containment: bool = False,
+    diagnostics: list | None = None,
+    selection_key: str | None = None,
 ) -> tuple[str, str] | None:
     """Pick the best catalog hit for an advisory mention.
 
@@ -6364,11 +6366,58 @@ def _select_surface_mention_match(
         ]
         if len(main_attributes) == 1:
             best = main_attributes
-    selected = random.choice(best)
+    # Repeated source rows must not weight the random draw.
+    unique = {}
+    for match in best:
+        key = (str(match["field"]), str(match["canonical_value"]).strip())
+        unique.setdefault(key, match)
+    duplicate_count = len(best) - len(unique)
+    best = [unique[key] for key in sorted(unique)]
+    selected = (
+        random.Random(str(selection_key) + "\\0" + mention).choice(best)
+        if selection_key else random.choice(best)
+    )
+    if diagnostics is not None and (len(best) > 1 or duplicate_count):
+        diagnostics.append({
+            "type": "SURFACE_MATCH_NOTICE",
+            "mention": mention,
+            "reason": "TIED_CANDIDATES" if len(best) > 1 else "DUPLICATE_CANDIDATES",
+            "selection_policy": "RANDOM_TOP_TIE" if len(best) > 1 else "DEDUPLICATED",
+            "resolved_field": str(selected["field"]),
+            "canonical_value": str(selected["canonical_value"]).strip(),
+            "score_type": "STRING_SIMILARITY",
+            "score": best_key[1],
+            "duplicate_count": duplicate_count,
+            "candidates": [
+                {"field": str(item["field"]), "value": str(item["canonical_value"]).strip(),
+                 "match_type": item["match_type"], "score": best_key[1]}
+                for item in best
+            ],
+            "source": "SURFACE_MENTION_RECALL",
+        })
     return (
         str(selected.get("field") or ""),
         str(selected.get("canonical_value") or "").strip(),
     )
+
+
+def _clear_advisory_filter_ambiguities(
+    ast: dict, mention: str, field: str = "", value: str = "",
+) -> None:
+    """Only retire a value ambiguity for the advisory phrase just handled."""
+    key = re.sub(r"\s+", "", mention).casefold()
+    def handled(item):
+        if not isinstance(item, dict) or item.get("type") not in {
+            "filter", "entity_value", "entity_role", "filter_slot",
+        }:
+            return False
+        phrase = str(item.get("phrase") or item.get("input_value") or "").strip()
+        return bool(key and re.sub(r"\s+", "", phrase).casefold() == key) or bool(
+            field and _ambiguity_mentions_filter(
+                item, field, [mention, value], require_value=True,
+            )
+        )
+    ast["ambiguity"] = [item for item in ast.get("ambiguity", []) if not handled(item)]
 
 
 def _apply_surface_mention_normalization(
@@ -6510,6 +6559,8 @@ def _apply_surface_mention_normalization(
             mention_allowed_fields,
             field_kinds,
             allow_role_containment=bool(role_hint),
+            diagnostics=repairs,
+            selection_key=knowledge.get("_surface_selection_key"),
         )
         if resolved is None and role_hint and mention_allowed_fields:
             # A role field can be correctly identified while its own source
@@ -6543,6 +6594,8 @@ def _apply_surface_mention_normalization(
                 related_fields,
                 field_kinds,
                 allow_role_containment=True,
+                diagnostics=repairs,
+                selection_key=knowledge.get("_surface_selection_key"),
             )
             if resolved is not None:
                 resolved_matches = related_matches
@@ -6605,6 +6658,8 @@ def _apply_surface_mention_normalization(
                     ),
                     field_kinds,
                     allow_role_containment=bool(role_hint),
+                    diagnostics=repairs,
+                    selection_key=knowledge.get("_surface_selection_key"),
                 )
                 if resolved is not None:
                     resolved_matches = expanded_matches
@@ -6616,7 +6671,11 @@ def _apply_surface_mention_normalization(
                 if not (
                     isinstance(item, dict)
                     and re.sub(
-                        r"\s+", "", str(item.get("value") or "").strip()
+                        r"\s+", "", (
+                            str(item.get("value") or "").strip().strip("%")
+                            if str(item.get("operator") or "").upper() == "LIKE"
+                            else str(item.get("value") or "").strip()
+                        )
                     ).casefold() == literal_key
                 )
             ]
@@ -6627,6 +6686,7 @@ def _apply_surface_mention_normalization(
                 "mention": mention,
                 "source": "SURFACE_MENTION_RECALL",
             })
+            _clear_advisory_filter_ambiguities(ast, mention)
             continue
         field, canonical_value = resolved
         if not field or not canonical_value:
@@ -6721,6 +6781,7 @@ def _apply_surface_mention_normalization(
         knowledge.setdefault("_source_canonical_values", {})[
             literal_key
         ] = canonical_value
+        _clear_advisory_filter_ambiguities(ast, mention, field, canonical_value)
         repairs.append({
             "type": "ADD_SOURCE_RESOLVED_ENTITY_FILTER",
             "mention": mention,
@@ -8190,6 +8251,7 @@ def main(
     exploration_requirements: dict | None = None,
     include_evidence: bool = False,
     surface_evidence: dict | None = None,
+    selection_key: str | None = None,
 ):
     """自然语言 → DSL
 
@@ -8451,6 +8513,10 @@ must pass the deterministic contract validator and echo the contract unchanged.
         domain_scope,
     )
     if intent_asl_contract is None and surface_evidence is not None:
+        getattr(builder, "last_knowledge", {})["_surface_selection_key"] = (
+            f"{semantic_model_id}:{domain_ids}:{selection_key}"
+            if selection_key else None
+        )
         # Without a caller contract the structured extraction is advisory
         # reference material only: resolve each mention against the source
         # catalog, keep the best standard hit, and drop unmatched wording.

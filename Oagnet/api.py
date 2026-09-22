@@ -1468,7 +1468,7 @@ def _candidate_scope_reason(exc: ValueError) -> str:
 
 
 @app.post("/agent/query", response_model=QueryResponse)
-def agent_query(req: QueryRequest):
+def agent_query(req: QueryRequest, request: Request = None):
     """自然语言提问生成 DSL，直接返回 agent 结果
 
     通过 semantic_model_id + 可选业务域参数限定检索作用域：
@@ -1481,6 +1481,8 @@ def agent_query(req: QueryRequest):
         generated = _asl_capacity.run(
             lambda: main(
                 req.query,
+                **({"selection_key": request.headers.get("Idempotency-Key")}
+                   if request is not None and request.headers.get("Idempotency-Key") else {}),
                 retrieval_query=req.retrieval_query,
                 surface_evidence=(req.surface_evidence.model_dump(mode="json")
                                   if req.surface_evidence is not None else None),
