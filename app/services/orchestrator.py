@@ -6266,20 +6266,6 @@ class DataAnalysisOrchestrator:
             )
             timing.set_attribute("chart_count", len(chart_specs))
             timing.mark_first_result()
-        chart_summary = ""
-        if chart_specs:
-            chart_labels = {
-                "LINE": "折线图",
-                "BAR": "柱状图",
-                "PIE": "饼图",
-                "SCATTER": "散点图",
-                "TABLE": "数据表",
-            }
-            rendered_charts = "、".join(
-                f"{chart_labels.get(str(item.get('chart_type')), '图表')}“{item.get('title', '')}”"
-                for item in chart_specs
-            )
-            chart_summary = f"\n已根据本次分析任务生成{rendered_charts}，用于直观查看数据变化和差异。"
         visualization_executions: list[ExtensionExecution] = []
         mcp_chart_urls: list[str] = []
         if chart_specs and reliability.level != "FAIL" and chat.mcp:
@@ -6333,13 +6319,6 @@ class DataAnalysisOrchestrator:
             chart_display = "\n\n#### 图表\n\n" + "\n\n".join(remote_images)
         elif chart_images:
             chart_display = "\n\n#### 图表\n\n" + "\n\n".join(chart_images)
-        chart_source = (
-            "PLATFORM_MCP"
-            if mcp_chart_urls
-            else "INLINE_SVG"
-            if chart_images
-            else "NONE"
-        )
         insight_text = (
             synthesized_answer
             or (
@@ -6362,13 +6341,11 @@ class DataAnalysisOrchestrator:
             (
                 f"分析意图：{self._intent_label(request.primary_intent)}。\n\n"
                 + insight_text
-                + chart_summary
-                + chart_display
                 + "\n\n以上内容只基于本次查询结果和已验证证据，不额外推测业务原因。"
             ),
             message_limit=8192,
-            chart_image_count=len(mcp_chart_urls) + len(chart_images),
-            chart_source=chart_source,
+            chart_image_count=0,
+            chart_source="NONE",
         )
         if reliability.level == "FAIL":
             response = self._fallback(

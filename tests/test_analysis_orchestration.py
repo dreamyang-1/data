@@ -919,7 +919,7 @@ async def test_qwen_synthesis_is_used_only_after_analysis_evidence_exists() -> N
 
 
 @pytest.mark.asyncio
-async def test_trend_chart_is_embedded_in_insight_progress_for_existing_web_client() -> None:
+async def test_trend_chart_is_only_embedded_in_final_answer() -> None:
     events = []
     with progress_scope(events.append):
         response = await service(
@@ -939,12 +939,14 @@ async def test_trend_chart_is_embedded_in_insight_progress_for_existing_web_clie
     insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
     assert response.status == "COMPLETED"
     assert response.chart_specs[0].chart_type == "LINE"
-    assert insight["chart_image_count"] == 1
-    assert "#### 图表" in insight["message"]
-    assert '<svg style="max-width:100%;height:auto;display:block"' in insight["message"]
-    assert "<title id=\"chart-title\">销售额趋势</title>" in insight["message"]
+    assert insight["chart_image_count"] == 0
+    assert insight["chart_source"] == "NONE"
+    assert "#### 图表" not in insight["message"]
+    assert "<svg" not in insight["message"]
+    assert "已根据本次分析任务生成" not in insight["message"]
     assert "#### 图表" in response.answer
     assert '<svg style="max-width:100%;height:auto;display:block"' in response.answer
+    assert "<title id=\"chart-title\">销售额趋势</title>" in response.answer
     assert "http://minio" not in insight["message"]
 
 
@@ -997,9 +999,10 @@ async def test_configured_visualization_mcp_is_used_before_inline_fallback() -> 
 
     insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
     assert response.status == "COMPLETED"
-    assert insight["chart_source"] == "PLATFORM_MCP"
-    assert insight["chart_image_count"] == 1
-    assert "![销售额趋势](https://charts.example/sales-trend.jpeg)" in insight["message"]
+    assert insight["chart_source"] == "NONE"
+    assert insight["chart_image_count"] == 0
+    assert "#### 图表" not in insight["message"]
+    assert "![销售额趋势](https://charts.example/sales-trend.jpeg)" not in insight["message"]
     assert "![销售额趋势](https://charts.example/sales-trend.jpeg)" in response.answer
     assert "<img" not in insight["message"]
     assert "<svg" not in insight["message"]
@@ -1047,9 +1050,11 @@ async def test_failed_visualization_mcp_falls_back_to_inline_chart() -> None:
 
     insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
     assert response.status == "COMPLETED"
-    assert insight["chart_source"] == "INLINE_SVG"
-    assert insight["chart_image_count"] == 1
-    assert "<svg" in insight["message"]
+    assert insight["chart_source"] == "NONE"
+    assert insight["chart_image_count"] == 0
+    assert "<svg" not in insight["message"]
+    assert "#### 图表" in response.answer
+    assert "<svg" in response.answer
     assert response.extension_executions == []
 
 
