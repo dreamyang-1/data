@@ -72,3 +72,18 @@ Next shortest blocking path：明确通用 MCP 与文件 MCP 的维护边界，�
 - 本报告。
 
 自审重点：未引入新的请求字段/SSE 格式；未改变节点顺序；未扩大授权或改写原始问题；已确认项不重复追问，其他待确认项不丢失；测试调整对应当前正式接口与结构，不以删断言制造通过。
+
+## 后续授权部署与验证
+
+用户随后明确要求“部署然后重启测试一下”。据此部署代码提交 `573a65f`，仅更新远程 DataAnalysis 的 `app/services/orchestrator.py`，提示词资源已一致、不重复覆盖；其他服务和同事模块不变。
+
+- 部署前远程文件 SHA-256 与基线一致：`4bbded45b405c370d5b57e9d24223ae57120b7391c85d5c46e3f8a0594c11425`。没有同事新改动冲突。
+- 部署后 SHA-256 与本地提交工作文件一致：`0131687a469528c80aa4e66997c72cd6518ca5a26bd58bae2f75ea8b87d79869`。通过语法检查，并保留远程原文件备份，备份哈希与基线相同。
+- 通过既有 `data-analysis-agent.service` 重启，端口 8808；启动时间 2026-09-22 20:06:41 CST，PID 从 3407305 变为 3516222。验证结束 `ActiveState=active`、`NRestarts=0`。
+- 重启后服务器内和本地跨机器访问 `/ready` 均为 READY；core/query_pipeline/full_feature 均为 true，degraded_capabilities 为空。既有运行模式保持不变。
+- 在远程临时测试目录运行本轮候选确认、语义选择、闲聊三份测试，导入实际部署源码：**88 passed**。测试目录与正式源码/生产会话隔离，未覆盖服务器测试文件。
+- 实际 `/agent_chat/stream` 冒烟使用独立 conversation/message，带当前授权模型/单域和用户提示词。能力介绍：HTTP 200 / COMPLETED，11.5 秒；日常闲聊：HTTP 200 / CHAT / COMPLETED，11.7 秒。
+- 真实只读业务查询：HTTP 200 / METRIC_QUERY / COMPLETED，103.7 秒。收到 ASL、SQL_EXECUTION、RELIABILITY_CHECK、INSIGHT_ANALYSIS 及最终 complete 事件，顺序为意图、规划、执行、校验、洞察、最终响应；无 SSE error、无 error_code、无待澄清项。只记录验证元数据，不保存业务结果内容。
+- Oagnet 与 SQL Translator 进程保持不变。此前 11 项 MCP 全量失败仍是已知边界，本次冒烟不等价于验证该模块或证明所有业务查询无误。
+
+回滚材料位于远程受限备份目录，发布标识 `pending-573a65f-20260922`；回滚时应先确认文件未被后续部署修改，再恢复原编排文件并重启同一 service。无需数据库变更或索引重建。
