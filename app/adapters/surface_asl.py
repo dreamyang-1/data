@@ -121,4 +121,5 @@ async def generate_surface_asl(
             ambiguities = []
     if ambiguities:
         raise AdapterError("ASL_AMBIGUOUS", "ASL requires clarification", details=ambiguities)
-    return {"asl": deepcopy(asl), "semantic_evidence": deepcopy(generated["semantic_evidence"])}
+    return {"asl": deepcopy(asl), "semantic_evidence": deepcopy(generated["semantic_evidence"]),
+            "asl_repair": deepcopy(generated.get("asl_repair") or [])}

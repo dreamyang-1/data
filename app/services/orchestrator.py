@@ -8732,6 +8732,22 @@ class DataAnalysisOrchestrator:
         response.requested_business_domain_ids = list(request.business_domain_ids)
         response.business_domain_selection_mode = 'EXPLICIT' if request.business_domain_ids else 'AUTO'
         response.answer = self._sanitize_user_visible_answer(response.answer)
+        # Disclose advisory binding choices even when answer generation omits
+        # them. This is a warning, never another execution gate or SSE node.
+        binding_warnings = list(dict.fromkeys(
+            str(message)
+            for item in response.evidence if item.kind == "ASL_BINDING_NOTICE"
+            for message in item.payload.get("warnings", []) if message
+        ))
+        for message in binding_warnings:
+            if message not in response.reliability.warnings:
+                response.reliability.warnings.append(message)
+        if binding_warnings:
+            if response.reliability.level == "HIGH":
+                response.reliability.level = "LIMITED"
+            missing_notices = [text for text in binding_warnings if text not in response.answer]
+            if missing_notices:
+                response.answer += "\n\n查询条件提示：\n" + "\n".join(missing_notices)
         self._attach_query_result_file(response)
         self._append_download_links(response)
         # A fresh terminal request has no pending state to clear. If this request
@@ -10206,6 +10222,14 @@ class DataAnalysisOrchestrator:
 
         evidence: list[EvidenceItem] = []
         for transform in query_result.execution_transforms:
+            if transform.get("type") == "ASL_BINDING_NOTICES":
+                evidence.append(EvidenceItem(
+                    evidence_id=f"asl-binding:{query_result.dataset.snapshot_id}",
+                    kind="ASL_BINDING_NOTICE",
+                    source_ref="Oagnet:surface-mention-recall",
+                    payload=transform,
+                ))
+                continue
             if (
                 transform.get("type")
                 != "RELATIONSHIP_COUNT_TO_DISTINCT_PROJECTION"
@@ -11876,7 +11900,7 @@ class DataAnalysisOrchestrator:
                     "上游未提供可验证的业务数据水位，本次无法确认请求时间范围的数据覆盖完整性。"
                 )
         for item in evidence:
-            if item.kind == "ANALYSIS_RESULT":
+            if item.kind in {"ANALYSIS_RESULT", "ASL_BINDING_NOTICE"}:
                 warnings.extend(
                     str(value) for value in item.payload.get("warnings", []) if value
                 )

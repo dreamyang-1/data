@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 
 from app.adapters.base import AdapterBundle, AdapterError, MetricDiscovery
+from app.adapters.asl_notices import attach_binding_notices, render_binding_notices
 from app.analysis.contracts import (
     contract_for_request,
     ordered_entity_metric_ranking_request,
@@ -2242,7 +2243,7 @@ class HttpDataRetrievalAdapter:
             "ASL_GENERATION",
             "COMPLETED",
             f"工具：{SEMANTIC_QUERY_TOOL_NAME}。\n"
-            + render_asl_extraction_json(asl),
+            + render_asl_extraction_json(asl) + render_binding_notices(asl_repairs),
             message_limit=65536,
             display_model="OagentASL",
             display_version=str(asl.get("version") or "UNKNOWN"),
@@ -2261,13 +2262,14 @@ class HttpDataRetrievalAdapter:
                 copy.deepcopy(asl_repairs),
             )
 
-        return await self._execute_validated_asl(
+        result = await self._execute_validated_asl(
             request, identity, asl=asl, semantic_model_id=semantic_model_id,
             business_domain_id=business_domain_id,
             analysis_contract=analysis_contract,
             metric_definitions=metric_definitions,
             metric_definition_fingerprints=metric_definition_fingerprints,
         )
+        return attach_binding_notices(result, asl_repairs)
 
     async def query_surface(
         self, request: CanonicalAnalysisRequest, identity: TrustedIdentity,
@@ -2312,7 +2314,7 @@ class HttpDataRetrievalAdapter:
                                 if isinstance(item, dict) and item.get("name")]
         execution.business_domain_ids = list(scope.business_domain_ids)
         await emit_progress("ASL_GENERATION", "COMPLETED",
-                            render_asl_extraction_json(asl), message_limit=65536,
+                            render_asl_extraction_json(asl) + render_binding_notices(plan.get("asl_repair")), message_limit=65536,
                             display_model="OagentASL", display_version=str(asl.get("version") or "UNKNOWN"))
         execution_domains = (
             list(scope.business_domain_ids)
@@ -2321,11 +2323,12 @@ class HttpDataRetrievalAdapter:
         execution_domain = (
             execution_domains[0] if len(execution_domains) == 1 else None
         )
-        return await self._execute_validated_asl(
+        result = await self._execute_validated_asl(
             execution, identity, asl=asl, semantic_model_id=scope.semantic_model_id,
             business_domain_id=execution_domain,
             analysis_contract=None, metric_definitions=[], metric_definition_fingerprints=[],
         )
+        return attach_binding_notices(result, plan.get("asl_repair") or [])
 
     async def _execute_validated_asl(
         self, request, identity, *, asl, semantic_model_id,
