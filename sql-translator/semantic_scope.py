@@ -10,7 +10,7 @@ import hashlib
 import json
 import re
 
-from sql_translator_prod import SemanticCatalog, RedisDSLLoader, SQLTranslatorProd, _positive_int
+from sql_translator_prod import SemanticCatalog, RedisDSLLoader, SQLTranslatorProd, _positive_int, _normalize_asl_compatibility
 
 CONTRACT_VERSION = 'single-domain-v1'
 
@@ -402,6 +402,7 @@ class ScopedTranslator(SQLTranslatorProd):
             ast = json.loads(asl_str)
             if not isinstance(ast, dict):
                 raise ValueError('ASL must be an object')
+            ast = _normalize_asl_compatibility(ast)
             for key in ('model_id', 'semantic_model_id'):
                 if key in ast:
                     self.scope.check_model(ast[key])

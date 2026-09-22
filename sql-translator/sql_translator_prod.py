@@ -679,7 +679,7 @@ class SemanticCatalog:
 #   docs/phase25/catalog_governance_overlay.json), ``IN`` and ``EQ``
 #   (same inventories and Oagnet/新旧数据对比.md legacy/new examples);
 # - exclusion: ``exclude`` (rendered as ``NOT (...)``).
-# Values are matched exactly; no case folding or spelling tolerance. Unknown,
+# Case and surrounding whitespace are normalized. Unknown,
 # empty, or non-string values must fail closed instead of defaulting to
 # include, which would silently invert a metric's caliber.
 _GLOBAL_FILTER_TYPE_MAP = {
@@ -690,6 +690,53 @@ _GLOBAL_FILTER_TYPE_MAP = {
 }
 
 _GLOBAL_FILTER_TYPE_MISSING = object()
+
+
+def _normalize_asl_compatibility(ast: dict) -> dict:
+    """Repair unambiguous formatting only; never discard query constraints."""
+    if not isinstance(ast, dict):
+        return ast
+    for key in ("metrics", "dimensions", "filters", "having", "ambiguity"):
+        if ast.get(key) is None:
+            ast[key] = []
+        if isinstance(ast[key], list):
+            unique = []
+            for item in ast[key]:
+                if item not in unique:
+                    unique.append(item)
+            ast[key] = unique
+    for key, default in (("version", "2.0"), ("intent", "query")):
+        if ast.get(key) is None:
+            ast[key] = default
+    if str(ast.get("version")).strip() == "2.0":
+        ast["version"] = "2.0"
+    if isinstance(ast.get("intent"), str):
+        ast["intent"] = ast["intent"].strip().lower()
+    for key in ("metrics", "dimensions"):
+        for item in ast.get(key) or []:
+            if isinstance(item, dict) and isinstance(item.get("name"), str):
+                item["name"] = item["name"].strip()
+    for item in ast.get("dimensions") or []:
+        if isinstance(item, dict):
+            if isinstance(item.get("granularity"), str):
+                item["granularity"] = item["granularity"].strip().lower()
+            name = str(item.get("name") or "")
+            if "." in name and item.get("attr") in ("", name.rsplit(".", 1)[-1]):
+                item["attr"] = None
+    for item in ast.get("filters") or []:
+        if isinstance(item, dict) and isinstance(item.get("operator"), str):
+            item["operator"] = item["operator"].strip().upper()
+    if isinstance(ast.get("projection_mode"), str):
+        ast["projection_mode"] = ast["projection_mode"].strip().upper()
+    if isinstance(ast.get("sort"), dict):
+        for key, transform in (("direction", str.upper), ("field_type", str.lower)):
+            value = ast["sort"].get(key)
+            if isinstance(value, str):
+                ast["sort"][key] = transform(value.strip())
+    limit = ast.get("limit")
+    if isinstance(limit, str) and limit.strip().isascii() and limit.strip().isdigit():
+        ast["limit"] = int(limit.strip())
+    return ast
 
 
 def _normalize_global_filters(value: Any) -> List[Dict]:
@@ -705,6 +752,8 @@ def _normalize_global_filters(value: Any) -> List[Dict]:
     """
 
     filters = value
+    if isinstance(filters, str) and not filters.strip():
+        filters = None
     if isinstance(filters, str):
         try:
             filters = json.loads(filters)
@@ -712,6 +761,8 @@ def _normalize_global_filters(value: Any) -> List[Dict]:
             raise ValueError('global_filters 不是合法的 JSON 过滤器数组')
     if filters is None:
         filters = []
+    if isinstance(filters, dict):
+        filters = [filters]
     if not isinstance(filters, list):
         raise ValueError('global_filters 必须是数组')
 
@@ -734,7 +785,12 @@ def _normalize_global_filters(value: Any) -> List[Dict]:
             filter_type = 'include'
         if not isinstance(filter_type, str):
             raise ValueError('global_filters 条目 filter_type 必须是非空字符串')
+        filter_type = filter_type.strip()
         mapped = _GLOBAL_FILTER_TYPE_MAP.get(filter_type)
+        if mapped is None:
+            mapped = _GLOBAL_FILTER_TYPE_MAP.get(filter_type.lower())
+        if mapped is None:
+            mapped = _GLOBAL_FILTER_TYPE_MAP.get(filter_type.upper())
         if mapped is None:
             raise ValueError(
                 'global_filters 条目 filter_type 不在受支持的允许值集合中')
@@ -3199,6 +3255,7 @@ class SQLTranslatorProd:
 
         if not isinstance(ast, dict):
             raise ValueError('AST必须是对象')
+        ast = _normalize_asl_compatibility(ast)
         # ``dim_date`` is a logical time dimension emitted by Oagnet, not a
         # physical column. Bind it to the authoritative ASL time anchor so
         # SELECT/GROUP BY and WHERE cannot silently use different fields.
@@ -3958,6 +4015,11 @@ class SQLTranslatorProd:
             ast_data = json.loads(asl_str)
         except json.JSONDecodeError as e:
             return {'success': False, 'sql': None, 'error': f"JSON解析错误: {str(e)}"}
+
+        if not isinstance(ast_data, dict):
+            return {'success': False, 'sql': None, 'error': 'AST必须是对象'}
+        ast_data = _normalize_asl_compatibility(ast_data)
+        asl_str = json.dumps(ast_data, ensure_ascii=False)
 
         # 检查歧义
         ambiguity = ast_data.get('ambiguity', [])

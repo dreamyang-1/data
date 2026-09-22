@@ -265,7 +265,9 @@ class GlobalFilterNormalizationTests(unittest.TestCase):
                 "order_info")
 
     def test_unknown_filter_type_is_rejected_without_sql(self):
-        for value in ("between", "LIKE", "all", "INCLUDE", "Exclude"):
+        # STALE_TEST: 2026-09-22 user requested tolerance for sloppy configuration.
+        # Case-only variants are now normalized; unknown semantics still fail.
+        for value in ("between", "LIKE", "all"):
             with self.assertRaisesRegex(ValueError, "filter_type", msg=value):
                 translator([])._build_filter_clause(
                     [], [{"filterType": value,
