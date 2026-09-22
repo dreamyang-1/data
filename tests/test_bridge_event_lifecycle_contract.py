@@ -8,12 +8,9 @@ production wiring uses: ``DataAnalysisOrchestrator.execute_v1_from_completed_que
 (see ``app/main.py`` bridge construction); that is the real entry behind
 ``bridge.handle``, so nothing is hand-faked.
 
-Known baseline state (recorded, not patched): the orchestrator currently
-records TURN_ADMISSION/CONTEXT_MERGE/QUERY_RESOLUTION with
-``trace_id=str(request_id)`` and does not emit USER_QUERY/INTENT_RESULT/
-FINAL_INSIGHT/TRACE_SUMMARY, so lifecycle assertions may fail. Failure is a
-valid delivery: it pins the exact gap for the A-side event rework. No
-production code is modified and no events are fabricated.
+The bridge owns external-turn lifecycle events. Match the production wiring
+by providing the real orchestrator's open/close callbacks as well as its
+executor. No events are fabricated and the existing lifecycle assertions stay.
 """
 
 from dataclasses import replace
@@ -101,7 +98,7 @@ def _bridge_event_orchestrator(events: InMemorySessionEventStore, **query_kwargs
     return orchestrator, query
 
 
-def _bridge_handler(catalog, redis, v1, *, model):
+def _bridge_handler(catalog, redis, v1, *, model, orchestrator):
     return V2ContextV1ExecutionBridge(
         store=RedisContextStateStore(
             redis,
@@ -112,6 +109,8 @@ def _bridge_handler(catalog, redis, v1, *, model):
         catalog=catalog,
         model=model,
         v1_executor=v1,
+        v1_lifecycle_open=orchestrator.open_external_turn,
+        v1_lifecycle_close=orchestrator.close_external_turn,
         clock=lambda: NOW,
         startup_receipt={"runtime_mode": "V2_CONTEXT_V1_EXECUTION"},
         demo_mode=True,
@@ -155,7 +154,7 @@ async def test_bridge_normal_request_records_full_lifecycle_once(context_catalog
         return await orchestrator.execute_v1_from_completed_question(chat, identity)
 
     bridge = _bridge_handler(
-        context_catalog[0], redis, v1, model=scripted.model
+        context_catalog[0], redis, v1, model=scripted.model, orchestrator=orchestrator
     )
     chat = request(
         question=first_step[0],
@@ -191,7 +190,7 @@ async def test_bridge_result_availability_retry_keeps_single_external_lifecycle(
         return await orchestrator.execute_v1_from_completed_question(chat, identity)
 
     bridge = _bridge_handler(
-        context_catalog[0], redis, v1, model=scripted.model
+        context_catalog[0], redis, v1, model=scripted.model, orchestrator=orchestrator
     )
     conversation_id = "bridge-lifecycle-retry"
     await bridge.handle(request(

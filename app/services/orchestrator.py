@@ -8883,24 +8883,38 @@ class DataAnalysisOrchestrator:
             return unresolved_choice()
 
         def resolved_by_same_choice(item: SemanticAmbiguity) -> bool:
-            if (
+            if item is ambiguity or (
                 item.ambiguity_id == ambiguity.ambiguity_id
                 and item.ambiguity_id is not None
-            ) or (item.ambiguity_id is None and item is ambiguity):
+                and item.type == ambiguity.type
+                and item.phrase == ambiguity.phrase
+            ):
                 return True
             affected = {
                 str(slot).strip().lower() for slot in item.affected_slots
             }
             item_type = str(item.type or "").strip().lower()
-            if ambiguity.type == "metric":
-                return item_type in {
-                    "metric", "metric_selection", "indicator", "指标",
-                } or bool(affected & {"metric", "metrics"})
-            if ambiguity.type == "dimension":
-                return item_type in {
-                    "dimension", "dimension_selection", "维度",
-                } or bool(affected & {"dimension", "dimensions"})
-            return False
+            same_kind = (
+                ambiguity.type == "metric"
+                and (item_type in {"metric", "metric_selection", "indicator", "指标"}
+                     or bool(affected & {"metric", "metrics"}))
+            ) or (
+                ambiguity.type == "dimension"
+                and (item_type in {"dimension", "dimension_selection", "维度"}
+                     or bool(affected & {"dimension", "dimensions"}))
+            )
+            if not same_kind:
+                return False
+            other_index = cls._semantic_choice_member_index(members, item.phrase)
+            if other_index is not None:
+                # Slot type alone is not identity: choosing sales cannot also
+                # answer the pending order-count (or another grouping) question.
+                return other_index == member_index
+            # Older catalogs sometimes repeat one question with an abbreviated
+            # phrase. Preserve that deduplication only with identical catalog
+            # candidates, never just identical visible option labels.
+            keys = cls._semantic_choice_candidate_keys(item)
+            return bool(keys) and keys == cls._semantic_choice_candidate_keys(ambiguity)
 
         remaining = [
             item.model_copy(deep=True)
@@ -8940,7 +8954,23 @@ class DataAnalysisOrchestrator:
         return target
 
     @staticmethod
+    def _semantic_choice_candidate_keys(
+        item: SemanticAmbiguity,
+    ) -> frozenset[tuple[str, str]]:
+        keys = set()
+        for detail in item.candidate_details:
+            code = str(detail.get("metric_id") or detail.get("canonical_code")
+                       or detail.get("semantic_id") or "").strip()
+            if not code:
+                return frozenset()
+            if ":" not in code and item.semantic_model_id:
+                code = f"{item.semantic_model_id}:{code}"
+            keys.add((code, str(detail.get("version") or item.semantic_model_version or "")))
+        return frozenset(keys)
+
+    @classmethod
     def _suppress_confirmed_slot_ambiguities(
+        cls,
         request: CanonicalAnalysisRequest,
     ) -> None:
         """Do not reopen a catalog slot that the user just confirmed.
@@ -8965,10 +8995,20 @@ class DataAnalysisOrchestrator:
         def affects_confirmed_slot(item: SemanticAmbiguity) -> bool:
             affected = {str(slot).strip().lower() for slot in item.affected_slots}
             ambiguity_type = str(item.type or "").strip().lower()
-            return bool(
-                "metric" in confirmed_slots
-                and (ambiguity_type in metric_types or "metric" in affected)
-            )
+            if not (ambiguity_type in metric_types or affected & {"metric", "metrics"}):
+                return False
+            members = [{value.strip() for value in (m.input, m.canonical_name, m.metric_id) if value}
+                       for m in request.metrics]
+            index = cls._semantic_choice_member_index(members, item.phrase)
+            metrics = request.metrics[index:index + 1] if index is not None else request.metrics
+            keys = cls._semantic_choice_candidate_keys(item)
+            if keys:
+                return any(
+                    metric.metric_id == code
+                    and (not version or not metric.version or metric.version == version)
+                    for metric in metrics for code, version in keys
+                )
+            return index is not None and bool(request.metrics[index].metric_id)
 
         request.semantic_ambiguities = [
             item for item in request.semantic_ambiguities
@@ -8979,7 +9019,8 @@ class DataAnalysisOrchestrator:
         ]
         request.missing_slots = [
             slot for slot in request.missing_slots
-            if not (slot == "metric" and "metric" in confirmed_slots)
+            if not (slot == "metric" and all(m.metric_id for m in request.metrics)
+                    and not request.semantic_ambiguities)
         ]
         if not request.semantic_ambiguities:
             request.missing_slots = [

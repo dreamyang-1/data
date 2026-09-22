@@ -139,6 +139,7 @@ async def test_qwen_chat_request_is_bounded_and_thinking_disabled():
 
     answer = await responder.respond(
         "我想吃西瓜",
+        agent_prompt="用简短自然的中文回答",
         history=[
             {"role": "user", "content": "你好"},
             {"role": "assistant", "content": "你好呀"},
@@ -148,6 +149,7 @@ async def test_qwen_chat_request_is_bounded_and_thinking_disabled():
     assert captured["enable_thinking"] is False
     assert captured["max_tokens"] == 240
     assert captured["temperature"] == 0.5
+    assert "用简短自然的中文回答" in captured["messages"][0]["content"]
     assert len(captured["messages"][0]["content"]) < 1000
     assert [item["role"] for item in captured["messages"]] == [
         "system", "user", "assistant", "user",

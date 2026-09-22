@@ -29,7 +29,7 @@ class OfflineModel:
     def __init__(self):
         self.calls = []
 
-    async def classify(self, question, *, pre_resolved=False):
+    async def classify(self, question, *, pre_resolved=False, agent_prompt=""):
         self.calls.append(question)
         return StructuredIntentOutput(primary_intent="METRIC_QUERY", confidence=.99, metrics=["销售额"])
 
@@ -88,7 +88,8 @@ async def test_product_clear_http_payload_has_no_stale_constraint(question):
     contract = client.payloads[0]["intent_asl_contract"]
     assert contract is not None
     assert contract["filters"] == [REGION]
-    assert contract["semantic_entity_mentions"] == ["上海市"]
+    # Region remains in the typed filter; do not demand a duplicate mention.
+    assert contract["semantic_entity_mentions"] == []
 
 
 @pytest.mark.asyncio

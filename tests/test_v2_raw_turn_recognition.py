@@ -99,6 +99,11 @@ class ScriptedTransport:
 async def test_surface_handoff_does_not_bind_a_complete_new_question(catalog, monkeypatch, operation):
     step = metric_step('销售额')
     step[1]['operation_markers'][0]['operation_hint'] = operation
+    # Deferred empty-context recognition now emits only context completion.
+    # The downstream planner/ASL owns mention and operation extraction.
+    step[1]['mentions'] = []
+    step[1]['operation_markers'] = []
+    step[1]['explicit_slot_mentions'] = {}
     engine, transport = planner(catalog, [step])
     engine.defer_new_task_binding = True
 
@@ -113,7 +118,8 @@ async def test_surface_handoff_does_not_bind_a_complete_new_question(catalog, mo
     assert result.completed_question == step[0]
     assert result.fallback_reason == 'ASL_OWNS_CATALOG_BINDING'
     assert len(transport.calls) == 1
-    assert result.parse.mentions[0].surface == '销售额'
+    assert result.parse.mentions == []
+    assert result.parse.operation_markers == []
     assert result.next_state.context.authorized_scope.business_domain_ids == (205,)
 
 

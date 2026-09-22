@@ -34,7 +34,7 @@ class OfflineIntentModel:
         self.unavailable = unavailable
         self.operator_entity = operator_entity
 
-    async def classify(self, question, *, pre_resolved=False):
+    async def classify(self, question, *, pre_resolved=False, agent_prompt=""):
         self.calls.append(question)
         if self.unavailable:
             raise RuntimeError("Synthetic offline model unavailability")
@@ -84,7 +84,11 @@ async def test_real_http_metric_edit_contract_excludes_operator_entities(questio
     with pytest.raises(AdapterError, match="Synthetic offline transport stop"):
         await adapter.query(request, IDENTITY, semantic_model_id=81, business_domain_id=None)
     assert [m.input for m in request.metrics] == expected
-    assert client.payloads[0]["intent_asl_contract"]["semantic_entity_mentions"] == ["上海市"]
+    contract = client.payloads[0]["intent_asl_contract"]
+    # Typed geographic filters are not duplicated as untyped value mentions.
+    assert contract["semantic_entity_mentions"] == []
+    assert contract["filters"] == request.filters
+    assert any(item["value"] == "上海市" for item in contract["filters"])
 
 
 @pytest.mark.asyncio
@@ -114,7 +118,10 @@ async def test_orchestrator_reaches_http_without_operator_entity(question, expec
     adapter = HttpDataRetrievalAdapter(agent.settings, client)
     with pytest.raises(AdapterError, match="Synthetic offline transport stop"):
         await adapter.query(request, IDENTITY, semantic_model_id=81, business_domain_id=None)
-    assert client.payloads[0]["intent_asl_contract"]["semantic_entity_mentions"] == ["上海市"]
+    contract = client.payloads[0]["intent_asl_contract"]
+    assert contract["semantic_entity_mentions"] == []
+    assert contract["filters"] == request.filters
+    assert any(item["value"] == "上海市" for item in contract["filters"])
 
 
 @pytest.mark.parametrize("question", [

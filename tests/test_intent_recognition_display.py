@@ -45,10 +45,11 @@ def test_completed_question_displays_classifier_structure_before_catalog_binding
         build_intent_recognition_display_v2(request, semantic_extractions=())
     )
 
-    assert "结构化参数提取：" in rendered
-    assert "南京（筛选值）" in rendered
-    assert "费森尤斯产品（筛选值）" in rendered
-    assert "医院（业务对象）" in rendered
+    parameters = build_intent_recognition_display_v2(request).structured_parameters
+    assert "结构化参数提取：" not in rendered
+    assert "南京（筛选值）" in parameters
+    assert "费森尤斯产品（筛选值）" in parameters
+    assert "医院（业务对象）" in parameters
 
 
 def test_all_time_partner_list_preserves_region_brand_product_and_output():
@@ -107,12 +108,12 @@ def test_all_time_partner_list_preserves_region_brand_product_and_output():
     assert "补全后的问题：查询不限时间（全部历史）内上海市" in rendered
     assert "竞争品牌万益特的血液净化管路产品的经销商名单" in rendered
     assert "最近一年" not in rendered
-    assert (
-        "结构化参数提取：上海地区（城市/地区）；"
-        "正在销售（关系词/业务状态）；竞争品牌（关系词/品牌类型）；"
-        "万益特（厂牌）；血液净化管路（产品名/产品类型）；"
-        "经销商名单（请求输出/经销商）。"
-    ) in rendered
+    view = build_intent_recognition_display_v2(request, semantic_extractions=semantic_extractions)
+    assert view.structured_parameters == [
+        "上海地区（城市/地区）", "正在销售（关系词/业务状态）", "竞争品牌（关系词/品牌类型）",
+        "万益特（厂牌）", "血液净化管路（产品名/产品类型）", "经销商名单（请求输出/经销商）",
+    ]
+    assert "结构化参数提取：" not in rendered
 
 
 def test_partner_list_model_mentions_have_stable_public_labels():
@@ -149,12 +150,12 @@ def test_partner_list_model_mentions_have_stable_public_labels():
         )
     )
 
-    assert (
-        "结构化参数提取：上海地区（城市/地区）；"
-        "正在销售（关系词/业务状态）；竞争品牌（关系词/品牌类型）；"
-        "万益特（厂牌）；血液净化管路（产品名/产品类型）；"
-        "经销商名单（请求输出/经销商）。"
-    ) in rendered
+    view = build_intent_recognition_display_v2(request, semantic_extractions=semantic_extractions)
+    assert view.structured_parameters == [
+        "上海地区（城市/地区）", "正在销售（关系词/业务状态）", "竞争品牌（关系词/品牌类型）",
+        "万益特（厂牌）", "血液净化管路（产品名/产品类型）", "经销商名单（请求输出/经销商）",
+    ]
+    assert "结构化参数提取：" not in rendered
 
 
 def test_pending_merged_display_renders_final_slots_not_stale_rewrite():
@@ -236,9 +237,14 @@ def test_resolved_context_and_intent_decision_render_as_nonduplicated_steps():
     assert "业务域：" not in context
     assert "用户原始问题：" not in decision
     assert "补全后的问题：" not in decision
-    assert "结构化参数提取：上海（筛选值）。" in decision
-    assert "业务域：医药销售域" in decision
-    assert "任务意图：趋势分析" in decision
+    assert "结构化参数提取：" not in decision
+    assert "业务域：" not in decision
+    assert "任务意图：" not in decision
+    view = build_intent_recognition_display_v2(
+        request, business_domain_labels=["医药销售域"], semantic_extractions=semantic_extractions,
+    )
+    assert "上海（筛选值）" in view.structured_parameters
+    assert view.business_domains == ["医药销售域"]
 
 
 def test_missing_parameter_display_names_the_exact_missing_slots():
@@ -255,7 +261,8 @@ def test_missing_parameter_display_names_the_exact_missing_slots():
     rendered = render_intent_recognition_display_v2(view)
 
     assert "参数规范化：" not in rendered
-    assert "任务意图：明细查询（置信度 0.60）" in rendered
+    assert "任务意图：" not in rendered
+    assert view.task_intent.startswith("明细查询")
     assert "缺少必要参数" not in rendered
     assert "返回的业务对象（例如经销商、医院、产品或科室）" in view.clarification_reason
     assert "返回字段" in view.clarification_reason
@@ -279,7 +286,12 @@ def test_composite_display_lists_real_unique_child_intents_only():
         )
     )
 
-    assert "任务意图：明细查询、趋势分析" in rendered
+    assert "任务意图：" not in rendered
+    view = build_composite_intent_recognition_display_v2(
+        "查询产品明细并分析销售趋势", plan,
+        task_intents=[PrimaryIntent.DETAIL_QUERY, PrimaryIntent.TREND_ANALYSIS],
+    )
+    assert [task.intent for task in view.tasks] == ["明细查询", "趋势分析"]
     assert "复合查询" not in rendered
     assert "共享业务标识" not in rendered
     assert "结构化拆分" not in rendered
@@ -353,17 +365,20 @@ def test_composite_display_groups_typed_parameters_under_each_completed_question
     )
 
     assert "补全后的问题：\n\n1. 查询空心纤维血液透析器产品合作的经销商名单" in rendered
-    assert (
-        "结构化参数提取：空心纤维血液透析器产品（筛选值）；"
-        "经销商（业务对象/分组维度）。"
-    ) in rendered
-    assert (
-        "2. 查询外周插管中心静脉导管合作的医院名单\n"
-        "   结构化参数提取：外周插管中心静脉导管（筛选值）；"
-        "医院（业务对象/分组维度）。"
-    ) in rendered
-    assert rendered.count("结构化参数提取：") == 2
-    assert "任务意图：明细查询（置信度 0.60）" in rendered
+    view = build_composite_intent_recognition_display_v2(
+        "查询产品的合作机构", plan,
+        task_intents=[PrimaryIntent.DETAIL_QUERY, PrimaryIntent.DETAIL_QUERY],
+        task_requests=[first, second], semantic_extractions=semantic_extractions,
+    )
+    assert view.tasks[0].structured_parameters == [
+        "空心纤维血液透析器产品（筛选值）", "经销商（业务对象/分组维度）",
+    ]
+    assert view.tasks[1].structured_parameters == [
+        "外周插管中心静脉导管（筛选值）", "医院（业务对象/分组维度）",
+    ]
+    assert "2. 查询外周插管中心静脉导管合作的医院名单" in rendered
+    assert "结构化参数提取：" not in rendered
+    assert "任务意图：" not in rendered
     assert "语义提取字段：" not in rendered
     assert "参数规范化：已识别" not in rendered
 

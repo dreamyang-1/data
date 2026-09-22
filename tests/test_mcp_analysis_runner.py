@@ -59,6 +59,7 @@ def chat_request(**overrides) -> ChatRequest:
         application_id="app",
         conversation_id="c1",
         message_id="m1",
+        semantic_model_id=81,
         question="分析上传文件的数据质量并出图表",
         temp_file_paths=["uploads/a.xlsx"],
         mcp=[McpConfig(mcp_server_url=MCP_URL, connect_type="streamable_http")],

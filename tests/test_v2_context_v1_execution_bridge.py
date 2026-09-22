@@ -2697,6 +2697,10 @@ def test_stable_key_has_no_catalog_publication_or_vector_input():
 
 
 def _current_catalog_with_fake_authority(*, model_domains):
+    # Each fake authority supplies a fresh catalog; do not reuse another
+    # test's process-wide TTL entry for the same semantic-model/domain key.
+    from app.semantic_v2.current_catalog import _catalog_cache
+    _catalog_cache.clear()
     calls = []
 
     class Release:

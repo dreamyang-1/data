@@ -670,8 +670,9 @@ async def test_all_time_reply_restores_complete_partner_query_before_execution()
     assert "补全后的问题：查询不限时间（全部历史）内上海市" in intent_message
     assert "竞争品牌万益特" in intent_message
     assert "血液净化管路产品的经销商名单" in intent_message
-    assert "万益特（母品牌/筛选值）" in intent_message
-    assert "血液净化管路（筛选值）" in intent_message
+    # Current intent display shows completed wording; typed parameters remain
+    # in the planning/ASL handoff verified below, not a duplicate intent block.
+    assert "结构化参数提取：" not in intent_message
     assert retrieval.surface_mentions == [[
         {"text": "上海市", "role_hint": "业务城市"},
         {"text": "万益特", "role_hint": "母品牌"},

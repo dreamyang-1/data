@@ -31,7 +31,7 @@ class OfflineIntentModel:
     def __init__(self):
         self.calls = []
 
-    async def classify(self, question, *, pre_resolved=False):
+    async def classify(self, question, *, pre_resolved=False, agent_prompt=""):
         self.calls.append(question)
         return StructuredIntentOutput(
             primary_intent="METRIC_QUERY", confidence=0.99,

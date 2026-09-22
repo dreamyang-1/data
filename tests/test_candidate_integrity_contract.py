@@ -120,6 +120,38 @@ def test_label_only_legacy_options_remain_label_only():
     assert item.candidate_details == []
 
 
+@pytest.mark.parametrize("kind,first,second", [
+    ("metric", "销售额", "订单量"), ("dimension", "区域", "渠道"),
+])
+@pytest.mark.parametrize("id_mode", ["distinct", "missing", "reused"])
+def test_choice_only_clears_selected_member_even_when_labels_repeat(kind, first, second, id_mode):
+    request = pending(kind, first)
+    selected = ambiguity(kind, first)
+    other = ambiguity(kind, second)
+    selected.ambiguity_id = "selected" if id_mode != "missing" else None
+    other.ambiguity_id = {"distinct": "other", "missing": None, "reused": "selected"}[id_mode]
+    request.semantic_ambiguities = [selected, other]
+    result = choose(request)
+    assert result.semantic_ambiguities == [other]
+    assert result.missing_slots == ["semantic_ambiguity"]
+    assert len(request.semantic_ambiguities) == 2  # input is not mutated
+    if kind == "metric":
+        assert result.metrics[1] == request.metrics[1]
+    else:
+        assert result.dimensions[1] == second
+
+
+def test_rewrite_suppression_preserves_other_pending_metric_even_with_bound_id():
+    request = pending()
+    other = same_labels_different_target("订单量", "orders")
+    request.semantic_ambiguities.append(other)
+    result = choose(request)
+    result.semantic_ambiguities.insert(0, ambiguity())
+    DataAnalysisOrchestrator._suppress_confirmed_slot_ambiguities(result)
+    assert result.semantic_ambiguities == [other]
+    assert "semantic_ambiguity" in result.missing_slots
+
+
 def test_trailing_missing_detail_is_padded_without_shifting_known_id():
     item = SemanticAmbiguity(type="metric", question="选择口径", candidates=["甲", "乙"],
                              candidate_details=[{"canonical_code": "a"}])

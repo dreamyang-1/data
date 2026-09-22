@@ -167,7 +167,7 @@ async def test_add_dimension_still_works_with_hybrid_classifier_and_rewriter():
     class OfflineModel:
         calls = 0
 
-        async def classify(self, question, *, pre_resolved=False):
+        async def classify(self, question, *, pre_resolved=False, agent_prompt=""):
             self.calls += 1
             return StructuredIntentOutput(primary_intent="METRIC_QUERY", confidence=0.99, metrics=["销售额"])
 
