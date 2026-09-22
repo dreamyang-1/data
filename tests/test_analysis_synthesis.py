@@ -126,6 +126,48 @@ def settings() -> Settings:
     return Settings(env="test", intent_model_api_key="test-key", analysis_synthesis_enabled=True, analysis_synthesis_max_retries=0)
 
 
+def test_formatted_amounts_are_validated_as_whole_numbers():
+    assert QwenAnalysisSynthesizer._numbers("金额-7,070,722.04，比例18.57%") == [-7070722.04, 0.1857]
+    assert not QwenAnalysisSynthesizer._number_is_grounded(7070722.04, [7, 70, 722.04])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("supported,accept", [([True, True], True), ([False, True], False), ([True], False)])
+async def test_expanded_wording_requires_complete_semantic_evidence_review(supported, accept):
+    output = {"claims": [
+        {"statement": "比较不同区域时需要同时观察正向与反向变化，各部分的增减不能脱离整体来解释。",
+         "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]},
+        {"statement": "当前归因不足以证明因果关系。",
+         "certainty": "LIMITATION", "evidence_ids": ["analysis:a1"]},
+    ]}
+    calls = [0]
+    model = QwenAnalysisSynthesizer(
+        settings().model_copy(update={"analysis_synthesis_validation_retries": 0}),
+        sequence_transport([output, {"supported": supported, "warnings_preserved": True}], calls),
+    )
+    if accept:
+        rendered, _ = await model.synthesize(request(), analysis(), evidence())
+        assert "比较不同区域" in rendered
+    else:
+        with pytest.raises(SynthesisValidationError):
+            await model.synthesize(request(), analysis(), evidence())
+    assert calls == [2]
+
+
+@pytest.mark.asyncio
+async def test_wording_review_cannot_bypass_later_numeric_error():
+    output = {"claims": [
+        {"statement": "比较不同区域时需要同时观察正向与反向变化，各部分的增减不能脱离整体来解释。",
+         "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]},
+        {"statement": "销售额下降999。", "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]},
+    ]}
+    calls = [0]
+    model = QwenAnalysisSynthesizer(settings().model_copy(update={"analysis_synthesis_validation_retries": 0}), sequence_transport([output], calls))
+    with pytest.raises(SynthesisValidationError, match="ungrounded number"):
+        await model.synthesize(request(), analysis(), evidence())
+    assert calls == [1]
+
+
 @pytest.mark.asyncio
 async def test_qwen_accepts_algorithm_selected_grounded_claims() -> None:
     output = {"claims": [
@@ -326,9 +368,15 @@ async def test_qwen_cannot_promote_unselected_knowledge_to_reason() -> None:
 
 @pytest.mark.asyncio
 async def test_qwen_rejects_causal_verified_fact() -> None:
-    output = {"claims": [{"statement": "华东贡献-80导致销售额下降50。", "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]}]}
+    output = {"claims": [
+        {"statement": "市场竞争导致销售额下降50。", "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]},
+        {"statement": "当前归因不足以证明因果关系。", "certainty": "LIMITATION", "evidence_ids": ["analysis:a1"]},
+    ]}
     with pytest.raises(SynthesisValidationError, match="must not assert causality"):
-        await QwenAnalysisSynthesizer(settings(), transport_for(output)).synthesize(request(), analysis(), evidence())
+        await QwenAnalysisSynthesizer(
+            settings().model_copy(update={"analysis_synthesis_validation_retries": 0}),
+            sequence_transport([output, {"supported": [False, True], "warnings_preserved": True}], [0]),
+        ).synthesize(request(), analysis(), evidence())
 
 
 @pytest.mark.asyncio

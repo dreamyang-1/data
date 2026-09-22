@@ -955,6 +955,27 @@ async def test_trend_chart_is_only_embedded_in_final_answer() -> None:
 
 
 @pytest.mark.asyncio
+async def test_failed_insight_is_disclosed_without_repeating_final_conclusions():
+    class UnavailableSynthesis:
+        async def synthesize(self, *args, **kwargs):
+            raise RuntimeError("simulated model failure")
+
+    events = []
+    with progress_scope(events.append):
+        response = await service(synthesizer=UnavailableSynthesis()).handle(
+            ChatRequest(application_id="app", conversation_id="insight-failure-disclosure",
+                        message_id="m1", question="分析2026年1月到2月销售额趋势",
+                        semantic_model_id=1, business_domain_id=1),
+            TrustedIdentity(tenant_id="tenant", user_id="user"),
+        )
+    insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
+    assert "暂不展示扩展解读" in insight["message"]
+    assert "关键事实：" not in insight["message"]
+    assert response.status == "COMPLETED"
+    assert "销售额" in response.answer
+
+
+@pytest.mark.asyncio
 async def test_configured_visualization_mcp_is_used_before_inline_fallback() -> None:
     class VisualizationDispatcher:
         async def execute_visualizations(self, *, chat, chart_specs):

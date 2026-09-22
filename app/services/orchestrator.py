@@ -6208,8 +6208,8 @@ class DataAnalysisOrchestrator:
             ) as exc:
                 logger.warning(
                     "analysis synthesis unavailable or rejected; using "
-                    "deterministic answer: %s",
-                    exc,
+                    "deterministic answer: request_id=%s error_type=%s detail=%s",
+                    request.request_id, type(exc).__name__, exc,
                 )
                 analysis_evidence = next(
                     item
@@ -6322,7 +6322,12 @@ class DataAnalysisOrchestrator:
         insight_text = (
             synthesized_answer
             or (
-                insight_output.answer
+                (
+                    "本次详细分析未能通过模型调用或证据校验，暂不展示扩展解读。"
+                    "已验证的数据与简要结论见最终输出。"
+                    if self.analysis_synthesizer is not None
+                    else insight_output.answer
+                )
                 if insight_output is not None
                 else "本次查询没有足够的数据生成补充解读。"
             )
