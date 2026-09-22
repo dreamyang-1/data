@@ -235,6 +235,24 @@ def _warning_line(warning: str) -> str:
     return f"{text}（产生原因：{_warning_reason(text)}）"
 
 
+def _reliability_reason(reliability: ReliabilityReport) -> str:
+    reasons = []
+    for warning in reliability.warnings:
+        text = _warning_text_zh(warning).rstrip("。；; ")
+        if "水位" in text and ("覆盖" in text or "范围" in text):
+            text = "现有数据未完整覆盖请求的时间范围，未覆盖时段无法判断"
+        if text and text not in reasons:
+            reasons.append(text)
+    if reasons:
+        summary = "；".join(reasons[:2])
+        return summary + ("；其他限制见下方告警" if len(reasons) > 2 else "")
+    return {
+        "HIGH": "本次结果已通过现有数据与证据校验",
+        "LIMITED": "结果存在适用限制，但本轮未提供具体原因，需进一步核实",
+        "FAIL": "本次结果未通过可靠性校验，不能作为已验证结论使用",
+    }.get(reliability.level, "尚未确认结果的可靠性")
+
+
 def render_reliability_validation(
     reliability: ReliabilityReport,
     evidence: list[EvidenceItem],
@@ -243,7 +261,7 @@ def render_reliability_validation(
     """Render the complete public validation block in Chinese."""
 
     lines = [
-        f"校验结论：{reliability_level_label_zh(reliability.level)}（{reliability.score:.2f}）。",
+        f"校验结论：{reliability_level_label_zh(reliability.level)}（{_reliability_reason(reliability)}）。",
         f"数据质量：{quality_status_label_zh(quality_status)}。",
         f"证据（{len(evidence)}项）：",
     ]
@@ -265,7 +283,9 @@ def render_reliability_validation(
         lines.append("告警：无。")
 
     lines.append(
-        "结果通过可靠性门禁。"
+        "有限可信表示结果只能在上述已验证范围内参考，不能据此推断缺失或未验证的部分。"
+        if reliability.level == "LIMITED"
+        else "结果通过可靠性门禁。"
         if reliability.level != "FAIL"
         else "结果未通过可靠性门禁，不输出未经验证的数值。"
     )

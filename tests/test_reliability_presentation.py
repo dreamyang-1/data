@@ -26,7 +26,7 @@ def test_validation_is_chinese_and_expands_each_evidence_item() -> None:
         "PASS",
     )
 
-    assert "校验结论：高可信（1.00）" in rendered
+    assert "校验结论：高可信（本次结果已通过现有数据与证据校验）" in rendered
     assert "数据质量：通过" in rendered
     assert "证据（2项）：" in rendered
     assert "1. 查询结果：返回 20 行，字段包括经销商、区域医院覆盖率（来源：" in rendered
@@ -43,7 +43,7 @@ def test_validation_expands_warning_with_concrete_reason() -> None:
     rendered = render_reliability_validation(
         ReliabilityReport(
             level="LIMITED",
-            score=0.75,
+            score=1.0,
             gates={"query_succeeded": True},
             warnings=[warning],
         ),
@@ -58,7 +58,9 @@ def test_validation_expands_warning_with_concrete_reason() -> None:
         "WARNING",
     )
 
-    assert "校验结论：有限可信（0.75）" in rendered
+    assert "校验结论：有限可信（现有数据未完整覆盖请求的时间范围，未覆盖时段无法判断）" in rendered
+    assert "（1.00）" not in rendered
+    assert "不能据此推断缺失或未验证的部分" in rendered
     assert "数据质量：有告警" in rendered
     assert "告警（1项）：" in rendered
     assert warning.rstrip("。") in rendered
