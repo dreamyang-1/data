@@ -5090,6 +5090,53 @@ def _normalize_caller_bound_metrics(
     return json.dumps(ast, ensure_ascii=False)
 
 
+def _normalize_asl_compatibility(ast: dict) -> dict:
+    """Repair unambiguous formatting only; never discard query constraints."""
+    if not isinstance(ast, dict):
+        return ast
+    for key in ("metrics", "dimensions", "filters", "having", "ambiguity"):
+        if ast.get(key) is None:
+            ast[key] = []
+        if isinstance(ast[key], list):
+            unique = []
+            for item in ast[key]:
+                if item not in unique:
+                    unique.append(item)
+            ast[key] = unique
+    for key, default in (("version", "2.0"), ("intent", "query")):
+        if ast.get(key) is None:
+            ast[key] = default
+    if str(ast.get("version")).strip() == "2.0":
+        ast["version"] = "2.0"
+    if isinstance(ast.get("intent"), str):
+        ast["intent"] = ast["intent"].strip().lower()
+    for key in ("metrics", "dimensions"):
+        for item in ast.get(key) or []:
+            if isinstance(item, dict) and isinstance(item.get("name"), str):
+                item["name"] = item["name"].strip()
+    for item in ast.get("dimensions") or []:
+        if isinstance(item, dict):
+            if isinstance(item.get("granularity"), str):
+                item["granularity"] = item["granularity"].strip().lower()
+            name = str(item.get("name") or "")
+            if "." in name and item.get("attr") in ("", name.rsplit(".", 1)[-1]):
+                item["attr"] = None
+    for item in ast.get("filters") or []:
+        if isinstance(item, dict) and isinstance(item.get("operator"), str):
+            item["operator"] = item["operator"].strip().upper()
+    if isinstance(ast.get("projection_mode"), str):
+        ast["projection_mode"] = ast["projection_mode"].strip().upper()
+    if isinstance(ast.get("sort"), dict):
+        for key, transform in (("direction", str.upper), ("field_type", str.lower)):
+            value = ast["sort"].get(key)
+            if isinstance(value, str):
+                ast["sort"][key] = transform(value.strip())
+    limit = ast.get("limit")
+    if isinstance(limit, str) and limit.strip().isascii() and limit.strip().isdigit():
+        ast["limit"] = int(limit.strip())
+    return ast
+
+
 def _validate_asl_output(
     content: str,
     knowledge: dict,
@@ -5103,6 +5150,7 @@ def _validate_asl_output(
         raise ValueError("model output is not valid ASL JSON") from exc
     if not isinstance(ast, dict):
         raise ValueError("ASL root must be an object")
+    ast = _normalize_asl_compatibility(ast)
     if ast.get("version") != "2.0" or ast.get("intent") != "query":
         raise ValueError("ASL version/intent is invalid")
     for name in ("metrics", "dimensions", "filters", "having", "ambiguity"):
@@ -8351,7 +8399,7 @@ must pass the deterministic contract validator and echo the contract unchanged.
         content = res["messages"][-1].content
     # 剥离 LLM 可能附加的 ```json 代码块包裹
     normalized = _normalize_caller_bound_metrics(
-        _strip_code_fence(content),
+        json.dumps(_normalize_asl_compatibility(json.loads(_strip_code_fence(content))), ensure_ascii=False),
         getattr(builder, "last_knowledge", {}),
         metric_codes,
         semantic_user_query,

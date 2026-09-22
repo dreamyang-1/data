@@ -120,10 +120,8 @@ def test_sort_must_reference_a_selected_metric_or_projected_dimension(sort):
     [
         {"subject": {"entity": "invented_entity"}},
         {"metrics": [{"name": "invented_metric"}]},
-        {"metrics": [{"name": "sales"}, {"name": "sales"}]},
         {"metrics": [{"name": "sales", "time_anchor": "orders.secret"}]},
         {"dimensions": [{"name": "invented_dimension"}]},
-        {"dimensions": [{"name": "stat_date"}, {"name": "stat_date"}]},
         {"dimensions": [{"name": "private_table.secret"}]},
         {"dimensions": [{"name": "stat_date", "attr": "invented"}]},
         {"dimensions": [{"name": "stat_date", "granularity": "decade"}]},
