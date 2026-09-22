@@ -6393,13 +6393,9 @@ class DataAnalysisOrchestrator:
             "entity_period_decline_ranking",
         }
         answer = (
-            (
-                analysis_output.answer
-                if (
-                    analysis_output.method in structured_table_methods
-                )
-                else (synthesized_answer or analysis_output.answer)
-            )
+            # Insight prose belongs to the progress node; the answer plan
+            # supplies final conclusions without repeating that explanation.
+            analysis_output.answer
             if analysis_output is not None
             else (
                 (

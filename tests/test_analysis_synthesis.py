@@ -113,6 +113,13 @@ async def test_data_insight_model_loads_platform_user_prompt_into_system_message
 
     assert "智能体用户设定（平台配置" in captured["system"]
     assert "平台表达设定：面向医药业务人员说明。" in captured["system"]
+    assert "高级分析专家工作方法" in captured["system"]
+    assert "第一条说明本次观察的指标" in captured["system"]
+    assert "只解释输入已经验证的计算结果" in captured["system"]
+    assert "不要结论先行" in captured["system"]
+    assert "贡献最大不等于业务根因" in captured["system"]
+    assert "多维、趋势、排名或归因任务" in captured["system"]
+    assert "最终仍只输出符合 Schema 的 JSON claims" in captured["system"]
 
 
 def settings() -> Settings:

@@ -482,7 +482,7 @@ class FailingReportExporter:
 
 
 class SynthesisStub:
-    async def synthesize(self, request, analysis, evidence):
+    async def synthesize(self, request, analysis, evidence, *, agent_prompt=""):
         return (
             "模型整理后的证据化总结",
             SynthesisOutput(
@@ -904,7 +904,8 @@ async def test_qwen_synthesis_is_used_only_after_analysis_evidence_exists() -> N
         TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
     assert response.status == "COMPLETED"
-    assert response.answer.startswith("模型整理后的证据化总结")
+    assert "模型整理后的证据化总结" not in response.answer
+    assert "销售额" in response.answer
     assert "#### 图表" in response.answer
     assert "<svg" in response.answer
     assert response.chart_specs[0].chart_type == "LINE"
@@ -924,6 +925,7 @@ async def test_trend_chart_is_only_embedded_in_final_answer() -> None:
     with progress_scope(events.append):
         response = await service(
             dataset_store=SmallDatasetStore(),
+            synthesizer=SynthesisStub(),
         ).handle(
             ChatRequest(
                 application_id="app",
@@ -938,6 +940,8 @@ async def test_trend_chart_is_only_embedded_in_final_answer() -> None:
 
     insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
     assert response.status == "COMPLETED"
+    assert "模型整理后的证据化总结" in insight["message"]
+    assert "模型整理后的证据化总结" not in response.answer
     assert response.chart_specs[0].chart_type == "LINE"
     assert insight["chart_image_count"] == 0
     assert insight["chart_source"] == "NONE"
