@@ -4,6 +4,8 @@ import asyncio
 import hashlib
 import json
 import logging
+import time
+from copy import deepcopy
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from typing import Any, Protocol
@@ -221,6 +223,42 @@ class QuestionRewriter:
         self.auto_replace_threshold = auto_replace_threshold
         self.candidate_gap = candidate_gap
         self.typo_similarity_threshold = typo_similarity_threshold
+        # 向量检索是 rewrite 里最贵的远程调用（3s 预算），别名/目录数据只在
+        # 发布时变化，短 TTL 内同一 (query, scope) 直接复用上次结果
+        self._search_cache: dict[tuple, tuple[float, list[dict]]] = {}
+
+    _SEARCH_CACHE_TTL_SECONDS = 60.0
+    _SEARCH_CACHE_MAX_ENTRIES = 128
+
+    async def _search_with_cache(
+        self,
+        query: str,
+        *,
+        semantic_model_id,
+        business_domain_id,
+        business_domain_ids,
+    ) -> list[dict]:
+        key = (
+            query,
+            semantic_model_id,
+            business_domain_id,
+            tuple(business_domain_ids or ()),
+        )
+        cached = self._search_cache.get(key)
+        now = time.monotonic()
+        if cached is not None and now - cached[0] <= self._SEARCH_CACHE_TTL_SECONDS:
+            return deepcopy(cached[1])
+        results = await self.searcher.search(
+            query,
+            semantic_model_id=semantic_model_id,
+            business_domain_id=business_domain_id,
+            business_domain_ids=business_domain_ids,
+        )
+        if len(self._search_cache) >= self._SEARCH_CACHE_MAX_ENTRIES:
+            oldest = min(self._search_cache, key=lambda k: self._search_cache[k][0])
+            self._search_cache.pop(oldest, None)
+        self._search_cache[key] = (now, deepcopy(list(results)))
+        return list(results)
 
     async def ground_display_slots(
         self,
@@ -894,7 +932,7 @@ class QuestionRewriter:
             if self.candidate_mode == "assist":
                 queries.extend(item.text for item in candidates[:4])
             results = await asyncio.gather(*[
-                self.searcher.search(
+                self._search_with_cache(
                     query,
                     semantic_model_id=semantic_model_id,
                     business_domain_id=business_domain_id,

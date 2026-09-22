@@ -869,6 +869,7 @@ async def chat_stream(
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
             nonlocal planning_released, presentation_scenario, composite_mode
+            nonlocal latest_progress_stage
             stage = str(event.get("stage") or "").upper()
             if bool(event.get("is_child_task")):
                 try:
@@ -890,16 +891,11 @@ async def chat_stream(
                 and str(event.get("progress_phase") or "") in {
                     "V2_SEMANTIC_CATALOG_READY",
                     "V2_SEMANTIC_CANDIDATES_READY",
-                    "V2_SEMANTIC_BINDING_MODEL_STREAM_STARTED",
                 }
             ):
                 # These events remain available to timing/telemetry handlers,
                 # but they describe catalog/binding internals rather than
                 # user decisions and must not enter the public SSE document.
-                # ``V2_CURRENT_TURN_MODEL_STREAM_STARTED`` is deliberately NOT
-                # filtered: it is the first true progress after the intent
-                # model's first response packet arrives and stays inside the
-                # intent-recognition section.
                 return []
             if stage == "TASK_PLANNING" and not planning_released:
                 # The document format presents one stable planning block. Keep
@@ -910,6 +906,12 @@ async def chat_stream(
                     deferred_planning[:] = [event]
                 elif not deferred_planning:
                     deferred_planning.append(event)
+                # 规划块内容仍然延迟发布；意图节点完成后心跳锚点跟着走到
+                # 规划阶段，拆分模型执行期间前端就不会一直停在"正在意图识别"。
+                # 意图完成之前的规划事件不推进锚点，维持
+                # 意图识别 → 任务拆分与规划 的既定展示顺序。
+                if intent_completed:
+                    latest_progress_stage = "TASK_PLANNING"
                 return []
             if (
                 stage == "INTENT_RECOGNITION"

@@ -16,7 +16,8 @@ from app.observability.call_timing import track_operation
 async def generate_surface_asl(
     client, settings, *, completed_question, mentions, authorized_scope,
     identity, application_id, request_id, time_range=None, confirmed_metrics=(),
-    resolved_business_domain_ids=(),
+    resolved_business_domain_ids=(), structured_reference=None,
+    structured_extraction=None,
 ):
     """Return validated Oagnet evidence without rewriting the generated ASL."""
     from app.domain.semantic_scope import AuthorizedSemanticScope
@@ -30,8 +31,12 @@ async def generate_surface_asl(
     if any(not authorized_scope.contains_domain(value) for value in resolved_domains):
         raise AdapterError("SEMANTIC_SCOPE_INVALID", "resolved domain exceeds authorization")
     execution_domains = domains or (resolved_domains if len(resolved_domains) == 1 else [])
-    payload = build_surface_asl_input(completed_question, mentions)
+    payload = build_surface_asl_input(
+        completed_question, mentions, structured_extraction=structured_extraction
+    )
     payload.update(
+        completed_question=completed_question,
+        structured_reference=structured_reference,
         semantic_model_id=authorized_scope.semantic_model_id,
         business_domain_id=execution_domains[0] if execution_domains else None,
         business_domain_ids=execution_domains,

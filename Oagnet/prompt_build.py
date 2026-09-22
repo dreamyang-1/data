@@ -5,7 +5,7 @@ from collections import deque
 import json
 import re
 
-from vector_store import ChromaVectorStore, SearchResult
+from vector_store import ChromaVectorStore, SearchResult, normalize_vector_text
 from scope_contract import normalize_domains, require_model_id, scope_filter, require_candidate_scope
 
 SYSTEM_PROMPT = """
@@ -400,7 +400,7 @@ class PromptBuilder:
     """
 
     # Surface evidence contains business phrases extracted from the completed
-    # question, not arbitrary tokenizer words. Recall each phrase separately
+    # question, not arbitrary tokenizer words.  Recall each phrase separately
     # while keeping both embedding cost and prompt size bounded.
     MAX_SURFACE_MENTIONS = 12
     MAX_PROMPT_RESULTS_PER_TYPE = 12
@@ -680,6 +680,34 @@ class PromptBuilder:
             return self._dedupe_results(fallback)
         records = list(loader(self._build_where(type_name)))
         self._validate_record_scope(records)
+        return self._dedupe_results(records)
+
+    def _exact_entity_value_mentions(self) -> list[SearchResult]:
+        """Load exact value hits without trusting an upstream role label.
+
+        Surface extraction may call a brand a product (or the reverse).  The
+        literal itself is still useful evidence, so look it up across every
+        entity-attribute value in the already pinned model/domain scope.  This
+        is a bounded list of at most six mentions and never broadens scope.
+        """
+        loader = getattr(self.store, "find_exact", None)
+        if not callable(loader):
+            loader = getattr(self.store, "get_by_where", None)
+        if not callable(loader):
+            return []
+        records: list[SearchResult] = []
+        base_where = self._build_where("entity_attribute_value")
+        for mention in self.surface_mentions:
+            canonical = normalize_vector_text(mention)
+            if not canonical:
+                continue
+            matches = list(loader({
+                "$and": [base_where, {"canonical_value": canonical}],
+            }))
+            self._validate_record_scope(matches)
+            for item in matches:
+                item.score = 1.0
+            records.extend(matches)
         return self._dedupe_results(records)
 
     def _validate_record_scope(self, records):
@@ -1013,19 +1041,34 @@ class PromptBuilder:
         # “销售额” metric even when that exact synonym appeared in a cross-domain
         # question, allowing a nearby “商品总金额” metric to be selected instead.
         candidate_k = min(40, max(12, self.top_k * 4))
+        exact_entity_value_mentions = self._exact_entity_value_mentions()
 
         candidate_pools: dict[str, list[SearchResult]] = {}
 
         def retrieve_type(type_name: str) -> list[SearchResult]:
+            # Short names, brands and model numbers are easy to misclassify and
+            # weak dense-search inputs.  Widen only their hidden candidate pool;
+            # the prompt-facing result remains compact below.
+            search_k = 40 if type_name == "entity_attribute_value" else candidate_k
             candidates = self.store.search(
                 vec,
-                top_k=candidate_k,
+                top_k=search_k,
                 where=self._build_where(type_name),
             )
             self._validate_record_scope(candidates)
+            if type_name == "entity_attribute_value":
+                candidates = self._dedupe_results([
+                    *exact_entity_value_mentions,
+                    *candidates,
+                ])
             mention_hits = []
             for mention_vec in mention_vectors:
-                extra = self.store.search(mention_vec, top_k=self.top_k,
+                mention_k = (
+                    max(8, self.top_k)
+                    if type_name == "entity_attribute_value"
+                    else self.top_k
+                )
+                extra = self.store.search(mention_vec, top_k=mention_k,
                                           where=self._build_where(type_name))
                 self._validate_record_scope(extra)
                 mention_hits.extend(extra)
@@ -1040,9 +1083,22 @@ class PromptBuilder:
                 return self._rerank_exact_mentions(
                     user_query, candidates, max(self.top_k, len(allowed))
                 )
+            # Keep the bounded per-mention recall in the generation context.
+            # Re-ranking only against the whole sentence would discard exactly
+            # the qualifier/specification candidates this recall was added for.
+            if type_name == "entity_attribute_value":
+                # Keep the 40-row pool for deterministic disambiguation, but
+                # expose only a small reranked set to generation.  Exact literal
+                # hits and per-mention hits compete on value/name evidence here;
+                # an upstream role label is never part of the ranking key.
+                return self._rerank_exact_mentions(
+                    user_query,
+                    [*exact_entity_value_mentions, *mention_hits, *candidates],
+                    max(12, self.top_k),
+                )
             # Every business phrase contributes its own top-k search above.
             # Fuse those hits with the whole-question pool, then apply one
-            # prompt-facing cap per semantic type. The full fused pool remains
+            # prompt-facing cap per semantic type.  The full fused pool remains
             # available in ``_ambiguity_candidates`` for deterministic checks.
             return self._rerank_exact_mentions(
                 user_query,

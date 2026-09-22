@@ -80,10 +80,16 @@ async def test_second_turn_with_history_keeps_full_contract(catalog):
 
 @pytest.mark.asyncio
 async def test_deferred_empty_context_uses_surface_only_extraction_prompt(catalog):
-    steps = [metric_step('销售额')]
+    # 空会话独立新问题的提及级证据没有下游消费：识别输出只剩关系判定和补全。
+    steps = [('查询销售额', parse('查询销售额'), None)]
     engine, transport = planner(catalog, steps)
     engine.defer_new_task_binding = True
-    results = await turns(engine, steps)
+    # 生产 bridge 的空会话独立新问题走直通（见 context_v1_execution 的
+    # allow_standalone_new_task_passthrough=True），不会进入语义编辑调用。
+    result = await engine.run(
+        request(question='查询销售额', message_id='turn0'), IDENTITY,
+        allow_standalone_new_task_passthrough=True)
+    results = [result]
 
     instruction, schema = split_instruction_and_schema(transport.calls[0])
     # The deferred-binding path delegates catalog matching to ASL, so it uses
@@ -96,13 +102,12 @@ async def test_deferred_empty_context_uses_surface_only_extraction_prompt(catalo
     assert '不得创造目录中不存在的业务' in instruction
     assert '筛选值不是分组维度' in instruction
     assert '结构化\n提取必须以它为唯一业务内容来源' in instruction
+    # 空会话强制跳过提及级提取：长数组字段全部封为空，压缩流式输出。
+    assert schema['properties']['mentions'] == {'type': 'array', 'maxItems': 0}
+    assert schema['properties']['operation_markers'] == {'type': 'array', 'maxItems': 0}
+    assert '本轮会话没有历史任务也没有挂起问题' in instruction
     proposal = schema['$defs']['ContextProposal']
     assert proposal['properties']['target_task_id'] == {'type': 'null'}
-    # Role labels are free-form: the model names what each span is (city, time,
-    # product name, ...) instead of being squeezed into the governed enum.
-    roles = schema['$defs']['Mention']['properties']['candidate_roles']
-    assert roles['items'] == {'type': 'string', 'minLength': 1, 'maxLength': 40}
-    assert 'enum' not in roles['items']
     result = results[0]
     assert result.context_trace['FINAL_STATUS'] == 'ACCEPTED'
     assert result.context_trace['FINAL_RELATION'] == 'NEW_TASK'

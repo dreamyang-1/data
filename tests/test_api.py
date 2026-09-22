@@ -729,16 +729,8 @@ def test_public_intent_stream_hides_internal_v2_milestones_but_releases_first_pa
                     "业务域语义目录已加载，正在提取当前问题的查询要素。",
                 ),
                 (
-                    "V2_CURRENT_TURN_MODEL_STREAM_STARTED",
-                    "语义识别模型已开始返回结构化结果，正在完成字段校验。",
-                ),
-                (
                     "V2_SEMANTIC_CANDIDATES_READY",
                     "关键词语义候选已提取，正在校验绑定。",
-                ),
-                (
-                    "V2_SEMANTIC_BINDING_MODEL_STREAM_STARTED",
-                    "语义绑定模型已开始返回结构化结果。",
                 ),
             ):
                 await emit_progress(
@@ -805,17 +797,11 @@ def test_public_intent_stream_hides_internal_v2_milestones_but_releases_first_pa
     forbidden = (
         "业务域语义目录已加载",
         "关键词语义候选已提取",
-        "语义绑定模型已开始返回",
     )
     assert all(text not in thinking for text in forbidden)
-    # The intent model's first stream packet gives one true progress update
-    # inside the intent section: visible exactly once, not duplicated.
-    first_packet = "语义识别模型已开始返回"
-    assert thinking.count(first_packet) == 1
     ordered = (
         "正在理解当前问题，并核对本轮与会话上下文的关系。",
         "对话状态识别：独立新问题。",
-        first_packet,
         "用户原始问题：按月份分析上海地区产品最近一年的销售趋势。",
         "补全后的问题：按月份分析上海地区产品最近一年的销售趋势。",
         "正在进行任务意图分析、参数提取和规范化。",
@@ -868,7 +854,7 @@ def test_intent_summary_marks_file_based_analysis_only_when_selected():
         file_based=False,
     )
     assert "### ◉ 意图识别" in file_summary
-    assert "任务意图：基于用户文件进行趋势分析" in file_summary
+    assert "任务意图：" not in file_summary
     assert "文件判断：检测到用户上传文件，按文件数据链路处理" in file_summary
     assert "任务意图：基于用户文件进行" not in normal_summary
     assert "文件判断：检测到用户上传文件，但当前问题不使用该文件" in normal_summary
@@ -893,7 +879,7 @@ def test_intent_summary_hides_internal_turn_and_clarification_diagnostics():
     assert "是否需要追问：" not in standalone_summary
     assert "不追问理由：" not in standalone_summary
     assert "参数规范化：" not in standalone_summary
-    assert "任务意图：趋势分析（置信度" in standalone_summary
+    assert "任务意图：" not in standalone_summary
 
     followup = standalone.model_copy(
         deep=True,
@@ -920,8 +906,8 @@ def test_intent_summary_hides_internal_turn_and_clarification_diagnostics():
     model_summary = DataAnalysisOrchestrator._intent_think_summary(
         model_enriched
     )
-    assert "任务意图：趋势分析（置信度" in model_summary
-    assert "意图判定依据：" in model_summary
+    assert "任务意图：" not in model_summary
+    assert "意图判定依据：" not in model_summary
 
 
 def test_intent_summary_does_not_render_a_pre_asl_structure():
@@ -1015,7 +1001,7 @@ def test_intent_display_v2_is_multiline_and_does_not_mutate_execution_request():
     assert summary.startswith("### ◉ 意图识别\n\n")
     assert "\n用户原始问题：" in summary
     assert "\n补全后的问题：" in summary
-    assert "\n业务域：医药销售域" in summary
+    assert "\n业务域：" not in summary
     assert "文件判断：" not in summary
     assert "\n结构化提取" not in summary
     assert "商品品牌 EQ 费森尤斯" not in summary
@@ -1678,7 +1664,7 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert intent["meta"]["is_composite"] is True
     intent_content = "".join(event["content"] for event in intent_chunks)
     assert "查询 TDC-3 产品的主要适用科室、次要适用科室" in intent_content
-    assert "任务意图：明细查询" in intent_content
+    assert "任务意图：" not in intent_content
     assert "复合查询" not in intent_content
     assert "共享业务标识" not in intent_content
     assert "结构化拆分" not in intent_content

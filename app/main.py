@@ -61,6 +61,14 @@ def create_app(settings: Settings | None = None, *, isolated_chat_handler=None,
                     app.state.container.orchestrator
                     .execute_v1_pending_clarification_answer
                 ),
+                v1_pending_triage=(
+                    app.state.container.orchestrator
+                    .triage_v1_pending_reply
+                ),
+                v1_pending_discard=(
+                    app.state.container.orchestrator
+                    .discard_v1_pending
+                ),
                 v1_lifecycle_open=(
                     app.state.container.orchestrator.open_external_turn
                 ),

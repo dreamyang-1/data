@@ -483,6 +483,13 @@ class V2ContextV1ExecutionBridge:
         v1_pending_executor: Callable[
             [ChatRequest, TrustedIdentity], Awaitable[AgentResponse]
         ] | None = None,
+        v1_pending_triage: Callable[
+            [ChatRequest, TrustedIdentity],
+            Awaitable[tuple[str, str | None] | None],
+        ] | None = None,
+        v1_pending_discard: Callable[
+            [ChatRequest, TrustedIdentity], Awaitable[None]
+        ] | None = None,
         v1_lifecycle_open: Callable[
             [ChatRequest, TrustedIdentity], Awaitable[None]
         ] | None = None,
@@ -501,6 +508,8 @@ class V2ContextV1ExecutionBridge:
         self.v1_context_value_resolver = v1_context_value_resolver
         self.v1_pending_answer_probe = v1_pending_answer_probe
         self.v1_pending_executor = v1_pending_executor
+        self.v1_pending_triage = v1_pending_triage
+        self.v1_pending_discard = v1_pending_discard
         self.v1_lifecycle_open = v1_lifecycle_open
         self.v1_lifecycle_close = v1_lifecycle_close
         self.clock = clock
@@ -1127,11 +1136,79 @@ class V2ContextV1ExecutionBridge:
                     chat, identity, response, turn_started
                 )
 
-            if (
+            # 目录捕获只依赖 semantic_model_id/business_domain_ids，与挂起
+            # 判定、分诊互不依赖；先并行启动，识别阶段再取结果。
+            catalog_task = asyncio.create_task(self._request_catalog(chat))
+            pending_continuation = (
                 self.v1_pending_answer_probe is not None
                 and self.v1_pending_executor is not None
                 and await self.v1_pending_answer_probe(chat, identity)
+            )
+            pending_merged_question: str | None = None
+            if (
+                not pending_continuation
+                and self.v1_pending_triage is not None
+                and self.v1_executor is not None
             ):
+                # 精确匹配没命中的自由文本，先分诊：仍在原话题的合并成完整
+                # 问题重新执行；换了话题的作废旧挂起，走正常新问流程。挂起
+                # 不读进来，V2 看到的会话状态是空的，会把澄清回答误判成
+                # 独立新问题，待确认项永远对不上。
+                triage = await self.v1_pending_triage(chat, identity)
+                if triage is not None:
+                    verdict, merged = triage
+                    if verdict == "ANSWER" and merged:
+                        if self.v1_pending_discard is not None:
+                            await self.v1_pending_discard(chat, identity)
+                        await emit_progress(
+                            "INTENT_RECOGNITION",
+                            "RUNNING",
+                            "对话状态识别：澄清回复。",
+                            progress_phase="V1_PENDING_TRIAGE",
+                        )
+                        pending_merged_question = merged
+                    elif self.v1_pending_discard is not None:
+                        await self.v1_pending_discard(chat, identity)
+            if pending_merged_question is not None:
+                running = await self.store.reserve(
+                    snapshot,
+                    chat=chat,
+                    trusted=identity,
+                    request_fingerprint=fingerprint,
+                    next_state=None,
+                    plan_state=None,
+                    pending_state=None,
+                    bridge_route="V1_PENDING_TRIAGE_MERGED",
+                    catalog_provenance=None,
+                )
+                with track_operation(
+                    "V1_ORCHESTRATION",
+                    "bridge.v1_execution",
+                    attributes={"route": "pending_triage_merged"},
+                ) as timing:
+                    merged_chat = chat.model_copy(
+                        deep=True,
+                        update={"history": [], "question": pending_merged_question},
+                    )
+                    # 与上传文件路径同款：问题已补全，V1 按自包含问题直接执行，
+                    # 任务规划等节点事件照常发布。
+                    merged_chat._completed_question_execution = True
+                    response = await self.v1_executor(merged_chat, identity)
+                    timing.mark_first_result()
+                await self.store.complete(
+                    running,
+                    chat=chat,
+                    trusted=identity,
+                    request_fingerprint=fingerprint,
+                    response=response,
+                    v1_execution_called=True,
+                )
+                # 该路由用不到目录，停掉预取任务
+                catalog_task.cancel()
+                return await self._finalize_turn(
+                    chat, identity, response, turn_started
+                )
+            if pending_continuation:
                 running = await self.store.reserve(
                     snapshot,
                     chat=chat,
@@ -1169,6 +1246,8 @@ class V2ContextV1ExecutionBridge:
                     response=response,
                     v1_execution_called=True,
                 )
+                # 该路由用不到目录，停掉预取任务
+                catalog_task.cancel()
                 return await self._finalize_turn(
                     chat, identity, response, turn_started
                 )
@@ -1198,7 +1277,7 @@ class V2ContextV1ExecutionBridge:
                 )
                 context_chat._conversation_state_progress_relation = "NEW_TASK"
             try:
-                catalog = await self._request_catalog(context_chat)
+                catalog = await catalog_task
             except Exception as exc:
                 catalog_failure = _catalog_request_failure_code(exc)
                 if catalog_failure is None:
@@ -1595,6 +1674,13 @@ def build_context_v1_execution_handler(
     v1_pending_executor: Callable[
         [ChatRequest, TrustedIdentity], Awaitable[AgentResponse]
     ] | None = None,
+    v1_pending_triage: Callable[
+        [ChatRequest, TrustedIdentity],
+        Awaitable[tuple[str, str | None] | None],
+    ] | None = None,
+    v1_pending_discard: Callable[
+        [ChatRequest, TrustedIdentity], Awaitable[None]
+    ] | None = None,
     v1_lifecycle_open: Callable[
         [ChatRequest, TrustedIdentity], Awaitable[None]
     ] | None = None,
@@ -1632,6 +1718,8 @@ def build_context_v1_execution_handler(
         v1_context_value_resolver=v1_context_value_resolver,
         v1_pending_answer_probe=v1_pending_answer_probe,
         v1_pending_executor=v1_pending_executor,
+        v1_pending_triage=v1_pending_triage,
+        v1_pending_discard=v1_pending_discard,
         v1_lifecycle_open=v1_lifecycle_open,
         v1_lifecycle_close=v1_lifecycle_close,
         demo_mode=settings.demo_mode,

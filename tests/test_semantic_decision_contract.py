@@ -23,6 +23,7 @@ from app.domain.semantic_decision import (
 )
 from app.intent import RuleBasedIntentClassifier
 from app.observability.call_timing import RequestTimingTracker, timing_scope
+from app.planning import PlannerOutcome
 from app.services import DataAnalysisOrchestrator
 from app.services.question_rewriter import QuestionRewriter
 from app.services.semantic_decision import (
@@ -353,7 +354,7 @@ async def test_pre_resolution_contract_cannot_skip_v1_task_decomposition():
 
         async def plan(self, *_args, **_kwargs):
             self.calls += 1
-            return None
+            return PlannerOutcome(plan=None)
 
     chat = _chat()
     chat._semantic_decision = _accepted_decision(chat)

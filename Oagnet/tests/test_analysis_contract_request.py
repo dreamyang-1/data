@@ -41,6 +41,102 @@ def _metric(code: str, name: str, synonyms: list[str] | None = None) -> SearchRe
     )
 
 
+def test_entity_value_vector_records_authorize_their_governed_source_field():
+    hit = SearchResult(
+        id="value:brand",
+        score=0.9,
+        text="brand",
+        metadata={
+            "type": "entity_attribute_value",
+            "semantic_model_id": 81,
+            "business_domain_id": 205,
+            "source_field": "products.brand_name",
+        },
+    )
+    knowledge = {
+        "entity_attribute_values": [],
+        "_ambiguity_candidates": {"entity_attribute_value": [hit]},
+    }
+
+    assert "products.brand_name" in agent._known_physical_fields(knowledge)
+
+
+def test_missing_asl_filter_field_gets_second_pass_exact_vector_proof():
+    hit = SearchResult(
+        id="value:brand",
+        score=0.0,
+        text="brand",
+        metadata={
+            "type": "entity_attribute_value",
+            "semantic_model_id": 81,
+            "business_domain_id": 205,
+            "source_field": "products.brand_name",
+        },
+    )
+
+    class Store:
+        def find_exact(self, where):
+            assert {"source_field": "products.brand_name"} in where["$and"]
+            return [hit]
+
+    content = json.dumps({
+        "metrics": [],
+        "dimensions": [],
+        "filters": [{
+            "field": "products.brand_name",
+            "operator": "=",
+            "value": "Acme",
+        }],
+        "time_context": None,
+        "sort": None,
+        "having": [],
+    })
+    knowledge = {"_vector_authorized_fields": []}
+
+    agent._verify_missing_asl_fields_in_vector_store(
+        content, knowledge, Store(), 81, [205]
+    )
+
+    assert knowledge["_vector_authorized_fields"] == ["products.brand_name"]
+    agent._validate_vector_grounded_asl(content, knowledge)
+
+
+def test_second_pass_vector_proof_does_not_accept_a_different_scope():
+    hit = SearchResult(
+        id="value:brand",
+        score=0.0,
+        text="brand",
+        metadata={
+            "type": "entity_attribute_value",
+            "semantic_model_id": 81,
+            "business_domain_id": 999,
+            "source_field": "products.brand_name",
+        },
+    )
+
+    class Store:
+        def find_exact(self, _where):
+            return [hit]
+
+    content = json.dumps({
+        "metrics": [],
+        "dimensions": [],
+        "filters": [{"field": "products.brand_name", "operator": "=", "value": "Acme"}],
+        "time_context": None,
+        "sort": None,
+        "having": [],
+    })
+    knowledge = {"_vector_authorized_fields": []}
+
+    agent._verify_missing_asl_fields_in_vector_store(
+        content, knowledge, Store(), 81, [205]
+    )
+
+    assert knowledge["_vector_authorized_fields"] == []
+    with pytest.raises(ValueError, match="filter field"):
+        agent._validate_vector_grounded_asl(content, knowledge)
+
+
 def test_query_request_accepts_matching_analysis_contract():
     request = QueryRequest(
         query="分析量价因素", semantic_model_id=6,
@@ -254,6 +350,7 @@ def test_analysis_contract_does_not_pollute_semantic_retrieval(monkeypatch):
     monkeypatch.setattr(agent, "create_deep_agent", lambda **_kwargs: ModelAgent())
     monkeypatch.setattr(agent, "_normalize_semantic_references", lambda content, *_args: content)
     monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda content, *_args: content)
+    monkeypatch.setattr(agent, "_validate_vector_grounded_asl", lambda *_args: None)
     monkeypatch.setattr(agent, "_validate_asl_output", lambda content, *_args: content)
 
     result = agent.main(
@@ -304,6 +401,7 @@ def test_intent_asl_contract_is_authoritative_in_model_prompt(monkeypatch):
     monkeypatch.setattr(agent, "create_deep_agent", create_agent)
     monkeypatch.setattr(agent, "_normalize_semantic_references", lambda content, *_args: content)
     monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda content, *_args: content)
+    monkeypatch.setattr(agent, "_validate_vector_grounded_asl", lambda *_args: None)
     monkeypatch.setattr(agent, "_validate_asl_output", lambda content, *_args: content)
     monkeypatch.setattr(agent, "_apply_intent_asl_contract", lambda content, *_args: (content, []))
     monkeypatch.setattr(agent, "_validate_intent_asl_contract", lambda *_args, **_kwargs: None)
@@ -353,6 +451,7 @@ def test_execution_constraints_do_not_pollute_semantic_date_validation(monkeypat
     monkeypatch.setattr(agent, "create_deep_agent", lambda **_kwargs: ModelAgent())
     monkeypatch.setattr(agent, "_normalize_semantic_references", normalize)
     monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda value, *_args: value)
+    monkeypatch.setattr(agent, "_validate_vector_grounded_asl", lambda *_args: None)
     monkeypatch.setattr(agent, "_validate_asl_output", validate)
 
     agent.main(
@@ -394,6 +493,7 @@ def test_exploration_requirements_are_enforced_after_clean_retrieval(monkeypatch
     monkeypatch.setattr(agent, "create_deep_agent", lambda **_kwargs: model_agent)
     monkeypatch.setattr(agent, "_normalize_semantic_references", lambda value, *_args: value)
     monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda value, *_args: value)
+    monkeypatch.setattr(agent, "_validate_vector_grounded_asl", lambda *_args: None)
     monkeypatch.setattr(agent, "_validate_asl_output", lambda value, *_args: value)
 
     result = agent.main(
@@ -403,6 +503,66 @@ def test_exploration_requirements_are_enforced_after_clean_retrieval(monkeypatch
     parsed = json.loads(result)
     assert observed["retrieval_query"] == "全面分析销售数据"
     assert parsed["analysis_exploration"]["requirements"] == EXPLORATION
+
+
+def test_structured_reference_is_vector_normalized_and_unmatched_items_are_removed():
+    knowledge = {
+        "metrics": [_metric("sales", "销售额", ["含税销售额"])],
+        "entities": [SearchResult(
+            id="entity:dealer", score=0.9, text="经销商",
+            metadata={
+                "type": "entity", "entity_code": "dealer", "entity_name": "经销商",
+                "attributes": [{
+                    "attr_code": "dealer_name", "attr_name": "经销商名称",
+                    "field_mapping": {"mappingTable": "dealer", "mappingColumn": "dealer_name"},
+                    "is_main_attribute": True,
+                }],
+            },
+        )],
+        "attributes": [], "dimensions": [], "relations": [],
+    }
+    reference = {
+        "primary_intent": "DETAIL_QUERY",
+        "entity": "经销商",
+        "metrics": [
+            {"input": "含税销售额", "canonical_name": None, "metric_id": None},
+            {"input": "不存在指标", "canonical_name": None, "metric_id": None},
+        ],
+        "fields": ["经销商名称", "不存在字段"],
+        "dimensions": [],
+        "filters": [
+            {"field": "经销商名称", "operator": "EQ", "value": "甲公司"},
+            {"field": "不存在字段", "operator": "EQ", "value": "噪声"},
+        ],
+        "operators": [], "time_range": None,
+    }
+
+    normalized, dropped = agent._normalize_structured_reference(reference, knowledge)
+
+    assert normalized["entity"] == "dealer"
+    assert normalized["metrics"] == ["sales"]
+    assert normalized["fields"] == ["dealer.dealer_name"]
+    assert normalized["filters"] == [{
+        "field": "dealer.dealer_name", "operator": "EQ", "value": "甲公司",
+    }]
+    assert {item["value"] for item in dropped} == {"不存在指标", "不存在字段"}
+
+
+def test_vector_grounding_rejects_field_authorized_only_by_non_vector_fallback():
+    asl = json.dumps({
+        "version": "2.0", "intent": "query", "subject": {}, "metrics": [],
+        "dimensions": [{"name": "published.only_field"}], "filters": [],
+        "time_context": None, "sort": None, "limit": None, "having": [],
+        "ambiguity": [],
+    }, ensure_ascii=False)
+    knowledge = {
+        "metrics": [], "dimensions": [], "entities": [],
+        "_published_authorized_fields": ["published.only_field"],
+        "_vector_authorized_fields": [],
+    }
+
+    with pytest.raises(ValueError, match="vector semantic scope"):
+        agent._validate_vector_grounded_asl(asl, knowledge)
 
 
 def test_exploration_normalizes_time_granularity_that_is_too_coarse():

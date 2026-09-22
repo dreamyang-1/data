@@ -33,6 +33,10 @@ from app.adapters import build_mock_adapters
 from minio_followup_store import DatasetReference, DatasetScope
 
 
+async def _run_plan(planner: MultiQuestionPlanner, question: str) -> TaskPlan | None:
+    return (await planner.plan(question)).plan
+
+
 @pytest.mark.asyncio
 async def test_completed_dag_persists_branch_focus_in_root_conversation() -> None:
     sessions = InMemorySessionStore()
@@ -109,7 +113,7 @@ async def test_completed_dag_persists_branch_focus_in_root_conversation() -> Non
 @pytest.mark.asyncio
 async def test_rule_planner_splits_numbered_independent_questions() -> None:
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
-    plan = await planner.plan(
+    plan = await _run_plan(planner, 
         "1. 查询本月销售额；2. 分析最近半年销售趋势；3. 解释销售额口径"
     )
     assert plan is not None
@@ -121,7 +125,7 @@ async def test_rule_planner_splits_numbered_independent_questions() -> None:
 @pytest.mark.asyncio
 async def test_rule_planner_keeps_dependent_post_calculations() -> None:
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
-    plan = await planner.plan(
+    plan = await _run_plan(planner, 
         "查询2026年7月销售额；按区域拆分；找出最高和最低区域；再算最高比最低高多少"
     )
 
@@ -134,7 +138,7 @@ async def test_rule_planner_keeps_dependent_post_calculations() -> None:
 @pytest.mark.asyncio
 async def test_rule_planner_splits_mixed_query_definition_and_export() -> None:
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
-    plan = await planner.plan(
+    plan = await _run_plan(planner, 
         "2026年7月销售额是多少？另外退款率口径是什么？再导出订单明细"
     )
 
@@ -148,7 +152,7 @@ async def test_rule_planner_splits_mixed_query_definition_and_export() -> None:
 @pytest.mark.asyncio
 async def test_single_continuous_analysis_is_not_split() -> None:
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
-    assert await planner.plan("查询最近半年销售额并分析趋势") is None
+    assert await _run_plan(planner, "查询最近半年销售额并分析趋势") is None
 
 
 @pytest.mark.asyncio
@@ -165,7 +169,7 @@ async def test_single_action_parallel_qualified_facets_are_split(question: str) 
         Settings(env="test", multi_question_model_enabled=False)
     )
 
-    plan = await planner.plan(question)
+    plan = await _run_plan(planner, question)
 
     assert plan is not None
     assert len(plan.tasks) == 2
@@ -192,7 +196,7 @@ async def test_plain_projection_or_all_scope_is_not_split(question: str) -> None
         Settings(env="test", multi_question_model_enabled=False)
     )
 
-    assert await planner.plan(question) is None
+    assert await _run_plan(planner, question) is None
 
 
 def test_parallel_facet_validation_requires_every_branch_exactly_once() -> None:
@@ -229,7 +233,7 @@ async def test_parallel_rankings_with_shared_or_repeated_verb_are_split(
 ) -> None:
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
 
-    plan = await planner.plan(question)
+    plan = await _run_plan(planner, question)
 
     assert plan is not None
     assert [task.question for task in plan.tasks] == expected
@@ -240,7 +244,7 @@ async def test_parallel_rankings_with_shared_or_repeated_verb_are_split(
 async def test_ranked_products_then_related_entities_is_a_dependent_plan() -> None:
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
 
-    plan = await planner.plan(
+    plan = await _run_plan(planner, 
         "找出销售额下降最大的五个产品，并列出涉及的经销商和医院。"
     )
 
@@ -256,7 +260,7 @@ async def test_ranked_products_then_related_entities_is_a_dependent_plan() -> No
 async def test_named_report_facets_are_split_for_combined_report() -> None:
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
 
-    plan = await planner.plan(
+    plan = await _run_plan(planner, 
         "生成上海地区最近一年销售分析报告，包含趋势、排名、异常和结论。"
     )
 
@@ -274,7 +278,7 @@ async def test_multi_facet_report_is_split_into_independent_evidence_queries() -
     planner = MultiQuestionPlanner(
         Settings(env="test", multi_question_model_enabled=False)
     )
-    plan = await planner.plan(
+    plan = await _run_plan(planner, 
         "分析上海市紫杉醇释放冠脉球囊导管整体销售趋势、"
         "医院覆盖、合作经销商数据，输出分析报告"
     )
@@ -295,7 +299,7 @@ async def test_multi_facet_report_preserves_explicit_lists_as_detail_queries() -
         Settings(env="test", multi_question_model_enabled=False)
     )
 
-    plan = await planner.plan(
+    plan = await _run_plan(planner, 
         "分析上海市某产品销售趋势、合作经销商名单，输出分析报告"
     )
 
@@ -309,7 +313,7 @@ async def test_multi_facet_report_preserves_explicit_lists_as_detail_queries() -
 @pytest.mark.asyncio
 async def test_inline_query_and_difference_becomes_dependent_chain() -> None:
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
-    plan = await planner.plan("查询2026年6月和7月销售额并计算差额")
+    plan = await _run_plan(planner, "查询2026年6月和7月销售额并计算差额")
     assert plan is not None
     assert [task.question for task in plan.tasks] == [
         "查询2026年6月和7月销售额，分别按月返回", "计算差额",
@@ -323,7 +327,7 @@ async def test_relation_lookup_then_filter_becomes_dependent_chain() -> None:
     planner = MultiQuestionPlanner(
         Settings(env="test", multi_question_model_enabled=False)
     )
-    plan = await planner.plan(
+    plan = await _run_plan(planner, 
         "匹配无线蓝牙耳机所属商品分类，并根据商品分类筛选出供应商"
     )
 
@@ -339,7 +343,7 @@ async def test_relation_lookup_then_filter_becomes_dependent_chain() -> None:
 @pytest.mark.asyncio
 async def test_multiple_inline_post_calculations_form_a_sequential_chain() -> None:
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
-    plan = await planner.plan("查询各区域销售额并找出最高和最低再计算差额")
+    plan = await _run_plan(planner, "查询各区域销售额并找出最高和最低再计算差额")
     assert plan is not None
     assert [task.depends_on for task in plan.tasks] == [[], ["task-1"], ["task-2"]]
 
@@ -347,7 +351,7 @@ async def test_multiple_inline_post_calculations_form_a_sequential_chain() -> No
 @pytest.mark.asyncio
 async def test_contextual_metric_addition_and_unit_price_are_split() -> None:
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
-    plan = await planner.plan("再加订单量，算客单价谁高")
+    plan = await _run_plan(planner, "再加订单量，算客单价谁高")
     assert plan is not None
     assert [task.question for task in plan.tasks] == ["再加订单量", "算客单价谁高"]
     assert plan.tasks[1].depends_on == ["task-1"]
@@ -452,7 +456,7 @@ async def test_structured_model_plan_is_schema_validated() -> None:
     planner = MultiQuestionPlanner(
         settings, transport=httpx.MockTransport(handler)
     )
-    plan = await planner.plan("查询本月销售额；另外解释退款率口径")
+    plan = await _run_plan(planner, "查询本月销售额；另外解释退款率口径")
     assert plan is not None
     assert plan.planner == "STRUCTURED_MODEL"
     assert [task.question for task in plan.tasks] == [
@@ -488,7 +492,7 @@ async def test_structured_model_plan_preserves_business_split_metadata() -> None
     )
     planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
 
-    plan = await planner.plan("查询上海市经销商名单。查询上海市医院名单。")
+    plan = await _run_plan(planner, "查询上海市经销商名单。查询上海市医院名单。")
 
     assert plan is not None
     assert plan.split_reason_code == "DISTINCT_DELIVERABLES"
@@ -516,7 +520,7 @@ async def test_structured_model_dependency_decision_is_preserved() -> None:
     )
     planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
 
-    plan = await planner.plan("先查询TDC-3产品的适用科室，再从这些科室中筛选合作医院")
+    plan = await _run_plan(planner, "先查询TDC-3产品的适用科室，再从这些科室中筛选合作医院")
 
     assert plan is not None
     assert plan.planner == "STRUCTURED_MODEL"
@@ -544,7 +548,7 @@ async def test_inconsistent_parallel_model_plan_falls_back_without_dependency() 
     )
     planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
 
-    plan = await planner.plan("查询本月销售额；另外查询本月订单量")
+    plan = await _run_plan(planner, "查询本月销售额；另外查询本月订单量")
 
     assert plan is not None
     assert plan.planner == "DETERMINISTIC_RULE"
@@ -576,7 +580,7 @@ async def test_model_judges_period_separated_independent_questions() -> None:
     )
     planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
 
-    plan = await planner.plan(question)
+    plan = await _run_plan(planner, question)
 
     assert plan is not None
     assert plan.planner == "STRUCTURED_MODEL"
@@ -604,7 +608,7 @@ async def test_valid_model_single_task_decision_is_authoritative() -> None:
     )
     planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
 
-    assert await planner.plan("查询最近半年销售额；然后分析趋势") is None
+    assert await _run_plan(planner, "查询最近半年销售额；然后分析趋势") is None
 
 
 @pytest.mark.asyncio
@@ -624,7 +628,7 @@ async def test_model_single_decision_does_not_remove_proven_dependency_plan() ->
     )
     planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
 
-    plan = await planner.plan(
+    plan = await _run_plan(planner, 
         "找出销售额下降最大的五个产品，并列出涉及的经销商和医院。"
     )
 
@@ -647,7 +651,7 @@ async def test_disabled_model_never_calls_multi_question_transport() -> None:
     )
     planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
 
-    plan = await planner.plan("查询本月销售额；另外查询本月订单量")
+    plan = await _run_plan(planner, "查询本月销售额；另外查询本月订单量")
 
     assert plan is not None
     assert plan.planner == "DETERMINISTIC_RULE"
@@ -665,7 +669,7 @@ async def test_period_separated_queries_have_deterministic_failure_fallback() ->
         "查询外周插管中心静脉导管合作的医院名单。"
     )
 
-    plan = await planner.plan(question)
+    plan = await _run_plan(planner, question)
 
     assert plan is not None
     assert [task.question for task in plan.tasks] == [
@@ -683,7 +687,7 @@ async def test_single_continuous_query_with_trailing_period_is_not_split() -> No
         multi_question_model_enabled=False,
     ))
 
-    assert await planner.plan("查询最近半年销售额并分析趋势。") is None
+    assert await _run_plan(planner, "查询最近半年销售额并分析趋势。") is None
 
 
 @pytest.mark.asyncio
@@ -694,7 +698,7 @@ async def test_explicit_result_reference_has_deterministic_dependency_fallback()
         multi_question_model_enabled=False,
     ))
 
-    plan = await planner.plan(
+    plan = await _run_plan(planner, 
         "先查询TDC-3产品的适用科室，再从这些科室中筛选合作医院"
     )
 
@@ -725,7 +729,7 @@ async def test_model_plan_cannot_invent_another_time_or_metric() -> None:
     planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
     # The structured plan is rejected and the deterministic fallback keeps the
     # original constraints instead of executing invented SQL.
-    plan = await planner.plan("查询本月销售额；另外分析销售额趋势")
+    plan = await _run_plan(planner, "查询本月销售额；另外分析销售额趋势")
     assert plan is not None
     assert all("上月" not in task.question and "退款率" not in task.question for task in plan.tasks)
 
@@ -747,7 +751,7 @@ async def test_model_plan_cannot_silently_drop_an_analysis_goal() -> None:
     )
     planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
 
-    plan = await planner.plan("查询本月销售额并分析趋势；另外查询本月订单量")
+    plan = await _run_plan(planner, "查询本月销售额并分析趋势；另外查询本月订单量")
 
     assert plan is not None
     assert plan.planner == "DETERMINISTIC_RULE"
@@ -799,7 +803,7 @@ def test_plan_validation_rejects_invented_or_dropped_business_identifier() -> No
 @pytest.mark.asyncio
 async def test_rule_plan_inherits_single_shared_metric_and_period():
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
-    plan = await planner.plan("查询本月销售额；另外分析趋势")
+    plan = await _run_plan(planner, "查询本月销售额；另外分析趋势")
     assert plan is not None
     assert plan.tasks[1].question.endswith("指标为销售额，时间范围为本月")
 
@@ -807,7 +811,7 @@ async def test_rule_plan_inherits_single_shared_metric_and_period():
 @pytest.mark.asyncio
 async def test_rule_plan_does_not_overwrite_a_second_implicit_metric() -> None:
     planner = MultiQuestionPlanner(Settings(env="test", multi_question_model_enabled=False))
-    plan = await planner.plan("查询销售额；另外查询库存")
+    plan = await _run_plan(planner, "查询销售额；另外查询库存")
     assert plan is not None
     assert "指标为销售额" not in plan.tasks[1].question
 
@@ -1800,3 +1804,181 @@ async def test_concurrent_dag_resume_executes_child_only_once() -> None:
     results = await asyncio.gather(*(service.handle(item, identity) for item in requests))
     assert answer_calls == 1
     assert sorted(item.status for item in results) == ["COMPLETED", "SAFE_FALLBACK"]
+
+
+@pytest.mark.asyncio
+async def test_model_plan_injects_semantic_context_into_system_prompt() -> None:
+    captured: dict[str, str] = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content.decode())
+        captured["system"] = payload["messages"][0]["content"]
+        return httpx.Response(200, json={
+            "choices": [{"message": {
+                "content": '{"task_structure":"SINGLE_TASK","tasks":[],'
+                          '"single_task_intent":"METRIC_QUERY",'
+                          '"single_task_extraction":{"意图":"统计查询",'
+                          '"业务域":["医药销售域"],"实体":["交易订单"],'
+                          '"指标":[{"name":"含税销售总额"}],"维度":["时间"],'
+                          '"展示字段":[],"过滤条件":[],'
+                          '"时间粒度":{"unit":"年","time_range":"今年"},'
+                          '"排序":[],"限制":null,"输出要求":"默认输出表格"}}'
+            }}]
+        })
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    spec = "# 业务语义规范\n指标表：含税销售总额、不含税销售总额"
+    outcome = await planner.plan("查一下今年销售额", semantic_context=spec)
+
+    assert "平台业务语义规范" in captured["system"]
+    assert "含税销售总额" in captured["system"]
+    # 国药结构化提取规范整段注入拆分提示词。
+    assert "结构化提取规范" in captured["system"]
+    assert "语义解析器" in captured["system"]
+    assert outcome.single_intent == PrimaryIntent.METRIC_QUERY
+    structured = outcome.single_structured
+    assert structured is not None
+    assert structured["意图"] == "统计查询"
+    assert structured["时间粒度"] == {"unit": "年", "time_range": "今年"}
+    # parameters由结构化提取JSON派生，兼容mentions通道。
+    assert list(outcome.single_parameters) == [
+        "交易订单（实体）", "含税销售总额（指标）", "时间（维度）", "今年（时间范围）",
+    ]
+    extraction = outcome.single_extraction
+    assert extraction is not None
+    assert extraction.structured == structured
+
+
+@pytest.mark.asyncio
+async def test_model_plan_without_semantic_context_keeps_plain_prompt() -> None:
+    captured: dict[str, str] = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content.decode())
+        captured["system"] = payload["messages"][0]["content"]
+        return httpx.Response(200, json={
+            "choices": [{"message": {
+                "content": '{"task_structure":"SINGLE_TASK","tasks":[]}'
+            }}]
+        })
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    await planner.plan("查询最近半年销售额；然后分析趋势")
+
+    # 平台语义上下文缺失时不注入智能体配置摘录，用提示词文件内置规范兜底。
+    assert "摘自智能体配置" not in captured["system"]
+    assert "医药销售域" in captured["system"]
+
+
+@pytest.mark.asyncio
+async def test_single_task_intent_falls_back_to_chinese_extraction_intent() -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [{"message": {
+                "content": '{"task_structure":"SINGLE_TASK","tasks":[],'
+                          '"single_task_extraction":{"意图":"明细查询",'
+                          '"业务域":["医药销售域"],"实体":["商品"],'
+                          '"指标":[],"维度":[],'
+                          '"展示字段":[{"entity":"科室","field":"科室名称"}],'
+                          '"过滤条件":[{"field":"商品品牌","op":"=",'
+                          '"value":["百特"]}],'
+                          '"时间粒度":{"unit":null,"time_range":null},'
+                          '"排序":[],"限制":null,"输出要求":"默认输出表格"}}'
+            }}]
+        })
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    outcome = await planner.plan("请提供百特Prismaflex M60 set使用科室。")
+
+    assert outcome.plan is None
+    # primary_intent缺失时按中文意图映射兜底。
+    assert outcome.single_intent == PrimaryIntent.DETAIL_QUERY
+    assert outcome.single_structured is not None
+    assert outcome.single_structured["意图"] == "明细查询"
+    assert outcome.single_structured["展示字段"] == [
+        {"entity": "科室", "field": "科室名称"}
+    ]
+    assert list(outcome.single_parameters) == [
+        "商品（实体）", "百特（商品品牌）",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_multi_task_extraction_is_kept_per_task_and_no_data_intent_drops_it() -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": """
+            {"task_structure":"PARALLEL_TASKS","tasks":[
+              {"question":"查询百特产品的合作医院名单","depends_on":[],
+               "primary_intent":"DETAIL_QUERY",
+               "extraction":{"意图":"明细查询","业务域":["医药销售域"],
+                 "实体":["医院"],"指标":[],"维度":[],"展示字段":[],
+                 "过滤条件":[{"field":"商品名称","op":"=","value":["百特产品"]}],
+                 "时间粒度":{"unit":null,"time_range":null},
+                 "排序":[],"限制":null,"输出要求":"默认输出表格"}},
+              {"question":"解释区域医院覆盖率的口径","depends_on":[],
+               "primary_intent":"METRIC_DEFINITION",
+               "extraction":{"意图":"统计查询","业务域":[],"实体":[],
+                 "指标":[],"维度":[],"展示字段":[],"过滤条件":[],
+                 "时间粒度":null,"排序":[],"限制":null,"输出要求":"默认输出表格"}}
+            ]}
+            """}}]
+        })
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    plan = await _run_plan(planner, "查询百特产品的合作医院名单。解释区域医院覆盖率的口径。")
+
+    assert plan is not None
+    assert plan.tasks[0].extraction is not None
+    assert plan.tasks[0].extraction["意图"] == "明细查询"
+    assert plan.tasks[0].parameters == ["医院（实体）", "百特产品（商品名称）"]
+    # 不查业务库的意图：结构化提取强制为空。
+    assert plan.tasks[1].extraction is None
+    assert plan.tasks[1].parameters == []
+
+
+def test_extract_semantic_spec_section_cuts_role_header() -> None:
+    prompt = (
+        "> 定位：业务分析伙伴\n# 角色设定\n不替代报表系统。\n"
+        "# 业务语义规范\n## 一、业务域总览\n指标表内容\n"
+    )
+    from app.planning import extract_semantic_spec_section
+    section = extract_semantic_spec_section(prompt)
+    assert section.startswith("# 业务语义规范")
+    assert "指标表内容" in section
+    assert "角色设定" not in section
+
+
+def test_extract_semantic_spec_section_returns_empty_without_marker() -> None:
+    from app.planning import extract_semantic_spec_section
+    assert extract_semantic_spec_section("> 定位：业务分析伙伴") == ""
+    assert extract_semantic_spec_section("") == ""
+    assert extract_semantic_spec_section(None) == ""

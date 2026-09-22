@@ -242,9 +242,7 @@ async def test_streaming_recognition_publishes_start_but_validates_complete_json
         )
 
     assert result.value == 'ok'
-    assert [item['progress_phase'] for item in progress] == [
-        'V2_CURRENT_TURN_MODEL_STREAM_STARTED',
-    ]
+    assert [item['progress_phase'] for item in progress] == []
 
 
 @pytest.mark.asyncio
@@ -926,7 +924,7 @@ async def test_streaming_completed_question_prefix_is_not_published_before_valid
 
     assert result.completed_question == completed
     phases = [item.get('progress_phase') for item in progress]
-    assert 'V2_CURRENT_TURN_MODEL_STREAM_STARTED' in phases
+    assert 'V2_CURRENT_TURN_MODEL_STREAM_STARTED' not in phases
     streaming = [
         item for item in progress
         if item.get('progress_phase') == 'V2_CURRENT_TURN_COMPLETED_QUESTION_STREAMING'

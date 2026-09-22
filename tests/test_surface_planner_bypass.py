@@ -1,11 +1,11 @@
-"""SPRINT-20260917-C-SURFACE-PLANNER-BYPASS.
+"""SPRINT-20260917-C-SURFACE-PLANNER-BYPASS 原始契约的后续修正。
 
-A V2 surface handoff that already proves a self-contained single NEW_TASK
-(single fallback task, NEW_TASK conversation state, scope/question matched)
-must not trigger the duplicate ``v1.task_decomposition`` model call. The
-user-facing "任务拆分与规划" node stays visible, the V1 intent model still
-runs exactly once, and compound/Pending/context-followup turns keep the
-original planning behavior. V2 evidence never becomes an ASL constraint.
+历史上 V2 surface 直通证明自足单任务时允许跳过 ``v1.task_decomposition``
+模型调用。任务规划边界改造后，任务边界、任务意图、结构化参数全部由拆分
+模型一次产出，而 surface 直通兜底决策不携带任务边界（复合问题同样只是
+单个兜底任务），跳过拆分器会导致多问题不再拆分、参数提取行消失。
+因此新契约：除 V2 ACCEPTED 授权计划（semantic_decision_ready）外，所有
+新问统一走拆分器；V1 意图模型行为不变，规划节点保持可见。
 """
 
 import pytest
@@ -125,7 +125,7 @@ def _surface_decision(chat, *, conversation_state="NEW_TASK", task_count=1):
 
 
 @pytest.mark.asyncio
-async def test_surface_single_task_evidence_skips_duplicate_decomposition():
+async def test_surface_fallback_decision_still_runs_planner():
     orchestrator, classifier, planner = _orchestrator()
     chat = _chat()
     chat._completed_question_execution = True
@@ -141,11 +141,11 @@ async def test_surface_single_task_evidence_skips_duplicate_decomposition():
         response = await orchestrator.handle(chat, IDENTITY)
 
     assert response.status == "COMPLETED"
-    # The duplicate planner model call is eliminated...
-    assert planner.calls == 0
+    # 兜底决策不带任务边界，拆分器必须照常运行（拆分/意图/参数由它产出）。
+    assert planner.calls == 1
     operations = [item.operation for item in tracker.finish(response.status).operations]
-    assert "v1.task_decomposition" not in operations
-    # ...while the V1 intent model still runs exactly once.
+    assert "v1.task_decomposition" in operations
+    # The V1 intent model still runs exactly once.
     assert operations.count("v1.intent_recognition") == 1
     assert classifier.model_calls == 1
     # The user-facing planning node stays visible.

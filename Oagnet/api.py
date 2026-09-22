@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, StrictInt, field_validator, model_validator
 
 from asl_contract import ASLValidationError, IntentASLContract
-from surface_evidence import SurfaceEvidence
+from surface_evidence import StructuredReference, SurfaceEvidence
 from scope_contract import CONTRACT_VERSION, normalize_domains, require_candidate_scope, semantic_record_types
 
 from capacity_control import (
@@ -1228,7 +1228,9 @@ def daily_table_status():
 
 class QueryRequest(BaseModel):
     query: str = Field(min_length=1, max_length=4000)
+    completed_question: str | None = Field(default=None, min_length=1, max_length=4000)
     surface_evidence: SurfaceEvidence | None = None
+    structured_reference: StructuredReference | None = None
     retrieval_query: str | None = Field(default=None, min_length=1, max_length=4000)
     semantic_model_id: StrictPositiveInt
     business_domain_id: StrictPositiveInt | None = None
@@ -1267,7 +1269,7 @@ class QueryRequest(BaseModel):
         description="开放式分析要求的受限指标、维度和结果粒度",
     )
 
-    @field_validator("query", "retrieval_query")
+    @field_validator("query", "completed_question", "retrieval_query")
     @classmethod
     def normalize_query(cls, value: str | None) -> str | None:
         if value is None:
@@ -1483,9 +1485,14 @@ def agent_query(req: QueryRequest, request: Request = None):
                 req.query,
                 **({"selection_key": request.headers.get("Idempotency-Key")}
                    if request is not None and request.headers.get("Idempotency-Key") else {}),
+                completed_question=req.completed_question,
                 retrieval_query=req.retrieval_query,
                 surface_evidence=(req.surface_evidence.model_dump(mode="json")
                                   if req.surface_evidence is not None else None),
+                structured_reference=(
+                    req.structured_reference.model_dump(mode="json")
+                    if req.structured_reference is not None else None
+                ),
                 store=_store,
                 semantic_model_id=req.semantic_model_id,
                 business_domain_id=req.business_domain_id,

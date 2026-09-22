@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 from app.adapters.base import (
     AdapterError,
     DataRetrievalAdapter,
@@ -12,6 +14,14 @@ from app.domain.models import (
     TrustedIdentity,
 )
 from app.services.semantic_context import build_semantic_context_snapshot
+
+
+def _accepts_kwarg(func, name: str) -> bool:
+    """判断下游实现是否声明了该关键字参数，避免破坏旧签名的调用方。"""
+    try:
+        return name in inspect.signature(func).parameters
+    except (TypeError, ValueError):
+        return False
 
 
 class CompositeSemanticQueryTool:
@@ -75,12 +85,16 @@ class CompositeSemanticQueryTool:
             business_domain_id=business_domain_id,
         )
 
-    async def query_surface(self, request, identity, *, mentions):
+    async def query_surface(self, request, identity, *, mentions, structured_extraction=None):
         """Leave metric/dimension binding to the scoped ASL planner."""
         generate = getattr(self.retrieval, "query_surface", None)
         if not callable(generate):
             raise AdapterError("SURFACE_ASL_UNAVAILABLE", "retrieval does not support surface planning")
-        return await generate(request, identity, mentions=mentions)
+        kwargs = {"mentions": mentions}
+        if structured_extraction is not None and _accepts_kwarg(generate, "structured_extraction"):
+            # 只有支持结构化提取入参的实现才透传，mock/旧实现保持原签名可用。
+            kwargs["structured_extraction"] = structured_extraction
+        return await generate(request, identity, **kwargs)
 
     async def query(
         self,

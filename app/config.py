@@ -227,9 +227,15 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("DATA_AGENT_INTENT_MODEL_API_KEY", "API_KEY"),
     )
     intent_model_name: str = "qwen3.7-max"
+    # V2 对话状态识别专用模型；不配置时回退 intent_model_name。
+    # 识别调用每轮必发且 prompt 随核心指令变长，可以用更快的型号压首屏时延。
+    v2_recognition_model_name: str | None = None
     intent_model_response_format: Literal["json_schema", "json_object"] = "json_object"
     intent_model_timeout_seconds: float = Field(default=30, gt=0, le=60)
     intent_model_max_retries: int = Field(default=1, ge=0, le=2)
+    # 挂起分诊只判一次"是不是原话题的回复"，不该占满整个意图模型预算；
+    # 超时按新话题兜底，走正常新问流程。
+    pending_triage_timeout_seconds: float = Field(default=10, gt=0, le=60)
     intent_model_enable_thinking: bool = False
     intent_model_min_confidence: float = Field(default=0.80, ge=0.5, le=1)
     multi_question_enabled: bool = True

@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import asyncio
 import copy
+import difflib
 import hashlib
 import hmac
 import json
@@ -34,8 +35,8 @@ from app.services.chat_responder import QwenChatResponder
 from app.services.memory_manager import MemoryManager
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
-from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
-from app.planning import MultiQuestionPlanner, TaskPlanningError
+from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PlannerExtraction, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
+from app.planning import MultiQuestionPlanner, TaskPlanningError, extract_semantic_spec_section, parse_parameter_mentions
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
     applicable_department_filter_slot,
@@ -91,6 +92,7 @@ from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress, task_progress_scope
 from app.observability import TraceSummary
 from app.observability.call_timing import track_operation
+from app.observability.langfuse_client import trace_generation
 from app.presentation import (
     QUERY_EXECUTION_CHAIN,
     build_composite_intent_recognition_display_v2,
@@ -254,6 +256,8 @@ class DataAnalysisOrchestrator:
         agent_prompt_store: Any | None = None,
     ) -> None:
         self.settings = settings
+        # 挂起分诊的 HTTP 连接复用同一客户端，避免每轮重建连接池
+        self._triage_http_client: httpx.AsyncClient | None = None
         self.classifier = classifier
         self.adapters = adapters
         self.sessions = sessions
@@ -636,6 +640,8 @@ class DataAnalysisOrchestrator:
             chat.application_id,
             chat.conversation_id,
         )
+        # 快照留在 chat 上，同轮紧随其后的分诊直接复用，不用再读一次
+        chat._v1_pending_snapshot = pending
         if pending is None or not self._pending_scope_matches(pending.request, chat):
             return False
         return bool(
@@ -645,6 +651,141 @@ class DataAnalysisOrchestrator:
             or self._is_deterministic_pending_reply(
                 chat.question, pending.request
             )
+        )
+
+    async def triage_v1_pending_reply(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> tuple[str, str | None] | None:
+        """挂起待确认项时对自由文本输入的分诊。
+
+        选项序号、候选名这类精确输入由 is_v1_pending_clarification_answer
+        覆盖；这里处理匹配不上的自由文本，用识别模型判一次：
+        - ('ANSWER', merged)：仍在原话题内，merged 是原问题合并用户输入后
+          的完整问题，调用方作废旧挂起后按它重新执行；
+        - ('NEW_TASK', None)：用户抛开原话题，调用方作废旧挂起走正常新问流程。
+
+        无挂起返回 None。模型不可用时按新话题兜底，避免旧挂起把后续
+        每轮都拖进澄清延续、回答永远对不上待确认项。
+        """
+        # 精确匹配探针同轮已读过挂起并存在 chat 上，直接复用；探针未跑时才读
+        pending = getattr(chat, "_v1_pending_snapshot", None)
+        if pending is None:
+            pending = await self.sessions.get_pending(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+        if pending is None or not self._pending_scope_matches(pending.request, chat):
+            return None
+        settings = self.settings
+        if not (settings.intent_model_enabled and settings.intent_model_api_key):
+            return ("NEW_TASK", None)
+        pending_request = pending.request
+        original = (
+            pending_request.original_question or pending_request.question or ""
+        ).strip()
+        asked = [
+            str(slot)
+            for slot in (pending_request.missing_slots or [])
+            if slot != "semantic_ambiguity"
+        ]
+        ambiguity = next(
+            (
+                item
+                for item in (pending_request.semantic_ambiguities or [])
+                if item.blocking and item.candidates
+            ),
+            None,
+        )
+        options: list[str] = []
+        if ambiguity is not None:
+            for index, candidate in enumerate(ambiguity.candidates):
+                detail = (
+                    ambiguity.candidate_details[index]
+                    if index < len(ambiguity.candidate_details)
+                    else {}
+                )
+                label = str(
+                    detail.get("label")
+                    or detail.get("canonical_name")
+                    or candidate
+                ).strip()
+                if label:
+                    options.append(label)
+        prompt = (
+            "你在判断用户最新输入与系统挂起的追问之间的关系。\n\n"
+            f"用户此前的问题：{original or '（无记录）'}\n"
+            f"系统因信息不全暂停执行，挂起的待确认项：{'；'.join(asked) or '无'}"
+            + (f"\n系统给出的候选：{'、'.join(options[:8])}" if options else "")
+            + f"\n用户最新输入：{chat.question.strip()}\n\n"
+            "判断属于哪一类，只输出 JSON：\n"
+            '- 用户仍在原话题内（直接给值、换一种说法、只补了部分条件、'
+            "表达仍模糊但没换话题）："
+            '{"relation": "ANSWER", "merged_question": "原问题与用户输入合并成的'
+            '一句完整自包含的业务问题"}\n'
+            '- 用户抛开原话题提出无关新问题：{"relation": "NEW_TASK"}\n'
+            "merged_question 只合并原问题和用户输入里出现过的指标、维度、"
+            "筛选和时间，不发明两边都没有的条件。\n"
+            "用户输入与某个候选名称近似（同义、错字、增减“总额/金额”等"
+            "通用字）时视为选择了该候选，merged_question 里统一用候选的"
+            "规范名称。\n"
+        )
+        body = {
+            "model": settings.intent_model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0,
+            "enable_thinking": False,
+            "response_format": {"type": "json_object"},
+        }
+        headers = {
+            "Authorization": "Bearer " + settings.intent_model_api_key.get_secret_value(),
+            "Content-Type": "application/json",
+        }
+        try:
+            with trace_generation(
+                name="v1-pending-triage",
+                model=body["model"],
+                messages=body["messages"],
+            ) as generation:
+                client = self._triage_http_client
+                if client is None or client.is_closed:
+                    client = httpx.AsyncClient(
+                        base_url=settings.intent_model_base_url.rstrip("/"),
+                        timeout=settings.pending_triage_timeout_seconds,
+                    )
+                    self._triage_http_client = client
+                resp = await client.post(
+                    "/chat/completions", headers=headers, json=body
+                )
+                resp.raise_for_status()
+                payload = resp.json()
+                generation.set_response(payload)
+            content = payload["choices"][0]["message"].get("content") or ""
+            data = json.loads(content)
+            relation = str(data.get("relation") or "").strip().upper()
+            if relation == "ANSWER":
+                merged = str(data.get("merged_question") or "").strip()
+                if merged:
+                    return ("ANSWER", merged)
+            return ("NEW_TASK", None)
+        except Exception:
+            logger.warning(
+                "v1 pending triage failed; treating as new task: message_id=%s",
+                chat.message_id,
+                exc_info=True,
+            )
+            return ("NEW_TASK", None)
+
+    async def discard_v1_pending(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> None:
+        """作废旧挂起：用户已离开原话题，或合并后的完整问题将重新执行。"""
+        await self.sessions.clear_pending(
+            identity.tenant_id,
+            identity.user_id,
+            chat.application_id,
+            chat.conversation_id,
         )
 
     async def execute_v1_pending_clarification_answer(
@@ -809,6 +950,9 @@ class DataAnalysisOrchestrator:
             raw_request = self._classify_with_rules(
                 chat.question, identity, chat.conversation_id
             )
+            # 同一轮 _handle 内部还会对（可能归一化过的）同一问题再算一次，
+            # 文本一致时直接复用这份确定性结果
+            chat._rules_classification_cache = (chat.question, raw_request)
             planning_question = chat.question
             confirmed_pending_choice = None
             if not (
@@ -877,7 +1021,11 @@ class DataAnalysisOrchestrator:
                     )
                 response = await self._handle(chat, identity)
             elif dag_pending is not None:
-                current = self._classify_with_rules(chat.question, identity, chat.conversation_id)
+                cached_rules = chat._rules_classification_cache
+                if cached_rules is not None and cached_rules[0] == chat.question:
+                    current = cached_rules[1]
+                else:
+                    current = self._classify_with_rules(chat.question, identity, chat.conversation_id)
                 facts = self.turn_admission_gate.extract_current_turn_facts(question=chat.question, current=current, message_id=chat.message_id)
                 if facts.is_self_contained and not chat.task_answers:
                     await self.sessions.clear_dag_pending(identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id, expected_version=int(dag_pending.get('state_version', 0)))
@@ -912,57 +1060,63 @@ class DataAnalysisOrchestrator:
                             authorized_scope=chat.authorized_semantic_scope,
                         ) is None
                     )
-                    # A V2 surface handoff already proved this turn is a
-                    # self-contained single NEW_TASK (NEW_TASK relation,
-                    # exactly one task, scope/question identity-checked).
-                    # Skip only the duplicate planner model call; the V1
-                    # intent model, ASL field binding and the user-visible
-                    # planning node stay untouched.  Pending confirmations
-                    # (confirmed_pending_choice) and compound/uncertain turns
-                    # fall through to the original planning behavior.
-                    surface_single_task_evidence = bool(
-                        chat._completed_question_execution
-                        and semantic_decision is not None
-                        and callable(getattr(
-                            semantic_decision,
-                            "request_single_task_evidence_mismatch",
-                            None,
-                        ))
-                        and semantic_decision.request_single_task_evidence_mismatch(
-                            message_id=chat.message_id,
-                            conversation_id=chat.conversation_id,
-                            application_id=chat.application_id,
-                            completed_question=chat.question,
-                            authorized_scope=chat.authorized_semantic_scope,
-                        ) is None
-                    )
-                    if (
-                        not semantic_decision_ready
-                        and not surface_single_task_evidence
-                        and confirmed_pending_choice is None
-                    ):
+                    # V2 ACCEPTED 授权计划已含任务边界与提取结果，不重复规划；
+                    # 其余新问统一走拆分器，由拆分模型一次产出任务边界、
+                    # 任务意图和结构化参数（闲聊已在上方独立分支拦截）。
+                    # surface 直通兜底决策不带任务边界（复合问题也只是单个
+                    # 兜底任务），跳过拆分器会导致多问题不再拆分，不能省。
+                    if confirmed_pending_choice is None and not semantic_decision_ready:
                         try:
+                            # 核心指令里的业务语义规范段随请求传给拆分模型，
+                            # 参数角色按规范分类对齐（指标/实体/维度）。
+                            planner_semantic_context = extract_semantic_spec_section(
+                                await self._agent_prompt_text(chat)
+                            )
+                            planner_parameters = inspect.signature(
+                                self.task_planner.plan
+                            ).parameters
+                            planner_kwargs = (
+                                {"semantic_context": planner_semantic_context}
+                                if "semantic_context" in planner_parameters
+                                else {}
+                            )
                             with track_operation(
                                 "V1_ORCHESTRATION",
                                 "v1.task_decomposition",
                             ) as timing:
-                                plan = await self.task_planner.plan(planning_question)
+                                outcome = await self.task_planner.plan(
+                                    planning_question,
+                                    **planner_kwargs,
+                                )
                                 timing.mark_first_result()
                                 timing.set_attribute(
                                     "task_count",
-                                    len(plan.tasks) if plan is not None else 1,
+                                    len(outcome.plan.tasks)
+                                    if outcome.plan is not None
+                                    else 1,
                                 )
+                            plan = outcome.plan
+                            if plan is None and outcome.single_extraction is not None:
+                                chat._planner_extraction = outcome.single_extraction
                         except TaskPlanningError as exc:
                             logger.warning("multi-question plan rejected: %s", exc)
                     if plan is not None:
-                        task_requests = [
-                            self._classify_with_rules(
+                        task_requests = []
+                        for task in plan.tasks:
+                            task_request = self._classify_with_rules(
                                 task.question,
                                 identity,
                                 chat.conversation_id,
                             )
-                            for task in plan.tasks
-                        ]
+                            task_request._planner_extraction = PlannerExtraction(
+                                intent=task.primary_intent,
+                                parameters=list(task.parameters),
+                                structured=task.extraction,
+                            )
+                            if task.primary_intent is not None:
+                                task_request.primary_intent = task.primary_intent
+                                task_request.intent_source = "TASK_PLANNER"
+                            task_requests.append(task_request)
                         if chat._semantic_decision is not None:
                             with track_operation(
                                 "V1_ORCHESTRATION",
@@ -1028,26 +1182,91 @@ class DataAnalysisOrchestrator:
                             is_composite=True,
                             task_count=len(plan.tasks),
                         )
+                    planning_domain_labels = (
+                        chat._business_domain_labels
+                        or tuple(
+                            f"ID {domain_id}"
+                            for domain_id in chat.business_domain_ids
+                        )
+                    )
+                    planning_domain_line = (
+                        f"业务域：{'、'.join(planning_domain_labels)}\n"
+                        if planning_domain_labels
+                        else ""
+                    )
+
+                    def _planning_task_block(
+                        index: int,
+                        question: str,
+                        intent: PrimaryIntent | None,
+                        parameters: list[str],
+                        structured: dict | None = None,
+                    ) -> str:
+                        intent_line = (
+                            f"任务意图：{self._intent_label(intent)}\n"
+                            if intent is not None
+                            else ""
+                        )
+                        is_data_task = (
+                            intent not in NO_DATA_INTENTS | METADATA_INTENTS
+                        )
+                        if structured is not None and is_data_task:
+                            # 结构化提取按国药语义解析规范原样输出JSON。
+                            parameters_line = (
+                                "参数提取："
+                                + json.dumps(structured, ensure_ascii=False)
+                                + "\n"
+                            )
+                        elif parameters and is_data_task:
+                            parameters_line = f"参数提取：{'；'.join(parameters)}\n"
+                        else:
+                            parameters_line = ""
+                        return (
+                            f"任务{index}：{question}\n"
+                            + intent_line
+                            + parameters_line
+                            + f"规划调用：{QUERY_EXECUTION_CHAIN}"
+                        )
+
+                    if plan is not None:
+                        planning_detail = "已拆分为以下任务：\n" + "\n\n".join(
+                            _planning_task_block(
+                                index,
+                                task.question,
+                                task_requests[index - 1].primary_intent,
+                                list(task.parameters),
+                                task.extraction,
+                            )
+                            for index, task in enumerate(plan.tasks, 1)
+                        )
+                    else:
+                        single_extraction = chat._planner_extraction
+                        planning_detail = (
+                            "当前问题无需拆分，按单任务执行。\n"
+                            + _planning_task_block(
+                                1,
+                                planning_question,
+                                (
+                                    single_extraction.intent
+                                    if single_extraction is not None
+                                    else None
+                                ),
+                                (
+                                    list(single_extraction.parameters)
+                                    if single_extraction is not None
+                                    else []
+                                ),
+                                (
+                                    single_extraction.structured
+                                    if single_extraction is not None
+                                    else None
+                                ),
+                            )
+                        )
                     await emit_progress(
                         "TASK_PLANNING",
                         "COMPLETED",
-                        (
-                            "拆分判断完成。"
-                            + (
-                                "已拆分为以下任务：\n"
-                                + "\n\n".join(
-                                    f"任务{index}：{task.question}\n"
-                                    f"规划调用：{QUERY_EXECUTION_CHAIN}"
-                                    for index, task in enumerate(plan.tasks, 1)
-                                )
-                                if plan is not None
-                                else (
-                                    "当前问题无需拆分，按单任务执行。\n"
-                                    f"任务1：{planning_question}\n"
-                                    f"规划调用：{QUERY_EXECUTION_CHAIN}"
-                                )
-                            )
-                        ),
+                        "拆分判断完成。" + planning_domain_line + planning_detail,
                         task_count=len(plan.tasks) if plan is not None else 1,
                     )
                 response = (
@@ -2023,6 +2242,12 @@ class DataAnalysisOrchestrator:
                     None,
                 ) if not requires_new_entity else None,
             )
+            if task.primary_intent is not None or task.parameters or task.extraction:
+                child._planner_extraction = PlannerExtraction(
+                    intent=task.primary_intent,
+                    parameters=list(task.parameters),
+                    structured=task.extraction,
+                )
             try:
                 with task_progress_scope(
                     parent_message_id=root_message_id,
@@ -3161,6 +3386,7 @@ class DataAnalysisOrchestrator:
                 chat.conversation_id,
                 pre_resolved=True,
                 agent_prompt=await self._agent_prompt_text(chat),
+                planner_extraction=chat._planner_extraction,
             )
         if request.primary_intent not in {
             PrimaryIntent.METRIC_QUERY, PrimaryIntent.DETAIL_QUERY,
@@ -3194,21 +3420,33 @@ class DataAnalysisOrchestrator:
         # distinguish a brand value from an equally similar project/product
         # value. Oagnet still owns catalog binding and may correct these hints.
         mention_roles: dict[str, str | None] = {}
-        completed_compact = re.sub(r"\s+", "", request.rewritten_question)
-        for item in request.filters:
-            if not isinstance(item, dict):
-                continue
-            role_hint = str(item.get("field") or "").strip() or None
-            raw_values = item.get("value")
-            values = raw_values if isinstance(raw_values, list) else [raw_values]
-            for value in values:
-                text = str(value or "").strip()
-                if text and re.sub(r"\s+", "", text) in completed_compact:
-                    mention_roles[text] = role_hint
-        for item in request.semantic_entity_mentions:
-            text = str(item).strip()
-            if text:
-                mention_roles.setdefault(text, None)
+        planner_extraction = request._planner_extraction
+        planner_mentions = (
+            parse_parameter_mentions(list(planner_extraction.parameters))
+            if planner_extraction is not None and planner_extraction.parameters
+            else []
+        )
+        if planner_mentions:
+            # 规划阶段产出的参数已做词面校验，直接作为 mentions 传给下游，
+            # 不再从 filters 做二次提取。
+            for item in planner_mentions:
+                mention_roles[item["text"]] = item["role_hint"] or None
+        else:
+            completed_compact = re.sub(r"\s+", "", request.rewritten_question)
+            for item in request.filters:
+                if not isinstance(item, dict):
+                    continue
+                role_hint = str(item.get("field") or "").strip() or None
+                raw_values = item.get("value")
+                values = raw_values if isinstance(raw_values, list) else [raw_values]
+                for value in values:
+                    text = str(value or "").strip()
+                    if text and re.sub(r"\s+", "", text) in completed_compact:
+                        mention_roles[text] = role_hint
+            for item in request.semantic_entity_mentions:
+                text = str(item).strip()
+                if text:
+                    mention_roles.setdefault(text, None)
         mentions = [
             {"text": text, "role_hint": role_hint}
             for text, role_hint in mention_roles.items()
@@ -3216,10 +3454,19 @@ class DataAnalysisOrchestrator:
         await emit_progress("INTENT_RECOGNITION", "COMPLETED", self._intent_think_summary(
             request, business_domain_labels=chat._business_domain_labels,
             semantic_extractions=chat._semantic_extraction_items,
+            question_chain=[turn.content for turn in chat.history if turn.role == "user"],
             include_resolved_context=not chat._intent_context_progress_emitted,
         ))
         try:
-            result = await self.adapters.query.query_surface(request, identity, mentions=mentions)
+            # 规划产出的结构化提取JSON原样透传给语义查询器，消费方式由下游负责；
+            # mentions 保留作兼容，语义查询器未适配前行为不变。
+            result = await self.adapters.query.query_surface(
+                request, identity, mentions=mentions,
+                structured_extraction=(
+                    planner_extraction.structured
+                    if planner_extraction is not None else None
+                ),
+            )
         except AdapterError as exc:
             if exc.code in {"ASL_AMBIGUOUS", "SQL_TRANSLATION_AMBIGUOUS"}:
                 request.semantic_ambiguities = self._semantic_ambiguities(exc)
@@ -3292,9 +3539,13 @@ class DataAnalysisOrchestrator:
         # Recognize an unmistakable standalone chat turn before applying any
         # business task frame. Otherwise a previous data query can rewrite a
         # later lifestyle question back into the old product/dealer task.
-        raw_rule_request = self._classify_with_rules(
-            admission_question, identity, chat.conversation_id
-        )
+        cached_rules = chat._rules_classification_cache
+        if cached_rules is not None and cached_rules[0] == admission_question:
+            raw_rule_request = cached_rules[1]
+        else:
+            raw_rule_request = self._classify_with_rules(
+                admission_question, identity, chat.conversation_id
+            )
         bind_authorized_scope(
             raw_rule_request,
             chat.authorized_semantic_scope,
@@ -3523,9 +3774,21 @@ class DataAnalysisOrchestrator:
             message_id=chat.message_id,
             pending=pending is not None,
         )
-        if pending is not None and not turn_decision.current_turn_facts.is_self_contained and pending_answer_admissibility(
-            raw_rule_request, pending.request, self_contained=False
-        ) == 'UNBOUND':
+        # 输入已被识别为对挂起候选的选择（含近似名称）时，UNBOUND 拦截要让路，
+        # 否则有效回答会在合并执行前被误判成无关输入。
+        admission_pending_choice = (
+            self._semantic_clarification_choice(pending.request, chat.question)
+            if pending is not None
+            else None
+        )
+        if (
+            pending is not None
+            and admission_pending_choice is None
+            and not turn_decision.current_turn_facts.is_self_contained
+            and pending_answer_admissibility(
+                raw_rule_request, pending.request, self_contained=False
+            ) == 'UNBOUND'
+        ):
             # Keep the existing pending state without binding unrelated input
             # or repeating its question. A complete new task was handled first.
             return self._fallback(raw_rule_request, '本轮输入未能对应当前待确认项，原任务保持待确认状态。')
@@ -3633,7 +3896,7 @@ class DataAnalysisOrchestrator:
         await emit_progress(
             "INTENT_RECOGNITION",
             "RUNNING",
-            "正在进行任务意图分析、参数提取和规范化。",
+            "正在判断本轮问题与会话上下文的关系，并补全问题。",
         )
         model_entity_mentions: list[str] = []
         filter_semantic_ambiguities: list[SemanticAmbiguity] = []
@@ -3817,6 +4080,7 @@ class DataAnalysisOrchestrator:
                     chat.conversation_id,
                     pre_resolved=chat._completed_question_execution,
                     agent_prompt=await self._agent_prompt_text(chat),
+                    planner_extraction=chat._planner_extraction,
                 )
             )
             current_request = request.model_copy(deep=True)
@@ -5114,6 +5378,7 @@ class DataAnalysisOrchestrator:
                 file_based=bool(chat._file_inspection.get("file_based")),
                 business_domain_labels=chat._business_domain_labels,
                 semantic_extractions=chat._semantic_extraction_items,
+                question_chain=[turn.content for turn in chat.history if turn.role == "user"],
                 include_resolved_context=(
                     not chat._intent_context_progress_emitted
                 ),
@@ -7909,18 +8174,24 @@ class DataAnalysisOrchestrator:
         *,
         pre_resolved: bool = False,
         agent_prompt: str = "",
+        planner_extraction: PlannerExtraction | None = None,
     ) -> CanonicalAnalysisRequest:
+        # 规划阶段已给出意图或参数时，分类只保留规则基线并套用规划提取，
+        # 不再重复调用结构化分类模型。
+        use_extraction = planner_extraction is not None and (
+            planner_extraction.intent is not None
+            or planner_extraction.parameters
+            or planner_extraction.structured is not None
+        )
         with track_operation(
             "V1_ORCHESTRATION",
             "v1.intent_recognition",
         ) as timing:
             classify = self.classifier.classify
-            supports_pre_resolved = (
-                "pre_resolved" in inspect.signature(classify).parameters
-            )
-            supports_agent_prompt = (
-                "agent_prompt" in inspect.signature(classify).parameters
-            )
+            signature = inspect.signature(classify).parameters
+            supports_pre_resolved = "pre_resolved" in signature
+            supports_agent_prompt = "agent_prompt" in signature
+            supports_skip_model = "skip_model" in signature
             classified = classify(
                 question,
                 identity,
@@ -7931,10 +8202,20 @@ class DataAnalysisOrchestrator:
                     if agent_prompt and supports_agent_prompt
                     else {}
                 ),
+                **(
+                    {"skip_model": True}
+                    if use_extraction and supports_skip_model
+                    else {}
+                ),
             )
             result = (
                 await classified if inspect.isawaitable(classified) else classified
             )
+            if use_extraction:
+                result._planner_extraction = planner_extraction
+                if planner_extraction.intent is not None:
+                    result.primary_intent = planner_extraction.intent
+                    result.intent_source = "TASK_PLANNER"
             self._apply_platform_metric_vocabulary(result, agent_prompt)
             timing.mark_first_result()
             timing.set_attribute("intent_source", result.intent_source)
@@ -8150,24 +8431,16 @@ class DataAnalysisOrchestrator:
                     if index < len(ambiguity.candidate_details)
                     else {}
                 )
-                aliases = {
-                    str(candidate).strip(),
-                    *(
-                        str(detail.get(key) or "").strip()
-                        for key in (
-                            "label", "canonical_name", "canonical_code",
-                            "attribute_name", "attribute_code", "entity_name",
-                            "value", "canonical_value", "attribute_value",
-                        )
-                    ),
-                }
-                aliases.discard("")
                 normalized_aliases = {
                     re.sub(r"\s+", "", value).strip("，,。.!！?？;；：:")
-                    for value in aliases
+                    for value in cls._candidate_aliases(candidate, detail)
                 }
                 if compact in normalized_aliases:
                     matched_indexes.append(index)
+            if not matched_indexes:
+                # 严格别名没命中再做近似匹配：用户凭记忆复述候选名常差一两个
+                # 通用字（如“含税销售金额”对“含税销售总额”），唯一高分才接。
+                matched_indexes = cls._fuzzy_candidate_match(compact, ambiguity)
             if len(set(matched_indexes)) != 1:
                 return None
             selected_index = matched_indexes[0]
@@ -8206,6 +8479,97 @@ class DataAnalysisOrchestrator:
             "detail": detail,
             "confirmation": confirmation,
         }
+
+    @staticmethod
+    def _candidate_aliases(candidate: Any, detail: dict[str, Any]) -> set[str]:
+        """候选的全部可匹配名称，含展示组合串拆出的独立片段。
+
+        候选文本常是“编码（中文名）”的展示格式，只拿整串去比对时，用户
+        单答中文名或单答编码都对不上，拆开后各自独立参与匹配。
+        """
+        aliases = {
+            str(candidate).strip(),
+            *(
+                str(detail.get(key) or "").strip()
+                for key in (
+                    "label", "canonical_name", "canonical_code",
+                    "attribute_name", "attribute_code", "entity_name",
+                    "value", "canonical_value", "attribute_value",
+                )
+            ),
+        }
+        parts: set[str] = set()
+        for alias in aliases:
+            if not alias:
+                continue
+            parts.add(alias)
+            for inner in re.findall(r"[（(]([^（）()]+)[）)]", alias):
+                inner = inner.strip()
+                if inner:
+                    parts.add(inner)
+            outer = re.sub(r"[（(][^（）()]*[）)]", "", alias).strip()
+            if outer:
+                parts.add(outer)
+        parts.discard("")
+        return parts
+
+    @classmethod
+    def _fuzzy_candidate_match(
+        cls,
+        compact: str,
+        ambiguity: SemanticAmbiguity,
+    ) -> list[int]:
+        """严格别名不中时的近似匹配，只接受唯一高分候选。
+
+        两条规则任一命中即给分：去掉通用计量后缀后完全相同；或与候选的
+        中文别名相似度不低于 0.8。多个候选都过线且分差不足 0.1 时视为
+        仍有歧义，不接，交给澄清流程继续问。
+        """
+        generic_suffixes = (
+            "总额", "金额", "价值", "费用", "总值",
+            "净值", "总量", "数量", "净额", "余额",
+        )
+
+        def strip_generic(value: str) -> str:
+            for suffix in generic_suffixes:
+                if value.endswith(suffix) and len(value) > len(suffix):
+                    return value[: -len(suffix)]
+            return value
+
+        def normalize(value: str) -> str:
+            return re.sub(r"\s+", "", value).strip("，,。.!！?？;；：:")
+
+        compact_core = strip_generic(compact)
+        scores: list[tuple[float, int]] = []
+        for index, candidate in enumerate(ambiguity.candidates):
+            detail = (
+                ambiguity.candidate_details[index]
+                if index < len(ambiguity.candidate_details)
+                else {}
+            )
+            aliases = cls._candidate_aliases(candidate, detail)
+            best = 0.0
+            for alias in aliases:
+                norm = normalize(alias)
+                if not norm:
+                    continue
+                if compact_core and strip_generic(norm) == compact_core:
+                    best = 1.0
+                    break
+                # 相似度只对中文名计算，英文编码形近的太多，不按相似度接
+                if re.search(r"[一-鿿]", norm) and re.search(r"[一-鿿]", compact):
+                    best = max(
+                        best,
+                        difflib.SequenceMatcher(None, compact, norm).ratio(),
+                    )
+            if best >= 0.8:
+                scores.append((best, index))
+        if not scores:
+            return []
+        scores.sort(key=lambda item: (-item[0], item[1]))
+        if len(scores) > 1 and scores[0][0] - scores[1][0] < 0.1:
+            return []
+        return [scores[0][1]]
 
     @staticmethod
     def _semantic_choice_member_index(
@@ -9793,6 +10157,7 @@ class DataAnalysisOrchestrator:
         file_based: bool = False,
         business_domain_labels: tuple[str, ...] | list[str] = (),
         semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]] = (),
+        question_chain: tuple[str, ...] | list[str] = (),
         include_resolved_context: bool = True,
     ) -> str:
         view = build_intent_recognition_display_v2(
@@ -9801,6 +10166,7 @@ class DataAnalysisOrchestrator:
             file_based=file_based,
             business_domain_labels=business_domain_labels,
             semantic_extractions=semantic_extractions,
+            question_chain=question_chain,
         )
         return render_intent_recognition_display_v2(
             view, include_resolved_context=include_resolved_context

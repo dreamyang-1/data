@@ -671,6 +671,48 @@ class HttpDataRetrievalAdapter:
         self._asl_plan_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 
     @staticmethod
+    def _structured_asl_reference(
+        request: CanonicalAnalysisRequest,
+    ) -> dict[str, Any]:
+        """Expose prior extraction as advisory input, never as catalog identity."""
+        return {
+            "primary_intent": request.primary_intent.value,
+            "entity": request.entity,
+            "metrics": [
+                {
+                    "input": metric.input,
+                    "canonical_name": metric.canonical_name,
+                    "metric_id": metric.metric_id,
+                }
+                for metric in request.metrics
+            ],
+            "dimensions": list(request.dimensions),
+            "fields": list(request.fields),
+            "filters": [
+                {
+                    "field": str(item.get("field") or ""),
+                    "operator": (
+                        str(item.get("operator"))
+                        if item.get("operator") is not None else None
+                    ),
+                    "value": item.get("value"),
+                }
+                for item in request.filters
+                if isinstance(item, dict) and str(item.get("field") or "").strip()
+            ],
+            "operators": [operator.value for operator in request.operators],
+            "time_range": (
+                {
+                    "start": request.time_range.start.isoformat(),
+                    "end": (
+                        request.time_range.end_exclusive - timedelta(days=1)
+                    ).isoformat(),
+                }
+                if request.time_range is not None else None
+            ),
+        }
+
+    @staticmethod
     def _materialize_oagent_execution_scope(
         request: CanonicalAnalysisRequest,
         business_domain_id: int | None,
@@ -926,7 +968,11 @@ class HttpDataRetrievalAdapter:
             self.settings.asl_generator_path,
             {
                 "query": query,
+                "completed_question": query,
                 "retrieval_query": query,
+                "structured_reference": self._structured_asl_reference(
+                    discovery_request
+                ),
                 "semantic_model_id": semantic_model_id,
                 **oagent_execution_scope,
                 "metric_ids": [],
@@ -1068,7 +1114,9 @@ class HttpDataRetrievalAdapter:
             self.settings.asl_generator_path,
             {
                 "query": query,
+                "completed_question": query,
                 "retrieval_query": query,
+                "structured_reference": self._structured_asl_reference(request),
                 "semantic_model_id": semantic_model_id,
                 **oagent_execution_scope,
                 "metric_ids": [],
@@ -1897,7 +1945,9 @@ class HttpDataRetrievalAdapter:
         if cacheable_asl:
             asl_cache_key = hashlib.sha256(json.dumps({
                 "query": asl_query,
+                "completed_question": semantic_query,
                 "retrieval_query": retrieval_query,
+                "structured_reference": self._structured_asl_reference(request),
                 "semantic_model_id": semantic_model_id,
                 "business_domain_id": oagent_execution_scope["business_domain_id"],
                 "business_domain_ids": oagent_execution_scope["business_domain_ids"],
@@ -1943,7 +1993,9 @@ class HttpDataRetrievalAdapter:
                     self.settings.asl_generator_path,
                     {
                     "query": asl_query,
+                    "completed_question": semantic_query,
                     "retrieval_query": retrieval_query,
+                    "structured_reference": self._structured_asl_reference(request),
                     "semantic_model_id": semantic_model_id,
                     **oagent_execution_scope,
                     "metric_ids": [
@@ -2273,7 +2325,7 @@ class HttpDataRetrievalAdapter:
 
     async def query_surface(
         self, request: CanonicalAnalysisRequest, identity: TrustedIdentity,
-        *, mentions: list[dict],
+        *, mentions: list[dict], structured_extraction: dict | None = None,
     ) -> DataQueryResult:
         """Plan from wording and use the same guarded SQL execution boundary.
 
@@ -2298,12 +2350,14 @@ class HttpDataRetrievalAdapter:
             mentions=mentions, authorized_scope=scope, identity=identity,
             application_id=request.application_id, request_id=request.request_id,
             time_range=request.time_range,
+            structured_extraction=structured_extraction,
             confirmed_metrics=tuple(
                 metric for metric in request.metrics if metric.metric_id
             ),
             resolved_business_domain_ids=tuple(
                 request.resolved_business_domain_ids
             ),
+            structured_reference=self._structured_asl_reference(request),
         )
         asl = plan["asl"]
         # Execution metadata is derived from this ASL, not the upstream role

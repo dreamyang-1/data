@@ -58,6 +58,38 @@ def test_exact_question_advisory_roles_and_unmodified_asl():
     assert len(client.calls) == 1  # no SQL/execution request
 
 
+def test_completed_question_and_structured_reference_are_forwarded_together():
+    client = Client(response())
+    reference = {
+        "primary_intent": "DETAIL_QUERY",
+        "entity": "医院",
+        "metrics": [], "dimensions": [], "fields": ["医院名称"],
+        "filters": [], "operators": [], "time_range": None,
+    }
+
+    run(client, structured_reference=reference)
+
+    payload = client.calls[0][0][2]
+    assert payload["completed_question"] == payload["query"]
+    assert payload["structured_reference"] == reference
+
+
+def test_planner_extraction_and_local_reference_survive_integration_together():
+    client = Client(response())
+    reference = {"primary_intent": "DETAIL_QUERY", "fields": ["hospital.name"]}
+    extraction = {"planner_output": [{"text": "hospital"}]}
+    original = deepcopy(extraction)
+
+    run(client, structured_reference=reference, structured_extraction=extraction)
+
+    payload = client.calls[0][0][2]
+    assert payload["structured_reference"] == reference
+    assert payload["structured_extraction"] == original
+    assert payload["completed_question"] == payload["query"]
+    payload["structured_extraction"]["planner_output"].clear()
+    assert extraction == original
+
+
 @pytest.mark.parametrize("change", [
     {"semantic_model_id": 82}, {"business_domain_ids": []},
     {"semantic_evidence": {}}, {"result": "not json"},

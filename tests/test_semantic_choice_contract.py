@@ -232,7 +232,7 @@ class CapturingSuccessfulRetrieval:
         self.requests.append(request.model_copy(deep=True))
         return await self.delegate.query(request, identity, **kwargs)
 
-    async def query_surface(self, request, identity, *, mentions):
+    async def query_surface(self, request, identity, *, mentions, structured_extraction=None):
         self.requests.append(request.model_copy(deep=True))
         self.surface_mentions.append([dict(item) for item in mentions])
         return await self.delegate.query(

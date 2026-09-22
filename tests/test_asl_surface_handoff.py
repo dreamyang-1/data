@@ -25,6 +25,39 @@ def test_returns_exactly_three_contract_keys() -> None:
     assert set(payload) == {"query", "retrieval_query", "surface_evidence"}
 
 
+def test_structured_extraction_is_passed_through_verbatim() -> None:
+    extraction = {
+        "意图": "明细查询",
+        "业务域": ["医药销售域"],
+        "实体": ["商品", "使用科室"],
+        "指标": [],
+        "维度": [],
+        "展示字段": [{"entity": "科室", "field": "科室名称"}],
+        "过滤条件": [{"field": "商品品牌", "op": "=", "value": ["百特"]}],
+        "时间粒度": {"unit": None, "time_range": None},
+        "排序": [],
+        "限制": None,
+        "输出要求": "默认输出表格",
+    }
+    payload = build_surface_asl_input("查询", [], structured_extraction=extraction)
+    assert set(payload) == {
+        "query", "retrieval_query", "surface_evidence", "structured_extraction",
+    }
+    # 原样透传且为深拷贝，后续修改不影响调用方对象。
+    assert payload["structured_extraction"] == extraction
+    assert payload["structured_extraction"] is not extraction
+
+
+def test_structured_extraction_none_keeps_three_keys() -> None:
+    payload = build_surface_asl_input("查询", [], structured_extraction=None)
+    assert set(payload) == {"query", "retrieval_query", "surface_evidence"}
+
+
+def test_structured_extraction_non_dict_raises() -> None:
+    with pytest.raises(ValueError):
+        build_surface_asl_input("查询", [], structured_extraction="明细查询")
+
+
 def test_completed_question_is_preserved_verbatim_in_both_fields() -> None:
     question = "  查询 华东区，2026年 Q2 的销售额（含税）？ "
     payload = build_surface_asl_input(question, [])

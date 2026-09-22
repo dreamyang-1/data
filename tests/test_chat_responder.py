@@ -16,7 +16,7 @@ IDENTITY = TrustedIdentity(tenant_id="t1", user_id="u1")
 
 
 class GentleFakeResponder:
-    async def respond(self, question: str, history=None) -> str:
+    async def respond(self, question: str, history=None, agent_prompt: str = "") -> str:
         assert question == "我想吃西瓜"
         assert history == []
         return "听起来很清爽呀，适量吃一点就好，也别忘了正常吃饭。"

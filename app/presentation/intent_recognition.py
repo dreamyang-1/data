@@ -402,6 +402,7 @@ class IntentRecognitionDisplayV2:
     ranking_count: int | None = None
     context_completion: str = "否"
     turn_relation: str = "未判定"
+    question_chain: list[str] = field(default_factory=list)
     needs_clarification: bool = False
     clarification_reason: str = ""
     normalization_status: str = "已完成"
@@ -755,6 +756,7 @@ def build_intent_recognition_display_v2(
     file_based: bool = False,
     business_domain_labels: tuple[str, ...] | list[str] = (),
     semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]] = (),
+    question_chain: tuple[str, ...] | list[str] = (),
 ) -> IntentRecognitionDisplayV2:
     """Build a detached presentation snapshot from an executable request."""
 
@@ -865,6 +867,13 @@ def build_intent_recognition_display_v2(
             else ["当前语义模型全部授权业务域"]
         )
     completed_question = _single_line(_completed_question_for_display(request))
+    # 追问链：历史用户问题接上本轮问题，仅追问类关系展示，链尾指向补全结果
+    chain = [text for item in question_chain if (text := _single_line(item))]
+    original = _single_line(request.original_question)
+    if original and (not chain or chain[-1] != original):
+        chain.append(original)
+    if relation in (None, TurnRelation.STANDALONE_NEW_TOPIC) or len(chain) < 2:
+        chain = []
     return IntentRecognitionDisplayV2(
         scenario=scenario,
         original_question=_single_line(request.original_question),
@@ -902,6 +911,7 @@ def build_intent_recognition_display_v2(
             _TURN_RELATION_LABELS.get(relation, relation.value)
             if relation is not None else "未判定"
         ),
+        question_chain=chain,
         needs_clarification=bool(request.missing_slots),
         clarification_reason=_clarification_reason(request),
         normalization_status=_normalization_status(request),
@@ -932,17 +942,15 @@ def render_intent_recognition_display_v2(
             f"{original_label}：{view.original_question}",
             f"补全后的问题：{view.completed_question}",
         ])
-    if view.structured_parameters:
-        lines.append(
-            "结构化参数提取：" + "；".join(view.structured_parameters) + "。"
-        )
-    lines.append(f"业务域：{'、'.join(view.business_domains)}")
+        if view.question_chain:
+            lines.append("问题链：")
+            lines.extend(
+                f"问题{index}：{question}"
+                f"{'（本轮）' if index == len(view.question_chain) else ''}"
+                for index, question in enumerate(view.question_chain, start=1)
+            )
     if view.file_judgement:
         lines.append(f"文件判断：{view.file_judgement}")
-    lines.extend([
-        f"任务意图：{view.task_intent}",
-        f"意图判定依据：{view.intent_basis}",
-    ])
     return "\n".join(lines)
 
 
@@ -1042,38 +1050,12 @@ def render_composite_intent_recognition_display_v2(
 ) -> str:
     """Render one deterministic parent trace for every DAG child."""
 
-    intent_labels = list(dict.fromkeys(
-        task.intent for task in view.tasks if task.intent
-    ))
-    task_intent = "、".join(intent_labels) or "待语义识别"
-    confidences = [
-        task.confidence
-        for task in view.tasks
-        if task.confidence is not None
-    ]
-    if confidences:
-        task_intent += f"（置信度 {min(confidences):.2f}）"
     lines = ["### ◉ 意图识别", ""]
     if include_resolved_context:
         lines.append(f"用户原始问题：{view.original_question}")
     lines.extend(["补全后的问题：", ""])
     for index, task in enumerate(view.tasks, 1):
         lines.append(f"{index}. {task.question}")
-        if task.structured_parameters:
-            lines.append(
-                "   结构化参数提取："
-                + "；".join(task.structured_parameters)
-                + "。"
-            )
         if index < len(view.tasks):
             lines.append("")
-    lines.append("")
-    lines.append(f"业务域：{'、'.join(view.business_domains)}")
-    lines.extend([
-        f"任务意图：{task_intent}",
-        (
-            "意图判定依据：各项任务均按其实际业务目标识别，"
-            "并分别交付查询或分析结果。"
-        ),
-    ])
     return "\n".join(lines)

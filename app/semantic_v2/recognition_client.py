@@ -10,8 +10,8 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError, best_match
 from referencing.exceptions import Unresolvable
 
-from app.services.progress import emit_progress
 from app.observability.call_timing import OperationHandle, track_operation
+from app.observability.langfuse_client import trace_generation
 
 
 _DIAGNOSTIC_PATH_LIMIT = 16
@@ -173,6 +173,11 @@ class RecognitionModelClient:
             else bool(force_stream)
         )
 
+    @property
+    def _model_name(self) -> str:
+        # 识别环节允许配置更快的专用型号，缺省与意图模型保持一致。
+        return self.settings.v2_recognition_model_name or self.settings.intent_model_name
+
     @staticmethod
     def _choice_payload(payload):
         choice = payload['choices'][0]
@@ -181,28 +186,6 @@ class RecognitionModelClient:
             message.get('content'),
             choice.get('finish_reason'),
             message.get('refusal'),
-        )
-
-    @staticmethod
-    async def _emit_stream_started(stage: str) -> None:
-        details = {
-            'v2_current_turn': (
-                '语义识别模型已开始返回结构化结果，正在完成字段校验。',
-                'V2_CURRENT_TURN_MODEL_STREAM_STARTED',
-            ),
-            'v2_semantic_edits': (
-                '语义绑定模型已开始返回结构化结果，正在完成任务绑定校验。',
-                'V2_SEMANTIC_BINDING_MODEL_STREAM_STARTED',
-            ),
-        }.get(stage)
-        if details is None:
-            return
-        message, phase = details
-        await emit_progress(
-            'INTENT_RECOGNITION',
-            'RUNNING',
-            message,
-            progress_phase=phase,
         )
 
     @staticmethod
@@ -256,7 +239,6 @@ class RecognitionModelClient:
                     fragments.append(fragment)
                     if not published_start:
                         timing.mark_first_result()
-                        await self._emit_stream_started(stage)
                         published_start = True
                     if not published_prefix:
                         buffer = ''.join(fragments)
@@ -274,7 +256,7 @@ class RecognitionModelClient:
             "V2_CONTEXT",
             f"v2.model.{operation_suffix}",
             attributes={
-                "model": self.settings.intent_model_name,
+                "model": self._model_name,
                 "stream": self.stream_enabled,
             },
         ) as timing:
@@ -311,49 +293,60 @@ class RecognitionModelClient:
         # Never truncate away candidates, schema, evidence or scope checks.
         if len(json.dumps(messages, ensure_ascii=False)) > 250_000:
             raise RecognitionFailure('V2_RECOGNITION_CONTEXT_TOO_LARGE')
-        body = dict(model=self.settings.intent_model_name, messages=messages, temperature=0,
+        body = dict(model=self._model_name, messages=messages, temperature=0,
             enable_thinking=self.settings.intent_model_enable_thinking, response_format=response_format)
         headers = {'Authorization': 'Bearer ' + self.settings.intent_model_api_key.get_secret_value()}
         try:
-            async with httpx.AsyncClient(base_url=self.settings.intent_model_base_url.rstrip('/'),
-                    timeout=self.settings.intent_model_timeout_seconds, transport=self.transport) as client:
-                for attempt in range(self.settings.intent_model_max_retries + 1):
-                    try:
-                        if self.stream_enabled:
-                            content, finish_reason, refusal = await self._stream_choice(
-                                client,
-                                headers=headers,
-                                body=body,
-                                stage=stage,
-                                timing=timing,
-                            )
-                        else:
-                            response = await client.post('/chat/completions', headers=headers, json=body)
-                            response.raise_for_status()
-                            timing.mark_first_result()
-                            content, finish_reason, refusal = self._choice_payload(
-                                response.json()
-                            )
-                        break
-                    except (httpx.TimeoutException, httpx.NetworkError):
-                        if attempt >= self.settings.intent_model_max_retries:
-                            raise
-                    except httpx.HTTPStatusError as exc:
-                        if exc.response.status_code != 429 and exc.response.status_code < 500:
-                            raise
-                        if attempt >= self.settings.intent_model_max_retries:
-                            raise
-                    await asyncio.sleep(0.2 * (2 ** attempt))
-            if finish_reason not in (None, 'stop') or refusal:
-                raise RecognitionFailure('V2_MODEL_OUTPUT_INCOMPLETE')
-            if not isinstance(content, str) or not content or len(content) > 128_000:
-                raise RecognitionFailure('V2_MODEL_OUTPUT_INVALID')
-            try:
-                raw_output = json.loads(content)
-            except (json.JSONDecodeError, TypeError):
-                raise RecognitionFailure('V2_MODEL_OUTPUT_INVALID') from None
-            _validate_exact_dynamic_schema(raw_output, schema, stage=stage)
-            return output_model.model_validate_json(content)
+            # 识别模型调用接入 Langfuse，按环节区分（current_turn / semantic_edits）
+            with trace_generation(
+                name=f"v2-recognition-{str(stage).removeprefix('v2_')}",
+                model=body.get("model"),
+                messages=body.get("messages"),
+            ) as generation:
+                async with httpx.AsyncClient(base_url=self.settings.intent_model_base_url.rstrip('/'),
+                        timeout=self.settings.intent_model_timeout_seconds, transport=self.transport) as client:
+                    for attempt in range(self.settings.intent_model_max_retries + 1):
+                        try:
+                            if self.stream_enabled:
+                                content, finish_reason, refusal = await self._stream_choice(
+                                    client,
+                                    headers=headers,
+                                    body=body,
+                                    stage=stage,
+                                    timing=timing,
+                                )
+                                # 流式没有整包返回，按相同结构记录拼好的内容
+                                generation.set_response({'choices': [{
+                                    'message': {'role': 'assistant', 'content': content or ''},
+                                    'finish_reason': finish_reason,
+                                }]})
+                            else:
+                                response = await client.post('/chat/completions', headers=headers, json=body)
+                                response.raise_for_status()
+                                timing.mark_first_result()
+                                payload = response.json()
+                                generation.set_response(payload)
+                                content, finish_reason, refusal = self._choice_payload(payload)
+                            break
+                        except (httpx.TimeoutException, httpx.NetworkError):
+                            if attempt >= self.settings.intent_model_max_retries:
+                                raise
+                        except httpx.HTTPStatusError as exc:
+                            if exc.response.status_code != 429 and exc.response.status_code < 500:
+                                raise
+                            if attempt >= self.settings.intent_model_max_retries:
+                                raise
+                        await asyncio.sleep(0.2 * (2 ** attempt))
+                if finish_reason not in (None, 'stop') or refusal:
+                    raise RecognitionFailure('V2_MODEL_OUTPUT_INCOMPLETE')
+                if not isinstance(content, str) or not content or len(content) > 128_000:
+                    raise RecognitionFailure('V2_MODEL_OUTPUT_INVALID')
+                try:
+                    raw_output = json.loads(content)
+                except (json.JSONDecodeError, TypeError):
+                    raise RecognitionFailure('V2_MODEL_OUTPUT_INVALID') from None
+                _validate_exact_dynamic_schema(raw_output, schema, stage=stage)
+                return output_model.model_validate_json(content)
         except RecognitionFailure as exc:
             if exc.stage is None:
                 exc.stage = stage

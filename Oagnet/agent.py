@@ -14,7 +14,7 @@ from pymysql.err import InterfaceError as MySQLInterfaceError
 from pymysql.err import OperationalError as MySQLOperationalError
 
 from asl_contract import ASLValidationError
-from scope_contract import normalize_domains, require_candidate_scope
+from scope_contract import normalize_domains, require_candidate_scope, scope_filter
 
 from config import (
     API_KEY,
@@ -902,6 +902,20 @@ def _known_physical_fields(knowledge: dict) -> set[str]:
     # they are not accepted from the model or caller.
     for value in knowledge.get("_published_authorized_fields", []):
         add(value)
+
+    # Value vectors carry the governed physical source field.  Treat both the
+    # compact prompt set and the wider hidden candidate pool as vector evidence;
+    # role hints never filter this pool, so a brand mislabelled as a product can
+    # still authorize its actual published brand field.
+    value_records = [*knowledge.get("entity_attribute_values", [])]
+    ambiguity_pools = knowledge.get("_ambiguity_candidates") or {}
+    if isinstance(ambiguity_pools, dict):
+        value_records.extend(
+            ambiguity_pools.get("entity_attribute_value", []) or []
+        )
+    for item in value_records:
+        metadata = getattr(item, "metadata", {}) or {}
+        add(metadata.get("source_field"))
 
     for item in knowledge.get("entities", []):
         metadata = getattr(item, "metadata", {}) or {}
@@ -8236,8 +8250,282 @@ def _ambiguity_asl(ambiguities: list[dict]) -> str:
         "ambiguity": ambiguities,
     }, ensure_ascii=False)
 
+
+def _structured_reference_retrieval_query(
+    completed_question: str,
+    reference: dict | None,
+) -> str:
+    """Add advisory structured terms to recall without making them authoritative."""
+    if not isinstance(reference, dict):
+        return completed_question
+    terms: list[str] = []
+    for key in ("entity",):
+        value = reference.get(key)
+        if isinstance(value, str) and value.strip():
+            terms.append(value.strip())
+    for key in ("dimensions", "fields"):
+        terms.extend(
+            str(value).strip()
+            for value in reference.get(key) or []
+            if isinstance(value, str) and value.strip()
+        )
+    for item in reference.get("metrics") or []:
+        if not isinstance(item, dict):
+            continue
+        terms.extend(
+            str(item.get(key)).strip()
+            for key in ("input", "canonical_name", "metric_id")
+            if isinstance(item.get(key), str) and str(item.get(key)).strip()
+        )
+    for item in reference.get("filters") or []:
+        if not isinstance(item, dict):
+            continue
+        field = item.get("field")
+        value = item.get("value")
+        if isinstance(field, str) and field.strip():
+            terms.append(field.strip())
+        if isinstance(value, str) and value.strip():
+            terms.append(value.strip())
+    suffix = " ".join(dict.fromkeys(terms))
+    return f"{completed_question} {suffix}".strip() if suffix else completed_question
+
+
+def _normalize_structured_reference(
+    reference: dict | None,
+    knowledge: dict,
+) -> tuple[dict | None, list[dict]]:
+    """Ground advisory structured fields in the current vector recall.
+
+    Items that cannot be mapped uniquely are omitted.  This reference never
+    authorizes an ASL field; the final ASL validator applies the same vector
+    scope again after model generation.
+    """
+    if not isinstance(reference, dict):
+        return None, []
+    normalized: dict[str, Any] = {}
+    dropped: list[dict] = []
+    intent = reference.get("primary_intent")
+    if isinstance(intent, str) and intent.strip():
+        normalized["primary_intent"] = intent.strip()
+
+    entity = reference.get("entity")
+    if isinstance(entity, str) and entity.strip():
+        candidates = _contract_entity_candidates(entity, knowledge)
+        if len(candidates) == 1:
+            normalized["entity"] = candidates[0]
+        else:
+            dropped.append({"slot": "entity", "value": entity})
+
+    metric_terms: dict[str, set[str]] = {}
+    known_metric_codes = _known_codes(knowledge, "metrics", "metric_code")
+    for result in knowledge.get("metrics", []):
+        metadata = getattr(result, "metadata", {}) or {}
+        code = str(metadata.get("metric_code") or "").strip()
+        if not code:
+            continue
+        for term in _metric_terms(metadata):
+            metric_terms.setdefault(term.casefold(), set()).add(code)
+    metrics: list[str] = []
+    for item in reference.get("metrics") or []:
+        if not isinstance(item, dict):
+            continue
+        raw_terms = [
+            str(item.get(key) or "").strip()
+            for key in ("metric_id", "canonical_name", "input")
+            if str(item.get(key) or "").strip()
+        ]
+        matches: set[str] = set()
+        for term in raw_terms:
+            possible_code = term.split(":", 1)[-1]
+            if possible_code in known_metric_codes:
+                matches.add(possible_code)
+            matches.update(metric_terms.get(term.casefold(), set()))
+        if len(matches) == 1:
+            code = next(iter(matches))
+            if code not in metrics:
+                metrics.append(code)
+        elif raw_terms:
+            dropped.append({"slot": "metrics", "value": raw_terms[0]})
+    if metrics:
+        normalized["metrics"] = metrics
+
+    for slot in ("dimensions", "fields"):
+        resolved: list[str] = []
+        for value in reference.get(slot) or []:
+            if not isinstance(value, str) or not value.strip():
+                continue
+            candidates = _contract_projection_candidates(value, entity, knowledge)
+            if len(candidates) == 1:
+                if candidates[0] not in resolved:
+                    resolved.append(candidates[0])
+            else:
+                dropped.append({"slot": slot, "value": value})
+        if resolved:
+            normalized[slot] = resolved
+
+    filters: list[dict] = []
+    for item in reference.get("filters") or []:
+        if not isinstance(item, dict):
+            continue
+        field = str(item.get("field") or "").strip()
+        candidates = _contract_filter_candidates(
+            field,
+            knowledge,
+            query_object=entity if isinstance(entity, str) else None,
+        )
+        if len(candidates) != 1:
+            if field:
+                dropped.append({"slot": "filters", "value": field})
+            continue
+        filters.append({
+            "field": candidates[0],
+            "operator": item.get("operator"),
+            "value": item.get("value"),
+        })
+    if filters:
+        normalized["filters"] = filters
+
+    for slot in ("operators", "time_range"):
+        value = reference.get(slot)
+        if value not in (None, [], {}):
+            normalized[slot] = value
+    return normalized, dropped
+
+
+def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
+    """Require every executable ASL field to exist in the vector recall scope."""
+    ast = json.loads(content)
+    vector_fields = set(knowledge.get("_vector_authorized_fields") or [])
+    vector_metrics = _known_codes(knowledge, "metrics", "metric_code")
+    vector_dimensions = _known_codes(knowledge, "dimensions", "dim_code")
+    vector_subjects = _known_subject_codes(knowledge, {
+        str(item.get("name"))
+        for item in ast.get("metrics") or []
+        if isinstance(item, dict) and item.get("name")
+    })
+    for item in ast.get("metrics") or []:
+        if isinstance(item, dict) and str(item.get("name") or "") not in vector_metrics:
+            raise ValueError("ASL metric was not validated by vector semantic scope")
+        anchor = item.get("time_anchor") if isinstance(item, dict) else None
+        if anchor is not None and str(anchor) not in vector_fields:
+            raise ValueError("ASL metric time_anchor was not validated by vector semantic scope")
+    subject = ast.get("subject")
+    if isinstance(subject, dict) and subject.get("entity"):
+        if str(subject["entity"]) not in vector_subjects:
+            raise ValueError("ASL subject was not validated by vector semantic scope")
+    for item in ast.get("dimensions") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "")
+        allowed = name in vector_fields if "." in name else name in vector_dimensions
+        if not allowed:
+            raise ValueError("ASL dimension was not validated by vector semantic scope")
+    for item in ast.get("filters") or []:
+        if isinstance(item, dict) and str(item.get("field") or "") not in vector_fields:
+            raise ValueError("ASL filter field was not validated by vector semantic scope")
+    time_context = ast.get("time_context")
+    if isinstance(time_context, dict) and str(time_context.get("anchor") or "") not in vector_fields:
+        raise ValueError("ASL time_context anchor was not validated by vector semantic scope")
+    sort = ast.get("sort")
+    if isinstance(sort, dict) and sort.get("field_type") == "field":
+        if str(sort.get("field") or "") not in vector_fields:
+            raise ValueError("ASL sort field was not validated by vector semantic scope")
+    for expression in ast.get("having") or []:
+        fields = re.findall(
+            r"\b[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*\b",
+            str(expression),
+        )
+        if any(field not in vector_fields for field in fields):
+            raise ValueError("ASL having field was not validated by vector semantic scope")
+
+
+def _verify_missing_asl_fields_in_vector_store(
+    content: str,
+    knowledge: dict,
+    store,
+    semantic_model_id: int,
+    business_domain_ids: list[int],
+) -> None:
+    """Second-pass exact vector proof for fields missed by similarity top-k.
+
+    Source/catalog resolution may uniquely correct a model's mistaken role, but
+    it must not itself authorize the corrected field.  For every still-missing
+    executable physical field, require an exact entity-value vector record in
+    the same semantic model/domain before extending this request's authorization
+    set.  Store failures remain fail-closed in the final validation gate.
+    """
+    ast = json.loads(content)
+    requested: set[str] = set()
+    for item in ast.get("dimensions") or []:
+        if isinstance(item, dict) and "." in str(item.get("name") or ""):
+            requested.add(str(item["name"]))
+    for item in ast.get("filters") or []:
+        if isinstance(item, dict) and item.get("field"):
+            requested.add(str(item["field"]))
+    for item in ast.get("metrics") or []:
+        if isinstance(item, dict) and item.get("time_anchor"):
+            requested.add(str(item["time_anchor"]))
+    time_context = ast.get("time_context")
+    if isinstance(time_context, dict) and time_context.get("anchor"):
+        requested.add(str(time_context["anchor"]))
+    sort = ast.get("sort")
+    if isinstance(sort, dict) and sort.get("field_type") == "field" and sort.get("field"):
+        requested.add(str(sort["field"]))
+    for expression in ast.get("having") or []:
+        requested.update(re.findall(
+            r"\b[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*\b",
+            str(expression),
+        ))
+
+    authorized = set(knowledge.get("_vector_authorized_fields") or [])
+    missing = {
+        field for field in requested - authorized
+        if _PHYSICAL_FIELD.fullmatch(field)
+    }
+    if not missing:
+        return
+    loader = getattr(store, "find_exact", None)
+    if not callable(loader):
+        loader = getattr(store, "get_by_where", None)
+    if not callable(loader):
+        return
+    base_where = scope_filter(
+        semantic_model_id,
+        business_domain_ids=business_domain_ids,
+        record_type="entity_attribute_value",
+    )
+    for field in sorted(missing):
+        try:
+            matches = list(loader({
+                "$and": [base_where, {"source_field": field}],
+            }))
+            for match in matches:
+                require_candidate_scope(
+                    getattr(match, "metadata", {}) or {},
+                    semantic_model_id,
+                    business_domain_ids,
+                )
+        except Exception as exc:
+            logger.warning(
+                "secondary vector field verification unavailable: sm=%s, "
+                "bds=%s, field=%s, error_type=%s",
+                semantic_model_id,
+                business_domain_ids or None,
+                field,
+                type(exc).__name__,
+            )
+            continue
+        if any(
+            str((getattr(match, "metadata", {}) or {}).get("source_field") or "")
+            == field
+            for match in matches
+        ):
+            authorized.add(field)
+    knowledge["_vector_authorized_fields"] = sorted(authorized)
+
 def main(
     query: str,
+    completed_question: str | None = None,
     retrieval_query: str | None = None,
     store=None,
     semantic_model_id: int = None,
@@ -8252,6 +8540,7 @@ def main(
     include_evidence: bool = False,
     surface_evidence: dict | None = None,
     selection_key: str | None = None,
+    structured_reference: dict | None = None,
 ):
     """自然语言 → DSL
 
@@ -8295,6 +8584,7 @@ def main(
         ),
         surface_mentions=[item["text"] for item in (surface_evidence or {}).get("mentions", [])],
     )
+    completed_business_question = completed_question or query
     execution_query = query
     # Validate and add advisory evidence only to generation; never embed it as
     # the user's question or feed it into deterministic contract repair.
@@ -8335,12 +8625,57 @@ def main(
     # user's business wording.  ``execution_query`` may contain caller-owned
     # instructions such as "不得添加最近一年"; treating those control words as
     # user semantics can manufacture a date range from the negated example.
-    semantic_user_query = retrieval_query or query
+    semantic_user_query = retrieval_query or completed_business_question
+    structured_retrieval_query = _structured_reference_retrieval_query(
+        semantic_user_query,
+        structured_reference,
+    )
 
     # Semantic recall must only see the user's business wording. The structured
     # contract is an execution constraint, not retrieval evidence; embedding its
     # aliases and JSON can displace the actual metric and dimension candidates.
-    mprompt = builder.build(semantic_user_query)
+    mprompt = builder.build(structured_retrieval_query)
+    vector_knowledge = getattr(builder, "last_knowledge", {})
+    vector_knowledge["_vector_authorized_fields"] = sorted(
+        _known_physical_fields(vector_knowledge)
+    )
+    normalized_structured_reference, dropped_structured_items = (
+        _normalize_structured_reference(structured_reference, vector_knowledge)
+    )
+    structured_repairs = [
+        {
+            "type": "DROP_UNVALIDATED_STRUCTURED_REFERENCE",
+            "slot": item.get("slot"),
+            "value": item.get("value"),
+            "source": "VECTOR_SEMANTIC_SCOPE",
+        }
+        for item in dropped_structured_items
+    ]
+    mprompt += (
+        "\n\n[Completed business question - primary semantic input]\n"
+        + completed_business_question
+    )
+    if normalized_structured_reference is not None:
+        mprompt += (
+            "\n\n[Vector-normalized structured reference - advisory only]\n"
+            "This is a second-pass reference from earlier extraction. Re-evaluate it "
+            "together with the completed business question. It is not authorization "
+            "and must not override the question or caller-owned contract. Every semantic "
+            "identifier below has been normalized against the current vector recall; "
+            "unmatched input items were removed.\n"
+            + json.dumps(
+                normalized_structured_reference,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+        )
+    if dropped_structured_items:
+        logger.info(
+            "structured reference items omitted after vector validation: sm=%s, bds=%s, items=%s",
+            semantic_model_id,
+            domain_ids or None,
+            dropped_structured_items,
+        )
     if surface_evidence is not None:
         mprompt += """
 
@@ -8419,7 +8754,7 @@ must pass the deterministic contract validator and echo the contract unchanged.
             "asl_contract": intent_asl_contract,
             "asl_validation": "PASS",
             "asl_validation_error_code": None,
-            "asl_repair": [],
+            "asl_repair": structured_repairs,
         }
     if exploration_requirements is not None:
         recalled_metric_codes = sorted(_known_codes(
@@ -8512,6 +8847,7 @@ must pass the deterministic contract validator and echo the contract unchanged.
         semantic_model_id,
         domain_scope,
     )
+    contract_repairs = [*structured_repairs, *contract_repairs]
     if intent_asl_contract is None and surface_evidence is not None:
         getattr(builder, "last_knowledge", {})["_surface_selection_key"] = (
             f"{semantic_model_id}:{domain_ids}:{selection_key}"
@@ -8540,6 +8876,14 @@ must pass the deterministic contract validator and echo the contract unchanged.
             repaired_ast, getattr(builder, "last_knowledge", {})
         )
         normalized = json.dumps(repaired_ast, ensure_ascii=False)
+    _verify_missing_asl_fields_in_vector_store(
+        normalized,
+        getattr(builder, "last_knowledge", {}),
+        store,
+        semantic_model_id,
+        domain_ids,
+    )
+    _validate_vector_grounded_asl(normalized, getattr(builder, "last_knowledge", {}))
     validation_args = (
         normalized,
         getattr(builder, "last_knowledge", {}),

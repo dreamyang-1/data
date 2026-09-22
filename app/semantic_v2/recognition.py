@@ -414,6 +414,31 @@ def surface_free_role_schema(schema):
     return schema
 
 
+_EMPTY_CONTEXT_SKIP_MENTIONS = '''
+本轮会话没有历史任务也没有挂起问题：completed_question 原样复制当前问题；
+mentions、operation_markers、negations、temporal_expressions、coordination_groups、
+explicit_slot_mentions 一律输出空数组或空对象，不要从当前问题里提取提及项。'''
+
+
+def _empty_surface_evidence_schema(schema):
+    """空会话独立新问题跳过提及级提取。
+
+    defer 模式下目录绑定归下游 ASL，独立新问题在识别完成后立即直通执行，
+    本轮的 mentions、操作标记等长数组没有下游消费；识别调用的耗时大头在
+    流式输出阶段，把这些字段强制为空能明显压缩首屏时延。追问上下文的
+    时间窗口由 build_context_question 的 default_time_window 兜底。
+    """
+    schema = deepcopy(schema)
+    for key in ('mentions', 'operation_markers', 'negations',
+                'temporal_expressions', 'coordination_groups'):
+        schema['properties'][key] = {'type': 'array', 'maxItems': 0}
+    schema['properties']['explicit_slot_mentions'] = {
+        'type': 'object',
+        'additionalProperties': {'type': 'array', 'maxItems': 0},
+    }
+    return schema
+
+
 class SlotEditDraft(m.StrictModel):
     slot_path: Literal[*DIRECT_EDIT_SLOTS]
     operation: Literal['SET', 'ADD', 'REPLACE', 'REMOVE', 'CLEAR']
@@ -658,6 +683,7 @@ class RawTurnPlanner:
         agent_prompt_text = (
             _original_prompt.render() if _original_prompt is not None else ""
         )
+        # 准备工作：把请求、身份、语义目录打包成一个作用域，本函数后续所有读写都经过它
         session = ScopedPlanSession(
             request,
             identity,
@@ -668,8 +694,10 @@ class RawTurnPlanner:
         now = self.clock()
         if now.tzinfo is None or now.utcoffset() is None:
             raise RecognitionFailure('V2_CLOCK_MUST_BE_AWARE')
+        # 第一步：恢复会话状态，拿到历史任务和挂起的澄清问题
         current = (ConversationState.model_validate(session.restore(state, kind='CONVERSATION', defer_source_values=True))
             if state is not None else ConversationState(state_version=0, **session._state_identity()))
+        # 上一轮已执行的计划也要恢复，并和当前状态逐一核对，对不上说明数据过期，直接拒绝
         previous_plans = {}
         for artifact in plans:
             previous = AuthorizedLogicalPlan.model_validate(session.restore(artifact, kind='LAST_REQUEST', defer_source_values=True))
@@ -681,8 +709,10 @@ class RawTurnPlanner:
             if previous.task_id in previous_plans:
                 raise RecognitionFailure('V2_DUPLICATE_PRIOR_PLAN')
             previous_plans[previous.task_id] = previous
+        # 同一句话只允许规划一次，重复投递直接拒绝
         if request.message_id in current.recent_turn_ids or any(v.current_turn_ref == request.message_id for t in current.tasks.values() for v in t.versions):
             raise RecognitionFailure('V2_MESSAGE_ALREADY_PLANNED')
+        # 空会话（没有历史任务也没有挂起问题）不用等模型，直接认定为独立新问题
         published_context_relation = str(published_context_relation or '').strip()
         if (
             not published_context_relation
@@ -697,6 +727,7 @@ class RawTurnPlanner:
                 progress_phase='V2_CONVERSATION_STATE_READY',
                 resolution_source='DETERMINISTIC_EMPTY_CONTEXT',
             )
+        # 把历史任务整理成候选清单，模型判断"这句话接哪个任务"时就从这里面选
         discovered = discover_context(session, state=state, plans=plans, pending=pending)
         parse_model = SurfaceContextParse if self.defer_new_task_binding else ContextAwareParse
         # A self-contained turn in a genuinely empty conversation has no history,
@@ -704,6 +735,7 @@ class RawTurnPlanner:
         # model's relation decision and every extraction rule while dropping the
         # history-selection clauses that cannot apply here. Pending resume, user
         # option confirmation and every non-empty path keep the full contract.
+        # 空会话用轻量合同：没有历史可选，去掉相关条款，模型少做无用功
         lightweight = (
             not current.tasks
             and current.pending is None
@@ -720,18 +752,25 @@ class RawTurnPlanner:
             # role labels instead of the long completion prompt; empty-context
             # non-defer keeps the full lightweight contract.
             if self.defer_new_task_binding:
-                schema = surface_free_role_schema(schema)
-            instruction = (
-                (SURFACE_ONLY_EXTRACTION_PROMPT if self.defer_new_task_binding
-                 else LIGHTWEIGHT_CURRENT_TURN_PROMPT)
-                + agent_prompt_section
-            )
+                # 空会话独立新问题的提及级证据没有下游消费，强制为空，
+                # 把识别输出压到关系判定与补全本身，缩短首屏时延。
+                schema = _empty_surface_evidence_schema(surface_free_role_schema(schema))
+                instruction = (
+                    SURFACE_ONLY_EXTRACTION_PROMPT
+                    + _EMPTY_CONTEXT_SKIP_MENTIONS
+                    + agent_prompt_section
+                )
+            else:
+                instruction = (
+                    LIGHTWEIGHT_CURRENT_TURN_PROMPT + agent_prompt_section
+                )
         else:
             schema = proposal_schema(discovered.model_context, current_turn_schema())
             instruction = PARSE_PROMPT + (
                 SURFACE_COMPLETION_PROMPT if self.defer_new_task_binding else '') + agent_prompt_section
         if self.defer_new_task_binding:
             schema['properties']['completed_question'] = SurfaceContextParse.model_json_schema()['properties']['completed_question']
+        # 第二步：调识别模型，一次返回两样东西——关系判定（新问题/追问/澄清回复）和本句的查询要素
         recognized = await self.model.complete(stage='v2_current_turn', instruction=instruction,
             context={'question': request.question, 'turn_id': request.message_id,
                 'clock': now.isoformat(), 'slots': list(EDIT_SLOTS),
@@ -740,6 +779,8 @@ class RawTurnPlanner:
         # Validate even injected transports: omission is not an old-rule fallback.
         recognized = parse_model.model_validate(recognized.model_dump(mode='json'))
         parsed = CurrentTurnSemanticParse.model_validate(recognized.model_dump(exclude={'context_proposal', 'completed_question'}))
+        # 第三步：硬校验模型的关系判定。说追问必须命中真实存在的老任务；
+        # 说澄清回复必须能对应到挂起问题的某个选项；对不上就拒绝
         try:
             context_trace = accept_proposal(session, recognized.context_proposal, discovered,
                 state=state, question=request.question)
@@ -759,6 +800,7 @@ class RawTurnPlanner:
                 extra={'message_id': request.message_id, 'parse_repairs': repairs})
         parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
             text_ref=request.message_id, parsed=parsed)
+        # Surface ASL 路径：已确认承接上文的轮次，直接产出补全后的完整问题，目录绑定交给下游 ASL
         if self.defer_new_task_binding and allow_standalone_new_task_passthrough:
             target = current.tasks.get(context_trace.get('FINAL_TARGET'))
             version = next((v for v in target.versions if v.version == target.active_version), None) if target else None
@@ -777,6 +819,7 @@ class RawTurnPlanner:
                     'completed_question': completed,
                     'barrier': self._standalone_new_task_barrier(current, request.message_id),
                 }, 'ASL_OWNS_CONTEXT_BINDING')
+        # 独立新问题且没有任何承接信号（没指代、没追问词）时标记直通
         surface_handoff = (
             self.defer_new_task_binding
             and allow_standalone_new_task_passthrough
@@ -795,6 +838,7 @@ class RawTurnPlanner:
                 extra={'message_id': request.message_id, 'catalog_span_trace': catalog_spans})
             parse = CurrentTurnParser.parse(text=request.question, turn_id=request.message_id,
                 text_ref=request.message_id, parsed=parsed)
+        # 最终认定的关系和之前发布的不一致时，把新关系推给前端展示
         final_context_relation = str(context_trace.get('FINAL_RELATION') or '')
         if final_context_relation != published_context_relation:
             await emit_progress(
@@ -808,6 +852,7 @@ class RawTurnPlanner:
                 + '。',
                 progress_phase='V2_CURRENT_TURN_PARSED',
             )
+        # 独立新问题登记一个直通快照，后面校验失败时用它恢复
         if surface_handoff or (allow_standalone_new_task_passthrough
                 and self._is_standalone_new_task(parse, context_trace)):
             barrier = self._standalone_new_task_barrier(current, request.message_id)
@@ -825,9 +870,11 @@ class RawTurnPlanner:
                 return self._materialize_standalone_fallback(
                     standalone_new_task_fallback[-1], 'ASL_OWNS_CATALOG_BINDING'
                 )
+        # 分流③澄清回复：用户在回答系统之前的反问，把所选选项填回挂起的任务
         if context_trace['FINAL_RELATION'] == 'ANSWER_CLARIFICATION':
             option=selected_option(current.pending,request.question)
             return self._answer_pending(session,current,state,pending,option,parsed,parse,now)
+        # 分流②的窄路：追问只改了一个筛选值（比如"只看华东的"），走快速通道，不起完整规划
         context_edit = self._recognized_task_context_edit(
             parsed,
             context_trace,
@@ -840,6 +887,7 @@ class RawTurnPlanner:
             # publisher perform unique catalog resolution instead of asking a
             # second model to rebuild an opaque prior task as a native plan.
             return context_edit
+        # 分流②主路和新问题共用的完整规划：先提取本句提到的指标、维度等候选
         handles, candidates = self._candidates(session, parse)
         # Candidate extraction is complete at this point. Publish that fact
         # before the semantic-edit model call, whose latency can otherwise
@@ -853,6 +901,7 @@ class RawTurnPlanner:
         tasks = {'task:' + contract_digest({'task': t.task_id})[:24]: t for t in current.tasks.values()}
         selected_tasks = {h:t for h,t in tasks.items() if t.task_id == context_trace['FINAL_TARGET']}
         datasets = {'dataset:' + contract_digest({'dataset': d.dataset_id})[:24]: d for d in current.datasets.values() if d.status == 'VALID'}
+        # 能确定性落地的就跳过模型；落不了再调一次模型产出语义编辑草案
         grounded = (can_publish_from_deterministic_grounding(session=session, parse=parse, candidates=candidates,
             handles=handles, context_trace=context_trace, current=current, pending=pending, now=now)
             if self.deterministic_grounding else None)
@@ -875,6 +924,7 @@ class RawTurnPlanner:
         if handle_repairs:
             logging.getLogger(__name__).info('V2 collection handle representation repaired',
                 extra={'message_id': request.message_id, 'handle_repairs': handle_repairs})
+        # 检查歧义：信息不够会生成 blocker，后面据此挂起并向用户反问
         draft,blockers,pending_operations,deferred=prepare_ambiguities(session,parse,draft,handles,candidates,SlotEditDraft)
         historical = selected_tasks.get(draft.historical_task_handle)
         if draft.historical_task_handle and (context_trace['FINAL_RELATION'] != 'RETURN_TO_TOPIC' or historical is None):
@@ -895,6 +945,7 @@ class RawTurnPlanner:
             patch, entity_instance_trace = preserve_new_task_entity_instance(
                 session, parse, patch, base=base, target=target)
             edit_trace.extend(entity_instance_trace)
+        # 保护已有筛选条件：不允许一次模糊的编辑把别的筛选条件弄丢
         if prior.filter_expression:
             for edit in draft.edits:
                 if edit.slot_path == 'filter_expression':
@@ -910,6 +961,7 @@ class RawTurnPlanner:
                         if not old_fields <= new_fields:
                             raise RecognitionFailure('V2_FILTER_MODIFICATION_WOULD_DROP_OTHER_FIELDS')
                         raise RecognitionFailure('V2_FILTER_SUBTREE_EDIT_REQUIRED')
+        # 把编辑草案落到任务上。追问是改老任务，不是新建
         reduced = apply_task_patch(prior, patch, clear_barriers=target.clear_barriers if target else [])
         kind = draft.payload_type
         if kind == 'INHERIT':
@@ -926,6 +978,7 @@ class RawTurnPlanner:
         definition = PayloadContractRegistry.get(kind)
         if parse.query_shape_prediction is not None and parse.query_shape_prediction != definition.resolved_query_shape:
             raise RecognitionFailure('V2_QUERY_SHAPE_CONFLICT')
+        # 分流②的挂起分支：有歧义没问清，先存一个挂起问题反问用户——"澄清问题"就是这么来的
         if blockers:
             return self._create_pending(session,current,target,skeleton,patch,reduced,blockers,pending_operations,kind,parse,now)
         patch, reduced = complete_catalog_defaults(session, kind, prior, patch,
@@ -949,6 +1002,7 @@ class RawTurnPlanner:
         semantic = self._resolution(payload, parse)
         resolution = session.resolve_turn(parsed=parsed, task_patch=patch, semantic_resolution=semantic,
             state=state, historical_task_id=historical.task_id if historical else None)
+        # 第五步：产出执行计划和新的会话状态，交给后面的 V1 执行链
         version = base + int(reduced.changed) if target else 1
         plan = session.compile(parsed=parsed, resolution=resolution, payload=payload,
             service_route=definition.allowed_service_routes[0], analysis_goals=sorted(definition.required_analysis_goals),
@@ -957,6 +1011,7 @@ class RawTurnPlanner:
                 current_turn_parser_version=CONTRACT_VERSION, turn_resolver_version='context-proposal-hard-v1',
                 adapter_version='legacy-capability-assessment-v1'))
         if target:
+            # 追问：更新老任务，版本号 +1
             next_state = apply_state_mutation(current, StateMutation(
                 mutation_id='mutation:' + request.message_id, message_id=request.message_id,
                 turn_id=request.message_id, task_id=target.task_id, expected_state_version=current.state_version,
@@ -968,6 +1023,7 @@ class RawTurnPlanner:
                 current_turn_digest=parse.text_digest)
             next_state = ConversationState.model_validate(updated)
         else:
+            # 新问题：新建任务和主题，版本从 1 开始
             task = TaskState(task_id=resolution.target_task_id, topic_id=resolution.target_topic_id,
                 active_version=1, status='RESOLVED', clear_barriers=reduced.clear_barriers,
                 versions=[TaskVersion(version=1, status='RESOLVED', semantics=reduced.semantics,

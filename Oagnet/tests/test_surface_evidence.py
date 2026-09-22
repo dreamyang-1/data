@@ -35,6 +35,30 @@ def test_api_passes_completed_question_and_advisory_separately():
     assert planner.call_args.kwargs["metric_selection_authoritative"] is False
 
 
+def test_api_passes_completed_question_and_structured_reference_as_advisory_input():
+    reference = {
+        "primary_intent": "DETAIL_QUERY",
+        "entity": "经销商",
+        "metrics": [],
+        "dimensions": ["城市"],
+        "fields": ["经销商名称"],
+        "filters": [{"field": "城市", "operator": "EQ", "value": "上海"}],
+        "operators": [],
+        "time_range": None,
+    }
+    with patch("api.main", side_effect=ValueError("probe")) as planner:
+        response = TestClient(api.app).post("/agent/query", json={
+            "query": "执行补充约束",
+            "completed_question": "查询上海的经销商名称",
+            "structured_reference": reference,
+            "semantic_model_id": 81,
+        })
+
+    assert response.status_code == 502
+    assert planner.call_args.kwargs["completed_question"] == "查询上海的经销商名称"
+    assert planner.call_args.kwargs["structured_reference"] == reference
+
+
 def test_generation_recalls_exact_question_without_advisory_json():
     import agent
     question = "上海市的销售额"
@@ -129,6 +153,60 @@ def test_mention_candidate_survives_whole_question_reranking():
     with patch.object(builder, '_complete_relational_scope', side_effect=lambda e,a,r,*args:(e,a,r,{})):
         result = builder.retrieve('whole')
     assert hit in result['attributes']
+
+
+def test_entity_value_recall_is_role_independent_and_uses_wider_hidden_pool():
+    from prompt_build import PromptBuilder
+    from vector_store import SearchResult
+
+    hit = SearchResult(
+        id="value:brand",
+        score=0.2,
+        text="brand value",
+        metadata={
+            "type": "entity_attribute_value",
+            "semantic_model_id": 81,
+            "business_domain_id": 205,
+            "entity_code": "product",
+            "entity_name": "product",
+            "attr_code": "brand_name",
+            "attr_name": "brand",
+            "attr_value": "Acme",
+            "canonical_value": "Acme",
+            "source_field": "products.brand_name",
+        },
+    )
+    calls = []
+
+    class Store:
+        def find_exact(self, where):
+            return [hit] if "canonical_value" in str(where) else []
+
+        def search(self, vector, *, top_k, where):
+            calls.append((vector, top_k, where))
+            return []
+
+    builder = PromptBuilder(
+        Store(),
+        lambda text: [1] if text == "show Acme products" else [2],
+        top_k=3,
+        semantic_model_id=81,
+        business_domain_ids=[205],
+        surface_mentions=["Acme"],
+    )
+    with patch.object(
+        builder,
+        "_complete_relational_scope",
+        side_effect=lambda e, a, r, *args: (e, a, r, {}),
+    ):
+        result = builder.retrieve("show Acme products")
+
+    value_where = builder._build_where("entity_attribute_value")
+    value_calls = [item for item in calls if item[2] == value_where]
+    assert any(vector == [1] and top_k == 40 for vector, top_k, _ in value_calls)
+    assert any(vector == [2] and top_k == 8 for vector, top_k, _ in value_calls)
+    assert hit in result["entity_attribute_values"]
+    assert hit in result["_ambiguity_candidates"]["entity_attribute_value"]
 
 
 def test_surface_time_is_not_erased_by_legacy_phrase_parser():

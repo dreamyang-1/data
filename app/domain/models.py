@@ -419,7 +419,18 @@ class LegacyLineageTarget(StrictModel):
     name: str = Field(min_length=1, max_length=500)
 
 
+class PlannerExtraction(StrictModel):
+    """任务规划阶段产出的结构化提取结果，随请求在进程内传递给下游。"""
+
+    intent: PrimaryIntent | None = None
+    parameters: list[str] = Field(default_factory=list, max_length=10)
+    # 国药语义解析规范产出的结构化提取JSON，parameters由它派生兼容mentions通道。
+    structured: dict[str, Any] | None = None
+
+
 class CanonicalAnalysisRequest(StrictModel):
+    # 任务规划产出的提取结果，仅进程内可信传递，不接受传输层注入。
+    _planner_extraction: PlannerExtraction | None = PrivateAttr(default=None)
     authorized_semantic_scope: AuthorizedSemanticScope | None = None
     # Literal user targets and an explicit inheritance barrier, not V2 state.
     lineage_target: LegacyLineageTarget | None = None
@@ -769,6 +780,16 @@ class ChatRequest(StrictModel):
     # Each item is (surface, canonical_value, canonical_name, attribute_code).
     _context_verified_filter_bindings: tuple[tuple[str, str, str, str], ...] = PrivateAttr(
         default_factory=tuple
+    )
+    # 任务规划产出的提取结果，由编排器在进程内透传到本轮分类请求。
+    _planner_extraction: PlannerExtraction | None = PrivateAttr(default=None)
+    # 桥接段精确挂起匹配时读到的挂起快照，供紧随其后的自由文本分诊复用，
+    # 省一次 Redis 往返；两次读取之间没有任何写操作，结果一致。
+    _v1_pending_snapshot: Any = PrivateAttr(default=None)
+    # 规则分类是确定性纯函数，同一问题文本在一轮里会被入口检查和 _handle
+    # 各算一次；按文本缓存结果避免重复计算。
+    _rules_classification_cache: tuple[str, Any] | None = PrivateAttr(
+        default=None
     )
     conversation_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
@@ -1292,6 +1313,10 @@ class AtomicTask(StrictModel):
     question: str = Field(min_length=2, max_length=1000)
     depends_on: list[str] = Field(default_factory=list, max_length=5)
     expected_output: str | None = Field(default=None, max_length=300)
+    parameters: list[str] = Field(default_factory=list, max_length=10)
+    # 拆分模型产出的结构化提取JSON（国药语义解析规范格式）。
+    extraction: dict[str, Any] | None = None
+    primary_intent: PrimaryIntent | None = None
 
 
 class TaskPlan(StrictModel):

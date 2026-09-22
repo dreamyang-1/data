@@ -13,6 +13,7 @@ ASL 入口输入，不做业务分词、角色映射、指标/维度匹配，不
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 # 与共用合同一致的硬上限：不截断、超限即拒绝。
@@ -24,22 +25,34 @@ MAX_ROLE_HINT_CHARS = 80
 _ALLOWED_MENTION_KEYS = ("text", "role_hint")
 
 
-def build_surface_asl_input(completed_question: str, mentions: list[dict]) -> dict:
+def build_surface_asl_input(
+    completed_question: str,
+    mentions: list[dict],
+    structured_extraction: dict | None = None,
+) -> dict:
     """组装 ASL 入口输入。
 
     返回且仅返回三个键：
     - ``query`` / ``retrieval_query``：均为完全不变的 ``completed_question``；
     - ``surface_evidence``：``{"mentions": [...]}``，每项为新建字典。
 
+    ``structured_extraction`` 为任务规划产出的结构化提取JSON，提供时原样
+    透传为第四个键，语义查询器直接消费，键级内容不在本层校验。
+
     非法输入一律抛 ``ValueError``：不截断、不猜测、不做类型转换。
     """
     _require_valid_question(completed_question)
     validated_mentions = _validate_mentions(mentions)
-    return {
+    payload = {
         "query": completed_question,
         "retrieval_query": completed_question,
         "surface_evidence": {"mentions": validated_mentions},
     }
+    if structured_extraction is not None:
+        if not isinstance(structured_extraction, dict):
+            raise ValueError("structured_extraction 必须是字典")
+        payload["structured_extraction"] = deepcopy(structured_extraction)
+    return payload
 
 
 def _require_valid_question(completed_question: Any) -> None:

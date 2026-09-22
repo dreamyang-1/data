@@ -9,9 +9,20 @@ from __future__ import annotations
 
 from copy import deepcopy
 import importlib
+import os
 from pathlib import Path
 import sys
+import time
 from typing import Any
+
+# capture_catalog 每轮要跑 6-10 条 MySQL 查询，是意图识别阶段的固定大头。
+# 目录发布是低频操作，短 TTL 内复用同一 (model, domains) 的快照不影响授权
+# 语义；设为 0 可完全关闭复用，回到每请求实时捕获。
+_CATALOG_CACHE_TTL_SECONDS = max(
+    0.0, float(os.environ.get("DATA_AGENT_CURRENT_CATALOG_CACHE_TTL_SECONDS", "30"))
+)
+_CATALOG_CACHE_MAX_ENTRIES = 8
+_catalog_cache: dict[tuple[int, tuple[int, ...]], tuple[float, tuple[dict[str, Any], Any, dict[int, str]]]] = {}
 
 
 def _where_matches(metadata: dict[str, Any], where: dict[str, Any]) -> bool:
@@ -291,31 +302,48 @@ class CurrentAuthorizedCatalog:
             domains = tuple(sorted(values))
             if len(domains) != 1:
                 raise ValueError("CURRENT_CATALOG_MODEL_WIDE_MULTI_DOMAIN_UNSUPPORTED")
-        snapshot = self._modules["catalog_release"].capture_catalog(
-            semantic_model_id, domains
-        )
-        expected_scope = self._modules["catalog_release"].catalog_scope(
-            semantic_model_id, domains
-        )
-        if snapshot.get("scope") != expected_scope:
-            raise ValueError("CURRENT_CATALOG_SCOPE_MISMATCH")
-        records, _coverage = self._modules[
-            "catalog_generation"
-        ].build_catalog_records(snapshot, lambda texts: [[0.1, 0.2] for _ in texts])
-        domain_labels_by_id = {}
-        for document in snapshot.get("documents") or []:
-            domain = document.get("business_domain")
-            if not isinstance(domain, dict):
-                continue
-            domain_id = domain.get("id")
-            domain_name = domain.get("name")
-            if (
-                type(domain_id) is int
-                and domain_id in domains
-                and isinstance(domain_name, str)
-                and domain_name.strip()
-            ):
-                domain_labels_by_id[domain_id] = domain_name.strip()
+        cache_key = (semantic_model_id, domains)
+        cached = _catalog_cache.get(cache_key)
+        now = time.monotonic()
+        if (
+            cached is not None
+            and now - cached[0] <= _CATALOG_CACHE_TTL_SECONDS
+        ):
+            snapshot, records, domain_labels_by_id = cached[1]
+        else:
+            snapshot = self._modules["catalog_release"].capture_catalog(
+                semantic_model_id, domains
+            )
+            expected_scope = self._modules["catalog_release"].catalog_scope(
+                semantic_model_id, domains
+            )
+            if snapshot.get("scope") != expected_scope:
+                raise ValueError("CURRENT_CATALOG_SCOPE_MISMATCH")
+            records, _coverage = self._modules[
+                "catalog_generation"
+            ].build_catalog_records(snapshot, lambda texts: [[0.1, 0.2] for _ in texts])
+            domain_labels_by_id = {}
+            for document in snapshot.get("documents") or []:
+                domain = document.get("business_domain")
+                if not isinstance(domain, dict):
+                    continue
+                domain_id = domain.get("id")
+                domain_name = domain.get("name")
+                if (
+                    type(domain_id) is int
+                    and domain_id in domains
+                    and isinstance(domain_name, str)
+                    and domain_name.strip()
+                ):
+                    domain_labels_by_id[domain_id] = domain_name.strip()
+            if _CATALOG_CACHE_TTL_SECONDS > 0:
+                if len(_catalog_cache) >= _CATALOG_CACHE_MAX_ENTRIES:
+                    oldest = min(_catalog_cache, key=lambda key: _catalog_cache[key][0])
+                    _catalog_cache.pop(oldest, None)
+                _catalog_cache[cache_key] = (
+                    now,
+                    (snapshot, records, domain_labels_by_id),
+                )
         return _CurrentCatalogSnapshotProvider(
             snapshot=snapshot,
             records=records,

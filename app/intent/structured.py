@@ -263,11 +263,15 @@ class HybridIntentClassifier:
         *,
         pre_resolved: bool = False,
         agent_prompt: str = "",
+        skip_model: bool = False,
     ) -> CanonicalAnalysisRequest:
         request = self.rules.classify(question, identity, conversation_id)
         request.intent_candidates = [
             IntentCandidate(intent=request.primary_intent, confidence=0.65, evidence=[])
         ]
+        if skip_model:
+            request.assumptions.append("PLANNER_EXTRACTION_MODEL_SKIPPED")
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
         if not self.settings.intent_model_enabled:
             return self._apply_pre_resolved_contract(request, question, pre_resolved)
         if self._should_skip_model(request, question):

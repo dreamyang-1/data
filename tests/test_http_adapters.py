@@ -42,6 +42,40 @@ class ContractClient:
         return next(self.results)
 
 
+def test_structured_asl_reference_contains_completed_extraction_without_binding_authority():
+    request = CanonicalAnalysisRequest(
+        conversation_id="structured-asl-reference",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询上海经销商的含税销售额",
+        rewritten_question="查询上海市经销商的含税销售总额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        entity="经销商",
+        metrics=[MetricRef(
+            input="销售额",
+            canonical_name="含税销售总额",
+            metric_id="81:sales_total_including_tax",
+        )],
+        dimensions=["经销商"],
+        fields=["经销商名称"],
+        filters=[{"field": "城市", "operator": "EQ", "value": "上海"}],
+        operators=[AnalysisOperator.AGGREGATE],
+        time_range=TimeRange(
+            start=date(2026, 1, 1), end_exclusive=date(2027, 1, 1)
+        ),
+    )
+
+    reference = HttpDataRetrievalAdapter._structured_asl_reference(request)
+
+    assert reference["entity"] == "经销商"
+    assert reference["metrics"][0]["metric_id"] == "81:sales_total_including_tax"
+    assert reference["filters"] == [
+        {"field": "城市", "operator": "EQ", "value": "上海"}
+    ]
+    assert reference["time_range"] == {"start": "2026-01-01", "end": "2026-12-31"}
+    assert "confirmed" not in reference
+
+
 def test_v2_scalar_shape_contract_is_bounded_to_consistent_canonical_requests():
     request = CanonicalAnalysisRequest(
         conversation_id="v2-scalar-shape",
