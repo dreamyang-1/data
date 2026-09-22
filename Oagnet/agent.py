@@ -5232,6 +5232,14 @@ def _validate_asl_output(
         if (
             natural_key_values
             and _is_relationship_key_field(str(item["field"]), attributes_by_entity)
+            and not (
+                operator in {"=", "!=", "IN", "NOT IN"}
+                and all(
+                    (str(item["field"]), literal)
+                    in knowledge.get("_source_verified_filter_values", set())
+                    for literal in natural_key_values
+                )
+            )
             and not any(
                 _ambiguity_mentions_filter(
                     ambiguity,
@@ -5242,8 +5250,16 @@ def _validate_asl_output(
                 for ambiguity in ast["ambiguity"]
             )
         ):
-            raise ValueError(
-                "ASL natural-language entity name cannot be used as a code/id/join key"
+            raise ASLValidationError(
+                "ASL_FILTER_INVALID",
+                "ASL natural-language entity name cannot be used as a code/id/join key",
+                field=str(item["field"]),
+                details={
+                    "reason": "NATURAL_NAME_ON_KEY",
+                    "operator": operator,
+                    "value": value,
+                    "message": "名称类筛选值被绑定到编码或关联键字段，需要核对字段语义与值绑定",
+                },
             )
 
     time_context = ast.get("time_context")
@@ -6575,7 +6591,11 @@ def _apply_surface_mention_normalization(
             item for item in filters
             if isinstance(item, dict)
             and re.sub(
-                r"\s+", "", str(item.get("value") or "").strip()
+                r"\s+", "", (
+                    str(item.get("value") or "").strip().strip("%")
+                    if str(item.get("operator") or "").upper() == "LIKE"
+                    else str(item.get("value") or "").strip()
+                )
             ).casefold() in {literal_key, canonical_key}
         ]
         exact_source_match = any(
@@ -6621,10 +6641,24 @@ def _apply_surface_mention_normalization(
         )
         if field not in published_authorized:
             published_authorized.append(field)
+        # Carry the exact field/value pair returned by the authorized source
+        # lookup. Code columns may legitimately contain spaces or natural text;
+        # neither vector similarity nor the field's name proves the value.
+        if any(
+            str(match.get("field") or "") == field
+            and str(match.get("canonical_value") or "").strip() == canonical_value
+            for match in resolved_matches
+            if isinstance(match, dict)
+        ):
+            knowledge.setdefault("_source_verified_filter_values", set()).add(
+                (field, canonical_value)
+            )
         if matching_filters:
             for item in matching_filters:
                 item["field"] = field
                 item["value"] = canonical_value
+                if str(item.get("operator") or "").upper() == "LIKE":
+                    item["operator"] = "="
         elif not any(
             isinstance(item, dict)
             and str(item.get("field") or "") == field
