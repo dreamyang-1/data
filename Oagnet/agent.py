@@ -6373,6 +6373,11 @@ def _apply_surface_mention_normalization(
     filters = ast.setdefault("filters", [])
     if not isinstance(filters, list):
         ast["filters"] = filters = []
+    projected_fields = {
+        str(item.get("name") or "").strip()
+        for item in ast.get("dimensions", [])
+        if isinstance(item, dict) and str(item.get("name") or "").strip()
+    }
     repairs: list[dict] = []
     published_candidates: list[dict] | None = None
 
@@ -6434,6 +6439,7 @@ def _apply_surface_mention_normalization(
                 semantic_model_id, domain_scope,
                 mention_candidates[offset : offset + 32], mention,
             ))
+        resolved_matches = matches
         resolved = _select_surface_mention_match(
             mention,
             matches,
@@ -6474,6 +6480,8 @@ def _apply_surface_mention_normalization(
                 field_kinds,
                 allow_role_containment=True,
             )
+            if resolved is not None:
+                resolved_matches = related_matches
         if resolved is None:
             # Top-k recall may miss newly published attributes. Retry once
             # against every published attribute in the same model/domain.
@@ -6534,6 +6542,8 @@ def _apply_surface_mention_normalization(
                     field_kinds,
                     allow_role_containment=bool(role_hint),
                 )
+                if resolved is not None:
+                    resolved_matches = expanded_matches
         if resolved is None:
             # An unmatched mention is reference noise: drop any filter the
             # model built from it and keep the rest of the request intact.
@@ -6557,11 +6567,6 @@ def _apply_surface_mention_normalization(
         field, canonical_value = resolved
         if not field or not canonical_value:
             continue
-        published_authorized = knowledge.setdefault(
-            "_published_authorized_fields", []
-        )
-        if field not in published_authorized:
-            published_authorized.append(field)
         canonical_key = re.sub(r"\s+", "", canonical_value).casefold()
         # The draft may already contain the raw mention or its standard value.
         # Rewrite every occurrence to the resolved field/value in place; never
@@ -6573,6 +6578,49 @@ def _apply_surface_mention_normalization(
                 r"\s+", "", str(item.get("value") or "").strip()
             ).casefold() in {literal_key, canonical_key}
         ]
+        exact_source_match = any(
+            isinstance(item, dict)
+            and str(item.get("field") or "") == field
+            and re.sub(
+                r"\s+", "", str(item.get("canonical_value") or "").strip()
+            ).casefold() == canonical_key
+            and str(item.get("match_type") or "") == "EXACT"
+            for item in resolved_matches
+        )
+        # Administrative suffix completion (上海 -> 上海市) is a canonical
+        # spelling completion, not a semantic broadening to a different value.
+        source_value_equivalent = exact_source_match or (
+            _administrative_suffix_completion(mention, canonical_value)
+        )
+        # A catalog search hit is not automatically a query predicate. Generic
+        # return-object words can be useful for recall (for example "department"
+        # finding the stored value "general department"), but turning that
+        # containment hit into a filter silently changes "which departments"
+        # into "is it in general department". Non-exact hits may materialize
+        # only when the field is not a requested projection and the filter is
+        # otherwise explicit in the structured/model draft. Exact source values
+        # remain valid even when the same field is also returned.
+        may_materialize_filter = source_value_equivalent or (
+            field not in projected_fields
+            and (bool(role_hint) or bool(matching_filters))
+        )
+        if not may_materialize_filter:
+            kept = [item for item in filters if item not in matching_filters]
+            if len(kept) != len(filters):
+                ast["filters"] = filters = kept
+            repairs.append({
+                "type": "DROP_NONEXACT_PROJECTION_FILTER",
+                "mention": mention,
+                "canonical_value": canonical_value,
+                "resolved_field": field,
+                "source": "SURFACE_MENTION_RECALL",
+            })
+            continue
+        published_authorized = knowledge.setdefault(
+            "_published_authorized_fields", []
+        )
+        if field not in published_authorized:
+            published_authorized.append(field)
         if matching_filters:
             for item in matching_filters:
                 item["field"] = field

@@ -2558,3 +2558,101 @@ def test_surface_mention_suffix_stated_level_wins_the_tie(monkeypatch):
         "mention": "不存在的东西",
         "source": "SURFACE_MENTION_RECALL",
     }]
+
+
+def test_nonexact_projection_label_is_recall_only_not_a_filter(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity(
+                "department", "department",
+                "department.dept_name", "department name",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("product"))
+    ast["dimensions"] = [{
+        "name": "department.dept_name",
+        "attr": None,
+        "level": None,
+        "granularity": None,
+    }]
+    # Simulate a draft predicate invented from the return-object word.
+    ast["filters"] = [{
+        "field": "department.dept_name",
+        "operator": "=",
+        "value": "科室",
+    }]
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [{
+            "field": "department.dept_name",
+            "canonical_value": "通用科室",
+            "match_type": "CANONICAL_CONTAINS_MENTION",
+        }],
+    )
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{
+            "text": "科室",
+            "role_hint": "department.dept_name",
+        }]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(normalized)["filters"] == []
+    assert repairs == [{
+        "type": "DROP_NONEXACT_PROJECTION_FILTER",
+        "mention": "科室",
+        "canonical_value": "通用科室",
+        "resolved_field": "department.dept_name",
+        "source": "SURFACE_MENTION_RECALL",
+    }]
+
+
+def test_exact_projected_value_can_still_be_an_explicit_filter(monkeypatch):
+    knowledge = {
+        "entities": [
+            _entity(
+                "department", "department",
+                "department.dept_name", "department name",
+            ),
+        ],
+    }
+    ast = json.loads(_detail_ast("product"))
+    ast["dimensions"] = [{
+        "name": "department.dept_name",
+        "attr": None,
+        "level": None,
+        "granularity": None,
+    }]
+    monkeypatch.setattr(
+        agent,
+        "resolve_entity_attribute_catalog_matches",
+        lambda *_args: [{
+            "field": "department.dept_name",
+            "canonical_value": "通用科室",
+            "match_type": "EXACT",
+        }],
+    )
+
+    normalized, repairs = _apply_surface_mention_normalization(
+        json.dumps(ast, ensure_ascii=False),
+        knowledge,
+        {"mentions": [{
+            "text": "通用科室",
+            "role_hint": "department.dept_name",
+        }]},
+        semantic_model_id=81,
+        domain_scope=205,
+    )
+
+    assert json.loads(normalized)["filters"] == [{
+        "field": "department.dept_name",
+        "operator": "=",
+        "value": "通用科室",
+    }]
+    assert repairs[-1]["type"] == "ADD_SOURCE_RESOLVED_ENTITY_FILTER"
