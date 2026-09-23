@@ -8590,7 +8590,20 @@ def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
             raise ValueError("ASL dimension was not validated by vector semantic scope")
     for item in ast.get("filters") or []:
         if isinstance(item, dict) and str(item.get("field") or "") not in vector_fields:
-            raise ValueError("ASL filter field was not validated by vector semantic scope")
+            raise ASLValidationError(
+                "ASL_FILTER_INVALID",
+                "ASL filter field was not validated by vector semantic scope",
+                field=str(item.get("field") or "filters"),
+                details={
+                    "validation_stage": "vector_grounding",
+                    # Report the first rejected predicate, not every requested
+                    # condition. Copy only contract facts, never model metadata.
+                    "failed_filter": {
+                        key: item[key] for key in ("field", "operator", "value")
+                        if key in item
+                    },
+                },
+            )
     time_context = ast.get("time_context")
     if isinstance(time_context, dict) and str(time_context.get("anchor") or "") not in vector_fields:
         raise ValueError("ASL time_context anchor was not validated by vector semantic scope")
