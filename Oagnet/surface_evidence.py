@@ -61,6 +61,11 @@ def advisory_prompt(evidence: dict | None) -> str:
         "force mentions into metrics or dimensions. Keep brand, manufacturer, product, "
         "requested output, grouping, filters and time distinct when supported by "
         "the question. Do not replace the question or omit its requirements. "
+        "Entity/object roles (实体/业务对象) denote involved logical tables, not literal names. "
+        "Metric, dimension, output-field and time roles are not filter values. "
+        "For example 商品（实体） must not become product_name = 商品. "
+        "Only concrete requested filter values may produce predicates; preserve IN/NOT IN "
+        "membership and do not append member equalities as additional AND conditions. "
         "A mention alone cannot authorize a field or expand scope.\n"
         + json.dumps(validated.model_dump(mode="json"), ensure_ascii=False)
     )

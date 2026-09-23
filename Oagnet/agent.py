@@ -6450,6 +6450,11 @@ def _apply_surface_mention_normalization(
     dropped instead of failing the request.
     """
     mentions_by_text: dict[str, str | None] = {}
+    non_value_roles = {
+        "实体", "业务对象", "返回对象", "指标", "维度", "分组维度",
+        "展示字段", "返回字段", "排序", "时间范围", "时间粒度",
+        "entity", "metric", "dimension", "projection", "time_range",
+    }
     for item in (surface_evidence or {}).get("mentions", []):
         if not isinstance(item, dict):
             continue
@@ -6457,6 +6462,10 @@ def _apply_surface_mention_normalization(
         if not text:
             continue
         role_hint = str(item.get("role_hint") or "").strip() or None
+        if role_hint and role_hint.casefold() in non_value_roles:
+            # These words still reach the ASL prompt/recall as semantic roles.
+            # Do not search literal catalog values or report missing filters.
+            continue
         if text not in mentions_by_text or role_hint is not None:
             mentions_by_text[text] = role_hint
     mentions = list(mentions_by_text)
@@ -6511,6 +6520,14 @@ def _apply_surface_mention_normalization(
     for mention in mentions:
         role_hint = mentions_by_text.get(mention)
         literal_key = re.sub(r"\s+", "", mention).casefold()
+        set_filters = [
+            item for item in filters
+            if isinstance(item, dict)
+            and str(item.get("operator") or "").upper() in {"IN", "NOT IN"}
+            and isinstance(item.get("value"), list)
+            and any(re.sub(r"\s+", "", str(value)).casefold() == literal_key
+                    for value in item["value"])
+        ]
         mention_candidates = candidates
         mention_allowed_fields = allowed_fields
         # An exact entity-attribute-value vector hit already carries the
@@ -6560,6 +6577,14 @@ def _apply_surface_mention_normalization(
             if scoped_candidates:
                 mention_candidates = scoped_candidates
                 mention_allowed_fields = role_fields
+        if set_filters:
+            # An existing alternative group owns its field. Prefer source hits
+            # for that field instead of independently rebinding each member.
+            set_fields = {str(item.get("field") or "") for item in set_filters}
+            set_candidates = [item for item in candidates if item.get("field") in set_fields]
+            if set_candidates:
+                mention_candidates = set_candidates
+                mention_allowed_fields = set_fields
         matches: list[dict[str, Any]] = []
         for offset in range(0, len(mention_candidates), 32):
             matches.extend(resolve_entity_attribute_catalog_matches(
@@ -6572,7 +6597,7 @@ def _apply_surface_mention_normalization(
             matches,
             mention_allowed_fields,
             field_kinds,
-            allow_role_containment=bool(role_hint),
+            allow_role_containment=bool(role_hint) or bool(set_filters),
             diagnostics=repairs,
             selection_key=knowledge.get("_surface_selection_key"),
         )
@@ -6678,6 +6703,12 @@ def _apply_surface_mention_normalization(
                 if resolved is not None:
                     resolved_matches = expanded_matches
         if resolved is None:
+            if set_filters:
+                repairs.append({
+                    "type": "PRESERVE_SET_FILTER", "mention": mention,
+                    "reason": "VALUE_UNRESOLVED", "source": "SURFACE_MENTION_RECALL",
+                })
+                continue
             # An unmatched mention is reference noise: drop any filter the
             # model built from it and keep the rest of the request intact.
             kept = [
@@ -6706,6 +6737,27 @@ def _apply_surface_mention_normalization(
         if not field or not canonical_value:
             continue
         canonical_key = re.sub(r"\s+", "", canonical_value).casefold()
+        if not set_filters:
+            # The model may already have expanded an alias inside the set.
+            # Recognize that canonical member too, before adding any predicate.
+            set_filters = [
+                item for item in filters
+                if isinstance(item, dict)
+                and str(item.get("operator") or "").upper() in {"IN", "NOT IN"}
+                and isinstance(item.get("value"), list)
+                and any(re.sub(r"\s+", "", str(value)).casefold() == canonical_key
+                        for value in item["value"])
+            ]
+        if set_filters and any(item.get("field") != field for item in set_filters):
+            # Flat ASL filters are ANDed. Cross-field alternatives cannot be
+            # represented by appending '=' predicates. Keep the original set
+            # semantics and disclose the incomplete normalization instead.
+            repairs.append({
+                "type": "PRESERVE_SET_FILTER", "mention": mention,
+                "reason": "CROSS_FIELD_MATCH", "resolved_field": field,
+                "canonical_value": canonical_value, "source": "SURFACE_MENTION_RECALL",
+            })
+            continue
         # The draft may already contain the raw mention or its standard value.
         # Rewrite every occurrence to the resolved field/value in place; never
         # append a second predicate for the same mention.
@@ -6742,7 +6794,7 @@ def _apply_surface_mention_normalization(
         # only when the field is not a requested projection and the filter is
         # otherwise explicit in the structured/model draft. Exact source values
         # remain valid even when the same field is also returned.
-        may_materialize_filter = source_value_equivalent or (
+        may_materialize_filter = bool(set_filters) or source_value_equivalent or (
             field not in projected_fields
             and (bool(role_hint) or bool(matching_filters))
         )
@@ -6775,13 +6827,25 @@ def _apply_surface_mention_normalization(
             knowledge.setdefault("_source_verified_filter_values", set()).add(
                 (field, canonical_value)
             )
+        if set_filters:
+            for item in set_filters:
+                updated = []
+                for value in item["value"]:
+                    replacement = (
+                        canonical_value
+                        if re.sub(r"\s+", "", str(value)).casefold() == literal_key
+                        else value
+                    )
+                    if replacement not in updated:
+                        updated.append(replacement)
+                item["value"] = updated
         if matching_filters:
             for item in matching_filters:
                 item["field"] = field
                 item["value"] = canonical_value
                 if str(item.get("operator") or "").upper() == "LIKE":
                     item["operator"] = "="
-        elif not any(
+        elif not set_filters and not any(
             isinstance(item, dict)
             and str(item.get("field") or "") == field
             and str(item.get("value") or "") == canonical_value
@@ -6806,6 +6870,12 @@ def _apply_surface_mention_normalization(
 
     if not repairs:
         return content, []
+    # Only remove identical predicates; never merge different fields/operators.
+    unique_filters = []
+    for item in filters:
+        if item not in unique_filters:
+            unique_filters.append(item)
+    ast["filters"] = unique_filters
     return json.dumps(ast, ensure_ascii=False), repairs
 
 
