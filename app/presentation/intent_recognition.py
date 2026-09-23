@@ -977,11 +977,27 @@ def render_resolved_intent_context_v2(
 def render_asl_extraction_json(asl: dict[str, object]) -> str:
     """Render the exact validated ASL object without a display-side rewrite."""
 
+    # Match the translator's projection/grouping distinction, only in prose.
+    # Keep the executable JSON and its dimensions key intact.
+    if not asl.get("dimensions"):
+        dimension_usage = "本次未使用分组维度或展示字段。"
+    elif asl.get("metrics"):
+        dimension_usage = (
+            "本次使用 dimensions（分组维度），用于按这些字段汇总指标。"
+        )
+    else:
+        dimension_usage = (
+            "本次使用 display_fields（展示字段），用于指定明细结果的返回列，"
+            "不表示分组汇总；ASL 中仍由 dimensions 承载。"
+        )
+
     return (
         "结构化提取（ASL）：\n"
         "```json\n"
         f"{json.dumps(asl, ensure_ascii=False, indent=2)}\n"
         "```\n"
+        "\n`dimensions / display_fields`\n\n"
+        f"说明：{dimension_usage}\n\n"
         "说明：`filters` 仅记录本次查询显式提出的筛选；"
         "指标定义自带的固定口径由 SQL 翻译服务合并，"
         "并在下一步单独展示。"

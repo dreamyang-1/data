@@ -1,4 +1,7 @@
 import json
+from copy import deepcopy
+
+import pytest
 
 from app.domain.models import (
     AnalysisOperator,
@@ -541,6 +544,42 @@ def test_validated_asl_is_rendered_as_direct_json_without_field_reformatting():
     assert "筛选条件：" not in rendered
     assert "字段说明：" not in rendered
     assert "subject.entity" not in rendered
+
+
+@pytest.mark.parametrize(
+    ("metrics", "dimensions", "usage"),
+    [
+        ([], [{"name": "sales_order.amount_with_tax"}], "display_fields（展示字段）"),
+        ([], [{"name": "hospital.hospital_name"}], "display_fields（展示字段）"),
+        ([{"name": "sales_total"}], [{"name": "city"}], "dimensions（分组维度）"),
+        ([{"name": "sales_total"}], [{"name": "business_date", "granularity": "month"}], "dimensions（分组维度）"),
+        ([], [], "本次未使用分组维度或展示字段"),
+        ([{"name": "sales_total"}], [], "本次未使用分组维度或展示字段"),
+        (None, None, "本次未使用分组维度或展示字段"),
+    ],
+)
+def test_asl_dimension_usage_label_is_display_only(metrics, dimensions, usage):
+    asl = {"metrics": metrics, "dimensions": dimensions, "filters": []}
+    before = deepcopy(asl)
+
+    rendered = render_asl_extraction_json(asl)
+    json_text = rendered.split("```json\n", 1)[1].split("\n```", 1)[0]
+    explanation = rendered.split("\n```", 1)[1]
+
+    assert json.loads(json_text) == before
+    assert asl == before
+    assert "`dimensions / display_fields`" in explanation
+    assert usage in explanation
+    if dimensions and not metrics:
+        assert "不表示分组汇总" in explanation
+    assert "`filters` 仅记录本次查询显式提出的筛选" in explanation
+
+
+def test_asl_dimension_usage_label_handles_missing_slots_without_inventing_fields():
+    asl = {"version": "2.0"}
+    rendered = render_asl_extraction_json(asl)
+    assert "本次未使用分组维度或展示字段" in rendered
+    assert asl == {"version": "2.0"}
 
 
 def test_control_enum_filter_is_not_promoted_to_display_entity():
