@@ -13,7 +13,7 @@ from app.adapters.base import AdapterError
 
 
 def _clean_text(value: object, *, limit: int = 240) -> str:
-    text = " ".join(str(value or "").split())
+    text = " ".join(str("" if value is None else value).split())
     return text[:limit]
 
 
@@ -91,11 +91,18 @@ def _filter_descriptions(value: object) -> list[str]:
         field = _field_label(entry.get("field") or entry.get("semantic_field"))
         raw_value = entry.get("value")
         values = _texts(raw_value)
-        operator = _clean_text(entry.get("operator") or entry.get("expected_operator"))
+        operator = _clean_text(entry.get("operator") or entry.get("op") or entry.get("expected_operator"))
+        display_operator = {
+            "EQ": "=", "NE": "!=", "NEQ": "!=", "GT": ">", "GTE": ">=",
+            "GE": ">=", "LT": "<", "LTE": "<=", "LE": "<=",
+        }.get(operator.upper(), operator)
         description = field
         if values:
-            description = f"{description or '筛选值'}={','.join(values)}"
-        if operator:
+            rendered_operator = display_operator or "="
+            if rendered_operator.isalpha():
+                rendered_operator = f" {rendered_operator} "
+            description = f"{description or '筛选值'}{rendered_operator}{','.join(values)}"
+        elif operator:
             description = f"{description}（要求操作符：{operator}）"
         if description:
             result.append(description)
@@ -140,6 +147,22 @@ def render_dependency_error(exc: AdapterError) -> str | None:
         )
 
     if code in {"ASL_FILTER_INVALID", "ASL_REQUIRED_FILTER_MISSING"}:
+        failed_filter = details.get("failed_filter")
+        if isinstance(failed_filter, dict):
+            failed = _filter_descriptions(failed_filter)
+            if failed:
+                reason = (
+                    "该字段未通过本次向量目录范围校验"
+                    if details.get("validation_stage") == "vector_grounding"
+                    else "该条件未能绑定到可执行的语义字段"
+                )
+                return (
+                    f"未通过校验的筛选条件：{_quote_join(failed)}。{reason}，"
+                    "因此本次未生成 SQL，也未执行数据查询。"
+                    "这里列出的是首先失败的条件，不代表其他条件也存在问题。"
+                    "请数据部门核对该字段的目录映射和召回配置；"
+                    "已提供的字段和值无需重复输入。"
+                )
         raw_filters = (
             details.get("expected_filter")
             or details.get("missing_filters")
@@ -149,7 +172,14 @@ def render_dependency_error(exc: AdapterError) -> str | None:
         semantic_field = _clean_text(details.get("semantic_field"))
         if semantic_field and semantic_field not in filters:
             filters.insert(0, semantic_field)
-        target = _quote_join(filters) if filters else "当前筛选条件"
+        if not filters:
+            return (
+                "筛选条件校验失败，本次未生成 SQL。"
+                "上游未返回具体失败字段和值，暂时无法判断是哪一项条件，"
+                "不能据此认定所有筛选条件都有问题。请服务维护人员检查该次请求的诊断信息；"
+                "无需重复输入已经提供的条件。"
+            )
+        target = _quote_join(filters)
         # Upstream does not currently produce candidate evidence carrying a
         # business semantic identity, and matching generic roles/types does
         # not prove relevance.  Never display unconfirmed candidates here;
