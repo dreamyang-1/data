@@ -2653,6 +2653,16 @@ class HttpDataRetrievalAdapter:
                 },
             )
         result_file_url = self._result_file_url(raw)
+        export_error = self._result_export_error(raw)
+        if export_error and not result_file_url and isinstance(raw.get("data"), list):
+            # Compatibility with older SQL servers returning the entire result
+            # on export failure. Preserve the total, not the oversized payload.
+            raw = {
+                **raw,
+                "data": raw["data"][:20],
+                "preview_count": min(len(raw["data"]), 20),
+                "preview_truncated": True,
+            }
         dataset = self._dataset(
             raw,
             request_id=str(request.request_id),
@@ -2679,6 +2689,7 @@ class HttpDataRetrievalAdapter:
             dataset=dataset,
             data_source_id=actual_data_source_id,
             result_file_url=result_file_url,
+            result_export_error=export_error,
         )
 
     async def _current_metric_definitions(
@@ -4592,6 +4603,22 @@ class HttpDataRetrievalAdapter:
                 "generated SQL references tables that are absent from FROM/JOIN",
                 details={"missing_tables": missing},
             )
+
+    @staticmethod
+    def _result_export_error(data: dict[str, Any]) -> str | None:
+        error = data.get("export_error")
+        if not error:
+            return None
+        # Older SQL versions include raw exception text. Do not reflect it into
+        # user-visible output; retain only a bounded, actionable classification.
+        text = str(error)
+        if any(code in text for code in (
+            "AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch",
+        )):
+            return "完整附件导出失败：文件存储访问被拒绝，请管理员检查导出账号和权限。"
+        if "导出组件不可用" in text or "openpyxl" in text:
+            return "完整附件导出失败：Excel导出组件不可用，请管理员检查服务依赖。"
+        return "完整附件导出失败：文件生成或上传失败，请管理员检查SQL服务导出日志。"
 
     @staticmethod
     def _result_file_url(data: dict[str, Any]) -> str | None:

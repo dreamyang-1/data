@@ -1146,6 +1146,8 @@ class DataQueryResult(StrictModel):
     sql: str
     dataset: Dataset
     data_source_id: str | None = None
+    # Internal delivery diagnostic; never a reason to discard a valid preview.
+    result_export_error: str | None = Field(default=None, max_length=500, exclude=True)
     ambiguities: list[dict[str, Any]] = Field(default_factory=list)
     # Audited post-query transformations are kept separate from ASL because
     # they describe deterministic result processing, not upstream query

@@ -5982,6 +5982,64 @@ class DataAnalysisOrchestrator:
             request.assumptions.append("LATEST_RESULT_DATASET_NOT_REUSABLE")
             await self.sessions.put_last_request(request)
             return await self._finish_terminal(request, response)
+        if query_result.result_export_error and not query_result.result_file_url:
+            # Export failure is a delivery failure, not a query failure. Keep
+            # the preview separate from full-data calculations and follow-ups.
+            preview = query_result.dataset.rows[:20]
+            note = query_result.result_export_error
+            evidence = [EvidenceItem(
+                evidence_id=f"query:{query_result.dataset.snapshot_id}",
+                kind="QUERY_RESULT",
+                source_ref=f"data-source:{query_result.data_source_id or 'unknown'}",
+                payload={
+                    "columns": query_result.dataset.columns,
+                    "row_count": total_row_count,
+                    "returned_row_count": len(preview),
+                    "total_row_count_confirmed": total_row_count_confirmed,
+                    "truncated": True,
+                    "complete_result_file": False,
+                    "complete_analysis_statistics": False,
+                },
+            )]
+            reliability = ReliabilityReport(
+                level="LIMITED", score=0.65,
+                gates={"query_succeeded": True, "complete_result_available": False,
+                       "preview_disclosed": True},
+                warnings=[note, "以下仅为结果预览，不代表完整清单，未据此计算全量统计。"],
+            )
+            await emit_progress(
+                "RELIABILITY_CHECK", "COMPLETED",
+                render_reliability_validation(
+                    reliability, evidence, query_result.dataset.quality_status,
+                ),
+                reliability_level=reliability.level,
+                reliability_score=reliability.score,
+            )
+            await emit_progress(
+                "INSIGHT_ANALYSIS", "COMPLETED",
+                "查询已成功，但当前仅提供预览；未使用预览推算全量合计、排名或趋势。",
+            )
+            answer = (
+                (f"查询成功，共 {total_row_count} 条结果。" if total_row_count_confirmed
+                 else "查询成功，但上游未确认完整结果条数。")
+                + f"以下展示前 {len(preview)} 条预览，不是完整清单。\n\n"
+                + self._markdown_result_table(
+                    query_result.dataset.columns, preview,
+                    question=request.rewritten_question or request.original_question,
+                )
+                + "\n\n附件说明：" + note
+                + " 本次暂无可下载的完整附件，未基于预览生成全量分析结论。"
+            )
+            if list_cleanup_note:
+                answer += "\n\n" + list_cleanup_note
+            request.assumptions.append("LATEST_RESULT_DATASET_NOT_REUSABLE")
+            await self.sessions.put_last_request(request)
+            return await self._finish_terminal(request, AgentResponse(
+                request_id=request.request_id, conversation_id=request.conversation_id,
+                status="PARTIAL_SUCCESS", intent=request.primary_intent,
+                intent_source=request.intent_source, intent_confidence=request.intent_confidence,
+                answer=answer, evidence=evidence, reliability=reliability,
+            ))
         if (
             total_row_count > self.settings.data_query_max_rows
             and not query_result.result_file_url
