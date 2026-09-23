@@ -8304,6 +8304,13 @@ class DataAnalysisOrchestrator:
         """
 
         aliases = cls._platform_metric_aliases(agent_prompt)
+        # Row-level comparisons are not aggregate metric aliases. The planner
+        # and ASL will bind the amount attribute; do not rewrite 单笔销售额 as
+        # 单笔含税销售总额 before they see the completed question.
+        if (request.primary_intent == PrimaryIntent.DETAIL_QUERY
+                and re.search(r"单笔|逐笔|每笔|每条|逐条",
+                              request.rewritten_question or request.original_question)):
+            return
         if not aliases or not request.metrics:
             return
         rewritten_metrics: list[MetricRef] = []
@@ -10149,6 +10156,10 @@ class DataAnalysisOrchestrator:
                 action="请提供历史起止范围或窗口，例如：基于过去12个月。",
             ))
         prefix = f"我已理解：{understood_text}。" if understood_text else ""
+        if source_stage == "OAGNET_ASL_GENERATION" and "semantic_ambiguity" in request.missing_slots:
+            # Upstream hypotheses can differ from the ASL that produced this
+            # clarification. Do not present their metric/entity as validated.
+            prefix = f"当前问题：{request.rewritten_question or request.original_question}。"
         response = AgentResponse(
             request_id=request.request_id,
             conversation_id=request.conversation_id,
