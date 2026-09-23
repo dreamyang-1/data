@@ -24,6 +24,10 @@
 
 默认监听 `0.0.0.0:48000`。
 
+独立部署时必须单独接入 MinIO 配置；SQL 服务不会自动读取相邻 Agent 的
+`DATA_AGENT_MINIO_*` 配置。配置来源、键名映射及导出验收见
+[MinIO 导出部署说明](docs/minio_export_configuration.md)。凭据保留在服务器受限配置文件中，不提交 Git。
+
 ```powershell
 python -m pip install -r requirements.txt
 python api_server_prod.py
