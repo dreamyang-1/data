@@ -41,3 +41,21 @@ Current Stage：本次缺列继续输出修复，离线验证与发布分支收�
 Cutover Blocker P0/P1、Catalog/Evaluation/Shadow Gap：不重新评定既有全局门禁；不以 Mock 替代生产业务验证。
 V1 Replacement Readiness：不切换 V2、不自动合并。
 Next shortest blocking path：按单独部署授权发布两个运行文件，再用新会话验收缺联系方式的名单查询。
+
+## 后续授权部署（2026-09-23）
+
+用户随后明确要求“部署重启”。发布 `partial-fields-4177bb8-20260923-131535` 只更新两个运行文件：
+
+- Oagnet `agent.py`，SHA-256：`b2ac88a7a5239c07fefab3a7c5ad001ed2d306abed4e023332b5886115a79ba1`。
+- DataAnalysis `app/adapters/asl_notices.py`，SHA-256：`a671e096ede701f18fa853673297fc47602340aab915769b2237fa770e4cfd69`。
+
+发布前两份远程文件均与基线 `67ed996` 一致。执行语法检查、逐文件备份、写入前漂移检查、原子替换和发布后哈希核验，未覆盖其他模块、环境配置或生产测试目录。回滚文件与清单位于远程受限备份目录，可按发布标识定位；回滚前需确认无后续文件更新。
+
+远程临时测试目录加载实际部署源码：Oagnet 部分字段输出专项 20 passed（2.75 秒），DataAnalysis 缺列提示及编排测试 6 passed（0.70 秒）；数据、目录、模型调用使用 Mock。
+
+- Oagnet 服务于 13:16:31 CST 重启，PID 1774399 → 2283494。
+- 数据分析服务于 13:16:32 CST 重启，PID 1958059 → 2283529。
+- 两者 active/running，NRestarts=0。服务器内及开发机访问 18022 `/` 返回 UP，8808 `/ready` 返回 READY、所有 profiles 通过、无降级项；18022 `/vector/health` healthy=true。
+- SQL Translator、数据库、索引和其他模块未改动、未重启。未运行真实业务问题，不将 Mock 或健康检查当成业务答案正确性的证明。
+
+Current Stage：本次可选展示字段降级已部署并重启，等待用户新会话验收。原有切流门禁与 V1 Replacement Readiness 不变，不自动合并 PR。
