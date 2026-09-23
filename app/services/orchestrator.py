@@ -32,6 +32,7 @@ from app.analysis import (
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
 from app.analysis.visualization import render_chart_svg
 from app.services.chat_responder import QwenChatResponder
+from app.services.result_cleanup import clean_name_list, cleanup_message
 from app.services.memory_manager import MemoryManager
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
@@ -5860,13 +5861,24 @@ class DataAnalysisOrchestrator:
         dataset_id=None, external_search_mode=None,
     ):
         self._restore_projected_filter_columns(request, query_result.dataset)
+        cleaned_result = clean_name_list(request.primary_intent, query_result)
+        if cleaned_result is not query_result:
+            # A cached/imported raw dataset must not masquerade as the cleaned list.
+            dataset_id = None
+        query_result = cleaned_result
+        list_cleanup_note = cleanup_message(query_result)
         await emit_progress(
             "DATA_RETRIEVAL",
             "COMPLETED",
             (
                 "调度执行完成。\n"
                 f"返回行数：{query_result.dataset.row_count}；\n"
-                f"结果总行数：{query_result.dataset.total_row_count}。"
+                + (
+                    "全量清理后行数：未知。"
+                    if list_cleanup_note and query_result.dataset.truncated
+                    else f"结果总行数：{query_result.dataset.total_row_count}。"
+                )
+                + (f"\n{list_cleanup_note}" if list_cleanup_note else "")
             ),
             row_count=query_result.dataset.row_count,
             truncated=query_result.dataset.truncated,
@@ -5990,6 +6002,7 @@ class DataAnalysisOrchestrator:
             dataset_id is None
             and query_result.result_file_url
             and request.primary_intent == PrimaryIntent.DETAIL_QUERY
+            and not list_cleanup_note
         ):
             dataset_id = await self._import_query_result_file(
                 request, query_result.result_file_url
@@ -6034,6 +6047,7 @@ class DataAnalysisOrchestrator:
         )
         if (
             not query_result.dataset.rows and not query_result.result_file_url
+            and not (list_cleanup_note and query_result.dataset.truncated)
         ) or no_effective_values:
             # The SQL/ASL contract is still verified when its result is empty.
             # Preserve it as the latest executable context so a subsequent
@@ -6083,7 +6097,7 @@ class DataAnalysisOrchestrator:
                             else "当前没有可用于计算该指标的数据；无数据不等同于指标值为 0。"
                         )
                     ),
-                    evidence=[evidence],
+                    evidence=[evidence, *self._derived_metric_evidence(request, query_result)],
                     reliability=ReliabilityReport(
                         level="HIGH",
                         score=1,
@@ -6091,6 +6105,8 @@ class DataAnalysisOrchestrator:
                     ),
                     dataset_id=dataset_id,
                 )
+                if list_cleanup_note:
+                    response.answer = "查询已完成，清理后没有可展示的有效名称。\n\n" + list_cleanup_note
                 return await self._finish_terminal(request, response)
             scope = "、".join(
                 f"{item.get('field')}={item.get('value')}"
@@ -6715,6 +6731,8 @@ class DataAnalysisOrchestrator:
             )
         if analysis_output is not None and analysis_output.warnings:
             answer += "\n\n注意事项：" + "；".join(analysis_output.warnings) + "。"
+        if list_cleanup_note:
+            answer += "\n\n" + list_cleanup_note
         unavailable_fields = [
             value.split("=", 1)[1]
             for value in request.assumptions
@@ -8122,7 +8140,10 @@ class DataAnalysisOrchestrator:
                     metric.metric_id or metric.canonical_name or metric.input
                     for metric in request.metrics
                 ],
-                transformation_log=(provenance,),
+                transformation_log=(provenance, *(
+                    item for item in query_result.execution_transforms
+                    if item.get("type") == "NAME_LIST_CLEANUP"
+                )),
                 ttl_seconds=self.settings.dataset_ttl_seconds,
             )
             await self.sessions.put_dataset_reference(
@@ -10629,6 +10650,13 @@ class DataAnalysisOrchestrator:
 
         evidence: list[EvidenceItem] = []
         for transform in query_result.execution_transforms:
+            if transform.get("type") == "NAME_LIST_CLEANUP":
+                evidence.append(EvidenceItem(
+                    evidence_id=f"list-cleanup:{query_result.dataset.snapshot_id}",
+                    kind="RESULT_CLEANUP", source_ref="deterministic:name-list-cleanup",
+                    payload=transform,
+                ))
+                continue
             if transform.get("type") == "ASL_BINDING_NOTICES":
                 evidence.append(EvidenceItem(
                     evidence_id=f"asl-binding:{query_result.dataset.snapshot_id}",
@@ -11162,10 +11190,25 @@ class DataAnalysisOrchestrator:
                     f"{base}code", f"{base}id",
                 )
             )
+            # Do not make distinct same-named entities look like duplicate rows
+            # by hiding the only column that distinguishes them.
+            label_columns = [
+                item for item in available
+                if cls._presentation_column_identity(item) == (base, "label")
+            ]
+            label_identities: dict[str, set[str]] = {}
+            if paired_with_label and role in {"identifier", "value"}:
+                for row in rows:
+                    label = json.dumps([row.get(item) for item in label_columns], default=str)
+                    label_identities.setdefault(label, set()).add(
+                        json.dumps(row.get(column), default=str)
+                    )
+            distinguishes_same_name = any(len(values) > 1 for values in label_identities.values())
             hide_identifier = (
                 paired_with_label
                 and role in {"identifier", "value"}
                 and not explicit_identifier_request
+                and not distinguishes_same_name
                 and cls._column_values_look_like_identifiers(column, rows)
             )
             if not hide_identifier:

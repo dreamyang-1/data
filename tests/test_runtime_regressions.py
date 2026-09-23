@@ -294,7 +294,7 @@ class RelationshipProjectionRetrieval:
 
 
 @pytest.mark.asyncio
-async def test_relationship_answer_preserves_all_sql_rows_including_duplicates() -> None:
+async def test_relationship_answer_cleans_name_list_and_audits_original_rows() -> None:
     adapters = build_mock_adapters()
     adapters = type(adapters)(
         semantic=adapters.semantic,
@@ -325,12 +325,17 @@ async def test_relationship_answer_preserves_all_sql_rows_including_duplicates()
     query_evidence = next(
         item for item in response.evidence if item.kind == "QUERY_RESULT"
     )
-    assert query_evidence.payload["row_count"] == 4
-    assert query_evidence.payload["returned_row_count"] == 4
+    # STALE_TEST updated by the user's explicit final-name-list cleanup contract.
+    # The table renderer itself remains lossless; query completion owns cleanup.
+    assert query_evidence.payload["row_count"] == 2
+    assert query_evidence.payload["returned_row_count"] == 2
     assert "presentation" not in query_evidence.payload
-    assert "共查询到 4 条明细" in response.answer
-    assert response.answer.count("外科") == 2
-    assert response.answer.count("麻醉科") == 2
+    assert "共查询到 2 条明细" in response.answer
+    assert response.answer.count("| 外科 |") == 1
+    assert response.answer.count("| 麻醉科 |") == 1
+    cleanup = next(item for item in response.evidence if item.kind == "RESULT_CLEANUP")
+    assert cleanup.payload["source_row_count"] == 4
+    assert cleanup.payload["duplicate_rows_removed"] == 2
     assert "唯一组合" not in response.answer
 
 
