@@ -49,3 +49,15 @@ Oagnet 独立提交：`6915444`。DataAnalysis 和本报告在后续独立提交
 Cutover Blocker P0/P1、Catalog/Evaluation/Shadow Gap：本轮只验证上述局部改动，不重新认定全局切流条件。
 V1 Replacement Readiness：不切流、不自动合并、不宣称生产就绪。
 Next shortest blocking path：如需上线，同步上述运行文件及语义文档，按当前远程版本检查差异后部署并做真实请求验证。本轮没有部署或重启远程。
+
+## 后续授权部署（2026-09-23）
+
+用户随后明确要求部署并重启。发布 `surface-roles-c6ca147-20260923-102835` 包含 4 个修改的运行 Python 文件及新增语义说明，共 5 个文件；既有文件哈希与基线完全一致，无同事变更冲突。逐文件备份、语法检查、原子替换和部署后 SHA-256 校验通过。
+
+既有 `oagnet-data-agent.service` 与 `data-analysis-agent.service` 均于 10:29:03 CST 重启，PID 分别变为 1774399、1774417；状态 active/running。SQL Translator、环境配置、数据库和索引不变。
+
+服务器内及开发机跨机器检查：8808 `/ready` 为 READY，18022 `/` 为 UP，`/vector/health` 为 healthy；DataAnalysis readiness profiles 全通过，无降级项。
+
+在远程临时测试目录导入实际部署源码，新增 ASL 案例 15 passed，提示词/提示消息案例 3 passed。另一项依赖本地测试文件位置的全文检查改为直接读取远程实际语义文件验证：9,203 字正文完整进入 user prompt，哈希仍为 `e72c844ad3b5335070c790be375f92290092605bc9bd4162b4d0b0ea0ec9b22c`。目录/模型调用均 Mock；本次没有运行真实业务问题，留给用户新会话验收，不将上述检查宣称为业务答案正确性的证明。
+
+回滚文件和清单位于远程受限备份目录，使用上述发布标识检索；恢复前须确认目标文件未被后续发布修改，再恢复清单文件并重启对应 service。
