@@ -5,6 +5,7 @@
 """
 
 import os
+import logging
 import uuid
 import tempfile
 from typing import List, Dict, Any, Optional
@@ -38,6 +39,7 @@ MINIO_PUBLIC_BASE = (
 # 大数据量阈值（超过此条数导出为Excel）
 EXPORT_THRESHOLD = 200
 DOWNLOAD_PREVIEW_ROWS = 20
+logger = logging.getLogger(__name__)
 
 
 class DataExporter:
@@ -192,30 +194,43 @@ def format_query_result(columns: List[str], data: List[Dict[str, Any]],
     }
 
     if row_count > EXPORT_THRESHOLD:
+        # A failed attachment must not turn a bounded preview into a full payload.
+        result.update(
+            columns=columns,
+            data=data[:DOWNLOAD_PREVIEW_ROWS],
+            download_url=None,
+            preview_count=min(len(data), DOWNLOAD_PREVIEW_ROWS),
+            preview_truncated=row_count > min(len(data), DOWNLOAD_PREVIEW_ROWS),
+        )
         # 数据量大，导出Excel
         try:
             exporter = get_exporter()
             download_url = exporter.export_to_excel(columns, data)
-            result["columns"] = columns
-            # Keep the normal small-result shape for downstream consumers:
-            # ``columns`` plus a list in ``data``.  The workbook still contains
-            # the complete result, while chat/data agents can render an inline
-            # preview without downloading and parsing the file again.
-            result["data"] = data[:DOWNLOAD_PREVIEW_ROWS]
             result["download_url"] = download_url
-            result["preview_count"] = min(len(data), DOWNLOAD_PREVIEW_ROWS)
-            result["preview_truncated"] = row_count > len(result["data"])
             result["message"] = (
                 f"数据量({row_count}条)超过{EXPORT_THRESHOLD}条，已导出为Excel；"
                 f"data字段返回前{len(result['data'])}条预览，"
                 "完整结果请通过download_url下载"
             )
         except Exception as e:
-            # 导出失败时降级返回原始数据
-            result["columns"] = columns
-            result["data"] = data
-            result["download_url"] = None
-            result["export_error"] = f"Excel导出失败: {str(e)}，返回原始JSON数据"
+            # Do not expose raw SDK errors (URLs, credentials or record values).
+            code = getattr(e, "code", None)
+            if code in {"AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch"}:
+                reason = f"文件存储访问被拒绝（{code}），请管理员检查导出账号和权限"
+            elif isinstance(e, ImportError):
+                reason = "导出组件不可用，请管理员检查Excel导出依赖"
+            else:
+                reason = "文件生成或上传失败，请管理员检查SQL服务导出日志"
+            logger.warning(
+                "SQL result export failed: rows=%s error_type=%s storage_access_denied=%s",
+                row_count, type(e).__name__,
+                code in {"AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch"},
+            )
+            result["export_error"] = f"完整附件导出失败：{reason}。"
+            result["message"] = (
+                f"查询成功，共{row_count}条；仅返回前{len(result['data'])}条预览。"
+                + result["export_error"]
+            )
     else:
         # 数据量小，直接返回
         result["columns"] = columns
