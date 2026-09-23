@@ -39,3 +39,32 @@ Current Stage：本次 Oagnet 数值与字母条件修复、离线回归及功�
 Cutover Blocker P0/P1、Catalog/Evaluation/Shadow Gap：本次不重评全局门禁，历史失败谓词仍不能回填为已知。
 V1 Replacement Readiness：保持现有路由，不自动合并 Draft PR。
 Next shortest blocking path：后续授权部署 Oagnet 的三个运行文件后，重放原订单问题，核对金额字段、明细投影及 SQL，再验收订单结果。
+
+## 后续授权部署：2026-09-23
+
+用户随后明确要求部署并重启。本节更新上述部署前状态，不改变离线验证的证据边界。
+
+- 功能版本：`528b553`；发布标识：`scalar-binding-528b553-20260923-174202`。
+- 目标：49 的 `/root/yyy/Oagnet`，端口 `18022`。仅部署 `agent.py`、`api.py` 和新增的 `surface_literals.py`。
+- 部署前两个已有文件与预期基线 `3dc237c` 一致，新增文件原先不存在；未发现他人改动冲突。完成 AST 检查、逐文件替换前二次漂移检查及部署后 SHA-256 核验。
+- 备份与清单：`/root/.codex-deploy-backups/scalar-binding-528b553-20260923-174202`。替换过程配置文件回滚，实际未触发。
+
+部署后运行文件 SHA-256（与本地版本库一致）：
+
+| 文件 | SHA-256 |
+| --- | --- |
+| agent.py | 295f2c980fa9a0cba1d39ba44e661afb2ef123d9335ac0dc0e458bb221b55dc2 |
+| api.py | 79880fbfbfa5a7ce94996822cd6681887817afef9d4eefa7de2ba78104d17139 |
+| surface_literals.py | 4e844d4d3d0210310f21b93f42c24571c328b07915a884417f3ace612273a53e |
+
+验证及重启：
+
+- 使用远程实际部署代码执行标量约束与 source key 专项测试：**57 passed，2.31 秒**。向量库、MySQL、模型依赖为模拟对象；测试进程替换 logger，避免模拟结果写入生产应用日志。
+- 仅重启 `oagnet-data-agent.service`：启动时间 **2026-09-23 17:42:47 CST**，PID 从 `3050419` 变为 `3148136`，状态 `active`，`NRestarts=0`。
+- `data-analysis-agent.service` 保持 PID `3050444`、17:15:10 的启动时间；`sql-translator.service` 保持 PID `2051085`、2026-09-21 19:42:50 的启动时间。两者均未部署、未重启，状态均为 `active`。
+- 从开发机检查 49：`18022/` 为 `UP`，`18022/vector/health` 的 success/healthy 均为 true，`8808/ready` 为 `READY`，所有检查与 readiness profiles 通过，无 degraded capabilities。
+- 运行中的 `18022/openapi.json` 已包含 `QueryRequest.structured_extraction`，确认新 API 声明已加载。
+- 本轮未重放真实业务订单问题；不能将模拟测试、接口健康和部署一致性等同于原订单查询已正确返回。下一步仍需核对真实 ASL 的金额条件、明细投影、SQL 与业务结果。
+
+Current Stage：修复已部署，Oagnet 已重启，远程专项测试与健康检查通过。
+V1 Replacement Readiness：保持 `V2_CONTEXT_V1_EXECUTION`，不切换路由，不自动合并 Draft PR；全局门禁仍未重新评估。
