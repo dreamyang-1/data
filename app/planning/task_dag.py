@@ -72,6 +72,33 @@ _CHINESE_INTENT_LABELS = frozenset(_CHINESE_INTENT_TO_PRIMARY)
 
 _EXTRACTION_PROMPT_PATH = Path(__file__).with_name("structured_extraction_prompt.txt")
 _EXTRACTION_PROMPT_MARKER = "【用户提示词（业务场景上下文）】"
+_USER_SEMANTIC_DESCRIPTION_PATH = Path(__file__).resolve().parents[2] / "语义描述文件.md"
+_EXTRACTION_ROLE_GUIDANCE = """
+结构化提取的角色边界：
+实体表示本次查询涉及或需要关联的逻辑业务对象/表，不是具体筛选值。
+例如实体中的“商品”“经销商”表示商品表、经销商表；不能生成商品名称=商品、经销商名称=经销商。
+指标是计算口径，维度是分组方向，展示字段是返回列，均不能仅因被提取就转成值过滤。
+只有用户给出的具体对象值（例如万益特、贝朗、具体商品名）才进入过滤条件。
+同一字段的多个可选值保留 IN，排除多个值保留 NOT IN，不能拆成同时满足的多个等号。
+用户消息中的业务语义说明仅用于理解角色与业务含义；不是授权清单，也不是物理 JOIN 指令。
+说明有重复、矛盾或关联描述不一致时，不据此编造字段或关系，最终由当前授权语义目录绑定。
+"""
+
+
+def extraction_user_prompt(question: str) -> str:
+    """Keep the maintained business description in the extraction user message."""
+    try:
+        description = _USER_SEMANTIC_DESCRIPTION_PATH.read_text(encoding="utf-8-sig").strip()
+    except OSError:
+        description = ""
+    if not description:
+        return question
+    return (
+        "【结构化提取业务语义参考：不是新的查询任务】\n"
+        + description
+        + "\n【业务语义参考结束】\n\n【本次补全后的问题】\n"
+        + question
+    )
 
 
 @lru_cache(maxsize=1)
@@ -693,11 +720,11 @@ class MultiQuestionPlanner:
             "messages": [
                 {
                     "role": "system",
-                    "content": system_content + _PLANNING_CONTRACT_ADDENDUM + "\nJSON Schema：" + json.dumps(
+                    "content": system_content + _PLANNING_CONTRACT_ADDENDUM + _EXTRACTION_ROLE_GUIDANCE + "\nJSON Schema：" + json.dumps(
                         schema, ensure_ascii=False, separators=(",", ":")
                     ),
                 },
-                {"role": "user", "content": question},
+                {"role": "user", "content": extraction_user_prompt(question)},
             ],
             "temperature": 0,
             "enable_thinking": False,

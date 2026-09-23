@@ -11,6 +11,10 @@ def binding_notices(repairs):
             message = (f"“{mention}”未匹配到可用目录值，本次未应用该项筛选。"
                        "结果仅代表实际保留条件下的数据；若该词表示您要求的筛选条件，查询范围可能扩大。"
                        "请数据部门核对目录配置。")
+        elif item.get("type") == "PRESERVE_SET_FILTER":
+            message = (f"“{mention}”的多值筛选未完成同字段标准化，已保留原有 IN/NOT IN 条件，"
+                       "未追加可能改变查询含义的单值条件。请数据部门核对品牌、厂家等字段的值映射；"
+                       "结果可能因原值未规范化而漏匹配。")
         elif item.get("type") == "SURFACE_MATCH_NOTICE":
             selected = f"{item.get('resolved_field')} = {item.get('canonical_value')}"
             if item.get("reason") == "TIED_CANDIDATES":
@@ -36,7 +40,7 @@ def attach_binding_notices(result, repairs):
         result.execution_transforms.append({
             "type": "ASL_BINDING_NOTICES", "warnings": messages,
             "repairs": [item for item in repairs if isinstance(item, dict)
-                        and item.get("type") in {"SURFACE_MATCH_NOTICE", "DROP_UNMATCHED_SURFACE_MENTION"}],
+                        and item.get("type") in {"SURFACE_MATCH_NOTICE", "DROP_UNMATCHED_SURFACE_MENTION", "PRESERVE_SET_FILTER"}],
         })
     return result
 
