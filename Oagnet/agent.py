@@ -6588,6 +6588,73 @@ def _restore_surface_detail_shape(content: str, knowledge: dict, reference: dict
     }]
 
 
+def _repair_surface_detail_time(content: str, knowledge: dict, query: str):
+    """Resolve explicit detail periods after the row shape has been restored.
+
+    Do not run the legacy time parser over every surface request: it supports
+    fewer expressions than the model. Only repair a positively parsed period,
+    using date attributes of the selected subject, never an arbitrary LLM anchor.
+    """
+    bounds = _query_date_bounds(query)
+    if bounds is None:
+        return content, []
+    ast = json.loads(content)
+    if ast.get("metrics"):
+        return content, []
+    subject = str((ast.get("subject") or {}).get("entity") or "")
+    _, attributes = _scoped_entity_attributes(knowledge)
+    known = _known_physical_fields(knowledge)
+    date_fields = {}
+    for field, metadata in attributes.get(subject, {}).items():
+        label = str(metadata.get("attr_name") or "")
+        dtype = str(metadata.get("data_type") or "").lower()
+        if field in known and (
+            re.match(r"^(?:date|datetime|timestamp)(?:\b|\()", dtype)
+            or metadata.get("semantic_role") == "time_anchor"
+            or re.search(r"日期|时间", label)
+        ):
+            date_fields[field] = label
+    # An explicit business date name can disambiguate multiple date attributes.
+    named = {field for field, label in date_fields.items()
+             if len(label) > 2 and label in query}
+    candidates = named or set(date_fields)
+    def pure_time_question(item):
+        return (isinstance(item, dict)
+                and item.get("type") in {"time", "time_anchor", "time_range"}
+                and set(item.get("affected_slots") or []).issubset(
+                    {"time", "time_anchor", "time_range", "time_context"}))
+
+    if len(candidates) != 1:
+        # An invented placeholder must not become executable on a later retry.
+        ast["time_context"] = None
+        ast["ambiguity"] = [a for a in ast.get("ambiguity") or [] if not pure_time_question(a)]
+        _append_ambiguity(ast, "time_anchor",
+                          "已识别时间范围，请确认本次明细按哪个日期字段筛选。" if candidates else
+                          "已识别时间范围，但当前目录未匹配到本次明细对象的日期字段，无法应用时间筛选。",
+                          sorted(candidates))
+        return json.dumps(ast, ensure_ascii=False), []
+    anchor = next(iter(candidates))
+    start, end, time_type = bounds
+    # Legacy parser returns a half-open end for a named month/year, while ASL
+    # range/custom ends are inclusive (the translator adds the following day).
+    if time_type == "custom" and len(_DATE_TOKEN.findall(query)) < 2:
+        end_date = date.fromisoformat(end)
+        end = date.fromordinal(end_date.toordinal() - 1).isoformat()
+    previous_time = ast.get("time_context")
+    previous_ambiguities = ast.get("ambiguity") or []
+    ast["time_context"] = {
+        "type": time_type, "start": start, "end": end,
+        "value": None, "unit": "day", "anchor": anchor,
+    }
+    # Remove only pure time questions we have just answered. Other or mixed
+    # business ambiguities must survive even when their prose mentions dates.
+    ast["ambiguity"] = [a for a in previous_ambiguities if not pure_time_question(a)]
+    changed = previous_time != ast["time_context"] or previous_ambiguities != ast["ambiguity"]
+    repairs = [{"type": "RESOLVE_DETAIL_TIME_RANGE", "anchor": anchor,
+                "start": start, "end": end, "source": "VECTOR_FIELD_METADATA"}] if changed else []
+    return json.dumps(ast, ensure_ascii=False), repairs
+
+
 def _apply_surface_mention_normalization(
     content: str,
     knowledge: dict,
@@ -9251,6 +9318,14 @@ must pass the deterministic contract validator and echo the contract unchanged.
             semantic_user_query,
         )
         contract_repairs.extend(surface_projection_repairs)
+        if surface_detail_restored and not (
+            "TIME_SCOPE=ALL_TIME" in execution_query
+            or "时间口径为截至业务数据水位的全部可用历史数据" in execution_query
+        ):
+            normalized, time_repairs = _repair_surface_detail_time(
+                normalized, getattr(builder, "last_knowledge", {}), completed_business_question,
+            )
+            contract_repairs.extend(time_repairs)
     if intent_asl_contract is not None:
         repaired_ast = json.loads(normalized)
         _dedupe_equivalent_dimensions(
