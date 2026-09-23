@@ -37,3 +37,16 @@
 - Current Stage：V1 名单输出清理；未部署或重启生产服务。
 - Cutover Blocker P0/P1、Catalog/Evaluation/Shadow Gap：本次不改变既有切换门禁，未提供新的生产发布或 V2 评估证据。
 - V1 Replacement Readiness：不宣称 V2 可替换；Next shortest blocking path：完成本轮离线验证后，按单独部署授权核验真实名单请求。
+
+## 后续授权部署（2026-09-23）
+
+用户随后明确要求“部署重启”。发布 `name-cleanup-a23d9f4-20260923-112339` 仅包含两个运行文件，没有覆盖其他模块、环境配置、测试目录或数据库。
+
+- `app/services/orchestrator.py`：远程发布前与基线 `5e7ea35` 完全一致；发布后 SHA-256 为 `c9dc97f43099f36ee1d99c4bd62bc08e48ae83d4c77c200847fedee63dd507f3`。
+- `app/services/result_cleanup.py`：远程原先不存在；发布后 SHA-256 为 `c1f5d584272fed467d76343d00c9b5ef13e5d1bb01a0c734a74c31f8c3bb80f8`。
+- 全部文件先检查远程漂移、备份并语法检查，再逐文件原子替换，发布后哈希与本地一致。回滚备份及清单保存在远程受限备份目录，可按发布标识定位；恢复前须确认没有后续文件变更。
+- 远程临时测试目录导入实际部署源码运行名单清理专项：18 passed，0.81 秒，使用模拟数据与 Mock，不访问真实业务记录。
+- 仅重启 `data-analysis-agent.service`，2026-09-23 11:24:24 CST；PID 从 1774417 变为 1958059，active/running，NRestarts=0。Oagnet 和 SQL Translator 未修改、未重启。
+- 刚重启尚未监听时第一次健康请求短暂拒绝连接；随后服务器内与开发机跨机器访问 8808 `/ready` 均返回 READY，所有 readiness profiles 通过，无降级项。
+- Current Stage：本次名单清理已部署，等待用户发起新查询验收。旧会话已生成的结果不会追溯改写。本轮没有运行真实业务问题，不把 Mock/健康检查当成业务答案正确性的证明。
+- 全局 Cutover/Catalog/Evaluation/Shadow 门禁未重新认定，V1 Replacement Readiness 不变，不切换 V2，不自动合并 PR。
