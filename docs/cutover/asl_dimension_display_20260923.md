@@ -28,3 +28,21 @@ Current Stage：页面展示文案修复完成，专项、Critical Slice 及全�
 Cutover Blocker P0/P1、Catalog/Evaluation/Shadow Gap：本次不重新评估全局门禁；保持历史已知问题状态。
 V1 Replacement Readiness：不变，不切换生产路由。
 Next shortest blocking path：后续授权部署后验收页面标签与用途说明；本轮未改变线上服务。
+
+## 后续授权部署与重启
+
+用户随后明确要求部署重启，以下记录更新前述未部署状态。
+
+- 功能版本 `1151d5d`；发布标识 `dimension-display-1151d5d-20260923-191029`。
+- 仅更新 DataAnalysis 的 `app/presentation/intent_recognition.py`。远程旧文件与 `32ed361` 基线一致（忽略 CRLF/LF 差异），替换前再次核对原始字节，未发现他人修改冲突。
+- 备份目录 `/root/.codex-deploy-backups/dimension-display-1151d5d-20260923-191029`，保存旧文件和哈希清单；上传后 AST 与哈希验证通过，原子替换，未触发回滚。
+- 远程运行文件与版本仓 SHA-256 一致：`8b29d130b9cdee4e0ab238e9b470b6b8504e5416e93ac1d41f30d9fa575e95dd`。
+- 使用远程部署源码执行展示专项：**23 passed，0.61 秒**。测试放在临时目录，未覆盖线上测试文件。
+- 仅重启 `data-analysis-agent.service`：**2026-09-23 19:10:45 CST**，PID `3050444` → `3476328`，状态 `active`，`NRestarts=0`。
+- Oagnet 保持 PID `3148136`，SQL Translator 保持 PID `2051085`，状态与启动时间均未变。
+- 服务本机及开发机访问平台 `/ready` 均为 `READY`，readiness profiles 全部通过，无 degraded capabilities；运行模式仍为 `V2_CONTEXT_V1_EXECUTION`。
+- 本次验证部署版本、展示逻辑和健康状态，未发起真实业务查询或浏览器视觉验收。历史会话内容不会被回写；新请求生成的 ASL 展示使用新说明。
+
+Current Stage：展示说明已部署，目标服务已重启，远程专项及健康检查通过。
+V1 Replacement Readiness、Cutover/Catalog/Evaluation/Shadow 全局门禁不变；不切换路由、不自动合并 Draft PR。
+Next shortest blocking path：新建查询验收页面中的英文标签及本次用途说明。
