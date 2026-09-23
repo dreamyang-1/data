@@ -4,6 +4,15 @@
 def binding_notices(repairs):
     result = []
     for item in repairs or []:
+        if (isinstance(item, dict) and item.get("source") == "VECTOR_DISPLAY_PROJECTION"
+                and item.get("type") == "OMIT_UNAVAILABLE_DISPLAY_FIELD"):
+            field = str(item.get("field") or "")
+            entity = str(item.get("entity") or "")
+            message = (f"“{field}”展示字段未匹配到本次可用的标准字段，无法显示{entity}{field}；"
+                       "已继续返回其他可用字段。此提示不表示数据库中一定没有该信息，请数据部门核对字段配置。")
+            if message not in result:
+                result.append(message)
+            continue
         if not isinstance(item, dict) or item.get("source") != "SURFACE_MENTION_RECALL":
             continue
         mention = str(item.get("mention") or "")
@@ -40,7 +49,7 @@ def attach_binding_notices(result, repairs):
         result.execution_transforms.append({
             "type": "ASL_BINDING_NOTICES", "warnings": messages,
             "repairs": [item for item in repairs if isinstance(item, dict)
-                        and item.get("type") in {"SURFACE_MATCH_NOTICE", "DROP_UNMATCHED_SURFACE_MENTION", "PRESERVE_SET_FILTER"}],
+                        and item.get("type") in {"SURFACE_MATCH_NOTICE", "DROP_UNMATCHED_SURFACE_MENTION", "PRESERVE_SET_FILTER", "OMIT_UNAVAILABLE_DISPLAY_FIELD"}],
         })
     return result
 
