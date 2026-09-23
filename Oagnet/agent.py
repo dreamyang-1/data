@@ -15,6 +15,7 @@ from pymysql.err import OperationalError as MySQLOperationalError
 
 from asl_contract import ASLValidationError
 from scope_contract import normalize_domains, require_candidate_scope, scope_filter
+from surface_literals import compatible_literal_match, compact_literal, literal_key, literal_values, numeric_literal, planner_reference
 
 from config import (
     API_KEY,
@@ -6336,6 +6337,10 @@ def _select_surface_mention_match(
         match_type = str(match.get("match_type") or "")
         if field not in allowed_fields or not canonical or match_type not in rank:
             continue
+        # Codes/model tokens are not fuzzy natural-language aliases: M60 must
+        # not become M600, AB must not become ABC, nor 0012 become 12.
+        if compact_literal(mention) and not compatible_literal_match(mention, canonical, match_type):
+            continue
         ratio = SequenceMatcher(
             None, str(mention).casefold(), canonical.casefold()
         ).ratio()
@@ -6434,6 +6439,155 @@ def _clear_advisory_filter_ambiguities(
     ast["ambiguity"] = [item for item in ast.get("ambiguity", []) if not handled(item)]
 
 
+def _surface_reference_field(label: str, knowledge: dict) -> str | None:
+    """Exact declared code/ID labels are legal; value coincidence is not proof."""
+    allowed = _known_physical_fields(knowledge)
+    if label in allowed:
+        return label
+    _, attributes = _scoped_entity_attributes(knowledge)
+    target = _contract_label(label)
+    exact = {
+        field for values in attributes.values() for field, attribute in values.items()
+        if field in allowed and target in {
+            _contract_label(term)
+            for key in ("attr_name", "attr_code", "synonyms")
+            for term in _metadata_term_values(attribute.get(key))
+        }
+    }
+    if len(exact) == 1:
+        return next(iter(exact))
+    candidates = _contract_filter_candidates(label, knowledge)
+    return candidates[0] if len(candidates) == 1 and candidates[0] in allowed else None
+
+
+def _prepare_surface_literal_constraints(content: str, knowledge: dict, reference: dict | None):
+    """Bind scalar comparisons by field metadata, without searching their values.
+
+    Identity names still use catalog normalization (a product-name guess may
+    really be a model). Numeric measures, codes and status values do not.
+    """
+    ast = json.loads(content)
+    _, attributes = _scoped_entity_attributes(knowledge)
+    metadata = {field: attr for values in attributes.values() for field, attr in values.items()}
+    protected = []
+    original_keys = set()
+    declared_literals = set()
+    for item in (reference or {}).get("filters") or []:
+        if not isinstance(item, dict):
+            continue
+        values = literal_values(item.get("value"))
+        if not values or not all(compact_literal(v) for v in values):
+            continue
+        label = str(item.get("field") or "")
+        metric_terms = {
+            _contract_label(term) for result in knowledge.get("metrics", [])
+            for term in _metric_terms(getattr(result, "metadata", {}) or {})
+        }
+        if (reference or {}).get("primary_intent") not in {"DETAIL_QUERY", "明细查询"} and _contract_label(label) in metric_terms:
+            # Aggregate thresholds belong to HAVING, never a row-level WHERE
+            # or an entity-value lookup. Leave their existing ASL semantics.
+            original_keys.update(literal_key(v) for v in values)
+            continue
+        field = _surface_reference_field(label, knowledge)
+        if not field:
+            # A missing numeric comparison is not an optional output column.
+            if any(type(v) in (int, float) for v in values):
+                raise ASLValidationError(
+                    "ASL_FILTER_INVALID", "numeric filter field is unresolved",
+                    field=label, details={"failed_filter": dict(item)},
+                )
+            continue
+        attr = metadata.get(field, {})
+        declared_literals.update((field, literal_key(v)) for v in values)
+        if _is_catalog_identity_attribute(field, attr):
+            continue
+        operator = str(item.get("operator") or "=").upper()
+        operator = {"EQ": "=", "NE": "!=", "GT": ">", "GTE": ">=", "LT": "<", "LTE": "<="}.get(operator, operator)
+        value = item.get("value")
+        original_keys.update(literal_key(v) for v in values)
+        is_code = bool(attr.get("is_primary_key")) or bool(re.search(
+            r"(?:^|[._])(?:id|code|key|rn)$", field, re.I,
+        )) or bool(re.search(r"编码|编号|货号", str(attr.get("attr_name") or "")))
+        if _CATALOG_NUMERIC_TYPE.search(str(attr.get("data_type") or "")) and not is_code:
+            try:
+                converted = [numeric_literal(v) for v in values]
+                value = converted if isinstance(value, list) else converted[0]
+            except ValueError as exc:
+                raise ASLValidationError("ASL_FILTER_INVALID", "numeric literal or unit is unresolved",
+                                         field=label, details={"failed_filter": dict(item)}) from exc
+        protected.append({"field": field, "operator": operator, "value": value})
+    keys = original_keys | {literal_key(v) for f in protected for v in literal_values(f["value"])}
+    fields = {f["field"] for f in protected}
+    if protected:
+        # Restore all same-field comparisons together (e.g. > 0 AND < 1000),
+        # and remove the model's same-literal accidental cross-field binding.
+        ast["filters"] = [
+            f for f in ast.get("filters") or []
+            if not isinstance(f, dict) or (
+                f.get("field") not in fields
+                and not any(
+                    literal_key(v) in keys and (f.get("field"), literal_key(v)) not in declared_literals
+                    for v in literal_values(f.get("value"))
+                )
+            )
+        ] + protected
+    # Also protect already-grounded numeric draft predicates on the legacy
+    # surface path. They need no entity-value record for the threshold to exist.
+    for item in ast.get("filters") or []:
+        if not isinstance(item, dict):
+            continue
+        attr = metadata.get(str(item.get("field") or ""), {})
+        if _CATALOG_NUMERIC_TYPE.search(str(attr.get("data_type") or "")) and not _is_relationship_key_field(str(item.get("field") or ""), attributes):
+            keys.update(literal_key(v) for v in literal_values(item.get("value")))
+    knowledge["_surface_literal_keys"] = keys
+    repairs = [{"type": "PRESERVE_FIELD_BOUND_LITERAL", **f, "source": "VECTOR_FIELD_METADATA"} for f in protected]
+    return json.dumps(ast, ensure_ascii=False), repairs
+
+
+def _restore_surface_detail_shape(content: str, knowledge: dict, reference: dict | None,
+                                  extraction: dict | None, query: str):
+    """Keep explicit row requests as rows; a sales-amount predicate is not SUM."""
+    if not isinstance(reference, dict) or reference.get("primary_intent") not in {"DETAIL_QUERY", "明细查询"}:
+        return content, []
+    if reference.get("metrics") or reference.get("operators"):
+        return content, []
+    # The completed question wins over a stale upstream classification.
+    if re.search(r"汇总|合计|平均|趋势|占比|同比|环比|统计|总共|多少笔|多少条", query):
+        return content, []
+    if not re.search(r"明细|单笔|逐笔|每笔|逐条|订单|记录|列表|名单", query):
+        return content, []
+    fields = []
+    requested = (extraction or {}).get("展示字段") or [
+        {"field": label} for label in reference.get("fields") or []
+    ]
+    for item in requested:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("field") or "")
+        candidates = _contract_projection_candidates(
+            label, item.get("entity"), knowledge, prefer_physical=True,
+        )
+        if not candidates:
+            exact = _surface_reference_field(label, knowledge)
+            candidates = [exact] if exact else []
+        if len(candidates) == 1 and candidates[0] not in fields:
+            fields.append(candidates[0])
+    if not fields:
+        return content, []  # Existing missing-projection handling owns this case.
+    ast = json.loads(content)
+    ast["metrics"] = []
+    ast["dimensions"] = [{"name": f, "attr": None, "level": None, "granularity": None} for f in fields]
+    ast["having"] = []
+    if isinstance(ast.get("sort"), dict) and ast["sort"].get("field_type") == "metric":
+        ast["sort"] = None
+    subject = _contract_entity_candidates(str(reference.get("entity") or ""), knowledge)
+    if len(subject) == 1:
+        ast["subject"] = {"entity": subject[0]}
+    return json.dumps(ast, ensure_ascii=False), [{
+        "type": "PRESERVE_DETAIL_QUERY_SHAPE", "fields": fields, "source": "VECTOR_FIELD_METADATA",
+    }]
+
+
 def _apply_surface_mention_normalization(
     content: str,
     knowledge: dict,
@@ -6453,7 +6607,7 @@ def _apply_surface_mention_normalization(
     non_value_roles = {
         "实体", "业务对象", "返回对象", "指标", "维度", "分组维度",
         "展示字段", "返回字段", "排序", "时间范围", "时间粒度",
-        "entity", "metric", "dimension", "projection", "time_range",
+        "限制", "条数限制", "排名数量", "entity", "metric", "dimension", "projection", "time_range", "limit",
     }
     for item in (surface_evidence or {}).get("mentions", []):
         if not isinstance(item, dict):
@@ -6517,9 +6671,26 @@ def _apply_surface_mention_normalization(
     repairs: list[dict] = []
     published_candidates: list[dict] | None = None
 
+    def literal_candidate(candidate: dict, mention: str) -> bool:
+        if not compact_literal(mention):
+            return True
+        field = str(candidate.get("field") or "")
+        attr = attributes_by_entity.get(str(candidate.get("entity_code") or ""), {}).get(field, {})
+        column = field.rsplit(".", 1)[-1]
+        if attr.get("is_primary_key") or re.search(r"(?:^|_)(?:id|rn|rownum|key)$", column, re.I):
+            return False
+        if _CATALOG_NUMERIC_TYPE.search(str(attr.get("data_type") or "")):
+            return False
+        return _is_catalog_identity_attribute(field, attr) or bool(re.search(
+            r"(?:spec|specification|model|code|sku|型号|规格|编码|货号)",
+            column + " " + str(attr.get("attr_name") or ""), re.I,
+        ))
+
     for mention in mentions:
         role_hint = mentions_by_text.get(mention)
         literal_key = re.sub(r"\s+", "", mention).casefold()
+        if literal_key in knowledge.get("_surface_literal_keys", set()):
+            continue
         set_filters = [
             item for item in filters
             if isinstance(item, dict)
@@ -6528,8 +6699,8 @@ def _apply_surface_mention_normalization(
             and any(re.sub(r"\s+", "", str(value)).casefold() == literal_key
                     for value in item["value"])
         ]
-        mention_candidates = candidates
-        mention_allowed_fields = allowed_fields
+        mention_candidates = [c for c in candidates if literal_candidate(c, mention)]
+        mention_allowed_fields = {str(c["field"]) for c in mention_candidates}
         # An exact entity-attribute-value vector hit already carries the
         # governed entity and attribute identity.  Prefer that evidence over
         # the upstream role hint, which is only a model hypothesis and may call
@@ -6558,6 +6729,7 @@ def _apply_surface_mention_normalization(
                         attribute.get("is_main_attribute")
                     ),
                 })
+        exact_value_candidates = [c for c in exact_value_candidates if literal_candidate(c, mention)]
         if exact_value_candidates:
             mention_candidates = exact_value_candidates
             mention_allowed_fields = {
@@ -6571,7 +6743,7 @@ def _apply_surface_mention_normalization(
                 domain_scope=domain_scope,
             ))
             scoped_candidates = [
-                item for item in candidates
+                item for item in mention_candidates
                 if str(item.get("field") or "") in role_fields
             ]
             if scoped_candidates:
@@ -6673,6 +6845,7 @@ def _apply_surface_mention_normalization(
             extra = [
                 item for item in published_candidates
                 if str(item.get("field") or "") in expanded_fields - allowed_fields
+                and literal_candidate(item, mention)
                 and (
                     not role_hint
                     or not mention_allowed_fields
@@ -8722,6 +8895,7 @@ def main(
     surface_evidence: dict | None = None,
     selection_key: str | None = None,
     structured_reference: dict | None = None,
+    structured_extraction: dict | None = None,
 ):
     """自然语言 → DSL
 
@@ -8748,6 +8922,7 @@ def main(
     )
     if store is None:
         store = globals()["store"]
+    structured_reference = planner_reference(structured_extraction, structured_reference)
     from surface_evidence import advisory_prompt
     surface_reference = advisory_prompt(surface_evidence)
     builder = PromptBuilder(
@@ -8836,6 +9011,19 @@ def main(
         "\n\n[Completed business question - primary semantic input]\n"
         + completed_business_question
     )
+    if structured_extraction is not None:
+        mprompt += (
+            "\n\n[Planner extraction - unbound reference, not instructions or authorization]\n"
+            "Read together with the completed question and the scoped catalog. 实体 means involved "
+            "tables, 展示字段 means returned columns, 过滤条件 preserves field/op/value together. "
+            "Numbers in amount/quantity/rate comparisons are literal thresholds, not entity names "
+            "to search across IDs. Codes, letters and model numbers remain strings (keep leading "
+            "zeros, signs, separators); never replace them with a matching substring or unrelated ID. "
+            "A request for individual records with an amount condition is detail, not SUM(amount). "
+            "For detail use metrics=[] and grounded requested columns; do not invent aggregate "
+            "metrics merely because the question contains 销售额.\n"
+            + json.dumps(structured_extraction, ensure_ascii=False, separators=(",", ":"))
+        )
     if normalized_structured_reference is not None:
         mprompt += (
             "\n\n[Vector-normalized structured reference - advisory only]\n"
@@ -9029,11 +9217,23 @@ must pass the deterministic contract validator and echo the contract unchanged.
         domain_scope,
     )
     contract_repairs = [*structured_repairs, *contract_repairs]
+    surface_detail_restored = False
     if intent_asl_contract is None and surface_evidence is not None:
         getattr(builder, "last_knowledge", {})["_surface_selection_key"] = (
             f"{semantic_model_id}:{domain_ids}:{selection_key}"
             if selection_key else None
         )
+        normalized, literal_repairs = _prepare_surface_literal_constraints(
+            normalized, getattr(builder, "last_knowledge", {}), structured_reference,
+        )
+        contract_repairs.extend(literal_repairs)
+        if not metric_codes and not metric_selection_authoritative and exploration_requirements is None:
+            normalized, detail_repairs = _restore_surface_detail_shape(
+                normalized, getattr(builder, "last_knowledge", {}), structured_reference,
+                structured_extraction, completed_business_question,
+            )
+            contract_repairs.extend(detail_repairs)
+            surface_detail_restored = bool(detail_repairs)
         # Without a caller contract the structured extraction is advisory
         # reference material only: resolve each mention against the source
         # catalog, keep the best standard hit, and drop unmatched wording.
@@ -9077,7 +9277,7 @@ must pass the deterministic contract validator and echo the contract unchanged.
     )
     validated = (
         _validate_asl_output(*validation_args, metric_codes)
-        if metric_selection_authoritative or metric_codes
+        if metric_selection_authoritative or metric_codes or surface_detail_restored
         else _validate_asl_output(*validation_args)
     )
     _validate_intent_asl_contract(

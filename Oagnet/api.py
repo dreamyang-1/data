@@ -1231,6 +1231,7 @@ class QueryRequest(BaseModel):
     completed_question: str | None = Field(default=None, min_length=1, max_length=4000)
     surface_evidence: SurfaceEvidence | None = None
     structured_reference: StructuredReference | None = None
+    structured_extraction: dict[str, Any] | None = None
     retrieval_query: str | None = Field(default=None, min_length=1, max_length=4000)
     semantic_model_id: StrictPositiveInt
     business_domain_id: StrictPositiveInt | None = None
@@ -1493,6 +1494,8 @@ def agent_query(req: QueryRequest, request: Request = None):
                     req.structured_reference.model_dump(mode="json")
                     if req.structured_reference is not None else None
                 ),
+                **({"structured_extraction": req.structured_extraction}
+                   if req.structured_extraction is not None else {}),
                 store=_store,
                 semantic_model_id=req.semantic_model_id,
                 business_domain_id=req.business_domain_id,
