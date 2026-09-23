@@ -8462,6 +8462,104 @@ def _normalize_structured_reference(
     return normalized, dropped
 
 
+def _allow_partial_surface_projections(
+    content: str, knowledge: dict, reference: dict | None, original_content: str,
+) -> tuple[str, list[dict]]:
+    """An unavailable display column need not discard an otherwise usable list.
+
+    Only the advisory detail path may degrade. Explicit execution contracts,
+    grouped/metric queries and columns used as constraints keep their guards.
+    No unregistered field is authorized and no replacement value is invented.
+    """
+    if not isinstance(reference, dict) or reference.get("primary_intent") not in {"DETAIL_QUERY", "明细查询"}:
+        return content, []
+    ast = json.loads(content)
+    original = json.loads(_strip_code_fence(original_content))
+    if (ast.get("metrics") or original.get("metrics") or reference.get("metrics")
+            or set(reference.get("operators") or []).intersection({"GROUP_BY", "GROUP", "AGGREGATE"})):
+        return content, []
+    requested = [str(value).strip() for value in reference.get("fields") or [] if str(value).strip()]
+    if not requested:
+        return content, []
+    allowed = set(knowledge.get("_vector_authorized_fields") or _known_physical_fields(knowledge))
+    allowed.update(_known_codes(knowledge, "dimensions", "dim_code"))
+    dimensions = ast.get("dimensions") or []
+    retained = [item for item in dimensions if isinstance(item, dict) and item.get("name") in allowed]
+    if not retained or any(item.get("granularity") for item in dimensions if isinstance(item, dict)):
+        return content, []
+    selected = {str(item["name"]) for item in retained}
+    missing = []
+    matched_requested = False
+    for label in requested:
+        candidates = set(_contract_projection_candidates(label, reference.get("entity"), knowledge))
+        if label in selected or candidates.intersection(selected):
+            matched_requested = True
+            continue
+        # A broad contact request may legitimately expand to several registered
+        # contact columns. Do not call that expansion an omitted display field.
+        if label in {"联系方式", "联系信息", "contact_info", "contact information"}:
+            _, owners = _scoped_entity_attributes(knowledge)
+            if any(field in selected and _CONTACT_ATTRIBUTE.search(" ".join(
+                str(attribute.get(key) or "") for key in ("attr_code", "attr_name", "description")
+            )) for attributes in owners.values() for field, attribute in attributes.items()):
+                matched_requested = True
+                continue
+        missing.append(label)
+    if not missing or not matched_requested:
+        return content, []
+    unresolved = {
+        str(item.get("name") or "")
+        for item in [*(original.get("dimensions") or []), *dimensions]
+        if isinstance(item, dict) and item.get("name") and item.get("name") not in allowed
+    }
+    # A missing output which also acts as a filter is not merely presentation.
+    constraints = [*(original.get("filters") or []), *(reference.get("filters") or [])]
+    protected_fields = {str(item.get("field") or "") for item in constraints if isinstance(item, dict)}
+    protected_fields.update(str(value) for value in reference.get("dimensions") or [])
+    protected_fields.add(str((original.get("sort") or {}).get("field") or ""))
+    protected_fields.add(str((original.get("time_context") or {}).get("anchor") or ""))
+    if protected_fields.intersection({*missing, *unresolved}) or any(
+        term in str(expression) for expression in original.get("having") or []
+        for term in [*missing, *unresolved]
+    ):
+        return content, []
+    # Only remove identifiable projection ambiguities, not entity/filter/time
+    # questions or an opaque model failure. Keep their original diagnostics.
+    remaining = []
+    for ambiguity in ast.get("ambiguity") or []:
+        if not isinstance(ambiguity, dict):
+            remaining.append(ambiguity)
+            continue
+        slots = set(ambiguity.get("affected_slots") or [])
+        text = " ".join(str(ambiguity.get(key) or "") for key in ("phrase", "question", "field"))
+        display_only = (str(ambiguity.get("type") or "").lower() in {
+            "dimension", "field", "projection", "display_field", "attribute",
+        } and not (slots - {"fields", "field", "projection", "dimensions", "dimension"}))
+        contact_ambiguity = (
+            any(_CONTACT_ATTRIBUTE.search(label) for label in missing)
+            and any(term in text for term in ("联系方式", "联系信息"))
+        )
+        if not (display_only and (contact_ambiguity or any(term in text for term in [*missing, *unresolved]))):
+            remaining.append(ambiguity)
+    # An unrelated missing projection cannot be dropped by proximity to one
+    # missing label. It must have become an identifiable display ambiguity.
+    if len(retained) != len(dimensions):
+        for item in dimensions:
+            if item in retained:
+                continue
+            name = str(item.get("name") or "") if isinstance(item, dict) else ""
+            if not name or not any(name == label or _contract_label(name.rsplit(".", 1)[-1]) == _contract_label(label)
+                                   or (_CONTACT_ATTRIBUTE.search(name.rsplit(".", 1)[-1]) and _CONTACT_ATTRIBUTE.search(label))
+                                   for label in missing):
+                return content, []
+    ast["dimensions"] = retained
+    ast["ambiguity"] = remaining
+    repairs = [{"type": "OMIT_UNAVAILABLE_DISPLAY_FIELD", "field": label,
+                "entity": reference.get("entity"), "source": "VECTOR_DISPLAY_PROJECTION",
+                "retained_fields": sorted(selected)} for label in missing]
+    return json.dumps(ast, ensure_ascii=False), repairs
+
+
 def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
     """Require every executable ASL field to exist in the vector recall scope."""
     ast = json.loads(content)
@@ -8953,6 +9051,11 @@ must pass the deterministic contract validator and echo the contract unchanged.
         semantic_model_id,
         domain_ids,
     )
+    if intent_asl_contract is None and surface_evidence is not None:
+        normalized, partial_projection_repairs = _allow_partial_surface_projections(
+            normalized, getattr(builder, "last_knowledge", {}), structured_reference, content,
+        )
+        contract_repairs.extend(partial_projection_repairs)
     _validate_vector_grounded_asl(normalized, getattr(builder, "last_knowledge", {}))
     validation_args = (
         normalized,
