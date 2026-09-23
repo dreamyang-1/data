@@ -41,3 +41,27 @@ Current Stage：明细时间与澄清一致性修复完成，专项、Critical S
 Cutover Blocker P0/P1、Catalog/Evaluation/Shadow Gap：本次不重新评估全局门禁；既有 MCP 失败独立保留，不借本任务扩展修改。
 V1 Replacement Readiness：不变，保持现有路由，不自动切流。
 Next shortest blocking path：后续授权部署后，以新请求核对时间范围、日期字段、明细金额条件及 SQL。
+
+## 后续授权部署：2026-09-23
+
+用户随后明确要求部署重启。本节更新上述未部署状态，不把离线测试等同于实际业务查询验收。
+
+- 发布标识 `detail-time-6968a2a-20260923-204956`，功能版本 Oagnet `ef4fadd`、DataAnalysis `6968a2a`。
+- 仅部署 `Oagnet/agent.py` 和 DataAnalysis `app/services/orchestrator.py`。两个旧文件均与 `6711e32` 基线一致（允许 CRLF/LF 差异）；替换前再次核对原始字节哈希，未发现他人修改冲突。
+- 备份与哈希清单：`/root/.codex-deploy-backups/detail-time-6968a2a-20260923-204956`。完成 AST、上传哈希及替换后哈希核验；设置失败回滚，实际未触发。
+- 远程 Oagnet 明细时间与标量专项：**69 passed，2.85 秒**。向量库、数据库和模型为模拟依赖，测试 logger 不写生产日志。
+- 远程 DataAnalysis 澄清一致性与平台指标别名专项：**16 passed，1.00 秒**。使用 mock 适配器与内存会话；临时测试进程使用 V1 环境，不更改服务运行模式。
+- Oagnet 重启时间 **20:50:18 CST**，PID `3148136` → `3824713`；DataAnalysis 重启时间 **20:50:22 CST**，PID `3476328` → `3825061`。两者均为 active，NRestarts=0。
+- SQL Translator 保持 PID `2051085` 及原启动时间，未部署、未重启。
+- 服务本机与开发机检查：Oagnet `UP`，向量库 healthy=true，平台 `READY`；readiness profiles 全部通过，无 degraded capabilities。路由仍为 `V2_CONTEXT_V1_EXECUTION`。
+
+部署后运行文件 SHA-256，与版本仓一致：
+
+| 文件 | SHA-256 |
+| --- | --- |
+| Oagnet/agent.py | 34b948e242226f9bd52998a5490bc251d30fbf143f73b1321e92c2f67c1fe839 |
+| app/services/orchestrator.py | 775babf2332aa51521733613a4a5ec5ba14149bede1656b3402770c26ff3c4b3 |
+
+Current Stage：两个目标服务已部署重启，远程专项与健康检查通过。
+Cutover/Catalog/Evaluation/Shadow 全局门禁不重新评估，V1 Replacement Readiness 不变，不自动合并 Draft PR。
+Next shortest blocking path：通过新请求验收真实模型、目录、SQL 与订单结果；本轮未执行真实业务查询，也未清理或改写用户的历史会话/Pending。
