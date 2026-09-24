@@ -60,7 +60,26 @@ are changed. User stage names/order remain unchanged.
 - Live local changed Oagnet + deployed SQL translation: example retains dealer
   grouping, selects hospital-owned province FK, has time_context=null, and SQL
   joins hospital without a calendar-year WHERE. Business SQL not executed in
-  this probe. Deployment/end-to-end verification to be recorded after release.
+  this probe.
+
+## Deployment and end-to-end verification
+
+- Runtime commit: `cecf4f3`; exact ten-file runtime manifest deployed after
+  known-version drift checks and recoverable backups. No unrelated API file or
+  configuration was overwritten. Protected configuration hashes are unchanged.
+- Remote scoped tests: Oagnet 178 passed; DataAnalysis 350 passed.
+- Oagnet restarted at 2026-09-24 16:55:16 CST; DataAnalysis restarted at
+  16:55:20 CST. Both health endpoints passed; vector health passed. SQL service
+  was unchanged and was not restarted.
+- Fresh-conversation production-route composite smoke completed in 82.4 seconds.
+  Both children completed. Task 1 preserved dealer grouping and used the
+  hospital-owned region FK in ASL and SQL; both ASLs had `time_context=null`,
+  with no current-year SQL predicate. Task 2 remained scalar. Task labels and
+  all six frozen user-visible stages appeared in the required order.
+- No raw business rows or credentials are included in this report. Existing
+  full-suite baseline failures remain as documented above; no new failing IDs.
+- Current stage remains bounded V1 maintenance. This release does not close
+  the separate catalog/evaluation/shadow gaps or authorize V2 replacement.
 
 ## Exact manifest
 
