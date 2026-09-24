@@ -26,7 +26,7 @@ SYSTEM_PROMPT = """
   "metrics": [                       // 指标列表，至少1个
     {
       "name": "指标编码",         // 必须来自 metrics.yml 的 metric_code，严禁用 表.字段 格式
-      "alias": "用户原话",            // 用户对指标的原始说法，保留便于回溯
+      "alias": "指标标准名称",        // 必须使用所选指标的 metric_name，不能填用户简称或自行改写
       "time_anchor": null            // 时间锚点：null 用指标默认锚点，或填 "表名.字段名" 覆盖
     }
   ],
@@ -97,7 +97,7 @@ SYSTEM_PROMPT = """
 ### 3. metrics（指标）
 - 匹配优先级：`metric_code` > `metric_name` > `synonyms`
 - 复合指标（如客单价、退款率）需展开 `depend_metrics` / `depend_atom_metric` 时**不要展开**，直接输出复合指标 code，由下游 SQL 生成器递归处理
-- `alias` 填用户原话，便于回溯；**但若指标的 `calc_formula` 已含 `as` 语句（已指定别名），则 `alias` 必须传 null**，避免与 SQL 别名冲突
+- `alias` 必须填写本轮召回中所选 `metric_code` 对应的 `metric_name`，不填用户原话、不缩写、不自行改名；目录缺少标准名称时使用该指标编码。即使 `calc_formula` 带有旧输出列别名，仍填写标准名称，由 SQL 翻译器统一输出列名与排序引用，不改计算表达式。`name` 仍必须填写标准编码，不能改成中文名称
 - `time_anchor` 默认 null（用指标默认锚点）；若用户明确说"按下单时间"或"按付款时间"则覆盖为 `表名.字段名` 格式（如 `order_info.create_time`）
 - **【强制】`name` 必须是 metrics.yml 中存在的 `metric_code`**，严禁使用 `表.字段` 格式（如 `goods_info.sales_volume`）；`表.字段` 格式仅用于 dimensions（实体属性作维度）和 filters.field
 - **用户要求统计且 metrics.yml 中无匹配指标时**：不要从实体属性借用字段当 metric，也不要将最接近的指标当成已选指标；仅列出有业务含义证据的候选并报告未绑定的具体计算要求。用户只要求实体名称、属性值或关系名单时，metrics=[]，直接使用已发布属性投影，不要求“对应的明细指标”。
@@ -178,7 +178,7 @@ SYSTEM_PROMPT = """
 5. **实体属性作维度时**，name 用 `表.字段` 格式
 6. **time_context.anchor 必须为 `表名.字段名` 格式**（如 `order_info.pay_time`）
 7. **having 中字段必须用 `表名.字段名` 格式**，每条为完整 SQL 表达式字符串
-8. **若指标的 `calc_formula` 已含 `as` 语句，metrics.alias 必须传 null**
+8. **metrics.alias 使用已召回指标的 metric_name，不采用用户简称或公式中的旧列名；metrics.name 保留标准 metric_code**
 9. **输出纯 JSON**，不要包裹 markdown 代码块，不要解释
 10. **【空召回硬性约束】当 entities.yml / metrics.yml / dimensions.yml 三者均为 "(无召回)" 时，严禁凭空编造实体编码、指标编码或维度字段**——此时你对用户问题所需的业务对象一无所知，任何 AST 都是臆造。必须输出下列"空召回澄清"结构（metrics/dimensions 留空，ambiguity 非空），由下游暂停并向用户追问：
 ```json

@@ -757,6 +757,24 @@ def _normalize_semantic_references(
     return json.dumps(ast, ensure_ascii=False)
 
 
+def _complete_metric_alias_from_recall(ast: dict, knowledge: dict) -> None:
+    """Use the selected vector metric's label, never a model paraphrase.
+
+    This only sets presentation metadata; it cannot authorize or select a
+    metric. SQL translation must use this label consistently for SELECT and
+    ORDER BY, even when a catalog formula has an old output alias. Incomplete
+    catalogs fall back to the registered code without creating a new blocker.
+    """
+    for metric in ast.get("metrics") or []:
+        if not isinstance(metric, dict):
+            continue
+        code = str(metric.get("name") or "")
+        record, metadata = _metric_vector_metadata(knowledge, code)
+        if record is None:
+            continue  # The existing semantic-code validator rejects this.
+        metric["alias"] = str(metadata.get("metric_name") or "").strip() or code
+
+
 def _complete_dimension_alias_from_recall(ast: dict, knowledge: dict) -> None:
     """Fill a logical dimension alias only from unique recalled metadata.
 
@@ -5560,6 +5578,7 @@ def _validate_asl_output(
         raise ValueError(
             "ASL must contain a metric, a detail projection, or a clarification ambiguity"
         )
+    _complete_metric_alias_from_recall(ast, knowledge)
     return json.dumps(ast, ensure_ascii=False)
 
 
