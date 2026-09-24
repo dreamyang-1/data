@@ -801,6 +801,7 @@ async def chat_stream(
         execution = asyncio.create_task(execute())
         deferred_planning: list[dict[str, Any]] = []
         intent_completed = False
+        question_completion_displayed = False
         file_inspection_completed = False
         planning_released = False
         presentation_scenario = "ANALYTIC"
@@ -868,6 +869,7 @@ async def chat_stream(
 
         def ordered_progress(event: dict[str, Any]) -> list[dict[str, Any]]:
             nonlocal intent_completed, file_inspection_completed
+            nonlocal question_completion_displayed
             nonlocal planning_released, presentation_scenario, composite_mode
             nonlocal latest_progress_stage
             stage = str(event.get("stage") or "").upper()
@@ -897,6 +899,25 @@ async def chat_stream(
                 # but they describe catalog/binding internals rather than
                 # user decisions and must not enter the public SSE document.
                 return []
+            if (
+                stage == "INTENT_RECOGNITION"
+                and event.get("progress_phase") == "V2_RESOLVED_INTENT_CONTEXT_READY"
+            ):
+                if question_completion_displayed:
+                    return []
+                # The completed question is the public intent/planning boundary.
+                # Later classification milestones still drive internal ordering,
+                # but must not reopen the intent node or its heartbeat.
+                question_completion_displayed = True
+                intent_completed = True
+                return [
+                    dict(event, status="COMPLETED"),
+                    {
+                        "stage": "TASK_PLANNING",
+                        "status": "RUNNING",
+                        "message": "正在进行任务拆分、任务意图分析与参数提取。",
+                    },
+                ]
             if stage == "TASK_PLANNING" and not planning_released:
                 # The document format presents one stable planning block. Keep
                 # the latest completed planner message and release it only once
@@ -904,14 +925,16 @@ async def chat_stream(
                 # first claim that it will execute and then immediately stop.
                 if str(event.get("status") or "").upper() == "COMPLETED":
                     deferred_planning[:] = [event]
-                elif not deferred_planning:
+                    if intent_completed:
+                        latest_progress_stage = "TASK_PLANNING"
+                    return []
+                if not deferred_planning:
                     deferred_planning.append(event)
-                # 规划块内容仍然延迟发布；意图节点完成后心跳锚点跟着走到
-                # 规划阶段，拆分模型执行期间前端就不会一直停在"正在意图识别"。
-                # 意图完成之前的规划事件不推进锚点，维持
-                # 意图识别 → 任务拆分与规划 的既定展示顺序。
                 if intent_completed:
+                    # Preserve the deployed early planning-running display;
+                    # only the completed plan waits for readiness.
                     latest_progress_stage = "TASK_PLANNING"
+                    return [event]
                 return []
             if (
                 stage == "INTENT_RECOGNITION"
@@ -927,6 +950,15 @@ async def chat_stream(
                     deferred_planning.clear()
                     planning_released = True
                     return ordered
+                pending_planning_runs = [
+                    item for item in deferred_planning
+                    if str(item.get("status") or "").upper() != "COMPLETED"
+                ]
+                if pending_planning_runs:
+                    deferred_planning[:] = [
+                        item for item in deferred_planning if item not in pending_planning_runs
+                    ]
+                    return [event, *pending_planning_runs]
             if (
                 composite_mode
                 and bool(event.get("is_child_task"))
@@ -1015,6 +1047,16 @@ async def chat_stream(
             try:
                 visible_progress = ordered_progress(progress_event)
                 for event in visible_progress:
+                    if (
+                        question_completion_displayed
+                        and event.get("stage") == "INTENT_RECOGNITION"
+                        and event.get("progress_phase") != "V2_RESOLVED_INTENT_CONTEXT_READY"
+                    ):
+                        if _thinking_section(latest_progress_stage) not in {"intent", "planning"}:
+                            continue
+                        # Keep useful parameter/child-question summaries, under
+                        # planning rather than emitting another intent node.
+                        event = dict(event, stage="TASK_PLANNING")
                     candidate_progress_stage = str(
                         event.get("stage") or latest_progress_stage
                     ).strip().upper()

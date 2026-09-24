@@ -691,6 +691,71 @@ def test_default_visible_progress_heartbeat_is_one_second():
     )
 
 
+@pytest.mark.parametrize("scenario", ["single", "composite", "clarification", "pending_resume"])
+def test_completed_question_moves_public_stream_to_planning_without_intent_regression(scenario):
+    app = build_test_app(runtime_mode="V1", thinking_stream_heartbeat_seconds=0.05)
+
+    class CompletedQuestionWorkflow:
+        async def ainvoke(self, state):
+            await emit_progress("INTENT_RECOGNITION", "RUNNING", "正在理解当前问题。")
+            await emit_progress(
+                "INTENT_RECOGNITION", "RUNNING", "补全后的问题：查询已确认业务范围的销售额。",
+                progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+            )
+            # Slow planner / extraction: heartbeat must already be planning.
+            await asyncio.sleep(0.12)
+            await emit_progress("INTENT_RECOGNITION", "RUNNING", "正在提取任务参数。")
+            await emit_progress("TASK_PLANNING", "RUNNING", "正在判断是否拆分。")
+            await emit_progress("TASK_PLANNING", "COMPLETED", "拆分判断完成。\n任务1：查询销售额")
+            await emit_progress(
+                "INTENT_RECOGNITION", "COMPLETED", "参数提取：销售额",
+                is_composite=scenario == "composite",
+                presentation_scenario="CLARIFICATION" if scenario == "clarification" else "ANALYTIC",
+            )
+            await emit_progress("COMPLETENESS_CHECK", "NEEDS_INPUT" if scenario == "clarification" else "COMPLETED", "参数校验完成")
+            if scenario != "clarification":
+                await emit_progress("SQL_EXECUTION", "RUNNING", "正在执行查询。")
+                await emit_progress("INTENT_RECOGNITION", "COMPLETED", "迟到的识别摘要不应重新开启节点")
+                await emit_progress("RELIABILITY_CHECK", "COMPLETED", "校验完成")
+                await emit_progress("INSIGHT_ANALYSIS", "COMPLETED", "分析完成")
+                await emit_progress("FINAL_OUTPUT", "COMPLETED", "结果已就绪")
+            return {"response": AgentResponse(
+                request_id=uuid4(), conversation_id=state["chat"].conversation_id,
+                status="NEEDS_CLARIFICATION" if scenario == "clarification" else "COMPLETED",
+                intent=PrimaryIntent.METRIC_QUERY, answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(app.state.container, "workflow", CompletedQuestionWorkflow())
+        response = client.post("/agent_chat/stream", json={
+            "semantic_model_id": 81, "application_id": "app1",
+            "conversation_id": "completion-boundary-" + scenario,
+            "message_id": "m1", "question": "1" if scenario == "pending_resume" else "查询销售额",
+        })
+    assert response.status_code == 200
+    events = [json.loads(b.removeprefix("data: ")) for b in response.text.strip().split("\n\n")]
+    chunks = [e for e in events if e.get("type") == "message_chunk" and e.get("meta", {}).get("stage")]
+    completion_end = max(i for i, e in enumerate(chunks)
+                         if e["meta"].get("stage") == "INTENT_RECOGNITION")
+    assert "补全后的问题" in "".join(e.get("content", "") for e in chunks[:completion_end + 1])
+    assert chunks[completion_end]["meta"]["status"] == "COMPLETED"
+    assert chunks[completion_end + 1]["meta"]["stage"] == "TASK_PLANNING"
+    heartbeats = [e for e in chunks[completion_end + 1:] if "已用时" in e.get("content", "")]
+    assert heartbeats and all(e["meta"]["stage"] == "TASK_PLANNING" for e in heartbeats)
+    text = "".join(e.get("content", "") for e in chunks)
+    assert text.count("#### ◉ 意图识别") == 1
+    assert text.count("#### ◉ 任务拆分与规划") == 1
+    assert "迟到的识别摘要" not in text
+    assert "参数提取：销售额" in thinking_content(events, "TASK_PLANNING", status="COMPLETED")
+    if scenario != "clarification":
+        stages = [e["meta"]["stage"] for e in chunks]
+        rank = {s: i for i, s in enumerate([
+            "INTENT_RECOGNITION", "TASK_PLANNING", "SQL_EXECUTION",
+            "RELIABILITY_CHECK", "INSIGHT_ANALYSIS", "FINAL_OUTPUT",
+        ])}
+        assert [rank[s] for s in stages] == sorted(rank[s] for s in stages)
+
+
 def test_default_thinking_text_uses_one_character_every_30ms():
     assert Settings.model_fields["thinking_stream_chunk_size"].default == 1
     assert (
@@ -854,7 +919,7 @@ def test_public_intent_stream_hides_internal_v2_milestones_but_releases_first_pa
         event.get("content", "")
         for event in events
         if event.get("type") == "message_chunk"
-        and event.get("step") == "step1"
+        and event.get("step") in {"step1", "execute_plan"}
         and "已用时" not in event.get("content", "")
     )
     forbidden = (
