@@ -6946,12 +6946,65 @@ def _apply_surface_mention_normalization(
             if set_candidates:
                 mention_candidates = set_candidates
                 mention_allowed_fields = set_fields
+        # Same literal on two governed fields does not make them synonyms:
+        # e.g. hospital location and dealer location can both be "上海市".
+        # Include the draft's scalar bindings in the source check so a vector
+        # hit on a shared dictionary cannot erase their business ownership.
+        scalar_filters = [
+            item for item in filters
+            if isinstance(item, dict)
+            and str(item.get("operator") or "").upper() in {"=", "!="}
+            and re.sub(r"\s+", "", str(item.get("value") or "")).casefold() == literal_key
+        ]
+        scalar_fields = {str(item.get("field") or "") for item in scalar_filters}
+        candidate_tables = {
+            str(item.get("field") or "").partition(".")[0] for item in mention_candidates
+        }
+        for candidate in candidates:
+            if (candidate.get("field") in scalar_fields
+                    and str(candidate["field"]).partition(".")[0] not in candidate_tables
+                    and candidate not in mention_candidates):
+                mention_candidates.append(candidate)
+                mention_allowed_fields.add(str(candidate["field"]))
         matches: list[dict[str, Any]] = []
         for offset in range(0, len(mention_candidates), 32):
             matches.extend(resolve_entity_attribute_catalog_matches(
                 semantic_model_id, domain_scope,
                 mention_candidates[offset : offset + 32], mention,
             ))
+        verified_scalars = []
+        for item in scalar_filters:
+            own_matches = [
+                match for match in matches
+                if str(match.get("field") or "") == item.get("field")
+                and item.get("field") in authorized_fields
+                and (
+                    str(match.get("match_type") or "") == "EXACT"
+                    or _administrative_suffix_completion(
+                        mention, str(match.get("canonical_value") or "")
+                    )
+                )
+            ]
+            own_values = {str(match.get("canonical_value") or "") for match in own_matches}
+            own_values.discard("")
+            if len(own_values) == 1:
+                verified_scalars.append((item, next(iter(own_values))))
+        matched_tables = {
+            str(match.get("field") or "").partition(".")[0] for match in matches
+        }
+        if (scalar_filters and len(verified_scalars) == len(scalar_filters)
+                and len(matched_tables) > 1):
+            for item, canonical_value in verified_scalars:
+                item["value"] = canonical_value
+                knowledge.setdefault("_source_verified_filter_values", set()).add(
+                    (item["field"], canonical_value)
+                )
+            _clear_advisory_filter_ambiguities(ast, mention)
+            repairs.append({
+                "type": "PRESERVE_SOURCE_VERIFIED_FILTER_ROLE",
+                "mention": mention, "source": "SURFACE_MENTION_RECALL",
+            })
+            continue
         resolved_matches = matches
         resolved = _select_surface_mention_match(
             mention,

@@ -1865,9 +1865,8 @@ class SQLTranslatorProd:
             table_name, model_id
         )
 
-        # 0. 优先延续已经用于 GROUP BY 的语义实体关系。候选仍全部来自当前
-        # 语义层，只调整路径选择：省份筛选不能在已选中经销商/城市层级后又
-        # 另开医院等无关业务分支。
+        # 0. 延续调用方明确提供的层级锚点；普通 GROUP BY 实体不代表
+        # 筛选条件归属（按经销商分组仍可筛选医院所在地）。
         anchored_paths = []
         for anchor_rank, anchor in enumerate(
             dict.fromkeys(preferred_entities or [])
@@ -2907,6 +2906,12 @@ class SQLTranslatorProd:
                 continue
             dim_code = dimension.get('name')
             if not dim_code:
+                continue
+            definition = self._get_dimension(dim_code, model_id) or {}
+            # Only a catalog-declared hierarchy can carry grouping context
+            # into a parent-level filter. An ordinary business entity is not
+            # evidence of filter ownership, even if its route is shorter.
+            if not definition.get('level_list'):
                 continue
             for candidate in self._get_dimension_entities(dim_code, model_id):
                 if candidate not in dimension_anchor_entities:

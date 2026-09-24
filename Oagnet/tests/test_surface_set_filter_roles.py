@@ -100,3 +100,37 @@ def test_draft_already_contains_standardized_member_without_adding_scalar(monkey
                 "value": ["万益特品牌", "贝朗"]}]
     result, _ = normalize(catalog, filters, [{"text": "万益特", "role_hint": "厂牌"}])
     assert result["filters"] == filters
+
+
+@pytest.mark.parametrize("owners", [["hospital"], ["dealer"], ["hospital", "dealer"]])
+@pytest.mark.parametrize("operator", ["=", "!="])
+def test_same_city_value_does_not_erase_verified_business_owner(monkeypatch, owners, operator):
+    knowledge = {"entities": [
+        _entity(owner, owner, owner + ".city_name", owner + "所在地")
+        for owner in ["hospital", "dealer", "dim_city"]
+    ]}
+    monkeypatch.setattr(agent, "load_published_entity_attribute_candidates", lambda *a: [])
+    monkeypatch.setattr(agent, "resolve_entity_attribute_catalog_matches", lambda m, d, cs, v: [
+        {"field": c["field"], "canonical_value": "上海市", "match_type": "EXACT"}
+        for c in cs
+    ])
+    filters = [{"field": owner + ".city_name", "operator": operator, "value": "上海市"}
+               for owner in owners]
+    result, repairs = normalize(knowledge, filters, [{"text": "上海市"}])
+    assert result["filters"] == filters
+    assert repairs[-1]["type"] == "PRESERVE_SOURCE_VERIFIED_FILTER_ROLE"
+
+
+def test_unverified_wrong_owner_can_still_be_corrected(monkeypatch):
+    knowledge = {"entities": [
+        _entity(owner, owner, owner + ".city_name", owner + "所在地")
+        for owner in ["hospital", "dim_city"]
+    ]}
+    monkeypatch.setattr(agent, "load_published_entity_attribute_candidates", lambda *a: [])
+    monkeypatch.setattr(agent, "resolve_entity_attribute_catalog_matches", lambda *a: [
+        {"field": "dim_city.city_name", "canonical_value": "上海市", "match_type": "EXACT"},
+    ])
+    result, _ = normalize(knowledge, [
+        {"field": "hospital.city_name", "operator": "=", "value": "上海市"},
+    ], [{"text": "上海市"}])
+    assert result["filters"][0]["field"] == "dim_city.city_name"
