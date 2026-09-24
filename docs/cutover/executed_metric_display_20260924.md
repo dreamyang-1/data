@@ -59,3 +59,39 @@ Four runtime files listed above, plus:
 
 Current stage: bounded V1 display/evidence repair. Semantic-model ownership and
 V2 replacement readiness remain independent; no claim of V2 readiness.
+
+## Deployment
+
+- Runtime commit: `7b69a13`; pushed to the existing feature branch / Draft PR.
+- Release: `recent-7b69a13-20260924-155428`. Four runtime files deployed with
+  before/after hash checks and rollback backups. Environment files unchanged.
+- Remote tests: 353 passed (one existing framework deprecation warning).
+- DataAnalysis restarted at 2026-09-24 15:54:48 server local time; new PID
+  3637445, active, restart counter zero, readiness HTTP 200 / READY.
+- SQL Translator and Oagnet did not require a restart and retained their PIDs.
+  Vector health passed. The colleague's remote-only API progress patch was not
+  touched because this release does not deploy `app/api.py`.
+
+### Coverage-query live blocker
+
+The live coverage question (model 106 / domain 259) returned SAFE_FALLBACK after ASL generation (28.6 s),
+before reaching the metric progress renderer. A direct translation of the
+user-supplied coverage ASL independently reproduced `INVALID_ASL`:
+`不存在指标: total_hospital_count_by_region`.
+The selected semantic model still has a stale coverage dependency. This release
+does not alter that model or the SQL service; the semantic team must reconcile
+the dependency with its published metric code. Do not report this coverage
+question as end-to-end passed. A standalone total-hospital metric is used as
+the control for the shared display/evidence execution boundary.
+
+The first control query completed in 55.0 s and passed all four metric-specific
+live checks (selected ASL metrics, expected name/code, no legacy empty binding,
+and honest code-bearing evidence). Its smoke observer incorrectly required a
+FINAL_OUTPUT metadata stage: the existing single-task API uses output/answer
+events instead. The observer was corrected to recognize those events; runtime
+API/stage behavior was not changed.
+
+The final control run completed in 52.5 s, with all five checks passing,
+including the frozen node order through the final output. Actual metric
+progress and evidence are verified live. The coverage dependency blocker above
+remains with semantic modeling, not with this display patch.
