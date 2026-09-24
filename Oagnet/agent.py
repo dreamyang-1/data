@@ -1936,6 +1936,30 @@ _EXPLICIT_GROUPING_NOUN = re.compile(
 )
 
 
+def _without_selected_metric_labels(ast: dict, knowledge: dict, query: str) -> str:
+    """Mask metric labels without losing offsets; words inside them are not grain requests."""
+    selected = {str(m.get("name") or "") for m in ast.get("metrics") or [] if isinstance(m, dict)}
+    labels = {term for r in knowledge.get("metrics", [])
+              for meta in [getattr(r, "metadata", {}) or {}]
+              if str(meta.get("metric_code") or "") in selected
+              for term in _metric_terms(meta) if len(term) >= 2}
+    if not labels:
+        return query
+    pattern = r"(?:所有|全部)?(?:" + "|".join(re.escape(t) for t in sorted(labels, key=len, reverse=True)) + ")"
+    return re.sub(pattern, lambda m: " " * len(m.group()), query, flags=re.IGNORECASE)
+
+
+def _requested_grouping_match(ast: dict, knowledge: dict, query: str):
+    masked = _without_selected_metric_labels(ast, knowledge, query)
+    for match in _EXPLICIT_GROUPING_NOUN.finditer(query):
+        if not masked[match.start():match.start() + 1].strip():
+            continue
+        if match.group().startswith(("所有", "全部")) and match.group("noun").endswith("总"):
+            continue  # 全部医院(的)总数 is a total, not one count per hospital.
+        return match
+    return None
+
+
 def _normalize_explicit_grouping_dimensions(
     ast: dict,
     knowledge: dict,
@@ -1945,7 +1969,7 @@ def _normalize_explicit_grouping_dimensions(
     dimensions = ast.get("dimensions")
     if not isinstance(dimensions, list):
         return
-    match = _EXPLICIT_GROUPING_NOUN.search(str(user_query or ""))
+    match = _requested_grouping_match(ast, knowledge, str(user_query or ""))
     if match is None:
         return
     noun = match.group("noun").strip().casefold()
@@ -7291,6 +7315,50 @@ def _apply_surface_mention_normalization(
     return json.dumps(ast, ensure_ascii=False), repairs
 
 
+def _repair_unrequested_metric_grouping(content: str, knowledge: dict, query: str,
+                                       reference: dict | None, extraction: dict | None = None):
+    """A scalar metric request must not become per-entity aggregates.
+
+    Empty upstream dimensions alone are insufficient: preserve any grouping,
+    detail, comparison or time-series request in the completed question. Read
+    the unnormalized reference so failed grounding cannot erase requested grain.
+    """
+    if not isinstance(reference, dict) or reference.get("primary_intent") not in {
+        "统计查询", "指标查询", "METRIC_QUERY", "AGGREGATE_QUERY",
+    }:
+        return content, []
+    if reference.get("dimensions") or reference.get("fields") or set(reference.get("operators") or []).intersection({
+        "GROUP_BY", "GROUP", "TREND", "RANK", "RANKING", "TOP_N", "COMPARE", "COMPARISON",
+    }):
+        return content, []
+    if (extraction or {}).get("维度") or (extraction or {}).get("展示字段") or (extraction or {}).get("排序"):
+        return content, []
+    if any(isinstance(f, dict) and isinstance(f.get("value"), list) and len(f["value"]) > 1
+           for f in reference.get("filters") or []):
+        return content, []  # Multiple places/categories may request a comparison.
+    ast = json.loads(content)
+    if not ast.get("metrics") or not ast.get("dimensions") or ast.get("having"):
+        return content, []
+    wording = _without_selected_metric_labels(ast, knowledge, query)
+    if _requested_grouping_match(ast, knowledge, query) or re.search(
+        r"按|每|各|逐|分别|分组|分布|趋势|走势|变化|排行|排名|前\s*\d+|最高|最低|最多|最少|"
+        r"对比|比较|同比|环比|明细|清单|名单|列表|名称|构成|占比|"
+        r"\b(?:by|per|each|every|trend|rank|top|breakdown|compare|comparison|list)\b",
+        wording, re.IGNORECASE,
+    ):
+        return content, []
+    removed = [d.get("name") for d in ast["dimensions"] if isinstance(d, dict)]
+    ast["dimensions"] = []
+    sort = ast.get("sort")
+    if isinstance(sort, dict) and sort.get("field") in removed:
+        ast["sort"] = None
+    return json.dumps(ast, ensure_ascii=False), [{
+        "type": "REMOVE_UNREQUESTED_METRIC_GROUPING", "removed_dimensions": removed,
+        "source": "COMPLETED_QUESTION_AND_STRUCTURED_REFERENCE",
+        "reason": "本次仅查询汇总指标，未要求分组或展示明细字段，已移除额外分组。",
+    }]
+
+
 def _normalize_surface_detail_projections(
     content: str,
     knowledge: dict,
@@ -9535,6 +9603,12 @@ must pass the deterministic contract validator and echo the contract unchanged.
             normalized, getattr(builder, "last_knowledge", {}), structured_reference, content,
         )
         contract_repairs.extend(partial_projection_repairs)
+    if intent_asl_contract is None and exploration_requirements is None:
+        normalized, grain_repairs = _repair_unrequested_metric_grouping(
+            normalized, vector_knowledge, completed_business_question,
+            structured_reference, structured_extraction,
+        )
+        contract_repairs.extend(grain_repairs)
     _validate_vector_grounded_asl(normalized, getattr(builder, "last_knowledge", {}))
     validation_args = (
         normalized,
