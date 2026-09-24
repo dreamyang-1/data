@@ -42,6 +42,19 @@ The deployed early-planning patch still waited for the same late signal.
   harness prevented Windows asyncio socketpair setup; that invalid run was
   discarded and the established offline harness was used for the final delta.
 
+## Deployment verification
+
+- Runtime commit `42c6db5`: only `app/api.py` deployed after remote hash/drift
+  check and backup. Protected configuration hashes unchanged.
+- Remote API/semantic-choice/composite tests: 125 passed. DataAnalysis restarted
+  at 2026-09-24 17:20:35 CST, new process confirmed and readiness HTTP 200.
+  Oagnet and SQL service processes unchanged.
+- Fresh-conversation two-task live stream completed in 88.2 seconds. Completed
+  question shown once; intent ended with COMPLETED; next visible node was
+  planning (9.7 seconds after request start). No intent events appeared after
+  planning. Both child tasks completed and all six public stages were ordered.
+- No raw business data or credentials included in this report.
+
 The separate catalog/evaluation/shadow gaps and V1 replacement readiness are
-unchanged. Next step is exact-file deployment and public streaming verification,
-not semantic publication or V2 replacement.
+unchanged. Current presentation fix is verified; semantic publication and V2
+replacement are not part of this release.
