@@ -21,10 +21,10 @@ def with_time_rule(index=0):
     return knowledge
 
 
-def test_selected_dsl_time_default_is_not_erased_by_missing_user_dates():
+def test_obsolete_selected_dsl_default_does_not_create_implicit_time():
     ast = _asl(time_context=default_time())
     agent._normalize_time_context(ast, with_time_rule(), '含税销售总额')
-    assert ast['time_context'] == default_time()
+    assert ast['time_context'] is None
     agent._validate_asl_output(json.dumps(ast), with_time_rule(), '含税销售总额')
 
 

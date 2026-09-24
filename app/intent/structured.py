@@ -553,6 +553,7 @@ class HybridIntentClassifier:
                 merged.metrics = before.metrics
             if (
                 "time_range" not in prior_missing
+                and before.time_range is not None
                 and not (
                     "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in before.assumptions
                     and merged.time_range != before.time_range

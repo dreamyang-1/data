@@ -92,7 +92,7 @@ def test_missing_source_watermark_downgrades_time_query_without_failing_it() -> 
     assert any("未提供可验证的业务数据水位" in item for item in reliability.warnings)
 
 
-def test_system_default_trend_is_reanchored_to_latest_complete_source_months() -> None:
+def test_obsolete_default_trend_is_not_reanchored_to_twelve_months() -> None:
     value = CanonicalAnalysisRequest(
         conversation_id="watermark-default-trend",
         tenant_id="tenant",
@@ -110,9 +110,7 @@ def test_system_default_trend_is_reanchored_to_latest_complete_source_months() -
         value, dataset()
     )
 
-    assert reanchored is not None
-    assert reanchored.start == date(2024, 12, 1)
-    assert reanchored.end_exclusive == date(2025, 12, 1)
+    assert reanchored is None
 
 
 def test_explicit_trend_time_is_never_reanchored_by_source_watermark() -> None:

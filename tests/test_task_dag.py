@@ -1642,8 +1642,8 @@ async def test_real_report_classifier_resumes_all_facets_with_one_period() -> No
             "t", "u", "app", f"dag-{root_token}-task-{index}"
         )
         assert restored is not None
-        assert restored.time_range is not None
-        assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in restored.assumptions
+        assert restored.time_range is None
+        assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in restored.assumptions
         assert "TRANSACTION_TIME_SCOPE=SALES_RECORD" in restored.assumptions
         assert {item["value"] for item in restored.filters} == {
             "上海市", "紫杉醇释放冠脉球囊导管",

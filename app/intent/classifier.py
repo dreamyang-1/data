@@ -744,7 +744,7 @@ class RuleBasedIntentClassifier:
 
     @classmethod
     def _apply_default_time_range(cls, request: CanonicalAnalysisRequest) -> None:
-        """Use the latest year when an analytical request omits its period.
+        """Leave omitted periods unrestricted; never invent a rolling year.
 
         Explicit periods and explicit lifetime/cumulative scopes always win. A
         precomputed snapshot metric also keeps its registered window semantics
@@ -753,16 +753,14 @@ class RuleBasedIntentClassifier:
         if (
             request.time_range is not None
             or cls._uses_all_time_scope(request)
-            or cls._uses_precomputed_metric_window(request)
+            or (cls._uses_precomputed_metric_window(request)
+                and not cls._has_activity_time_filter(request.original_question or ""))
         ):
             return
         if cls._uses_business_default_all_time_scope(request):
             # An unqualified scalar/grouped metric means the complete governed
-            # fact history up to the source watermark.  A rolling year remains
-            # appropriate for rankings, comparisons, trends and explicitly
-            # active/current populations, but silently applying it to a plain
-            # hospital count or manufacturer total makes otherwise identical
-            # queries disagree with their business definition.
+            # fact history up to the source watermark. No automatic rolling
+            # window is added for rankings, comparisons or trends either.
             request.assumptions.extend(
                 assumption
                 for assumption in (
@@ -812,12 +810,10 @@ class RuleBasedIntentClassifier:
         }:
             return
 
-        request.time_range = cls._time_range("最近一年")
-        if request.time_range is None:  # Defensive: the canonical parser must support this.
-            return
-        request.assumptions.append("DEFAULT_TIME_RANGE=LATEST_ONE_YEAR")
-        if request.primary_intent == PrimaryIntent.FORECAST_ANALYSIS:
-            request.forecast_history_provided = True
+        if request.primary_intent != PrimaryIntent.FORECAST_ANALYSIS:
+            # No time filter is a valid query, not a missing mandatory slot.
+            # Forecasting still needs a user-selected historical training range.
+            request.assumptions.append("TIME_SCOPE=ALL_TIME")
 
     @classmethod
     def _extract_metric_refs(cls, text: str) -> list[MetricRef]:
@@ -1057,19 +1053,6 @@ class RuleBasedIntentClassifier:
         ):
             request.assumptions.append(
                 "ACTIVE_DEFINITION=HAS_SALES_RECORD_IN_REQUESTED_TIME_RANGE"
-            )
-        if (
-            transaction_activity
-            and request.time_range is None
-            and "正在销售" in compact
-        ):
-            # “正在销售” needs a bounded transaction window.  In an analytical
-            # list request, default to the latest year relative to the request
-            # date and disclose it, rather than blocking an otherwise complete
-            # query.  Explicit user periods always take precedence.
-            request.time_range = cls._time_range("最近一年")
-            request.assumptions.append(
-                "ACTIVE_TIME_DEFAULT=LATEST_ONE_YEAR_FROM_REQUEST_DATE"
             )
         cls._apply_report_business_scope(request, compact)
         cls._apply_department_partner_scope(request, compact)
@@ -4408,7 +4391,9 @@ class RuleBasedIntentClassifier:
             pending.time_range = parsed.time_range
             pending.assumptions = [
                 value for value in pending.assumptions
-                if value != "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR"
+                if value not in {"DEFAULT_TIME_RANGE=LATEST_ONE_YEAR", "TIME_SCOPE=ALL_TIME",
+                                 "TIME_SCOPE=ALL_AVAILABLE_HISTORY",
+                                 "TIME_SCOPE_SOURCE=BUSINESS_DEFAULT_ALL_AVAILABLE_HISTORY"}
             ]
         if parsed.entity:
             pending.entity = parsed.entity

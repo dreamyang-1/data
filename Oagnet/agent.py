@@ -4603,19 +4603,8 @@ def _normalize_time_context(ast: dict, knowledge: dict, user_query: str) -> None
     # invented ranges for ordinary grouped, cumulative and distinct-count
     # queries instead of failing later on a fabricated anchor.
     if bounds is None and not explicit_ongoing:
-        # A selected metric's published DSL time policy can legitimately supply
-        # a default without a literal date phrase in the question. Do not erase
-        # it merely because the legacy date parser found no user date. A rule on
-        # an unrelated recalled metric is not applicable to this query.
-        has_selected_time_policy = any(
-            isinstance(caliber, dict) and bool(caliber.get("special_rule"))
-            for metric in ast.get("metrics") or [] if isinstance(metric, dict)
-            for caliber in [_json_value(metadata_by_code.get(
-                str(metric.get("name") or ""), {}).get("time_caliber"))]
-        )
-        if (has_selected_time_policy and isinstance(time_context, dict)
-                and incoming_anchor in _known_physical_fields(knowledge)):
-            return  # Existing final scope/schema validation still validates the range.
+        # Product policy: no implicit time window, including obsolete defaults
+        # still present in catalog descriptions. Fixed metric formulas are intact.
         ast["time_context"] = None
         if not _EXPLICIT_TIME_WORDING.search(str(user_query or "")):
             ambiguities = ast.get("ambiguity")
@@ -9609,6 +9598,20 @@ must pass the deterministic contract validator and echo the contract unchanged.
             normalized, vector_knowledge, semantic_user_query,
         )
         contract_repairs.extend(administrative_repairs)
+    if (intent_asl_contract is None and exploration_requirements is None
+            and (structured_extraction is not None or surface_evidence is not None)):
+        # Review the actual final predicates, after name/administrative
+        # normalization. Otherwise a later normalizer could erase ownership.
+        from query_binding_review import review_bindings
+        from mysql_tool import resolve_scoped_dictionary_keys
+        normalized, binding_repairs = review_bindings(
+            normalized, vector_knowledge, completed_business_question,
+            structured_extraction, chat_model, resolve_scoped_dictionary_keys,
+            semantic_model_id, domain_scope,
+            explicit_time=bool(_query_date_bounds(completed_business_question)
+                               or (structured_reference or {}).get("time_range")),
+        )
+        contract_repairs.extend(binding_repairs)
     _verify_missing_asl_fields_in_vector_store(
         normalized,
         getattr(builder, "last_knowledge", {}),

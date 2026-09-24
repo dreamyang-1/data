@@ -3013,41 +3013,12 @@ class DataAnalysisOrchestrator:
         request: CanonicalAnalysisRequest,
         dataset: Dataset,
     ) -> TimeRange | None:
-        """Return 12 complete source months for a system-default trend range."""
+        """Compatibility for historical requests: never create a default year.
 
-        if (
-            request.primary_intent != PrimaryIntent.TREND_ANALYSIS
-            or request.time_range is None
-            or "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in request.assumptions
-            or dataset.source_data_as_of is None
-        ):
-            return None
-        watermark = (
-            dataset.source_data_as_of.date()
-            if isinstance(dataset.source_data_as_of, datetime)
-            else dataset.source_data_as_of
-        )
-        if request.time_range.end_exclusive <= watermark + timedelta(days=1):
-            return None
-        watermark_month = watermark.replace(day=1)
-        next_month = cls._shift_month_start(watermark_month, 1)
-        # A month is complete only when the verified source watermark reached
-        # its final calendar day. Partial current months are deliberately not
-        # mixed into a default trend without disclosure.
-        end_exclusive = (
-            next_month
-            if watermark == next_month - timedelta(days=1)
-            else watermark_month
-        )
-        start = cls._shift_month_start(end_exclusive, -12)
-        candidate = TimeRange(
-            start=start,
-            end_exclusive=end_exclusive,
-            timezone=request.time_range.timezone,
-        )
-        if candidate == request.time_range:
-            return None
-        return candidate
+        A source watermark may qualify the answer, but cannot invent a new
+        twelve-month filter. Explicit user periods remain unchanged.
+        """
+        return None
 
     async def _requery_system_default_trend_at_watermark(
         self,
@@ -5364,35 +5335,8 @@ class DataAnalysisOrchestrator:
             *internal_assumptions,
             *(["STRUCTURED_TASK_RECALL"] if recalled_task_frame else []),
         ]))
-        if (
-            _SALES_RECORD_TIME_ASSUMPTION in internal_assumptions
-            and request.time_range is None
-            and (
-                "TIME_SCOPE_SOURCE=BUSINESS_DEFAULT_ALL_AVAILABLE_HISTORY"
-                in request.assumptions
-            )
-        ):
-            # A relationship-detail facet proven to belong to the combined
-            # sales report must execute on one concrete sales-record period,
-            # shared by every sibling facet.  The deterministic splitter can
-            # append the all-history phrase to such child questions, which the
-            # classifier resolves to a business-default all-time scope; that
-            # scope contradicts the trusted sales-record time scope.  Replace
-            # it with the controlled default period.  Explicit user periods are
-            # never touched because ``time_range`` is already set for them.
-            rules = getattr(self.classifier, "rules", self.classifier)
-            parser = getattr(rules, "_time_range", None)
-            window = parser("最近一年") if callable(parser) else None
-            if window is not None:
-                request.time_range = window
-                request.assumptions = [
-                    value for value in request.assumptions
-                    if value not in {
-                        "TIME_SCOPE=ALL_TIME",
-                        "TIME_SCOPE_SOURCE=BUSINESS_DEFAULT_ALL_AVAILABLE_HISTORY",
-                    }
-                ]
-                request.assumptions.append("DEFAULT_TIME_RANGE=LATEST_ONE_YEAR")
+        # A sales-record relationship is not a time interval. Child tasks keep
+        # the parent's explicit period, or remain unbounded when it has none.
         if (
             "LATEST_RESULT_DATASET_NOT_REUSABLE" in request.assumptions
             and re.search(

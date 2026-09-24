@@ -64,8 +64,8 @@ class IntentASLContract(BaseModel):
                 raise ValueError("DETAIL_QUERY contract requires projection_mode")
         if self.time_dimension_required and self.intent != "TREND_ANALYSIS":
             raise ValueError("time_dimension_required is only valid for TREND_ANALYSIS")
-        if self.time_dimension_required and self.time_policy != "REQUIRED":
-            raise ValueError("time_dimension_required requires REQUIRED time_policy")
+        if self.time_dimension_required and self.time_policy == "FORBIDDEN":
+            raise ValueError("time_dimension_required cannot use FORBIDDEN time_policy")
         if self.time_policy == "REQUIRED":
             if not self.canonical_time_range or not all(
                 self.canonical_time_range.get(key) for key in ("start", "end")

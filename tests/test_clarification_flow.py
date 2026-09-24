@@ -101,8 +101,7 @@ async def test_metric_request_uses_the_default_time_instead_of_a_pending():
         IDENTITY,
     )
 
-    # The controlled default time applies to this metric request, so the turn
-    # must execute immediately and must not fabricate a time_range pending.
+    # An omitted period adds no time filter and must not fabricate a pending.
     assert response.status == "COMPLETED"
     assert response.intent == PrimaryIntent.METRIC_QUERY
     assert response.missing_slots == []
@@ -112,8 +111,8 @@ async def test_metric_request_uses_the_default_time_instead_of_a_pending():
         "tenant-1", "user-1", "app-1", "metric-default-time"
     ) is None
     submitted = retrieval.requests[0]
-    assert submitted.time_range is not None
-    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in submitted.assumptions
+    assert submitted.time_range is None
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in submitted.assumptions
 
 
 @pytest.mark.asyncio

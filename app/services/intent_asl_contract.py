@@ -172,7 +172,8 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         for value in request.assumptions
     )
     time_grouping_requested = (
-        AnalysisOperator.TIME_BUCKET in request.operators
+        request.primary_intent == PrimaryIntent.TREND_ANALYSIS
+        or AnalysisOperator.TIME_BUCKET in request.operators
         or any(
             value.startswith("DEFAULT_TIME_GRANULARITY=")
             for value in request.assumptions
@@ -286,7 +287,7 @@ def validate_intent_asl_contract_definition(contract: dict[str, Any]) -> list[st
         errors.append("TIME_DIMENSION_CONTRACT_INVALID")
     if contract.get("time_policy") not in {"REQUIRED", "OPTIONAL", "FORBIDDEN"}:
         errors.append("TIME_POLICY_INVALID")
-    if contract.get("time_dimension_required") and contract.get("time_policy") != "REQUIRED":
+    if contract.get("time_dimension_required") and contract.get("time_policy") == "FORBIDDEN":
         errors.append("TIME_POLICY_CONFLICT")
     canonical_time_range = contract.get("canonical_time_range")
     if contract.get("time_policy") == "REQUIRED" and not (

@@ -217,6 +217,56 @@ def _normalized_domain_ids(
     return list(dict.fromkeys(values))
 
 
+def resolve_scoped_dictionary_keys(semantic_model_id, domain_scope, choice, label_field, value):
+    """Read label -> key from one authorized dictionary, never infer ID values.
+
+    The caller supplies a scoped, recalled relation. Both dictionary columns
+    must additionally be live authorized fields on the same entity/data source.
+    Multiple IDs for one label are retained as IN, preserving label semantics.
+    """
+    entity = choice.get("dictionary_entity")
+    key_field = choice.get("dictionary_key")
+    candidates = [{"entity_code": entity, "business_domain_id": choice.get("business_domain_id"),
+                   "field": field} for field in (label_field, key_field)]
+    requested, rows = _authorized_entity_field_rows(
+        semantic_model_id, domain_scope, candidates, require_unique_main=False, max_candidates=2,
+    )
+    if len(requested) != 2 or len(rows) != 2:
+        return []
+    if len({(r["entity_code"], r["business_domain_id"], r["data_source_id"], r["mapping_table"]) for r in rows}) != 1:
+        return []
+    expected = {(e, d, t, c) for e, d, t, c in requested}
+    if {(r["entity_code"], int(r["business_domain_id"]), r["mapping_table"], r["mapping_column"]) for r in rows} != expected:
+        return []
+    source = rows[0]
+    if str(source.get("db_type") or "").casefold() not in {"mysql", "mariadb"}:
+        return []
+    table = _validated_identifier(source["mapping_table"], label="table")
+    label = _validated_identifier(label_field.split(".")[1], label="column")
+    key = _validated_identifier(key_field.split(".")[1], label="column")
+    connection = pymysql.connect(
+        host=source["host"], port=int(source["port"]), user=source["username"],
+        password=source.get("password") or "", database=source["db_name"], charset=MYSQL_CHARSET,
+        connect_timeout=MYSQL_CONNECT_TIMEOUT, read_timeout=MYSQL_READ_TIMEOUT,
+        write_timeout=MYSQL_READ_TIMEOUT, autocommit=False,
+    )
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("START TRANSACTION READ ONLY")
+            cursor.execute(
+                f"SELECT DISTINCT CAST(`{key}` AS CHAR) FROM `{table}` "
+                f"WHERE CAST(`{label}` AS CHAR) = %s AND `{key}` IS NOT NULL "
+                f"ORDER BY CAST(`{key}` AS CHAR) LIMIT 9", (str(value),),
+            )
+            found = [r[0] for r in cursor.fetchall() if r[0] not in (None, "")]
+            return found if len(found) <= 8 else []
+    finally:
+        try:
+            connection.rollback()
+        finally:
+            connection.close()
+
+
 def _data_source_has_exact_value(
     source: dict,
     table_name: str,
