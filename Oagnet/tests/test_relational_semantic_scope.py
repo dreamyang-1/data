@@ -1094,8 +1094,8 @@ def test_geographic_slot_uses_source_verified_admin_field_on_result_entity():
     def resolver(_model, _domain, candidates, value):
         candidate_sets.append({item["field"] for item in candidates})
         if value == "海州市":
-            # Both columns contain the same canonical value.  泛指“地区”按
-            # documented level precedence chooses province, never list order.
+            # Same canonical place across levels defaults to the finest grain,
+            # not vector ordering or the old broad-region provincial default.
             return ["dealer.city", "dealer.province", "market_area.province"]
         return ["dealer_result.address", "dealer_result.dealer_name"]
 
@@ -1110,7 +1110,7 @@ def test_geographic_slot_uses_source_verified_admin_field_on_result_entity():
     result = json.loads(normalized)
 
     assert result["filters"] == [{
-        "field": "dealer.province",
+        "field": "dealer.city",
         "operator": "=",
         "value": "海州市",
     }]

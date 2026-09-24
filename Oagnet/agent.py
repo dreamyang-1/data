@@ -3263,6 +3263,150 @@ def _administrative_value_candidates(
     return [raw_value + suffix for suffix in _ADMINISTRATIVE_SUFFIXES]
 
 
+def _prefer_finest_administrative_matches(matches: list[dict], query: str) -> list[dict]:
+    """Default same-value administrative alternatives to the finest level.
+
+    This is not fuzzy place-name resolution. Keep different canonical values,
+    scopes, business owners and same-level alternatives separate. An explicit
+    field selection or level in the question always wins over this default.
+    """
+    ranks = {"province": 10, "city": 20, "district": 30}
+    groups: dict[tuple, list[tuple[int, dict, str]]] = {}
+    retained: list[tuple[int, dict]] = []
+    for index, item in enumerate(matches):
+        field = str(item.get("source_field") or item.get("field") or item.get("attr_code") or "")
+        kind = _administrative_attribute_kind(field, item)
+        value = str(item.get("canonical_value") or item.get("attr_value") or "").strip()
+        if kind not in ranks or not value:
+            retained.append((index, item))
+            continue
+        table = field.split(".")[0] if "." in field else str(item.get("parent") or item.get("entity_name") or "")
+        # Separate geography dimension tables are one administrative family;
+        # dealer/hospital/product location attributes are not interchangeable.
+        geographic_owner = re.fullmatch(
+            r"(?:(?:dim|dimension|dict|sys)[_\s])?(?:province|city|district|county)|"
+            r"省|省份|省市|城市|市|区县|区|县|行政区(?:划)?", table, re.I,
+        )
+        owner = "administrative" if geographic_owner or not table else table.casefold()
+        qualifier = tuple(re.findall(
+            r"registered|registration|billing|shipping|delivery|office|注册|开票|收货|发货|办公",
+            field + " " + str(item.get("attr_name") or ""), re.I,
+        ))
+        key = (item.get("semantic_model_id"), item.get("business_domain_id"),
+               owner, qualifier, item.get("country_code"), item.get("province_code"), value.casefold())
+        groups.setdefault(key, []).append((index, item, kind))
+    for alternatives in groups.values():
+        if len({kind for _, _, kind in alternatives}) < 2:
+            retained.extend((i, item) for i, item, _ in alternatives)
+            continue
+        explicit = []
+        for index, item, kind in alternatives:
+            codes = [str(item.get(k) or "").strip() for k in ("source_field", "field", "attr_code")]
+            if any(code and re.search(r"(?<![\w])" + re.escape(code) + r"(?![\w])", query, re.I) for code in codes):
+                explicit.append((index, item, kind))
+        # Bare 地区/区域 is not a grain selection; a place suffix such as 市
+        # is part of its name, not a request to override the finest default.
+        requested = next((kind for kind, pattern in (
+            ("province", r"省级|省份口径|按省份|省份(?:为|是|=|：|:)"),
+            ("city", r"市级|城市口径|按城市|城市(?:为|是|=|：|:)"),
+            ("district", r"区县级|县级|区县口径|按区县"),
+        ) if re.search(pattern, query)), None)
+        chosen = explicit or [row for row in alternatives if row[2] == requested]
+        if not chosen:
+            finest = max(ranks[kind] for _, _, kind in alternatives)
+            chosen = [row for row in alternatives if ranks[row[2]] == finest]
+        retained.extend((index, item) for index, item, _ in chosen)
+    return [item for _, item in sorted(retained, key=lambda row: row[0])]
+
+
+def _administrative_vector_defaults(knowledge: dict, query: str) -> list[dict]:
+    pools = knowledge.get("_ambiguity_candidates") or {}
+    records = [*knowledge.get("entity_attribute_values", []),
+               *(pools.get("entity_attribute_value", []) if isinstance(pools, dict) else [])]
+    matches = [getattr(record, "metadata", {}) or {} for record in records]
+    chosen = _prefer_finest_administrative_matches(matches, query)
+    defaults = []
+    for item in chosen:
+        if item not in defaults and any(
+            other not in chosen
+            and _prefer_finest_administrative_matches([other, item], query) == [item]
+            for other in matches
+        ):
+            defaults.append(item)
+    return defaults
+
+
+def _apply_administrative_vector_defaults(content: str, knowledge: dict, query: str):
+    """Enforce recalled defaults after model/surface repairs, not just in prose."""
+    ast = json.loads(_strip_code_fence(content))
+    repairs = []
+    defaults = _administrative_vector_defaults(knowledge, query)
+    if not defaults:
+        return content, repairs
+    allowed = _known_physical_fields(knowledge)
+    pools = knowledge.get("_ambiguity_candidates") or {}
+    records = [*knowledge.get("entity_attribute_values", []),
+               *(pools.get("entity_attribute_value", []) if isinstance(pools, dict) else [])]
+    for item in ast.get("filters") or []:
+        if not isinstance(item, dict) or item.get("operator") not in {"=", "IN"}:
+            continue
+        values = item.get("value") if isinstance(item.get("value"), list) else [item.get("value")]
+        if not values or any(not isinstance(value, str) for value in values):
+            continue
+        # Re-run the same grouping with the current field included: defaults
+        # from another business entity must never rewrite this filter.
+        source = str(item.get("field") or "")
+        target_fields = set()
+        for value in values:
+            current = [r.metadata for r in records if (getattr(r, "metadata", {}) or {}).get("source_field") == source
+                       and str(r.metadata.get("attr_value") or "").casefold() == value.casefold()]
+            targets = []
+            for candidate in defaults:
+                if str(candidate.get("attr_value") or "").casefold() != value.casefold():
+                    continue
+                if any(_prefer_finest_administrative_matches([old, candidate], query) == [candidate]
+                       for old in current if old != candidate):
+                    targets.append(str(candidate.get("source_field") or ""))
+            if len(set(targets)) != 1:
+                target_fields.clear()
+                break
+            target_fields.update(targets)
+        if len(target_fields) == 1 and next(iter(target_fields)) in allowed:
+            target = next(iter(target_fields))
+            item["field"] = target
+            repairs.append({"type": "PREFER_FINEST_ADMINISTRATIVE_LEVEL", "from": source,
+                            "to": target, "value": item["value"], "source": "VECTOR_SEMANTIC_SCOPE"})
+    # A model may still echo the province/city choice despite the default in
+    # its prompt. Retire only that exact hierarchy question, and only after a
+    # corresponding executable filter is present; preserve all other doubts.
+    for default in defaults:
+        if not ast.get("ambiguity"):
+            break
+        value = str(default.get("attr_value") or "")
+        field = str(default.get("source_field") or "")
+        if not any(f.get("field") == field and f.get("operator") in {"=", "IN"}
+                   and value in (f["value"] if isinstance(f.get("value"), list) else [f.get("value")])
+                   for f in ast.get("filters") or [] if isinstance(f, dict)):
+            continue
+        alternatives = [m for r in records if (m := getattr(r, "metadata", {}) or {})
+                        and _prefer_finest_administrative_matches([m, default], query) == [default]]
+        if not alternatives:
+            continue
+        codes = {str(m.get(k) or "") for m in [default, *alternatives]
+                 for k in ("source_field", "attr_code")} - {""}
+        def resolved(ambiguity):
+            if not isinstance(ambiguity, dict) or ambiguity.get("type") not in {"filter", "entity_value", "filter_slot"}:
+                return False
+            candidates = ambiguity.get("candidates") or []
+            return (len(candidates) >= 2
+                    and value in str(ambiguity.get("phrase") or ambiguity.get("question") or "")
+                    and all(isinstance(c, str) and any(
+                        re.search(r"(?<![\w.])" + re.escape(code) + r"(?![\w.])", c)
+                        for code in codes) for c in candidates))
+        ast["ambiguity"] = [a for a in ast.get("ambiguity") or [] if not resolved(a)]
+    return json.dumps(ast, ensure_ascii=False), repairs
+
+
 def _administrative_field_score(
     entity_code: str,
     field_kind: str,
@@ -3533,6 +3677,15 @@ def _normalize_entity_attribute_filters(
                     return all(str(candidate) in allowed for candidate in ambiguity_candidates)
 
                 if administrative_matches:
+                    # Source-verified equal names follow the same default as
+                    # vector recall, rather than reverting generic 地区 to province.
+                    preferred = _prefer_finest_administrative_matches([
+                        {**attributes_by_entity[administrative_fields[f][0]][f],
+                         "source_field": f, "attr_value": v,
+                         "business_domain_id": administrative_fields[f][2]}
+                        for f, v in sorted(administrative_matches)
+                    ], user_query)
+                    administrative_matches = {(m["source_field"], m["attr_value"]) for m in preferred}
                     distances = _result_entity_distances(
                         ast,
                         knowledge,
@@ -8441,6 +8594,11 @@ def _vector_semantic_ambiguities(
         records = pools.get(spec["pool"], [])
         if not isinstance(records, list):
             continue
+        if semantic_type == "entity_attribute_value":
+            preferred = _prefer_finest_administrative_matches(
+                [getattr(record, "metadata", {}) or {} for record in records], query,
+            )
+            records = [record for record in records if (getattr(record, "metadata", {}) or {}) in preferred]
         for record in records:
             metadata = getattr(record, "metadata", {}) or {}
             if str(metadata.get("type") or "") != semantic_type:
@@ -9169,6 +9327,15 @@ must pass the deterministic contract validator and echo the contract unchanged.
         semantic_user_query,
         preferred_metric_codes=metric_codes,
     )
+    administrative_defaults = _administrative_vector_defaults(vector_knowledge, semantic_user_query)
+    if administrative_defaults:
+        mprompt += (
+            "\n[同名行政层级默认选择]\n同一地区值出现在不同已发布行政层级时，"
+            "默认采用以下更细粒度字段，不再追问省/市层级；保留用户明确指定的字段和层级。"
+            "不改变分组维度，也不得把地区值作为医院或经销商名称。\n"
+            + json.dumps([{k: m.get(k) for k in ("attr_value", "attr_code", "source_field")}
+                          for m in administrative_defaults], ensure_ascii=False)
+        )
     if vector_ambiguities:
         clarified = _ambiguity_asl(vector_ambiguities)
         logger.info(
@@ -9332,6 +9499,11 @@ must pass the deterministic contract validator and echo the contract unchanged.
             repaired_ast, getattr(builder, "last_knowledge", {})
         )
         normalized = json.dumps(repaired_ast, ensure_ascii=False)
+    if intent_asl_contract is None:
+        normalized, administrative_repairs = _apply_administrative_vector_defaults(
+            normalized, vector_knowledge, semantic_user_query,
+        )
+        contract_repairs.extend(administrative_repairs)
     _verify_missing_asl_fields_in_vector_store(
         normalized,
         getattr(builder, "last_knowledge", {}),
