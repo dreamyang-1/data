@@ -2416,11 +2416,17 @@ class SQLTranslatorProd:
                                 )
                     expr = sub_expr
 
-            # 判断是否已有列别名（排除 CAST(... AS UNSIGNED) 等类型转换语法）
-            alias_pattern = re.compile(r'\s+AS\s+`[^`]+`\s*$', re.IGNORECASE)
-            has_column_alias = bool(alias_pattern.search(expr))
-            if alias and not has_column_alias:
-                select_parts.append(f"{expr} AS `{alias}`")
+            # ASL owns the output label. Strip only the formula's trailing
+            # column alias, not CAST(... AS type), so SELECT and ORDER BY use
+            # the same standard name. Legacy alias=None keeps its formula.
+            alias_pattern = re.compile(
+                r'\s+AS\s+(?:`(?:``|[^`])+`|"(?:""|[^"])+"|\'(?:\'\'|[^\'])+\'|[\w\u4e00-\u9fff]+)\s*;?\s*$',
+                re.IGNORECASE,
+            )
+            if alias:
+                expr = alias_pattern.sub('', expr)
+                escaped_alias = str(alias).replace('`', '``')
+                select_parts.append(f"{expr} AS `{escaped_alias}`")
             else:
                 select_parts.append(expr)
 
@@ -2548,7 +2554,8 @@ class SQLTranslatorProd:
         if field_type == 'metric':
             for metric in metrics:
                 if metric.get('name') == field:
-                    sort_field = f"`{metric.get('alias', field)}`"
+                    metric_alias = str(metric.get('alias', field)).replace('`', '``')
+                    sort_field = f"`{metric_alias}`"
                     break
             if not sort_field:
                 sort_field = field
@@ -2576,7 +2583,8 @@ class SQLTranslatorProd:
         else:
             for metric in metrics:
                 if metric.get('name') == field:
-                    sort_field = f"`{metric.get('alias', field)}`"
+                    metric_alias = str(metric.get('alias', field)).replace('`', '``')
+                    sort_field = f"`{metric_alias}`"
                     break
             if not sort_field:
                 for dim_item in dimensions:
