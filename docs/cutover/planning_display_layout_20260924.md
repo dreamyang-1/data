@@ -43,6 +43,16 @@ For missing-input clarification, use `当前任务参数不完整，暂停子任
 - `tests/test_semantic_choice_contract.py`
 - This report
 
-Exact-file synchronization to the version repository requires SHA-256 equality. No production deployment is part of this request.
+Exact-file synchronization to the version repository requires SHA-256 equality. The implementation request did not include production deployment; the subsequent explicit deployment request is recorded below.
 
 Current stage: V1 presentation maintenance. No V2 cutover, catalog, evaluation or shadow readiness claim; their existing gaps remain outside this change.
+
+## User-authorized deployment
+
+- Follow-up request explicitly authorized deployment and restart. Release: `recent-e1bdd6e-20260924-132628`.
+- Two runtime files updated: `app/api.py` and `app/services/orchestrator.py`. Only the DataAnalysis service restarted, at 2026-09-24 13:26:44 CST; new PID 3005389, active, readiness HTTP 200 / READY, no automatic restarts.
+- Drift guard initially stopped deployment before any runtime write. The remote API contained a colleague's additional planning-RUNNING event-release logic. That change was reviewed and retained; only the display hunk from `e1bdd6e` was applied to the remote API. Therefore this is **not** a whole-file-identical deployment of the repository API.
+- Remote API before SHA-256: `18d37ca79d1efbe3497623cbbd6eb7880fe1399e48c3651a7045a54685f66e72`; merged after: `0d2c9b5d6382b5d06e4ec737b890470fb69cc5e754fb2135a2aa99949a1032f2`. Orchestrator after: `1bfb17d8f39bca9d09247190f11e9776c7901a8e9376e41d668ffbc481a509d1`.
+- Remote API + candidate-confirmation tests: 109 passed (one dependency deprecation warning).
+- Configuration hashes unchanged. Oagnet and SQL service PIDs unchanged; vector health passed. A protected pre-deployment backup and rollback manifest are retained under the release name.
+- Live stream check: an isolated conversation querying the regional hospital total completed in 47.9 seconds, with no error code. Decision and explanation on the same line, business domain immediately below task intent, planned-call text absent, and extracted parameters retained: all passed. Intent → planning → SQL execution → result validation → insight order passed, followed by a COMPLETED final response. No business result rows or credentials retained in this report.
