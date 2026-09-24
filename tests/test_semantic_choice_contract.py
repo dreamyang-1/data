@@ -336,6 +336,10 @@ async def test_surface_only_choice_restores_full_task_before_planning():
     )
     assert "任务1：2" not in planning["message"]
     assert "按品牌/厂家字段过滤" in planning["message"]
+    assert planning["message"].startswith(
+        "拆分判断完成。当前问题无需拆分，按单任务执行。\n任务1："
+    )
+    assert "规划调用：" not in planning["message"]
     assert await agent.sessions.get_pending(
         IDENTITY.tenant_id, IDENTITY.user_id,
         "choice-app", "choice-conversation",
@@ -688,6 +692,10 @@ async def test_all_time_reply_restores_complete_partner_query_before_execution()
     planning_event = planning_events[0]
     assert original in planning_event["message"]
     assert "已确认不限时间（全部历史）" in planning_event["message"]
+    assert planning_event["message"].startswith(
+        "拆分判断完成。当前问题无需拆分，按单任务执行。\n任务1："
+    )
+    assert "规划调用：" not in planning_event["message"]
     assert await agent.sessions.get_pending(
         IDENTITY.tenant_id,
         IDENTITY.user_id,

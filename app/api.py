@@ -960,11 +960,16 @@ async def chat_stream(
                     if needs_input:
                         presentation_scenario = "CLARIFICATION"
                         planning = dict(deferred_planning[-1])
+                        # Keep the same task / intent / domain / parameters
+                        # layout when asking for missing input. Only replace
+                        # the decision line; no executable plan is promised.
+                        _, _, task_details = str(
+                            planning.get("message") or ""
+                        ).partition("\n")
                         planning["message"] = (
                             "当前任务参数不完整，暂停子任务拆分。\n"
-                            "规划链路：终止 SQL 生成、数据库查询等后续取数流程，"
-                            "输出追问话术收集缺失条件。"
-                        )
+                            + task_details
+                        ).rstrip()
                         ordered.append(planning)
                     else:
                         ordered.append(deferred_planning[-1])

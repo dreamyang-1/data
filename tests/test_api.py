@@ -88,6 +88,69 @@ def test_markdown_hard_line_breaks_preserve_document_logical_lines():
     )
 
 
+@pytest.mark.parametrize("question,task_count,clarifying", [
+    ("查询本月销售额", 1, False),
+    ("统计经销商", 1, True),
+    ("查询 TDC-3 产品的主要适用科室、次要适用科室", 2, False),
+])
+@pytest.mark.parametrize("domains", [[], [205]])
+def test_planning_layout_is_shared_by_single_composite_and_clarification(
+    question, task_count, clarifying, domains,
+):
+    with TestClient(build_test_app(multi_question_model_enabled=False)) as client:
+        response = client.post("/agent_chat/stream", json={
+            "semantic_model_id": 81,
+            "business_domain_ids": domains,
+            "conversation_id": str(uuid4()),
+            "application_id": "app1",
+            "message_id": "m1",
+            "question": question,
+        })
+    assert response.status_code == 200
+    events = [json.loads(block.removeprefix("data: "))
+              for block in response.text.strip().split("\n\n")]
+    content = thinking_content(events, "TASK_PLANNING", status="COMPLETED")
+    assert "规划调用：" not in content
+    assert "规划链路：" not in content
+    decision = content.split("任务1：", 1)[0]
+    assert "业务域：" not in decision
+    if clarifying:
+        assert "当前任务参数不完整，暂停子任务拆分。" in decision
+        assert "无需拆分" not in decision
+    elif task_count == 1:
+        assert "拆分判断完成。当前问题无需拆分，按单任务执行。" in decision
+    else:
+        assert "拆分判断完成。已拆分为以下任务：" in decision
+    for index in range(1, task_count + 1):
+        block = content.split(f"任务{index}：", 1)[1].split(f"任务{index + 1}：", 1)[0]
+        if domains:
+            assert block.count("业务域：") == 1
+            if "任务意图：" in block:
+                assert re.search(r"任务意图：[^\n]+\n业务域：", block)
+            if "参数提取：" in block:
+                assert block.index("业务域：") < block.index("参数提取：")
+        else:
+            assert "业务域：" not in block
+    stages = [event.get("meta", {}).get("stage") for event in events
+              if event.get("type") == "message_chunk"]
+    assert stages.index("INTENT_RECOGNITION") < stages.index("TASK_PLANNING")
+    if "DATA_RETRIEVAL" in stages:
+        assert stages.index("TASK_PLANNING") < stages.index("DATA_RETRIEVAL")
+    if not clarifying:
+        analytic_stages = [
+            "INTENT_RECOGNITION", "TASK_PLANNING", "DATA_RETRIEVAL",
+            "RELIABILITY_CHECK", "INSIGHT_ANALYSIS",
+        ]
+        positions = [next(i for i, event in enumerate(events)
+                          if event.get("type") == "message_chunk"
+                          and event.get("meta", {}).get("stage") == stage)
+                     for stage in analytic_stages]
+        positions.append(next(i for i, event in enumerate(events)
+                              if event.get("type") == "message_chunk"
+                              and event.get("step") == "output"))
+        assert positions == sorted(positions)
+
+
 def test_chat_endpoint():
     with TestClient(build_test_app()) as client:
         response = client.post(
@@ -161,7 +224,7 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
     execution_running_content = thinking_content(
         events, "DATA_RETRIEVAL", status="RUNNING"
     )
-    assert f"规划调用：{QUERY_EXECUTION_CHAIN}" in planning_content
+    assert "规划调用：" not in planning_content
     assert f"执行链路：{QUERY_EXECUTION_CHAIN}" in execution_running_content
     assert "语义解析" not in QUERY_EXECUTION_CHAIN
     assert QUERY_EXECUTION_CHAIN == (
@@ -1544,10 +1607,9 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         events, "TASK_PLANNING", status="COMPLETED"
     )
     assert "#### ◉ 任务拆分与规划" in planning_completed_content
-    assert "拆分判断完成" in planning_completed_content
+    assert "拆分判断完成。当前问题无需拆分，按单任务执行。" in planning_completed_content
     assert "当前问题无需拆分，按单任务执行。  \n任务1：" in planning_completed_content
-    assert "规划调用：" in planning_completed_content
-    assert f"规划调用：{QUERY_EXECUTION_CHAIN}" in planning_completed_content
+    assert "规划调用：" not in planning_completed_content
     completed_think_stages = [
         data.get("meta", {}).get("stage")
         for data in events
@@ -1679,7 +1741,8 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     )
     assert "任务1：查询 TDC-3 产品的主要适用科室" in planning_content
     assert "任务2：查询 TDC-3 产品的次要适用科室" in planning_content
-    assert planning_content.count("规划调用：") == 2
+    assert "拆分判断完成。已拆分为以下任务：" in planning_content
+    assert "规划调用：" not in planning_content
     completed = next(event for event in events if event["type"] == "complete")
     assert completed["execution_shape"] == "COMPOSITE"
     assert len(completed["task_results"]) == 2

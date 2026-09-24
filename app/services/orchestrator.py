@@ -1225,9 +1225,9 @@ class DataAnalysisOrchestrator:
                         return (
                             f"任务{index}：{question}\n"
                             + intent_line
+                            + planning_domain_line
                             + parameters_line
-                            + f"规划调用：{QUERY_EXECUTION_CHAIN}"
-                        )
+                        ).rstrip()
 
                     if plan is not None:
                         planning_detail = "已拆分为以下任务：\n" + "\n\n".join(
@@ -1267,7 +1267,7 @@ class DataAnalysisOrchestrator:
                     await emit_progress(
                         "TASK_PLANNING",
                         "COMPLETED",
-                        "拆分判断完成。" + planning_domain_line + planning_detail,
+                        "拆分判断完成。" + planning_detail,
                         task_count=len(plan.tasks) if plan is not None else 1,
                     )
                 response = (
