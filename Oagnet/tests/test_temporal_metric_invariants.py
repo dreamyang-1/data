@@ -1,10 +1,12 @@
 import json
+from types import SimpleNamespace
 
 import pytest
 
 from agent import (
     _normalize_caller_bound_metrics,
     _normalize_semantic_references,
+    _review_metric_query_grain,
     _query_date_bounds,
     _uses_transaction_activity_definition,
     _validate_asl_output,
@@ -265,6 +267,18 @@ def test_grouped_distinct_count_restores_missing_explicit_group_dimension():
     normalized = _normalize_semantic_references(
         json.dumps(ast, ensure_ascii=False), knowledge, query,
     )
+    # STALE_TEST: quantifier regex no longer decides grain. A contextual model
+    # decision must preserve the supported per-dealer query instead.
+    assert json.loads(normalized)["dimensions"] == []
+    knowledge["_vector_authorized_fields"] = ["dealer.dealer_name"]
+    reviewer = SimpleNamespace(invoke=lambda messages: SimpleNamespace(content=json.dumps({
+        "shape": "grouped", "dimensions": [{"name": "dealer.dealer_name", "attr": None,
+                                               "level": None, "granularity": None}],
+        "reason": "此问题需要分别统计每个经销商合作的医院数量。",
+    })))
+    normalized, repairs = _review_metric_query_grain(normalized, knowledge, query, None, None, reviewer)
+    assert repairs[0]["query_shape"] == "grouped"
+    normalized = _normalize_semantic_references(normalized, knowledge, query)
     result = json.loads(normalized)
 
     assert result["dimensions"] == [{

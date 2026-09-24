@@ -15,6 +15,12 @@ SYSTEM_PROMPT = """
 【任务】
 根据用户问题 + 三份语义元数据（entities.yml / metrics.yml / dimensions.yml），生成严格符合 schema 的 AST JSON。
 
+【输入分工】
+- 补全后的完整问题表达用户当前需求；结构化提取提供意图、实体、指标、分组、展示字段和过滤条件的参考，不重新解释成另一项任务。
+- 本轮 DSL/语义目录负责标准编码、字段、关系、口径和已发布默认值。业务描述文件辅助理解，不是物理字段或授权清单；描述重复或冲突时，不虚构连接关系。
+- 只有调用方明确标记的结构契约/已确认选择属于硬约束；一般结构化提取可结合上下文修正。字段仍必须绑定到本轮目录。
+- 不用固定词表代替业务判断，不因单个词出现而自动加指标、分组、筛选、时间范围或追问。通用说明和示例不是当前问题的新需求。
+
 【AST Schema】（严格遵守字段名与类型）
 
 {
@@ -23,7 +29,7 @@ SYSTEM_PROMPT = """
   "subject": {                       // 查询主体，由指标 source_dependency 推断
     "entity": "ent_xxx"              // 实体代码，如 ent_order, ent_customer
   },
-  "metrics": [                       // 指标列表，至少1个
+  "metrics": [                       // 聚合指标列表；逐条记录/属性名单查询允许为空
     {
       "name": "指标编码",         // 必须来自 metrics.yml 的 metric_code，严禁用 表.字段 格式
       "alias": "指标标准名称",        // 必须使用所选指标的 metric_name，不能填用户简称或自行改写
@@ -91,8 +97,8 @@ SYSTEM_PROMPT = """
 - 对比场景：通过多个 metrics 或 dimensions 分组表达，intent 仍为 "query"
 
 ### 2. subject（主实体）
-- 由 `metrics[0].name` 查 metrics.yml 的 `source_dependency.bind_entity[0]` 得到
-- 多指标时取公共实体；无公共实体时选主指标实体，并在 ambiguity 中标注
+- 汇总查询结合所选指标的 source_dependency 与已发布关系确定主体；明细/名单结合返回对象和关系路径确定主体，不能要求 metrics[0] 必须存在。
+- 多指标来自不同实体不自动构成歧义，先检查目录已有的依赖与关系是否能支持当前查询。
 
 ### 3. metrics（指标）
 - 匹配优先级：`metric_code` > `metric_name` > `synonyms`
@@ -101,13 +107,15 @@ SYSTEM_PROMPT = """
 - `time_anchor` 默认 null（用指标默认锚点）；若用户明确说"按下单时间"或"按付款时间"则覆盖为 `表名.字段名` 格式（如 `order_info.create_time`）
 - **【强制】`name` 必须是 metrics.yml 中存在的 `metric_code`**，严禁使用 `表.字段` 格式（如 `goods_info.sales_volume`）；`表.字段` 格式仅用于 dimensions（实体属性作维度）和 filters.field
 - **用户要求统计且 metrics.yml 中无匹配指标时**：不要从实体属性借用字段当 metric，也不要将最接近的指标当成已选指标；仅列出有业务含义证据的候选并报告未绑定的具体计算要求。用户只要求实体名称、属性值或关系名单时，metrics=[]，直接使用已发布属性投影，不要求“对应的明细指标”。
-- **“明细/列表”只是展示方式，不是指标名称**：必须继续匹配用户明确说出的业务对象和字段。例如“订单明细，显示订单号和实付金额”应选“实付金额”对应指标，并将 `order_info.order_id` 作为展示维度；严禁因为出现“明细”二字而改选“商品明细”等其他实体的指标
-- 当用户原话明确命中某指标的 `metric_name` 或 `synonyms`（例如“销售额”命中实付金额指标）时，必须优先使用该精确命中的指标；不得用仅语义相近的“商品总金额”等指标替代。精确名称/别名命中已经完成消歧，除非存在多个指标共享同一个精确词，否则不得再添加“确认指标”的 ambiguity
-- “销售趋势 / 销售情况 / 销售分析”本身没有说明金额或数量。若召回中同时存在销售金额、销量等多个规范指标，必须在 `ambiguity` 中列出这些已召回候选并追问；不得静默默认其中一个。用户明确说“含税销售总额 / 销量”等规范名称后才可唯一选择
+- **“明细/列表”不是指标名称**：根据用户实际要求的结果粒度判断。例如“逐笔订单，显示订单号和实付金额”应使用已发布订单属性作展示字段，metrics=[]；“各订单的实付金额合计”才涉及按订单汇总。不得因为出现某个词就改选其他实体或聚合指标。
+- 确定确实需要聚合后，再按目录名称、别名和业务口径匹配指标。名称匹配不能把单笔金额条件或否定提及强制变成汇总指标。
+- 对较宽泛的表达，先结合补全问题、结构化参考、已确认选择和目录业务默认值理解；已有足够依据时直接生成，不因同时召回多个相关指标就重新追问。确实缺少必要业务含义时才在 ambiguity 说明具体缺项。
 
-### 4. dimensions（维度）
-- 先区分汇总总数与分组查询：用户只问某范围内的总数/总额等指标，没有要求按实体、类别或时间分组时，dimensions=[]；实体出现在问题或“实体”参考中不等于要按实体名称分组。
-- 指标标准名称内部的“全部/所有/区域”等词属于指标名称，不是分组指令。补全问题与结构化参考都未要求分组/展示字段时，不得自行添加名称列；明确“各经销商/按等级/每月”等分组或明细要求仍须保留。
+### 4. dimensions（维度 / 明细展示字段）
+- 先结合补全后的完整问题、业务上下文和目录含义，确定“一行结果代表什么”，再生成字段。结构化参考中的意图、维度和展示字段不是最终结论，允许根据完整语义纠正。
+- 需要筛选范围内一个汇总值时，使用指标且 dimensions=[]；需要不同业务对象/类别/时间段之间的结果时，使用对应分组；需要逐条记录或名单时，dimensions 表达展示字段，metrics=[]。不要仅因实体出现在问题或参考中就加名称分组。
+- “全部/各/每/总数/明细”等词只能作为语义线索，不能据此固定分类。理解其修饰对象、否定及对比关系：例如“不要按医院分开，只给全市合计”不分组；“医院数量最多的城市”需要按城市分组，即使没有“按”字；“区域全部医院总数”作为指标完整名称时，其内部文字不产生额外分组。
+- 每个 dimensions 项都应能说明用户需要它作为分组或返回列的业务依据；不能为丰富展示自行添加。结构化参考维度为空不等于禁止分组；不为空也不等于必须保留，必须结合完整问题判断。只输出最终 ASL，不输出内部推理过程。
 - 匹配优先级：`dim_code` > `dim_name` > `synonyms`
 - **实体属性作维度**：若用户说"按商品名称""按客户年龄"等，维度字段不在 dimensions.yml 中，则 `name` 直接填 `表.字段`（如 `order_item_detail.goods_name`），`level` 和 `granularity` 为 null
 - 时间维度：`name` 必须填写 dimensions.yml 中实际召回的 `dim_code`（例如 `statistical_date`）；除非元数据里的真实编码就是 `dim_date`，否则严禁使用通用占位名 `dim_date`。并根据用户说法填 `granularity`（日/月/季/年）
@@ -120,14 +128,14 @@ SYSTEM_PROMPT = """
 
 ### 5. filters（过滤条件）
 - **【强制】`field` 必须是 `表名.字段名` 格式**，从 entities.yml 的 `attributes[].field_mapping` 查表
-- **关系路径中的名称过滤**：join_key / 编码字段只接受真实编码。用户给出的是实体名称而非编码时，必须在当前召回关系路径的相关实体中选择唯一的主名称属性（如元数据中的“实体名称”属性）进行过滤；不得把名称字符串填入 `*_code` / `*_id` / 关联键。名称为自由文本时优先使用 `LIKE` 并在 value 两侧加 `%`；无法唯一确定名称属性时保留 ambiguity 追问
+- **关系路径中的名称过滤**：依据目录映射选择名称字段或该名称对应的标准编码，不把名称文本直接填入编码字段。精确值用 = / IN，只有用户要求包含、前缀等模糊匹配时才用 LIKE，不自动给所有名称加通配符。
 - **跨实体修饰词必须拆分**：一句话同时给出品牌/厂家、商品、地区等不同实体或属性值时，每个值必须写入各自召回属性的独立 filter。不得把品牌、厂家或地区文字拼进商品名称，也不得把商品名称拼进品牌/厂家名称；缺少相应实体、属性或关系路径时必须 ambiguity 追问
 - **已注册的间接关系可直接执行**：若 relations 元数据已经用一个或多个桥接实体连通源条件实体和目标结果实体，必须沿该路径生成查询；不得因为两端没有直连关系而追问，也不得要求用户确认是否使用中间实体。用户已给出源实体过滤值和目标实体时，中间实体只作 JOIN 桥梁，不要再要求中间实体的具体名称。只有当当前作用域内的关系元数据确实不能连通时才追问
 - 支持的操作符：`=`, `!=`, `>`, `>=`, `<`, `<=`, `IN`, `NOT IN`, `LIKE`, `BETWEEN`
 - 数值范围（如 30-40 岁）可用 `BETWEEN`：`{ "field": "customer_info.age", "operator": "BETWEEN", "value": [30, 40] }`，也可拆成两个 filter（`>= 30` 和 `<= 40`）
 - 枚举值过滤：value 用 label（如"已支付"）或 code（如 1）均可，但同一 filter 内统一
 - 指标的 `global_filters`（如 `order_status = 1`）**不要**写入 filters，由下游自动注入
-- “活跃”不得臆造布尔/枚举状态。若召回属性被元数据定义为“最近一次订单时间”，只能使用 ISO 日期比较或 `BETWEEN` 表达用户明确的活跃期间；不得生成 `活跃状态 = '活跃'`。缺少唯一日期字段或时间范围时必须 ambiguity 追问
+- 状态、品牌、类别、活跃度等业务含义由当前目录定义，不在提示词中固定解释成某种物理字段。日期属性使用日期条件，枚举属性使用已注册值；不能用邻近字段替代另一种业务含义。
 
 ### 6. time_context（时间范围）
 - `type`、`unit`、`anchor` 三个字段**必填**
@@ -140,9 +148,9 @@ SYSTEM_PROMPT = """
 - 用户说"最近30天" → `type=range, start=计算日期, end=今天, unit=day`
 - 用户说"2026-01-01至2026-06-30" → `type=custom, start="2026-01-01", end="2026-06-30", unit=day`
 - 用户说"去年" → `type=range, start=去年1月1日, end=去年12月31日, unit=year`
-- 用户未说时间 → `time_context = null`
-- “正在销售 / 当前在售”不是可执行的时间边界；用户未给出起止日期时必须将 `time_context` 设为 null 并在 ambiguity 中追问时间范围
-- `anchor` 从主指标的 `time_caliber.time_anchor` 取，**必须是 `表名.字段名` 格式**（如 `order_info.pay_time`）。已有唯一口径时直接使用，不得改成名称相近的日期列；口径为空或存在多个无法确定的候选时不得猜测，应将 `time_context` 设为 null 并在 ambiguity 中追问时间口径
+- 用户未要求时间且调用方未给适用的已确认时间口径时，time_context=null；不要把指标名称中的“年度”或无关示例当成本次时间条件。通用提示词不新增最近一年之类默认值。
+- “正在销售 / 当前在售”等描述先按目录业务含义理解，可能是状态、关系或时间条件，不固定要求用户提供日期。
+- `anchor` 必须是当前目录可执行的表.字段。汇总优先采用指标发布的 time_caliber.time_anchor；指标未定义时结合相关时间维度、主体日期属性及其业务含义选择。明细不要求存在指标时间锚点。只有当前时间要求确实无法绑定时才说明具体缺项；不能丢弃明确时间条件返回全时间结果。
 - type=year 时必填 `value`；type=custom/range 时必填 `start` 和 `end`
 
 ### 7. sort（排序）
@@ -165,11 +173,10 @@ SYSTEM_PROMPT = """
   - "购买过2次以上的客户" → `["COUNT(DISTINCT order_info.order_id) >= 2"]`
   - "总消费金额超过1000的会员" → `["SUM(order_info.pay_amount) > 1000"]`
 
-### 10. ambiguity（歧义澄清）
-- 指标歧义：用户说"金额"，可能是实付金额/退款金额/商品总金额 → 列出候选
-- 维度歧义：用户说"渠道"，可能是下单渠道/注册渠道 → 列出候选
-- 时间锚点歧义：用户说"本月GMV"，可能按下单时间或付款时间 → 列出候选
-- 无歧义时返回空数组 `[]`
+### 10. ambiguity（必要缺项）
+- 不因出现某个词或多个召回候选自动追问。先利用完整问题、结构化参考、业务口径和已确认选择解决。
+- 缺少某个非必要展示属性时，保留可以输出的字段；只报告该属性无法显示，不让整个可执行查询中断。不使用相似但含义不同的字段凑数。
+- 真正影响所求指标、结果对象或必要约束且仍无法处理的缺项，说明具体字段/值及原因，不泛称“语义不明确”。没有这种缺项时 ambiguity=[]。
 
 【关键约束】
 
@@ -210,158 +217,6 @@ SYSTEM_PROMPT = """
 
 直接输出符合 schema 的 JSON，无任何额外文字。
 
-【示例】
-
-### 示例 1：本月各会员等级的实付金额
-
-输入：
-- 用户问题："本月各会员等级的实付金额"
-- 元数据：entities.yml / metrics.yml / dimensions.yml（略）
-
-输出：
-{
-  "version": "2.0",
-  "intent": "query",
-  "subject": { "entity": "ent_order" },
-  "metrics": [
-    { "name": "total_pay_amount", "alias": "实付金额", "time_anchor": null }
-  ],
-  "dimensions": [
-    { "name": "dim_member_level", "attr": null, "level": null, "granularity": null }
-  ],
-  "filters": [],
-  "time_context": {
-    "type": "this_month",
-    "start": null,
-    "end": null,
-    "value": null,
-    "unit": "month",
-    "anchor": "order_info.pay_time"
-  },
-  "sort": null,
-  "limit": null,
-  "having": [],
-  "ambiguity": []
-}
-
-### 示例 2：30-40 岁用户购买量前十的商品类目
-
-输入：
-- 用户问题："30-40岁用户购买量前十的商品类目"
-- 元数据：entities.yml / metrics.yml / dimensions.yml（略）
-
-输出：
-{
-  "version": "2.0",
-  "intent": "query",
-  "subject": { "entity": "ent_order_item" },
-  "metrics": [
-    { "name": "goods_quantity", "alias": "购买量", "time_anchor": null }
-  ],
-  "dimensions": [
-    { "name": "dim_goods_category", "attr": null, "level": null, "granularity": null }
-  ],
-  "filters": [
-    { "field": "customer_info.age", "operator": "BETWEEN", "value": [30, 40] }
-  ],
-  "time_context": null,
-  "sort": {
-    "field": "goods_quantity",
-    "direction": "DESC",
-    "field_type": "metric"
-  },
-  "limit": 10,
-  "having": [],
-  "ambiguity": []
-}
-
-### 示例 3：各商品品牌的退款笔数（含歧义澄清）
-
-输入：
-- 用户问题："各品牌的退款笔数"
-- 元数据：entities.yml / metrics.yml / dimensions.yml（略）
-
-输出：
-{
-  "version": "2.0",
-  "intent": "query",
-  "subject": { "entity": "ent_refund" },
-  "metrics": [
-    { "name": "refund_count", "alias": "退款笔数", "time_anchor": null }
-  ],
-  "dimensions": [
-    { "name": "dim_brand", "attr": null, "level": null, "granularity": null }
-  ],
-  "filters": [],
-  "time_context": null,
-  "sort": null,
-  "limit": null,
-  "having": [],
-  "ambiguity": []
-}
-
-### 示例 4：2026年每天的订单量趋势
-
-输入：
-- 用户问题："2026年每天的订单量趋势"
-- 元数据：entities.yml / metrics.yml / dimensions.yml（略）
-
-输出：
-{
-  "version": "2.0",
-  "intent": "query",
-  "subject": { "entity": "ent_order" },
-  "metrics": [
-    { "name": "order_count", "alias": "订单量", "time_anchor": null }
-  ],
-  "dimensions": [
-    { "name": "dim_date", "attr": null, "level": null, "granularity": "day" }
-  ],
-  "filters": [],
-  "time_context": {
-    "type": "year",
-    "start": null,
-    "end": null,
-    "value": 2026,
-    "unit": "year",
-    "anchor": "order_info.create_time"
-  },
-  "sort": {
-    "field": "dim_date",
-    "direction": "ASC",
-    "field_type": "dimension"
-  },
-  "limit": null,
-  "having": [],
-  "ambiguity": []
-}
-
-### 示例 5：购买过2次以上的客户
-
-输入：
-- 用户问题："购买过2次以上的客户"
-- 元数据：entities.yml / metrics.yml / dimensions.yml（略）
-
-输出：
-{
-  "version": "2.0",
-  "intent": "query",
-  "subject": { "entity": "ent_customer" },
-  "metrics": [
-    { "name": "order_count", "alias": "订单数", "time_anchor": null }
-  ],
-  "dimensions": [
-    { "name": "customer_info.customer_name", "attr": null, "level": null, "granularity": null }
-  ],
-  "filters": [],
-  "time_context": null,
-  "sort": null,
-  "limit": null,
-  "having": [
-    "COUNT(DISTINCT order_info.order_id) >= 2"
-  ],
-  "ambiguity": []
-}
 
 
 【用户提示词模板（User Prompt）】
@@ -1269,14 +1124,6 @@ class PromptBuilder:
         metrics_text = self._format_section(knowledge.get("metrics", []))
         dimensions_text = self._format_section(knowledge.get("dimensions", []))
 
-        if len(self.business_domain_ids) > 1:
-            user_query = (
-                user_query
-                + "\n\n【系统作用域】调用方已经显式选择业务域 "
-                + str(self.business_domain_ids)
-                + "，允许并期望在这些业务域之间联合分析。不得仅因为所选指标来自"
-                "不同的已选业务域而添加 ambiguity；只有业务术语本身仍有多种精确候选时才追问。"
-            )
         if self.preferred_metric_codes:
             user_query += (
                 "\n\n【指标硬约束】调用方已将指标解析为 "
@@ -1292,12 +1139,18 @@ class PromptBuilder:
                 ("dimensions", dimensions_text),
             ] if text == "(无召回)"
         ]
-        if empty_sections:
+        if len(empty_sections) == 3:
             user_query = (
                 user_query
                 + f"\n\n【系统提醒】以下语义元数据章节为空召回: {', '.join(empty_sections)}。"
                 "请严格遵守 System Prompt 第 10 条【空召回硬性约束】："
                 "不得凭空编造实体/指标/维度编码，必须输出空召回澄清结构（ambiguity 非空）以触发追问。"
+            )
+        elif empty_sections:
+            user_query += (
+                f"\n\n【目录提示】以下章节无召回: {', '.join(empty_sections)}。"
+                "这本身不构成查询失败：明细可以没有指标，汇总总数可以没有维度，"
+                "实体属性可以作展示字段。仅在当前任务实际需要且无法绑定时报告具体缺项。"
             )
 
         current_date = date.today().isoformat()
