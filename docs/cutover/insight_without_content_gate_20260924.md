@@ -62,3 +62,18 @@ Tests: `tests/test_analysis_synthesis.py`, `tests/test_analysis_orchestration.py
 
 The separate catalog/evaluation/shadow gaps and V1 replacement readiness are
 unchanged. No semantic publication, production configuration or V2 routing edits.
+
+## Deployment and live check
+
+- Runtime commit `fb7da7b`: exact three-file deployment after known-version
+  hash checks and backup; protected configuration hashes unchanged.
+- Remote scoped tests: 128 passed. DataAnalysis restarted at
+  2026-09-24 17:59:27 CST; process change and readiness HTTP 200 confirmed.
+  Oagnet and SQL processes were not restarted or changed.
+- A fresh-conversation hospital-total query completed in 60.9 seconds and
+  produced six model paragraphs. Insight-stage text contained 1031 characters,
+  without the hidden-analysis fallback or chart output. The generation record
+  explicitly reported no independent content validation. All six public stages
+  appeared in order; final query result remained available.
+- This confirms pipeline behavior and report availability, not independent
+  verification of every generated sentence. No raw business rows are committed.
