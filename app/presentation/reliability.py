@@ -101,6 +101,14 @@ def _evidence_line(item: EvidenceItem) -> str:
 
     if item.kind == "SEMANTIC_METRIC_RESOLUTION":
         metric = _compact_text(payload.get("canonical_name") or payload.get("metric_name"))
+        if item.source_ref == "oagnet-asl":
+            code = _compact_text(payload.get("metric_id"), limit=160).split(":", 1)[-1]
+            detail = f"指标“{metric}”" if metric else "查询指标"
+            code_text = f"，标准编码：{code}" if code else ""
+            return (
+                f"指标执行证据：{detail}已在最终 ASL 中选用并用于 SQL 查询{code_text}"
+                "（来源：本次执行的 ASL 与查询结果；不代表已独立审计全部业务口径）"
+            )
         detail = f"指标“{metric}”已完成口径绑定" if metric else "查询指标已完成口径绑定"
         return (
             f"指标口径证据：{detail}"

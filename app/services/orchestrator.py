@@ -10849,31 +10849,27 @@ class DataAnalysisOrchestrator:
         Re-querying a document knowledge base would add latency without improving
         metric correctness and would incorrectly couple numeric answers to app KBs.
         """
-        asl_metrics = query_result.asl.get("metrics") or []
-        if not isinstance(asl_metrics, list):
-            return []
-        resolved = {
-            str(item.get("name")).split(":", 1)[-1]: item
-            for item in asl_metrics
-            if isinstance(item, dict) and item.get("name")
-        }
+        from app.presentation.execution_trace import executed_asl_metrics
+
         evidence: list[EvidenceItem] = []
-        for metric in request.metrics:
-            metric_code = metric.metric_id.split(":", 1)[-1] if metric.metric_id else None
-            if metric_code is None or metric_code not in resolved:
-                continue
-            item = resolved[metric_code]
+        for item in executed_asl_metrics(query_result.asl):
+            metric_code = item["name"].split(":", 1)[-1]
+            # Retain a real upstream ID when available, never manufacture one
+            # for display. The actual ASL still determines which metrics exist.
+            existing = next((metric for metric in request.metrics
+                             if metric.metric_id and metric.metric_id.split(":", 1)[-1] == metric_code), None)
+            metric_id = existing.metric_id if existing else item["name"]
             evidence.append(
                 EvidenceItem(
                     evidence_id=(
                         f"semantic:{semantic_model_id}:{business_domain_id}:"
-                        f"{metric.metric_id}"
+                        f"{metric_id}"
                     ),
                     kind="SEMANTIC_METRIC_RESOLUTION",
                     source_ref="oagnet-asl",
                     payload={
-                        "metric_id": metric.metric_id,
-                        "canonical_name": metric.canonical_name or item.get("alias"),
+                        "metric_id": metric_id,
+                        "canonical_name": item["alias"] or (existing.canonical_name if existing else None) or item["name"],
                         "semantic_model_id": semantic_model_id,
                         "business_domain_id": business_domain_id,
                         "verified": True,

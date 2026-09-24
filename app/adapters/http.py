@@ -2492,14 +2492,16 @@ class HttpDataRetrievalAdapter:
             business_domain_id=business_domain_id,
         )
         self._validate_read_only_sql(sql)
-        metric_bindings = [
-            {
-                "用户指标": metric.input,
-                "标准指标": metric.canonical_name or metric.input,
-                "指标ID": metric.metric_id,
-            }
-            for metric in request.metrics
+        from app.presentation.execution_trace import executed_asl_metrics
+
+        selected_metrics = [
+            {"指标名称": item["alias"] or item["name"], "标准编码": item["name"]}
+            for item in executed_asl_metrics(asl)
         ]
+        metric_summary = (
+            _compact_progress_value(selected_metrics, 1000)
+            if selected_metrics else "无（本次 ASL 未选择指标）"
+        )
         query_shape = {
             "查询对象": (asl.get("subject") or {}).get("entity")
             if isinstance(asl.get("subject"), dict)
@@ -2513,7 +2515,7 @@ class HttpDataRetrievalAdapter:
             "COMPLETED",
             f"调用工具：{SQL_TRANSLATION_TOOL_NAME}。\n"
             f"输入：已验证 ASL（版本={asl.get('version') or 'UNKNOWN'}，"
-            f"指标绑定={_compact_progress_value(metric_bindings, 500)}，"
+            f"已选指标（来自最终ASL）={metric_summary}，"
             f"查询结构={_compact_progress_value(query_shape, 500)}，"
             f"ASL筛选条件={_compact_progress_value(asl.get('filters') or [], 500)}，"
             f"指标固定口径（SQL自动合并）="

@@ -12,3 +12,29 @@ QUERY_EXECUTION_CHAIN = " → ".join((
     "结果校验",
     "洞察分析",
 ))
+
+
+def executed_asl_metrics(asl: dict) -> list[dict[str, str]]:
+    """Read actual selected codes/labels, not advisory request bindings.
+
+    Callers supply the validated execution ASL. This is presentation metadata,
+    not a catalog lookup, ID generator or additional semantic validation.
+    """
+    metrics = asl.get("metrics")
+    if not isinstance(metrics, list):
+        return []
+    result = []
+    seen = set()
+    for item in metrics:
+        if not isinstance(item, dict) or not isinstance(item.get("name"), str):
+            continue
+        name = item["name"].strip()
+        if not name:
+            continue
+        alias = item.get("alias")
+        alias = alias.strip() if isinstance(alias, str) else ""
+        pair = (name, alias)
+        if pair not in seen:
+            result.append({"name": name, "alias": alias})
+            seen.add(pair)
+    return result

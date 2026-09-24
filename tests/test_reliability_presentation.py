@@ -30,7 +30,8 @@ def test_validation_is_chinese_and_expands_each_evidence_item() -> None:
     assert "数据质量：通过" in rendered
     assert "证据（2项）：" in rendered
     assert "1. 查询结果：返回 20 行，字段包括经销商、区域医院覆盖率（来源：" in rendered
-    assert "2. 指标口径证据：指标“区域医院覆盖率”已完成口径绑定（来源：" in rendered
+    assert "2. 指标执行证据：指标“区域医院覆盖率”已在最终 ASL 中选用并用于 SQL 查询" in rendered
+    assert "不代表已独立审计全部业务口径" in rendered
     assert "告警：无。" in rendered
     assert "HIGH" not in rendered
     assert "PASS" not in rendered
