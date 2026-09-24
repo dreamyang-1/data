@@ -61,12 +61,30 @@ edited in this release; deployed catalog mappings remain authoritative.
 
 ## Deployment / readiness
 
-Deployment pending at the time of this code commit. Plan: exact two Oagnet runtime
-files, hash/drift guarded backup, remote focused tests, restart Oagnet only, health
-checks, then real ASL + SQL translation checks for paraphrased totals, negated
-grouping, explicit grouping, and detail. No configuration or business data writes.
+Deployed code commit: `643b5a9`. Only `Oagnet/agent.py` and
+`Oagnet/prompt_build.py` uploaded after confirming remote files matched the known
+previous release; SHA-256 verified before/after and backup retained. No
+configuration or business data writes. SQL and DataAnalysis processes unchanged.
+
+Oagnet restart confirmed at 2026-09-24 11:06:53 CST; PID changed, ActiveState=active,
+NRestarts=0, HTTP health=200/UP and vector health=true. Remote focused suite:
+124 passed. Post-final-edit local focused suite: 73 passed.
+
+Real-model ASL plus SQL translation: five of five passed, no ambiguity:
+
+- Original full metric name, paraphrased hospital count and negated grouping:
+  dimensions=[], COUNT query without GROUP BY (13.1 / 11.0 / 11.5 seconds ASL).
+- Per-province count: published province dimension and SQL GROUP BY (10.7 seconds).
+- Hospital-name list: metrics=[], hospital name projection, no GROUP BY (7.9 seconds).
+
+The paraphrases selected different valid province/city filter fields for the same
+municipality. Two additional scoped read-only scalar count executions returned
+one row each and equal counts in current data. This is not evidence that all
+future municipality bindings or underlying data are equivalent. No raw records
+were fetched and no full platform SSE conversation was exercised in this smoke.
 
 V1 replacement readiness: unchanged / not requested. Catalog/Evaluation/Shadow
 gaps and existing strict-offline fixture failures remain outside this fix.
-Next shortest path for this task: verify deployed model behavior and record it;
-do not claim all legacy business rules removed or blanket production readiness.
+Current target's deployment verification is complete. Next product verification:
+try a new platform conversation against the deployed service. Do not claim all
+legacy business rules removed or blanket production readiness.
