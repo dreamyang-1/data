@@ -930,6 +930,14 @@ async def chat_stream(
             if (
                 composite_mode
                 and bool(event.get("is_child_task"))
+                and stage in {"COMPLETENESS_CHECK", "CLARIFICATION_EXECUTION", "CLARIFICATION_RESULT"}
+            ):
+                # A child's clarification is not a global stop. Its task-local
+                # terminal milestone is rendered in the execution section.
+                return []
+            if (
+                composite_mode
+                and bool(event.get("is_child_task"))
                 and _thinking_section(stage) in {
                     "execution", "validation", "insight",
                 }
@@ -1078,7 +1086,9 @@ async def chat_stream(
                     yield rendered_event
             deferred_planning.clear()
             response_scenario = (
-                "CHAT"
+                "ANALYTIC"
+                if response.execution_shape == "COMPOSITE"
+                else "CHAT"
                 if response.intent == PrimaryIntent.CHAT
                 else "CLARIFICATION"
                 if response.status == "NEEDS_CLARIFICATION"
@@ -1087,7 +1097,7 @@ async def chat_stream(
                 else presentation_scenario
             )
             presentation_scenario = response_scenario
-            if response_scenario in {"CHAT", "CLARIFICATION"}:
+            if response_scenario in {"CHAT", "CLARIFICATION"} or response.execution_shape == "COMPOSITE":
                 async for rendered_event in stream_thinking({
                     "stage": "FINAL_OUTPUT",
                     "status": "COMPLETED",
@@ -1424,6 +1434,9 @@ class _CompositeChildProgressOrderer:
         self.deferred_validation: list[dict[str, Any]] = []
         self.deferred_insight: list[dict[str, Any]] = []
         self.labelled_tasks: set[tuple[str, int]] = set()
+        self.execution_pending: dict[int, list[dict[str, Any]]] = {}
+        self.execution_finished_indices: set[int] = set()
+        self.next_execution_index = 0
 
     @staticmethod
     def _task_key(event: dict[str, Any]) -> str:
@@ -1487,13 +1500,38 @@ class _CompositeChildProgressOrderer:
         task_key = self._task_key(current)
 
         if section == "execution":
-            visible = self._label([current])
+            try:
+                task_index = max(0, int(current.get("task_index") or 0))
+            except (TypeError, ValueError):
+                task_index = 0
+            terminal = bool(current.get("task_terminal"))
+            duplicate_terminal = (
+                terminal and task_key in self.execution_completed
+            )
+            if not duplicate_terminal:
+                self.execution_pending.setdefault(task_index, []).append(current)
             if (
                 stage == "DATA_RETRIEVAL"
                 and status in self._TERMINAL_STATUSES
             ):
                 self.execution_completed.add(task_key)
-                visible.extend(self._open_validation_if_ready())
+                self.execution_finished_indices.add(task_index)
+            if terminal:
+                # No fake validation/insight events for a skipped task; it
+                # merely cannot hold successful siblings behind the barrier.
+                self.validation_completed.add(task_key)
+            visible = []
+            while self.next_execution_index < self.expected_task_count:
+                visible.extend(self._label(self.execution_pending.pop(self.next_execution_index, [])))
+                if self.next_execution_index not in self.execution_finished_indices:
+                    break
+                self.next_execution_index += 1
+            # Preserve any additional adapter execution milestone emitted
+            # after this task's ordinary retrieval output was released.
+            if task_index < self.next_execution_index:
+                visible.extend(self._label(self.execution_pending.pop(task_index, [])))
+            visible.extend(self._open_validation_if_ready())
+            visible.extend(self._open_insight_if_ready())
             return visible
 
         if section == "validation":
@@ -1514,7 +1552,11 @@ class _CompositeChildProgressOrderer:
         return [current]
 
     def flush(self) -> list[dict[str, Any]]:
-        pending = [*self.deferred_validation, *self.deferred_insight]
+        pending = [
+            *(event for index in sorted(self.execution_pending) for event in self.execution_pending[index]),
+            *self.deferred_validation, *self.deferred_insight,
+        ]
+        self.execution_pending.clear()
         self.deferred_validation.clear()
         self.deferred_insight.clear()
         return self._label(pending)
@@ -1562,7 +1604,9 @@ def _ordered_composite_child_progress_events(
                 if message.startswith("执行链路："):
                     message = message.removeprefix("执行链路：")
                 current["message"] = (
-                    f"任务{task_index + 1}执行链路：{message}"
+                    f"任务{task_index + 1}：{current.get('task_question') or ''}\n{message}"
+                    if current.get("task_terminal")
+                    else f"任务{task_index + 1}执行链路：{message}"
                 )
             else:
                 task_question = str(current.get("task_question") or "").strip()
@@ -1604,7 +1648,7 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
         "insight": "#### ◉ 数据洞察分析",
         "clarification_execution": "#### 3、调研执行",
         "clarification_result": "#### 4、结果生成",
-        "final_output": "#### 5、最终输出",
+        "final_output": "#### ◉ 最终输出",
     }[section]
 
 

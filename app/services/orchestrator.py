@@ -2230,6 +2230,7 @@ class DataAnalysisOrchestrator:
                 web_search=chat.web_search,
                 temp_file_paths=chat.temp_file_paths,
                 department=chat.department,
+                prompt=chat.prompt.model_copy(deep=True) if chat.prompt else None,
                 dependency_constraints=dependency_constraints,
                 dataset_id=next(
                     (
@@ -2242,6 +2243,23 @@ class DataAnalysisOrchestrator:
                     ),
                     None,
                 ) if not requires_new_entity else None,
+            )
+            # A split of an already completed question retains the same ASL
+            # boundary. A reply to Pending or a dependent/contextual task must
+            # still resolve its own execution envelope through the legacy path.
+            child._completed_question_execution = bool(
+                chat._completed_question_execution
+                and task.task_id not in task_answers
+                and not task.depends_on
+                and not contextual_root_task
+                and not (
+                    chat._semantic_decision is not None
+                    and str(chat._semantic_decision.source) == "V2_AUTHORIZED_PLAN"
+                )
+            )
+            child._business_domain_labels = chat._business_domain_labels
+            child._demo_execution_resolved_business_domain_ids = (
+                chat._demo_execution_resolved_business_domain_ids
             )
             if task.primary_intent is not None or task.parameters or task.extraction:
                 child._planner_extraction = PlannerExtraction(
@@ -2288,13 +2306,49 @@ class DataAnalysisOrchestrator:
                 logger.exception("atomic task failed: %s", task.task_id)
                 return task.task_id, exc
 
+        async def report_terminal(task: AtomicTask, value: AgentResponse | Exception) -> None:
+            status = value.status if isinstance(value, AgentResponse) else (
+                "SKIPPED" if str(value) == "DEPENDENCY_NOT_COMPLETED" else "FAILED"
+            )
+            if status == "NEEDS_CLARIFICATION":
+                message = "本任务需要补充条件，暂未完成；其他独立任务不受影响。"
+                if value.clarification_questions:
+                    message += "\n" + "；".join(value.clarification_questions)
+            elif status in {"COMPLETED", "PARTIAL_SUCCESS"}:
+                message = "本任务处理完成。"
+            elif status == "SKIPPED":
+                message = "依赖任务尚未完成，本任务未执行；其他独立任务不受影响。"
+            else:
+                message = "本任务未完成，请查看本任务最终输出；其他独立任务不受影响。"
+            progress_status = (
+                "COMPLETED" if status in {"COMPLETED", "PARTIAL_SUCCESS"}
+                else "SKIPPED" if status in {"NEEDS_CLARIFICATION", "SKIPPED"}
+                else "FAILED"
+            )
+            with task_progress_scope(
+                parent_message_id=root_message_id, task_id=task.task_id,
+                task_index=task_index_by_id[task.task_id], task_count=len(plan.tasks),
+                task_question=task.question, is_child_task=True,
+            ):
+                await emit_progress(
+                    "DATA_RETRIEVAL",
+                    progress_status,
+                    message, task_terminal=True, task_result_status=status,
+                )
+
+        async def run_and_report(task: AtomicTask) -> tuple[str, AgentResponse | Exception]:
+            task_id, value = await run(task)
+            await report_terminal(task, value)
+            return task_id, value
+
         for layer in layers:
-            layer_results = await asyncio.gather(*(run(task) for task in layer))
+            layer_results = await asyncio.gather(*(run_and_report(task) for task in layer))
             responses.update(layer_results)
 
         for alias_id, canonical_id in aliases.items():
             responses[alias_id] = responses[canonical_id]
             conversation_by_task[alias_id] = conversation_by_task.get(canonical_id, "")
+            await report_terminal(next(task for task in plan.tasks if task.task_id == alias_id), responses[alias_id])
 
         task_results: list[TaskExecutionResult] = []
         evidence: list[EvidenceItem] = []
