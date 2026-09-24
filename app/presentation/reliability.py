@@ -133,6 +133,12 @@ def _evidence_line(item: EvidenceItem) -> str:
 
     if item.kind == "ANSWER_SYNTHESIS":
         claim_count = payload.get("claim_count")
+        if payload.get("content_validation") == "NOT_PERFORMED":
+            detail = f"已生成 {claim_count} 段数据解读" if isinstance(claim_count, int) else "已生成数据解读"
+            return (
+                f"分析生成记录：{detail}"
+                "（来源：基于本次问题与查询数据的模型分析，未进行独立内容校验，不作为新增事实证据）"
+            )
         detail = f"已整理 {claim_count} 条已验证结论" if isinstance(claim_count, int) else "已整理已验证结论"
         return (
             f"回答整理证据：{detail}"

@@ -6502,8 +6502,26 @@ class DataAnalysisOrchestrator:
 
         if insight_output is not None and self.analysis_synthesizer is not None:
             await emit_progress(
-                "ANSWER_SYNTHESIS", "RUNNING", "正在将已验证的查询事实整理成通俗的数据解读。"
+                "ANSWER_SYNTHESIS", "RUNNING", "正在结合本次问题与查询数据生成分析解读。"
             )
+            # Only the model input receives this bounded task-local preview;
+            # do not add raw rows to persisted analysis evidence or cross-task context.
+            synthesis_input = replace(insight_output, facts={
+                **insight_output.facts,
+                "query_data": {
+                    "columns": query_result.dataset.columns,
+                    "rows": query_result.dataset.rows[:20],
+                    "returned_row_count": len(query_result.dataset.rows),
+                    "total_row_count": total_row_count,
+                    "total_row_count_confirmed": total_row_count_confirmed,
+                    "sample_only": (
+                        query_result.dataset.truncated
+                        or len(query_result.dataset.rows) > 20
+                        or not total_row_count_confirmed
+                        or total_row_count > len(query_result.dataset.rows)
+                    ),
+                },
+            })
             try:
                 with track_operation(
                     "ANALYSIS",
@@ -6514,7 +6532,7 @@ class DataAnalysisOrchestrator:
                 ) as timing:
                     synthesized_answer, synthesis = (
                         await self.analysis_synthesizer.synthesize(
-                            request, insight_output, evidence,
+                            request, synthesis_input, evidence,
                             agent_prompt=await self._agent_prompt_text(chat),
                         )
                     )
@@ -6528,6 +6546,7 @@ class DataAnalysisOrchestrator:
                         ),
                         payload={
                             "model": self.settings.analysis_synthesis_model_name,
+                            "content_validation": "NOT_PERFORMED",
                             "claim_count": len(synthesis.claims),
                             "claims": [
                                 claim.model_dump(mode="json")
@@ -6544,7 +6563,7 @@ class DataAnalysisOrchestrator:
                 SynthesisValidationError,
             ) as exc:
                 logger.warning(
-                    "analysis synthesis unavailable or rejected; using "
+                    "analysis synthesis unavailable; using "
                     "deterministic answer: request_id=%s error_type=%s detail=%s",
                     request.request_id, type(exc).__name__, exc,
                 )
@@ -6558,7 +6577,7 @@ class DataAnalysisOrchestrator:
                     "presentation_warnings", []
                 )
                 warning = (
-                    "Qwen分析总结未通过可用性或证据校验，"
+                    "Qwen分析服务暂不可用或未返回可展示文本，"
                     "已返回确定性分析结果"
                 )
                 if warning not in warnings:
@@ -6660,8 +6679,7 @@ class DataAnalysisOrchestrator:
             synthesized_answer
             or (
                 (
-                    "本次详细分析未能通过模型调用或证据校验，暂不展示扩展解读。"
-                    "已验证的数据与简要结论见最终输出。"
+                    "本次模型分析暂不可用，以下为查询数据摘要：\n\n" + insight_output.answer
                     if self.analysis_synthesizer is not None
                     else insight_output.answer
                 )
@@ -6670,8 +6688,7 @@ class DataAnalysisOrchestrator:
             )
         )
         if (
-            synthesized_answer is None
-            and insight_output is not None
+            insight_output is not None
             and insight_output.warnings
         ):
             insight_text += "\n需要注意的是，" + "；".join(
@@ -6683,7 +6700,7 @@ class DataAnalysisOrchestrator:
             (
                 f"分析意图：{self._intent_label(request.primary_intent)}。\n\n"
                 + insight_text
-                + "\n\n以上内容只基于本次查询结果和已验证证据，不额外推测业务原因。"
+                + "\n\n以上分析基于本次问题与查询数据，推断性解释不代表已核实的业务原因。"
             ),
             message_limit=8192,
             chart_image_count=0,

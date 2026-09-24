@@ -10,409 +10,166 @@ from app.config import Settings
 from app.domain.models import CanonicalAnalysisRequest, EvidenceItem, MetricRef, PrimaryIntent
 
 
-def request() -> CanonicalAnalysisRequest:
+def request():
     return CanonicalAnalysisRequest(
         conversation_id="c1", tenant_id="t1", user_id="u1",
-        original_question="为什么销售额下降",
+        original_question="为什么销售额下降", rewritten_question="分析上海销售额的变化",
         primary_intent=PrimaryIntent.ROOT_CAUSE_ANALYSIS,
         metrics=[MetricRef(input="销售额")],
     )
 
 
-def analysis() -> AnalysisOutput:
+def analysis():
     return AnalysisOutput(
-        answer="销售额下降50。华东贡献-80，华南贡献30，覆盖度100%。",
+        answer="销售额下降50。华东贡献-80，华南贡献30。",
         method="ranked_contribution_candidates",
-        facts={
-            "contribution_sum": -50, "coverage": 1.0,
-            "causality_established": False,
-            "decision_source": "DETERMINISTIC_ALGORITHM",
-            "llm_role": "PRESENTATION_ONLY",
-            "algorithm_contract_version": "analysis-contract-v2",
-            "matched_knowledge": [{"content": "促销结束可能影响销量"}],
-            "ranked_candidates": [
-                {"label": "华东", "contribution": -80},
-                {"label": "华南", "contribution": 30},
-            ],
-        },
-        warnings=["归因结果是贡献驱动而非因果证明"],
+        facts={"contribution_sum": -50, "coverage": 1.0,
+               "query_data": {"rows": [{"地区": "华东", "贡献": -80}, {"地区": "华南", "贡献": 30}], "sample_only": False}},
+        warnings=["贡献分析不能证明业务因果"],
     )
 
 
-def evidence() -> list[EvidenceItem]:
+def evidence():
     return [
         EvidenceItem(evidence_id="query:q1", kind="QUERY_RESULT", source_ref="data:test", payload={"row_count": 2}),
         EvidenceItem(evidence_id="analysis:a1", kind="ANALYSIS_RESULT", source_ref="deterministic:test", payload={"facts": analysis().facts}),
-        EvidenceItem(evidence_id="knowledge:k1", kind="ANALYSIS_KNOWLEDGE", source_ref="kb:test", payload={"sources": [{"source": "运营记录"}]}),
+        EvidenceItem(evidence_id="knowledge:k1", kind="ANALYSIS_KNOWLEDGE", source_ref="kb:test", payload={"text": "不可混入的外部原因"}),
     ]
 
 
-def transport_for(output: dict) -> httpx.MockTransport:
-    async def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(output, ensure_ascii=False)}}]})
-    return httpx.MockTransport(handler)
+def settings(**changes):
+    return Settings(env="test", intent_model_api_key="test-key",
+                    analysis_synthesis_enabled=True, analysis_synthesis_max_retries=0, **changes)
 
 
-def capturing_transport(output: dict, captured: dict) -> httpx.MockTransport:
-    async def handler(request: httpx.Request) -> httpx.Response:
-        body = json.loads(request.content)
-        captured.update(json.loads(body["messages"][1]["content"]))
-        return httpx.Response(
-            200,
-            json={"choices": [{"message": {"content": json.dumps(output)}}]},
-        )
-
-    return httpx.MockTransport(handler)
-
-
-def sequence_transport(outputs: list[dict], call_count: list[int]) -> httpx.MockTransport:
-    async def handler(request: httpx.Request) -> httpx.Response:
-        index = call_count[0]
-        call_count[0] += 1
-        output = outputs[min(index, len(outputs) - 1)]
-        return httpx.Response(
-            200,
-            json={"choices": [{"message": {"content": json.dumps(output)}}]},
-        )
-
+def transport_for(output, calls=None):
+    async def handler(req):
+        if calls is not None:
+            calls.append(json.loads(req.content))
+        content = output if isinstance(output, str) else json.dumps(output, ensure_ascii=False)
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
     return httpx.MockTransport(handler)
 
 
 @pytest.mark.asyncio
-async def test_data_insight_model_loads_platform_user_prompt_into_system_message() -> None:
-    captured = {}
-    output = {"claims": [
-        {
-            "statement": "销售额下降50，华东贡献-80，华南贡献30。",
-            "certainty": "VERIFIED_FACT",
-            "evidence_ids": ["analysis:a1"],
-        },
-        {
-            "statement": "当前归因不足以证明因果关系。",
-            "certainty": "LIMITATION",
-            "evidence_ids": ["analysis:a1"],
-        },
-    ]}
-
-    async def handler(request: httpx.Request) -> httpx.Response:
-        body = json.loads(request.content)
-        captured["system"] = body["messages"][0]["content"]
-        return httpx.Response(
-            200,
-            json={"choices": [{"message": {"content": json.dumps(output)}}]},
-        )
-
-    await QwenAnalysisSynthesizer(
-        settings(), httpx.MockTransport(handler)
-    ).synthesize(
-        request(),
-        analysis(),
-        evidence(),
-        agent_prompt="平台表达设定：面向医药业务人员说明。",
-    )
-
-    assert "智能体用户设定（平台配置" in captured["system"]
-    assert "平台表达设定：面向医药业务人员说明。" in captured["system"]
-    assert "高级分析专家工作方法" in captured["system"]
-    assert "第一条说明本次观察的指标" in captured["system"]
-    assert "只解释输入已经验证的计算结果" in captured["system"]
-    assert "不要结论先行" in captured["system"]
-    assert "贡献最大不等于业务根因" in captured["system"]
-    assert "多维、趋势、排名或归因任务" in captured["system"]
-    assert "最终仍只输出符合 Schema 的 JSON claims" in captured["system"]
-
-
-def settings() -> Settings:
-    return Settings(env="test", intent_model_api_key="test-key", analysis_synthesis_enabled=True, analysis_synthesis_max_retries=0)
-
-
-def test_formatted_amounts_are_validated_as_whole_numbers():
-    assert QwenAnalysisSynthesizer._numbers("金额-7,070,722.04，比例18.57%") == [-7070722.04, 0.1857]
-    assert not QwenAnalysisSynthesizer._number_is_grounded(7070722.04, [7, 70, 722.04])
+async def test_data_insight_uses_completed_question_data_and_platform_style_without_review():
+    calls = []
+    result = {"claims": [{"statement": "华南的正向贡献部分抵消华东的下降，但未改变总体下降方向。"}]}
+    text, parsed = await QwenAnalysisSynthesizer(
+        settings(analysis_synthesis_validation_retries=1), transport_for(result, calls)
+    ).synthesize(request(), analysis(), evidence(), agent_prompt="面向医药业务人员说明")
+    assert text == result["claims"][0]["statement"]
+    assert len(parsed.claims) == 1 and len(calls) == 1
+    prompt = calls[0]["messages"][0]["content"]
+    data = json.loads(calls[0]["messages"][1]["content"])
+    assert data["completed_question"] == "分析上海销售额的变化"
+    assert data["facts"]["query_data"]["rows"][0]["贡献"] == -80
+    assert data["warnings"] == analysis().warnings
+    assert "knowledge:k1" not in data["evidence"]
+    assert "allowed_numbers_for_output" not in data
+    assert "面向医药业务人员说明" in prompt
+    assert "合理推断" in prompt and "不要补造数据" in prompt
+    assert "八百至一千五百字" in prompt and "不要结论先行" in prompt
+    assert "不生成图表" in prompt and "sample_only" in prompt
+    assert "高级分析专家工作方法" in prompt
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("supported,accept", [([True, True], True), ([False, True], False), ([True], False)])
-async def test_expanded_wording_requires_complete_semantic_evidence_review(supported, accept):
-    output = {"claims": [
-        {"statement": "比较不同区域时需要同时观察正向与反向变化，各部分的增减不能脱离整体来解释。",
-         "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]},
-        {"statement": "当前归因不足以证明因果关系。",
-         "certainty": "LIMITATION", "evidence_ids": ["analysis:a1"]},
-    ]}
-    calls = [0]
-    model = QwenAnalysisSynthesizer(
-        settings().model_copy(update={"analysis_synthesis_validation_retries": 0}),
-        sequence_transport([output, {"supported": supported, "warnings_preserved": True}], calls),
-    )
-    if accept:
-        rendered, _ = await model.synthesize(request(), analysis(), evidence())
-        assert "比较不同区域" in rendered
-    else:
-        with pytest.raises(SynthesisValidationError):
-            await model.synthesize(request(), analysis(), evidence())
-    assert calls == [2]
+async def test_data_insight_accepts_derived_calculation_not_in_numeric_allowlist():
+    output = {"claims": [{"statement": "华南贡献30抵消华东下降80的37.5%，剩余净下降50。",
+                          "certainty": "VERIFIED_FACT", "evidence_ids": ["query:q1"]}]}
+    calls = []
+    text, _ = await QwenAnalysisSynthesizer(settings(), transport_for(output, calls)).synthesize(
+        request(), analysis(), evidence())
+    assert "37.5%" in text and len(calls) == 1
 
 
 @pytest.mark.asyncio
-async def test_wording_review_cannot_bypass_later_numeric_error():
-    output = {"claims": [
-        {"statement": "比较不同区域时需要同时观察正向与反向变化，各部分的增减不能脱离整体来解释。",
-         "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]},
-        {"statement": "销售额下降999。", "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]},
-    ]}
-    calls = [0]
-    model = QwenAnalysisSynthesizer(settings().model_copy(update={"analysis_synthesis_validation_retries": 0}), sequence_transport([output], calls))
-    with pytest.raises(SynthesisValidationError, match="ungrounded number"):
-        await model.synthesize(request(), analysis(), evidence())
-    assert calls == [1]
+async def test_unlocked_analysis_and_missing_claim_metadata_do_not_block_report():
+    unlocked = AnalysisOutput(answer="订单笔数为49。", method="query-summary", facts={}, warnings=[])
+    text, parsed = await QwenAnalysisSynthesizer(settings(), transport_for(
+        {"claims": [{"statement": "此次结果是该范围内的订单数量，没有同期对照，不能据此判断增长。"}]}
+    )).synthesize(request(), unlocked, [])
+    assert "订单数量" in text
+    assert parsed.claims[0].evidence_ids == []
 
 
 @pytest.mark.asyncio
-async def test_qwen_accepts_algorithm_selected_grounded_claims() -> None:
-    output = {"claims": [
-        {"statement": "销售额下降50，华东贡献-80，华南贡献30。", "certainty": "VERIFIED_FACT", "evidence_ids": ["query:q1", "analysis:a1"]},
-        {"statement": "促销结束可能是候选原因，尚未验证。", "certainty": "SUPPORTED_HYPOTHESIS", "evidence_ids": ["knowledge:k1"]},
-        {"statement": "当前归因不足以证明因果关系。", "certainty": "LIMITATION", "evidence_ids": ["analysis:a1"]},
-    ]}
-    answer, parsed = await QwenAnalysisSynthesizer(settings(), transport_for(output)).synthesize(request(), analysis(), evidence())
+async def test_unknown_evidence_metadata_is_dropped_without_hiding_analysis():
+    text, output = await QwenAnalysisSynthesizer(settings(), transport_for({"claims": [{
+        "statement": "华东下降抵消了华南的正向贡献。",
+        "certainty": "VERIFIED_FACT", "evidence_ids": ["made-up:id", "analysis:a1"],
+    }]})).synthesize(request(), analysis(), evidence())
+    assert text and output.claims[0].evidence_ids == ["analysis:a1"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("output", [
+    {"claims": [{"statement": "可读分析。"}]},
+    {"claims": [{"statement": "可读分析。", "certainty": ["bad"], "evidence_ids": None}]},
+    {"claims": ["可读分析。"]},
+    {"analysis": "可读分析。"},
+    {"content": "可读分析。"},
+    "可读分析。",
+    '"可读分析。"',
+    '```json\n{"claims":[{"statement":"可读分析。"}]}\n```',
+])
+async def test_paragraph_format_variations_remain_displayable(output):
+    text, _ = await QwenAnalysisSynthesizer(settings(), transport_for(output)).synthesize(
+        request(), analysis(), evidence())
+    assert text == "可读分析。"
+
+
+@pytest.mark.asyncio
+async def test_paragraph_order_length_and_missing_limitation_claim_do_not_reject_text():
+    paragraphs = [
+        {"statement": "先比较数据范围。", "certainty": "LIMITATION"},
+        {"statement": "展开分析依据。" * 100, "certainty": "VERIFIED_FACT"},
+        {"statement": "先比较数据范围。", "certainty": "LIMITATION"},
+    ]
+    text, parsed = await QwenAnalysisSynthesizer(settings(), transport_for(
+        {"claims": paragraphs})).synthesize(request(), analysis(), evidence())
     assert len(parsed.claims) == 3
-    assert "从本次查询结果来看" in answer
-    assert "结合已有业务资料" in answer
-    assert "需要注意的是" in answer
+    assert text.startswith(paragraphs[0]["statement"])
+    assert paragraphs[1]["statement"] in text
 
 
 @pytest.mark.asyncio
-async def test_qwen_rejects_invented_number() -> None:
-    output = {"claims": [{"statement": "销售额下降999。", "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]}]}
-    with pytest.raises(SynthesisValidationError, match="ungrounded number"):
-        await QwenAnalysisSynthesizer(settings(), transport_for(output)).synthesize(request(), analysis(), evidence())
+@pytest.mark.parametrize("content", ["", " ", "{}", '{"claims":[]}', '{"claims":[{"statement":""}]}', '{"claims":'])
+async def test_empty_or_broken_response_is_availability_failure_not_content_review(content):
+    with pytest.raises(SynthesisValidationError):
+        await QwenAnalysisSynthesizer(settings(), transport_for(content)).synthesize(request(), analysis(), evidence())
 
 
 @pytest.mark.asyncio
-async def test_qwen_may_repeat_explicit_time_number_from_user_question() -> None:
-    scoped_request = request().model_copy(
-        update={"original_question": "分析2026年销售额变化"}
-    )
-    output = {"claims": [
-        {
-            "statement": "2026年销售额下降50。",
-            "certainty": "VERIFIED_FACT",
-            "evidence_ids": ["analysis:a1"],
-        },
-        {
-            "statement": "当前归因不足以证明因果关系。",
-            "certainty": "LIMITATION",
-            "evidence_ids": ["analysis:a1"],
-        },
-    ]}
-
-    answer, _ = await QwenAnalysisSynthesizer(
-        settings(), transport_for(output)
-    ).synthesize(scoped_request, analysis(), evidence())
-
-    assert "2026年销售额下降50" in answer
+async def test_missing_api_key_still_reports_service_unavailable():
+    with pytest.raises(RuntimeError, match="API key"):
+        await QwenAnalysisSynthesizer(settings().model_copy(update={"intent_model_api_key": None})).synthesize(
+            request(), analysis(), evidence())
 
 
 @pytest.mark.asyncio
-async def test_query_summary_accepts_natural_grounded_paraphrase() -> None:
-    query_summary = AnalysisOutput(
-        answer=(
-            "本次查询共命中1条结果，返回字段为订单笔数。\n"
-            "本次返回的是完整查询结果，没有发生结果截断。\n"
-            "这次结果的核心值是订单笔数为49。"
-        ),
-        method="validated_query_result_summary",
-        facts={
-            "decision_source": "DETERMINISTIC_ALGORITHM",
-            "llm_role": "PRESENTATION_ONLY",
-            "row_count": 1,
-            "returned_row_count": 1,
-            "truncated": False,
-        },
-    )
-    query_request = request().model_copy(
-        update={"original_question": "查询2025年江苏省订单笔数"}
-    )
-    query_evidence = [
-        EvidenceItem(
-            evidence_id="analysis:a1",
-            kind="ANALYSIS_RESULT",
-            source_ref="deterministic:test",
-            payload={"facts": query_summary.facts},
-        )
-    ]
-    output = {"claims": [
-        {
-            "statement": "2025年江苏省订单笔数查询结果已确认，返回的订单笔数为49笔。",
-            "certainty": "VERIFIED_FACT",
-            "evidence_ids": ["analysis:a1"],
-        },
-        {
-            "statement": "本次返回的是完整查询结果，没有发生结果截断。",
-            "certainty": "VERIFIED_FACT",
-            "evidence_ids": ["analysis:a1"],
-        },
-    ]}
-
-    answer, _ = await QwenAnalysisSynthesizer(
-        settings(), transport_for(output)
-    ).synthesize(query_request, query_summary, query_evidence)
-
-    assert "订单笔数为49笔" in answer
-    assert "没有发生结果截断" in answer
+async def test_transient_http_failure_retries_transport_only():
+    calls = []
+    async def handler(req):
+        calls.append(json.loads(req.content))
+        if len(calls) == 1:
+            return httpx.Response(503)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "模型分析。"}}]})
+    model = QwenAnalysisSynthesizer(settings().model_copy(update={"analysis_synthesis_max_retries": 1}),
+                                    httpx.MockTransport(handler))
+    text, _ = await model.synthesize(request(), analysis(), evidence())
+    assert text == "模型分析。" and len(calls) == 2
+    assert calls[0] == calls[1]
 
 
 @pytest.mark.asyncio
-async def test_query_summary_still_rejects_unrelated_business_claim() -> None:
-    query_summary = AnalysisOutput(
-        answer="本次查询共命中1条结果，订单笔数为49。",
-        method="validated_query_result_summary",
-        facts={
-            "decision_source": "DETERMINISTIC_ALGORITHM",
-            "llm_role": "PRESENTATION_ONLY",
-            "row_count": 1,
-            "columns": ["订单笔数"],
-        },
-    )
-    output = {"claims": [{
-        "statement": "订单笔数为49，反映市场需求旺盛。",
-        "certainty": "VERIFIED_FACT",
-        "evidence_ids": ["analysis:a1"],
-    }]}
-
-    with pytest.raises(SynthesisValidationError, match="business interpretation"):
-        await QwenAnalysisSynthesizer(
-            settings(), transport_for(output)
-        ).synthesize(
-            request(),
-            query_summary,
-            [EvidenceItem(
-                evidence_id="analysis:a1",
-                kind="ANALYSIS_RESULT",
-                source_ref="deterministic:test",
-                payload={"facts": query_summary.facts},
-            )],
-        )
-
-
-@pytest.mark.asyncio
-async def test_synthesis_prompt_exposes_an_explicit_numeric_allowlist() -> None:
-    captured: dict = {}
-    output = {"claims": [
-        {
-            "statement": "销售额下降50。",
-            "certainty": "VERIFIED_FACT",
-            "evidence_ids": ["analysis:a1"],
-        },
-        {
-            "statement": "当前归因不足以证明因果关系。",
-            "certainty": "LIMITATION",
-            "evidence_ids": ["analysis:a1"],
-        },
-    ]}
-
-    await QwenAnalysisSynthesizer(
-        settings(), capturing_transport(output, captured)
-    ).synthesize(request(), analysis(), evidence())
-
-    allowed = captured["allowed_numbers_for_output"]
-    assert 50 in allowed
-    assert -80 in allowed
-    assert 999 not in allowed
-
-
-@pytest.mark.asyncio
-async def test_synthesis_repairs_one_validation_failure_then_returns_valid_claims() -> None:
-    invalid = {"claims": [{
-        "statement": "销售额下降999。",
-        "certainty": "VERIFIED_FACT",
-        "evidence_ids": ["analysis:a1"],
-    }]}
-    repaired = {"claims": [
-        {
-            "statement": "销售额下降50。",
-            "certainty": "VERIFIED_FACT",
-            "evidence_ids": ["analysis:a1"],
-        },
-        {
-            "statement": "当前归因不足以证明因果关系。",
-            "certainty": "LIMITATION",
-            "evidence_ids": ["analysis:a1"],
-        },
-    ]}
-    calls = [0]
-
-    answer, _ = await QwenAnalysisSynthesizer(
-        settings(), sequence_transport([invalid, repaired], calls)
-    ).synthesize(request(), analysis(), evidence())
-
-    assert calls == [2]
-    assert "销售额下降50" in answer
-    assert "999" not in answer
-
-
-@pytest.mark.asyncio
-async def test_qwen_rejects_unknown_evidence() -> None:
-    output = {"claims": [{"statement": "销售额下降50。", "certainty": "VERIFIED_FACT", "evidence_ids": ["made-up:evidence"]}]}
-    with pytest.raises(SynthesisValidationError, match="unknown evidence"):
-        await QwenAnalysisSynthesizer(settings(), transport_for(output)).synthesize(request(), analysis(), evidence())
-
-
-@pytest.mark.asyncio
-async def test_qwen_cannot_promote_unselected_knowledge_to_reason() -> None:
-    output = {"claims": [{"statement": "市场竞争可能是候选原因，尚未验证。", "certainty": "SUPPORTED_HYPOTHESIS", "evidence_ids": ["knowledge:k1"]}]}
-    with pytest.raises(SynthesisValidationError, match="not selected"):
-        await QwenAnalysisSynthesizer(settings(), transport_for(output)).synthesize(request(), analysis(), evidence())
-
-
-@pytest.mark.asyncio
-async def test_qwen_rejects_causal_verified_fact() -> None:
-    output = {"claims": [
-        {"statement": "市场竞争导致销售额下降50。", "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]},
-        {"statement": "当前归因不足以证明因果关系。", "certainty": "LIMITATION", "evidence_ids": ["analysis:a1"]},
-    ]}
-    with pytest.raises(SynthesisValidationError, match="must not assert causality"):
-        await QwenAnalysisSynthesizer(
-            settings().model_copy(update={"analysis_synthesis_validation_retries": 0}),
-            sequence_transport([output, {"supported": [False, True], "warnings_preserved": True}], [0]),
-        ).synthesize(request(), analysis(), evidence())
-
-
-@pytest.mark.asyncio
-async def test_qwen_requires_locked_algorithm_decision() -> None:
-    unlocked = AnalysisOutput(answer="销售额下降50。", method="unsafe", facts={}, warnings=[])
-    output = {"claims": [{"statement": "销售额下降50。", "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]}]}
-    with pytest.raises(SynthesisValidationError, match="locked"):
-        await QwenAnalysisSynthesizer(settings(), transport_for(output)).synthesize(request(), unlocked, evidence())
-
-
-@pytest.mark.asyncio
-async def test_qwen_must_preserve_algorithm_warnings() -> None:
-    output = {"claims": [{"statement": "销售额下降50。", "certainty": "VERIFIED_FACT", "evidence_ids": ["analysis:a1"]}]}
-    with pytest.raises(SynthesisValidationError, match="require a limitation claim"):
-        await QwenAnalysisSynthesizer(settings(), transport_for(output)).synthesize(request(), analysis(), evidence())
-
-
-@pytest.mark.asyncio
-async def test_qwen_ranking_cannot_drop_requested_profile_columns() -> None:
-    base = analysis()
-    ranked = AnalysisOutput(
-        answer="经销商排名：甲=100（合作时长=24，合作次数=8）。",
-        method=base.method,
-        facts={
-            **base.facts,
-            "profile_columns": ["合作时长", "合作次数"],
-        },
-        warnings=[],
-    )
-    output = {"claims": [{
-        "statement": "经销商排名：甲=100（合作时长=24）。",
-        "certainty": "VERIFIED_FACT",
-        "evidence_ids": ["analysis:a1"],
-    }]}
-
-    with pytest.raises(SynthesisValidationError, match="omitted requested profile"):
-        await QwenAnalysisSynthesizer(
-            settings(), transport_for(output)
-        ).synthesize(request(), ranked, evidence())
+async def test_permission_http_failure_is_not_retried_or_hidden():
+    calls = []
+    async def handler(req):
+        calls.append(1)
+        return httpx.Response(403)
+    with pytest.raises(httpx.HTTPStatusError):
+        await QwenAnalysisSynthesizer(settings(), httpx.MockTransport(handler)).synthesize(
+            request(), analysis(), evidence())
+    assert calls == [1]

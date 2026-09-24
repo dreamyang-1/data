@@ -483,6 +483,10 @@ class FailingReportExporter:
 
 class SynthesisStub:
     async def synthesize(self, request, analysis, evidence, *, agent_prompt=""):
+        query_data = analysis.facts["query_data"]
+        assert query_data["columns"] and query_data["rows"]
+        assert len(query_data["rows"]) <= 20
+        assert "sample_only" in query_data
         return (
             "模型整理后的证据化总结",
             SynthesisOutput(
@@ -912,6 +916,8 @@ async def test_qwen_synthesis_is_used_only_after_analysis_evidence_exists() -> N
     assert response.chart_specs[0].point_count == 2
     kinds = [item.kind for item in response.evidence]
     assert kinds.index("ANALYSIS_RESULT") < kinds.index("ANSWER_SYNTHESIS")
+    assert next(e for e in response.evidence if e.kind == "ANSWER_SYNTHESIS").payload["content_validation"] == "NOT_PERFORMED"
+    assert all("query_data" not in e.payload.get("facts", {}) for e in response.evidence)
     synthesis_step = next(
         step for step in response.analysis_process if step.stage == "MODEL_SYNTHESIS"
     )
@@ -940,6 +946,9 @@ async def test_trend_chart_is_only_embedded_in_final_answer() -> None:
 
     insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
     assert response.status == "COMPLETED"
+    reliability_text = next(item["message"] for item in events if item["stage"] == "RELIABILITY_CHECK")
+    assert "未进行独立内容校验" in reliability_text
+    assert "条已验证结论" not in reliability_text
     assert "模型整理后的证据化总结" in insight["message"]
     assert "模型整理后的证据化总结" not in response.answer
     assert response.chart_specs[0].chart_type == "LINE"
@@ -969,8 +978,10 @@ async def test_failed_insight_is_disclosed_without_repeating_final_conclusions()
             TrustedIdentity(tenant_id="tenant", user_id="user"),
         )
     insight = next(item for item in events if item["stage"] == "INSIGHT_ANALYSIS")
-    assert "暂不展示扩展解读" in insight["message"]
-    assert "关键事实：" not in insight["message"]
+    assert "本次模型分析暂不可用" in insight["message"]
+    assert "以下为查询数据摘要" in insight["message"]
+    assert "销售额" in insight["message"]
+    assert "证据校验" not in insight["message"]
     assert response.status == "COMPLETED"
     assert "销售额" in response.answer
 

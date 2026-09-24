@@ -255,7 +255,8 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
     assert "#### ◉ 数据洞察分析" in insight_content
     assert "本次查询共命中" in insight_content
     assert "这次结果的核心值" in insight_content
-    assert "只基于本次查询结果和已验证证据" in insight_content
+    assert "基于本次问题与查询数据" in insight_content
+    assert "推断性解释不代表已核实的业务原因" in insight_content
     assert "任务1：" not in validation_content
     assert "任务1：" not in insight_content
 
