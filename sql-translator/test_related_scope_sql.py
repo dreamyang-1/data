@@ -21,7 +21,7 @@ def fixture():
     return translator,{'subject':{'entity':'sales'},'related_filters':[relation]}
 
 
-def test_exists_counts_each_sale_once_even_with_duplicate_multiple_tags():
+def test_membership_counts_each_sale_once_even_with_duplicate_multiple_tags():
     t,ast=fixture(); condition=compile_related_filters(t,ast,'106')[0]
     sql='SELECT SUM(sales.amount) FROM sales WHERE '+condition
     assert SQLTranslatorProd.validate_read_only_sql(sql)==sql
@@ -33,6 +33,8 @@ def test_exists_counts_each_sale_once_even_with_duplicate_multiple_tags():
     c.executemany('INSERT INTO sales VALUES(?,?)',[('candidate',100),('candidate',200),('unrelated',500)])
     assert c.execute('SELECT SUM(amount) FROM sales WHERE '+condition).fetchone()[0]==300
     assert 'LIMIT' not in condition
+    assert 'EXISTS' not in condition
+    assert condition.count('sales.product_id') == 1
     c.close()
 
 
@@ -57,7 +59,7 @@ def test_reverse_only_publication_from_shared_entity_is_supported():
         return row
     t._get_entity=entity
     t.catalog.entity_relationship_metadata=lambda model:{'tag':{'relations':[{'join_key':'tag.id = bridge.tag_id'}]}}
-    assert 'EXISTS' in compile_related_filters(t,ast,'106')[0]
+    assert ' IN (SELECT ' in compile_related_filters(t,ast,'106')[0]
 
 
 @pytest.mark.parametrize('change',[

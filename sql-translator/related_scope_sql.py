@@ -3,7 +3,7 @@ import re
 
 
 def is_compiled_shared_scope_sql(sql):
-    """Recognize only the compiler's correlated semi-join envelope.
+    """Recognize only the compiler's materializable semi-join envelope.
 
     Input is already comment/literal-scrubbed by the read-only guard. All other
     subqueries remain forbidden; scoped execution still re-translates the ASL
@@ -11,11 +11,11 @@ def is_compiled_shared_scope_sql(sql):
     """
     identifier = r'[A-Za-z_]\w*'
     prefix = re.compile(
-        rf'EXISTS\s*\(SELECT\s+1\s+FROM\s+(?P<table>{identifier})\s+_related_(?P<n>[0-3])\s+'
-        rf'WHERE\s+_related_(?P=n)\.(?P<key>{identifier})\s*=\s*{identifier}\.{identifier}\s+'
-        rf'AND\s+EXISTS\s*\(SELECT\s+1\s+FROM\s+(?P=table)\s+_target_(?P=n)\s+'
-        rf'WHERE\s+_target_(?P=n)\.(?P<shared>{identifier})\s*=\s*_related_(?P=n)\.(?P=shared)\s+'
-        rf'AND\s+_target_(?P=n)\.(?P=key)\s+IN\s*\(', re.I | re.ASCII)
+        rf'{identifier}\.{identifier}\s+IN\s*\(SELECT\s+_related_(?P<n>[0-3])\.(?P<key>{identifier})\s+'
+        rf'FROM\s+(?P<table>{identifier})\s+_related_(?P=n)\s+'
+        rf'JOIN\s+(?P=table)\s+_target_(?P=n)\s+'
+        rf'ON\s+_target_(?P=n)\.(?P<shared>{identifier})\s*=\s*_related_(?P=n)\.(?P=shared)\s+'
+        rf'WHERE\s+_target_(?P=n)\.(?P=key)\s+IN\s*\(', re.I | re.ASCII)
     remaining = sql
     count = 0
     while (match := prefix.search(remaining)) is not None:
@@ -31,7 +31,7 @@ def is_compiled_shared_scope_sql(sql):
         if (not target_match or re.search(r'\b(?:SELECT|UNION|WITH)\b', target[target_match.end():], re.I)
                 or not re.search(r'\bWHERE\b', target, re.I)):
             return False
-        suffix = re.match(r'\s*\)\s*\)', remaining[end:])
+        suffix = re.match(r'\s*\)', remaining[end:])
         if not suffix:
             return False
         remaining = remaining[:match.start()] + '1=1' + remaining[end+suffix.end():]
@@ -112,11 +112,13 @@ def compile_related_filters(translator, ast, model_id):
         bridge_table, key_column = bridge.split('.')
         shared_column = shared.split('.')[1]
         left, right = f'_related_{number}', f'_target_{number}'
+        # An uncorrelated membership set can be materialized once. Nested
+        # correlated EXISTS caused repeated scans per fact row on live MySQL.
+        # IN still counts each outer fact once, regardless of bridge fan-out.
         conditions.append(
-            f'EXISTS (SELECT 1 FROM {bridge_table} {left} '
-            f'WHERE {left}.{key_column} = {outer} AND EXISTS ('
-            f'SELECT 1 FROM {bridge_table} {right} '
-            f'WHERE {right}.{shared_column} = {left}.{shared_column} '
-            f'AND {right}.{key_column} IN ({target_sql})))'
+            f'{outer} IN (SELECT {left}.{key_column} FROM {bridge_table} {left} '
+            f'JOIN {bridge_table} {right} '
+            f'ON {right}.{shared_column} = {left}.{shared_column} '
+            f'WHERE {right}.{key_column} IN ({target_sql}))'
         )
     return conditions
