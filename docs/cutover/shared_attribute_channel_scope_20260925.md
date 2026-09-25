@@ -57,9 +57,9 @@ no catalog publication or source-data mutation is included in this release.
 
 ## Known boundary
 
-The current hospital-to-department publication needs separate semantic-owner
-maintenance. This change does not infer actual clinical transaction departments
-from product applicability or silently repair that database relationship.
+The code-only release did not change the hospital-to-department publication.
+The later explicitly authorized semantic correction is recorded below. Neither
+change infers actual clinical transaction departments from product applicability.
 Current stage is bounded V1 defect repair; V2 readiness, catalog/evaluation/shadow
 gaps and production routing are unchanged. No V2 replacement readiness is claimed.
 
@@ -91,3 +91,34 @@ gaps and production routing are unchanged. No V2 replacement readiness is claime
   sources; test_related_scope_sql covers fan-out, reverse edges and rejected SQL.
 - Code commits: 19b592c (scope support), af24d01 (relation integration),
   1510804 (read-only integration), 25ee32a (materializable membership).
+
+## User-authorized semantic correction (2026-09-25)
+
+PROVEN: `hospital_include_department` declared a department target but joined to
+the hospital/department bridge's hospital key; that bridge had no active entity.
+Read-only source checks verified the bridge's columns, primary key, and complete
+hospital/department references before the update.
+
+- Scope: current model 106, domain 259 only. Existing business data are unchanged.
+- Added `hospital_dept_relation` entity and four mapped attributes: `id`,
+  `hospital_id`, `dept_code`, `relation_type`. The primary-key flag follows the
+  physical constraint; no relationship-type enumeration was invented.
+- Corrected the existing hospital relationship's target to the bridge, preserving
+  its relation identifier/code. Added bridge-to-department `N:1` on `dept_code`.
+- Backed up before-images on the deployment host with restricted file permissions.
+  MySQL changes used an explicit transaction and row checks. Eight exact semantic
+  vector records were upserted and strongly read back; no scope-wide rebuild.
+- Updated only the hospital and new bridge Redis entity records under WATCH/MULTI.
+  The old Redis version rejected KEEPTTL; the retry preserved the original TTL
+  explicitly, retained the original backup and verified any partially created key
+  before completing. No unrelated cache keys were changed.
+- A scoped SQL translation/execution probe now correctly traverses
+  `hospital -> hospital_dept_relation -> department` and executes successfully.
+- SQL/Oagnet consumer services restarted to clear process-local metadata caches.
+  Application code, environment files, other semantic models and V2 routing were
+  not changed by this semantic-only operation.
+- Post-change health checks passed for both services. Original-question end-to-end
+  replay completed in 78.6 seconds with 10 rows and all eight acceptance assertions
+  passing (including stage order, target scope, final disclosure and no default time).
+  Offline application suites were not rerun because no application code changed;
+  the previous suite baseline remains documented above.
