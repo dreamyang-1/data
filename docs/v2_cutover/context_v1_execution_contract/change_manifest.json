@@ -1,0 +1,23 @@
+{
+  "base_commit": "ab2870147e55647009fce3939bd55bb063ad834b",
+  "functional_files": [
+    "app/semantic_v2/completed_question.py",
+    "app/semantic_v2/context_v1_execution.py"
+  ],
+  "test_files": [
+    "tests/test_v2_context_completed_question_trial.py",
+    "tests/test_v2_context_v1_execution_bridge.py"
+  ],
+  "evidence_files": [
+    "docs/v2_cutover/context_v1_execution_contract/validation_report.md",
+    "docs/v2_cutover/context_v1_execution_contract/test_delta.json",
+    "docs/v2_cutover/context_v1_execution_contract/change_manifest.json"
+  ],
+  "excluded": [
+    ".env",
+    ".eval_private",
+    "app/api.py",
+    "Oagnet",
+    "sql-translator"
+  ]
+}

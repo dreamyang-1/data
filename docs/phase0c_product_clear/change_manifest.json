@@ -1,0 +1,88 @@
+{
+  "baseline_commit": "c2fa1411d1909a6380f924ebe1bb4723a2518df8",
+  "feature_branch": "phase0c-product-clear-20260908-01",
+  "files": [
+    {
+      "repository_path": "app/intent/classifier.py",
+      "source_sha256": "5d432ce5c110771b22ae667e7d32cec9a98f3a7372d0f2bcd109851c0531b144",
+      "published_sha256": "5d432ce5c110771b22ae667e7d32cec9a98f3a7372d0f2bcd109851c0531b144",
+      "baseline_sha256": "fd13ee0061cb9eaf95138d310b2486fc18e156c56b7238e551ef8e97ebbdb47e"
+    },
+    {
+      "repository_path": "app/services/turn_admission.py",
+      "source_sha256": "27b5bdb93aa611ab1ba481de0b92bb402930691a412bda5a470d67316bc795de",
+      "published_sha256": "27b5bdb93aa611ab1ba481de0b92bb402930691a412bda5a470d67316bc795de",
+      "baseline_sha256": "275ebe361ebff53960c2c8591df09c63c0b12dbaa00c5ec7e9f85532660c71f0"
+    },
+    {
+      "repository_path": "app/services/legacy_guards.py",
+      "source_sha256": "185f153d07f7d04db14356d833495cb1d0d81eec6b7eb4a72008ea8db83ca1fc",
+      "published_sha256": "185f153d07f7d04db14356d833495cb1d0d81eec6b7eb4a72008ea8db83ca1fc",
+      "baseline_sha256": "6094416687d30d2c06e3145e7f12f35aeeb68e3fdec9ed321343e080a3d2f02e"
+    },
+    {
+      "repository_path": "tests/test_product_clear_contract.py",
+      "source_sha256": "3df114d723369cda5fd7763177504555e9c05191e5ddb8063ddbad8d46e751ec",
+      "published_sha256": "3df114d723369cda5fd7763177504555e9c05191e5ddb8063ddbad8d46e751ec",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c/trust_semantic_scope_contract.md",
+      "source_sha256": "ed2269bd57b1504ee535d34d46879ba9314ce4ea25a11c307e9031636c8b3af2",
+      "published_sha256": "ed2269bd57b1504ee535d34d46879ba9314ce4ea25a11c307e9031636c8b3af2",
+      "baseline_sha256": "82aa4751d9ffcef58db908bf579211d6e92e9385e29699e518eb0a2a8b1e2dc0"
+    },
+    {
+      "repository_path": "docs/phase0c_product_clear/audit_inventory.json",
+      "source_sha256": "ff3d43efd6b8cadafacfd4c5f46b53111eb0b9fcdc33bd4615630679237e7183",
+      "published_sha256": "ff3d43efd6b8cadafacfd4c5f46b53111eb0b9fcdc33bd4615630679237e7183",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_product_clear/closure_report.md",
+      "source_sha256": "1d4bcbcb6260f3e581347a9d9bf711c6403de663718154102f7f317308c1bc1b",
+      "published_sha256": "1d4bcbcb6260f3e581347a9d9bf711c6403de663718154102f7f317308c1bc1b",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_product_clear/failure_evidence.json",
+      "source_sha256": "8acb2be9e9f1b629b9d19403940583d2ac0cf9d598a7f838c6ac755d92f44dbf",
+      "published_sha256": "8acb2be9e9f1b629b9d19403940583d2ac0cf9d598a7f838c6ac755d92f44dbf",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_product_clear/final_DataAnalysis_Agent.json",
+      "source_sha256": "810225e51f865edda064580908cd60d5690f6ab76ab85026acf518c3e11936ec",
+      "published_sha256": "810225e51f865edda064580908cd60d5690f6ab76ab85026acf518c3e11936ec",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_product_clear/final_Oagnet.json",
+      "source_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "published_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_product_clear/final_SQL_Translator.json",
+      "source_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "published_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_product_clear/rollback_manifest.json",
+      "source_sha256": "1fffd94d981a24546d36a91037f3399ef8375d886ca3316d83faf4067b1240ed",
+      "published_sha256": "1fffd94d981a24546d36a91037f3399ef8375d886ca3316d83faf4067b1240ed",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_product_clear/test_delta.json",
+      "source_sha256": "a51a86ee947fd3e60ead98a3a0866770b01d400d17e7001a515859b4aa37ec52",
+      "published_sha256": "a51a86ee947fd3e60ead98a3a0866770b01d400d17e7001a515859b4aa37ec52",
+      "baseline_sha256": null
+    }
+  ],
+  "secret_scan_findings": 0,
+  "publication_policy": "Explicit files only; no credentials, environments, logs, private diagnostic text, runtime data or snapshots",
+  "original_oagnet_index_preserved": true,
+  "manifest_self_hash": "Committed Git blob; no circular hash"
+}

@@ -1,0 +1,240 @@
+{
+  "case_id": "S81-001",
+  "history_utterance": "含税销售总额和销售总数量",
+  "source": "Captured real qwen3.7-max model outputs on the frozen 81/205 catalog",
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "model_outputs": [
+    {
+      "case_id": "S81-001",
+      "turn_index": 0,
+      "stage": "v2_current_turn",
+      "output": {
+        "mentions": [
+          {
+            "mention_id": "m-0",
+            "surface": "含税销售总额",
+            "normalized_surface": "含税销售总额",
+            "start_char": 0,
+            "end_char": 6,
+            "candidate_roles": [
+              "MEASURE"
+            ],
+            "explicit": true,
+            "negated": false,
+            "clause_id": null,
+            "coordination_group_id": "cg-0",
+            "modifier_ids": [],
+            "source_turn_id": "turn-0"
+          },
+          {
+            "mention_id": "m-1",
+            "surface": "销售总数量",
+            "normalized_surface": "销售总数量",
+            "start_char": 7,
+            "end_char": 12,
+            "candidate_roles": [
+              "MEASURE"
+            ],
+            "explicit": true,
+            "negated": false,
+            "clause_id": null,
+            "coordination_group_id": "cg-0",
+            "modifier_ids": [],
+            "source_turn_id": "turn-0"
+          }
+        ],
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "operation_markers": [
+          {
+            "mention_id": "m-0",
+            "operation_hint": "ADD",
+            "slot_name": "metrics"
+          },
+          {
+            "mention_id": "m-1",
+            "operation_hint": "ADD",
+            "slot_name": "metrics"
+          }
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ],
+        "negations": [],
+        "coordination_groups": [
+          [
+            "m-0",
+            "m-1"
+          ]
+        ],
+        "temporal_expressions": [],
+        "query_shape_prediction": "SCALAR_AGGREGATE",
+        "explicit_slot_mentions": {
+          "subject": [],
+          "metrics": [
+            "m-0",
+            "m-1"
+          ],
+          "dimensions": [],
+          "projection_spec": [],
+          "filter_expression": [],
+          "time_spec": [],
+          "ranking_spec": [],
+          "comparison_spec": [],
+          "delivery_spec": [],
+          "relationship_spec": []
+        }
+      }
+    },
+    {
+      "case_id": "S81-001",
+      "turn_index": 0,
+      "stage": "v2_semantic_edits",
+      "output": {
+        "edits": [
+          {
+            "slot_path": "metrics",
+            "operation": "ADD",
+            "evidence_mention_ids": [
+              "m-0"
+            ],
+            "value": {
+              "binding_handle": "binding:2514aaf34713e06941d74a65924df0f6"
+            }
+          },
+          {
+            "slot_path": "metrics",
+            "operation": "ADD",
+            "evidence_mention_ids": [
+              "m-1"
+            ],
+            "value": {
+              "binding_handle": "binding:509a6d26e553000caee6260ac5b54ba9"
+            }
+          }
+        ],
+        "filter_edits": [],
+        "temporal_edits": [],
+        "relationship_edits": [],
+        "comparison_edits": [],
+        "source_value_requests": [],
+        "payload_type": "SCALAR_AGGREGATE",
+        "historical_task_handle": null,
+        "dataset_handle": null,
+        "dataset_operation": null,
+        "unresolved_mention_ids": [],
+        "ambiguities": []
+      }
+    }
+  ],
+  "first_validation": {
+    "case_id": "S81-001",
+    "turn_index": 0,
+    "error_type": "ValidationError",
+    "reason": "BOUNDED_ERROR_DETAILS_PRIVATE",
+    "last_model_stage": "v2_semantic_edits",
+    "diagnostics": [
+      {
+        "type": "list_type",
+        "loc": [],
+        "msg": "Input should be a valid list"
+      }
+    ],
+    "frames": [
+      {
+        "name": "main",
+        "filename": "diagnose_recorded_v2.py",
+        "line": 98
+      },
+      {
+        "name": "_run",
+        "filename": "recognition.py",
+        "line": 290
+      },
+      {
+        "name": "source_filter_patch",
+        "filename": "source_value_recognition.py",
+        "line": 161
+      },
+      {
+        "name": "_patch",
+        "filename": "recognition.py",
+        "line": 533
+      },
+      {
+        "name": "validate_python",
+        "filename": "type_adapter.py",
+        "line": 441
+      }
+    ]
+  },
+  "second_validation": {
+    "case_id": "S81-001",
+    "turn_index": 0,
+    "error_type": "RecognitionFailure",
+    "reason": "V2_BINDING_OUTSIDE_EDIT_EVIDENCE",
+    "last_model_stage": "v2_semantic_edits",
+    "frames": [
+      {
+        "name": "main",
+        "filename": "replay_after.py",
+        "line": 98
+      },
+      {
+        "name": "_run",
+        "filename": "recognition.py",
+        "line": 290
+      },
+      {
+        "name": "source_filter_patch",
+        "filename": "source_value_recognition.py",
+        "line": 161
+      },
+      {
+        "name": "_patch",
+        "filename": "recognition.py",
+        "line": 547
+      }
+    ]
+  },
+  "selected_handle_evidence": [
+    {
+      "edit_evidence": [
+        "m-0"
+      ],
+      "chosen": {
+        "binding_handle": "binding:2514aaf34713e06941d74a65924df0f6",
+        "mention_id": "m-0",
+        "role": "MEASURE",
+        "catalog_type": "METRIC",
+        "name": "含税销售总额",
+        "code": "sales_total_including_tax",
+        "aliases": [
+          "销售总额,销售额,年度总销售额,含税销售金额,订单销售额,订单总金额"
+        ]
+      }
+    },
+    {
+      "edit_evidence": [
+        "m-1"
+      ],
+      "chosen": {
+        "binding_handle": "binding:509a6d26e553000caee6260ac5b54ba9",
+        "mention_id": "m-0",
+        "role": "MEASURE",
+        "catalog_type": "METRIC",
+        "name": "销售总数量",
+        "code": "sales_total_quantity",
+        "aliases": [
+          "销量,销售数量"
+        ]
+      }
+    }
+  ],
+  "final_history_replay": "full_plan_probe.json / recorded_history_replay",
+  "private_snapshot_included": false,
+  "raw_business_rows_included": false
+}

@@ -1,0 +1,168 @@
+{
+  "baseline_commit": "b0c2d9da2a836b9e16b9986c90d1e3b2065026f0",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline": {
+        "passed": 2615,
+        "failed": 27
+      },
+      "final": {
+        "passed": 2615,
+        "failed": 27
+      },
+      "new_tests": [],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "collection_errors": 0,
+      "remaining_failures": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete"
+      ]
+    },
+    "Oagnet": {
+      "baseline": {
+        "passed": 649,
+        "failed": 8
+      },
+      "final": {
+        "passed": 663,
+        "failed": 8
+      },
+      "new_tests": [
+        "tests/test_catalog_sql_sources.py::test_each_sql_planning_fact_changes_catalog_version[data_source_id]",
+        "tests/test_catalog_sql_sources.py::test_each_sql_planning_fact_changes_catalog_version[dependency_codes]",
+        "tests/test_catalog_sql_sources.py::test_each_sql_planning_fact_changes_catalog_version[main_table_name]",
+        "tests/test_catalog_sql_sources.py::test_each_sql_planning_fact_changes_catalog_version[sub_table_mappings]",
+        "tests/test_catalog_sql_sources.py::test_sql_facts_are_scoped_metadata_only_and_preserve_declared_join[domains0]",
+        "tests/test_catalog_sql_sources.py::test_sql_facts_are_scoped_metadata_only_and_preserve_declared_join[domains1]",
+        "tests/test_catalog_sql_sources.py::test_subtable_physical_metadata_keeps_model_domain_and_source_ownership",
+        "tests/test_catalog_sql_sources.py::test_unprovable_sql_sources_fail_closed[duplicate_entity]",
+        "tests/test_catalog_sql_sources.py::test_unprovable_sql_sources_fail_closed[duplicate_metric]",
+        "tests/test_catalog_sql_sources.py::test_unprovable_sql_sources_fail_closed[duplicate_subtable]",
+        "tests/test_catalog_sql_sources.py::test_unprovable_sql_sources_fail_closed[invalid_dependency]",
+        "tests/test_catalog_sql_sources.py::test_unprovable_sql_sources_fail_closed[invalid_source]",
+        "tests/test_catalog_sql_sources.py::test_unprovable_sql_sources_fail_closed[invalid_table]",
+        "tests/test_catalog_sql_sources.py::test_unprovable_sql_sources_fail_closed[missing_owner]"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "collection_errors": 0,
+      "remaining_failures": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter"
+      ]
+    },
+    "SQL_Translator": {
+      "baseline": {
+        "passed": 200
+      },
+      "final": {
+        "passed": 251
+      },
+      "new_tests": [
+        "test_pinned_catalog.py::test_actual_translator_compiles_from_snapshot_and_finishes_before_acceptance",
+        "test_pinned_catalog.py::test_asl_cannot_override_authority_or_version[authorized_semantic_scope-value3]",
+        "test_pinned_catalog.py::test_asl_cannot_override_authority_or_version[business_domain_ids-value2]",
+        "test_pinned_catalog.py::test_asl_cannot_override_authority_or_version[database_id-7]",
+        "test_pinned_catalog.py::test_asl_cannot_override_authority_or_version[intent-execute]",
+        "test_pinned_catalog.py::test_asl_cannot_override_authority_or_version[knowledge_base_names-value6]",
+        "test_pinned_catalog.py::test_asl_cannot_override_authority_or_version[semantic_model_id-82]",
+        "test_pinned_catalog.py::test_asl_cannot_override_authority_or_version[version-1.0]",
+        "test_pinned_catalog.py::test_cross_scope_stale_or_inconsistent_catalog_cannot_generate_sql[digest]",
+        "test_pinned_catalog.py::test_cross_scope_stale_or_inconsistent_catalog_cannot_generate_sql[dimension]",
+        "test_pinned_catalog.py::test_cross_scope_stale_or_inconsistent_catalog_cannot_generate_sql[domain]",
+        "test_pinned_catalog.py::test_cross_scope_stale_or_inconsistent_catalog_cannot_generate_sql[field]",
+        "test_pinned_catalog.py::test_cross_scope_stale_or_inconsistent_catalog_cannot_generate_sql[mode]",
+        "test_pinned_catalog.py::test_cross_scope_stale_or_inconsistent_catalog_cannot_generate_sql[model]",
+        "test_pinned_catalog.py::test_cross_scope_stale_or_inconsistent_catalog_cannot_generate_sql[owner]",
+        "test_pinned_catalog.py::test_cross_scope_stale_or_inconsistent_catalog_cannot_generate_sql[source_id]",
+        "test_pinned_catalog.py::test_cross_scope_stale_or_inconsistent_catalog_cannot_generate_sql[sources]",
+        "test_pinned_catalog.py::test_cross_scope_stale_or_inconsistent_catalog_cannot_generate_sql[version]",
+        "test_pinned_catalog.py::test_current_upstream_scope_is_the_only_authority[scope0]",
+        "test_pinned_catalog.py::test_current_upstream_scope_is_the_only_authority[scope1]",
+        "test_pinned_catalog.py::test_current_upstream_scope_is_the_only_authority[scope2]",
+        "test_pinned_catalog.py::test_current_upstream_scope_is_the_only_authority[scope3]",
+        "test_pinned_catalog.py::test_current_upstream_scope_is_the_only_authority[scope4]",
+        "test_pinned_catalog.py::test_current_upstream_scope_is_the_only_authority[scope5]",
+        "test_pinned_catalog.py::test_current_upstream_scope_is_the_only_authority[scope6]",
+        "test_pinned_catalog.py::test_database_and_knowledge_scope_fingerprints_do_not_cross_reuse",
+        "test_pinned_catalog.py::test_declared_dependencies_expand_without_interpreting_numeric_level[None]",
+        "test_pinned_catalog.py::test_declared_dependencies_expand_without_interpreting_numeric_level[cycle]",
+        "test_pinned_catalog.py::test_declared_dependencies_expand_without_interpreting_numeric_level[missing]",
+        "test_pinned_catalog.py::test_detail_projection_and_explicit_time_use_same_snapshot",
+        "test_pinned_catalog.py::test_drift_at_acceptance_withholds_generated_sql[activation]",
+        "test_pinned_catalog.py::test_drift_at_acceptance_withholds_generated_sql[authority]",
+        "test_pinned_catalog.py::test_drift_at_acceptance_withholds_generated_sql[index]",
+        "test_pinned_catalog.py::test_numeric_or_missing_catalog_level_does_not_change_formula[1]",
+        "test_pinned_catalog.py::test_numeric_or_missing_catalog_level_does_not_change_formula[None]",
+        "test_pinned_catalog.py::test_numeric_or_missing_catalog_level_does_not_change_formula[\\u539f\\u5b50\\u6307\\u6807]",
+        "test_pinned_catalog.py::test_plan_only_entry_never_executes_business_sql[execute_query]",
+        "test_pinned_catalog.py::test_plan_only_entry_never_executes_business_sql[execute_sql_on_data_source]",
+        "test_pinned_catalog.py::test_plan_only_entry_never_executes_business_sql[execute_sql_only]",
+        "test_pinned_catalog.py::test_plan_only_entry_never_executes_business_sql[fetch_data_source]",
+        "test_pinned_catalog.py::test_real_publication_pin_and_sql_translator_share_acceptance[None]",
+        "test_pinned_catalog.py::test_real_publication_pin_and_sql_translator_share_acceptance[activation]",
+        "test_pinned_catalog.py::test_real_publication_pin_and_sql_translator_share_acceptance[authority]",
+        "test_pinned_catalog.py::test_real_publication_pin_and_sql_translator_share_acceptance[inventory]",
+        "test_pinned_catalog.py::test_real_publication_pin_and_sql_translator_share_acceptance[reuse]",
+        "test_pinned_catalog.py::test_structured_declared_relationship_is_used_without_inventing_endpoints[None]",
+        "test_pinned_catalog.py::test_structured_declared_relationship_is_used_without_inventing_endpoints[foreign_source]",
+        "test_pinned_catalog.py::test_structured_declared_relationship_is_used_without_inventing_endpoints[missing_endpoint]",
+        "test_pinned_catalog.py::test_unregistered_fields_are_not_recovered_by_physical_name_guessing[query0]",
+        "test_pinned_catalog.py::test_unregistered_fields_are_not_recovered_by_physical_name_guessing[query1]",
+        "test_pinned_catalog.py::test_unregistered_fields_are_not_recovered_by_physical_name_guessing[query2]"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "collection_errors": 0,
+      "remaining_failures": []
+    }
+  },
+  "new_tests": 65,
+  "critical": {
+    "total": 160,
+    "passed": 160
+  },
+  "clarification_coverage": {
+    "public_clarification_responses": 89,
+    "with_reason_trace": 89
+  },
+  "collection_errors": 0,
+  "old_pass_to_new_fail": 0,
+  "stale_test_expectations_changed": 0,
+  "offline_mode": true,
+  "real_model_calls": 0,
+  "sql_executions": 0,
+  "production_writes": 0
+}

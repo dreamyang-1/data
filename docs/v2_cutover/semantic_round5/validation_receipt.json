@@ -1,0 +1,50 @@
+{
+  "status": "PARTIAL",
+  "gates": {
+    "SCHEMA_REJECT_ROOT_CAUSE_CLOSED": "PASS",
+    "FINAL_PRODUCTION_SCHEMA_LIVE": "PASS",
+    "RELATION_RUNTIME_WIRING": "PASS",
+    "TARGET_RUNTIME_WIRING": "PASS",
+    "CANDIDATE_MEMBERSHIP": "PASS",
+    "AMBIGUOUS_UNRESOLVED_TERMINAL_PATHS": "PASS",
+    "HARD_ONLY_VALIDATION": "PASS",
+    "NO_RULE_FIRST_RELATION": "PASS",
+    "PATCH_REDUCER_NONREGRESSION": "PASS",
+    "CONTEXT_SLICE_8_18": "PASS",
+    "CRITICAL_160": "PASS",
+    "ROUND3_15_TARGET_PRESERVATION": "PASS",
+    "NO_NEW_TEST_REGRESSION": "PASS",
+    "ZERO_COLLECTION_ERRORS": "PASS",
+    "ZERO_ADDITIONAL_SEQUENTIAL_CONTEXT_LLM_CALLS": "PASS",
+    "PERFORMANCE_BEFORE_AFTER_ACCEPTANCE": "PARTIAL",
+    "PRODUCTION_RAW_RUNTIME_USES_CONTRACT": "PASS"
+  },
+  "all_functional_wiring_gates_pass": true,
+  "performance_latency_nonregression": "UNKNOWN",
+  "baseline_verifiers": "Round1/Round2/Round3/Round4/Calibration/Harness PASS before production edits",
+  "tests": {
+    "passed": 3266,
+    "failed": 27
+  },
+  "collection_errors": 0,
+  "new_regressions": 0,
+  "models": 20,
+  "sql": 0,
+  "production_writes": 0,
+  "blind": 0,
+  "source_hashes": {
+    "app/semantic_v2/context_contract.py": "8dd90555dd131650edfdda9c9019ce96a76e8c69ef504d54c1b33336a2b46fce",
+    "app/semantic_v2/context_proposal.py": "ad5d3d9d88de83f138dc59a868dd44936495eebeba0e2e79c015d2c125c50e84",
+    "app/semantic_v2/recognition.py": "a7a24f9e6eeac22a5bc0e384c7f5c3ffdc4e2ce6ed529cda808ba4b80ff21f56",
+    "app/semantic_v2/catalog_bridge.py": "1a25820621da70e477a9579908ce1750a2eba5709f6952bb855d2482d5717323"
+  },
+  "evidence_hashes": {
+    "live_validation_receipt.json": "5b15490b96de8b1a59ed04c744930e72da12d4fda2c1cf39b91bc192823489d6",
+    "llm_rule_arbitration_matrix.json": "1ef9c5bd2051cd9825f756e58f13b0e0d0a9ca671931e16fb00355da4887ccf4",
+    "performance_receipt.json": "d92db53e6e27b8cd0663f5bedf390fec1fdbceb387d897ba86449a54b2c48627",
+    "round5_manifest.json": "564ab5230d9e3059e808ddaf1cbb136bbb7667bf296f8c6495ed620c79d8b376",
+    "runtime_replay_receipt.json": "a00619f6a00d6f19ea4af6d29e3afa87db6f61991fcb0c3a8547586702b2233c",
+    "target_regression_receipt.json": "26119afc5100c5ab864b172d3fb5ed012df608e0a93d42b4f0a7d457cd668c9c",
+    "test_delta.json": "53307acf764c99a873bb30124efd901c550515a921c3365fe807e23592cc124c"
+  }
+}

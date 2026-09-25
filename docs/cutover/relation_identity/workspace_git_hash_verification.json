@@ -1,0 +1,10 @@
+{
+  "status": "PASS_PRECOMMIT_WORKSPACE_ALIGNMENT",
+  "baseline_commit": "011a7193f5eafda1101255209129b4d4e2ad4f94",
+  "feature_branch": "cutover-relation-identity-evidence-20260909-01",
+  "tracked_and_manifest_files": 1130,
+  "runtime_source_changed": false,
+  "unexpected_source_drift": 0,
+  "final_commit": "Commit containing this report",
+  "final_gate": "Post-commit check of every tracked development file, repository file and Git blob, clean tree and original Oagnet index."
+}

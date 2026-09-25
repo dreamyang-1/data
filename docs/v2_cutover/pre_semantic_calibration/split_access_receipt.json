@@ -1,0 +1,24 @@
+{
+  "PRIVATE_VALIDATION": {
+    "case_count": 24,
+    "activity": "AGGREGATE_FEATURE_AND_FIRST_DIVERGENCE_ANALYSIS",
+    "production_or_prompt_training_use": false,
+    "promoted_case_ids": []
+  },
+  "BLIND_HOLDOUT": {
+    "case_count": 24,
+    "state": "SEALED_NOT_VIEWED_OR_RUN",
+    "model_calls": 0,
+    "manifest": {
+      "case_count": 24,
+      "case_ids_hash": "39eef8f5ce03cd83b2c88638b999bf0291c91324608be1fc2b5d7a8cace6b0ae",
+      "manifest_hash": "faa347cd76fe9e8482358213863f4e4652ab34b23f62d3646787e51cd9353eef",
+      "file_sha256": "206dcc76c50852bb2fd810ab04e3a1c8131d88dad674d343b37f2b60285233d1",
+      "public_overlap": 0,
+      "access_status": "SEALED_NOT_VIEWED_OR_RUN",
+      "original_utterances_published": false,
+      "prompt_or_rule_training_use": false
+    }
+  },
+  "split_manifest_hash": "a2bf2cbd1564107101271139914165d3c8f45a1f992ca9ece554eebc0ff9e447"
+}

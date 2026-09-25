@@ -1,0 +1,17 @@
+{
+  "baseline_commit": "b0c2d9da2a836b9e16b9986c90d1e3b2065026f0",
+  "feature_branch": "cutover-pinned-sql-catalog-20260909-01",
+  "base_branch": "cutover-catalog-publication-candidate-20260909-01",
+  "implementation_commit": "905a29bca58ef44034602f125de0d6b72dbbea64",
+  "service_commits": {
+    "Oagnet": "eb2230bc3bc05053d14cb1c24f3174b6c6326c47",
+    "SQL_Translator": "905a29bca58ef44034602f125de0d6b72dbbea64"
+  },
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

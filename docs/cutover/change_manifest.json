@@ -1,0 +1,186 @@
+{
+  "baseline_commit": "c4c00d131f53848d279cd7353cd22dc4ea4be4e0",
+  "feature_branch": "cutover-readiness-catalog-20260908-01",
+  "files": [
+    {
+      "repository_path": "AGENTS.md",
+      "source_sha256": "a6c426bfdec4b318e3cea0d5ef7b290fb531b21d78c63424dd7a99c952eeb7c2",
+      "published_sha256": "a6c426bfdec4b318e3cea0d5ef7b290fb531b21d78c63424dd7a99c952eeb7c2",
+      "baseline_sha256": "ff137ee1587a89991b329a4762a5b7543482d2c3efc94bb329507dd9959e3a91"
+    },
+    {
+      "repository_path": "Oagnet/mysql_tool.py",
+      "source_sha256": "ae9737ceaec1f0b9c7a0879f668a99ba7f1949a2233324bcde0c5bac0f300eb0",
+      "published_sha256": "ae9737ceaec1f0b9c7a0879f668a99ba7f1949a2233324bcde0c5bac0f300eb0",
+      "baseline_sha256": "825f62818c73cf46878feb41c0e756a86559967be7586aa7b596f30160539af1"
+    },
+    {
+      "repository_path": "Oagnet/catalog_release.py",
+      "source_sha256": "2f32430d6c48ada7fcc0040fcb3f0c4e2a1aa1d74ae7ff73cde12b751b37ed4e",
+      "published_sha256": "2f32430d6c48ada7fcc0040fcb3f0c4e2a1aa1d74ae7ff73cde12b751b37ed4e",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "Oagnet/scripts/check_catalog_release.py",
+      "source_sha256": "34da18204e8aa867530bb2fca7273ece12b735b9453f53d232dd08da5db4ee31",
+      "published_sha256": "34da18204e8aa867530bb2fca7273ece12b735b9453f53d232dd08da5db4ee31",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "Oagnet/tests/test_catalog_release.py",
+      "source_sha256": "e47af46f0b72097f9d34346cdc88e1bb2d91c6c0d8a04dadec84382c15fb8a38",
+      "published_sha256": "e47af46f0b72097f9d34346cdc88e1bb2d91c6c0d8a04dadec84382c15fb8a38",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "Oagnet/agent.py",
+      "source_sha256": "24cc4f7de542e3f265b1503f9d108408c2ba16f18f6616fb2994bfddda19a6b3",
+      "published_sha256": "24cc4f7de542e3f265b1503f9d108408c2ba16f18f6616fb2994bfddda19a6b3",
+      "baseline_sha256": "aef873af7dee705069b39bd53eef9dbdea992cc61c1ec83886813570f39a1ee5"
+    },
+    {
+      "repository_path": "Oagnet/tests/test_cutover_binding_safety.py",
+      "source_sha256": "91f6b810163becd1960f86262339453a6e50f37f7c7173250569f355c02e1f81",
+      "published_sha256": "91f6b810163becd1960f86262339453a6e50f37f7c7173250569f355c02e1f81",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/catalog_version_contract.md",
+      "source_sha256": "202ca6c82abc8a5ff5d04a2bb588cac4250de425f19595834148108f1a5a2644",
+      "published_sha256": "202ca6c82abc8a5ff5d04a2bb588cac4250de425f19595834148108f1a5a2644",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/closure_report.md",
+      "source_sha256": "fb527626cd4ef47a28fffcab500e1dc1fbeed3e6132824658530bbcb9a9fc42c",
+      "published_sha256": "fb527626cd4ef47a28fffcab500e1dc1fbeed3e6132824658530bbcb9a9fc42c",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/cutover_blockers.csv",
+      "source_sha256": "819f7f77ce8406ca0f2ee6e85c71a726b1d94de8b063c02f94ab4ce91bf8b72e",
+      "published_sha256": "db9081fed2dd8dbb366509e97525b6809e51f945db7dd62c6840e3195e3794fb",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/cutover_blockers.json",
+      "source_sha256": "ad061f8bf62264d6d059c0e99d148150bcdadfd3e30a50dff678977b80a02b26",
+      "published_sha256": "ad061f8bf62264d6d059c0e99d148150bcdadfd3e30a50dff678977b80a02b26",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/final_DataAnalysis_Agent.json",
+      "source_sha256": "79a98dd4143171d4a06c5a459eded1716102be4b8444754a712e1e1a1a78d6dd",
+      "published_sha256": "79a98dd4143171d4a06c5a459eded1716102be4b8444754a712e1e1a1a78d6dd",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/final_Oagnet.json",
+      "source_sha256": "6d0f1e8f652c782aa3a366dc24cc835e668bd2885176d4daf5a20360b2a0ae43",
+      "published_sha256": "6d0f1e8f652c782aa3a366dc24cc835e668bd2885176d4daf5a20360b2a0ae43",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/final_SQL_Translator.json",
+      "source_sha256": "1def107d86dc9458087149be04a8ff65a29dce187349f61fe2b83eb816737933",
+      "published_sha256": "1def107d86dc9458087149be04a8ff65a29dce187349f61fe2b83eb816737933",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/git_commit_manifest.json",
+      "source_sha256": "04b273fe60a5ae92b5d04bebbfc992f0726dbe8de681c436414b3193eb195b4c",
+      "published_sha256": "04b273fe60a5ae92b5d04bebbfc992f0726dbe8de681c436414b3193eb195b4c",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/historical_evidence_gaps.json",
+      "source_sha256": "b0f9e213ff12962b2f9591ae9397aee1c66ddc9d27830927164edc4d1d057d9a",
+      "published_sha256": "b0f9e213ff12962b2f9591ae9397aee1c66ddc9d27830927164edc4d1d057d9a",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/legacy_backlog.json",
+      "source_sha256": "0815c2aa858d5615a14095499b1c4b2e3be18a79dde341f6d44c63c2018acabf",
+      "published_sha256": "0815c2aa858d5615a14095499b1c4b2e3be18a79dde341f6d44c63c2018acabf",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/remaining_failure_inventory.csv",
+      "source_sha256": "caa7956be71d4b3f94053470bd9845916bc64f0a1ccb678e5d887514b091cb33",
+      "published_sha256": "1db01256cf6a027ff2404aaebc5379fd620a55fab54db7e16d55221ee7085c0e",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/remaining_failure_inventory.json",
+      "source_sha256": "8fabbe0a31c00d5f94ba253e7f83a39b70ba91577df1ed705bf0b28b7de5258b",
+      "published_sha256": "8fabbe0a31c00d5f94ba253e7f83a39b70ba91577df1ed705bf0b28b7de5258b",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/rollback_manifest.json",
+      "source_sha256": "4b8dc5e8bc295e70b3b07ddd684f7844230253efb13f7e122deea4c8ed0c1ad6",
+      "published_sha256": "4b8dc5e8bc295e70b3b07ddd684f7844230253efb13f7e122deea4c8ed0c1ad6",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/source_audit.json",
+      "source_sha256": "41e0b77f719508cf9054f9e1855450a78d9898550667205a2186751d685fdf12",
+      "published_sha256": "41e0b77f719508cf9054f9e1855450a78d9898550667205a2186751d685fdf12",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/test_delta.json",
+      "source_sha256": "e0390a01ada2554458a5529a2d556f1f21e3d321676a02c1ac16b4ad87b75a0e",
+      "published_sha256": "e0390a01ada2554458a5529a2d556f1f21e3d321676a02c1ac16b4ad87b75a0e",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.csv",
+      "source_sha256": "e16c857b4221d2815d6e8329182b838c5f43daede11450fad788d9ac92ca7fd7",
+      "published_sha256": "a655cc243c7234ee2233c81114551637d43afb34b047fc4603ed84afc3f1817f",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.json",
+      "source_sha256": "a34ce8529da73b9e9bff05930fdb4729a8f2c93409a668da955a6a65a526fc7e",
+      "published_sha256": "a34ce8529da73b9e9bff05930fdb4729a8f2c93409a668da955a6a65a526fc7e",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/v2_cutover_readiness_matrix.md",
+      "source_sha256": "7db5ead9e9b4d29701978c50c7e5ccad68fa8603f979b6b766f889706096bbd2",
+      "published_sha256": "7db5ead9e9b4d29701978c50c7e5ccad68fa8603f979b6b766f889706096bbd2",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/cutover/workspace_git_hash_verification.json",
+      "source_sha256": "7e59cf587543f2655cf21463522a64bb045ac566ddc29b37848453d272187658",
+      "published_sha256": "7e59cf587543f2655cf21463522a64bb045ac566ddc29b37848453d272187658",
+      "baseline_sha256": null
+    }
+  ],
+  "secret_scan_findings": 0,
+  "publication_policy": "Explicit files only; no credentials, environments, logs, private diagnostic text, runtime data or snapshots",
+  "original_oagnet_index_preserved": true,
+  "manifest_self_hash": "Committed Git blob; no circular hash",
+  "independent_implementation_commits": [
+    {
+      "commit": "ce198cae4f1343d92d1cfa4d40b08b8bd1cf5903",
+      "title": "cutover: add catalog snapshot and release evidence contract",
+      "files": [
+        "Oagnet/catalog_release.py",
+        "Oagnet/mysql_tool.py",
+        "Oagnet/scripts/check_catalog_release.py",
+        "Oagnet/tests/test_catalog_release.py"
+      ]
+    },
+    {
+      "commit": "fc044a5ddc7f7f0f5da987340d8c3b87061cb18a",
+      "title": "cutover: preserve source-verified exact entity bindings",
+      "files": [
+        "Oagnet/agent.py",
+        "Oagnet/tests/test_cutover_binding_safety.py"
+      ]
+    }
+  ]
+}

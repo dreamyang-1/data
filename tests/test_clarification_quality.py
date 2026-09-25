@@ -112,8 +112,11 @@ async def test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplic
     )
 
     assert result.intent_source == "STRUCTURED_MODEL"
-    assert result.missing_slots == ["time_range"]
-    assert result.ambiguities == ["时间表达“最近”边界不明确"]
+    # An omitted period no longer needs a default or a clarification.
+    assert result.missing_slots == []
+    assert result.ambiguities == []
+    assert result.time_range is None
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in result.assumptions
 
 
 @pytest.mark.asyncio
@@ -132,7 +135,11 @@ async def test_model_metric_must_be_grounded_in_the_users_words():
     )
 
     assert result.metrics == []
-    assert result.missing_slots == ["metric", "time_range"]
+    # Only the ungrounded metric remains missing, not an unspecified period.
+    assert result.missing_slots == ["metric"]
+    assert result.ambiguities == []
+    assert result.time_range is None
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in result.assumptions
     assert "UNGROUNDED_MODEL_METRIC_DROPPED" in result.assumptions
 
 

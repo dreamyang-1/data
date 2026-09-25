@@ -53,6 +53,56 @@ def test_query_answer_uses_business_markdown_table_and_hides_physical_prefix() -
     assert "product.product_name" not in answer
 
 
+def test_result_table_hides_paired_city_identifier_from_business_display() -> None:
+    request = request_for("查看2025年安徽省各个城市每月销售额")
+    columns = ["城市", "时间", "城市名称", "销售额"]
+    rows = [
+        {"城市": 340100, "时间": "2025-10", "城市名称": "合肥市", "销售额": 100},
+        {"城市": 340700, "时间": "2025-10", "城市名称": "铜陵市", "销售额": 80},
+    ]
+
+    answer = DataAnalysisOrchestrator._analyze(
+        request,
+        columns,
+        rows,
+        KnowledgeContext(query=request.original_question, documents=[]),
+    )
+
+    assert "| 时间 | 城市名称 | 销售额 |" in answer
+    assert "340100" not in answer
+    assert "340700" not in answer
+    assert "合肥市" in answer
+    assert "铜陵市" in answer
+    assert columns == ["城市", "时间", "城市名称", "销售额"]
+    assert rows[0]["城市"] == 340100
+
+
+def test_result_table_keeps_identifier_when_user_explicitly_requests_it() -> None:
+    request = request_for("按城市编号查看各城市销售额")
+    answer = DataAnalysisOrchestrator._analyze(
+        request,
+        ["城市", "城市名称", "销售额"],
+        [{"城市": 340100, "城市名称": "合肥市", "销售额": 100}],
+        KnowledgeContext(query=request.original_question, documents=[]),
+    )
+
+    assert "| 城市 | 城市名称 | 销售额 |" in answer
+    assert "340100" in answer
+
+
+def test_result_table_keeps_only_available_identifier_column() -> None:
+    request = request_for("按产线编号统计故障工单行数")
+    answer = DataAnalysisOrchestrator._analyze(
+        request,
+        ["产线编号", "故障工单行数"],
+        [{"产线编号": "LINE-01", "故障工单行数": 3}],
+        KnowledgeContext(query=request.original_question, documents=[]),
+    )
+
+    assert "| 产线编号 | 故障工单行数 |" in answer
+    assert "LINE-01" in answer
+
+
 def test_metric_table_displays_all_138_untruncated_rows() -> None:
     request = request_for(
         "统计每家医院承接的订单总金额（含税）及订单笔数，并关联医院等级"
@@ -101,7 +151,7 @@ def test_complete_217_row_product_list_is_not_silently_presented_as_preview() ->
     assert "当前展示前" not in answer
 
 
-def test_relationship_projection_is_deduplicated_only_for_answer_display() -> None:
+def test_relationship_projection_preserves_duplicate_sql_rows() -> None:
     request = request_for("某商品适用于哪些科室")
     columns = ["科室"]
     rows = [
@@ -118,16 +168,14 @@ def test_relationship_projection_is_deduplicated_only_for_answer_display() -> No
         KnowledgeContext(query=request.original_question, documents=[]),
     )
 
-    assert "4 条原始关系记录" in answer
-    assert "2 个唯一组合" in answer
-    assert "原始数据集及证据行数仍为 4" in answer
+    assert "共查询到 4 条明细" in answer
     assert "| 科室 |" in answer
-    assert answer.count("| 外科 |") == 1
-    assert answer.count("| 麻醉科 |") == 1
+    assert answer.count("| 外科 |") == 2
+    assert answer.count("| 麻醉科 |") == 2
     assert len(rows) == 4
 
 
-def test_implicit_product_dealer_list_deduplicates_repeated_fact_paths() -> None:
+def test_implicit_product_dealer_list_preserves_repeated_fact_paths() -> None:
     request = request_for("查询上海市医用外科口罩产品的经销商名单")
     request.entity = "经销商"
     request.fields = ["经销商名称"]
@@ -140,10 +188,9 @@ def test_implicit_product_dealer_list_deduplicates_repeated_fact_paths() -> None
         KnowledgeContext(query=request.original_question, documents=[]),
     )
 
-    assert "196 条原始关系记录" in answer
-    assert "1 个唯一组合" in answer
-    assert answer.count("| 上海德昶实业有限公司 |") == 1
-    assert "共查询到 196 条明细" not in answer
+    assert "共查询到 196 条明细" in answer
+    assert answer.count("| 上海德昶实业有限公司 |") == 196
+    assert "唯一组合" not in answer
 
 
 def test_identical_transaction_detail_rows_are_not_silently_deduplicated() -> None:
@@ -182,7 +229,11 @@ def test_relationship_wording_does_not_deduplicate_order_facts() -> None:
 
     assert "共查询到 2 条明细" in answer
     assert "唯一组合" not in answer
-    assert "| 订单号 | 商品 |" in answer
+    # The display layer normalizes the physical alias "商品" to the official
+    # display field "商品名称"; values, row count and the non-deduplicated
+    # wording must stay unchanged, and no code/ID column may appear.
+    assert "| 订单号 | 商品名称 |" in answer
+    assert "商品编码" not in answer
     assert answer.count("| A-1 | 甲 |") == 2
 
 
@@ -243,7 +294,7 @@ class RelationshipProjectionRetrieval:
 
 
 @pytest.mark.asyncio
-async def test_relationship_answer_keeps_query_evidence_at_physical_row_count() -> None:
+async def test_relationship_answer_cleans_name_list_and_audits_original_rows() -> None:
     adapters = build_mock_adapters()
     adapters = type(adapters)(
         semantic=adapters.semantic,
@@ -274,15 +325,18 @@ async def test_relationship_answer_keeps_query_evidence_at_physical_row_count() 
     query_evidence = next(
         item for item in response.evidence if item.kind == "QUERY_RESULT"
     )
-    assert query_evidence.payload["row_count"] == 4
-    assert query_evidence.payload["returned_row_count"] == 4
-    assert query_evidence.payload["presentation"] == {
-        "mode": "UNIQUE_RELATIONSHIP_PROJECTION",
-        "original_relationship_row_count": 4,
-        "unique_combination_count": 2,
-    }
-    assert "4 条原始关系记录" in response.answer
-    assert "2 个唯一组合" in response.answer
+    # STALE_TEST updated by the user's explicit final-name-list cleanup contract.
+    # The table renderer itself remains lossless; query completion owns cleanup.
+    assert query_evidence.payload["row_count"] == 2
+    assert query_evidence.payload["returned_row_count"] == 2
+    assert "presentation" not in query_evidence.payload
+    assert "共查询到 2 条明细" in response.answer
+    assert response.answer.count("| 外科 |") == 1
+    assert response.answer.count("| 麻醉科 |") == 1
+    cleanup = next(item for item in response.evidence if item.kind == "RESULT_CLEANUP")
+    assert cleanup.payload["source_row_count"] == 4
+    assert cleanup.payload["duplicate_rows_removed"] == 2
+    assert "唯一组合" not in response.answer
 
 
 class CapturingDatasetStore:

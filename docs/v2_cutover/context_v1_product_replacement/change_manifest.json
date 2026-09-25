@@ -1,0 +1,23 @@
+{
+  "baseline_head": "63bfc9c89e7521fc8d72294c026bb4f60fecb309",
+  "production_files": [
+    "app/semantic_v2/context_question.py",
+    "app/semantic_v2/context_v1_execution.py"
+  ],
+  "test_files": [
+    "tests/test_v2_context_v1_execution_bridge.py"
+  ],
+  "documentation_files": [
+    "docs/v2_cutover/context_v1_product_replacement/validation_report.md",
+    "docs/v2_cutover/context_v1_product_replacement/change_manifest.json",
+    "docs/v2_cutover/context_v1_product_replacement/test_delta.json"
+  ],
+  "excluded": [
+    ".env",
+    "logs",
+    "cache",
+    "credentials",
+    "private runtime receipts",
+    "business query results"
+  ]
+}

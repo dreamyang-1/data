@@ -1,0 +1,17 @@
+{
+  "baseline_commit": "ff389dc4cd3fe4e0dabe1c665e3672b80b445330",
+  "feature_branch": "cutover-v2-source-value-binding-20260908-01",
+  "base_branch": "cutover-v2-entity-value-sources-20260908-01",
+  "implementation_commit": "87fedb4710e1a9d41cddc3ee066efc08b79b0b10",
+  "service_commits": {
+    "DataAnalysis_Agent": "87fedb4710e1a9d41cddc3ee066efc08b79b0b10",
+    "Oagnet": "b2259c3677585828ba52cc3704c73a51c9f038b8"
+  },
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

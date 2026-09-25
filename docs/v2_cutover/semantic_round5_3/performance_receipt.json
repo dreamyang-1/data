@@ -1,0 +1,120 @@
+{
+  "before_round52": {
+    "requests": 5,
+    "calls_mean": 2.2,
+    "input_tokens_mean": 27831,
+    "output_tokens_mean": 882.2,
+    "request_seconds_mean": 13.35,
+    "request_seconds_p95": 19.8312
+  },
+  "all_provider_attempts": {
+    "requests": 6,
+    "calls": {
+      "mean": 1.8333333333333333,
+      "p95": 3
+    },
+    "input_tokens": {
+      "mean": 15160,
+      "p95": 31949
+    },
+    "output_tokens": {
+      "mean": 559.1666666666666,
+      "p95": 984
+    },
+    "request_seconds": {
+      "mean": 10.52349999997144,
+      "p95": 17.219000000040978
+    }
+  },
+  "valid_business_inputs_only": {
+    "requests": 3,
+    "calls": {
+      "mean": 2.6666666666666665,
+      "p95": 3
+    },
+    "input_tokens": {
+      "mean": 26721,
+      "p95": 31949
+    },
+    "output_tokens": {
+      "mean": 889.3333333333334,
+      "p95": 984
+    },
+    "request_seconds": {
+      "mean": 15.687666666616375,
+      "p95": 17.219000000040978
+    }
+  },
+  "invalid_fixture_inputs_only": {
+    "requests": 3,
+    "calls": {
+      "mean": 1,
+      "p95": 1
+    },
+    "input_tokens": {
+      "mean": 3599,
+      "p95": 3600
+    },
+    "output_tokens": {
+      "mean": 229,
+      "p95": 229
+    },
+    "request_seconds": {
+      "mean": 5.359333333326504,
+      "p95": 5.937999999849126
+    }
+  },
+  "http_status_counts": {
+    "200": 11
+  },
+  "model_calls": 11,
+  "provider_timeouts": 0,
+  "schema_failures": 1,
+  "provider_determinism_claim": false,
+  "model": "qwen3.7-max",
+  "thinking": false,
+  "temperature": 0,
+  "retry": 0,
+  "normal_llm_stages_added": 0,
+  "targeted_read_latency": {
+    "rows": [
+      {
+        "query_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+        "candidate_count": 1,
+        "targeted_latency_seconds": 0.31200000015087426,
+        "source_observation_unchanged": true,
+        "indexed_access_guard_passed": true
+      },
+      {
+        "query_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+        "candidate_count": 1,
+        "targeted_latency_seconds": 0.21899999980814755,
+        "source_observation_unchanged": true,
+        "indexed_access_guard_passed": true
+      }
+    ],
+    "candidate_source_selects": 2,
+    "business_plan_sql_executed": 0,
+    "writes": 0
+  },
+  "extra_retrieval_calls": "F actual accepted plan: one targeted discovery plus one finish re-observation (frozen adapter during model validation); real source read latency separately measured",
+  "probe_latency": [
+    {
+      "query_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+      "probe_latency_seconds": 0.26500000013038516,
+      "returned_candidates": 0,
+      "complete": false,
+      "model_calls": 0
+    },
+    {
+      "query_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+      "probe_latency_seconds": 0.2190000000409782,
+      "returned_candidates": 0,
+      "complete": false,
+      "model_calls": 0
+    }
+  ],
+  "causal_performance_claim": false,
+  "reason": "Small unmatched cases; invalid inputs and parser rejects stop early. Do not infer global speed or accuracy.",
+  "probe_latency_measurement": "Separate read-only source measurements, not model request critical-path timing"
+}

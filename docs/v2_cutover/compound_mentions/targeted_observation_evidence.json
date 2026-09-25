@@ -1,0 +1,269 @@
+{
+  "case_id": "S81-014",
+  "capture_hashes": [
+    "e98c8bbde5c54ca869faea83ac1f31b9b1aaf0b5202907bcadae19bbfda3175a",
+    "5048d4de01f6a38768b561ee9315ea3fa9255ae4c7a90635d368299962292401",
+    "3caa509fad62c7244566534359717d60952739e5bbfbb7f4e5d651f94fcf073d"
+  ],
+  "initial_raw_mentions": [
+    "2025年",
+    "订单",
+    "笔数"
+  ],
+  "initial_effective_mentions": [
+    "2025年",
+    "订单笔数"
+  ],
+  "initial_time_anchor": "created_date",
+  "initial_range": {
+    "start": "2024-12-31T16:00:00Z",
+    "end_exclusive": "2025-12-31T16:00:00Z"
+  },
+  "initial_grain": "NONE",
+  "later_ranges": [
+    null,
+    null
+  ],
+  "final_metric_codes": [
+    "order_count",
+    "sales_total_quantity"
+  ],
+  "replays": [
+    {
+      "case_id": "S81-014",
+      "turn_index": 0,
+      "mode": "RECORDED_MODEL_PIPELINE",
+      "source_capture_hash": "e98c8bbde5c54ca869faea83ac1f31b9b1aaf0b5202907bcadae19bbfda3175a",
+      "oracle_outputs_hash": null,
+      "model_stages": [
+        {
+          "stage": "v2_current_turn",
+          "context_matches_recording": true,
+          "output_changed": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_matches_recording": true,
+          "output_changed": false
+        }
+      ],
+      "failure": null,
+      "real_model_calls": 0,
+      "source_SQL_executions": 0,
+      "production_writes": 0,
+      "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+      "source_observations_replayed": 0,
+      "model_accuracy_established": false,
+      "production_cutover_pass": false,
+      "captured_result_reproduced_exactly": true
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 1,
+      "mode": "RECORDED_MODEL_PIPELINE",
+      "source_capture_hash": "5048d4de01f6a38768b561ee9315ea3fa9255ae4c7a90635d368299962292401",
+      "oracle_outputs_hash": null,
+      "model_stages": [
+        {
+          "stage": "v2_current_turn",
+          "context_matches_recording": true,
+          "output_changed": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_matches_recording": true,
+          "output_changed": false
+        }
+      ],
+      "failure": null,
+      "real_model_calls": 0,
+      "source_SQL_executions": 0,
+      "production_writes": 0,
+      "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+      "source_observations_replayed": 0,
+      "model_accuracy_established": false,
+      "production_cutover_pass": false,
+      "captured_result_reproduced_exactly": true
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 2,
+      "mode": "RECORDED_MODEL_PIPELINE",
+      "source_capture_hash": "3caa509fad62c7244566534359717d60952739e5bbfbb7f4e5d651f94fcf073d",
+      "oracle_outputs_hash": null,
+      "model_stages": [
+        {
+          "stage": "v2_current_turn",
+          "context_matches_recording": true,
+          "output_changed": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_matches_recording": true,
+          "output_changed": false
+        }
+      ],
+      "failure": null,
+      "real_model_calls": 0,
+      "source_SQL_executions": 0,
+      "production_writes": 0,
+      "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+      "source_observations_replayed": 0,
+      "model_accuracy_established": false,
+      "production_cutover_pass": false,
+      "captured_result_reproduced_exactly": true
+    }
+  ],
+  "observation": {
+    "case_id": "S81-014",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "status": "OK",
+    "axes": {
+      "time_relation": "ABSENT",
+      "time_grain": "NONE",
+      "metric_surfaces": [
+        "订单笔数",
+        "销售总数量"
+      ],
+      "dimension_surfaces": [],
+      "canonical_metrics": [
+        "METRIC:order_count",
+        "METRIC:sales_total_quantity"
+      ],
+      "canonical_dimensions": [],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "ADD"
+      ],
+      "metric_operations": [
+        "ADD"
+      ],
+      "dimension_operations": []
+    },
+    "safety": {},
+    "evidence": {
+      "boundary": "RawTurnPlanner typed next_state and bound canonical refs",
+      "backend_mode": "SHADOW_ONLY",
+      "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+      "state_version": 3,
+      "full_pipeline_executed": false
+    }
+  },
+  "evaluation": {
+    "contract": "multiturn-transition-evaluation-v1",
+    "component": "V2_RAW_TURN_PLANNER",
+    "mode": "LIVE_MODEL_PLAN_ONLY",
+    "cases": 1,
+    "gold_hash": "478e96c9cd0605b0b24cceaedaff3b3ff0e9f0efbef96412100b256b92a09544",
+    "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "metrics": {
+      "metric_surfaces": {
+        "passed": 1,
+        "denominator": 1,
+        "unobserved": 0,
+        "value": 1.0
+      },
+      "target_task": {
+        "passed": 1,
+        "denominator": 1,
+        "unobserved": 0,
+        "value": 1.0
+      },
+      "time_relation": {
+        "passed": 1,
+        "denominator": 1,
+        "unobserved": 0,
+        "value": 1.0
+      }
+    },
+    "safety": {
+      "cross_scope_dataset_reuse": {
+        "required_or_supplied_observations": 0,
+        "violations": 0,
+        "unobserved": 0,
+        "gate": "NOT_EVALUATED"
+      },
+      "cross_scope_pending_reuse": {
+        "required_or_supplied_observations": 0,
+        "violations": 0,
+        "unobserved": 0,
+        "gate": "NOT_EVALUATED"
+      },
+      "pending_hijack": {
+        "required_or_supplied_observations": 0,
+        "violations": 0,
+        "unobserved": 0,
+        "gate": "NOT_EVALUATED"
+      },
+      "scope_expansion": {
+        "required_or_supplied_observations": 0,
+        "violations": 0,
+        "unobserved": 0,
+        "gate": "NOT_EVALUATED"
+      },
+      "unsafe_truncated_ranking": {
+        "required_or_supplied_observations": 0,
+        "violations": 0,
+        "unobserved": 0,
+        "gate": "NOT_EVALUATED"
+      },
+      "wrong_inheritance": {
+        "required_or_supplied_observations": 1,
+        "violations": 0,
+        "unobserved": 1,
+        "gate": "NOT_EVALUATED"
+      },
+      "wrong_silent_auto_accept": {
+        "required_or_supplied_observations": 0,
+        "violations": 0,
+        "unobserved": 0,
+        "gate": "NOT_EVALUATED"
+      }
+    },
+    "unlabeled_safety_checks": [
+      "cross_scope_dataset_reuse",
+      "cross_scope_pending_reuse",
+      "pending_hijack",
+      "scope_expansion",
+      "unsafe_truncated_ranking",
+      "wrong_silent_auto_accept"
+    ],
+    "full_pipeline_accuracy": "NOT_ESTABLISHED_BY_COMPONENT_RESULTS",
+    "production_cutover_pass": false,
+    "details": [
+      {
+        "case_id": "S81-014",
+        "axes": {
+          "metric_surfaces": "PASS",
+          "time_relation": "PASS",
+          "target_task": "PASS"
+        },
+        "safety": {
+          "wrong_inheritance": "NOT_OBSERVED"
+        },
+        "observation_status": "OK"
+      }
+    ]
+  },
+  "new_model_calls": 0,
+  "new_source_SQL": 0
+}

@@ -1,0 +1,48 @@
+{
+  "baseline_ref": "../source_evidence/live_evaluation.json",
+  "same_model_prompt_schema_clock_catalog_and_gold": true,
+  "before_observation_counts": {
+    "OK": 5,
+    "FAILED": 11,
+    "NOT_RUN": 4
+  },
+  "after_observation_counts": {
+    "OK": 6,
+    "FAILED": 10,
+    "NOT_RUN": 4
+  },
+  "model_sample_old_pass_to_other": [],
+  "model_sample_fail_to_pass": [
+    {
+      "case_id": "S81-002",
+      "axis": "turn_relation"
+    }
+  ],
+  "newly_observed_axes": [
+    {
+      "case_id": "S81-014",
+      "axis": "metric_surfaces",
+      "result": "PASS"
+    },
+    {
+      "case_id": "S81-014",
+      "axis": "time_relation",
+      "result": "PASS"
+    },
+    {
+      "case_id": "S81-014",
+      "axis": "target_task",
+      "result": "PASS"
+    }
+  ],
+  "causal_limit": "Sample changes outside the specifically recorded metric-boundary/time case are not attributed to this patch; model outputs vary.",
+  "real_model_calls": 56,
+  "targeted_calls": 6,
+  "full_corpus_calls": 50,
+  "source_SQL_executions": 0,
+  "production_writes": 0,
+  "unchanged_gold_file_sha256": "c8df9ae284acfc61d4295c84f6f2ef7e213dac6824e6e0b4888fea4fe1c683e5",
+  "not_evaluated_safety_stays_open": true,
+  "full_pipeline_accuracy": "NOT_ESTABLISHED",
+  "production_cutover_pass": false
+}

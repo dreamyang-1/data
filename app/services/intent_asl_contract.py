@@ -49,6 +49,16 @@ def _is_negative_filter(item: dict[str, Any]) -> bool:
     }
 
 
+# Time-granularity labels must never be promoted to the query object.  The
+# vocabulary stays aligned with the governed granularity normalization set in
+# ``app/semantic_v2/context_question.py`` (月份→月, 星期→周, ...), so a
+# structured-model dimension such as ``月份`` remains a time bucket instead of
+# displacing the explicit business object (for example 产品).
+_TIME_GRANULARITY_LABELS = frozenset({
+    "时间", "日期", "年", "季度", "季", "月", "月份", "周", "星期", "日", "天",
+})
+
+
 def _query_object(
     request: CanonicalAnalysisRequest, *, prefer_grouping_object: bool = False
 ) -> str | None:
@@ -66,7 +76,7 @@ def _query_object(
     # the actual entity and display field from recalled metadata.
     candidates = [
         value for value in request.dimensions
-        if value not in {"时间", "日期", "年", "季度", "月", "周", "日"}
+        if value not in _TIME_GRANULARITY_LABELS
     ]
     if prefer_grouping_object and candidates:
         return candidates[-1]
@@ -136,8 +146,9 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         "品牌": "商品品牌", "品牌名称": "商品品牌", "母品牌": "商品品牌",
         "母厂牌": "商品品牌", "厂牌": "商品品牌",
         "品类": "商品品类", "商品分类": "商品品类", "产品分类": "商品品类",
-        "区域": "地区", "省份": "地区", "城市": "地区",
-        "业务省份": "地区", "业务城市": "地区",
+        "区域": "地区", "地区": "地区",
+        "省份": "省份", "业务省份": "省份",
+        "城市": "城市", "业务城市": "城市",
     }
 
     def normalized_role(value: str) -> str:
@@ -146,7 +157,7 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
     normalized_filter_roles = {normalized_role(value) for value in filter_roles}
     required_groupings = list(dict.fromkeys(
         value for value in request.dimensions
-        if value not in {"时间", "日期", "年", "季度", "月", "周", "日"}
+        if value not in _TIME_GRANULARITY_LABELS
         and normalized_role(value) not in normalized_filter_roles
     ))
     default_time_only = "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in request.assumptions
@@ -161,7 +172,8 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
         for value in request.assumptions
     )
     time_grouping_requested = (
-        AnalysisOperator.TIME_BUCKET in request.operators
+        request.primary_intent == PrimaryIntent.TREND_ANALYSIS
+        or AnalysisOperator.TIME_BUCKET in request.operators
         or any(
             value.startswith("DEFAULT_TIME_GRANULARITY=")
             for value in request.assumptions
@@ -185,7 +197,12 @@ def build_intent_asl_contract(request: CanonicalAnalysisRequest) -> dict[str, An
     return {
         "version": CONTRACT_VERSION,
         "intent": request.primary_intent.value,
-        "query_object": _query_object(request, prefer_grouping_object=ranking),
+        "query_object": _query_object(
+            request,
+            prefer_grouping_object=(
+                ranking or (not detail_like and bool(required_groupings))
+            ),
+        ),
         "metric_required": metric_required,
         "required_metrics": [metric.canonical_name or metric.input for metric in request.metrics],
         "required_metric_codes": metric_codes,
@@ -270,7 +287,7 @@ def validate_intent_asl_contract_definition(contract: dict[str, Any]) -> list[st
         errors.append("TIME_DIMENSION_CONTRACT_INVALID")
     if contract.get("time_policy") not in {"REQUIRED", "OPTIONAL", "FORBIDDEN"}:
         errors.append("TIME_POLICY_INVALID")
-    if contract.get("time_dimension_required") and contract.get("time_policy") != "REQUIRED":
+    if contract.get("time_dimension_required") and contract.get("time_policy") == "FORBIDDEN":
         errors.append("TIME_POLICY_CONFLICT")
     canonical_time_range = contract.get("canonical_time_range")
     if contract.get("time_policy") == "REQUIRED" and not (

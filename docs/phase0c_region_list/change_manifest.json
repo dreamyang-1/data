@@ -1,0 +1,76 @@
+{
+  "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c",
+  "feature_branch": "phase0c-region-list-20260908-01",
+  "files": [
+    {
+      "repository_path": "app/intent/classifier.py",
+      "source_sha256": "3c96419c6611678907fca71c222e1a8566256ca71df9e7d02bf4213d38dc3298",
+      "published_sha256": "3c96419c6611678907fca71c222e1a8566256ca71df9e7d02bf4213d38dc3298",
+      "baseline_sha256": "5d432ce5c110771b22ae667e7d32cec9a98f3a7372d0f2bcd109851c0531b144"
+    },
+    {
+      "repository_path": "tests/test_region_list_contract.py",
+      "source_sha256": "ba45ce7f97f09d56de8543e066b9f9db78d67ffbfbb4a60b768db61ac39b7032",
+      "published_sha256": "ba45ce7f97f09d56de8543e066b9f9db78d67ffbfbb4a60b768db61ac39b7032",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c/trust_semantic_scope_contract.md",
+      "source_sha256": "5b9a58b90ddf76440dc5f344ef2e580984c8408b4e97df37aeb95d2d6e2dc41a",
+      "published_sha256": "5b9a58b90ddf76440dc5f344ef2e580984c8408b4e97df37aeb95d2d6e2dc41a",
+      "baseline_sha256": "ed2269bd57b1504ee535d34d46879ba9314ce4ea25a11c307e9031636c8b3af2"
+    },
+    {
+      "repository_path": "docs/phase0c_region_list/audit_inventory.json",
+      "source_sha256": "59f23823c9332ff6348a12f9f12ba9f3273b94fa44450da282ec9dd23bfbea47",
+      "published_sha256": "59f23823c9332ff6348a12f9f12ba9f3273b94fa44450da282ec9dd23bfbea47",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_region_list/closure_report.md",
+      "source_sha256": "685ec2d51959073dc01f83ec41513cf198afdb0ad48072027ed0988e48b67933",
+      "published_sha256": "685ec2d51959073dc01f83ec41513cf198afdb0ad48072027ed0988e48b67933",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_region_list/failure_evidence.json",
+      "source_sha256": "443d8a323f724e906666fa3e140e3b12e90c900304a2ee90531381443287901a",
+      "published_sha256": "443d8a323f724e906666fa3e140e3b12e90c900304a2ee90531381443287901a",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_region_list/final_DataAnalysis_Agent.json",
+      "source_sha256": "5e253033397ec4f043fef6a025c20a50bd9fb1bff0a0f98517eb3b6555e417d8",
+      "published_sha256": "5e253033397ec4f043fef6a025c20a50bd9fb1bff0a0f98517eb3b6555e417d8",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_region_list/final_Oagnet.json",
+      "source_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "published_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_region_list/final_SQL_Translator.json",
+      "source_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "published_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_region_list/rollback_manifest.json",
+      "source_sha256": "0bbaedf130772430dac49302443c53ac1d621c940fa8a4cce147fc370fb4a163",
+      "published_sha256": "0bbaedf130772430dac49302443c53ac1d621c940fa8a4cce147fc370fb4a163",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_region_list/test_delta.json",
+      "source_sha256": "c4032fb3a0a9973bfb7e8e09150357ba75bd609815d8ceec2317d694a878333b",
+      "published_sha256": "c4032fb3a0a9973bfb7e8e09150357ba75bd609815d8ceec2317d694a878333b",
+      "baseline_sha256": null
+    }
+  ],
+  "secret_scan_findings": 0,
+  "publication_policy": "Explicit files only; no credentials, environments, logs, private diagnostic text, runtime data or snapshots",
+  "original_oagnet_index_preserved": true,
+  "manifest_self_hash": "Committed Git blob; no circular hash"
+}

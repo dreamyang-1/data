@@ -63,6 +63,7 @@ def plan_dataset_followup(
     rows: Sequence[Mapping[str, Any]],
     *,
     ordering_proof: Mapping[str, Any] | None = None,
+    source_complete: bool = True,
 ) -> dict[str, Any] | None:
     """Map only unambiguous local follow-ups to whitelisted dataset operations.
 
@@ -71,6 +72,18 @@ def plan_dataset_followup(
     the wrong historical snapshot.
     """
     compact = re.sub(r"\s+", "", question)
+    # Explicit display limits preserve row order even for numeric datasets.
+    display = re.fullmatch(r"(?:只看|只显示|只展示|只返回|只保留|显示|展示|返回)前(\d{1,5}|[一二三四五六七八九十]{1,3})条[。？！?!]?", compact)
+    if display:
+        return {'type': 'limit', 'count': _ranking_count(display.group(1))}
+    if not source_complete:
+        candidate = plan_dataset_followup(question, columns, rows, ordering_proof=ordering_proof)
+        family = dataset_operation_family(candidate)
+        if family in {'DISPLAY_LIMIT', 'PROJECTION'}:
+            return candidate
+        if family == 'LOCAL_SORT' and any(marker in compact for marker in _DATASET_REFERENCE_MARKERS):
+            return candidate
+        return None
     # “其他筛选条件不变” describes inherited query scope; it is not itself a
     # request to filter the materialized result. Remove this suffix before
     # choosing the local operation so “只返回前5个” reaches the limit parser.
@@ -174,11 +187,12 @@ def plan_dataset_followup(
         })
 
     if (wants_maximum or wants_minimum) and extrema_target is not None:
+        explicit_count = re.search(r"(?:最高|最低|最大|最小)(\d{1,5}|[一二三四五六七八九十]{1,3})(?:名|条|个)", compact)
         return _with_sheet_filter(sheet_filter, {
             "type": "sort_limit",
             "field": extrema_target,
             "descending": wants_maximum,
-            "count": 1,
+            "count": _ranking_count(explicit_count.group(1)) if explicit_count else 1,
         })
 
     if any(marker in compact for marker in (
@@ -329,6 +343,57 @@ def plan_dataset_followup(
         if selected:
             return _with_sheet_filter(sheet_filter, {"type": "select", "columns": selected})
     return sheet_filter
+
+
+def dataset_operation_family(operation: Mapping[str, Any] | None) -> str | None:
+    if operation is None:
+        return None
+    return {'limit':'DISPLAY_LIMIT', 'sort':'LOCAL_SORT', 'select':'PROJECTION',
+            'sort_limit':'GLOBAL_RANKING', 'aggregate':'GLOBAL_RANKING',
+            'extrema':'GLOBAL_RANKING', 'extrema_difference':'GLOBAL_RANKING',
+            'drilldown':'DRILLDOWN'}.get(str(operation.get('type')))
+
+
+def presentation_ancestors(
+    selected: Mapping[str, Any], references: Sequence[Mapping[str, Any]], *, allow_rank_slice: bool = False,
+) -> list[Mapping[str, Any]]:
+    """Walk only proven slice edges; filters, joins and changed snapshots are barriers.
+
+    Undoing a sort-limit is safe only when a new global operation will be planned
+    on the complete parent. Display expansion must preserve the existing order.
+    """
+    by_id = {item.get('dataset_id'): item for item in references}
+    result: list[Mapping[str, Any]] = []
+    visited = {selected.get('dataset_id')}
+    current = selected
+    while True:
+        parents = current.get('parent_dataset_ids') or []
+        if len(parents) != 1 or parents[0] in visited:
+            return result
+        parent = by_id.get(parents[0])
+        if parent is None or current.get('source_ref') != parents[0]:
+            return result
+        if any(current.get(key) != parent.get(key) for key in (
+            'scope', 'columns', 'snapshot_id', 'data_as_of', 'semantic_model_id', 'business_domain_ids',
+        )):
+            return result
+        current_log, parent_log = current.get('transformation_log') or [], parent.get('transformation_log') or []
+        if len(current_log) != len(parent_log) + 1 or current_log[:-1] != parent_log:
+            return result
+        operation = current_log[-1]
+        if not isinstance(operation, Mapping) or operation.get('type') not in (
+            {'limit', 'sort_limit'} if allow_rank_slice else {'limit'}
+        ):
+            return result
+        child_rows, parent_rows = current.get('row_count'), parent.get('row_count')
+        if type(child_rows) is not int or type(parent_rows) is not int or not 0 <= child_rows <= parent_rows:
+            return result
+        count = operation.get('count')
+        if type(count) is not int or count < 1 or child_rows != min(count, parent_rows):
+            return result
+        visited.add(parents[0])
+        result.append(parent)
+        current = parent
 
 
 def _ranking_count(value: str) -> int:
@@ -503,6 +568,7 @@ def scope_for_request(request: Any) -> DatasetScope:
         user_id=request.user_id,
         application_id=request.application_id,
         conversation_id=request.conversation_id,
+        authorized_semantic_scope_fingerprint=(request.authorized_semantic_scope.fingerprint() if request.authorized_semantic_scope else ''),
     )
 
 

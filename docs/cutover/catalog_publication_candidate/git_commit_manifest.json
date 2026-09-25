@@ -1,0 +1,16 @@
+{
+  "baseline_commit": "df09b52ea4ab76254f5005619aefa8e4cb87ac5f",
+  "feature_branch": "cutover-catalog-publication-candidate-20260909-01",
+  "base_branch": "cutover-v2-source-value-binding-20260908-01",
+  "implementation_commit": "bd692be7a701fd19f69e54c9b2ce2c137cd429ec",
+  "service_commits": {
+    "Oagnet": "bd692be7a701fd19f69e54c9b2ce2c137cd429ec"
+  },
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

@@ -1,0 +1,57 @@
+{
+  "baseline_commit": "47608b0a8db4a20b54973d717bf4176e621d1b2a",
+  "reviewer": "Self-review; no sub-agent",
+  "source_files": [
+    {
+      "path": "app/semantic_v2/recognition.py",
+      "sha256": "b3e190e01d773792fbef58671b3ebd794d44c6882a3cbae5a857429264f3d32a"
+    },
+    {
+      "path": "app/semantic_v2/recognition_client.py",
+      "sha256": "ba5462734b9bacf48b59d7a6baba43246d63d739d1197f9daeff0ad457154ce4"
+    },
+    {
+      "path": "tests/test_v2_raw_turn_recognition.py",
+      "sha256": "9f714ed5a1bfff52b786e6d9cf8674e8dbf1ccf1ac4e895c9edcb7d1d2fb0517"
+    },
+    {
+      "path": "specs/semantic_v2/semantic_task_draft_v1.schema.json",
+      "sha256": "7772b5e985b1703354e4939eb0f8a1f8956d5bed34911b095a67b52731c41b52"
+    },
+    {
+      "path": "specs/semantic_v2/current_recognition_value_v1.schema.json",
+      "sha256": "dfe93ef02aeeef7729c6a144803750c347e0d55d2895ba7499ba898fb5def736"
+    }
+  ],
+  "proven_edges": [
+    "Current request and scoped stored conversation checked before model history input",
+    "Separate surface-only parse HTTP call; spans and current turn validated",
+    "Offered current catalog handles to typed edits; scope/authority keys denied",
+    "Operation markers and explicit mentions cannot be silently dropped or changed",
+    "Deterministic reducer to payload construction; silent semantic loss rejected",
+    "Prior plan scope/task/version/plan ID checked before shape inheritance",
+    "Catalog finish before plan/state output; no executed result is created"
+  ],
+  "findings_resolved": [
+    "An autonomous caller can now submit the raw request without supplying parse/patch/binding fixtures",
+    "Prior ranking shape could otherwise be reduced to scalar aggregation",
+    "Slot evidence, binding evidence and current turn need consistent provenance",
+    "Unsupported Pending answers must not silently become new tasks",
+    "Full-filter replacement/clear must not silently remove unrelated fields"
+  ],
+  "open_evidence": [
+    "Native catalog publication and deployed trust",
+    "Actual model recognition quality, semantic margin/calibration and wrong-auto-accept rate",
+    "Typed Pending answer and ambiguity/clarification creation path",
+    "Full field-level filter edits, partial temporal edits, governed defaults/relations, remaining analytical payloads",
+    "Production state-store and response adapter integration; current entry returns internal plan-only artifacts"
+  ],
+  "production_modules_unchanged": [
+    "app/api.py",
+    "app/workflow.py",
+    "app/intent/structured.py",
+    "app/services/orchestrator.py",
+    "Oagnet/agent.py",
+    "sql-translator/sql_translator_prod.py"
+  ]
+}

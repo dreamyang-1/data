@@ -1,0 +1,54 @@
+[
+  {
+    "requested": "preexisting_workspace_drift.json",
+    "status": "READ",
+    "available_evidence": [
+      "preexisting_workspace_drift.json"
+    ]
+  },
+  {
+    "requested": "workspace_git_hash_verification.json",
+    "status": "MISSING_IN_STARTING_COMMIT_AND_WORKSPACE",
+    "available_evidence": [
+      "final_workspace_git_drift.json"
+    ]
+  },
+  {
+    "requested": "git_baseline.json",
+    "status": "MISSING_IN_STARTING_COMMIT_AND_WORKSPACE",
+    "available_evidence": [
+      "preexisting_workspace_drift.json",
+      "current_code_baseline_audit.md"
+    ]
+  },
+  {
+    "requested": "git_commit_manifest.json",
+    "status": "MISSING_IN_STARTING_COMMIT_AND_WORKSPACE",
+    "available_evidence": [
+      "change_manifest_implementation.json",
+      "change_manifest_closure.json"
+    ]
+  },
+  {
+    "requested": "change_manifest.json",
+    "status": "MISSING_IN_STARTING_COMMIT_AND_WORKSPACE",
+    "available_evidence": [
+      "change_manifest_implementation.json",
+      "change_manifest_closure.json"
+    ]
+  },
+  {
+    "requested": "rollback_manifest.json",
+    "status": "MISSING_IN_STARTING_COMMIT_AND_WORKSPACE",
+    "available_evidence": [
+      "contract_boundaries_and_rollback.md"
+    ]
+  },
+  {
+    "requested": "phase25_1_closure_report.md",
+    "status": "READ",
+    "available_evidence": [
+      "phase25_1_closure_report.md"
+    ]
+  }
+]

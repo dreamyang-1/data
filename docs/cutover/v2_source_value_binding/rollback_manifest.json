@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "ff389dc4cd3fe4e0dabe1c665e3672b80b445330",
+  "feature_branch": "cutover-v2-source-value-binding-20260908-01",
+  "rollback": "Reviewed per-service revert of this feature and explicit development resync. No production rollback was exercised. New filter-choice/source-evidence artifacts must not be fed into older code; clear only isolated test state or migrate deliberately.",
+  "native_publication_performed": false,
+  "production_routing_changed": false,
+  "auto_merge": false
+}

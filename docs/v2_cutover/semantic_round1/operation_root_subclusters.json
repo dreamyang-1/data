@@ -1,0 +1,97 @@
+{
+  "original_cluster": "RC-a0a5c2da8009",
+  "original_count": 13,
+  "subclusters": [
+    {
+      "subcluster_id": "OP-R1-ENTITY-PROJECTION",
+      "case_ids": [
+        "G81-001",
+        "G81-003",
+        "G81-008",
+        "G81-012"
+      ],
+      "classification": "TARGET_SLOT_UNRESOLVED",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "invariant": "An entity-list subject plus governed default display is not a current explicit projection-field ADD.",
+      "first_boundary": "CurrentTurnSemanticParse explicit_slot_mentions/operation_markers",
+      "evidence_consumption_path": "entity mention -> subject SET consumed; spurious projection ADD -> no projection edit -> _patch guard",
+      "case_count": 4,
+      "severity": "P1",
+      "risk": "SAFE_REJECT",
+      "owner": "DataAnalysis Agent recognition/parsing; PROMPT_OR_RECOGNITION_LAYER_CANDIDATE",
+      "production_operation_defect_proven": false,
+      "MAXIMUM_CASE_COVERAGE": 4,
+      "MINIMUM_INDEPENDENT_ROOT_CAUSE_ESTIMATE": "UNKNOWN",
+      "next_action": "Separate future recognition hypothesis experiment; no parser, role, prompt, turn or query-shape patch in Round 1"
+    },
+    {
+      "subcluster_id": "OP-R1-PRESENTATION-CUE",
+      "case_ids": [
+        "G81-009",
+        "G81-010",
+        "G81-058",
+        "G81-059",
+        "G81-060",
+        "G81-061",
+        "PV81-010",
+        "PV81-016"
+      ],
+      "classification": "OPERAND_UNRESOLVED",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "invariant": "A presentation/aggregation cue is not a role-bearing catalog field or explicit projection operand.",
+      "first_boundary": "CurrentTurnSemanticParse mentions.candidate_roles + linked projection declaration",
+      "evidence_consumption_path": "presentation cue -> PROJECTION_FIELD/SET or ADD -> no canonical projection operand/edit -> _patch guard",
+      "case_count": 8,
+      "severity": "P1",
+      "risk": "SAFE_REJECT",
+      "owner": "DataAnalysis Agent recognition/parsing; PROMPT_OR_RECOGNITION_LAYER_CANDIDATE",
+      "production_operation_defect_proven": false,
+      "MAXIMUM_CASE_COVERAGE": 8,
+      "MINIMUM_INDEPENDENT_ROOT_CAUSE_ESTIMATE": "UNKNOWN",
+      "next_action": "Separate future recognition hypothesis experiment; no parser, role, prompt, turn or query-shape patch in Round 1"
+    },
+    {
+      "subcluster_id": "OP-R1-MERGED-BOUNDARY",
+      "case_ids": [
+        "G81-066"
+      ],
+      "classification": "OPERAND_UNRESOLVED",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "invariant": "Entity surface and list-presentation wording must not become one asserted field operand.",
+      "first_boundary": "CurrentTurnSemanticParse mentions surface/role boundary",
+      "evidence_consumption_path": "merged entity/list surface -> subject bind, spurious projection SET -> no projection edit -> _patch guard",
+      "case_count": 1,
+      "severity": "P1",
+      "risk": "SAFE_REJECT",
+      "owner": "DataAnalysis Agent recognition/parsing; PROMPT_OR_RECOGNITION_LAYER_CANDIDATE",
+      "production_operation_defect_proven": false,
+      "MAXIMUM_CASE_COVERAGE": 1,
+      "MINIMUM_INDEPENDENT_ROOT_CAUSE_ESTIMATE": "UNKNOWN",
+      "next_action": "Separate future recognition hypothesis experiment; no parser, role, prompt, turn or query-shape patch in Round 1"
+    }
+  ],
+  "distribution": {
+    "SEMANTIC_ROLE": 12,
+    "MENTION_BOUNDARY": 1
+  },
+  "operation_operand_target": {
+    "OPERATION_EVIDENCE_DROPPED": 0,
+    "OPERAND_UNRESOLVED": 9,
+    "TARGET_SLOT_UNRESOLVED": 4,
+    "TARGET_TASK_UNRESOLVED": 0
+  },
+  "risk_distribution": {
+    "CORRECT_ACCEPT": 0,
+    "SAFE_REJECT": 13,
+    "WRONG_CLARIFICATION": 0,
+    "UNSAFE_ACCEPT": 0,
+    "WRONG_SILENT_ACCEPT": 0
+  },
+  "generic_operation_contract_defects_proven": 0,
+  "NO_GENERIC_OPERATION_DEFECT_PROVEN": true,
+  "remaining_original_cluster_cases_owned_by_operation_consumer": 0,
+  "reclassified_unresolved_recognition_cases": 13,
+  "other_task_operation_cases_not_investigated": 8,
+  "minimum_independent_recognition_defects": "UNKNOWN; these three boundaries are investigation groups, not three proven independent bugs",
+  "note": "Removing a model-only declaration in an Oracle is diagnostic, not authority to drop real user edits in production."
+}

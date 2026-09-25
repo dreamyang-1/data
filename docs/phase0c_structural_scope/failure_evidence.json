@@ -1,0 +1,54 @@
+{
+  "failure_id": "SS-01",
+  "previous_observation": "TR-A01",
+  "confidence": "PROVEN",
+  "root_cause_class": "REAL_PRODUCTION_BUG",
+  "severity": "P0",
+  "first_divergence_stage": "RULE_PARSE",
+  "failure_signature": "RULE_PARSE|METRIC_QUERY|NEW_REQUEST|entity/filter|temporal-geographic-syntax-promoted-to-entity",
+  "utterance": "查询2026年7月上海订单量",
+  "expected": "July 2026 orders filtered by Shanghai business city",
+  "actual_before": "Product equality filter and semantic entity mention containing 2026年7月上海, sent by the actual HTTP adapter as an Intent-ASL requirement",
+  "injection_sites": [
+    "_apply_metric_subject_scope",
+    "implicit_metric_subject in _apply_semantic_catalog_guardrails"
+  ],
+  "paths": [
+    "Hybrid classifier + successful offline structured model + actual question rewriter with scoped synthetic catalog + orchestrator + captured retrieval request",
+    "Rule classifier + bound current scope + actual HttpDataRetrievalAdapter up to offline ASL transport"
+  ],
+  "repeatability": "DETERMINISTIC",
+  "independent_reproductions": [
+    {
+      "path": 1,
+      "attempt": 1,
+      "results": {
+        "tests/test_structural_scope_contract.py::test_compact_time_region_does_not_pollute_executable_contract": "failed"
+      }
+    },
+    {
+      "path": 1,
+      "attempt": 2,
+      "results": {
+        "tests/test_structural_scope_contract.py::test_compact_time_region_does_not_pollute_executable_contract": "failed"
+      }
+    },
+    {
+      "path": 2,
+      "attempt": 1,
+      "results": {
+        "tests/test_structural_scope_contract.py::test_real_http_adapter_does_not_send_fabricated_product_requirement": "failed"
+      }
+    },
+    {
+      "path": 2,
+      "attempt": 2,
+      "results": {
+        "tests/test_structural_scope_contract.py::test_real_http_adapter_does_not_send_fabricated_product_requirement": "failed"
+      }
+    }
+  ],
+  "validation_limit": "Executable Agent contract poisoning is proven. Deployed catalog contents, result rows and occurrence frequency were not inspected.",
+  "status": "FIXED",
+  "external_service_patch": false
+}

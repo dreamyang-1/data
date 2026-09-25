@@ -1,0 +1,892 @@
+[
+  {
+    "path": "tests/test_api.py",
+    "insertions": [
+      {
+        "line": 442,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 478,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 522,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 548,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 575,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 594,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 610,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 630,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 650,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 677,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 694,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1151,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1179,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 70,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 149,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 436,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 715,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 735,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 751,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 773,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 793,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 906,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 937,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1111,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1134,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1210,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_business_question_collector.py",
+    "insertions": [
+      {
+        "line": 40,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_chat_request_validation.py",
+    "insertions": [
+      {
+        "line": 10,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_chat_responder.py",
+    "insertions": [
+      {
+        "line": 62,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 106,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 75,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_clarification_flow.py",
+    "insertions": [
+      {
+        "line": 28,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 61,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 77,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 96,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 106,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 126,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 136,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 153,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 163,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 180,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 194,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 214,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 224,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 250,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_external_search_routing.py",
+    "insertions": [
+      {
+        "line": 100,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 133,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 163,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 224,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 262,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 287,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 316,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 345,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 377,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 442,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 506,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 545,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 582,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 690,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 742,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 776,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_forecast_readiness.py",
+    "insertions": [
+      {
+        "line": 138,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 164,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_handshake.py",
+    "insertions": [
+      {
+        "line": 141,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_history_compaction.py",
+    "insertions": [
+      {
+        "line": 30,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 44,
+        "kind": "HTTP fixture",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_memory_manager.py",
+    "insertions": [
+      {
+        "line": 104,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_orchestrator.py",
+    "insertions": [
+      {
+        "line": 1347,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 79,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1063,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1114,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1168,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1318,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1332,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1352,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1362,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1369,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1395,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1412,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1413,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1415,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1425,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1437,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1461,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1473,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1486,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1501,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1505,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1516,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1520,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1581,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1642,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1679,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1689,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1731,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1769,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1809,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2033,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2073,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2085,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2101,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2110,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2136,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2144,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2162,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2215,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2266,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2286,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2306,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 2317,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1384,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1942,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1994,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_pending_execution_transition.py",
+    "insertions": [
+      {
+        "line": 179,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 188,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 204,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 216,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 244,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 275,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 284,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 312,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 321,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 343,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 353,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_phase0b_regressions.py",
+    "insertions": [
+      {
+        "line": 115,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 123,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 234,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 238,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 256,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 56,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 272,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_semantic_clarification_session_recovery.py",
+    "insertions": [
+      {
+        "line": 88,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 100,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 118,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 131,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 188,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 229,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_session_event_log.py",
+    "insertions": [
+      {
+        "line": 88,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 123,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_task_dag.py",
+    "insertions": [
+      {
+        "line": 880,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1126,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 370,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 415,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 578,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 628,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 824,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1071,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 1130,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_tracing_evaluation.py",
+    "insertions": [
+      {
+        "line": 113,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_turn_admission.py",
+    "insertions": [
+      {
+        "line": 1196,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_workflow.py",
+    "insertions": [
+      {
+        "line": 28,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 43,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 50,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 63,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 78,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 94,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      },
+      {
+        "line": 126,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  },
+  {
+    "path": "tests/test_working_memory.py",
+    "insertions": [
+      {
+        "line": 108,
+        "kind": "ChatRequest",
+        "semantic_model_id": 81
+      }
+    ]
+  }
+]

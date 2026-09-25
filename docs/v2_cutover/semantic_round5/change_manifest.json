@@ -1,0 +1,202 @@
+{
+  "baseline": "899b7b692f7ff06a8660fe99361ba39f8528b1f1",
+  "branch": "semantic-context-production-wiring-round5-20260910t015554z",
+  "hash_mode": "SHA256 after CRLF to LF normalization; exact copied bytes additionally checked privately",
+  "files": [
+    {
+      "path": "app/semantic_v2/catalog_bridge.py",
+      "action": "MODIFY",
+      "before_hash": "fcf609fc22e50cc172abccde7de0332694af0715c6b4e6ad502f2fdb1d354214",
+      "after_hash": "1a25820621da70e477a9579908ce1750a2eba5709f6952bb855d2482d5717323"
+    },
+    {
+      "path": "app/semantic_v2/context_contract.py",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "8dd90555dd131650edfdda9c9019ce96a76e8c69ef504d54c1b33336a2b46fce"
+    },
+    {
+      "path": "app/semantic_v2/context_proposal.py",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "ad5d3d9d88de83f138dc59a868dd44936495eebeba0e2e79c015d2c125c50e84"
+    },
+    {
+      "path": "app/semantic_v2/recognition.py",
+      "action": "MODIFY",
+      "before_hash": "456659bcbafa4b9b99c17750eeabf908cd704e67a2ae33fcb3fbdd0704911941",
+      "after_hash": "a7a24f9e6eeac22a5bc0e384c7f5c3ffdc4e2ce6ed529cda808ba4b80ff21f56"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/closure_report.md",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "e91b333e548f51715f257451370601a35f9482366fea3e9e3c258306d4c8c933"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/current_production_context_path.md",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "ba1c79aedd2ae6402ecbf499460544101aaeb3a6ac27c14e9bcd901b1d849382"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/live_validation_receipt.json",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "5b15490b96de8b1a59ed04c744930e72da12d4fda2c1cf39b91bc192823489d6"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/llm_rule_arbitration_matrix.json",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "1ef9c5bd2051cd9825f756e58f13b0e0d0a9ca671931e16fb00355da4887ccf4"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/performance_receipt.json",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "d92db53e6e27b8cd0663f5bedf390fec1fdbceb387d897ba86449a54b2c48627"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/round5_manifest.json",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "564ab5230d9e3059e808ddaf1cbb136bbb7667bf296f8c6495ed620c79d8b376"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/runtime_replay_receipt.json",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "a00619f6a00d6f19ea4af6d29e3afa87db6f61991fcb0c3a8547586702b2233c"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/schema_contract.md",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "213316eada6c49844605da553c042892077c5edd0e962605225366f16d384afb"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/target_regression_receipt.json",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "26119afc5100c5ab864b172d3fb5ed012df608e0a93d42b4f0a7d457cd668c9c"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/test_contract_migrations.md",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "e8f6b3d661a61bbd0684cdc941a05c345b386fd7a042488230153ea5a04d8425"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/test_delta.json",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "53307acf764c99a873bb30124efd901c550515a921c3365fe807e23592cc124c"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/validation_receipt.json",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "a068af17426a350e9404466ec6da03a4fefb9d6bfd7877e136a55f778d5eb1c2"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5/verify_round5.py",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "a60fc49f5861f75cb31c32080b5ffeaea53545994951f233cae311f4c558ec5d"
+    },
+    {
+      "path": "tests/context_fixture_contract.py",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "8c8c542f395c10b17b0f4eaabcd556e81449340ad735b2cdb057f929d9e71f6d"
+    },
+    {
+      "path": "tests/test_cutover_harness_fixtures.py",
+      "action": "MODIFY",
+      "before_hash": "14de0ebe16085bf65cee14f194a66d206b6bf7a050cfb97a59c47c6534399b0a",
+      "after_hash": "99fb660774d0debca7733a8587a014574ad02a4f181f993f2b10a3dbe8528298"
+    },
+    {
+      "path": "tests/test_cutover_raw_transition_benchmark.py",
+      "action": "MODIFY",
+      "before_hash": "94926ffee88d454b7dc6afac628d0f7f1601cf9ea7f4bc13c7e63fda7ec268de",
+      "after_hash": "6493020e7c7bfaaf4e97ae42606e086f56b9727837d67a99542a0bd1749316e4"
+    },
+    {
+      "path": "tests/test_v2_context_production_round5.py",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "1c6f99fce1f2fa5fb47d9eebbe598e368456bdd536da6391803f7d93afb01992"
+    },
+    {
+      "path": "tests/test_v2_context_round3.py",
+      "action": "MODIFY",
+      "before_hash": "4837357e85c638e354c8a724696365b47543dfd316aa7b421d3dc1d76573cb85",
+      "after_hash": "b90460bc22e029b0570cb6837fa579fbabb25bbe8280d5a807cf69e1ad3fbeda"
+    },
+    {
+      "path": "tests/test_v2_operation_round1.py",
+      "action": "MODIFY",
+      "before_hash": "9064a275b9d90a825e4f93c774a8104929b9e58414900645d2def3a889a0e88d",
+      "after_hash": "ad1edfa3b415a14f1bac16b4f93695eae85f3e1c80b5410016f49e8b2f8b9e08"
+    },
+    {
+      "path": "tests/test_v2_pending_recognition.py",
+      "action": "MODIFY",
+      "before_hash": "9634964308bce869d2f7fa4de25b722138b033709b991f8f2e7cbc4848b61023",
+      "after_hash": "8ee693d14d011b25fddf4defb1a352daab8868b2b230f52a803322b109ae19eb"
+    },
+    {
+      "path": "tests/test_v2_raw_turn_recognition.py",
+      "action": "MODIFY",
+      "before_hash": "5049ddc3ab3278cf5cdd40b978a66e4dbaecbcae2aec7d4f9389c04e0511a243",
+      "after_hash": "602f6920ea78d1d9f4e7bfea5e8b4a6a485992b825a2ee788be9d1fdcd16f597"
+    },
+    {
+      "path": "tests/test_v2_structured_edits.py",
+      "action": "MODIFY",
+      "before_hash": "fbd148b31bb93f5a14695df686feed45e780c4e9d7de306d033c5214f16fbeea",
+      "after_hash": "1540cb3803789dbef913b6b6df84630dcc4870b75a574871870834c344debb47"
+    },
+    {
+      "path": "tools/cutover/context_production_round5.py",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "8548fbe9edc36c9c30b8a735f12c18ffc9912625751492d7fbdb34e03a8708f3"
+    },
+    {
+      "path": "tools/cutover/context_round5_frozen_targets.py",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "3a1abc042bbddf89d3f95760a9d8c78d6905aa15875061ae0b3ca1ce2fd1bfc3"
+    },
+    {
+      "path": "tools/cutover/context_round5_runtime_replay.py",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "a2dde83d5cdfc055590cd981e632bed0057470042d7d553364fe226fe33b55f1"
+    },
+    {
+      "path": "tools/cutover/harness_observation.py",
+      "action": "MODIFY",
+      "before_hash": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b",
+      "after_hash": "46c1a8ab894d2b314ceacec9464e8af98a3864d74af5fe4e8d1f39311506931f"
+    },
+    {
+      "path": "tools/cutover/summarize_context_round5.py",
+      "action": "ADD",
+      "before_hash": null,
+      "after_hash": "f6b886bbe0a46864b3c8993c1aa2ee273a55cda64a98eb2e5a9b666f9bfc9c34"
+    }
+  ],
+  "explicit_manifest_files": [
+    "docs/v2_cutover/semantic_round5/change_manifest.json",
+    "docs/v2_cutover/semantic_round5/workspace_git_hash_verification.json",
+    "docs/v2_cutover/semantic_round5/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5/rollback_manifest.json"
+  ],
+  "recursive_hash_exclusions": "Four self-referential manifests listed explicitly; Git commit seals all files",
+  "unrelated_tracked_changes": 0,
+  "secrets_or_private_artifacts_included": false
+}

@@ -83,6 +83,8 @@ class SessionStore(Protocol):
     async def put_report_reference(self, reference: dict) -> None: ...
     async def list_expired_report_references(self, *, now_epoch: float, limit: int) -> list[dict]: ...
     async def delete_report_reference(self, report_id: str) -> None: ...
+    async def put_validated_query_example(self, example: dict, *, max_items: int) -> None: ...
+    async def get_validated_query_examples(self, tenant_id: str, application_id: str, semantic_model_id: int, business_domain_ids: list[int], *, limit: int) -> list[dict]: ...
 
 
 class InMemorySessionStore:
@@ -112,6 +114,9 @@ class InMemorySessionStore:
             tuple[str, str, str, str, str], tuple[float, str, str]
         ] = {}
         self._report_references: dict[str, dict] = {}
+        self._validated_query_examples: dict[
+            tuple[str, str, int, tuple[int, ...]], list[dict]
+        ] = {}
         self._lock = asyncio.Lock()
 
     async def get_pending(self, tenant_id: str, user_id: str, application_id: str, conversation_id: str) -> PendingState | None:
@@ -435,6 +440,44 @@ class InMemorySessionStore:
     async def delete_report_reference(self, report_id: str) -> None:
         async with self._lock:
             self._report_references.pop(report_id, None)
+
+    async def put_validated_query_example(
+        self, example: dict, *, max_items: int
+    ) -> None:
+        """Store a bounded SQL-free semantic example in development memory."""
+
+        key = (
+            str(example["tenant_id"]),
+            str(example["application_id"]),
+            int(example["semantic_model_id"]),
+            tuple(sorted(int(item) for item in example.get("business_domain_ids", []))),
+        )
+        async with self._lock:
+            values = self._validated_query_examples.setdefault(key, [])
+            fingerprint = str(example["fingerprint"])
+            values[:] = [item for item in values if item.get("fingerprint") != fingerprint]
+            values.insert(0, json.loads(json.dumps(example)))
+            del values[max(1, max_items):]
+
+    async def get_validated_query_examples(
+        self,
+        tenant_id: str,
+        application_id: str,
+        semantic_model_id: int,
+        business_domain_ids: list[int],
+        *,
+        limit: int,
+    ) -> list[dict]:
+        """Return only examples from the exact semantic scope."""
+
+        key = (
+            tenant_id,
+            application_id,
+            semantic_model_id,
+            tuple(sorted(business_domain_ids)),
+        )
+        async with self._lock:
+            return json.loads(json.dumps(self._validated_query_examples.get(key, [])[:limit]))
 
 
 class RedisSessionStore:
@@ -940,3 +983,60 @@ return 0
             pipe.delete(self._key("report-ref", report_id))
             pipe.zrem(self._report_expiry_key, report_id)
             await pipe.execute()
+
+    async def put_validated_query_example(
+        self, example: dict, *, max_items: int
+    ) -> None:
+        """Persist a bounded SQL-free example under its exact semantic scope."""
+
+        key = self._key(
+            "validated-query",
+            str(example["tenant_id"]),
+            str(example["application_id"]),
+            str(example["semantic_model_id"]),
+            json.dumps(sorted(example.get("business_domain_ids", []))),
+        )
+        raw_values = await self.redis.lrange(key, 0, max(0, max_items - 1))
+        fingerprint = str(example["fingerprint"])
+        retained: list[str] = []
+        for raw in raw_values:
+            try:
+                value = json.loads(raw)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                continue
+            if value.get("fingerprint") != fingerprint:
+                retained.append(json.dumps(value, ensure_ascii=False, separators=(",", ":")))
+        encoded = json.dumps(example, ensure_ascii=False, separators=(",", ":"))
+        async with self.redis.pipeline(transaction=True) as pipe:
+            pipe.delete(key)
+            pipe.rpush(key, encoded, *retained[: max(0, max_items - 1)])
+            pipe.expire(key, self.ttl_seconds)
+            await pipe.execute()
+
+    async def get_validated_query_examples(
+        self,
+        tenant_id: str,
+        application_id: str,
+        semantic_model_id: int,
+        business_domain_ids: list[int],
+        *,
+        limit: int,
+    ) -> list[dict]:
+        """Read validated examples from the exact tenant/application scope."""
+
+        key = self._key(
+            "validated-query",
+            tenant_id,
+            application_id,
+            str(semantic_model_id),
+            json.dumps(sorted(business_domain_ids)),
+        )
+        result: list[dict] = []
+        for raw in await self.redis.lrange(key, 0, max(0, limit - 1)):
+            try:
+                value = json.loads(raw)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                continue
+            if isinstance(value, dict):
+                result.append(value)
+        return result

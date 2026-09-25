@@ -97,7 +97,7 @@ async def test_web_search_true_uses_builtin_bocha_compatible_tool():
         settings=settings,
         transport=httpx.MockTransport(handler),
     )
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         application_id="app",
         conversation_id="c",
         message_id="m",
@@ -130,7 +130,7 @@ async def test_web_search_http_200_error_body_is_not_reported_as_success():
         settings=Settings(bocha_api_key="test-bocha-key"),
         transport=httpx.MockTransport(handler),
     )
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         application_id="app",
         conversation_id="c",
         message_id="m",
@@ -160,7 +160,7 @@ async def test_web_search_http_auth_failure_uses_new_agent_error_contract():
         settings=Settings(bocha_api_key="test-bocha-key"),
         transport=httpx.MockTransport(handler),
     )
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         application_id="app",
         conversation_id="c",
         message_id="m",
@@ -221,7 +221,7 @@ async def test_web_search_false_does_not_expose_builtin_tool():
         settings=Settings(bocha_api_key="test-bocha-key"),
         transport=httpx.MockTransport(handler),
     )
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         application_id="app",
         conversation_id="c",
         message_id="m",
@@ -259,7 +259,7 @@ async def test_web_search_true_exposes_but_does_not_force_builtin_tool():
         transport=transport,
         tool_selector=OptionalToolSelector(settings, transport=transport),
     )
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         application_id="app",
         conversation_id="c",
         message_id="m",
@@ -284,7 +284,7 @@ async def test_web_search_missing_key_degrades_without_network_call():
         settings=Settings(bocha_api_key=None),
         transport=httpx.MockTransport(handler),
     )
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         application_id="app",
         conversation_id="c",
         message_id="m",
@@ -313,7 +313,7 @@ async def test_explicit_web_tool_has_priority_over_builtin_tool():
         settings=Settings(bocha_api_key="test-bocha-key"),
         transport=httpx.MockTransport(handler),
     )
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         application_id="app",
         conversation_id="c",
         message_id="m",
@@ -342,7 +342,7 @@ async def test_required_web_search_reuses_new_agent_arguments_without_model_sele
         return httpx.Response(200, json=search_response())
 
     dispatcher = ExtensionDispatcher(transport=httpx.MockTransport(handler))
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         application_id="app",
         conversation_id="c",
         message_id="m",
@@ -374,7 +374,7 @@ async def test_web_search_skill_can_label_a_generic_bound_http_tool(tmp_path):
         transport=httpx.MockTransport(handler),
         skill_loader=DynamicSkillLoader(tmp_path),
     )
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         application_id="app",
         conversation_id="c",
         message_id="m",
@@ -439,7 +439,7 @@ async def test_required_web_search_discovers_and_calls_mcp_capability():
         })
 
     dispatcher = ExtensionDispatcher(transport=httpx.MockTransport(handler))
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         application_id="app",
         conversation_id="c",
         message_id="m",
@@ -503,7 +503,7 @@ async def test_required_web_search_mcp_error_contract_is_not_reported_as_success
         })
 
     dispatcher = ExtensionDispatcher(transport=httpx.MockTransport(handler))
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         application_id="app",
         conversation_id="c",
         message_id="m",
@@ -542,7 +542,7 @@ async def test_public_hospital_address_is_answered_before_out_of_scope_shortcut(
         ),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app",
             conversation_id="address",
             message_id="m1",
@@ -579,7 +579,7 @@ async def test_default_orchestrator_honors_web_search_flag_without_request_tool(
     )
     agent.extension_dispatcher.transport = httpx.MockTransport(handler)
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app",
             conversation_id="builtin-address",
             message_id="m1",
@@ -687,7 +687,7 @@ async def test_mixed_dealer_profile_keeps_internal_query_then_adds_web_supplemen
         ),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app",
             conversation_id="mixed",
             message_id="m1",
@@ -739,7 +739,7 @@ async def test_web_enrichment_is_not_called_when_profile_analysis_stops_safely()
         ),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app",
             conversation_id="mixed-analysis-fallback",
             message_id="m1",
@@ -773,7 +773,7 @@ async def test_ranked_web_failure_does_not_change_database_ranking():
         ),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app",
             conversation_id="ranked-web-failure",
             message_id="m1",

@@ -1,0 +1,195 @@
+{
+  "native_before": {
+    "requests": 9,
+    "model_calls": 20,
+    "calls_per_request": {
+      "n": 9,
+      "mean": 2.2222222222222223,
+      "p95": 3.0,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "input_tokens": {
+      "n": 9,
+      "mean": 21967.777777777777,
+      "p95": 32076.999999999996,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "output_tokens": {
+      "n": 9,
+      "mean": 1015.1111111111111,
+      "p95": 1520.0,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "recognition_seconds": {
+      "n": 9,
+      "mean": 10.090222222213116,
+      "p95": 13.674600000027567,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "total_plan_request_seconds": {
+      "n": 9,
+      "mean": 16.963555555583703,
+      "p95": 24.981400000024585,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "accepted_plan_only_seconds": {
+      "n": 3,
+      "mean": 9.854000000050291,
+      "p95": 11.598000000137835,
+      "method": "Linear interpolated sample percentile; descriptive, not a population guarantee"
+    },
+    "provider_timeouts": 0,
+    "http_status_counts": {
+      "200": 20
+    },
+    "schema_failures": 0,
+    "clarification_count": 0
+  },
+  "resolver_after": null,
+  "resolver_comparison": "NOT_APPLICABLE_DECISION_C; NOT_TESTED_OR_ENABLED",
+  "historical_pre_round5_latency": "UNKNOWN_UNCHANGED",
+  "model": {
+    "name": "qwen3.7-max",
+    "returned_models": [
+      "qwen3.7-max"
+    ],
+    "thinking": false,
+    "temperature": 0,
+    "retry": 0,
+    "timeout_seconds": 60,
+    "seed": "NOT_SENT",
+    "top_p": "NOT_SENT",
+    "max_tokens": "NOT_SENT"
+  },
+  "runtime_call_design": {
+    "normal_and_context": 2,
+    "exact_pending_answer": 1,
+    "extra_context_resolver": 0,
+    "existing_value_probe_calls_observed": 3
+  },
+  "rows": [
+    {
+      "turn_id": "38cab6c42ec2fbdba2d13f16",
+      "case_id": "LF51-A",
+      "has_context": false,
+      "calls": 2,
+      "input_tokens": 35837,
+      "output_tokens": 1449,
+      "recognition_seconds": 12.514999999897555,
+      "total_seconds": 21.54699999978766,
+      "plan": false,
+      "source_probe_calls": 0
+    },
+    {
+      "turn_id": "0b81b399f27444b20b65c3ec",
+      "case_id": "LF51-B",
+      "has_context": false,
+      "calls": 3,
+      "input_tokens": 24933,
+      "output_tokens": 1407,
+      "recognition_seconds": 11.172000000020489,
+      "total_seconds": 23.844000000040978,
+      "plan": false,
+      "source_probe_calls": 1
+    },
+    {
+      "turn_id": "d484d5fccffa9a3be2e49823",
+      "case_id": "LF51-C",
+      "has_context": false,
+      "calls": 3,
+      "input_tokens": 26113,
+      "output_tokens": 1560,
+      "recognition_seconds": 13.140000000130385,
+      "total_seconds": 25.125,
+      "plan": false,
+      "source_probe_calls": 1
+    },
+    {
+      "turn_id": "73de003cd145373786a7a509",
+      "case_id": "LF51-D",
+      "has_context": false,
+      "calls": 3,
+      "input_tokens": 24894,
+      "output_tokens": 1460,
+      "recognition_seconds": 14.030999999959022,
+      "total_seconds": 24.766000000061467,
+      "plan": false,
+      "source_probe_calls": 1
+    },
+    {
+      "turn_id": "5302e958a7ea50f787715e82",
+      "case_id": "LF51-F",
+      "has_context": false,
+      "calls": 2,
+      "input_tokens": 22298,
+      "output_tokens": 914,
+      "recognition_seconds": 8.438000000081956,
+      "total_seconds": 14.875,
+      "plan": false,
+      "source_probe_calls": 0
+    },
+    {
+      "turn_id": "ff6430cbb4b9288918389561",
+      "case_id": "LF51-I",
+      "has_context": true,
+      "calls": 1,
+      "input_tokens": 3436,
+      "output_tokens": 418,
+      "recognition_seconds": 6.984999999869615,
+      "total_seconds": 7.077999999979511,
+      "plan": true,
+      "source_probe_calls": 0
+    },
+    {
+      "turn_id": "cc217d4c0ae4185dda7b2d5f",
+      "case_id": "LF51-J",
+      "has_context": true,
+      "calls": 2,
+      "input_tokens": 26437,
+      "output_tokens": 710,
+      "recognition_seconds": 8.218999999808148,
+      "total_seconds": 12.953000000212342,
+      "plan": false,
+      "source_probe_calls": 0
+    },
+    {
+      "turn_id": "e926902f21abfb21e218346e",
+      "case_id": "LF51-LIVE-CONTROL",
+      "has_context": true,
+      "calls": 2,
+      "input_tokens": 17013,
+      "output_tokens": 649,
+      "recognition_seconds": 8.515000000130385,
+      "total_seconds": 11.687000000150874,
+      "plan": true,
+      "source_probe_calls": 0
+    },
+    {
+      "turn_id": "f2e5c6bec2315e9d39ff7a7b",
+      "case_id": "LF51-LIVE-CONTROL",
+      "has_context": true,
+      "calls": 2,
+      "input_tokens": 16749,
+      "output_tokens": 569,
+      "recognition_seconds": 7.797000000020489,
+      "total_seconds": 10.797000000020489,
+      "plan": true,
+      "source_probe_calls": 0
+    }
+  ],
+  "comparability": "This round is Native-before for a potential resolver. No After arm. Different cases/sample times from Round5; no causal before/after performance claim.",
+  "latency_boundary": "RawTurnPlanner.run with opt-in observation + frozen catalog/source adapters; excludes HTTP/V1/SQL/answer delivery",
+  "observed_context_only": {
+    "turns": 4,
+    "relation_errors": 0,
+    "target_errors": 0,
+    "pending_response": 1,
+    "pending_new": 1,
+    "active_modification": 2,
+    "historical_return": 0,
+    "true_ambiguity": 0,
+    "region_change": 0
+  },
+  "source_writes": 0,
+  "sql_calls": 0
+}

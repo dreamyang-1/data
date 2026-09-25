@@ -105,7 +105,7 @@ async def test_orchestrator_can_return_to_an_older_task_branch():
     ]
     for index, question in enumerate(questions, 1):
         response = await agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="app",
                 conversation_id="branch-recall",
                 message_id=f"m{index}",

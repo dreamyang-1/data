@@ -1,0 +1,229 @@
+{
+  "capture": {
+    "observed_at": "2026-09-08T17:24:15.860649+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "source_identity_hash": "88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1",
+    "status": "ACTUAL_METADATA_ONLY_CAPTURE_LOCAL_SOURCE_BINDING_CHECK",
+    "governed_value_fields": 89,
+    "distinct_source_routes": 1,
+    "declared_vectorization_counts": {
+      "None": 11,
+      "0": 52,
+      "1": 26
+    },
+    "attribute_mapping_outcomes": {
+      "VERIFIED_SOURCE_MAPPING": 89
+    },
+    "records_generated": 290,
+    "private_snapshot_committed": false,
+    "business_source_reads": 0,
+    "real_model_calls": 0,
+    "embedding_calls": 0,
+    "production_external_writes": 0,
+    "native_publication": false,
+    "live_entity_values_verified": false,
+    "configured_route_is_not_server_identity": true
+  },
+  "offline_sql_replay": {
+    "unresolved_relationship_declarations": 6,
+    "unresolved_reason": "UNQUALIFIED_DECLARED_ENDPOINTS",
+    "observed_at": "2026-09-08T17:33:19.638148+00:00",
+    "status": "ACTUAL_METADATA_OFFLINE_SQL_REPLAY",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+    "subtable_registrations": 2,
+    "source_entities": 14,
+    "source_metrics": 11,
+    "outcomes": {
+      "PASS": 25
+    },
+    "cases": [
+      {
+        "kind": "detail",
+        "case_hash": "f9fff85cf4369dbd433237974ff3558a7d23476020130c71d2631e11d8c08327",
+        "status": "PASS",
+        "sql_hash": "6a33dab2ad398217d48a84ec0183ab8837800f5068767ff08215b6d33495e9b1"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "34cd48fe156190565b948e840c8068dae495ec690e1025ba72b60eea58c0ece0",
+        "status": "PASS",
+        "sql_hash": "b1c70ec2633e872739b4ed838838467944871359edbabcb59b2c4473ddfbda29"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "3a70facc9d03a767978236f4e41f0284ae83dd250019c811a4160ed638f43a3a",
+        "status": "PASS",
+        "sql_hash": "5459f7db4b3714576cfaf3939e2ba95672e7a06916dedccc6e517a81ac39e209"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "29d5263f3f788d64842e4bc1d4849c4b1818be7b7845010577925a62902b54c8",
+        "status": "PASS",
+        "sql_hash": "b3dbcaa85af81214f520a92884667835fcc48d184120c3b572b739e77ef5abd2"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "fb847a61dcbdb21707e3e709a862fe0ac1fe234b6b31062b225b41376b793293",
+        "status": "PASS",
+        "sql_hash": "3d060b5e3a611ef80d6a8b1d9d4f1762d51162e96183dc331b791f16d43667d5"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "2e6ee1b68007d6b8e56207072dce8dd56504d734a0a206f495113784b6f9defc",
+        "status": "PASS",
+        "sql_hash": "c280fff850a93201e800003b5d5b81ffdc1a133989429c4063058eb26c291d6d"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "b06abd1706990aa197d13ec11a69989c2a3dbe9b2d50a1c8d22ccb08985303fd",
+        "status": "PASS",
+        "sql_hash": "3e56b5392323438a1721d9897202509ea284122dc8a50b023ac8a94157d60805"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "d838a71f7833fd9f9f316106480c00336ccd9b137ed78f8673914c200bcf264a",
+        "status": "PASS",
+        "sql_hash": "75b30b07d4077e77c2130eb68161da488964745714981128a64449e5b77bc7b4"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "0dcb34d2b2e0e889d48d9d2099edf923036e95a9f6564e5cc4dd404bdc5dfc53",
+        "status": "PASS",
+        "sql_hash": "e632aa41aff184653ed1470730cf617117b1cc838b5f673717fdc4fd124b4612"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "09cb6390b8049ad041b8a74e8329b766e14e8975275071301829b81cb27b2c3f",
+        "status": "PASS",
+        "sql_hash": "c9aa9bbba2e11ced88caf02dd9ad9bcb56d4375f66e2425de625114512a187f3"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "0d6a8721e4ebcbc35be07b438382216a9a7ed0a058f4e6acd4ccf3a6e442e281",
+        "status": "PASS",
+        "sql_hash": "72b3bdb1463b1e30706a246b451d94d681c7b619eb5c6d17b6aa4ea77ca8bb44"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "5d8f9fff4fa11eafd36506c05b9b252c8c21627d5787b9b33378cfc8eb8e6936",
+        "status": "PASS",
+        "sql_hash": "b5ee3a043a9abd6e54d13c36eac44707a0b36d2eaaa723ad10171e9fbc7d2b40"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "dff8d54d6117f3e6ea0d6e6769064dbf8580a047e61cdf7ce8d8feb9e2e50e58",
+        "status": "PASS",
+        "sql_hash": "57f52db0745b897c505ca80ea5b263aabbd5ba5ad528a0f0d76a1130278af11d"
+      },
+      {
+        "kind": "detail",
+        "case_hash": "b69c32ac0ec49031611010308608316a2a1165e0e181e3a5fbfead1fde267b0c",
+        "status": "PASS",
+        "sql_hash": "1a8039bba0e4eb980b7951e8855f824a42ffa9363f1e1b60fe9811cd058a9c60"
+      },
+      {
+        "kind": "metric",
+        "case_hash": "007af4f614b27c13674bd2c62f1ab42ae59ea47f7b62605f489b158ac2591f67",
+        "status": "PASS",
+        "sql_hash": "1a84ec8ca27399776e49032800380e81c37e46994e10f2e3fe4a16b283007f8e"
+      },
+      {
+        "kind": "metric",
+        "case_hash": "51132907d9948b1d7b6367e6328520f4da00d0875a63411748087b4f7300189f",
+        "status": "PASS",
+        "sql_hash": "bd4bbb2bbc3f31c064b66bdb2409dfcfe844151a91c7d24af438d0158065c60a"
+      },
+      {
+        "kind": "metric",
+        "case_hash": "76d13151d12f7f6c6a2cbc8de3ea616188132cc5dd8f83b31b411c961a434302",
+        "status": "PASS",
+        "sql_hash": "d39cbe9ebe1d04184b83cc81868d01b9c51f01b7fedab039983f403099631126"
+      },
+      {
+        "kind": "metric",
+        "case_hash": "9e1c89e0d2253717f4604ed6e7e297ea0b43d311522914d0d052be4676cb98ad",
+        "status": "PASS",
+        "sql_hash": "cd235c8287615bfe8a03595af5538bb093be747470be70aa05f5715f50fc21cd"
+      },
+      {
+        "kind": "metric",
+        "case_hash": "2af18e7a296437833ca16741302340328d17e352fd43edd97660a2bf1fad3f7a",
+        "status": "PASS",
+        "sql_hash": "c9a43256285b9bd62ee50ee85aeaeedd720150e71956a2618f43057c9062f00a"
+      },
+      {
+        "kind": "metric",
+        "case_hash": "7e5a0da9413d9fed94eac9000f7c9d7ae93ba2fc6a188cd0b90118e19e91ec62",
+        "status": "PASS",
+        "sql_hash": "bf996e771de54f050f1da51d8a38d25c7bdcdbfd9312a6a6c58d6bea87a520ba"
+      },
+      {
+        "kind": "metric",
+        "case_hash": "95d2f0b52bad77bd6fc5b24323cc2fc2b02562687181c26927196da61f6a30e0",
+        "status": "PASS",
+        "sql_hash": "84e0ac57d526cd48a1ec3db9e879d569a1dfd21d1cdd76cbfdb0cbb8159067a3"
+      },
+      {
+        "kind": "metric",
+        "case_hash": "d4dbec7e2eff3e9e55bbb51b7acd1aca85c0b2e2174ad0dd85a15e53d988ab12",
+        "status": "PASS",
+        "sql_hash": "007c5bad4f671beec6800e306c35146d3caf60a2eb66723e4e5ab304584145fd"
+      },
+      {
+        "kind": "metric",
+        "case_hash": "3a221a8cebd7cd5cfa916df41f8e1f34cac3f0434bbd3abf05f7cc5b72097b17",
+        "status": "PASS",
+        "sql_hash": "ea85d9bb5c25db0d2a3a4f111d60be8e01d3c4c7f6652ead58de0d75e032553b"
+      },
+      {
+        "kind": "metric",
+        "case_hash": "9132a0465c3863f9d5bed45c31f4ef8b0932616b8682267bb8bea0f742aad00f",
+        "status": "PASS",
+        "sql_hash": "77f9798afc1dbe8e78b8b6cf51659f98b7de8e9fc04a6ca03c841c076dae25a4"
+      },
+      {
+        "kind": "metric",
+        "case_hash": "f22a88d8b5b5489ecb2dcc33e1a8f1f2541639cfc8bdfd19f86db2b8e78ce7b7",
+        "status": "PASS",
+        "sql_hash": "0700a46a5e28efc3f86fa22cf72badf96e435b06f639ba9c41462f8848d81aae"
+      }
+    ],
+    "real_publication_implementation": true,
+    "persistence": "IN_MEMORY_ONLY",
+    "native_publication_verified": false,
+    "sql_executions": 0,
+    "business_source_reads": 0,
+    "real_model_calls": 0,
+    "embedding_service_calls": 0,
+    "production_external_writes": 0
+  },
+  "redis_deployment_discovery": {
+    "observed_at": "2026-09-08T17:02:05.529132+00:00",
+    "redis_target_hash": "6deaf2abed2af78a1eb0c9e8fc12e3c670d19d9cd3a98638e4ce783f86a21959",
+    "production_writes": 0,
+    "container_exec_calls": 0,
+    "service_restarts": 0,
+    "redis_host_matches_local_interface": false,
+    "docker_cli_present": true,
+    "docker_endpoint_is_local": true,
+    "docker_status": "REDIS_TARGET_NOT_LOCAL_DO_NOT_INSPECT_UNRELATED_DAEMON",
+    "status": "READ_ONLY_DISCOVERY_COMPLETE"
+  },
+  "previous_native_observation": "docs/cutover/catalog_publication_candidate/live_scope_evidence.json (timestamped prior observation, not refreshed native proof)",
+  "native_publication_verified": false,
+  "raw_catalog_and_sql_committed": false
+}

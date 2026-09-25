@@ -1,0 +1,709 @@
+{
+  "stage": "ROUND_5_1_LIVE_FOLLOWUP_READINESS_PARTIAL",
+  "decision": "DECISION_C_FAILURE_IS_DOWNSTREAM",
+  "primary": {
+    "cases": [
+      {
+        "case_id": "LF51-A",
+        "status": "BLOCKED",
+        "first_divergence": "CANONICAL_BINDING",
+        "first_failed_turn": "38cab6c42ec2fbdba2d13f16",
+        "reason": "SOURCE_LOOKUP_SELECTED_DIMENSION_WHERE_ATTRIBUTE_REQUIRED",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-B",
+        "status": "BLOCKED",
+        "first_divergence": "SLOT_OPERATION",
+        "first_failed_turn": "0b81b399f27444b20b65c3ec",
+        "reason": "DRAFT_ADD_WITHOUT_MATCHING_CURRENT_OPERATION_DECLARATION",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-C",
+        "status": "BLOCKED",
+        "first_divergence": "SLOT_OPERATION",
+        "first_failed_turn": "d484d5fccffa9a3be2e49823",
+        "reason": "DRAFT_ADD_WITHOUT_MATCHING_CURRENT_OPERATION_DECLARATION",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-D",
+        "status": "BLOCKED",
+        "first_divergence": "SLOT_OPERATION",
+        "first_failed_turn": "73de003cd145373786a7a509",
+        "reason": "TEMPORAL_COMPONENT_EDIT_WITHOUT_INITIAL_TIME_SPEC",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-E",
+        "status": "BLOCKED",
+        "first_divergence": "CANONICAL_BINDING",
+        "first_failed_turn": "38cab6c42ec2fbdba2d13f16",
+        "reason": "SOURCE_LOOKUP_SELECTED_DIMENSION_WHERE_ATTRIBUTE_REQUIRED",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-F",
+        "status": "BLOCKED",
+        "first_divergence": "ENTITY_VALUE_GROUNDING",
+        "first_failed_turn": "5302e958a7ea50f787715e82",
+        "reason": "SELECTED_CITY_FIELD_HAS_EMPTY_EXACT_AND_INCOMPLETE_BOUNDED_PROBE",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-G",
+        "status": "BLOCKED",
+        "first_divergence": "ENTITY_VALUE_GROUNDING",
+        "first_failed_turn": "5302e958a7ea50f787715e82",
+        "reason": "SELECTED_CITY_FIELD_HAS_EMPTY_EXACT_AND_INCOMPLETE_BOUNDED_PROBE",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-H",
+        "status": "BLOCKED",
+        "first_divergence": "ENTITY_VALUE_GROUNDING",
+        "first_failed_turn": "5302e958a7ea50f787715e82",
+        "reason": "SELECTED_CITY_FIELD_HAS_EMPTY_EXACT_AND_INCOMPLETE_BOUNDED_PROBE",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-I",
+        "status": "PASS",
+        "first_divergence": null,
+        "reason": "DECLARED_AXES_ONLY",
+        "current_turn_executed": true
+      },
+      {
+        "case_id": "LF51-J",
+        "status": "FAIL",
+        "first_divergence": "SLOT_OPERATION",
+        "first_failed_turn": "cc217d4c0ae4185dda7b2d5f",
+        "reason": "DECLARED_SOURCE_VALUE_REQUEST_NOT_CONSUMED_IN_FILTER_EDIT",
+        "current_turn_executed": true
+      },
+      {
+        "case_id": "LF51-K",
+        "status": "BLOCKED",
+        "first_divergence": "ENTITY_VALUE_GROUNDING",
+        "first_failed_turn": "5302e958a7ea50f787715e82",
+        "reason": "SELECTED_CITY_FIELD_HAS_EMPTY_EXACT_AND_INCOMPLETE_BOUNDED_PROBE",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-L",
+        "status": "BLOCKED",
+        "first_divergence": "ENTITY_VALUE_GROUNDING",
+        "first_failed_turn": "5302e958a7ea50f787715e82",
+        "reason": "SELECTED_CITY_FIELD_HAS_EMPTY_EXACT_AND_INCOMPLETE_BOUNDED_PROBE",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-A2",
+        "status": "BLOCKED",
+        "first_divergence": "CANONICAL_BINDING",
+        "first_failed_turn": "38cab6c42ec2fbdba2d13f16",
+        "reason": "SOURCE_LOOKUP_SELECTED_DIMENSION_WHERE_ATTRIBUTE_REQUIRED",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-A3",
+        "status": "BLOCKED",
+        "first_divergence": "CANONICAL_BINDING",
+        "first_failed_turn": "38cab6c42ec2fbdba2d13f16",
+        "reason": "SOURCE_LOOKUP_SELECTED_DIMENSION_WHERE_ATTRIBUTE_REQUIRED",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-B2",
+        "status": "BLOCKED",
+        "first_divergence": "SLOT_OPERATION",
+        "first_failed_turn": "0b81b399f27444b20b65c3ec",
+        "reason": "DRAFT_ADD_WITHOUT_MATCHING_CURRENT_OPERATION_DECLARATION",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-C2",
+        "status": "BLOCKED",
+        "first_divergence": "SLOT_OPERATION",
+        "first_failed_turn": "d484d5fccffa9a3be2e49823",
+        "reason": "DRAFT_ADD_WITHOUT_MATCHING_CURRENT_OPERATION_DECLARATION",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-D2",
+        "status": "BLOCKED",
+        "first_divergence": "SLOT_OPERATION",
+        "first_failed_turn": "73de003cd145373786a7a509",
+        "reason": "TEMPORAL_COMPONENT_EDIT_WITHOUT_INITIAL_TIME_SPEC",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-F2",
+        "status": "BLOCKED",
+        "first_divergence": "ENTITY_VALUE_GROUNDING",
+        "first_failed_turn": "5302e958a7ea50f787715e82",
+        "reason": "SELECTED_CITY_FIELD_HAS_EMPTY_EXACT_AND_INCOMPLETE_BOUNDED_PROBE",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-G2",
+        "status": "BLOCKED",
+        "first_divergence": "ENTITY_VALUE_GROUNDING",
+        "first_failed_turn": "5302e958a7ea50f787715e82",
+        "reason": "SELECTED_CITY_FIELD_HAS_EMPTY_EXACT_AND_INCOMPLETE_BOUNDED_PROBE",
+        "current_turn_executed": false
+      },
+      {
+        "case_id": "LF51-H2",
+        "status": "BLOCKED",
+        "first_divergence": "ENTITY_VALUE_GROUNDING",
+        "first_failed_turn": "5302e958a7ea50f787715e82",
+        "reason": "SELECTED_CITY_FIELD_HAS_EMPTY_EXACT_AND_INCOMPLETE_BOUNDED_PROBE",
+        "current_turn_executed": false
+      }
+    ],
+    "counts": {
+      "BLOCKED": 18,
+      "PASS": 1,
+      "FAIL": 1
+    },
+    "first_divergence_distribution": {
+      "CANONICAL_BINDING": [
+        "LF51-A",
+        "LF51-E",
+        "LF51-A2",
+        "LF51-A3"
+      ],
+      "SLOT_OPERATION": [
+        "LF51-B",
+        "LF51-C",
+        "LF51-D",
+        "LF51-J",
+        "LF51-B2",
+        "LF51-C2",
+        "LF51-D2"
+      ],
+      "ENTITY_VALUE_GROUNDING": [
+        "LF51-F",
+        "LF51-G",
+        "LF51-H",
+        "LF51-K",
+        "LF51-L",
+        "LF51-F2",
+        "LF51-G2",
+        "LF51-H2"
+      ]
+    },
+    "unique_executed_turns": 7,
+    "required_turn_appearances": 44,
+    "executed_turn_appearances": 20,
+    "current_turns_executed": 2
+  },
+  "supplemental": {
+    "cases": [
+      {
+        "case_id": "LF51-LIVE-CONTROL",
+        "status": "PASS",
+        "first_divergence": null,
+        "reason": "DECLARED_AXES_ONLY",
+        "current_turn_executed": true
+      }
+    ],
+    "counts": {
+      "PASS": 1
+    },
+    "first_divergence_distribution": {},
+    "unique_executed_turns": 2,
+    "required_turn_appearances": 2,
+    "executed_turn_appearances": 2,
+    "current_turns_executed": 1
+  },
+  "unique_turns": 9,
+  "unique_failures": 6,
+  "unique_first_divergence": {
+    "CANONICAL_BINDING": 1,
+    "SLOT_OPERATION": 4,
+    "ENTITY_VALUE_GROUNDING": 1
+  },
+  "counts_are_not_independent_bug_counts": true,
+  "turn_judgments": [
+    {
+      "turn_id": "38cab6c42ec2fbdba2d13f16",
+      "case_id": "LF51-A",
+      "first_divergence": "CANONICAL_BINDING",
+      "reason": "SOURCE_LOOKUP_SELECTED_DIMENSION_WHERE_ATTRIBUTE_REQUIRED",
+      "first_rejection": "CONTRACT_OR_HARNESS_FAILURE",
+      "downstream_effects": [
+        "V2_SOURCE_VALUE_ATTRIBUTE_NOT_OFFERED",
+        "NO_TASK_PATCH_OR_PLAN"
+      ],
+      "evidence": [
+        {
+          "field_type": "ATTRIBUTE",
+          "code": "city_name"
+        },
+        {
+          "field_type": "DIMENSION",
+          "code": "city"
+        }
+      ],
+      "evidence_strength": "PROVEN_ON_CAPTURE",
+      "source_locations": [
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "run",
+          "line": 249
+        },
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "_run",
+          "line": 328
+        },
+        {
+          "file": "app/semantic_v2/source_value_recognition.py",
+          "function": "source_filter_patch",
+          "line": 163
+        },
+        {
+          "file": "app/semantic_v2/source_value_recognition.py",
+          "function": "resolve_requests",
+          "line": 81
+        },
+        {
+          "file": "app/semantic_v2/catalog_bridge.py",
+          "function": "lookup_source_values",
+          "line": 152
+        },
+        {
+          "file": "app/semantic_v2/source_value_binding.py",
+          "function": "lookup_values",
+          "line": 14
+        }
+      ],
+      "capture_hash": "72383b33aeac1c9b698423f3e1759048ec8384721b84880584c6eb6a01b0293d",
+      "relation_correct": true,
+      "target_or_new_selection_correct": true,
+      "has_context": false,
+      "relation": "NEW_TASK",
+      "target": null,
+      "declared_axes_pass": false,
+      "observed_declared_axes": {},
+      "state_input_unchanged": true,
+      "final_plan_reached": false,
+      "question_completion": "CONTRACT_GAP_NOT_SCORED"
+    },
+    {
+      "turn_id": "0b81b399f27444b20b65c3ec",
+      "case_id": "LF51-B",
+      "first_divergence": "SLOT_OPERATION",
+      "reason": "DRAFT_ADD_WITHOUT_MATCHING_CURRENT_OPERATION_DECLARATION",
+      "first_rejection": "V2_SLOT_OPERATION_CONFLICT",
+      "downstream_effects": [
+        "V2_SLOT_OPERATION_CONFLICT",
+        "NO_TASK_PATCH_OR_PLAN"
+      ],
+      "evidence": [
+        {
+          "slot": "metrics",
+          "operation": "SET"
+        },
+        {
+          "slot": "time_spec",
+          "operation": "SET"
+        },
+        {
+          "slot": "filter_expression",
+          "operation": "ADD"
+        }
+      ],
+      "evidence_strength": "PROVEN_ON_CAPTURE",
+      "source_locations": [
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "run",
+          "line": 249
+        },
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "_run",
+          "line": 328
+        },
+        {
+          "file": "app/semantic_v2/source_value_recognition.py",
+          "function": "source_filter_patch",
+          "line": 169
+        },
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "_patch",
+          "line": 562
+        }
+      ],
+      "capture_hash": "e05f8dfa05c4beb947d5dfaa11cbbbfd2a49059484e3dab2acc1234c2dcbe4cd",
+      "relation_correct": true,
+      "target_or_new_selection_correct": true,
+      "has_context": false,
+      "relation": "NEW_TASK",
+      "target": null,
+      "declared_axes_pass": false,
+      "observed_declared_axes": {},
+      "state_input_unchanged": true,
+      "final_plan_reached": false,
+      "question_completion": "CONTRACT_GAP_NOT_SCORED"
+    },
+    {
+      "turn_id": "d484d5fccffa9a3be2e49823",
+      "case_id": "LF51-C",
+      "first_divergence": "SLOT_OPERATION",
+      "reason": "DRAFT_ADD_WITHOUT_MATCHING_CURRENT_OPERATION_DECLARATION",
+      "first_rejection": "V2_SLOT_OPERATION_CONFLICT",
+      "downstream_effects": [
+        "V2_SLOT_OPERATION_CONFLICT",
+        "NO_TASK_PATCH_OR_PLAN"
+      ],
+      "evidence": [
+        {
+          "slot": "metrics",
+          "operation": "ADD"
+        },
+        {
+          "slot": "metrics",
+          "operation": "ADD"
+        },
+        {
+          "slot": "filter_expression",
+          "operation": "SET"
+        }
+      ],
+      "evidence_strength": "PROVEN_ON_CAPTURE",
+      "source_locations": [
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "run",
+          "line": 249
+        },
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "_run",
+          "line": 328
+        },
+        {
+          "file": "app/semantic_v2/source_value_recognition.py",
+          "function": "source_filter_patch",
+          "line": 169
+        },
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "_patch",
+          "line": 593
+        }
+      ],
+      "capture_hash": "c53b0cf2035b538bfe51431cd23ddcb081ea97751a88880cac5e1577a4aba5df",
+      "relation_correct": true,
+      "target_or_new_selection_correct": true,
+      "has_context": false,
+      "relation": "NEW_TASK",
+      "target": null,
+      "declared_axes_pass": false,
+      "observed_declared_axes": {},
+      "state_input_unchanged": true,
+      "final_plan_reached": false,
+      "question_completion": "CONTRACT_GAP_NOT_SCORED"
+    },
+    {
+      "turn_id": "73de003cd145373786a7a509",
+      "case_id": "LF51-D",
+      "first_divergence": "SLOT_OPERATION",
+      "reason": "TEMPORAL_COMPONENT_EDIT_WITHOUT_INITIAL_TIME_SPEC",
+      "first_rejection": "V2_TEMPORAL_BASE_REQUIRED",
+      "downstream_effects": [
+        "V2_TEMPORAL_BASE_REQUIRED",
+        "RAW_METRIC_BOUNDARY_RECOVERED_BEFORE_CANDIDATES",
+        "NO_PLAN"
+      ],
+      "evidence": [
+        {
+          "component": "RANGE",
+          "operation": "SET"
+        }
+      ],
+      "evidence_strength": "PROVEN_ON_CAPTURE",
+      "source_locations": [
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "run",
+          "line": 249
+        },
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "_run",
+          "line": 328
+        },
+        {
+          "file": "app/semantic_v2/source_value_recognition.py",
+          "function": "source_filter_patch",
+          "line": 169
+        },
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "_patch",
+          "line": 655
+        },
+        {
+          "file": "app/semantic_v2/structured_edits.py",
+          "function": "lower_edits",
+          "line": 194
+        },
+        {
+          "file": "app/semantic_v2/structured_edits.py",
+          "function": "<lambda>",
+          "line": 191
+        },
+        {
+          "file": "app/semantic_v2/structured_edits.py",
+          "function": "temporal_edits",
+          "line": 162
+        }
+      ],
+      "capture_hash": "0c01b2466c681dd1aa6d8a23cf7da0d5bcc96ac9ac3a269f50c0e99a545dad54",
+      "relation_correct": true,
+      "target_or_new_selection_correct": true,
+      "has_context": false,
+      "relation": "NEW_TASK",
+      "target": null,
+      "declared_axes_pass": false,
+      "observed_declared_axes": {},
+      "state_input_unchanged": true,
+      "final_plan_reached": false,
+      "question_completion": "CONTRACT_GAP_NOT_SCORED"
+    },
+    {
+      "turn_id": "5302e958a7ea50f787715e82",
+      "case_id": "LF51-F",
+      "first_divergence": "ENTITY_VALUE_GROUNDING",
+      "reason": "SELECTED_CITY_FIELD_HAS_EMPTY_EXACT_AND_INCOMPLETE_BOUNDED_PROBE",
+      "first_rejection": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+      "downstream_effects": [
+        "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+        "NO_PLAN"
+      ],
+      "evidence": [
+        {
+          "scope": {
+            "semantic_model_id": 81,
+            "business_domain_ids": [
+              205
+            ]
+          },
+          "field": "city.city_name",
+          "frozen_exact_count": 0,
+          "frozen_probe_complete": false,
+          "probe_bound": 64,
+          "source_fixture_missing": false
+        }
+      ],
+      "evidence_strength": "PROVEN_BOUNDARY; FIELD_SELECTION_OR_SOURCE_CONTRACT_OWNERSHIP_UNRESOLVED",
+      "source_locations": [
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "run",
+          "line": 249
+        },
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "_run",
+          "line": 328
+        },
+        {
+          "file": "app/semantic_v2/source_value_recognition.py",
+          "function": "source_filter_patch",
+          "line": 163
+        },
+        {
+          "file": "app/semantic_v2/source_value_recognition.py",
+          "function": "resolve_requests",
+          "line": 89
+        },
+        {
+          "file": "app/semantic_v2/source_value_probe.py",
+          "function": "select_probed_value",
+          "line": 50
+        }
+      ],
+      "capture_hash": "7a987e4c52f82f43f8ed67ff182fc48e93daab2c51d7e8f9bcc68f4e1c3a177d",
+      "relation_correct": true,
+      "target_or_new_selection_correct": true,
+      "has_context": false,
+      "relation": "NEW_TASK",
+      "target": null,
+      "declared_axes_pass": false,
+      "observed_declared_axes": {},
+      "state_input_unchanged": true,
+      "final_plan_reached": false,
+      "question_completion": "CONTRACT_GAP_NOT_SCORED"
+    },
+    {
+      "turn_id": "ff6430cbb4b9288918389561",
+      "case_id": "LF51-I",
+      "first_divergence": null,
+      "reason": null,
+      "first_rejection": null,
+      "downstream_effects": [],
+      "evidence": [],
+      "evidence_strength": "PROVEN_ON_CAPTURE",
+      "source_locations": [],
+      "capture_hash": "fe725a64a65fa7f38303cbcc98bd9dd5e9dc4a25f67143175616775485d4110b",
+      "relation_correct": true,
+      "target_or_new_selection_correct": true,
+      "has_context": true,
+      "relation": "ANSWER_CLARIFICATION",
+      "target": "fixture-task:round5-1-live-shared-prefix",
+      "declared_axes_pass": true,
+      "observed_declared_axes": {
+        "canonical_metrics": [
+          "sales_total_including_tax"
+        ],
+        "empty_region_and_time": true,
+        "task_state_payload_match": true,
+        "scope_match": true,
+        "operations": [
+          "SET"
+        ]
+      },
+      "state_input_unchanged": true,
+      "final_plan_reached": true,
+      "question_completion": "CONTRACT_GAP_NOT_SCORED"
+    },
+    {
+      "turn_id": "cc217d4c0ae4185dda7b2d5f",
+      "case_id": "LF51-J",
+      "first_divergence": "SLOT_OPERATION",
+      "reason": "DECLARED_SOURCE_VALUE_REQUEST_NOT_CONSUMED_IN_FILTER_EDIT",
+      "first_rejection": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "downstream_effects": [
+        "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+        "NO_PATCH_OR_PLAN",
+        "RELATION_LIST_WITHOUT_RELATIONSHIP_IS_DOWNSTREAM_QUERY_SHAPE_CANDIDATE; NOT_SECOND_PRIMARY_ROOT"
+      ],
+      "evidence": [
+        {
+          "source_requests": 1,
+          "filter_edits": 0,
+          "relation": "NEW_TASK",
+          "has_pending": true
+        }
+      ],
+      "evidence_strength": "PROVEN_ON_CAPTURE",
+      "source_locations": [
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "run",
+          "line": 249
+        },
+        {
+          "file": "app/semantic_v2/recognition.py",
+          "function": "_run",
+          "line": 328
+        },
+        {
+          "file": "app/semantic_v2/source_value_recognition.py",
+          "function": "source_filter_patch",
+          "line": 163
+        },
+        {
+          "file": "app/semantic_v2/source_value_recognition.py",
+          "function": "resolve_requests",
+          "line": 41
+        }
+      ],
+      "capture_hash": "9fb3e0d5e3277246788a53180e783acb1d5ee199c7d157fa0b32e154cbfc8be5",
+      "relation_correct": true,
+      "target_or_new_selection_correct": true,
+      "has_context": true,
+      "relation": "NEW_TASK",
+      "target": null,
+      "declared_axes_pass": false,
+      "observed_declared_axes": {},
+      "state_input_unchanged": true,
+      "final_plan_reached": false,
+      "question_completion": "CONTRACT_GAP_NOT_SCORED"
+    },
+    {
+      "turn_id": "e926902f21abfb21e218346e",
+      "case_id": "LF51-LIVE-CONTROL",
+      "first_divergence": null,
+      "reason": null,
+      "first_rejection": null,
+      "downstream_effects": [],
+      "evidence": [],
+      "evidence_strength": "PROVEN_ON_CAPTURE",
+      "source_locations": [],
+      "capture_hash": "1c4000019f573e959307e4387e13c88fc7102a66e7ff81c8ab6b6e5c48c1147f",
+      "relation_correct": true,
+      "target_or_new_selection_correct": true,
+      "has_context": true,
+      "relation": "ADD",
+      "target": "fixture-task:round5-1-live-shared-prefix",
+      "declared_axes_pass": true,
+      "observed_declared_axes": {
+        "canonical_metrics": [
+          "order_count",
+          "sales_total_including_tax"
+        ],
+        "empty_region_and_time": true,
+        "task_state_payload_match": true,
+        "scope_match": true,
+        "operations": [
+          "ADD"
+        ]
+      },
+      "state_input_unchanged": true,
+      "final_plan_reached": true,
+      "question_completion": "CONTRACT_GAP_NOT_SCORED"
+    },
+    {
+      "turn_id": "f2e5c6bec2315e9d39ff7a7b",
+      "case_id": "LF51-LIVE-CONTROL",
+      "first_divergence": null,
+      "reason": null,
+      "first_rejection": null,
+      "downstream_effects": [],
+      "evidence": [],
+      "evidence_strength": "PROVEN_ON_CAPTURE",
+      "source_locations": [],
+      "capture_hash": "9b1f90c8c0061323ef33f9815d7f643ed776d6b4d1d015a7ba67e298c9cdde56",
+      "relation_correct": true,
+      "target_or_new_selection_correct": true,
+      "has_context": true,
+      "relation": "REMOVE",
+      "target": "fixture-task:round5-1-live-shared-prefix",
+      "declared_axes_pass": true,
+      "observed_declared_axes": {
+        "canonical_metrics": [
+          "order_count"
+        ],
+        "empty_region_and_time": true,
+        "task_state_payload_match": true,
+        "scope_match": true,
+        "operations": [
+          "REMOVE"
+        ]
+      },
+      "state_input_unchanged": true,
+      "final_plan_reached": true,
+      "question_completion": "CONTRACT_GAP_NOT_SCORED"
+    }
+  ],
+  "underlying_production_context_path_unchanged": true,
+  "real_model_calls": 20,
+  "source_observations_replayed": 12,
+  "missing_source_observations": 0,
+  "source_calls": 0,
+  "production_writes": 0,
+  "blind_access": 0,
+  "observed_accepted_plans": 3,
+  "whole_plan_accuracy": "NOT_ESTABLISHED; NO_DRYPLAN_OR_SQL",
+  "supplementary_does_not_rescore_blocked_primary": true,
+  "pending_origin": "Native typed business-declared precondition, not claimed to have been elicited by the live model"
+}

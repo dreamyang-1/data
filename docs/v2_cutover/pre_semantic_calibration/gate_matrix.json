@@ -1,0 +1,56 @@
+{
+  "stage": "PRE_SEMANTIC_CLOSURE_CALIBRATION",
+  "rows": [
+    {
+      "gate": "EVALUATOR_CORE_READY",
+      "status": "PASS",
+      "evidence": [
+        "PR53 frozen verifier PASS",
+        "24 calibration tests PASS",
+        "14 mutation and 7 equivalence categories retained",
+        "172 original replay turns retained; 10 new exact replay turns",
+        "Case/Turn/partial/full labels separated",
+        "Manifest/source/split hashes pinned"
+      ],
+      "blocking_stage": null,
+      "next_action": "Use frozen core for bounded production root investigations; keep unobserved runtime capabilities separate"
+    },
+    {
+      "gate": "RUNTIME_CAPABILITY_COVERAGE_READY",
+      "status": "PARTIAL",
+      "evidence": [
+        "Native Pending/state/IR observed",
+        "16 certified full-plan contracts",
+        "Dataset/DryPlan and critical live safety paths incomplete"
+      ],
+      "blocking_stage": "AFFECTED_QUERY_SHAPES_AND_CUTOVER",
+      "next_action": "Track Dataset/DryPlan integrations and planned safety cases independently"
+    },
+    {
+      "gate": "V1_V2_COMPARISON_READY",
+      "status": "BLOCKED",
+      "evidence": [
+        "Native V1 adapter and no-op test exist",
+        "58 native entries stopped at missing frozen HTTP evidence",
+        "Common set 0"
+      ],
+      "blocking_stage": "CUTOVER_COMPARISON",
+      "next_action": "Obtain exact frozen native V1 dependency/history receipts; do not reconstruct production semantics in adapter"
+    },
+    {
+      "gate": "CUTOVER_EVALUATION_READY",
+      "status": "BLOCKED",
+      "evidence": [
+        "Runtime capability coverage PARTIAL",
+        "Common-set unavailable",
+        "Hard safety incomplete; blind locked"
+      ],
+      "blocking_stage": "MODEL_BENCHMARK_SHADOW_CANARY_CUTOVER",
+      "next_action": "Close verified semantic roots, freeze candidate, then unlock holdout under its gate"
+    }
+  ],
+  "stage_status": "PRE_SEMANTIC_CLOSURE_CALIBRATION_COMPLETE",
+  "next_stage_status": "SEMANTIC_PRODUCTION_ROOT_CAUSE_CLOSURE_READY",
+  "cutover_ready": false,
+  "V1_production_routing": "UNCHANGED"
+}

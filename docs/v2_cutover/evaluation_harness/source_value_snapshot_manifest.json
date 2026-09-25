@@ -1,0 +1,361 @@
+{
+  "format": "FROZEN_SOURCE_VALUE_OBSERVATIONS_V1",
+  "artifact_hash": "593bd6f5e4efb2eaa913dd4e36766b6957ebe58f82bdc0f3603f3e9abf48bc27",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "snapshot_sha256": "a34612e53b64200bb3f28e55d6721653251fd23d3adf9b0cdaecd87b37683ac2",
+  "private_storage": ".eval_private/harness-20260909T083000Z/source_observations.json",
+  "entries": [
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094307294823661570",
+        "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "EXACT_NORMALIZED",
+      "query_value": "PRIVATE",
+      "query_value_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+      "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "returned_count": 0,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:39.417984+00:00",
+      "observation_hash": "116fabad755e99b11d7c298109fadc74c07d20398f175846965067337ac65dfc"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094307294823661570",
+        "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "CANDIDATE_DISCOVERY",
+      "query_value": "PRIVATE",
+      "query_value_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+      "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "returned_count": 0,
+      "complete": false,
+      "observed_at": "2026-09-09T07:38:40.723164+00:00",
+      "observation_hash": "b7e52b599205aa98029dc5398e1c435ff98001dfab801965544de567cf5978d9"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094307294823661570",
+        "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "EXACT_NORMALIZED",
+      "query_value": "PRIVATE",
+      "query_value_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+      "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "returned_count": 0,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:40.982904+00:00",
+      "observation_hash": "9b3f0525e3efd9a6bc5369b3e259ba22d5b6e0cb461ce76797dfd00452b0f93e"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094307294823661570",
+        "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "CANDIDATE_DISCOVERY",
+      "query_value": "PRIVATE",
+      "query_value_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+      "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "returned_count": 0,
+      "complete": false,
+      "observed_at": "2026-09-09T07:38:41.447212+00:00",
+      "observation_hash": "46d7dc43422ac0626affe0b93ce51ed2198a33d3ffb8d320dbd46190ab238c32"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094307294823661570",
+        "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "EXACT_NORMALIZED",
+      "query_value": "PRIVATE",
+      "query_value_hash": "e9042243f9222214e0cb9238173edd9447db60874b49594dd91adaafa0400237",
+      "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "returned_count": 0,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:41.651552+00:00",
+      "observation_hash": "1b1576deff3e5c5f9395cbc02b5565120959cc4c051e4d0b73c1a718c918df59"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094307294823661570",
+        "mapping_hash": "5cd2f8b9f6c020e0fef8341517a90ef892a2df1a02f564494b444fd126fcd9ae"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "CANDIDATE_DISCOVERY",
+      "query_value": "PRIVATE",
+      "query_value_hash": "e9042243f9222214e0cb9238173edd9447db60874b49594dd91adaafa0400237",
+      "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "returned_count": 0,
+      "complete": false,
+      "observed_at": "2026-09-09T07:38:42.073616+00:00",
+      "observation_hash": "8b47f349676673d248d47ad19e14e0aecef55eb38529a88374c632c85f5c15d1"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094306753653587970",
+        "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "EXACT_NORMALIZED",
+      "query_value": "PRIVATE",
+      "query_value_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+      "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "returned_count": 0,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:43.968346+00:00",
+      "observation_hash": "4f0c0f91e4e68985b2257848ee1251c1f360c47303751b99b3e9bad27905dd36"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094306753653587970",
+        "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "CANDIDATE_DISCOVERY",
+      "query_value": "PRIVATE",
+      "query_value_hash": "89a772bd9a255529d288130acdd221fe19dc8481f4330f7e493296062025412a",
+      "returned_candidates_hash": "cd1b351e7a83f93a2700b0cde55eaee6498ce1afee9edebf2b841ef88015fa2a",
+      "returned_count": 34,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:44.486550+00:00",
+      "observation_hash": "9bbf2197ee2f038c62b33f1a044064e649df404bd9cc2f64a45aa32d9aa49752"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094306753653587970",
+        "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "EXACT_NORMALIZED",
+      "query_value": "PRIVATE",
+      "query_value_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+      "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "returned_count": 0,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:44.967805+00:00",
+      "observation_hash": "4efff31f7a13805a3c618f42261987b3c566c3a6ffe8ba9da8e9a4e3231e5744"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094306753653587970",
+        "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "CANDIDATE_DISCOVERY",
+      "query_value": "PRIVATE",
+      "query_value_hash": "4ad6d27e53d70a5e6e3752e33989af4906fb9dcbf7a6a349ee8ff227652f8a08",
+      "returned_candidates_hash": "cd1b351e7a83f93a2700b0cde55eaee6498ce1afee9edebf2b841ef88015fa2a",
+      "returned_count": 34,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:45.719371+00:00",
+      "observation_hash": "83489827691a2d15f26449a743dab4279f2ec44c2d018f655d70de02d5909c93"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094306753653587970",
+        "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "EXACT_NORMALIZED",
+      "query_value": "PRIVATE",
+      "query_value_hash": "e9042243f9222214e0cb9238173edd9447db60874b49594dd91adaafa0400237",
+      "returned_candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "returned_count": 0,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:45.955093+00:00",
+      "observation_hash": "60fb8c0229f72c592b6b5290dd3ed13f1d8de9b94e1f7348bb522bc351878628"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094306753653587970",
+        "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "CANDIDATE_DISCOVERY",
+      "query_value": "PRIVATE",
+      "query_value_hash": "e9042243f9222214e0cb9238173edd9447db60874b49594dd91adaafa0400237",
+      "returned_candidates_hash": "cd1b351e7a83f93a2700b0cde55eaee6498ce1afee9edebf2b841ef88015fa2a",
+      "returned_count": 34,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:46.932491+00:00",
+      "observation_hash": "dbfe4dd0c6377b5122a6c1ef24a44f28dbe6d5bbb1b453c9a26221535b2baafc"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094306753653587970",
+        "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "EXACT_NORMALIZED",
+      "query_value": "PRIVATE",
+      "query_value_hash": "432f80464c3ff7ccec37b8fb70fd8c702e1a0b102968bb81e482ee5dfbe8bc04",
+      "returned_candidates_hash": "715b46430352e3e388b60798e8ef0a7793eac5dc1d75869c357eb65ecc899c74",
+      "returned_count": 1,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:47.286216+00:00",
+      "observation_hash": "70a9725aeee33052cff334dbef5ae6f4b830943ee2aa1e4e08fe5c18aa5d654d"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094306753653587970",
+        "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "EXACT_NORMALIZED",
+      "query_value": "PRIVATE",
+      "query_value_hash": "1ff7507cd9bd7bd5dea51aed5a59f9e285ab57d267c1869f3767c00e814a1bd2",
+      "returned_candidates_hash": "5231f7fabc01c69dabc7950b97d8b894b601437aaad8e741da0fd01ef99b0def",
+      "returned_count": 1,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:47.532758+00:00",
+      "observation_hash": "85ef8e79b957087defb9be6f60b7f99b130ffbe318ea76ee2206fbf2c1c95026"
+    },
+    {
+      "field_ref": {
+        "semantic_model_id": 81,
+        "business_domain_id": 205,
+        "attribute_id": "2094306753653587970",
+        "mapping_hash": "aab3dc038847c5acc1e86285140dc305e89dfc0afadc2b225088563ee94fe016"
+      },
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ],
+        "scope_mode": "EXPLICIT_DOMAINS"
+      },
+      "match_mode": "EXACT_NORMALIZED",
+      "query_value": "PRIVATE",
+      "query_value_hash": "dca766cb422d1e113310f1adff861d181f02fe44d39f5bb51f41d33489a62122",
+      "returned_candidates_hash": "d99a4edfba8ea4f1d093717b62a1430b78154515b959802a61aa1589d3b35534",
+      "returned_count": 1,
+      "complete": true,
+      "observed_at": "2026-09-09T07:38:47.761424+00:00",
+      "observation_hash": "80d5b0bf13afc0e85f815876e609b096938132fde1eba3d433280fb046184361"
+    }
+  ]
+}

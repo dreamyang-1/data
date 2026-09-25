@@ -1,0 +1,25 @@
+{
+  "stage_baseline_commit": "ec48f654d6bcaa48ed09d41d7aca4fcbaedcd82e",
+  "capture_runtime_commit": "871183e62ada81c5526e51948a7e11ba2d3c8908",
+  "evaluator_git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+  "included_stage_commits": [
+    "871183e62ada81c5526e51948a7e11ba2d3c8908",
+    "ac42bc72ec480c754dc39ce7a6bc5b1d274f9c32",
+    "8748d3d64d9a51e6a57c6769954eec90f849137e",
+    "4f23205198576cc42cb4cb0823a85917e9c0b511",
+    "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+    "9af0817e959d0048c46ad481974f9f6a0329cc12"
+  ],
+  "final_evidence_commit": "Commit containing this manifest",
+  "resolve_final_evidence_commit": "git log -1 --format=%H -- docs/v2_cutover/evaluation_harness/git_commit_manifest.json",
+  "feature_branch": "evaluation-harness-closure-20260909t083000z",
+  "draft_pr_base": "semantic-cutover-triage-20260909t074900z",
+  "draft_pr_base_number": 52,
+  "stage_status": "EVALUATION_HARNESS_NOT_READY",
+  "new_harness_tests": 74,
+  "Agent_test_result": {
+    "passed": 3136,
+    "failed": 27
+  },
+  "planned_evidence_subject": "docs: clarify historical fixture and replay evidence limits"
+}

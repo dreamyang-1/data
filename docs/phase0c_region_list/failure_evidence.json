@@ -1,0 +1,422 @@
+{
+  "failures": [
+    {
+      "failure_id": "RL-01",
+      "source": "PR #16 PC-A01 plus current deterministic boundary proofs",
+      "confidence": "PROVEN",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "first_divergence_stage": "RULE_PARSE",
+      "failure_signature": "RULE_PARSE|METRIC_QUERY|REGION_LIST|filters.region|The last matching region wins: city EQ Beijing; the rest of the positive list is lost",
+      "history": [],
+      "current_utterance": "上海和北京销售额",
+      "expected_behavior": "Preserve Shanghai and Beijing as one existing IN filter without adding comparison grouping",
+      "actual_before": "The last matching region wins: city EQ Beijing; the rest of the positive list is lost",
+      "status": "FIXED",
+      "repeatability": "DETERMINISTIC",
+      "evidence": [
+        "app/intent/classifier.py::_apply_common_region_filter",
+        "app/intent/classifier.py::_is_structural_metric_subject",
+        "app/intent/classifier.py::sanitize_semantic_entity_mentions",
+        "tests/test_region_list_contract.py"
+      ]
+    },
+    {
+      "failure_id": "RL-02",
+      "source": "PR #16 PC-A01 plus current deterministic boundary proofs",
+      "confidence": "PROVEN",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "first_divergence_stage": "RULE_PARSE",
+      "failure_signature": "RULE_PARSE|METRIC_QUERY|REGION_LIST|filters.region|Single-region prefix trimming fabricates product 和北京, which then protects Beijing from region extraction",
+      "history": [],
+      "current_utterance": "查询上海和北京销售额",
+      "expected_behavior": "Recognize the complete structural region subject before product/implicit entity fallback",
+      "actual_before": "Single-region prefix trimming fabricates product 和北京, which then protects Beijing from region extraction",
+      "status": "FIXED",
+      "repeatability": "DETERMINISTIC",
+      "evidence": [
+        "app/intent/classifier.py::_apply_common_region_filter",
+        "app/intent/classifier.py::_is_structural_metric_subject",
+        "app/intent/classifier.py::sanitize_semantic_entity_mentions",
+        "tests/test_region_list_contract.py"
+      ]
+    },
+    {
+      "failure_id": "RL-03",
+      "source": "PR #16 PC-A01 plus current deterministic boundary proofs",
+      "confidence": "PROVEN",
+      "root_cause_class": "REAL_PRODUCTION_BUG",
+      "severity": "P0",
+      "owning_service": "DataAnalysis_Agent",
+      "first_divergence_stage": "SEMANTIC_GROUNDING",
+      "failure_signature": "SEMANTIC_GROUNDING|METRIC_QUERY|REGION_LIST|filters.region|The admitted filter changes, but context_before permits the superseded Shanghai entity evidence to survive sanitization",
+      "history": [
+        "查询销售额，2026年7月，地区上海"
+      ],
+      "current_utterance": "那北京和天津呢？ / 不限地区",
+      "expected_behavior": "After admitted region replacement/clear, remove only superseded region evidence; keep literals owned by retained filters",
+      "actual_before": "The admitted filter changes, but context_before permits the superseded Shanghai entity evidence to survive sanitization",
+      "status": "FIXED",
+      "repeatability": "DETERMINISTIC",
+      "evidence": [
+        "app/intent/classifier.py::_apply_common_region_filter",
+        "app/intent/classifier.py::_is_structural_metric_subject",
+        "app/intent/classifier.py::sanitize_semantic_entity_mentions",
+        "tests/test_region_list_contract.py"
+      ]
+    }
+  ],
+  "unique_failure_signatures": 3,
+  "independent_reproductions": [
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_complete_region_list_reaches_execution[rule-\\u4e0a\\u6d77\\u548c\\u5317\\u4eac\\u9500\\u552e\\u989d]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_complete_region_list_reaches_execution[rule-\\u4e0a\\u6d77\\u548c\\u5317\\u4eac\\u9500\\u552e\\u989d]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_complete_region_list_reaches_execution[rule-\\u67e5\\u8be2\\u4e0a\\u6d77\\u548c\\u5317\\u4eac\\u9500\\u552e\\u989d]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_complete_region_list_reaches_execution[rule-\\u67e5\\u8be2\\u4e0a\\u6d77\\u548c\\u5317\\u4eac\\u9500\\u552e\\u989d]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_complete_region_list_reaches_execution[hybrid-\\u4e0a\\u6d77\\u548c\\u5317\\u4eac\\u9500\\u552e\\u989d]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_complete_region_list_reaches_execution[hybrid-\\u4e0a\\u6d77\\u548c\\u5317\\u4eac\\u9500\\u552e\\u989d]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_complete_region_list_reaches_execution[hybrid-\\u67e5\\u8be2\\u4e0a\\u6d77\\u548c\\u5317\\u4eac\\u9500\\u552e\\u989d]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_complete_region_list_reaches_execution[hybrid-\\u67e5\\u8be2\\u4e0a\\u6d77\\u548c\\u5317\\u4eac\\u9500\\u552e\\u989d]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_list_replacement_survives_later_time_edit[rule]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_list_replacement_survives_later_time_edit[rule]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_list_replacement_survives_later_time_edit[hybrid]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_list_replacement_survives_later_time_edit[hybrid]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_http_contract_preserves_the_entire_region_set[\\u67e5\\u8be2\\u4e0a\\u6d77\\u548c\\u5317\\u4eac\\u9500\\u552e\\u989d]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_http_contract_preserves_the_entire_region_set[\\u67e5\\u8be2\\u4e0a\\u6d77\\u548c\\u5317\\u4eac\\u9500\\u552e\\u989d]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_http_contract_preserves_the_entire_region_set[\\u67e5\\u8be2\\u9500\\u552e\\u989d\\uff0c2026\\u5e747\\u6708\\uff0c\\u5730\\u533a\\u4e0a\\u6d77\\u548c\\u5317\\u4eac]",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_http_contract_preserves_the_entire_region_set[\\u67e5\\u8be2\\u9500\\u552e\\u989d\\uff0c2026\\u5e747\\u6708\\uff0c\\u5730\\u533a\\u4e0a\\u6d77\\u548c\\u5317\\u4eac]",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed",
+      "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_admitted_region_list_replacement_drops_old_entity_evidence",
+      "attempt": 1,
+      "baseline": "failed",
+      "final": "passed",
+      "boundary": "Injected valid IN frame; unchanged baseline sanitizer isolated after initial parser fix"
+    },
+    {
+      "nodeid": "tests/test_region_list_contract.py::test_admitted_region_list_replacement_drops_old_entity_evidence",
+      "attempt": 2,
+      "baseline": "failed",
+      "final": "passed",
+      "boundary": "Injected valid IN frame; unchanged baseline sanitizer isolated after initial parser fix"
+    }
+  ],
+  "provenance_comparison": {
+    "baseline": {
+      "raw_parse": [
+        {
+          "question": "上海和北京销售额",
+          "filters": [
+            {
+              "field": "业务城市",
+              "operator": "EQ",
+              "value": "北京市"
+            }
+          ],
+          "mentions": [
+            "和北京",
+            "北京市"
+          ]
+        },
+        {
+          "question": "查询上海和北京销售额",
+          "filters": [
+            {
+              "field": "商品名称",
+              "operator": "EQ",
+              "value": "和北京"
+            },
+            {
+              "field": "业务城市",
+              "operator": "EQ",
+              "value": "上海市"
+            }
+          ],
+          "mentions": [
+            "和北京",
+            "上海市"
+          ]
+        },
+        {
+          "question": "查询销售额，2026年7月，地区江苏和浙江",
+          "filters": [
+            {
+              "field": "业务省份",
+              "operator": "EQ",
+              "value": "浙江省"
+            }
+          ],
+          "mentions": [
+            "浙江省"
+          ]
+        },
+        {
+          "question": "那北京和天津呢？",
+          "filters": [
+            {
+              "field": "业务城市",
+              "operator": "EQ",
+              "value": "天津市"
+            }
+          ],
+          "mentions": [
+            "天津市"
+          ]
+        }
+      ],
+      "admitted_state": [
+        {
+          "question": "那北京和天津呢？",
+          "relation": "CURRENT_TOPIC_FOLLOWUP",
+          "filters": [
+            {
+              "field": "业务城市",
+              "operator": "IN",
+              "value": [
+                "北京市",
+                "天津市"
+              ]
+            }
+          ],
+          "mentions": [
+            "上海市",
+            "北京市",
+            "天津市"
+          ]
+        },
+        {
+          "question": "不限地区",
+          "relation": "CURRENT_TOPIC_FOLLOWUP",
+          "filters": [],
+          "mentions": [
+            "上海市"
+          ]
+        }
+      ]
+    },
+    "final": {
+      "raw_parse": [
+        {
+          "question": "上海和北京销售额",
+          "filters": [
+            {
+              "field": "业务城市",
+              "operator": "IN",
+              "value": [
+                "上海市",
+                "北京市"
+              ]
+            }
+          ],
+          "mentions": [
+            "上海市",
+            "北京市"
+          ]
+        },
+        {
+          "question": "查询上海和北京销售额",
+          "filters": [
+            {
+              "field": "业务城市",
+              "operator": "IN",
+              "value": [
+                "上海市",
+                "北京市"
+              ]
+            }
+          ],
+          "mentions": [
+            "上海市",
+            "北京市"
+          ]
+        },
+        {
+          "question": "查询销售额，2026年7月，地区江苏和浙江",
+          "filters": [
+            {
+              "field": "业务省份",
+              "operator": "IN",
+              "value": [
+                "江苏省",
+                "浙江省"
+              ]
+            }
+          ],
+          "mentions": [
+            "江苏省",
+            "浙江省"
+          ]
+        },
+        {
+          "question": "那北京和天津呢？",
+          "filters": [
+            {
+              "field": "业务城市",
+              "operator": "IN",
+              "value": [
+                "北京市",
+                "天津市"
+              ]
+            }
+          ],
+          "mentions": [
+            "北京市",
+            "天津市"
+          ]
+        }
+      ],
+      "admitted_state": [
+        {
+          "question": "那北京和天津呢？",
+          "relation": "CURRENT_TOPIC_FOLLOWUP",
+          "filters": [
+            {
+              "field": "业务城市",
+              "operator": "IN",
+              "value": [
+                "北京市",
+                "天津市"
+              ]
+            }
+          ],
+          "mentions": [
+            "北京市",
+            "天津市"
+          ]
+        },
+        {
+          "question": "不限地区",
+          "relation": "CURRENT_TOPIC_FOLLOWUP",
+          "filters": [],
+          "mentions": []
+        }
+      ]
+    }
+  },
+  "validation_boundary": "Real Rule/Hybrid classifier, deterministic QuestionRewriter and orchestrator; actual HTTP adapter stopped at offline ASL transport. Mock model emits a valid metric signal. No deployed catalog/model/SQL accuracy claim.",
+  "review_resolutions": [
+    "A positive IN filter must not imply comparison grouping",
+    "Recognize complete region subjects before partial product or implicit-mention trimming",
+    "Admitted replacement and CLEAR both supersede old region entity evidence; other typed filter ownership is retained",
+    "Do not promote negatives, corrections, mixed levels, protected entity literals or incomplete outer lists to a positive IN filter"
+  ],
+  "fixture_decisions": [
+    "A temporary direct Gate proof initially used positional instead of required keyword arguments; corrected runs are secondary-valid-1/2. The fixture TypeError is not a production bug.",
+    "An initial focused command named a nonexistent test_intent_asl_contract.py; corrected to the existing test_intent_asl_contract_matrix.py. Final collections are complete.",
+    "The five partial-list review failures were introduced in the draft implementation and fixed before release; they are not counted as preexisting production defects."
+  ],
+  "unresolved_observations": [
+    {
+      "id": "RL-A01",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "observation": "Region ADD/REMOVE, exclusions, mixed city/province OR and unknown place names remain outside this complete known-list gate. Existing fallback can retain a singleton; this stage does not certify unsupported phrase correctness."
+    },
+    {
+      "id": "PC-A02",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "observation": "Alternate 产品/商品 grouping and governed alias/grain collision needs independent catalog evidence."
+    },
+    {
+      "id": "MG-A01",
+      "status": "UNKNOWN_NEEDS_EVIDENCE",
+      "observation": "Broader discourse, compound commands and model-proposed typed filter role conflicts retain earlier evidence requirements."
+    }
+  ]
+}

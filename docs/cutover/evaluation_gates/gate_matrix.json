@@ -1,0 +1,74 @@
+{
+  "authority": "USER_DECISION_2026_09_09",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "rows": [
+    {
+      "stage": "GOLD",
+      "eligible": true,
+      "missing": [],
+      "identity_gate": "PER_QUERY_SHAPE",
+      "production_routing_changed": false
+    },
+    {
+      "stage": "EVALUATOR",
+      "eligible": true,
+      "missing": [],
+      "identity_gate": "PER_QUERY_SHAPE",
+      "production_routing_changed": false
+    },
+    {
+      "stage": "MODEL_BENCHMARK",
+      "eligible": true,
+      "missing": [],
+      "identity_gate": "PER_QUERY_SHAPE",
+      "production_routing_changed": false
+    },
+    {
+      "stage": "PLAN_ONLY_SHADOW",
+      "eligible": false,
+      "missing": [
+        "EVALUATION_ACCEPTANCE_REQUIRED"
+      ],
+      "identity_gate": "PER_QUERY_SHAPE",
+      "production_routing_changed": false
+    },
+    {
+      "stage": "CANARY",
+      "eligible": false,
+      "missing": [
+        "EVALUATION_ACCEPTANCE_REQUIRED",
+        "NATIVE_CATALOG_PUBLICATION_REQUIRED",
+        "PRODUCTION_REDIS_RECOVERY_REQUIRED",
+        "DEPLOYED_TRUST_BOUNDARY_REQUIRED",
+        "REAL_SHADOW_ACCEPTANCE_REQUIRED"
+      ],
+      "identity_gate": "PER_QUERY_SHAPE",
+      "production_routing_changed": false
+    },
+    {
+      "stage": "CUTOVER",
+      "eligible": false,
+      "missing": [
+        "EVALUATION_ACCEPTANCE_REQUIRED",
+        "NATIVE_CATALOG_PUBLICATION_REQUIRED",
+        "PRODUCTION_REDIS_RECOVERY_REQUIRED",
+        "DEPLOYED_TRUST_BOUNDARY_REQUIRED",
+        "REAL_SHADOW_ACCEPTANCE_REQUIRED",
+        "EXPLICIT_USER_REPLACEMENT_APPROVAL_REQUIRED"
+      ],
+      "identity_gate": "PER_QUERY_SHAPE",
+      "production_routing_changed": false
+    }
+  ],
+  "current_eligibility": "Offline axis Gold, evaluator and configured-model component benchmark eligible now",
+  "identity": "Per query shape. Exact relationship, count/rank, join and attribution require a valid identity and grain. Name fallback only for the explicitly allowed low-risk shapes.",
+  "redis": "Runtime DB3 verified; production storage/recovery unproven. Canary/Cutover only.",
+  "publication": "Frozen scoped snapshot is sufficient for offline evaluation; native publication remains required for production.",
+  "shadow": "May use isolated in-memory state and frozen snapshot; still requires evaluation acceptance and no SQL/production-state/response side effects."
+}

@@ -1,0 +1,30 @@
+{
+  "baseline": "bc5bc3f418c374f3f155403550649b23c64ce4e5",
+  "production_files": [
+    "app/semantic_v2/recognition.py",
+    "app/semantic_v2/recognition_initialization.py"
+  ],
+  "configuration_changes": 0,
+  "procedure": "Revert the introducing commit on an isolated branch. Restore recognition.py from the baseline and remove only the newly introduced files; no migration, production routing or state write is involved.",
+  "changed_files": [
+    "app/semantic_v2/recognition.py",
+    "app/semantic_v2/recognition_initialization.py",
+    "docs/v2_cutover/semantic_round5_2/causal_receipt.json",
+    "docs/v2_cutover/semantic_round5_2/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/closure_report.md",
+    "docs/v2_cutover/semantic_round5_2/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/live_recheck.json",
+    "docs/v2_cutover/semantic_round5_2/performance_receipt.json",
+    "docs/v2_cutover/semantic_round5_2/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/root_clusters.json",
+    "docs/v2_cutover/semantic_round5_2/round5_2_manifest.json",
+    "docs/v2_cutover/semantic_round5_2/test_delta.json",
+    "docs/v2_cutover/semantic_round5_2/validation_receipt.json",
+    "docs/v2_cutover/semantic_round5_2/verify_round5_2.py",
+    "docs/v2_cutover/semantic_round5_2/workspace_git_hash_verification.json",
+    "tests/test_v2_initialization_round52.py",
+    "tools/cutover/round52_live_recheck.py",
+    "tools/cutover/round52_recorded_causes.py"
+  ],
+  "final_commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_2/git_commit_manifest.json"
+}

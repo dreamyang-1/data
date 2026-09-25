@@ -1,0 +1,548 @@
+{
+  "baseline_reproduction": [
+    {
+      "case_id": "LF51-A",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": true,
+      "error": {
+        "type": "ValueError",
+        "reason": "CONTRACT_OR_HARNESS_FAILURE"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-A",
+      "mode": "ATTRIBUTE_ONLY",
+      "strict_request_match": true,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": true
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-B",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": true,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_source_value_choice",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-B",
+      "mode": "INITIAL_FILTER_ASSIGNMENT",
+      "strict_request_match": true,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "CATALOG_METRIC_TIME_ANCHOR_MISSING"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": true
+        },
+        {
+          "stage": "v2_source_value_choice",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-C",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": true,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_source_value_choice",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-C",
+      "mode": "INITIAL_METRIC_ASSIGNMENT",
+      "strict_request_match": true,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_TEMPORAL_BASE_REQUIRED"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": true
+        },
+        {
+          "stage": "v2_source_value_choice",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-D",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": true,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_TEMPORAL_BASE_REQUIRED"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_source_value_choice",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-D",
+      "mode": "INITIAL_TIME_ASSIGNMENT",
+      "strict_request_match": true,
+      "error": null,
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": true
+        },
+        {
+          "stage": "v2_source_value_choice",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": true
+    },
+    {
+      "case_id": "LF51-F",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": true,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-F",
+      "mode": "ALTERNATE_OFFERED_FIELD_DIAGNOSTIC",
+      "strict_request_match": true,
+      "error": {
+        "type": "RuntimeError",
+        "reason": "ORACLE_NEXT_MODEL_OUTPUT_NOT_RECORDED"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": true
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-J",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": true,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-J",
+      "mode": "CONSUME_SOURCE_REQUEST",
+      "strict_request_match": true,
+      "error": {
+        "type": "RuntimeError",
+        "reason": "ORACLE_NEXT_MODEL_OUTPUT_NOT_RECORDED"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": true
+        }
+      ],
+      "plan": false
+    }
+  ],
+  "final_recorded": [
+    {
+      "case_id": "LF51-A",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": false,
+      "error": {
+        "type": "ValueError",
+        "reason": "CONTRACT_OR_HARNESS_FAILURE"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": false,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-B",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": false,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SLOT_OPERATION_CONFLICT"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": false,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_source_value_choice",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-C",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": false,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "CATALOG_METRIC_TIME_ANCHOR_MISSING"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": false,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_source_value_choice",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-D",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": false,
+      "error": null,
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": false,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_source_value_choice",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        }
+      ],
+      "plan": true
+    },
+    {
+      "case_id": "LF51-F",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": false,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": false,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    },
+    {
+      "case_id": "LF51-J",
+      "mode": "RECORDED_OUTPUT",
+      "strict_request_match": false,
+      "error": {
+        "type": "RecognitionFailure",
+        "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+      },
+      "calls": [
+        {
+          "stage": "v2_current_turn",
+          "context_match": true,
+          "schema_prompt_match": true,
+          "output_intervention": false
+        },
+        {
+          "stage": "v2_semantic_edits",
+          "context_match": true,
+          "schema_prompt_match": false,
+          "output_intervention": false
+        }
+      ],
+      "plan": false
+    }
+  ],
+  "baseline_strict_request_reproduction": 6,
+  "final_versioned_recorded_output_cases": 6,
+  "final_strict_original_generation_request": false,
+  "generation_change": "Second-stage source-field enum and initial time representation schema; Parse/Context/Prompt unchanged",
+  "oracle_single_artifact_runs": 7,
+  "oracle_model_calls": 0,
+  "oracle_sql_calls": 0,
+  "oracle_outcome_scope": "Six original boundary interventions plus one newly observed subtree-deletion intervention; NONE count as model/Gold PASS",
+  "missing_downstream_outputs": [
+    "LF51-F alternate-field value choice",
+    "LF51-J newly consumed source-request value choice"
+  ],
+  "actual_live_chain_verification": {
+    "status": "PASS",
+    "rows": [
+      {
+        "turn_id": "73de003cd145373786a7a509",
+        "question": "查询去年江苏订单笔数",
+        "year": 2025,
+        "canonical_metrics": [
+          "order_count"
+        ],
+        "filter_empty": false,
+        "clear_barrier": false,
+        "state_and_plan_consistent": true,
+        "scope_match": true
+      },
+      {
+        "turn_id": "3344fc7309211b5600786fb7",
+        "question": "不限地区",
+        "year": 2025,
+        "canonical_metrics": [
+          "order_count"
+        ],
+        "filter_empty": true,
+        "clear_barrier": true,
+        "state_and_plan_consistent": true,
+        "scope_match": true
+      },
+      {
+        "turn_id": "d025b6c95a2c6f95f69fdd63",
+        "question": "换今年",
+        "year": 2026,
+        "canonical_metrics": [
+          "order_count"
+        ],
+        "filter_empty": true,
+        "clear_barrier": true,
+        "state_and_plan_consistent": true,
+        "scope_match": true
+      }
+    ],
+    "checks": {
+      "seed_matches_final_runtime": true,
+      "original_clear_recorded_output_now_plans": true,
+      "all_three_actual_accepted_turns_match_final_runtime": true
+    },
+    "one_original_blocked_case_unlocked": true,
+    "actual_followup_turns": 2,
+    "new_gold_cases": 0,
+    "production_writes": 0
+  }
+}

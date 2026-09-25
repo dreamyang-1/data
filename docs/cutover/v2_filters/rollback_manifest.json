@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "ed35bc37c8c9685e1b1fec265c183862bf418488",
+  "feature_branch": "cutover-v2-filter-tree-20260909-01",
+  "source_rollback": "Reviewed Agent/SQL commit reverts and explicit development resync. No native or production state changed.",
+  "native_publication_performed": false,
+  "runtime_rollback_proven": false,
+  "production_v2_routing_changed": false
+}

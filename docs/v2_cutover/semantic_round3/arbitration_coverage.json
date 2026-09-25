@@ -1,0 +1,5386 @@
+{
+  "counts": {
+    "MODEL_DECISION_ACCEPTED": 167,
+    "MODEL_UNAVAILABLE_FALLBACK": 3,
+    "MODEL_DECISION_NOT_REACHED": 2,
+    "MODEL_DECISION_REJECTED_BY_HARD_CONSTRAINT": 0,
+    "MODEL_DECISION_VETOED_BY_SOFT_RULE": 0,
+    "MODEL_DECISION_REPLACED_BY_RULE": 0,
+    "RULE_ONLY_DECISION": 0,
+    "MODEL_UNRESOLVED": 0
+  },
+  "unit": "One original recorded turn; final observed resolver output, not duplicate internal calls",
+  "total": 172,
+  "rows": [
+    {
+      "case_id": "G81-001",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-002",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-003",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-004",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-005",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-006",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-007",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-008",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-009",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-010",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-011",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-012",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-013",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-014",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-015",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-016",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-017",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-018",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-019",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-020",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-021",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-022",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-023",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-024",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-025",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-026",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-027",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-028",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-029",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-030",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-031",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-032",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-033",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-034",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-035",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-036",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-037",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-038",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-039",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-040",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-041",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-042",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-043",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-044",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-045",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-046",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-047",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-048",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-049",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-050",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-051",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-052",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-053",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-053",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-1",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-1",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-1",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-054",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-054",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "REPLACE",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "MODIFY"
+        ],
+        "reference_signals": [],
+        "followup_signals": [
+          "MODIFY"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "REPLACE",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-055",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-055",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "REPLACE",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "MODIFY"
+        ],
+        "reference_signals": [],
+        "followup_signals": [
+          "MODIFY"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "REPLACE",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-056",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-057",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-058",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-059",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-060",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-061",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-062",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-063",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-064",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-065",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-066",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-068",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-069",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-070",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-072",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-072",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "MODIFY",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REMOVE"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "MODIFY",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-074",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-075",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-1",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-1",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-1",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-077",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-077",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "ADD",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "ADD",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-078",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-079",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-079",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "MODIFY",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REMOVE"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "MODIFY",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-080",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-081",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-081",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "ADD",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "ADD",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-082",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-082",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REPLACE"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "MODIFY"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-083",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-083",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "MODIFY",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REMOVE"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "MODIFY",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-084",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-085",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-086",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-086",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-1",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-1",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-1",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-087",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-089",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-089",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "REPLACE",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REPLACE"
+        ],
+        "reference_signals": [],
+        "followup_signals": [
+          "MODIFY"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "REPLACE",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-090",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-092",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-093",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-094",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-095",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-096",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-097",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-098",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-099",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "G81-100",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-001",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-001",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "ADD",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "ADD",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-002",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-002",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REPLACE"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "MODIFY"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-003",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-003",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "MODIFY",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REMOVE"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "MODIFY",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-004",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-005",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-006",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-007",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-008",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-009",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-010",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-011",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-011",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "ADD",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "ADD",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-012",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-012",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "MODIFY",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REPLACE"
+        ],
+        "reference_signals": [],
+        "followup_signals": [
+          "MODIFY"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "MODIFY",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-013",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-013",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "MODIFY",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REMOVE"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "MODIFY",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "MODIFY",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "CLEAR"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "MODIFY",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 2,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "ADD",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_FOLLOWUP_EVIDENCE",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "DEPENDENCY_OR_DEFAULT_NEW",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "ADD",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-015",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-016",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-1",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-1",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-1",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-017",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-017",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-1",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-1",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-1",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "S81-017",
+      "turn_index": 2,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "RETURN_TO_TOPIC",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "RETURN_TO_TOPIC",
+          "ADD"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-001",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-002",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-002",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-003",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-003",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REMOVE",
+          "MODIFY"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "MODIFY"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-004",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-005",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-005",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-006",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-006",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REMOVE"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "MODIFY"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-007",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-008",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-008",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-009",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-010",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-011",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-011",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-012",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-012",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REMOVE",
+          "MODIFY"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "MODIFY"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-013",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-014",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-014",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-015",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-015",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REMOVE",
+          "MODIFY"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "MODIFY"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-016",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-017",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-017",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-018",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-018",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "REMOVE",
+          "MODIFY"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "MODIFY"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-019",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-020",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-020",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-022",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-023",
+      "turn_index": 0,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "NEW_TASK",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "NEW_TASK",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_NEW_TASK",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": false,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "NEW_TASK"
+        ],
+        "reference_signals": [],
+        "followup_signals": [],
+        "topic_shift_signals": [
+          "EXPLICIT_NEW_TASK"
+        ]
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "TOPIC_SHIFT_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "NEW_TASK",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    },
+    {
+      "case_id": "PV81-023",
+      "turn_index": 1,
+      "classification": "MODEL_DECISION_ACCEPTED",
+      "MODEL_RELATION": "FOLLOW_UP",
+      "MODEL_TARGET_TASK": "task:turn-0",
+      "FINAL_RELATION": "RETURN_TO_TOPIC",
+      "FINAL_TARGET_TASK": "task:turn-0",
+      "OVERRIDE_DIRECTION": "NONE",
+      "OVERRIDE_REASON": "MODEL_OFFERED_TARGET",
+      "HARD_OR_SOFT": "LLM_SEMANTIC_EVIDENCE",
+      "relation_label_only_difference": true,
+      "MODEL_RELATION_EVIDENCE": {
+        "dialogue_act_candidates": [
+          "ADD"
+        ],
+        "reference_signals": [
+          "HISTORICAL"
+        ],
+        "followup_signals": [
+          "ADD"
+        ],
+        "topic_shift_signals": []
+      },
+      "MODEL_RELATION_IS_RECONSTRUCTED": true,
+      "INDEPENDENT_MODEL_RELATION_PROPOSAL_AVAILABLE": false,
+      "RULE_OR_CONSTRAINT": "HISTORICAL_PRECEDENCE",
+      "DETERMINISTIC_CONSTRAINT": "CURRENT_SCOPE_RESTORE_AND_NATIVE_TARGET_MEMBERSHIP; NO_HARD_VETO_OBSERVED",
+      "FINAL_DECISION": {
+        "relation": "RETURN_TO_TOPIC",
+        "target_task": "task:turn-0",
+        "decision": "PROCEED"
+      }
+    }
+  ],
+  "MODEL_UNAVAILABLE_FALLBACK_means": "Fail-closed transport/schema exit; no V2 rule fallback or user ask claimed",
+  "label_only_is_not_veto": true,
+  "independent_model_decision_observed": false
+}

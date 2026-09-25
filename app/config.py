@@ -8,6 +8,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SERVICE_BUNDLE_ROOT = (
+    PROJECT_ROOT
+    if (PROJECT_ROOT / "Oagnet").is_dir() and (PROJECT_ROOT / "sql-translator").is_dir()
+    else PROJECT_ROOT.parent
+)
 PLATFORM_ENV = PROJECT_ROOT.parent / ".env"
 SHARED_PROJECT_ENV = PROJECT_ROOT.parent / "New_Agent" / ".env"
 
@@ -25,6 +30,36 @@ class Settings(BaseSettings):
     adapter_mode: Literal["mock", "http"] = "mock"
     redis_url: str | None = None
     session_store_mode: Literal["memory", "redis"] = "redis"
+    # The public service stays on V1 unless an operator selects the bounded
+    # candidate at process startup.  Request content can never change this.
+    runtime_mode: Literal[
+        "V1", "V2_LIMITED_SCALAR", "V2_CONTEXT_V1_EXECUTION"
+    ] = "V1"
+    # Explicit demo-only recovery behavior for the V2-context/V1-execution
+    # bridge.  The default remains disabled so normal production behavior and
+    # fail-closed execution-scope handling are unchanged.
+    demo_mode: bool = False
+    surface_asl_execution_enabled: bool = False
+    # Public thinking/progress text uses the same SSE ``message_chunk``
+    # contract as the final answer.  These settings control presentation only;
+    # model, ASL and SQL stages continue to consume complete validated values.
+    thinking_stream_chunk_size: int = Field(default=1, ge=1, le=64)
+    thinking_stream_max_chunks: int = Field(default=120, ge=1, le=1000)
+    thinking_stream_chunk_interval_seconds: float = Field(default=0.03, ge=0, le=0.2)
+    # A protocol-only ``updata_state`` heartbeat keeps the HTTP connection
+    # alive, but the platform does not render it as changing progress.  Emit an
+    # existing ``message_chunk`` stage marker at this interval while a long
+    # semantic/model/tool call has no new milestone.
+    thinking_stream_heartbeat_seconds: float = Field(default=1.0, ge=0.05, le=30)
+    # Stream structured recognition responses internally so the transport can
+    # publish real model-start milestones without weakening final JSON/schema
+    # validation. The complete payload is still assembled and validated before
+    # it can affect semantic state or execution.
+    intent_model_stream_enabled: bool = True
+    # Source tree for the existing semantic-catalog authority used by the
+    # context-only bridge.  It is read on each request and is independent of
+    # the Limited Scalar publication/pin configuration below.
+    context_catalog_root: Path = SERVICE_BUNDLE_ROOT / "Oagnet"
     # v2 separates fingerprint-aware idempotency records from pre-upgrade Redis
     # values that cannot prove which request payload produced a cached response.
     session_key_prefix: str = "youo:data-analysis:v2"
@@ -36,6 +71,47 @@ class Settings(BaseSettings):
     # Keep the idempotency record at least as long as the pending conversation.
     # Session stores enforce max(response_cache_ttl, session_ttl) as a second guard.
     response_cache_ttl_seconds: int = Field(default=7200, ge=300, le=86400)
+    # V2 limited-scalar deployment settings are deliberately separate from the
+    # V1 session namespace.  Empty identity/pins are valid while runtime_mode is
+    # V1 and are rejected by the V2 builder before it opens any dependency.
+    limited_scalar_store_namespace: str = ""
+    limited_scalar_deployment_id: str = ""
+    limited_scalar_session_ttl_seconds: int = Field(default=86400, ge=300, le=604800)
+    limited_scalar_idempotency_ttl_seconds: int = Field(default=604800, ge=300, le=2592000)
+    limited_scalar_running_review_seconds: int = Field(default=300, ge=30, le=86400)
+    limited_scalar_max_messages_per_session: int = Field(default=100, ge=1, le=1000)
+    limited_scalar_max_envelope_bytes: int = Field(default=4 * 1024 * 1024, ge=65536, le=32 * 1024 * 1024)
+    # BaseSettings reads scalar environment variables as text. Keep the
+    # positive-integer constraint while allowing the normal ``KEY=81``
+    # deployment representation. ChatRequest enforces request strictness.
+    limited_scalar_semantic_model_id: int = Field(default=81, gt=0)
+    limited_scalar_business_domain_ids: list[int] = Field(default_factory=lambda: [205])
+    limited_scalar_data_source_id: int = Field(default=58, gt=0)
+    limited_scalar_catalog_version: str = ""
+    limited_scalar_vector_index_version: str = ""
+    limited_scalar_catalog_target_identity_hash: str = ""
+    # The internal 8088 context trial may pin a fresh authoritative catalog
+    # snapshot in process memory.  It never creates or changes a Milvus
+    # collection.  The normal deployment path continues to require PUBLISHED.
+    limited_scalar_catalog_access: Literal[
+        "PUBLISHED", "LIVE_READ_ONLY_SNAPSHOT"
+    ] = "PUBLISHED"
+    limited_scalar_oagnet_root: Path = SERVICE_BUNDLE_ROOT / "Oagnet"
+    limited_scalar_sql_translator_root: Path = SERVICE_BUNDLE_ROOT / "sql-translator"
+    limited_scalar_oagnet_source_digest: str = ""
+    limited_scalar_sql_source_digest: str = ""
+    # Non-secret fingerprint of the approved execution target (driver, host,
+    # port, database, schema and account identity).  The password is excluded.
+    limited_scalar_data_source_target_digest: str = ""
+    limited_scalar_readiness_cache_seconds: float = Field(default=5, ge=1, le=30)
+    limited_scalar_readiness_timeout_seconds: float = Field(default=5, ge=1, le=15)
+    limited_scalar_cancellation_cleanup_seconds: float = Field(default=2, ge=0.1, le=10)
+    limited_scalar_time_field_canonical_id: str = ""
+    limited_scalar_time_field_mapping: str = "sales_order.created_date"
+    limited_scalar_time_field_id: int = Field(default=24400, gt=0)
+    limited_scalar_time_table_id: int = Field(default=1880, gt=0)
+    limited_scalar_time_storage_timezone: str = "Asia/Shanghai"
+    limited_scalar_time_evidence_version: str = "round59-user-declaration-beijing-v1"
     allow_missing_trusted_identity_headers: bool = False
     require_trusted_application_header: bool = False
     max_clarification_rounds: int = Field(default=3, ge=1, le=10)
@@ -49,6 +125,24 @@ class Settings(BaseSettings):
     dynamic_skills_enabled: bool = True
     autonomous_tool_selection_enabled: bool = True
     autonomous_tool_selection_max_tools: int = Field(default=3, ge=1, le=5)
+    # Platform-configured MCP services may act as the primary executor only
+    # for a request that carries an uploaded file and exposes at least one
+    # file-analysis tool.  All ordinary semantic/SQL requests keep the V1
+    # execution path unchanged.
+    mcp_file_analysis_enabled: bool = True
+    mcp_file_analysis_discovery_timeout_seconds: float = Field(
+        default=20, gt=0, le=60
+    )
+    mcp_file_analysis_model_timeout_seconds: float = Field(
+        default=30, gt=0, le=60
+    )
+    mcp_file_analysis_tool_timeout_seconds: float = Field(
+        default=60, gt=0, le=180
+    )
+    mcp_file_analysis_total_budget_seconds: float = Field(
+        default=105, gt=0, le=240
+    )
+    mcp_file_analysis_max_turns: int = Field(default=8, ge=1, le=20)
     bocha_api_key: SecretStr | None = Field(
         default=None,
         validation_alias=AliasChoices("DATA_AGENT_BOCHA_KEY", "BOCHA_KEY"),
@@ -102,6 +196,9 @@ class Settings(BaseSettings):
     knowledge_base_search_path: str = "/knowledge_base/search_docs"
     knowledge_base_timeout_seconds: float = Field(default=30, gt=0, le=300)
     platform_api_key: SecretStr | None = None
+    # Matches the business backend's existing Authorization: Bearer authKey
+    # transport. It authenticates the service caller, never computes user ACLs.
+    trusted_backend_token: SecretStr | None = None
     http_max_retries: int = Field(default=2, ge=0, le=5)
     http_retry_backoff_seconds: float = Field(default=0.2, ge=0, le=5)
     semantic_resolve_path: str = "/v1/semantic/metrics/resolve"
@@ -129,10 +226,16 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("DATA_AGENT_INTENT_MODEL_API_KEY", "API_KEY"),
     )
-    intent_model_name: str = "qwen3.6-plus"
+    intent_model_name: str = "qwen3.7-max"
+    # V2 对话状态识别专用模型；不配置时回退 intent_model_name。
+    # 识别调用每轮必发且 prompt 随核心指令变长，可以用更快的型号压首屏时延。
+    v2_recognition_model_name: str | None = None
     intent_model_response_format: Literal["json_schema", "json_object"] = "json_object"
     intent_model_timeout_seconds: float = Field(default=30, gt=0, le=60)
     intent_model_max_retries: int = Field(default=1, ge=0, le=2)
+    # 挂起分诊只判一次"是不是原话题的回复"，不该占满整个意图模型预算；
+    # 超时按新话题兜底，走正常新问流程。
+    pending_triage_timeout_seconds: float = Field(default=10, gt=0, le=60)
     intent_model_enable_thinking: bool = False
     intent_model_min_confidence: float = Field(default=0.80, ge=0.5, le=1)
     multi_question_enabled: bool = True
@@ -143,11 +246,12 @@ class Settings(BaseSettings):
     # engine. Its output is evidence-validated and safely falls back to the
     # deterministic answer when unavailable or ungrounded.
     analysis_synthesis_enabled: bool = True
-    analysis_synthesis_model_name: str = "qwen3.6-plus"
-    analysis_synthesis_timeout_seconds: float = Field(default=8, gt=0, le=20)
+    analysis_synthesis_model_name: str = "qwen3.7-max"
+    analysis_synthesis_timeout_seconds: float = Field(default=60, gt=0, le=120)
     analysis_synthesis_max_retries: int = Field(default=0, ge=0, le=1)
+    analysis_synthesis_validation_retries: int = Field(default=1, ge=0, le=1)
     chat_model_enabled: bool = True
-    chat_model_name: str = "qwen3.6-plus"
+    chat_model_name: str = "qwen3.7-max"
     chat_model_timeout_seconds: float = Field(default=8, gt=0, le=20)
     chat_model_max_retries: int = Field(default=0, ge=0, le=1)
     # Optional Langfuse export. Content is hash/shape-only unless the explicit
@@ -245,6 +349,10 @@ class Settings(BaseSettings):
     mysql_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
     mysql_read_timeout_seconds: int = Field(default=10, ge=1, le=60)
     mysql_write_timeout_seconds: int = Field(default=10, ge=1, le=60)
+    platform_upload_reference_resolution_enabled: bool = True
+    platform_upload_reference_max_age_seconds: int = Field(
+        default=600, ge=30, le=3600
+    )
     minio_dataset_enabled: bool = False
     minio_endpoint: str | None = Field(
         default=None,

@@ -1,0 +1,20 @@
+{
+  "snapshot_hashes_checked": 49,
+  "python_files_compiled": 41,
+  "selected_test_files": [
+    "tests/test_capacity_control.py",
+    "tests/test_daily_job_store.py"
+  ],
+  "passed": 12,
+  "failed": 0,
+  "skipped": 0,
+  "collection_errors": 0,
+  "setup_teardown_errors": 0,
+  "network_attempts": 0,
+  "real_model_calls": 0,
+  "external_production_writes": 0,
+  "pytest_exit_code": 0,
+  "python_version": "3.12.8",
+  "pytest_version": "8.4.2",
+  "scope": "Import integrity, syntax and selected offline unit tests; not full integration acceptance"
+}

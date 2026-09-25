@@ -1,0 +1,102 @@
+{
+  "stage": "SEMANTIC_ROOT_CLOSURE_ROUND_4_COMPLETE",
+  "conclusion": [
+    "STRUCTURAL_CONTEXT_PROPOSAL_GAP_CONFIRMED",
+    "SCHEMA_GAP_CONFIRMED",
+    "MIXED_ROOTS"
+  ],
+  "baseline_commit": "466482b67703bf19214ef54c852c606ee14be109",
+  "feature_branch": "semantic-context-proposal-round4-20260910t004000z",
+  "parent_draft_pr": 57,
+  "started_at": "2026-09-10T00:40:00+00:00",
+  "max_duration_seconds": 7200,
+  "tracked_start": 1519,
+  "unexpected_starting_drift": 0,
+  "production_changes": 0,
+  "production_prompt_changes": 0,
+  "production_schema_changes": 0,
+  "production_routing_changes": 0,
+  "production_regex_changes": 0,
+  "production_business_keyword_changes": 0,
+  "semantic_confidence_weight_changes": 0,
+  "experimental_schema_version": "context-proposal-experiment-v1.1",
+  "live_schema_version": "context-proposal-experiment-v1",
+  "experimental_prompt_version": "context-proposal-experiment-v1",
+  "experimental_prompt_addendum_hash": "a9b7b2174de74705201d6f35b7c96bb907a2f237f2706dfd680d92ff1c2597b7",
+  "experimental_prompt_addendum_nonempty_lines": 11,
+  "experimental_schema_export_review": "v1.1 exports existing Python consistency constraints; no v1 capture rescored, v1.1 not live tested",
+  "model": "qwen3.7-max",
+  "thinking": false,
+  "temperature": 0,
+  "retry": 0,
+  "max_request_timeout_seconds": 60,
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ]
+  },
+  "as_of": "2026-09-09T09:00:00+08:00",
+  "actual_live_clocks": [
+    "2026-09-09T09:00:00+08:00"
+  ],
+  "actual_control_clock": "2026-09-08T12:00:00+08:00",
+  "controlled_clock_note": "Existing frozen critical slice clock preserved; not mixed with live clock.",
+  "real_model_calls": 26,
+  "source_sql_calls": 0,
+  "production_writes": 0,
+  "private_remaining": 20,
+  "new_promotions": 0,
+  "private_remaining_reads": 0,
+  "blind_access": 0,
+  "production_source_count": 115,
+  "production_source_hash": "98b5e87c66b24e70be2bcec76ca12c6f4fcf4ec1d477660de0c70ad0e46c45e8",
+  "audited_source_hashes": {
+    "app/semantic_v2/recognition.py": "456659bcbafa4b9b99c17750eeabf908cd704e67a2ae33fcb3fbdd0704911941",
+    "app/semantic_v2/pipeline.py": "56715d069f2deca374fa619473136b0bc9b3e57b93d5a383030719bc3392280b",
+    "app/semantic_v2/catalog_bridge.py": "fcf609fc22e50cc172abccde7de0332694af0715c6b4e6ad502f2fdb1d354214",
+    "app/semantic_v2/state_machine.py": "f85d1157a44dd17c0e6a12d033460c6ae016282c1d8bb393228fcca61fcafa4f",
+    "app/semantic_v2/pending_recognition.py": "93f3daf560ac574d41caeb08e79dfa09c4acef202bae6ad4243de619f13a6d5b",
+    "app/services/turn_admission.py": "27b5bdb93aa611ab1ba481de0b92bb402930691a412bda5a470d67316bc795de",
+    "app/config.py": "a284ce9799b14864228156519c762dc5fdc166de4cc3420dec67186753c4d20a",
+    "app/intent/structured.py": "a8797333f90da5b46c2de6222e5cbe74bd1ad3ee7de151a2a6ad04438c9d24bf"
+  },
+  "parent_evidence_hash": "758a207dec39cd814ece0ea2218387429086831f931df372e3034717839514f1",
+  "input_freeze_hash": "73635331376d12dbe76c69400934c1b1c72a9ccf1c4b498f3a49b5f994dd0e03",
+  "live_result_hash": "7c278521567f6f51be6536db68752d4d8fe6308f19c52c74d8add52b0db484cb",
+  "native_result_hash": "77b1e237a4b7ec6a7264d96d4d65f8edfd3aa3ebb1521a786dff059d43d6dcda",
+  "original_cluster": {
+    "baseline_target_match": {
+      "n": 15,
+      "N": 15
+    },
+    "baseline_evidence_hash": "d3105cfe9b1ce9dd6f3ce6316d20aa798de55035e8c5fa4a59d62b501d034e16",
+    "new_B_coverage": {
+      "n": 1,
+      "N": 15
+    },
+    "new_B_case_ids": [
+      "S81-002"
+    ],
+    "unexamined_private_not_inferred": true
+  },
+  "gates": {
+    "PRODUCTION_FIX_GATE": "NOT_PROVEN",
+    "CONTEXT_ATTACHMENT_CORE_READY": "NOT_READY",
+    "CONTEXT_FOLLOWUP_READY": "NOT_READY",
+    "SEMANTIC_FREEZE_CANDIDATE": "BLOCKED",
+    "READY_FOR_USER_APPROVAL": false
+  },
+  "full_regression_required": false,
+  "next_round_started": false,
+  "diagnostic_files": {
+    "tools/cutover/context_proposal_schema.py": "4d2c67227413001d17ae7bf980cfc93b86546e4261625a836a33926b9e04ba3e",
+    "tools/cutover/context_proposal_round4.py": "5f93008357fcb11e9357f85b79b1ed928c967d70aa47d91ddbd030ce373c91f2",
+    "tools/cutover/run_context_proposal_round4.py": "68fa95ab6359ddf5168e1fac8529cf8841d2089077c290b5d307cb7fe4a9bdf4",
+    "tools/cutover/context_proposal_native_diagnostic.py": "7820bca3346530dce252d1783f35b112fd87dfc434d31a89893947250b835fcf",
+    "tools/cutover/summarize_context_proposal_round4.py": "6a012c1bda29e20254f0fa4811e3639e0d0c2d29ad9a9d85a8ca80a8d05cbfe7",
+    "tests/test_v2_context_proposal_round4.py": "2f400ad16e784308699daaec4c3cd069fdb35c8a915f9dad4a587b30f7e5e4a0",
+    "docs/v2_cutover/semantic_round4/verify_round4.py": "e7a67373512d110bc00b570ce20d5cd1e5cf80358f83db2c2c4607ab7e6550be"
+  },
+  "diagnostic_code_hash": "02a92ae91011476740cc8ea37d678a595ff86689c8400f9cd1ddac672e059570"
+}

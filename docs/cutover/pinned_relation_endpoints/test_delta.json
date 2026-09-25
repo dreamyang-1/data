@@ -1,0 +1,95 @@
+{
+  "baseline_commit": "2881cd7e52a7d8ca21bbb66e808746bd4566e137",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline": {
+        "passed": 2697,
+        "failed": 27
+      },
+      "final": {
+        "passed": 2697,
+        "failed": 27
+      },
+      "new_tests": [],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "previous_nodeids_verified": 2724,
+      "baseline_evidence": "docs/cutover/v2_bound_sql/final_DataAnalysis_Agent.json"
+    },
+    "Oagnet": {
+      "baseline": {
+        "passed": 663,
+        "failed": 8
+      },
+      "final": {
+        "passed": 663,
+        "failed": 8
+      },
+      "new_tests": [],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "previous_nodeids_verified": 671,
+      "baseline_evidence": "docs/cutover/v2_bound_sql/final_Oagnet.json"
+    },
+    "SQL_Translator": {
+      "baseline": {
+        "passed": 354
+      },
+      "final": {
+        "passed": 381
+      },
+      "new_tests": [
+        "test_pinned_relation_endpoints.py::test_base_subtable_collision_is_unresolved_even_with_unique_attribute_mapping[False]",
+        "test_pinned_relation_endpoints.py::test_base_subtable_collision_is_unresolved_even_with_unique_attribute_mapping[True]",
+        "test_pinned_relation_endpoints.py::test_current_scope_and_final_pin_acceptance_are_still_required",
+        "test_pinned_relation_endpoints.py::test_endpoint_entity_code_and_governed_id_are_equivalent[2]",
+        "test_pinned_relation_endpoints.py::test_endpoint_entity_code_and_governed_id_are_equivalent[customers]",
+        "test_pinned_relation_endpoints.py::test_explicit_qualified_endpoint_can_choose_declared_base_or_subtable[order_extra.id]",
+        "test_pinned_relation_endpoints.py::test_explicit_qualified_endpoint_can_choose_declared_base_or_subtable[orders.id]",
+        "test_pinned_relation_endpoints.py::test_global_registered_column_cannot_fill_an_absent_owned_endpoint",
+        "test_pinned_relation_endpoints.py::test_source_owned_bridge_is_not_a_complete_target_entity_endpoint",
+        "test_pinned_relation_endpoints.py::test_unique_declared_endpoints_produce_correct_sql_without_mutating_pin[id-customers.id]",
+        "test_pinned_relation_endpoints.py::test_unique_declared_endpoints_produce_correct_sql_without_mutating_pin[id-id]",
+        "test_pinned_relation_endpoints.py::test_unique_declared_endpoints_produce_correct_sql_without_mutating_pin[orders.id-customers.id]",
+        "test_pinned_relation_endpoints.py::test_unique_declared_endpoints_produce_correct_sql_without_mutating_pin[orders.id-id]",
+        "test_pinned_relation_endpoints.py::test_unqualified_column_unique_to_declared_subtable_resolves",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[empty]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[expression]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[extra_key]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[foreign_source]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[list]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[missing_source]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[missing_target]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[null]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[undeclared_table]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[unknown_target]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[whitespace]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[wrong_source_owner]",
+        "test_pinned_relation_endpoints.py::test_unusable_declared_endpoint_does_not_authorize_a_join[wrong_target_owner]"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "previous_nodeids_verified": 354,
+      "baseline_evidence": "docs/cutover/v2_bound_sql/final_SQL_Translator.json"
+    }
+  },
+  "new_tests": 27,
+  "critical": {
+    "total": 160,
+    "passed": 160
+  },
+  "clarification_coverage": {
+    "public_clarification_responses": 89,
+    "with_reason_trace": 89
+  },
+  "agent_test_modules": 106,
+  "collection_errors": 0,
+  "old_pass_to_new_fail": 0,
+  "agent_and_oagnet_results": "Complete current suites rerun and every baseline nodeid matched; reuse baseline nodeid files instead of duplicating them.",
+  "real_model_calls": 0,
+  "business_source_reads": 0,
+  "production_writes": 0,
+  "fixture_sql_executed": true,
+  "external_sql_executions": 0,
+  "old_test_expectations_changed": false
+}

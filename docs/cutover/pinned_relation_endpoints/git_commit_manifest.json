@@ -1,0 +1,16 @@
+{
+  "baseline_commit": "2881cd7e52a7d8ca21bbb66e808746bd4566e137",
+  "feature_branch": "cutover-pinned-relation-endpoints-20260909-01",
+  "base_branch": "cutover-v2-bound-sql-20260909-01",
+  "implementation_commit": "833451f638c92c9377fa0a4df61979340941b278",
+  "service_commits": {
+    "SQL_Translator": "833451f638c92c9377fa0a4df61979340941b278"
+  },
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

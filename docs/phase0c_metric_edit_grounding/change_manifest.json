@@ -1,0 +1,76 @@
+{
+  "baseline_commit": "b80492044882b409559a67d7e4bd60c1497be3fc",
+  "feature_branch": "phase0c-metric-edit-grounding-20260908-01",
+  "files": [
+    {
+      "repository_path": "app/intent/classifier.py",
+      "source_sha256": "fd13ee0061cb9eaf95138d310b2486fc18e156c56b7238e551ef8e97ebbdb47e",
+      "published_sha256": "fd13ee0061cb9eaf95138d310b2486fc18e156c56b7238e551ef8e97ebbdb47e",
+      "baseline_sha256": "c41e5709ede39812309f5f80898f206b88d0abeebd752448659e51833d0d3cb0"
+    },
+    {
+      "repository_path": "tests/test_metric_edit_grounding_contract.py",
+      "source_sha256": "0b4369b42f9b36f5c2abecd5d8cb59be7d812a039475ba3e92dc1b0929be2320",
+      "published_sha256": "0b4369b42f9b36f5c2abecd5d8cb59be7d812a039475ba3e92dc1b0929be2320",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c/trust_semantic_scope_contract.md",
+      "source_sha256": "82aa4751d9ffcef58db908bf579211d6e92e9385e29699e518eb0a2a8b1e2dc0",
+      "published_sha256": "82aa4751d9ffcef58db908bf579211d6e92e9385e29699e518eb0a2a8b1e2dc0",
+      "baseline_sha256": "bbb3e2b142504979298773003cbba2968859e762de03dda3c744d678269a7f03"
+    },
+    {
+      "repository_path": "docs/phase0c_metric_edit_grounding/audit_inventory.json",
+      "source_sha256": "5cd2fb8e251fdd3a50b9c922c0272e1b409a2e9c53fc7dae0c3dc2457c1a4ad7",
+      "published_sha256": "5cd2fb8e251fdd3a50b9c922c0272e1b409a2e9c53fc7dae0c3dc2457c1a4ad7",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_metric_edit_grounding/closure_report.md",
+      "source_sha256": "fce6506f32dc59a68603c3c1140ce8e6549563dbf577180f5917e384e94608a1",
+      "published_sha256": "fce6506f32dc59a68603c3c1140ce8e6549563dbf577180f5917e384e94608a1",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_metric_edit_grounding/failure_evidence.json",
+      "source_sha256": "8d5200eafbb5bf72989a778c882da64cfc7843a2155707bd9f5e5596831d717b",
+      "published_sha256": "8d5200eafbb5bf72989a778c882da64cfc7843a2155707bd9f5e5596831d717b",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_metric_edit_grounding/final_DataAnalysis_Agent.json",
+      "source_sha256": "04341e8803ffffaa25a00f47e289769828dc2924689d876e664e4de97d1828bf",
+      "published_sha256": "04341e8803ffffaa25a00f47e289769828dc2924689d876e664e4de97d1828bf",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_metric_edit_grounding/final_Oagnet.json",
+      "source_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "published_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_metric_edit_grounding/final_SQL_Translator.json",
+      "source_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "published_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_metric_edit_grounding/rollback_manifest.json",
+      "source_sha256": "55065844d9defa2d1403a4570054b53c4c8d170ebce336f21f27880f65adb78c",
+      "published_sha256": "55065844d9defa2d1403a4570054b53c4c8d170ebce336f21f27880f65adb78c",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_metric_edit_grounding/test_delta.json",
+      "source_sha256": "3dd0237972940ba5dc0a80a3a365627d1b37cf35b6dcea9e8fc43c3e61034b8f",
+      "published_sha256": "3dd0237972940ba5dc0a80a3a365627d1b37cf35b6dcea9e8fc43c3e61034b8f",
+      "baseline_sha256": null
+    }
+  ],
+  "secret_scan_findings": 0,
+  "publication_policy": "Explicit files only; no credentials, environments, logs, private diagnostic text, runtime data or snapshots",
+  "original_oagnet_index_preserved": true,
+  "manifest_self_hash": "Committed Git blob; no circular hash"
+}

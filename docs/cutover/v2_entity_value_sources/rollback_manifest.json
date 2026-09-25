@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "0bb3f92327e69372e8450c7f49c2a8e2c0871630",
+  "feature_branch": "cutover-v2-entity-value-sources-20260908-01",
+  "rollback": "Reviewed revert of this source/evidence pair and explicit development resync. Republish a fresh compatible isolated catalog before runtime use; do not reuse older catalog identities to bypass new source facts.",
+  "production_rollback_proven": false,
+  "native_publication_performed": false,
+  "auto_merge": false
+}

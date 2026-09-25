@@ -1,0 +1,515 @@
+{
+  "stage": "PRE_SEMANTIC_CLOSURE_CALIBRATION",
+  "baseline_HEAD": "5aaf64a235ca1766ee5c72bb24997aba924c10e0",
+  "HEAD": "b2478b5125f2b7d8ce463b0b42b389f1b3462367",
+  "included_PRs": [
+    {
+      "number": 1,
+      "head": "phase0a-repro-closure-20260907-01",
+      "commit": "e4d3bb59026d3b219c9268ac53f87dccf58f3c28",
+      "base": "phase25.1-final-contract-20260907-closure",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 2,
+      "head": "phase0b-legacy-multiturn-p0-closure-20260907-01",
+      "commit": "3b3d60ccdd2698887ba57e2b849564861adf7e7c",
+      "base": "phase0a-repro-closure-20260907-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 3,
+      "head": "phase0c-trust-semantic-scope-20260908-01",
+      "commit": "e406029c83692d6e785b0880815d2a64773157c7",
+      "base": "phase0b-legacy-multiturn-p0-closure-20260907-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 4,
+      "head": "oagnet-source-import-20260908-01",
+      "commit": "813073ff3d34a5935e98c5433207ab38d55ccf6b",
+      "base": "phase0c-trust-semantic-scope-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 5,
+      "head": "phase0c-scope-root-cause-20260908-01",
+      "commit": "8711a3f93a088c63053dcd447d68c2c1b2f9bbcc",
+      "base": "oagnet-source-import-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 6,
+      "head": "phase0c-single-domain-execution-20260908-01",
+      "commit": "cdb2a8cfb059c841fbd8de51eb3c3a59cb0cf981",
+      "base": "phase0c-scope-root-cause-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 7,
+      "head": "phase0c-oagnet-scope-closure-20260908-01",
+      "commit": "5acfa99140f5dfede8f7c10ab3e0fd09db9c59f3",
+      "base": "phase0c-single-domain-execution-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 8,
+      "head": "phase0c-conversation-trust-20260908-01",
+      "commit": "119d84d70d46867f655e8de2bf44838f44d2cd46",
+      "base": "phase0c-oagnet-scope-closure-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 9,
+      "head": "phase0c-dataset-lineage-20260908-01",
+      "commit": "89643b95a10a782dd096b388bd28db9cf383c0eb",
+      "base": "phase0c-conversation-trust-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 10,
+      "head": "phase0c-semantic-choice-20260908-01",
+      "commit": "dfdcd1b76ab9f8dbdbfb8d88777abeabb7215f36",
+      "base": "phase0c-dataset-lineage-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 11,
+      "head": "phase0c-candidate-integrity-20260908-01",
+      "commit": "8bbf35167b15492b37e1ed141abbefef18c90204",
+      "base": "phase0c-semantic-choice-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 12,
+      "head": "phase0c-task-recall-20260908-01",
+      "commit": "b9d6dc9ed46e819b2f34055256be00a95910d207",
+      "base": "phase0c-candidate-integrity-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 13,
+      "head": "phase0c-structural-scope-20260908-01",
+      "commit": "098c3ed9489de925b44eb4f814b98c686683acc7",
+      "base": "phase0c-task-recall-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 14,
+      "head": "phase0c-dimension-mutation-20260908-01",
+      "commit": "b80492044882b409559a67d7e4bd60c1497be3fc",
+      "base": "phase0c-structural-scope-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 15,
+      "head": "phase0c-metric-edit-grounding-20260908-01",
+      "commit": "c2fa1411d1909a6380f924ebe1bb4723a2518df8",
+      "base": "phase0c-dimension-mutation-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 16,
+      "head": "phase0c-product-clear-20260908-01",
+      "commit": "80533c309a69851542dd182de92fff70b1e39e4c",
+      "base": "phase0c-metric-edit-grounding-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 17,
+      "head": "phase0c-region-list-20260908-01",
+      "commit": "c4c00d131f53848d279cd7353cd22dc4ea4be4e0",
+      "base": "phase0c-product-clear-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 18,
+      "head": "cutover-readiness-catalog-20260908-01",
+      "commit": "3ab8b4336b290d3560756345c4328278ee1ca9b3",
+      "base": "phase0c-region-list-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 19,
+      "head": "cutover-catalog-publication-20260908-01",
+      "commit": "a1708a796c9eb103309bc189280a94fb51b0ebfd",
+      "base": "cutover-readiness-catalog-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 20,
+      "head": "cutover-catalog-identity-20260908-01",
+      "commit": "aa6252f367b7da35774ccbabb17c85545975bd20",
+      "base": "cutover-catalog-publication-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 21,
+      "head": "cutover-v2-scope-bridge-20260908-02",
+      "commit": "47608b0a8db4a20b54973d717bf4176e621d1b2a",
+      "base": "cutover-catalog-identity-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 22,
+      "head": "cutover-v2-recognition-20260908-01",
+      "commit": "d798dc6f7a9342f3090ed418439d2fa0672a6c54",
+      "base": "cutover-v2-scope-bridge-20260908-02",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 23,
+      "head": "cutover-v2-pending-20260908-01",
+      "commit": "fc7c5fc2fe63c9dd4284a88d6c268a10b6b72c52",
+      "base": "cutover-v2-recognition-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 24,
+      "head": "cutover-v2-slot-edits-20260908-01",
+      "commit": "5583d8c48db49e22d236e2ee543b26dc89fa3264",
+      "base": "cutover-v2-pending-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 25,
+      "head": "cutover-v2-catalog-plans-20260908-01",
+      "commit": "b5037e7d15ecfd8e733551c853cbf9441be7c4bd",
+      "base": "cutover-v2-slot-edits-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 26,
+      "head": "cutover-v2-relation-paths-20260908-01",
+      "commit": "2e5b5a6fb82d896eacc859af99a1b5eece067f11",
+      "base": "cutover-v2-catalog-plans-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 27,
+      "head": "cutover-v2-temporal-comparisons-20260908-01",
+      "commit": "0bb3f92327e69372e8450c7f49c2a8e2c0871630",
+      "base": "cutover-v2-relation-paths-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 28,
+      "head": "cutover-v2-entity-value-sources-20260908-01",
+      "commit": "ff389dc4cd3fe4e0dabe1c665e3672b80b445330",
+      "base": "cutover-v2-temporal-comparisons-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 29,
+      "head": "cutover-v2-source-value-binding-20260908-01",
+      "commit": "df09b52ea4ab76254f5005619aefa8e4cb87ac5f",
+      "base": "cutover-v2-entity-value-sources-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 30,
+      "head": "cutover-catalog-publication-candidate-20260909-01",
+      "commit": "b0c2d9da2a836b9e16b9986c90d1e3b2065026f0",
+      "base": "cutover-v2-source-value-binding-20260908-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 31,
+      "head": "cutover-pinned-sql-catalog-20260909-01",
+      "commit": "abd6e82bfffb683d829e408581dda583633ec8d8",
+      "base": "cutover-catalog-publication-candidate-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 32,
+      "head": "cutover-v2-asl2-lowering-20260909-01",
+      "commit": "b6ca3db0d8602f9f7457a64092d60c449a1c725d",
+      "base": "cutover-pinned-sql-catalog-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 33,
+      "head": "cutover-v2-ranking-contract-20260909-01",
+      "commit": "ed35bc37c8c9685e1b1fec265c183862bf418488",
+      "base": "cutover-v2-asl2-lowering-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 34,
+      "head": "cutover-v2-filter-tree-20260909-01",
+      "commit": "e80132164b4335d38edd7081fd8d884551baa7fe",
+      "base": "cutover-v2-ranking-contract-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 35,
+      "head": "cutover-v2-bound-sql-20260909-01",
+      "commit": "2881cd7e52a7d8ca21bbb66e808746bd4566e137",
+      "base": "cutover-v2-filter-tree-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 36,
+      "head": "cutover-pinned-relation-endpoints-20260909-01",
+      "commit": "011a7193f5eafda1101255209129b4d4e2ad4f94",
+      "base": "cutover-v2-bound-sql-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 37,
+      "head": "cutover-relation-identity-evidence-20260909-01",
+      "commit": "bcf7d81b57fce85b018e5dc053368b8a6b870108",
+      "base": "cutover-pinned-relation-endpoints-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 38,
+      "head": "cutover-evaluation-gates-20260909t011632z",
+      "commit": "f15969dcc0f90e75a399a3d80d4a489d58139dec",
+      "base": "cutover-relation-identity-evidence-20260909-01",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 39,
+      "head": "cutover-parser-spans-20260909t015840z",
+      "commit": "66c11a1bfa414ba63b4592cb5ff3713492a5b324",
+      "base": "cutover-evaluation-gates-20260909t011632z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 40,
+      "head": "cutover-state-evaluator-20260909t024300z",
+      "commit": "2cd4d93de8ce151f0b859e8252db3f0ed7ce141c",
+      "base": "cutover-parser-spans-20260909t015840z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 41,
+      "head": "cutover-qwen37-config-20260909t031200z",
+      "commit": "037839d7df9127fa946b1580363ddf84d32c50bb",
+      "base": "cutover-state-evaluator-20260909t024300z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 42,
+      "head": "cutover-qwen37-benchmark-20260909t031600z",
+      "commit": "b42fdaf913e6e54d7de9bdb8a343183536703586",
+      "base": "cutover-qwen37-config-20260909t031200z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 43,
+      "head": "cutover-transition-runner-20260909t034400z",
+      "commit": "a87df7d37756d160f93db2acf9b9de5af928f8a3",
+      "base": "cutover-qwen37-benchmark-20260909t031600z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 44,
+      "head": "cutover-task-context-20260909t042538z",
+      "commit": "299513e6d0b7d02f7e7dffb68feeeba4f677f071",
+      "base": "cutover-transition-runner-20260909t034400z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 45,
+      "head": "cutover-replacement-oracle-20260909t045212z",
+      "commit": "9696077296b29ee8eb9d381c60e376053d4cf035",
+      "base": "cutover-task-context-20260909t042538z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 46,
+      "head": "cutover-source-evidence-20260909t052100z",
+      "commit": "adb10068be9e5ed5669c5f2acf59ec2a87bf8f64",
+      "base": "cutover-replacement-oracle-20260909t045212z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 47,
+      "head": "cutover-recorded-oracle-20260909t055600z",
+      "commit": "c19e65544664395200d814300e27d330006ea9a1",
+      "base": "cutover-source-evidence-20260909t052100z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 48,
+      "head": "cutover-governed-time-20260909t062000z",
+      "commit": "9d680ae096b9deafe42767d0d7952e0525be0c0a",
+      "base": "cutover-recorded-oracle-20260909t055600z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 49,
+      "head": "cutover-compound-mention-20260909t064400z",
+      "commit": "42547ca85fcc9a2ad6f83260df444ada3ea81ddd",
+      "base": "cutover-governed-time-20260909t062000z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 50,
+      "head": "cutover-time-components-20260909t070300z",
+      "commit": "b79fbd02a0f054ea5bd6ab6106569ea0019b0a28",
+      "base": "cutover-compound-mention-20260909t064400z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 51,
+      "head": "cutover-source-alias-20260909t071700z",
+      "commit": "0e408509126aae0a3a324aff02aef848fd0d3c56",
+      "base": "cutover-time-components-20260909t070300z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 52,
+      "head": "semantic-cutover-triage-20260909t074900z",
+      "commit": "ec48f654d6bcaa48ed09d41d7aca4fcbaedcd82e",
+      "base": "cutover-source-alias-20260909t071700z",
+      "draft": true,
+      "merged_at": null
+    },
+    {
+      "number": 53,
+      "head": "5aaf64a235ca1766ee5c72bb24997aba924c10e0",
+      "status": "OPEN_DRAFT_UNMERGED"
+    }
+  ],
+  "branch": "pre-semantic-calibration-20260909t111841z",
+  "base_branch": "evaluation-harness-closure-20260909t083000z",
+  "Evaluator_core_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+  "Evaluator_core_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+  "Calibration_evaluator_commit": "b2478b5125f2b7d8ce463b0b42b389f1b3462367",
+  "Calibration_files": {
+    "tools/cutover/calibration_audit.py": "a683073bc55507f0d09f8475607f80d724354dd1bbe057d3e7ec67da7f0f2e00",
+    "tools/cutover/calibration_gold.py": "9222a15c85d62af23b6aa9ea0812caac358e8505eb21c68e63c171601815a892",
+    "tools/cutover/calibration_profile.py": "763d4f77ae230208c6dc1ef611f01e928253c66f9478371612b8a69a76a3e263",
+    "tools/cutover/calibration_v1.py": "abf5ee15e4240c5aad04c17124fd0e9748b19b0d3f90c92b0676cefaf5126d20",
+    "tools/cutover/calibration_v1_probe.py": "f68c08b8d9b5bf6f87417916bdc065b436e2248adbcca4a2fbcd28ffb8ca0a66",
+    "tests/test_cutover_calibration.py": "170e9a14a75e3dedd049bef75688b3fc1bb2ce3145ac4b6725fdfa6b044f238e"
+  },
+  "Calibration_evaluator_hash": "df70a7b8a72b661a3ac73085c4258b668fb92f7bcaf29daf1db95b5dedc3644e",
+  "Prompt_hashes": {
+    "PARSE": {
+      "version": "v2-current-recognition-v8",
+      "hash": "621522c249ef4ab58a08eba2e0a8140a40f9afcf21f0bff85cea05e3baa62412",
+      "line_count": 16,
+      "sentence_units": 19
+    },
+    "DRAFT": {
+      "version": "v2-current-recognition-v8",
+      "hash": "446b110d7b3411d585858c8e6919dafc7739c5152b5d3934127908e91ff1122d",
+      "line_count": 63,
+      "sentence_units": 63
+    },
+    "PROBE": {
+      "version": "v2-source-value-choice-v1",
+      "hash": "18c52183ff785de85c9c9afc2b906cdacfdd56b0cb852451b452387d32968fcf",
+      "line_count": 8,
+      "sentence_units": 10
+    }
+  },
+  "Schema_hashes": {
+    "current_turn": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "semantic_draft_template": "306d5c5f8a9191a0923b100ef6d5ef4e0ff4fe1d98668e521dbe5b3b9fa86421",
+    "value_choice_template": "ae2cb6191e0bbf34e5fa39e11fc976414cf10c52df1d07a47bd820474aca0bf7"
+  },
+  "Catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "Candidate_hash": "d7668b20c8f611570829a6b4115d8c7dd5d19e4b051bc271e93810579276d007",
+  "Public_Dev_hash": "f7fe68dd3164bbbf50aba7b197db1c96547c8f9366dfde8fb23f5bffd47d4af1",
+  "Private_Validation_hash": "782c9c7b01a848d04f6a0ec72115b0f9979b6fd1e362050f6c05d7ec862732a2",
+  "Blind_Holdout_hash": "206dcc76c50852bb2fd810ab04e3a1c8131d88dad674d343b37f2b60285233d1",
+  "Full_Plan_Gold_hash": "8c20a794f9a5d7b3ff90cde44eb35b14b807c2b59750c5f1678fbb66e7210184",
+  "new_full_plan_runtime_input_hash": "ac8081d73e8dbd5db350be0ead095d0c1e61bcc50b2089b884bc8155d25d1d68",
+  "V1_Adapter_version": "v1-native-outcome-observer-v1",
+  "V2_Adapter_version": "runtime-evaluation-harness-v1",
+  "Full_Plan_Gold_version": "certified-full-semantic-plan-v1",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "as_of": "2026-09-09T09:00:00+08:00",
+  "timezone": "Asia/Shanghai",
+  "model_parameters": {
+    "model": "qwen3.7-max",
+    "thinking_mode": false,
+    "temperature": 0,
+    "top_p": "NOT_SENT_PROVIDER_DEFAULT",
+    "seed": "NOT_SENT_SUPPORT_UNVERIFIED",
+    "retry_policy": {
+      "max_retries": 0
+    },
+    "max_tokens": "NOT_SENT_PROVIDER_DEFAULT"
+  },
+  "snapshot_pins": [
+    "a34612e53b64200bb3f28e55d6721653251fd23d3adf9b0cdaecd87b37683ac2",
+    "593bd6f5e4efb2eaa913dd4e36766b6957ebe58f82bdc0f3603f3e9abf48bc27"
+  ],
+  "stage_model_requests": 20,
+  "blind_holdout_calls": 0,
+  "formal_model_benchmark": false,
+  "shadow": false,
+  "canary": false,
+  "Production_Semantic_Logic_changes": 0,
+  "Prompt_changes": 0,
+  "Schema_changes": 0,
+  "Candidate_Retrieval_Strategy_changes": 0,
+  "production_writes": 0,
+  "production_SQL_executions": 0,
+  "runtime_input_output_format_changes": 0,
+  "final_evidence_commit": "Commit containing git_commit_manifest.json; code/evaluator identity remains the HEAD above"
+}

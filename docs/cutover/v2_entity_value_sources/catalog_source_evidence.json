@@ -1,0 +1,32 @@
+{
+  "observed_at": "2026-09-08T15:32:18.587418+00:00",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_version": "b3106dea38f62738f5f2551e4667ceee6a0d3ba96f5e88ddd90e7ef746b88506",
+  "source_identity_hash": "88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1",
+  "status": "ACTUAL_METADATA_ONLY_CAPTURE_LOCAL_SOURCE_BINDING_CHECK",
+  "governed_value_fields": 89,
+  "distinct_source_routes": 1,
+  "declared_vectorization_counts": {
+    "None": 11,
+    "0": 52,
+    "1": 26
+  },
+  "attribute_mapping_outcomes": {
+    "VERIFIED_SOURCE_MAPPING": 89
+  },
+  "records_generated": 290,
+  "private_snapshot_committed": false,
+  "business_source_reads": 0,
+  "real_model_calls": 0,
+  "embedding_calls": 0,
+  "production_external_writes": 0,
+  "native_publication": false,
+  "live_entity_values_verified": false,
+  "configured_route_is_not_server_identity": true
+}

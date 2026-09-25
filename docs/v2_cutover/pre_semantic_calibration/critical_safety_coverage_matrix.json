@@ -1,0 +1,143 @@
+{
+  "rows": [
+    {
+      "check": "catalog_id_fabrication",
+      "evaluated_cases": 49,
+      "violations": 0,
+      "status": "PASS_ON_OBSERVED_AXES",
+      "coverage_complete": true,
+      "blocked_case_ids": [],
+      "blocker": "LIVE_PATH_COVERAGE_GAP",
+      "evidence": "PR53 critical_safety_report; component regression does not replace absent live path",
+      "next_action": "Execute independently labeled negative/contrast scenario on native state; do not use 0/0 as PASS"
+    },
+    {
+      "check": "clear_resurrection",
+      "evaluated_cases": 0,
+      "violations": 0,
+      "status": "INCOMPLETE_NO_COVERAGE",
+      "coverage_complete": true,
+      "blocked_case_ids": [],
+      "blocker": "LIVE_PATH_COVERAGE_GAP",
+      "evidence": "PR53 critical_safety_report; component regression does not replace absent live path",
+      "next_action": "Execute independently labeled negative/contrast scenario on native state; do not use 0/0 as PASS"
+    },
+    {
+      "check": "pending_hijack",
+      "evaluated_cases": 0,
+      "violations": 0,
+      "status": "INCOMPLETE_NO_COVERAGE",
+      "coverage_complete": false,
+      "blocked_case_ids": [
+        "S81-016"
+      ],
+      "blocker": "LIVE_PATH_COVERAGE_GAP",
+      "evidence": "PR53 critical_safety_report; component regression does not replace absent live path",
+      "next_action": "Execute independently labeled negative/contrast scenario on native state; do not use 0/0 as PASS"
+    },
+    {
+      "check": "remove_last_resurrection",
+      "evaluated_cases": 0,
+      "violations": 0,
+      "status": "INCOMPLETE_NO_COVERAGE",
+      "coverage_complete": true,
+      "blocked_case_ids": [],
+      "blocker": "LIVE_PATH_COVERAGE_GAP",
+      "evidence": "PR53 critical_safety_report; component regression does not replace absent live path",
+      "next_action": "Execute independently labeled negative/contrast scenario on native state; do not use 0/0 as PASS"
+    },
+    {
+      "check": "scope_expansion",
+      "evaluated_cases": 49,
+      "violations": 0,
+      "status": "PASS_ON_OBSERVED_AXES",
+      "coverage_complete": true,
+      "blocked_case_ids": [],
+      "blocker": "LIVE_PATH_COVERAGE_GAP",
+      "evidence": "PR53 critical_safety_report; component regression does not replace absent live path",
+      "next_action": "Execute independently labeled negative/contrast scenario on native state; do not use 0/0 as PASS"
+    },
+    {
+      "check": "unsafe_truncated_ranking",
+      "evaluated_cases": 0,
+      "violations": 0,
+      "status": "INCOMPLETE_NO_COVERAGE",
+      "coverage_complete": false,
+      "blocked_case_ids": [
+        "S81-018",
+        "S81-019",
+        "S81-020"
+      ],
+      "blocker": "BLOCKED_BY_IMPLEMENTATION_GAP",
+      "evidence": "PR53 critical_safety_report; component regression does not replace absent live path",
+      "next_action": "Execute independently labeled negative/contrast scenario on native state; do not use 0/0 as PASS"
+    },
+    {
+      "check": "wrong_inheritance",
+      "evaluated_cases": 7,
+      "violations": 0,
+      "status": "PASS_ON_OBSERVED_AXES",
+      "coverage_complete": false,
+      "blocked_case_ids": [
+        "S81-004",
+        "S81-005",
+        "S81-006",
+        "S81-007",
+        "S81-008",
+        "S81-009",
+        "S81-010",
+        "S81-012",
+        "S81-015",
+        "S81-016"
+      ],
+      "blocker": "LIVE_PATH_COVERAGE_GAP",
+      "evidence": "PR53 critical_safety_report; component regression does not replace absent live path",
+      "next_action": "Execute independently labeled negative/contrast scenario on native state; do not use 0/0 as PASS"
+    },
+    {
+      "check": "wrong_silent_auto_accept",
+      "evaluated_cases": 42,
+      "violations": 0,
+      "status": "PASS_ON_OBSERVED_AXES",
+      "coverage_complete": true,
+      "blocked_case_ids": [],
+      "blocker": "LIVE_PATH_COVERAGE_GAP",
+      "evidence": "PR53 critical_safety_report; component regression does not replace absent live path",
+      "next_action": "Execute independently labeled negative/contrast scenario on native state; do not use 0/0 as PASS"
+    },
+    {
+      "check": "cross_scope_binding",
+      "evaluated_cases": 0,
+      "violations": 0,
+      "status": "INCOMPLETE_NO_COVERAGE",
+      "coverage_complete": false,
+      "blocker": "LIVE_CROSS_SCOPE_FIXTURE_REQUIRED",
+      "evidence": "test_v2_authorized_catalog_bridge.py / test_v2_pending_recognition.py component rejection tests",
+      "next_action": "Use genuine scope-bound artifact and changed current request; executed Dataset integration is required for Dataset path"
+    },
+    {
+      "check": "cross_scope_pending",
+      "evaluated_cases": 0,
+      "violations": 0,
+      "status": "INCOMPLETE_NO_COVERAGE",
+      "coverage_complete": false,
+      "blocker": "LIVE_CROSS_SCOPE_FIXTURE_REQUIRED",
+      "evidence": "test_v2_authorized_catalog_bridge.py / test_v2_pending_recognition.py component rejection tests",
+      "next_action": "Use genuine scope-bound artifact and changed current request; executed Dataset integration is required for Dataset path"
+    },
+    {
+      "check": "cross_scope_dataset",
+      "evaluated_cases": 0,
+      "violations": 0,
+      "status": "INCOMPLETE_NO_COVERAGE",
+      "coverage_complete": false,
+      "blocker": "BLOCKED_BY_IMPLEMENTATION_GAP",
+      "evidence": "test_v2_authorized_catalog_bridge.py / test_v2_pending_recognition.py component rejection tests",
+      "next_action": "Use genuine scope-bound artifact and changed current request; executed Dataset integration is required for Dataset path"
+    }
+  ],
+  "overall": "INCOMPLETE",
+  "zero_denominator_never_passes": true,
+  "new_C205": "CLEAR operation observed, but no later turn in this case proves resurrection resistance; not counted as that safety path",
+  "new_inputs_do_not_replace_required_safety_cases": true
+}

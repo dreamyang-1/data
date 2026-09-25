@@ -1,0 +1,40 @@
+{
+  "status": "ROUND_2_4_ENTITY_PIPELINE_FAILURE",
+  "baseline_commit": "195ab12de7fce571d49606284d5003e3ab370685",
+  "branch": "v2-real-source-value-round2-4-20260912T041452Z",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [205],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "private_evidence": {
+    "source_value_observation_sha256": "e542191c54df5b71ff5ceccb899a3632b9c9bd9d5382d11513c22d242b93521c",
+    "source_receipt_sha256": "8d7d55275aa425091f48a73910560f6aba732e2e709f8392a026a51c979b8239",
+    "acquisition_result_sha256": "a3b8332a376cd93a5583b9e7e2c31ef623bd3d002dec71fc7d3a76c5fd9b9f59",
+    "offline_replay_sha256": "f2b0cd4ceb4b6051e38aee6830b93f4cb761886dd9ec0165ef1f2d49d7cd4b9c",
+    "offline_gate_sha256": "01ef5ddc3bd121452409981d53a53fd494bf9fda6ad0a9f2a6a1571a2942fcdd",
+    "targeted_result_sha256": "ac6e5be07f59dc6fe82404d15525a7930cd4b71817748d0af0200ab2a46890fe",
+    "targeted_analysis_sha256": "34fdab67895594b144ee04b875157b1a0a55ede785d0363372eb88c177ea5d23",
+    "round_manifest_sha256": "6d8496306b3741b46eb38032b8b576e7cdb127745276e3aaa6354b8b1da6cd63"
+  },
+  "results": {
+    "source_value_proof": "FOUND_UNIQUE",
+    "offline_replay": "ROUND24_OFFLINE_ENTITY_CLOSURE_PASS",
+    "related_tests": "219_PASSED",
+    "real_targeted": "RB50_37_REAL_TARGETED_FAIL",
+    "first_failure_stage": "SEMANTIC_EDITS_DYNAMIC_SCHEMA_VALIDATION",
+    "final_classification": "SAFE_REJECT_MODEL_DYNAMIC_SCHEMA_VIOLATION"
+  },
+  "calls": {
+    "source_read_operations": 1,
+    "offline_model_calls": 0,
+    "targeted_current_turn_calls": 1,
+    "targeted_semantic_edits_calls": 1,
+    "retry": 0,
+    "targeted_sql_calls": 0,
+    "production_writes": 0
+  },
+  "introducing_commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_context_benchmark/failure_closure_round2_4/evidence_index.json"
+}

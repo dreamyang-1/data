@@ -1,0 +1,37 @@
+{
+  "status": "EXECUTION_BACKED_ANCHOR_TIME_EDIT_OFFLINE_GATE_PASS",
+  "baseline": {
+    "passed": 300,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "final": {
+    "passed": 314,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "focused_module": {
+    "passed": 33,
+    "failed": 0
+  },
+  "new_tests": 14,
+  "old_pass_to_new_fail": 0,
+  "diagnostic_calls": {
+    "current_turn": 1,
+    "semantic_edits": 0,
+    "v1": 0,
+    "oagent": 0,
+    "sql": 0,
+    "state_writes": 0
+  },
+  "benchmark_runs": 0,
+  "runtime_validation": {
+    "anchor_time_edit": "PASS_REAL_PLATFORM",
+    "first_turn": "COMPLETED_QUERY_RESULT_22_ROWS_ANCHOR_CREATED",
+    "followup_completed_question": "PASS",
+    "first_downstream_failure": "OAGENT_EXECUTION_SCOPE_UNRESOLVED",
+    "oagent_reached_on_followup": false,
+    "sql_translator_reached_on_followup": false,
+    "db_reached_on_followup": false
+  }
+}

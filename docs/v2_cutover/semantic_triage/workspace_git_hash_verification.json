@@ -1,0 +1,10 @@
+{
+  "status": "PASS_PRECOMMIT_ALIGNMENT",
+  "baseline_commit": "0e408509126aae0a3a324aff02aef848fd0d3c56",
+  "feature_branch": "semantic-cutover-triage-20260909t074900z",
+  "tracked_and_manifest_files": 1340,
+  "unexpected_source_drift": 0,
+  "normalization": "CRLF to LF only",
+  "post_commit_gate": "Every mapped development file = repository file = Git blob; clean tree; original Oagnet HEAD/index preserved",
+  "source_hash_policy": "Only source/document file SHA-256 normalizes line endings; frozen input/canonical JSON digests unchanged"
+}

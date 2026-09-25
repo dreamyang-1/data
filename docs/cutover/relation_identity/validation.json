@@ -1,0 +1,38 @@
+{
+  "checks": {
+    "snapshot_unchanged": "PASS",
+    "actual_missing_declarations": "PASS",
+    "digest_drift_rejected": "PASS",
+    "declaration_not_auto_proof": "PASS",
+    "scope_mismatch_rejected": "PASS",
+    "string_zero_not_true": "PASS"
+  },
+  "runtime_code_changed": false,
+  "full_suite_rerun": false,
+  "baseline_commit": "011a7193f5eafda1101255209129b4d4e2ad4f94",
+  "baseline_regression_evidence": "docs/cutover/pinned_relation_endpoints/test_delta.json",
+  "last_verified_full_regression": {
+    "DataAnalysis_Agent": {
+      "passed": 2697,
+      "failed": 27
+    },
+    "Oagnet": {
+      "passed": 663,
+      "failed": 8
+    },
+    "SQL_Translator": {
+      "passed": 381,
+      "failed": 0
+    }
+  },
+  "last_verified_critical": {
+    "passed": 160,
+    "total": 160
+  },
+  "last_verified_clarification_trace": {
+    "with_reason": 89,
+    "total": 89
+  },
+  "assertion": "These full-suite numbers are prior evidence at the unchanged runtime source baseline; they are not a new full-suite run.",
+  "runtime_source_verification": "Explicit sync rejects changes to any tracked source outside the five readiness documents and this audit directory. Post-commit verification checks every tracked blob."
+}

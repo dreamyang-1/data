@@ -1,0 +1,73 @@
+[
+  {
+    "case_id": "S81-014",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "555124263d7033efd935a74999404c505626f3862dfe6bc1cbd1c8fb6d01276f",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_PAYLOAD_WOULD_DROP_BINDING",
+      "first_rejecting_boundary": "RAW_TURN_CONTRACT"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "UNCHANGED_RECORDING"
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 0,
+    "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+    "source_capture_hash": "555124263d7033efd935a74999404c505626f3862dfe6bc1cbd1c8fb6d01276f",
+    "oracle_outputs_hash": "07a3beb714b73892fbdd12d309c74d66d3fd85c9a77b0b5b734e1c92e37fed89",
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": true
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": false,
+        "output_changed": true
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "REDUNDANT_SUBJECT_STATE_OUTPUT_ORACLE",
+    "time_observation": {
+      "anchor_code": "created_date",
+      "anchor_role": "TIME_FIELD",
+      "range": {
+        "start": "2024-12-31T16:00:00Z",
+        "end_exclusive": "2025-12-31T16:00:00Z"
+      },
+      "timezone": "Asia/Shanghai",
+      "grain": "NONE",
+      "payload_type": "SCALAR_AGGREGATE"
+    }
+  }
+]

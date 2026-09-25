@@ -1,0 +1,874 @@
+{
+  "contract": "semantic-axis-evaluation-v1",
+  "cases": 100,
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "missing_or_failed_predictions": 0,
+  "metrics": {
+    "critical_mention_recall": {
+      "passed": 79,
+      "denominator": 89,
+      "value": 0.8876404494382022
+    },
+    "critical_role_purity": {
+      "passed": 70,
+      "denominator": 89,
+      "value": 0.7865168539325843
+    },
+    "critical_role_recall": {
+      "passed": 79,
+      "denominator": 89,
+      "value": 0.8876404494382022
+    },
+    "operation": {
+      "passed": 11,
+      "denominator": 13,
+      "value": 0.8461538461538461
+    },
+    "query_shape": {
+      "passed": 41,
+      "denominator": 56,
+      "value": 0.7321428571428571
+    },
+    "turn_relation": {
+      "passed": 67,
+      "denominator": 72,
+      "value": 0.9305555555555556
+    }
+  },
+  "unlabeled_axes": [
+    "SQL_EXECUTION",
+    "RESULT_ACCURACY",
+    "FULL_STATE_MUTATION",
+    "CANONICAL_BINDING",
+    "EXACT_ENTITY_COUNT"
+  ],
+  "critical_mention_precision": "NOT_LABELED",
+  "end_to_end_acceptance": "NOT_EVALUATED",
+  "production_cutover_pass": false,
+  "details": [
+    {
+      "case_id": "G81-001",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-002",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-003",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-004",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-005",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-006",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-007",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-008",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-009",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-010",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-011",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-012",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-013",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-014",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-015",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-016",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-017",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-018",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-019",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-020",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-021",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-022",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-023",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-024",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-025",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-026",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-027",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-028",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-029",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-030",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-031",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-032",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-033",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-034",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-035",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-036",
+      "axes": {
+        "query_shape": true,
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-037",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-038",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-039",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-040",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-041",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-042",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-043",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-044",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-045",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-046",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-047",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-048",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-049",
+      "axes": {
+        "turn_relation": true,
+        "mentions": true,
+        "query_shape": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-050",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-051",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-052",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-053",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-054",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-055",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-056",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-057",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-058",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-059",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-060",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-061",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-062",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-063",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-064",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-065",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-066",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-067",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-068",
+      "axes": {
+        "turn_relation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-069",
+      "axes": {
+        "turn_relation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-070",
+      "axes": {
+        "turn_relation": true,
+        "operation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-071",
+      "axes": {
+        "turn_relation": false,
+        "operation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-072",
+      "axes": {
+        "turn_relation": true,
+        "operation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-073",
+      "axes": {
+        "turn_relation": false,
+        "operation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-074",
+      "axes": {
+        "turn_relation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-075",
+      "axes": {
+        "turn_relation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-076",
+      "axes": {
+        "turn_relation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-077",
+      "axes": {
+        "turn_relation": true,
+        "operation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-078",
+      "axes": {
+        "turn_relation": true,
+        "operation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-079",
+      "axes": {
+        "turn_relation": true,
+        "operation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-080",
+      "axes": {
+        "turn_relation": true,
+        "operation": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-081",
+      "axes": {
+        "turn_relation": true,
+        "operation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-082",
+      "axes": {
+        "turn_relation": false,
+        "operation": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-083",
+      "axes": {
+        "turn_relation": true,
+        "operation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-084",
+      "axes": {
+        "turn_relation": false,
+        "operation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-085",
+      "axes": {
+        "turn_relation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-086",
+      "axes": {
+        "turn_relation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-087",
+      "axes": {
+        "turn_relation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-088",
+      "axes": {
+        "turn_relation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-089",
+      "axes": {
+        "turn_relation": true,
+        "operation": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-090",
+      "axes": {
+        "turn_relation": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-091",
+      "axes": {
+        "query_shape": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-092",
+      "axes": {
+        "query_shape": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-093",
+      "axes": {
+        "query_shape": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-094",
+      "axes": {
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-095",
+      "axes": {
+        "query_shape": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-096",
+      "axes": {
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-097",
+      "axes": {
+        "query_shape": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-098",
+      "axes": {
+        "query_shape": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-099",
+      "axes": {
+        "query_shape": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-100",
+      "axes": {
+        "query_shape": true,
+        "mentions": true
+      },
+      "prediction_status": "OK"
+    }
+  ]
+}

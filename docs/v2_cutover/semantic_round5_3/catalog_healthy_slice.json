@@ -1,0 +1,227 @@
+{
+  "version": "catalog-healthy-live-context-slice-v2",
+  "split": "PUBLIC_DEV",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ]
+  },
+  "clock": "2026-09-09T09:00:00+08:00",
+  "seed_capture_hash": "ed632fcddf8d768ec94ea4634e38b5afec87fa7d40a97d92c16bbe19299605dc",
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "metric_contracts": {
+    "order_count": "sales_order.created_date",
+    "sales_total_quantity": "sales_order.created_date"
+  },
+  "source_values": "Frozen exact province values plus current indexed city candidates; full receipts private",
+  "cases": [
+    {
+      "case_id": "HC53-A",
+      "capability": "REGION_REPLACE",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "换成北京市"
+      ],
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "expected_target": "SEED",
+      "status": "NOT_RUN",
+      "precondition": "ACTUAL_LIVE_D_PREFIX",
+      "expected_source": "CATALOG_PROVEN + USER_CONTRACT",
+      "blocker": "LIVE_BUDGET_REMAINDER_LT_COMPLETE_REQUEST"
+    },
+    {
+      "case_id": "HC53-B",
+      "capability": "TIME_REPLACE",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "换今年"
+      ],
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "expected_target": "SEED",
+      "status": "NOT_RUN",
+      "precondition": "ACTUAL_LIVE_D_PREFIX",
+      "expected_source": "CATALOG_PROVEN + USER_CONTRACT",
+      "blocker": "LIVE_BUDGET_REMAINDER_LT_COMPLETE_REQUEST"
+    },
+    {
+      "case_id": "HC53-C",
+      "capability": "ADD",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "再加销售总数量"
+      ],
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "expected_target": "SEED",
+      "status": "NOT_RUN",
+      "precondition": "ACTUAL_LIVE_D_PREFIX",
+      "expected_source": "CATALOG_PROVEN + USER_CONTRACT",
+      "blocker": "LIVE_BUDGET_REMAINDER_LT_COMPLETE_REQUEST"
+    },
+    {
+      "case_id": "HC53-D",
+      "capability": "REMOVE",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "再加销售总数量",
+        "不要销售总数量"
+      ],
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "expected_target": "SEED",
+      "status": "NOT_RUN",
+      "precondition": "ACTUAL_LIVE_D_PREFIX",
+      "expected_source": "CATALOG_PROVEN + USER_CONTRACT",
+      "blocker": "LIVE_BUDGET_REMAINDER_LT_COMPLETE_REQUEST"
+    },
+    {
+      "case_id": "HC53-E",
+      "capability": "CLEAR_NO_RESURRECTION",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "不限地区",
+        "换今年"
+      ],
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "expected_target": "SEED",
+      "status": "NOT_RUN",
+      "precondition": "ACTUAL_LIVE_D_PREFIX",
+      "expected_source": "CATALOG_PROVEN + USER_CONTRACT",
+      "blocker": "LIVE_BUDGET_REMAINDER_LT_COMPLETE_REQUEST"
+    },
+    {
+      "case_id": "HC53-F",
+      "capability": "NEW_TASK",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "查询今年北京市销售总数量"
+      ],
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "expected_target": "NEW",
+      "status": "NOT_RUN",
+      "precondition": "ACTUAL_LIVE_D_PREFIX",
+      "expected_source": "CATALOG_PROVEN + USER_CONTRACT",
+      "blocker": "LIVE_BUDGET_REMAINDER_LT_COMPLETE_REQUEST"
+    },
+    {
+      "case_id": "HC53-G",
+      "capability": "HISTORICAL_RETURN",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "查询今年北京市销售总数量",
+        "返回刚才江苏订单笔数那个任务"
+      ],
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "expected_target": "SEED",
+      "status": "NOT_RUN",
+      "precondition": "ACTUAL_LIVE_D_PREFIX",
+      "expected_source": "CATALOG_PROVEN + USER_CONTRACT",
+      "blocker": "LIVE_BUDGET_REMAINDER_LT_COMPLETE_REQUEST"
+    },
+    {
+      "case_id": "HC53-H",
+      "capability": "PENDING_NEW_TASK",
+      "utterances": [
+        "查询今年北京市订单笔数"
+      ],
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "expected_target": "NEW",
+      "status": "NOT_RUN",
+      "precondition": "NATIVE_USER_DECLARED_PENDING",
+      "expected_source": "CATALOG_PROVEN + USER_CONTRACT",
+      "blocker": "LIVE_BUDGET_REMAINDER_LT_COMPLETE_REQUEST"
+    },
+    {
+      "case_id": "HC53-I",
+      "capability": "TRUE_AMBIGUITY",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "查询今年北京市销售总数量",
+        "前面两个任务选一个继续，具体哪个我还没确定"
+      ],
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "expected_target": "CLARIFICATION",
+      "status": "NOT_RUN",
+      "precondition": "ACTUAL_LIVE_D_PREFIX",
+      "expected_source": "CATALOG_PROVEN + USER_CONTRACT",
+      "blocker": "LIVE_BUDGET_REMAINDER_LT_COMPLETE_REQUEST"
+    },
+    {
+      "case_id": "HC53-J",
+      "capability": "SELF_CONTAINED_NEW_TASK",
+      "utterances": [
+        "查询去年江苏订单笔数",
+        "查询今年北京市订单笔数"
+      ],
+      "scope": {
+        "semantic_model_id": 81,
+        "business_domain_ids": [
+          205
+        ]
+      },
+      "clock": "2026-09-09T09:00:00+08:00",
+      "expected_target": "NEW",
+      "status": "NOT_RUN",
+      "precondition": "ACTUAL_LIVE_D_PREFIX",
+      "expected_source": "CATALOG_PROVEN + USER_CONTRACT",
+      "blocker": "LIVE_BUDGET_REMAINDER_LT_COMPLETE_REQUEST"
+    }
+  ],
+  "original_gold_unchanged": true,
+  "whole_plan_gold": false,
+  "invalid_previous_definition_hash": "2d58516336a2fd6e6d00efc5e03cdac4218a6091271bd3d343fcb20e47895103",
+  "definition_hash": "4d10bc0aa0a50f88225827718acaae7261178d49a139783a5bc8cbb2de5847ca"
+}

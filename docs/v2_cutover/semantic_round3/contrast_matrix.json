@@ -1,0 +1,277 @@
+{
+  "cases": [
+    {
+      "id": 1,
+      "scenario": "??????",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_followup_critical_slice.py::test_context_followup_critical_slice[CFCS-01]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 2,
+      "scenario": "ADD metric",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_followup_critical_slice.py::test_context_followup_critical_slice[CFCS-02]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 3,
+      "scenario": "REMOVE metric",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_followup_critical_slice.py::test_context_followup_critical_slice[CFCS-03]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 4,
+      "scenario": "CLEAR ????",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_followup_critical_slice.py::test_context_followup_critical_slice[CFCS-04]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 5,
+      "scenario": "?? REMOVE",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_followup_critical_slice.py::test_context_followup_critical_slice[CFCS-05]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 6,
+      "scenario": "?? REPLACE ??",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_followup_critical_slice.py::test_context_followup_critical_slice[CFCS-06]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 7,
+      "scenario": "?? New Task",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_round3.py::test_complete_new_metric_time_request_keeps_old_region_out"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 8,
+      "scenario": "?? New Task",
+      "status": "CONTROLLED_COUNTERFACTUAL_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_round3.py::test_model_arm_new_task_does_not_inherit"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 9,
+      "scenario": "???? Follow-up",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_round3.py::test_complete_metric_and_time_still_follow_model_reference"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 10,
+      "scenario": "operation-like ???? New Task",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_operation_round1.py::test_operation_like_business_word_does_not_force_followup"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 11,
+      "scenario": "Historical Return",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_raw_turn_recognition.py::test_historical_task_selected_only_from_scoped_offer"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 12,
+      "scenario": "A ? B ? A",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_followup_critical_slice.py::test_context_followup_critical_slice[CFCS-07]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 13,
+      "scenario": "Pending Response",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_pending_recognition.py::test_exact_answer_resumes_same_task_and_compiles[name]",
+        "tests/test_v2_pending_recognition.py::test_exact_answer_resumes_same_task_and_compiles[id]",
+        "tests/test_v2_pending_recognition.py::test_exact_answer_resumes_same_task_and_compiles[1]",
+        "tests/test_v2_pending_recognition.py::test_exact_answer_resumes_same_task_and_compiles[\\u7b2c\\u4e00\\u4e2a]",
+        "tests/test_v2_pending_recognition.py::test_exact_answer_resumes_same_task_and_compiles[\\u6211\\u9009\\u62e9\\u7b2c\\u4e00\\u9879]",
+        "tests/test_v2_pending_recognition.py::test_exact_answer_resumes_same_task_and_compiles[\\u7528\\u4e00\\u6761]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 14,
+      "scenario": "Pending ?? New Task",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_followup_critical_slice.py::test_context_followup_critical_slice[CFCS-08]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 15,
+      "scenario": "Correction act ??",
+      "status": "CONTROLLED_PRECEDENCE_GAP_CONFIRMED",
+      "test_nodeids": [
+        "tests/test_v2_context_round3.py::test_act_only_ablation_exposes_unconsumed_model_signal_without_changing_production[CORRECT]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 16,
+      "scenario": "??????????",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_round3.py::test_complete_metric_and_time_still_follow_model_reference"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 17,
+      "scenario": "????????",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_followup_critical_slice.py::test_context_followup_critical_slice[CFCS-01]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 18,
+      "scenario": "CLEAR ????",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[INHERIT-CLEAR]",
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[INHERIT-REMOVE]",
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[TIME-CLEAR]",
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[TIME-REMOVE]",
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[ADD-CLEAR]",
+        "tests/test_v2_operation_round1.py::test_explicit_empty_filter_survives_followup_with_versions_and_provenance[ADD-REMOVE]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 19,
+      "scenario": "?? Scope ??",
+      "status": "CONTROLLED_NATIVE_SAFE_REJECT",
+      "test_nodeids": [
+        "tests/test_v2_operation_round1.py::test_cross_scope_operation_rejected_before_model_and_state_mutation"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 20,
+      "scenario": "??? Scope",
+      "status": "CONTROLLED_NATIVE_SAFE_REJECT",
+      "test_nodeids": [
+        "tests/test_v2_raw_turn_recognition.py::test_scope_change_rejected_before_history_reaches_model"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 21,
+      "scenario": "Follow-up ? target",
+      "status": "CONTROLLED_NATIVE_SAFE_REJECT",
+      "test_nodeids": [
+        "tests/test_v2_context_round3.py::test_context_with_missing_active_task_fails_closed"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 22,
+      "scenario": "Historical ????",
+      "status": "CONTROLLED_NATIVE_SAFE_REJECT",
+      "test_nodeids": [
+        "tests/test_v2_raw_turn_recognition.py::test_generation_constraint_does_not_remove_runtime_history_guard"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 23,
+      "scenario": "????/???????",
+      "status": "STRUCTURAL_EXPOSURE_ONLY; actual LLM anti-pollution unproven",
+      "test_nodeids": [
+        "tests/test_v2_context_round3.py::test_historical_exposure_is_gated_before_context_aware_model"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 24,
+      "scenario": "??????",
+      "status": "CATALOG_AMBIGUITY_NATIVE_PASS; independent task-reference ambiguity proposal absent",
+      "test_nodeids": [
+        "tests/test_v2_pending_recognition.py::test_governed_ambiguity_creates_traced_provisional_task"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 25,
+      "scenario": "? Metric ??? Follow-up",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_followup_critical_slice.py::test_context_followup_critical_slice[CFCS-01]"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    },
+    {
+      "id": 26,
+      "scenario": "?? Metric/Time ?????",
+      "status": "CONTROLLED_NATIVE_PASS",
+      "test_nodeids": [
+        "tests/test_v2_context_round3.py::test_complete_metric_and_time_still_follow_model_reference"
+      ],
+      "scope": "81/[205] fixture or explicit scope rejection control",
+      "live_model_accuracy_claimed": false
+    }
+  ],
+  "count": 26,
+  "all_listed_tests_executed": true,
+  "full_runtime_or_live_coverage_claimed": false
+}

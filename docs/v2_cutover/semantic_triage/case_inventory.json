@@ -1,0 +1,4581 @@
+[
+  {
+    "case_id": "G81-001",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出产品线名单",
+    "history": [],
+    "first_divergence_stage": "QUERY_SHAPE",
+    "root_cause_id": "RC-SHAPE-LIST",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Plain entity name/list requests predict RELATION_LIST without a stated relationship instead of DETAIL_ROWS. Span-failed list cases are counted only under their earlier boundary cause.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "1912826ba3cd9343bb333052a1aa3bea1aa509dfd16b0f4d1c77998ca880d255",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-002",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出科室名单",
+    "history": [],
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "root_cause_id": "RC-BOUNDARY-OBJECT",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Current semantic spans absorb list/record/relation cue text into the entity object; exact catalog surface is no longer a separate mention.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": false
+    },
+    "downstream_effect": [
+      {
+        "stage": "QUERY_SHAPE",
+        "evidence": "Recorded parser axis mismatch",
+        "axis": "query_shape",
+        "causal_order": "Co-observed proxy; not an independently counted production defect"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "975696fd089f95abd226c4ef372e99b2559f96e6c04c1f4eb3ee307191ce1f11",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-003",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出城市名单",
+    "history": [],
+    "first_divergence_stage": "QUERY_SHAPE",
+    "root_cause_id": "RC-SHAPE-LIST",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Plain entity name/list requests predict RELATION_LIST without a stated relationship instead of DETAIL_ROWS. Span-failed list cases are counted only under their earlier boundary cause.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "0580571cc9b88987e9fa327ac6e8bd645c3c98ad36060298c0382ae1c6da2d20",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-004",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出商品科室关联记录",
+    "history": [],
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "root_cause_id": "RC-BOUNDARY-OBJECT",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Current semantic spans absorb list/record/relation cue text into the entity object; exact catalog surface is no longer a separate mention.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": false
+    },
+    "downstream_effect": [
+      {
+        "stage": "QUERY_SHAPE",
+        "evidence": "Recorded parser axis mismatch",
+        "axis": "query_shape",
+        "causal_order": "Co-observed proxy; not an independently counted production defect"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "2b3907a3568bc191f549893c8f715f61fe265880b3618ba9a8228951617c0e32",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-005",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出商品名单",
+    "history": [],
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "root_cause_id": "RC-BOUNDARY-OBJECT",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Current semantic spans absorb list/record/relation cue text into the entity object; exact catalog surface is no longer a separate mention.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": false
+    },
+    "downstream_effect": [
+      {
+        "stage": "QUERY_SHAPE",
+        "evidence": "Recorded parser axis mismatch",
+        "axis": "query_shape",
+        "causal_order": "Co-observed proxy; not an independently counted production defect"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "2b149f478529938823272a5263c9bdb7a7ad50c16c028daa8c4a89d4813164c8",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-006",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出销售订单记录",
+    "history": [],
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "root_cause_id": "RC-BOUNDARY-OBJECT",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Current semantic spans absorb list/record/relation cue text into the entity object; exact catalog surface is no longer a separate mention.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": false
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "8ae60fb2a2014c5b20a18a23a2fe106ecc3104339dd94a2be37301311c5f2def",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-007",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出经销商名单",
+    "history": [],
+    "first_divergence_stage": "QUERY_SHAPE",
+    "root_cause_id": "RC-SHAPE-LIST",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Plain entity name/list requests predict RELATION_LIST without a stated relationship instead of DETAIL_ROWS. Span-failed list cases are counted only under their earlier boundary cause.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "c06289110f353a29aa721f7eadbf562e00d81a2b154e1dbd1e90007b2da526a9",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-008",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出生产厂家名单",
+    "history": [],
+    "first_divergence_stage": "QUERY_SHAPE",
+    "root_cause_id": "RC-SHAPE-LIST",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Plain entity name/list requests predict RELATION_LIST without a stated relationship instead of DETAIL_ROWS. Span-failed list cases are counted only under their earlier boundary cause.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "1051a3e929e644300bb2b51c116844916c227aef6e7490fbe255a50fdc4a0a7f",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-009",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出销售项目名单",
+    "history": [],
+    "first_divergence_stage": "QUERY_SHAPE",
+    "root_cause_id": "RC-SHAPE-LIST",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Plain entity name/list requests predict RELATION_LIST without a stated relationship instead of DETAIL_ROWS. Span-failed list cases are counted only under their earlier boundary cause.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "89c6798db3bbc9f7bc9d62c64d5d7e99e345746ce1bb4afa5c9b67b53edb2957",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-010",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出销售公司名单",
+    "history": [],
+    "first_divergence_stage": "QUERY_SHAPE",
+    "root_cause_id": "RC-SHAPE-LIST",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Plain entity name/list requests predict RELATION_LIST without a stated relationship instead of DETAIL_ROWS. Span-failed list cases are counted only under their earlier boundary cause.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "4ec3e7c391ef39804d9e479ef5e830c9becbfd7f120a78db1b2cf6f33b4e6fda",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-011",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出业务员名单",
+    "history": [],
+    "first_divergence_stage": "QUERY_SHAPE",
+    "root_cause_id": "RC-SHAPE-LIST",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Plain entity name/list requests predict RELATION_LIST without a stated relationship instead of DETAIL_ROWS. Span-failed list cases are counted only under their earlier boundary cause.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "6fca2169773a9dd8aae574c1da7ee038394a910e1e1b1c6d4f61b1c895c99805",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-012",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出省份名单",
+    "history": [],
+    "first_divergence_stage": "QUERY_SHAPE",
+    "root_cause_id": "RC-SHAPE-LIST",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Plain entity name/list requests predict RELATION_LIST without a stated relationship instead of DETAIL_ROWS. Span-failed list cases are counted only under their earlier boundary cause.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "f6b911fb0f12a3200554c9e32dcc2c001c907c4c5153a63b73a5e485089e0910",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-013",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出产品分类名单",
+    "history": [],
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "root_cause_id": "RC-BOUNDARY-OBJECT",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Current semantic spans absorb list/record/relation cue text into the entity object; exact catalog surface is no longer a separate mention.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": false
+    },
+    "downstream_effect": [
+      {
+        "stage": "QUERY_SHAPE",
+        "evidence": "Recorded parser axis mismatch",
+        "axis": "query_shape",
+        "causal_order": "Co-observed proxy; not an independently counted production defect"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "edc1860086917663a04f38b8f456b10f9a31c86d6eb7b19039d97e8059ad9159",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-014",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出医院名单",
+    "history": [],
+    "first_divergence_stage": "QUERY_SHAPE",
+    "root_cause_id": "RC-SHAPE-LIST",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Plain entity name/list requests predict RELATION_LIST without a stated relationship instead of DETAIL_ROWS. Span-failed list cases are counted only under their earlier boundary cause.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "282b1494d0301c40a2370ebd5fa4ad42c44570806b75819dc4f11bff18038ea1",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-015",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "查询含税销售总额",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "a39bd2775adcb59b39305852d2307c22cf02cf0eaa9a9079a84b2b79d603f568",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-016",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "请告诉我含税销售总额",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "f4c389d390516f323c79b0c6f756eba2a1b0ff23cdd1871925cb8d20a6374c02",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-017",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "查询不含税销售总额",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "f7efe0a7739244ae27b9ae2ddaf961b797dc1b1aadf2b31c5975b4838f2797c0",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-018",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "请告诉我不含税销售总额",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "d7b804ec823472925e28ae171248ca4db6f0f247153aae365e83921df90b941f",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-019",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "查询销售总成本",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "243b00ca8bf23181a481bf759429643d5d55c2a9305ef96796f29a211f4afcc7",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-020",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "请告诉我销售总成本",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "519204809a695f2d199467d498e918993fe27527c4effdd47bd4b2bf95409705",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-021",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "查询销售总数量",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "20b8a61d09f158cba764483a41beb8514a9954247ebf7c7c5ae2766f81660410",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-022",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "请告诉我销售总数量",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "beb8bc0dc906ce8ffb55dc9ce05d763d5e28aba7bfb89d1c2b4df7cc2940e214",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-023",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "查询订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "8fc0e9529ef0cf8d05bf27a4f28f9badfb8b839da1073cef5f6780217dece8bc",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-024",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "请告诉我订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "06d0789a54ead104519f791173e48cb6fe836979f4ab7a4708f9fdfd7b06420e",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-025",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "查询已合作经销商数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "3a405431f96529607390b3db642498ed5b7b4ff3b3aefcc3af85c6754f7f10c6",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-026",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "请告诉我已合作经销商数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "81189a431aab48daaf7e7b0b2476a2aa0a5de1099d21b0534fb65b72536a62e7",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-027",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "查询已合作医院数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "aec6d8978d451532ac5879238d12c431ecb5cd235d50a2b9dc86d9f66d79a42f",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-028",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "请告诉我已合作医院数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "94aba53b52a4f584176e5bf7593337dc4e0a73944b172084c22c6c5c76cfb24f",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-029",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "查询区域全部医院总数",
+    "history": [],
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "root_cause_id": "RC-BOUNDARY-METRIC",
+    "severity": "P0",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "One exact governed compound metric is split into entity/filter/measure pieces. Current recovery deliberately requires contiguous compatible pieces; these captures do not satisfy it.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": false
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "6e97a374df74a3bdc3a21c6be9b0dfcef04aaf9a7bbfc7f1f21f8d24b912ef17",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-030",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "请告诉我区域全部医院总数",
+    "history": [],
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "root_cause_id": "RC-BOUNDARY-METRIC",
+    "severity": "P0",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "One exact governed compound metric is split into entity/filter/measure pieces. Current recovery deliberately requires contiguous compatible pieces; these captures do not satisfy it.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": false
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "95e63f008c1f0977bb4438707fd50e6fe787afa35c9373c4d544f1c11474f7ac",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-031",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "查询合作时长",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "5be40d879ee3a8d83b242a7ebc4738e978ceb2c8e374414e4093b74a478609df",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-032",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "请告诉我合作时长",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "5caecb5825fe8da2e75648863eb0297446644f171476221745503ae6b8c25db9",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-033",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "查询医院下属科室数量",
+    "history": [],
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "root_cause_id": "RC-BOUNDARY-METRIC",
+    "severity": "P0",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "One exact governed compound metric is split into entity/filter/measure pieces. Current recovery deliberately requires contiguous compatible pieces; these captures do not satisfy it.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": false
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "a84c1626406f02ae85e3be316131882766c758d2c0464abe6b9cff1719dc7f43",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-034",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "请告诉我医院下属科室数量",
+    "history": [],
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "root_cause_id": "RC-BOUNDARY-METRIC",
+    "severity": "P0",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "One exact governed compound metric is split into entity/filter/measure pieces. Current recovery deliberately requires contiguous compatible pieces; these captures do not satisfy it.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": false
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "c356c6979383f6af282e2f0808076d1155b1f43973dd70d17c5f3687ef678f98",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-035",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "查询区域医院覆盖率",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "1a6b92f8416061effb51dc3bebface4301adae6c8895b1f8d926908ce1195af0",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-036",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "请告诉我区域医院覆盖率",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "93c359660acc0a6b11fc79fd18e6c1930f92c63cb88231c10b6b4e5986d4805e",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-037",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按医院等级统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "c0e6bb9aff6675ab4f03aa8032fea912ac61a9a989df767615b99e2463b64394",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-038",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按渠道业态统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "0372e7e88f077116c3f1b453a8deb94661caf1e0c2b32fad02bdecf626e8d6a3",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-039",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按交易日期统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "e3b17f71ec2887db42a998f5505303fa29cf01c586644d600159c4e9f535344e",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-040",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按商品统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "bc50b5675b4c68512afb038e4b7f42bffcf1bbfe6930999773d932ec7cc48c53",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-041",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按经销商统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "4e6eb9a0bd222c453b4bda6059486fc1330eb7821d4820bc0e450fa2caa267d1",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-042",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按医院统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "254107252ec27f02b33195537d74341f23d76a7bf66701b922691506e1907f9e",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-043",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按业务员统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "29bfdaa7958fe9bc95b2b7d0388ec3cc47db6d75b56b4388f5d8c887cf382cc2",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-044",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按省份统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "7d87f766ce67795f3a3922aac85536b578d90ef95c0ce07b4f08407d521c759b",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-045",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按城市统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "6b77cbddea17c0b606f210d05a4a32979fb066da2c1444eeefdfbf8a68723366",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-046",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按商品品牌统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "80b064e245720318474aedc565e7dabc6c56b2acad2bb67bc2598fe386770734",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-047",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按商品品类统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "952dd603ecdfe11148e111638c1c8a6d3e8f28de71e9b84d74947e22ef4a828c",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-048",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按科室统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "9858407bd2eb615fad1a3579387a4ce8642827e76c180fb70d0559e9f220571e",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-049",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按适用科室统计订单笔数",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "mentions": true,
+      "query_shape": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "4232ef3339b6f1278276cd06064d8835913e8db22224adcf7fa71a1204df3616",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-050",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回医院名称",
+    "history": [
+      "列出医院名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "f145858a97efc44abaafbbaf87901eba942d20d68eeb2b72bbabe6f211d3b340",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-051",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回医院标识",
+    "history": [
+      "列出医院名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "6c5a1bbd2040fec80b64b595a7738c8ad1460105b1d06fcffe6a6096bc72d2b5",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-052",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回医院编码",
+    "history": [
+      "列出医院名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "849be3bce7b0455d814c35e777e187384a6fdb7ba4fab291801fde9e57e73cf6",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-053",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回商品名称",
+    "history": [
+      "列出商品名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "a16dd99c7256efdd6516b61286edc5668e511be91396deb7082a489f7f0ac997",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-054",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回商品编码",
+    "history": [
+      "列出商品名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "f4becdf6f18df65aaa76922df334a6adeeccca07ccd468d4d6369cc6bf18b617",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-055",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回规格型号",
+    "history": [
+      "列出商品名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "efd035d94cc507cd0e87f2326dd8e8e1d51cd49f2740ad7c6d8b5603e49e6054",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-056",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回销售员姓名",
+    "history": [
+      "列出业务员名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "32de79ab7ddb41254f7d556e713a10a96244a5bd5ea77445a409da59f0c76d5a",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-057",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回销售员编码",
+    "history": [
+      "列出业务员名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "0b10535d6bb59f46c7b24f0c8e07f5ebc5a18305a105017c56927f16f180aa79",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-058",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回项目名称",
+    "history": [
+      "列出销售项目名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "7eed003b8aa6bc275bdd278039acea5868fc4f136f28e4335a4099e44f2c4453",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-059",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回项目编码",
+    "history": [
+      "列出销售项目名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "312835ea01184d79732a1a9376e45aad6e7392459b21818e3dbba8a8f2166be0",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-060",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回国药公司名称",
+    "history": [
+      "列出销售公司名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "73995e8947d1659d78aea650878761e14b5540f5cbcb57109426b62bbb6cf744",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-061",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回国药公司编码",
+    "history": [
+      "列出销售公司名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "5fe00d5f790fbb17c48b6983c55b5400b15df5861f6305c8192a212da33c0287",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-062",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回科室名称",
+    "history": [
+      "列出科室名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "39e86f76f891e86b63098f937d538be1efdfb3ea267f2dab167a1a69f56e9dab",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-063",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回科室编码",
+    "history": [
+      "列出科室名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "219b911903a3832234cc96066d0935280c833651420d2ef1ba715d06a31f76c5",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-064",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回经销商名称",
+    "history": [
+      "列出经销商名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "6143c04c654239df1788e5962ca2a180e6fafe133fad6b5ebbb1eedb84e85f46",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-065",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回经销商编码",
+    "history": [
+      "列出经销商名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "88316b2c33d7fb14b3edef2c0eb8f922d76eca2d8a7bb76c307649f78bf85aa1",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-066",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回城市名称",
+    "history": [
+      "列出市名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "c12923b6318b2bf9e2a827f22ea1b2b6089b62554c616b28f420feb804baed2c",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-067",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "结果中只返回省份名称",
+    "history": [
+      "列出省份名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "253595423e412621bd716c3980e33da5641168eee0369fb599ee21c6bc5a5f0f",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-068",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "那江苏呢？",
+    "history": [
+      "上海最近一年销售额"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "95f0d88a5534a6136f2aaab6da0ad1a29dd04a9a64f0820857761d297c922781",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-069",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "江苏有哪些医院？",
+    "history": [
+      "上海最近一年销售额"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "6c56d29ef883d8f8f907903eeba3f60a2c1de9f37ce816f670a0fc0f8307e06d",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-070",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "再加订单笔数",
+    "history": [
+      "销售额和销售量"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "operation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "af3befcd85153cd64a63b6e9d3a5437bafaa9e41b87b3256d91bb872ff92806d",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-071",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "换成江苏",
+    "history": [
+      "上海销售额"
+    ],
+    "first_divergence_stage": "EVALUATOR_GAP",
+    "root_cause_id": "RC-EVAL-TURN-PROXY",
+    "severity": "P2",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "A context-free parser signal projection is scored as final turn resolution. normalize omits the native REMOVE/CLEAR dependency rule and never executes TurnResolver/current state. Full raw parses are not retained in this100-case result; production first divergence is unproven.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": false,
+      "operation": true
+    },
+    "downstream_effect": [
+      {
+        "stage": "TURN_RESOLUTION",
+        "evidence": "Recorded parser axis mismatch",
+        "axis": "turn_relation",
+        "causal_order": "Co-observed proxy; not an independently counted production defect"
+      },
+      {
+        "stage": "EVALUATOR_GAP",
+        "evidence": "Full runtime verdict is NOT_EVALUATED; raw score remains FAIL"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "94ba37bb81db5537399f8b9030fa01368de35d44d1afbd37c045ad802077a078",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-072",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "不要订单笔数",
+    "history": [
+      "销售额和订单笔数"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "operation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "43b909882be67ca2e28c4f5576a9731c369507a696ddbd05d1eee69a445a00bd",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-073",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "不限地区",
+    "history": [
+      "上海销售额"
+    ],
+    "first_divergence_stage": "EVALUATOR_GAP",
+    "root_cause_id": "RC-EVAL-TURN-PROXY",
+    "severity": "P2",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "A context-free parser signal projection is scored as final turn resolution. normalize omits the native REMOVE/CLEAR dependency rule and never executes TurnResolver/current state. Full raw parses are not retained in this100-case result; production first divergence is unproven.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": false,
+      "operation": true
+    },
+    "downstream_effect": [
+      {
+        "stage": "TURN_RESOLUTION",
+        "evidence": "Recorded parser axis mismatch",
+        "axis": "turn_relation",
+        "causal_order": "Co-observed proxy; not an independently counted production defect"
+      },
+      {
+        "stage": "EVALUATOR_GAP",
+        "evidence": "Full runtime verdict is NOT_EVALUATED; raw score remains FAIL"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "1569c90a7065f94784a2ec36658b13050c4198c46ef16bbc50d824ce248409de",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-074",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按季度",
+    "history": [
+      "上海销售额；不限地区"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "ec401de4c5708f0a46f361a2fc1a9cf6c2deca46738e16c61c6b735ce26a5592",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-075",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "江苏有哪些医院？",
+    "history": [
+      "待选：销售额还是销售量"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "4eb84c07a663f736f39c81961433765ae661d0de3c0f759d14dd1814fbb749ec",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-076",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "回到刚才上海那个问题",
+    "history": [
+      "江苏销售额"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "a8d51f0febcb3998f0c115778be190e0bfa5deb26949c13b43a816f1cb8cdbd9",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-077",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "再加销售总成本",
+    "history": [
+      "按医院统计销售额"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "operation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "b9cbc32bcd01e0f41a4d5d12530033083bbadbf37a66749d59cf3f251947896f",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-078",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "把指标换成订单笔数",
+    "history": [
+      "按医院统计销售额"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "operation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "2c7d70d179ae66814300e9d2fefeb2c0d2be21d5d3d47279afa998a9fbaaa87a",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-079",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "去掉销售总成本",
+    "history": [
+      "含税销售总额和销售总成本"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "operation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "8fa62addca868aa350e0550fe47ba02067c40de9b2cc8160722411c46709ae97",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-080",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "取消地区限制",
+    "history": [
+      "只看上海的医院"
+    ],
+    "first_divergence_stage": "TASK_OPERATION",
+    "root_cause_id": "RC-OP-ATOMIC",
+    "severity": "P0",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Atomic CLEAR/REPLACE intent is represented as REMOVE or REMOVE+ADD. S81-012 has a correct REPLACE draft conflicting with earlier parse markers; the native guard rejects.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "operation": false
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "580cc8e8736b6a48aa6c20af47388bde29c562d6fc28eaee4361c3b1ff8c3c77",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-081",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "增加按销售公司分组",
+    "history": [
+      "销售额按业务员分组"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "operation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "0d1d6fa653b1af52e7ecadb795167fca5384a1e0652924013572c5bc3f26b0ef",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-082",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "把医院换成经销商",
+    "history": [
+      "销售额按医院分组"
+    ],
+    "first_divergence_stage": "EVALUATOR_GAP",
+    "root_cause_id": "RC-EVAL-TURN-PROXY",
+    "severity": "P2",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "A context-free parser signal projection is scored as final turn resolution. normalize omits the native REMOVE/CLEAR dependency rule and never executes TurnResolver/current state. Full raw parses are not retained in this100-case result; production first divergence is unproven.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": false,
+      "operation": false
+    },
+    "downstream_effect": [
+      {
+        "stage": "TURN_RESOLUTION",
+        "evidence": "Recorded parser axis mismatch",
+        "axis": "turn_relation",
+        "causal_order": "Co-observed proxy; not an independently counted production defect"
+      },
+      {
+        "stage": "TASK_OPERATION",
+        "evidence": "Recorded parser axis mismatch",
+        "axis": "operation",
+        "causal_order": "Co-observed proxy; not an independently counted production defect"
+      },
+      {
+        "stage": "EVALUATOR_GAP",
+        "evidence": "Full runtime verdict is NOT_EVALUATED; raw score remains FAIL"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "a3be250220f004803ca31ed9f092f4e0af4efed13092603020b7f13bd3240d63",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-083",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "不要按业务员分组",
+    "history": [
+      "销售额按城市和业务员分组"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "operation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "7b41eb5bf0b23efbb64dc0d128d8a926a95457fa527954d13eb5f75fb6f86f4d",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-084",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "取消时间限制",
+    "history": [
+      "最近一年订单笔数"
+    ],
+    "first_divergence_stage": "EVALUATOR_GAP",
+    "root_cause_id": "RC-EVAL-TURN-PROXY",
+    "severity": "P2",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "A context-free parser signal projection is scored as final turn resolution. normalize omits the native REMOVE/CLEAR dependency rule and never executes TurnResolver/current state. Full raw parses are not retained in this100-case result; production first divergence is unproven.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": false,
+      "operation": true
+    },
+    "downstream_effect": [
+      {
+        "stage": "TURN_RESOLUTION",
+        "evidence": "Recorded parser axis mismatch",
+        "axis": "turn_relation",
+        "causal_order": "Co-observed proxy; not an independently counted production defect"
+      },
+      {
+        "stage": "EVALUATOR_GAP",
+        "evidence": "Full runtime verdict is NOT_EVALUATED; raw score remains FAIL"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "9cff4518d9cafb2b9b949f136da929a0a0bb3ec1f1ec2be518b6cb19db7a9eab",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-085",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "只看前5条",
+    "history": [
+      "列出医院名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "5fefce5828e22cac72516f03329df3d90426bd0f1b7cc6bdf8bcbbef83ddbdba",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-086",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "现在查询销售总成本",
+    "history": [
+      "列出商品名单"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "321227835909d0ede6db7b7e7bf724c0e0897253f8677b5e158375cb53be1f2a",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-087",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "医院名称字段来自哪个表？",
+    "history": [
+      "上海销售额"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "79c79b544b44106ef41f64f986367c6e8fc02eea15d6f26d5f7689b2e8570246",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-088",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "返回之前的医院名单",
+    "history": [
+      "查询订单笔数"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "bbcece14ba490db55ce2a51d46aa06e03fcd2300c7b27cf5fc211b3bbcb7ed52",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-089",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "改成不含税销售总额",
+    "history": [
+      "含税销售总额"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": true,
+      "operation": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "64605b49885779a5377173e6c1397f6aea3463a0c1f1d33d32c7d889e20e0271",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-090",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "继续看下一页",
+    "history": [
+      "按季度看订单笔数"
+    ],
+    "first_divergence_stage": "EVALUATOR_GAP",
+    "root_cause_id": "RC-EVAL-TURN-PROXY",
+    "severity": "P2",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "A context-free parser signal projection is scored as final turn resolution. normalize omits the native REMOVE/CLEAR dependency rule and never executes TurnResolver/current state. Full raw parses are not retained in this100-case result; production first divergence is unproven.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "turn_relation": false
+    },
+    "downstream_effect": [
+      {
+        "stage": "TURN_RESOLUTION",
+        "evidence": "Recorded parser axis mismatch",
+        "axis": "turn_relation",
+        "causal_order": "Co-observed proxy; not an independently counted production defect"
+      },
+      {
+        "stage": "EVALUATOR_GAP",
+        "evidence": "Full runtime verdict is NOT_EVALUATED; raw score remains FAIL"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "dd72c5f525e20098f5adcb6e51a5a2fa1a08ef1a832dcc86802dd76a6a478d15",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-091",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "只看前5条",
+    "history": [
+      "当前已有医院名单"
+    ],
+    "first_divergence_stage": "EVALUATOR_GAP",
+    "root_cause_id": "RC-EVAL-DATASET-PROXY",
+    "severity": "P2",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Current utterance parser returns no query shape for display-limit continuation; the Gold expects a dataset route requiring existing dataset/state that this parser runner does not execute.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false
+    },
+    "downstream_effect": [
+      {
+        "stage": "QUERY_SHAPE",
+        "evidence": "Recorded parser axis mismatch",
+        "axis": "query_shape",
+        "causal_order": "Co-observed proxy; not an independently counted production defect"
+      },
+      {
+        "stage": "EVALUATOR_GAP",
+        "evidence": "Full runtime verdict is NOT_EVALUATED; raw score remains FAIL"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "7710731928e763e77d1c2a3c1599f44243af8576435340b100b0d67b6fc205da",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-092",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "订单笔数最高的5家医院",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "e526d3691446721df928aafd85e436b7127452fc093cbbbd55abb43574ca76d9",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-093",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "医院名称字段来自哪个表？",
+    "history": [],
+    "first_divergence_stage": "QUERY_SHAPE",
+    "root_cause_id": "RC-SHAPE-LINEAGE",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "The explicit field-source/table question predicts METADATA_LOOKUP instead of LINEAGE_GRAPH; target mention is present.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": false
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "a7746c024876f643b248d8b025305365207663c422238a96b17515cd005af47b",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-094",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "FAIL",
+    "current_utterance": "列出TDC-3合作医院",
+    "history": [],
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "root_cause_id": "RC-BOUNDARY-OBJECT",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Current semantic spans absorb list/record/relation cue text into the entity object; exact catalog surface is no longer a separate mention.",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": false
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "46b2aae14a2fd1aacd62f9404238842db08965b205d4f923ea8c12a5e1858dc4",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-095",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按商品名称统计销售总数量",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "3f5cf34fcb4be689ecaa82197bab4806e81d650e57c5383fc8a7e5efdf9ce3ba",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-096",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "返回商品名称",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "fc0c443fdb74dbb225887a4d9138ce5ea8c878fd9d7143cf25367bc3b5cbe88d",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-097",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "统计销售数量",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "d8f1f5dc5855c5c84701d4b208db870d2dabd909882e61693c0acb7296fedd62",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-098",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "列出订单中的销售数量字段",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "c0a83c30f3f40f69e84b524bbbed1bfe8cea3eecf2c051d11ce191f1a783fbd3",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-099",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "按月查看销售总成本走势",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "efe85afa31859db6a3d6d20b5eff747d7829ecd990e2e1f3ad69175a549291e1",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "G81-100",
+    "corpus": "100_PARSER_AXIS_GOLD",
+    "status": "PASS",
+    "current_utterance": "2026年1月的订单笔数是多少",
+    "history": [],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "CURRENT_TURN_PARSER_ONLY",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "query_shape": true,
+      "mentions": true
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/transition_runner/parser_v8_predictions.jsonl",
+      "docs/cutover/evaluation_gates/gold_axes.jsonl",
+      "tools/cutover/run_parser_benchmark.py:25"
+    ],
+    "evidence_hash": "636342cdacc0fa15aa58da9dc4b499aca383b7e0c30854a68d77b133ec91c1e1",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "SQL",
+      "source_result",
+      "canonical_binding",
+      "complete_task_state"
+    ]
+  },
+  {
+    "case_id": "S81-001",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "PASS",
+    "current_utterance": "再加订单笔数",
+    "history": [
+      "含税销售总额和销售总数量"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "time_relation": "ABSENT",
+      "time_grain": "NONE",
+      "metric_surfaces": [
+        "订单笔数",
+        "含税销售总额",
+        "销售总数量"
+      ],
+      "dimension_surfaces": [],
+      "canonical_metrics": [
+        "METRIC:order_count",
+        "METRIC:sales_total_including_tax",
+        "METRIC:sales_total_quantity"
+      ],
+      "canonical_dimensions": [],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "ADD"
+      ],
+      "metric_operations": [
+        "ADD"
+      ],
+      "dimension_operations": []
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "e35e661b6ec9b14de77b37e6302c12d25e268e8fe753f0d64b43c67f1024af00",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-002",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "PASS",
+    "current_utterance": "把指标换成订单笔数",
+    "history": [
+      "含税销售总额和销售总数量"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "time_relation": "ABSENT",
+      "time_grain": "NONE",
+      "metric_surfaces": [
+        "订单笔数"
+      ],
+      "dimension_surfaces": [],
+      "canonical_metrics": [
+        "METRIC:order_count"
+      ],
+      "canonical_dimensions": [],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "REPLACE"
+      ],
+      "metric_operations": [
+        "REPLACE"
+      ],
+      "dimension_operations": []
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "6ed69bbe92ccebb2d89a1902ba86d27ab6828b54dad6a36035233029dfe7c22d",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-003",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "PASS",
+    "current_utterance": "不要订单笔数",
+    "history": [
+      "含税销售总额和订单笔数"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "time_relation": "ABSENT",
+      "time_grain": "NONE",
+      "metric_surfaces": [
+        "含税销售总额"
+      ],
+      "dimension_surfaces": [],
+      "canonical_metrics": [
+        "METRIC:sales_total_including_tax"
+      ],
+      "canonical_dimensions": [],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "REMOVE"
+      ],
+      "metric_operations": [
+        "REMOVE"
+      ],
+      "dimension_operations": []
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "e2f6f30e45f1b9bc4b6912d4d0995dc5eb710bd4a21bab8f19947c7b50e9fff9",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-004",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "FAIL",
+    "current_utterance": "按季度",
+    "history": [
+      "上海最近一年含税销售总额",
+      "不限地区"
+    ],
+    "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+    "root_cause_id": "RC-VALUE-CANDIDATES",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Selected city-name field has no exact abbreviation match and exceeds bounded enumeration. No accepted scoped approximate-value candidate path is available. Choosing province is not declared business truth for these cases.",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": 0,
+    "actual_rejection": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+    "observed_axes": {},
+    "downstream_effect": [
+      {
+        "stage": "SEMANTIC_QUERY_IR",
+        "evidence": "Current target utterance was not reached after real history failed; no separate lineage/new-task/clear bug claimed"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "29f68a44070fa0a400b748170ad05cd892f51d23eaa615d93ec497513e0c5033",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-005",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "FAIL",
+    "current_utterance": "那江苏呢？",
+    "history": [
+      "上海最近一年含税销售总额"
+    ],
+    "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+    "root_cause_id": "RC-VALUE-CANDIDATES",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Selected city-name field has no exact abbreviation match and exceeds bounded enumeration. No accepted scoped approximate-value candidate path is available. Choosing province is not declared business truth for these cases.",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": 0,
+    "actual_rejection": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+    "observed_axes": {},
+    "downstream_effect": [
+      {
+        "stage": "SEMANTIC_QUERY_IR",
+        "evidence": "Current target utterance was not reached after real history failed; no separate lineage/new-task/clear bug claimed"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "90396a264d0398158cddf79aa03105533393a52a6c7d3a1a1c6332686e5aafa7",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-006",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "FAIL",
+    "current_utterance": "换成江苏",
+    "history": [
+      "上海含税销售总额"
+    ],
+    "first_divergence_stage": "TASK_OPERATION",
+    "root_cause_id": "RC-EDIT-COVERAGE",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "The draft declares source-value requests but emits no filter effect using them, despite current filter evidence. The request-use coverage guard rejects before source lookup.",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": 0,
+    "actual_rejection": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+    "observed_axes": {},
+    "downstream_effect": [
+      {
+        "stage": "SEMANTIC_QUERY_IR",
+        "evidence": "Current target utterance was not reached after real history failed; no separate lineage/new-task/clear bug claimed"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "04774fb83da9f3eef38de524d6c6c7d3d526960a724652304bd11a560753dda0",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-007",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "FAIL",
+    "current_utterance": "地区再加江苏",
+    "history": [
+      "上海和北京含税销售总额"
+    ],
+    "first_divergence_stage": "TASK_OPERATION",
+    "root_cause_id": "RC-EDIT-COVERAGE",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "The draft declares source-value requests but emits no filter effect using them, despite current filter evidence. The request-use coverage guard rejects before source lookup.",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": 0,
+    "actual_rejection": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+    "observed_axes": {},
+    "downstream_effect": [
+      {
+        "stage": "SEMANTIC_QUERY_IR",
+        "evidence": "Current target utterance was not reached after real history failed; no separate lineage/new-task/clear bug claimed"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "16a2ba9532c78d47c75410a720222a9c56f16ea40c8eed2dfb4948b98dcb9bbc",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-008",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "FAIL",
+    "current_utterance": "不要北京",
+    "history": [
+      "上海和北京含税销售总额"
+    ],
+    "first_divergence_stage": "TASK_OPERATION",
+    "root_cause_id": "RC-EDIT-COVERAGE",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "The draft declares source-value requests but emits no filter effect using them, despite current filter evidence. The request-use coverage guard rejects before source lookup.",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": 0,
+    "actual_rejection": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+    "observed_axes": {},
+    "downstream_effect": [
+      {
+        "stage": "SEMANTIC_QUERY_IR",
+        "evidence": "Current target utterance was not reached after real history failed; no separate lineage/new-task/clear bug claimed"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "dc962e436900938b6b6b9a44a62c852dbaf67f0c5b26450b94f07b320ba3916f",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-009",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "FAIL",
+    "current_utterance": "江苏有哪些医院？",
+    "history": [
+      "上海最近一年含税销售总额"
+    ],
+    "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+    "root_cause_id": "RC-VALUE-CANDIDATES",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Selected city-name field has no exact abbreviation match and exceeds bounded enumeration. No accepted scoped approximate-value candidate path is available. Choosing province is not declared business truth for these cases.",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": 0,
+    "actual_rejection": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+    "observed_axes": {},
+    "downstream_effect": [
+      {
+        "stage": "SEMANTIC_QUERY_IR",
+        "evidence": "Current target utterance was not reached after real history failed; no separate lineage/new-task/clear bug claimed"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "3d022e786974992f4008aec06d8e188895782916cf132a067cf702ed136cb481",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-010",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "FAIL",
+    "current_utterance": "切换话题：查询订单笔数",
+    "history": [
+      "上海最近一年含税销售总额"
+    ],
+    "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+    "root_cause_id": "RC-VALUE-CANDIDATES",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Selected city-name field has no exact abbreviation match and exceeds bounded enumeration. No accepted scoped approximate-value candidate path is available. Choosing province is not declared business truth for these cases.",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": 0,
+    "actual_rejection": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+    "observed_axes": {},
+    "downstream_effect": [
+      {
+        "stage": "SEMANTIC_QUERY_IR",
+        "evidence": "Current target utterance was not reached after real history failed; no separate lineage/new-task/clear bug claimed"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "8f13a98c71a0b7e7e74e0fc2aae94f1b0de65fc7ca286a0ccc27a5b442f18a73",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-011",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "PASS",
+    "current_utterance": "增加按城市分组",
+    "history": [
+      "按医院统计含税销售总额"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "time_relation": "ABSENT",
+      "time_grain": "NONE",
+      "metric_surfaces": [
+        "含税销售总额"
+      ],
+      "dimension_surfaces": [
+        "城市",
+        "医院"
+      ],
+      "canonical_metrics": [
+        "METRIC:sales_total_including_tax"
+      ],
+      "canonical_dimensions": [
+        "DIMENSION:city",
+        "DIMENSION:hospital"
+      ],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "ADD"
+      ],
+      "metric_operations": [],
+      "dimension_operations": [
+        "ADD"
+      ]
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "a577baf2d8911e5f0b58492a94292c65a475c45d08c63f26221a8b979fc5a1cb",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-012",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "FAIL",
+    "current_utterance": "把分组换成经销商",
+    "history": [
+      "按医院统计含税销售总额"
+    ],
+    "first_divergence_stage": "TASK_OPERATION",
+    "root_cause_id": "RC-OP-ATOMIC",
+    "severity": "P0",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Atomic CLEAR/REPLACE intent is represented as REMOVE or REMOVE+ADD. S81-012 has a correct REPLACE draft conflicting with earlier parse markers; the native guard rejects.",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": 1,
+    "actual_rejection": "V2_SLOT_OPERATION_CONFLICT",
+    "observed_axes": {},
+    "downstream_effect": [
+      {
+        "stage": "TASK_OPERATION",
+        "evidence": "Draft REPLACE conflicts with parse REMOVE+ADD; guard is working"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "c74a59c694ccb48b0b4764ebde5a8d5f65c8bfc16dbec85012e5d0fb4a3eb575",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-013",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "PASS",
+    "current_utterance": "不要按业务员分组",
+    "history": [
+      "按城市和业务员统计含税销售总额"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "time_relation": "ABSENT",
+      "time_grain": "NONE",
+      "metric_surfaces": [
+        "含税销售总额"
+      ],
+      "dimension_surfaces": [
+        "城市"
+      ],
+      "canonical_metrics": [
+        "METRIC:sales_total_including_tax"
+      ],
+      "canonical_dimensions": [
+        "DIMENSION:city"
+      ],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "REMOVE"
+      ],
+      "metric_operations": [],
+      "dimension_operations": [
+        "REMOVE"
+      ]
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "d208d13c4d79ede3f843d2786d31fd1094b81aac689adfd5a6ca398bdc483556",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-014",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "PASS",
+    "current_utterance": "再加销售总数量",
+    "history": [
+      "2025年订单笔数",
+      "取消时间限制"
+    ],
+    "first_divergence_stage": null,
+    "root_cause_id": null,
+    "severity": null,
+    "cutover_blocker": false,
+    "confidence": "PASS_FOR_LISTED_AXES_ONLY",
+    "reason": "All supplied labeled axes passed; full semantic acceptance is not established",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": null,
+    "actual_rejection": null,
+    "observed_axes": {
+      "time_relation": "ABSENT",
+      "time_grain": "NONE",
+      "metric_surfaces": [
+        "订单笔数",
+        "销售总数量"
+      ],
+      "dimension_surfaces": [],
+      "canonical_metrics": [
+        "METRIC:order_count",
+        "METRIC:sales_total_quantity"
+      ],
+      "canonical_dimensions": [],
+      "target_task": "PREVIOUS",
+      "turn_relation": "FOLLOW_UP",
+      "clarification_decision": "NO_ASK",
+      "slot_operations": [
+        "ADD"
+      ],
+      "metric_operations": [
+        "ADD"
+      ],
+      "dimension_operations": []
+    },
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "ac545706cd91951310c0b3261034f7598ecf9dbbdd6fd84701f1eec57bdbf097",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-015",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "FAIL",
+    "current_utterance": "医院名称字段来自哪个表？",
+    "history": [
+      "上海含税销售总额"
+    ],
+    "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+    "root_cause_id": "RC-VALUE-CANDIDATES",
+    "severity": "P1",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "Selected city-name field has no exact abbreviation match and exceeds bounded enumeration. No accepted scoped approximate-value candidate path is available. Choosing province is not declared business truth for these cases.",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": 0,
+    "actual_rejection": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+    "observed_axes": {},
+    "downstream_effect": [
+      {
+        "stage": "SEMANTIC_QUERY_IR",
+        "evidence": "Current target utterance was not reached after real history failed; no separate lineage/new-task/clear bug claimed"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "9f7be47d34602d713726a8fa8397b6b1dbde36978a99a3ad61d2c95ea92faf1c",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-016",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "NOT_RUN",
+    "current_utterance": "江苏有哪些医院？",
+    "history": [
+      "上海含税销售总额"
+    ],
+    "first_divergence_stage": "FIXTURE_GAP",
+    "root_cause_id": "RC-FIXTURE-STATE-ENTRY",
+    "severity": "P2",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "One explicit runner branch skips any initial_pending or dataset case. No scoped initial-state fixture is installed at the same production semantic entry. Pending and Dataset are two fixture variants of this shared entry gap.",
+    "execution_boundary": "NO_ENTRY_FIXTURE",
+    "failed_turn_index": null,
+    "actual_rejection": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+    "observed_axes": {},
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "e36bcdca772c4b6a6c6bd8e8d9c41df80cbf9c57cf5b662ef6de51f06bf95947",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-017",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "FAIL",
+    "current_utterance": "回到含税销售总额，再加订单笔数",
+    "history": [
+      "含税销售总额",
+      "销售总成本"
+    ],
+    "first_divergence_stage": "TASK_OPERATION",
+    "root_cause_id": "RC-REFERENCE-AS-EDIT",
+    "severity": "P0",
+    "cutover_blocker": true,
+    "confidence": "HIGH_CONFIDENCE",
+    "reason": "The historical task-identifying metric mention emits REPLACE instead of only identifying the historical task. The later incorrect GROUPED_AGGREGATE is a downstream rejection.",
+    "execution_boundary": "RAW_PLANNER_NATIVE_PIN_STATE_REDUCER_COMPILER",
+    "failed_turn_index": 2,
+    "actual_rejection": "V2_CONTRACT_VALIDATION_FAILURE",
+    "observed_axes": {},
+    "downstream_effect": [
+      {
+        "stage": "QUERY_SHAPE",
+        "evidence": "Raw parse and draft choose GROUPED_AGGREGATE despite empty dimensions"
+      },
+      {
+        "stage": "SEMANTIC_QUERY_IR",
+        "evidence": "Actual rejecting boundary is grouped payload validation, after the earlier extra REPLACE marker"
+      }
+    ],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "19c83267284b4eab2dc7fda82fe96b0300b976d5dea3a7a83d2571858224d9b1",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-018",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "NOT_RUN",
+    "current_utterance": "只看前5条",
+    "history": [
+      "已有医院名单"
+    ],
+    "first_divergence_stage": "FIXTURE_GAP",
+    "root_cause_id": "RC-FIXTURE-STATE-ENTRY",
+    "severity": "P2",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "One explicit runner branch skips any initial_pending or dataset case. No scoped initial-state fixture is installed at the same production semantic entry. Pending and Dataset are two fixture variants of this shared entry gap.",
+    "execution_boundary": "NO_ENTRY_FIXTURE",
+    "failed_turn_index": null,
+    "actual_rejection": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+    "observed_axes": {},
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "bc1472b9aef99dd8560875b9561d946f0fd8df190a55467e7f382f77f66db8fb",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-019",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "NOT_RUN",
+    "current_utterance": "含税销售总额最高5名",
+    "history": [
+      "已有按医院统计的含税销售总额"
+    ],
+    "first_divergence_stage": "FIXTURE_GAP",
+    "root_cause_id": "RC-FIXTURE-STATE-ENTRY",
+    "severity": "P2",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "One explicit runner branch skips any initial_pending or dataset case. No scoped initial-state fixture is installed at the same production semantic entry. Pending and Dataset are two fixture variants of this shared entry gap.",
+    "execution_boundary": "NO_ENTRY_FIXTURE",
+    "failed_turn_index": null,
+    "actual_rejection": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+    "observed_axes": {},
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "03504f020d7f7a0c2b0552aab034ccecd0a00e67c6bbd339061aab9821bbe7cb",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  },
+  {
+    "case_id": "S81-020",
+    "corpus": "20_TRANSITION_GOLD",
+    "status": "NOT_RUN",
+    "current_utterance": "含税销售总额最高5名",
+    "history": [
+      "已有按医院统计的含税销售总额"
+    ],
+    "first_divergence_stage": "FIXTURE_GAP",
+    "root_cause_id": "RC-FIXTURE-STATE-ENTRY",
+    "severity": "P2",
+    "cutover_blocker": true,
+    "confidence": "PROVEN",
+    "reason": "One explicit runner branch skips any initial_pending or dataset case. No scoped initial-state fixture is installed at the same production semantic entry. Pending and Dataset are two fixture variants of this shared entry gap.",
+    "execution_boundary": "NO_ENTRY_FIXTURE",
+    "failed_turn_index": null,
+    "actual_rejection": "FULL_ENTRY_PENDING_OR_DATASET_FIXTURE_REQUIRED",
+    "observed_axes": {},
+    "downstream_effect": [],
+    "evidence": [
+      "docs/v2_cutover/value_probe/live_turns.json",
+      "docs/v2_cutover/value_probe/replay_receipts.json",
+      "docs/cutover/state_evaluation/transition_gold.jsonl"
+    ],
+    "evidence_hash": "0aee8586f32d26266435f65b526d1571ebd7569888675ab75ba181004d8f9c66",
+    "complete_semantic_gold_evaluable": false,
+    "full_plan_accuracy": "NOT_ESTABLISHED",
+    "retained_missing_labels": [
+      "complete_semantic_plan",
+      "source_SQL_result",
+      "scope_reuse_runtime",
+      "full_clarification_trace"
+    ]
+  }
+]

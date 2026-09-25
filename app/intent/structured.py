@@ -5,7 +5,7 @@ import logging
 import re
 import asyncio
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -46,6 +46,20 @@ class StructuredSlotOperation(BaseModel):
     confidence: float = Field(default=0.8, ge=0, le=1)
 
 
+class StructuredFilter(BaseModel):
+    """Model-proposed semantic filter; the live catalog remains authoritative."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    field: str = Field(min_length=1, max_length=100)
+    operator: Literal[
+        "EQ", "NE", "GT", "GTE", "LT", "LTE", "IN", "NOT_IN",
+        "CONTAINS", "IS_NULL", "IS_NOT_NULL",
+    ] = "EQ"
+    value: str | int | float | list[str | int | float] | None = None
+    evidence_span: str = Field(min_length=1, max_length=500)
+
+
 class StructuredIntentOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -62,6 +76,7 @@ class StructuredIntentOutput(BaseModel):
     dimensions: list[str] = Field(default_factory=list)
     entity: str | None = None
     fields: list[str] = Field(default_factory=list)
+    filters: list[StructuredFilter] = Field(default_factory=list, max_length=30)
     current_entity_values: list[str] = Field(default_factory=list, max_length=20)
     comparison_type: str | None = None
     ambiguities: list[str] = Field(default_factory=list)
@@ -69,6 +84,7 @@ class StructuredIntentOutput(BaseModel):
 
 
 SYSTEM_PROMPT = """你是企业数据分析系统的意图分类器，只分类和抽取，不回答问题。输出必须是符合给定字段定义的 JSON 对象，不得包含 Markdown 或额外文字。
+Extract business wording at semantic phrase granularity. Keep these elements separate when the user states them separately: a concrete name/value, its generic object type, the business relationship, and the requested output field. For example, in “查询外周插管中心静脉导管产品合作的医院名单”, preserve “外周插管中心静脉导管” as the concrete product value, “产品” as the object type, “合作” as the relationship, and “医院名称” as the requested output. Do not merge the full phrase into one entity value. Do not split a real proper name or model, such as “Prismaflex M60 set”, and do not decide catalog IDs, physical fields, metric IDs, or whether an ambiguous company-like name is a brand or manufacturer. Those bindings belong to the downstream ASL model. The extraction is advisory evidence, not an authoritative catalog binding.
 必须遵守：
 1. 只能使用 Schema 中给定的枚举，不创造意图。
 2. TREND_ANALYSIS 只描述历史；明确未来时间或预测表达才是 FORECAST_ANALYSIS。
@@ -80,7 +96,7 @@ SYSTEM_PROMPT = """你是企业数据分析系统的意图分类器，只分类�
 8. “下月计划值/预算值/目标值”是已存在数据查询，不是预测；只有要求推算未知未来结果才是 FORECAST_ANALYSIS。
 9. 同时包含多个诉求时，最终交付物作为 primary_intent，其余放 secondary_intents；例如“分析下降原因并生成报告”主意图为 REPORT_GENERATION、次意图为 ROOT_CAUSE_ANALYSIS。
 10. 指标名称优先保持用户原话中的完整业务度量，不得改写成臆造的标准指标编码，也不得只截取“销售、订单、业务、数据、金额、数量、趋势”等泛化名词充当指标。
-11. 只查询一个时间段的汇总数值是 METRIC_QUERY；出现“最近30天、某月、某季度、某日”本身不代表趋势。只有要求走势、升降、按时间观察变化才是 TREND_ANALYSIS。
+11. 查询汇总数值或按维度、时间粒度展开数值是 METRIC_QUERY；时间范围及“每月、逐日、按季度”本身不代表趋势。只有要求走势、升降、波动等变化分析才是 TREND_ANALYSIS。例如“查看2025年安徽省各城市每月销售额”是 METRIC_QUERY，保留城市分组、月份粒度和销售额；“分析各城市每月销售额趋势”才是 TREND_ANALYSIS，也必须保留城市分组。根据完整语义和交付物判断，不按单个时间词分类。
 12. 预测必须要求推算尚未发生的结果。明确的历史日期、月份、季度，即使带年份，也不能分类为 FORECAST_ANALYSIS。
 13. 同比、环比、同期比、较上期、增长率属于 COMPARISON_ANALYSIS，不能归为普通指标查询。
 14. 询问来源表、来源字段、加工链路属于 DATA_LINEAGE；询问指标含义、公式、统计范围属于 METRIC_DEFINITION。
@@ -110,6 +126,12 @@ SYSTEM_PROMPT = """你是企业数据分析系统的意图分类器，只分类�
 38. 空筛选值应丢弃，但用户明确查询“为空、未填写、缺失”的情况除外；此时应保留 IS_NULL 语义。维度空值属于结果展示策略，不得反向生成筛选条件。
 39. 指标名称内部出现的业务对象词不构成 entity 证据。例如“区域医院覆盖率”中的“医院”属于指标名称；“经销商医院覆盖率”中的“经销商、医院”也不能单独决定查询对象。只有“各经销商、按经销商、经销商名单”等独立结果粒度或返回对象表达，才能把经销商识别为 entity。
 40. 当前问题仅重复上一轮指标并修改排序方向时（包括“从高到低/从低到高”“从大到小/从小到大”“升序/降序”），这是排序修改追问；必须继承上一轮已确认的查询对象、维度、筛选、时间口径和指标绑定，只修改排序，不得新增“医院”等指标名称内部对象、默认最近一年或其他条件，也不得要求用户确认轮次关系。
+41. filters 必须由语义理解提取，不得按固定句式截取。field 填业务语义角色（如商品名称、商品品牌、商品品类、厂家名称、业务省份、业务城市），value 只保留用户实际用于限定范围的值，不得包含“查一下、查询、查看、请、帮我”等请求动作，也不得包含“合作的经销商名单”等返回对象描述。
+42. 每个 filter 的 evidence_span 必须逐字来自当前用户问题，并覆盖该筛选值及足以判断其筛选角色的原文；筛选值必须能在 evidence_span 中找到。字段名可做语义规范化，但筛选值不得凭空规范化、补后缀或使用模型常识改写，后续目录服务会完成标准值和字段绑定。
+43. 具体名称同时可能属于商品、品牌、品类或厂家时，仍要根据整句业务含义给出最合理的临时 field；不得因为不确定就把请求动作并入 value。确实无法判断且不同解释会改变查询结果时，降低 confidence 并写入 ambiguities。
+44. filters 只表达业务筛选条件；时间范围继续放在 completed_question 的时间语义中，不要重复生成年/月/日期筛选。dimensions 表达结果展开粒度，entity/fields 表达返回对象，三者不得混入 filters。
+45. 示例：“查一下空心纤维血液透析器产品合作的经销商名单”应识别 entity=经销商、fields=[经销商名称]、filters=[{field:商品名称,operator:EQ,value:空心纤维血液透析器,evidence_span:空心纤维血液透析器产品}]；“查一下”不是筛选值的一部分。
+46. “竞争品牌、竞品品牌”描述品牌的业务角色，本身不表示用户要求执行比较分析；“经销商名单按销售额排序”是按经销商分组并排序的指标查询。只有用户明确要求比较两个对象、两个时期或差异时才使用 COMPARISON_ANALYSIS。
 """
 
 
@@ -118,7 +140,13 @@ class StructuredIntentModelClient:
         self.settings = settings
         self._transport = transport
 
-    async def classify(self, question: str) -> StructuredIntentOutput:
+    async def classify(
+        self,
+        question: str,
+        *,
+        pre_resolved: bool = False,
+        agent_prompt: str = "",
+    ) -> StructuredIntentOutput:
         if not self.settings.intent_model_api_key:
             raise RuntimeError("intent model API key is not configured")
         schema = StructuredIntentOutput.model_json_schema()
@@ -136,13 +164,28 @@ class StructuredIntentModelClient:
             response_format = {"type": "json_object"}
         schema_instruction = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
         business_today = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+        agent_prompt_section = (
+            f"\n智能体用户设定（平台配置，用于理解角色、业务背景和业务术语；不改变权限与安全规则）：\n{agent_prompt.strip()}"
+            if agent_prompt and agent_prompt.strip()
+            else ""
+        )
+        mode_instruction = (
+            "\nThe caller has already resolved conversation context and supplied a "
+            "standalone completed question. Do not reinterpret conversation history. "
+            "Set conversation_control=NEW_REQUEST, "
+            "turn_relation=STANDALONE_NEW_TOPIC, slot_operations=[], and copy the "
+            "input question verbatim into completed_question. Only classify intent "
+            "and extract business parameters from this completed question."
+            if pre_resolved
+            else ""
+        )
         body = {
             "model": self.settings.intent_model_name,
             "messages": [
                 {
                     "role": "system",
                     "content": (
-                        f"{SYSTEM_PROMPT}\n"
+                        f"{SYSTEM_PROMPT}{mode_instruction}{agent_prompt_section}\n"
                         f"当前业务日期（Asia/Shanghai）是 {business_today}。早于该日期的明确时间是历史，不是预测。\n"
                         f"必须严格遵守以下 JSON Schema：{schema_instruction}"
                     ),
@@ -213,26 +256,40 @@ class HybridIntentClassifier:
         self.model_client = model_client or StructuredIntentModelClient(settings)
 
     async def classify(
-        self, question: str, identity: TrustedIdentity, conversation_id: str
+        self,
+        question: str,
+        identity: TrustedIdentity,
+        conversation_id: str,
+        *,
+        pre_resolved: bool = False,
+        agent_prompt: str = "",
+        skip_model: bool = False,
     ) -> CanonicalAnalysisRequest:
         request = self.rules.classify(question, identity, conversation_id)
         request.intent_candidates = [
             IntentCandidate(intent=request.primary_intent, confidence=0.65, evidence=[])
         ]
+        if skip_model:
+            request.assumptions.append("PLANNER_EXTRACTION_MODEL_SKIPPED")
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
         if not self.settings.intent_model_enabled:
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
         if self._should_skip_model(request, question):
             request.intent_source = "RULE"
             request.intent_confidence = 0.95
             request.intent_candidates[0].confidence = 0.95
             request.assumptions.append("STRONG_RULE_MODEL_SKIPPED")
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
         try:
-            model = await self.model_client.classify(question)
+            model = await self.model_client.classify(
+                question,
+                pre_resolved=pre_resolved,
+                agent_prompt=agent_prompt,
+            )
         except (httpx.HTTPError, KeyError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
             logger.warning("structured intent model unavailable; using rule baseline: %s", type(exc).__name__)
             request.assumptions.append("STRUCTURED_MODEL_UNAVAILABLE_RULE_FALLBACK")
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
 
         request.intent_candidates.insert(
             0,
@@ -244,16 +301,16 @@ class HybridIntentClassifier:
         )
         if model.confidence < self.settings.intent_model_min_confidence:
             request.assumptions.append("LOW_MODEL_CONFIDENCE_RULE_FALLBACK")
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
         if not self._passes_deterministic_constraints(model, question):
             request.assumptions.append("MODEL_INTENT_FAILED_CONSTRAINT_RULE_FALLBACK")
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
         if (
             model.primary_intent != request.primary_intent
             and self._has_strong_rule_signal(request.primary_intent, question)
         ):
             request.assumptions.append("MODEL_CONFLICT_STRONG_RULE_FALLBACK")
-            return request
+            return self._apply_pre_resolved_contract(request, question, pre_resolved)
 
         deterministic_control = request.conversation_control
         request.primary_intent = model.primary_intent
@@ -286,6 +343,9 @@ class HybridIntentClassifier:
         request.intent_source = "STRUCTURED_MODEL"
         request.intent_confidence = model.confidence
         semantic_extraction_applied = False
+        model_filters_declared = "filters" in model.model_fields_set
+        grounded_model_filters: list[dict[str, Any]] = []
+        model_filter_validation_failed = False
         current_entity_candidates = list(model.current_entity_values)
         current_fragment = question.split(
             "\n已确认的上一轮上下文", 1
@@ -318,6 +378,18 @@ class HybridIntentClassifier:
             if len(current_entity_values) != len(current_entity_candidates):
                 request.assumptions.append(
                     "UNGROUNDED_CURRENT_ENTITY_VALUE_DROPPED"
+                )
+        if model_filters_declared:
+            grounded_model_filters, filter_issues = self._grounded_model_filters(
+                model.filters,
+                question,
+            )
+            model_filter_validation_failed = bool(filter_issues)
+            if model_filter_validation_failed:
+                request.assumptions.append("INVALID_MODEL_FILTERS_DROPPED")
+            else:
+                semantic_extraction_applied = semantic_extraction_applied or bool(
+                    grounded_model_filters
                 )
         if model.metrics:
             grounded_metrics = self._grounded_metric_names(model.metrics, question)
@@ -381,20 +453,22 @@ class HybridIntentClassifier:
             request.assumptions.append("MODEL_ENTITY_EXTRACTION_APPLIED")
         self.rules.sanitize_semantic_entity_mentions(request)
         if model.completed_question:
-            completed_question = self._safe_completed_question(
-                model.completed_question,
-                question,
-                required_current_entities=request.semantic_entity_mentions,
-            )
-            if completed_question is not None:
-                request.rewritten_question = completed_question
-                request.assumptions.append("MODEL_QUESTION_COMPLETION_APPLIED")
-            else:
-                request.assumptions.append("UNSAFE_MODEL_QUESTION_COMPLETION_DROPPED")
+            request.rewritten_question = model.completed_question
+            request.assumptions.append("MODEL_QUESTION_COMPLETION_APPLIED")
         # Re-apply deterministic result-shape rules after model enrichment.
         # The structured model may otherwise downgrade a supplier list to a
         # metric query or treat recommendation wording as out of scope.
         self.rules.apply_business_query_shapes(request, question)
+        if model_filters_declared:
+            # Result-shape rules may classify a list as DETAIL_QUERY and add
+            # safety assumptions, but flexible language-to-filter extraction is
+            # owned by the structured model.  The live semantic catalog later
+            # verifies and may rebind each provisional field/value pair.
+            request.filters = (
+                [] if model_filter_validation_failed else grounded_model_filters
+            )
+            request.semantic_filter_bindings = []
+            request.assumptions.append("MODEL_FILTER_EXTRACTION_AUTHORITATIVE")
         self.rules.sanitize_semantic_entity_mentions(request)
         request.risk_level = (
             "HIGH"
@@ -402,6 +476,11 @@ class HybridIntentClassifier:
             else "MEDIUM"
         )
         request.missing_slots = self.rules.required_missing_slots(request)
+        if model_filter_validation_failed:
+            request.missing_slots = list(dict.fromkeys([
+                *request.missing_slots,
+                "semantic_ambiguity",
+            ]))
         # Model ambiguities are advisory and are only safe after the complete model
         # result has passed every deterministic gate.  Keep only ambiguities that
         # describe a slot which is still actually missing; otherwise stale or
@@ -410,6 +489,40 @@ class HybridIntentClassifier:
         request.ambiguities = self._filter_ambiguities(
             model.ambiguities, request.missing_slots
         )
+        if model_filter_validation_failed:
+            request.ambiguities = list(dict.fromkeys([
+                *request.ambiguities,
+                "当前问题中的筛选条件未能可靠对应到原文，请明确要筛选的业务名称及其类型。",
+            ]))
+        return self._apply_pre_resolved_contract(request, question, pre_resolved)
+
+    @staticmethod
+    def _apply_pre_resolved_contract(
+        request: CanonicalAnalysisRequest,
+        question: str,
+        enabled: bool,
+    ) -> CanonicalAnalysisRequest:
+        """Keep V2-owned context/completion authoritative during V1 execution.
+
+        The structured intent model may still enrich intent and business slots when
+        a V2 plan cannot be adapted, but it must not reopen conversation relation or
+        rewrite the already validated completed question.
+        """
+
+        if not enabled:
+            return request
+        request.original_question = question
+        request.rewritten_question = question
+        request.conversation_control = ConversationControl.NEW_REQUEST
+        request.turn_relation = TurnRelation.STANDALONE_NEW_TOPIC
+        request.model_turn_relation = TurnRelation.STANDALONE_NEW_TOPIC
+        request.model_turn_relation_confidence = 1.0
+        request.slot_operations = []
+        request.rewrite_context_applied = False
+        request.assumptions = list(dict.fromkeys([
+            *request.assumptions,
+            "CONTEXT_AND_COMPLETION_OWNED_BY_UNIFIED_SEMANTIC_CONTRACT",
+        ]))
         return request
 
     def merge_clarification(
@@ -440,6 +553,7 @@ class HybridIntentClassifier:
                 merged.metrics = before.metrics
             if (
                 "time_range" not in prior_missing
+                and before.time_range is not None
                 and not (
                     "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" in before.assumptions
                     and merged.time_range != before.time_range
@@ -914,6 +1028,87 @@ class HybridIntentClassifier:
         return grounded
 
     @staticmethod
+    def _grounded_model_filters(
+        filters: list[StructuredFilter], question: str
+    ) -> tuple[list[dict[str, Any]], list[str]]:
+        """Validate model filter proposals against literal current-turn evidence.
+
+        The model owns the linguistic decision.  This method only enforces that
+        no value was invented or copied from prior context; the current semantic
+        catalog remains responsible for binding the proposed field and value.
+        One invalid proposal rejects the complete model filter set so execution
+        cannot silently broaden the request by dropping only a difficult filter.
+        """
+
+        current = question.split("\n已确认的上一轮上下文", 1)[0]
+        compact_current = re.sub(r"\s+", "", current).casefold()
+        grounded: list[dict[str, Any]] = []
+        issues: list[str] = []
+        seen: set[tuple[str, str, str]] = set()
+        null_operators = {"IS_NULL", "IS_NOT_NULL"}
+
+        for index, item in enumerate(filters):
+            field = re.sub(r"\s+", "", item.field).strip()
+            evidence = re.sub(r"\s+", "", item.evidence_span).strip()
+            evidence_key = evidence.casefold()
+            if not field or not evidence or evidence_key not in compact_current:
+                issues.append(f"filter[{index}]:ungrounded_evidence")
+                continue
+
+            raw_values = item.value if isinstance(item.value, list) else [item.value]
+            if item.operator in null_operators:
+                if item.value is not None:
+                    issues.append(f"filter[{index}]:null_operator_with_value")
+                    continue
+            elif not raw_values or any(value is None for value in raw_values):
+                issues.append(f"filter[{index}]:missing_value")
+                continue
+
+            normalized_values: list[str | int | float] = []
+            value_invalid = False
+            for value in raw_values:
+                if value is None:
+                    continue
+                if isinstance(value, str):
+                    normalized = re.sub(r"\s+", " ", value).strip()
+                    compact_value = re.sub(r"\s+", "", normalized).casefold()
+                    if (
+                        not normalized
+                        or len(normalized) > 500
+                        or compact_value not in evidence_key
+                    ):
+                        value_invalid = True
+                        break
+                    normalized_values.append(normalized)
+                else:
+                    if str(value) not in evidence:
+                        value_invalid = True
+                        break
+                    normalized_values.append(value)
+            if value_invalid:
+                issues.append(f"filter[{index}]:ungrounded_value")
+                continue
+
+            value: Any
+            if item.operator in null_operators:
+                value = None
+            elif isinstance(item.value, list):
+                value = list(dict.fromkeys(normalized_values))
+            else:
+                value = normalized_values[0]
+            key = (field.casefold(), item.operator, repr(value))
+            if key in seen:
+                continue
+            seen.add(key)
+            grounded.append({
+                "field": field,
+                "operator": item.operator,
+                "value": value,
+            })
+
+        return (grounded, issues) if not issues else ([], issues)
+
+    @staticmethod
     def _passes_deterministic_constraints(model: StructuredIntentOutput, question: str) -> bool:
         if model.primary_intent == PrimaryIntent.FORECAST_ANALYSIS:
             future_signals = (
@@ -989,50 +1184,6 @@ class HybridIntentClassifier:
         } and cls._has_strong_rule_signal(request.primary_intent, question):
             return True
         return False
-
-    @staticmethod
-    def _safe_completed_question(
-        value: str,
-        source: str,
-        required_current_entities: list[str] | None = None,
-    ) -> str | None:
-        completed = re.sub(r"\s+", " ", value).strip()
-        if not completed or len(completed) > 4000:
-            return None
-        if any(
-            marker in completed.lower()
-            for marker in ("select ", "insert ", "update ", "delete ", "```", "已确认的上一轮上下文")
-        ):
-            return None
-        current = source.split("\n已确认的上一轮上下文", 1)[0].strip()
-        current_numbers = set(re.findall(r"\d+(?:\.\d+)?", current))
-        completed_numbers = set(re.findall(r"\d+(?:\.\d+)?", completed))
-        if not current_numbers.issubset(completed_numbers):
-            return None
-        for term in ("不要", "排除", "剔除", "不含", "不是"):
-            if term in current and term not in completed:
-                return None
-        required_entities = [
-            re.sub(r"\s+", "", item)
-            for item in required_current_entities or []
-            if str(item).strip()
-        ]
-        compact_completed = re.sub(r"\s+", "", completed)
-        if any(entity not in compact_completed for entity in required_entities):
-            return None
-        if required_entities and "\n已确认的上一轮上下文" in source:
-            context = source.split("\n已确认的上一轮上下文", 1)[1]
-            inherited_filter_values = {
-                re.sub(r"\s+", "", item)
-                for item in re.findall(r'["\']value["\']\s*:\s*["\']([^"\']+)["\']', context)
-            }
-            if any(
-                old_value not in required_entities
-                and old_value in compact_completed
-                for old_value in inherited_filter_values
-            ):
-                return None
-        return completed
 
     @staticmethod
     def _supported_entity_category(

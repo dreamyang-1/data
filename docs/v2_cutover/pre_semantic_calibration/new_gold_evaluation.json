@@ -1,0 +1,310 @@
+{
+  "contract": "runtime-evaluation-harness-v1",
+  "evaluator_version": "runtime-evaluation-harness-v1",
+  "evaluator_git_commit": "f6ce319591d714d658916f48cdc6fe7c70d9b252",
+  "evaluator_hash": "3ac9f973590abfdeb3d233ea501accca8f6dceb2ff7f4b6f1955e599a896cbf0",
+  "evaluator_files": {
+    "tools/cutover/harness_contract.py": "7ec253d994d82f8756bc045fc52a61ac4ce0f138f685ec6e14c6b33ed0a905dd",
+    "tools/cutover/harness_corpus.py": "6d3e6d5993387c6135f047b6821b47b1317e1b27a0ac4cbbdac0706f00ec6454",
+    "tools/cutover/harness_fixtures.py": "db3f29f10d10a764f2b51a4300427291a362165896a48019c2c8e21d220a8a7b",
+    "tools/cutover/harness_observation.py": "d4f7edb53703207c88a83d769b38d72f1c920f3a6152a2dbb3ad00a389d9747b",
+    "tools/cutover/harness_runtime.py": "bb305edba260c1162f331892e325eeae90507103e35a1f3afd235f32e231faba",
+    "tools/cutover/harness_replay.py": "1543b6f5099796bcca90bbefcaea82f591d0638a01207bed2bb73ece39608c64",
+    "tools/cutover/harness_splits.py": "0e8bd22147b2072c427de4ba9657eef8a5671bf5f0e413fa7962691874abd90f",
+    "tools/cutover/harness_manifest.py": "8a6e93bb35fc4b7a4d0c82dc44e5f706f3af04fe17ca8e6e6bbec154634241b4",
+    "tools/cutover/harness_safety.py": "c050238aada7d382ca6b7514b42fbae2377577c23b096e1508a989f4864212b3",
+    "tools/cutover/harness_cli.py": "108870cca22748c60e0ec26c3e7e70c9a82b3e45cc0a46f5bb8918e701e52755",
+    "tools/cutover/harness_dryplan.py": "2fa8cdec3b51bfd1a3d5fa7c76e9a893c39274dd189be4b896185fdb14e29009",
+    "tools/cutover/harness_transport_replay.py": "4fbbd4cf9c35443a4307f6fc3a1a4ce7f6e6a83b2a40f79dd6dd9cb5d0777832",
+    "tools/cutover/harness_replay_corpus.py": "1d95ab3bee6fac99c9af6a720cb23a69befadda2772c831764976c4cae43c4be",
+    "tools/cutover/run_raw_transition_benchmark.py": "6a95d5876b7f9054477a5c072e3f19df05132a0f2c89c0cec565a4b7acdc49e2",
+    "tools/cutover/transition_observations.py": "106460a9ba5ff70f383f11463df8cb5e362d374fdce82e8d6ca4121c65bde6ba",
+    "tools/cutover/frozen_source_values.py": "8209b7402e95cdfc1bdec563826f5bd94d999269a54b38081c047a52dcdfdd6a",
+    "tools/cutover/transition_evaluator.py": "7d257893e83b2993e25e983918086120da13c2892f056bdd46564a869eb6b8a2"
+  },
+  "corpus": "CERTIFIED_FULL_PLAN_SLICE",
+  "mode": "RECORDED_RUNTIME_REEVALUATION",
+  "gold_hash": "ac8081d73e8dbd5db350be0ead095d0c1e61bcc50b2089b884bc8155d25d1d68",
+  "catalog_hash": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "candidate_snapshot_hash": "d7668b20c8f611570829a6b4115d8c7dd5d19e4b051bc271e93810579276d007",
+  "as_of": "2026-09-09T09:00:00+08:00",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "capture_runtime_commit": "5aaf64a235ca1766ee5c72bb24997aba924c10e0",
+  "observation_contract": "IMMUTABLE_NATIVE_CALL_TRACES_WITH_EXACT_REPLAY",
+  "runtime_parity_verified": true,
+  "runtime_parity_boundary": "RawTurnPlanner only; see artifact matrix for excluded capabilities",
+  "baseline_manifest_hash": "e6af9e9f7e98168bcd36b6db16f631914a33cc210bbb9f050f77720e0b985ed9",
+  "case_count": 6,
+  "turn_count": 10,
+  "executed_turn_count": 10,
+  "evaluable_case_count": 6,
+  "fully_evaluable_case_count": 6,
+  "status_counts": {
+    "PASS": 6,
+    "FAIL": 0,
+    "NOT_RUN": 0,
+    "BLOCKED": 0
+  },
+  "CASE_LEVEL": {
+    "exact_match": {
+      "n": 6,
+      "N": 6,
+      "value": 1.0,
+      "evidence": "EVIDENCE_INSUFFICIENT"
+    },
+    "excluded_not_run_or_blocked": 0,
+    "fully_labeled_axis_coverage": {
+      "n": 6,
+      "N": 6,
+      "value": 1.0,
+      "evidence": "EVIDENCE_INSUFFICIENT"
+    }
+  },
+  "TURN_LEVEL": {
+    "semantic_match": {
+      "n": 6,
+      "N": 6,
+      "value": 1.0,
+      "evidence": "EVIDENCE_INSUFFICIENT"
+    },
+    "unlabeled_or_unobserved": 4,
+    "turns_are_correlated": "Do not treat turns as independent case samples"
+  },
+  "FULL_PLAN_GOLD_COUNT": 0,
+  "WHOLE_PLAN_PASS": 0,
+  "WHOLE_PLAN_FAIL": 0,
+  "WHOLE_PLAN_UNOBSERVED": 0,
+  "POST_HARNESS_FIRST_DIVERGENCE": {},
+  "details": [
+    {
+      "case_id": "C81-201",
+      "status": "PASS",
+      "axis_results": {
+        "canonical_metrics": "PASS",
+        "canonical_dimensions": "PASS",
+        "target_task": "PASS",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "C81-202",
+      "status": "PASS",
+      "axis_results": {
+        "canonical_metrics": "PASS",
+        "canonical_dimensions": "PASS",
+        "target_task": "PASS",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "C81-203",
+      "status": "PASS",
+      "axis_results": {
+        "canonical_metrics": "PASS",
+        "canonical_dimensions": "PASS",
+        "target_task": "PASS",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "C81-204",
+      "status": "PASS",
+      "axis_results": {
+        "canonical_metrics": "PASS",
+        "canonical_dimensions": "PASS",
+        "target_task": "PASS",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "C81-205",
+      "status": "PASS",
+      "axis_results": {
+        "canonical_metrics": "PASS",
+        "canonical_dimensions": "PASS",
+        "target_task": "PASS",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    },
+    {
+      "case_id": "C81-206",
+      "status": "PASS",
+      "axis_results": {
+        "canonical_metrics": "PASS",
+        "canonical_dimensions": "PASS",
+        "target_task": "PASS",
+        "turn_relation": "PASS"
+      },
+      "missing_axes": [],
+      "error": null,
+      "first_divergence_stage": null,
+      "first_divergence_basis": "CURRENT_LABELED_OBSERVABLES_IN_RAW_RUNTIME_STAGE_ORDER_OR_FIRST_REJECTING_BOUNDARY",
+      "downstream_effects": [],
+      "safety_violations": [],
+      "safety_unobserved": [],
+      "evaluable": true,
+      "fully_evaluable": true,
+      "full_plan_gold": false
+    }
+  ],
+  "production_cutover_pass": false,
+  "stage_observation_coverage": {
+    "AuthorizedSemanticScope": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "CandidateSet": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "CanonicalBinding": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "CatalogSnapshot": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "CurrentClock": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "CurrentTurnParseInput": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "DatasetReference": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "HistoricalTasks": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "LogicalPlan": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "ModelInput": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "PendingState": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "PreviousTask": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "RecentTasks": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "SemanticQueryIR": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "SemanticResolutionInput": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "TaskPatchInput": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "TaskSemanticState": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    },
+    "TurnResolutionInput": {
+      "observed_turns": 10,
+      "executed_turn_denominator": 10,
+      "required_turn_denominator": 10
+    }
+  },
+  "real_model_calls": 0,
+  "source_capture_model_calls": 20,
+  "source_SQL_calls": 0,
+  "milvus_calls": 0,
+  "production_redis_writes": 0,
+  "production_state_mutations": 0,
+  "formal_model_benchmark": false,
+  "blind_holdout_run": false,
+  "full_production_orchestrator": false,
+  "fixture_receipts": {},
+  "capture_manifest_hash": "ebee492879489e19fe32126da19f61268eac336a5096e3e2751078f1b8d795ea"
+}

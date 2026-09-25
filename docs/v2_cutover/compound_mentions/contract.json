@@ -1,0 +1,18 @@
+{
+  "status": "BOUNDED_CATALOG_METRIC_SPAN_CONTRACT_VERIFIED",
+  "evidence_requirement": "One exact unique full metric display name in current pin; one MEASURE piece and contiguous explicit SUBJECT/SOURCE pieces; consistent clause/negation and no independent modifier/coordination/temporal evidence",
+  "collision_policy": "Exact full display name, canonical code or governed literal alias on another metric/role preserves original hypotheses; overlapping proposals and repeated spans are not arbitrarily selected",
+  "mutation": "Preserve measure mention ID and its operation; absorb only adjacent subject SET evidence; retag consistent negation IDs. No binding selection, synthetic canonical ID or new business alias.",
+  "trace": "Reason code, mention IDs, span, pinned catalog record/version; no full user question",
+  "time_observation": "Current/prior actual typed ranges only; range and grain measured separately, explicit unbounded means ABSENT, previous artifact scope/digest validated; no expected labels or inferred all-safe flags",
+  "limits": [
+    "Other compound-role patterns remain unresolved rather than overwritten",
+    "Model operation/shape mistakes remain",
+    "Existing TemporalEdit RANGE and legacy TIME_FIELD-only draft date authority need full closure",
+    "Region/source-value resolution and Pending/Dataset evaluator entry coverage remain"
+  ],
+  "prompt_changes": 0,
+  "regex_changes": 0,
+  "production_V1_routing_changed": false,
+  "canonical_selection_performed_by_span_recovery": false
+}

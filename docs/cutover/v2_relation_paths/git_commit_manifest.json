@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "b5037e7d15ecfd8e733551c853cbf9441be7c4bd",
+  "feature_branch": "cutover-v2-relation-paths-20260908-01",
+  "base_branch": "cutover-v2-catalog-plans-20260908-01",
+  "implementation_commit": "f653caa27561bd39b26a64692c1ab6e785af732d",
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "real_model_calls": 0,
+  "production_writes": 0
+}

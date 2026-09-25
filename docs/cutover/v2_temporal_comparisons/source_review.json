@@ -1,0 +1,60 @@
+{
+  "status": "PASS",
+  "reviewer": "Autonomous lead self-review; no independent reviewer claimed",
+  "findings": [
+    {
+      "stage": "V2_TEMPORAL_CONTRACT",
+      "confidence": "PROVEN",
+      "before": "ComparisonSpec permits unrelated or stale current/baseline periods and ambiguous output roles",
+      "after": "Scoped period rule is retained and all derived ranges/metric refs are reconstructed at final plan validation"
+    },
+    {
+      "stage": "V2_SLOT_DEPENDENCY",
+      "confidence": "PROVEN",
+      "before": "RANGE/ANCHOR changes reject any comparison dependency",
+      "after": "Typed comparison dependencies recompute in the same atomic TaskPatch; legacy unspecified dependencies remain bounded"
+    },
+    {
+      "stage": "V2_RESULT_CONTRACT",
+      "confidence": "PROVEN",
+      "before": "Comparison output metric ref can deduplicate with the current measure, with no baseline/derived distinction",
+      "after": "CURRENT/BASELINE/DERIVED output requirements, source-compatible arithmetic, grouping uniqueness and output collision checks"
+    }
+  ],
+  "corrections": [
+    "Fixed an initial local variable shadowing the scoped state argument during comparison CLEAR.",
+    "Changed the Pending alias fixture to use a distinct in-memory publication ID, rather than reserving its first ID twice.",
+    "Kept explicit current-window endpoint instants instead of re-deciding an already supplied DST fold.",
+    "Preserved temporal output subclass fields during JSON serialization.",
+    "Rejected projection IDs that hide the required time/group key; added duplicate bucket and collision contrasts.",
+    "Aligned mock utterances with the chosen period rule; mocks prove orchestration, not model recognition quality."
+  ],
+  "authoritative_calculation_evidence": [
+    "app/analysis/engine.py::_comparison/_pct_change",
+    "app/analysis/result_validator.py::_change_rate_check"
+  ],
+  "calculation_contract": "ABS_DIFF=current-baseline; GROWTH_RATE=(current-baseline)/abs(baseline), fractional result. Zero baseline has no growth rate. Missing current/baseline propagates missing derived value. No fabricated zero.",
+  "schema_expectation_migration": {
+    "old": [
+      "semantic_task_draft_v5.schema.json",
+      "current_recognition_value_v3.schema.json"
+    ],
+    "current": [
+      "semantic_task_draft_v6.schema.json",
+      "current_recognition_value_v4.schema.json"
+    ],
+    "decision": "Existing source/schema equality test now checks the explicit current schema versions. Historical schemas and business assertions remain unchanged."
+  },
+  "prompt_version": "v2-current-recognition-v6",
+  "prompt_reason": "Describe typed comparison rule/calculation edits and distinguish QUERY_GRAIN dependency from fixed units. Code owns derived periods, baseline facts and output roles; no prompt-based calendar repair.",
+  "regex_changes": 0,
+  "public_io_changed": false,
+  "v1_routing_changed": false,
+  "cross_service_patches": false,
+  "retained_gates": [
+    "Native catalog publication and deployed caches",
+    "Calendar policy gaps recorded separately",
+    "Actual ASL/SQL baseline selection, bucket pairing and execution output bindings",
+    "External entity-value/remaining semantic coverage, Gold/model evaluation, actual shadow and rollback"
+  ]
+}

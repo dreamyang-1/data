@@ -1,10 +1,12 @@
+import asyncio
 import json
 import re
-from datetime import date, datetime, timezone
+import time
+from datetime import date
 from uuid import uuid4
 
 import pytest
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient as RawTestClient
 
 from app.config import Settings
 from app.domain.models import (
@@ -20,25 +22,35 @@ from app.domain.models import (
 from app.main import create_app
 from app.services.orchestrator import (
     DataAnalysisOrchestrator,
-    _business_datetime_text,
-    _quality_status_text,
+    QUERY_EXECUTION_CHAIN,
 )
+from app.presentation import (
+    SEMANTIC_QUERY_TOOL_NAME,
+    SQL_EXECUTION_TOOL_NAME,
+    SQL_TRANSLATION_TOOL_NAME,
+)
+from app.services.progress import emit_progress
 from app.api import (
+    _CompositeChildProgressOrderer,
     _answer_chunk_delay,
     _answer_chunks,
+    _forward_traced_progress,
     _markdown_hard_line_breaks,
     _prepare_regeneration,
+    _progress_heartbeat_events,
+    _thinking_chunk_delay,
+    _thinking_chunks,
+    _thinking_events,
     _thinking_section,
     _thinking_title,
 )
 
 
-def test_user_visible_dataset_summary_uses_chinese_status_and_beijing_time():
-    assert _quality_status_text("PASS") == "通过"
-    assert _quality_status_text("FAIL") == "不通过"
-    assert _business_datetime_text(
-        datetime(2026, 9, 7, 5, 11, 7, tzinfo=timezone.utc)
-    ) == "2026-09-07 13:11:07（北京时间）"
+def TestClient(app, **kwargs):
+    """Business fixtures now call as a trusted backend with explicit identity."""
+    headers = {'Authorization': 'Bearer phase0c-fixture-token', 'X-Tenant-Id': 't1', 'X-User-Id': 'u1'}
+    headers.update(kwargs.pop('headers', {}))
+    return RawTestClient(app, headers=headers, **kwargs)
 
 
 def build_test_app(**overrides):
@@ -48,9 +60,23 @@ def build_test_app(**overrides):
         "intent_model_enabled": False,
         "allow_missing_trusted_identity_headers": False,
         "business_question_collection_enabled": False,
+        "trusted_backend_token": "phase0c-fixture-token",
     }
     defaults.update(overrides)
     return create_app(Settings(**defaults))
+
+
+def thinking_content(
+    events: list[dict], stage: str, *, status: str | None = None
+) -> str:
+    return "".join(
+        event["content"]
+        for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("step") != "output"
+        and event.get("meta", {}).get("stage") == stage
+        and (status is None or event.get("meta", {}).get("status") == status)
+    )
 
 
 def test_markdown_hard_line_breaks_preserve_document_logical_lines():
@@ -62,12 +88,75 @@ def test_markdown_hard_line_breaks_preserve_document_logical_lines():
     )
 
 
+@pytest.mark.parametrize("question,task_count,clarifying", [
+    ("查询本月销售额", 1, False),
+    ("统计经销商", 1, True),
+    ("查询 TDC-3 产品的主要适用科室、次要适用科室", 2, False),
+])
+@pytest.mark.parametrize("domains", [[], [205]])
+def test_planning_layout_is_shared_by_single_composite_and_clarification(
+    question, task_count, clarifying, domains,
+):
+    with TestClient(build_test_app(multi_question_model_enabled=False)) as client:
+        response = client.post("/agent_chat/stream", json={
+            "semantic_model_id": 81,
+            "business_domain_ids": domains,
+            "conversation_id": str(uuid4()),
+            "application_id": "app1",
+            "message_id": "m1",
+            "question": question,
+        })
+    assert response.status_code == 200
+    events = [json.loads(block.removeprefix("data: "))
+              for block in response.text.strip().split("\n\n")]
+    content = thinking_content(events, "TASK_PLANNING", status="COMPLETED")
+    assert "规划调用：" not in content
+    assert "规划链路：" not in content
+    decision = content.split("任务1：", 1)[0]
+    assert "业务域：" not in decision
+    if clarifying:
+        assert "当前任务参数不完整，暂停子任务拆分。" in decision
+        assert "无需拆分" not in decision
+    elif task_count == 1:
+        assert "拆分判断完成。当前问题无需拆分，按单任务执行。" in decision
+    else:
+        assert "拆分判断完成。已拆分为以下任务：" in decision
+    for index in range(1, task_count + 1):
+        block = content.split(f"任务{index}：", 1)[1].split(f"任务{index + 1}：", 1)[0]
+        if domains:
+            assert block.count("业务域：") == 1
+            if "任务意图：" in block:
+                assert re.search(r"任务意图：[^\n]+\n业务域：", block)
+            if "参数提取：" in block:
+                assert block.index("业务域：") < block.index("参数提取：")
+        else:
+            assert "业务域：" not in block
+    stages = [event.get("meta", {}).get("stage") for event in events
+              if event.get("type") == "message_chunk"]
+    assert stages.index("INTENT_RECOGNITION") < stages.index("TASK_PLANNING")
+    if "DATA_RETRIEVAL" in stages:
+        assert stages.index("TASK_PLANNING") < stages.index("DATA_RETRIEVAL")
+    if not clarifying:
+        analytic_stages = [
+            "INTENT_RECOGNITION", "TASK_PLANNING", "DATA_RETRIEVAL",
+            "RELIABILITY_CHECK", "INSIGHT_ANALYSIS",
+        ]
+        positions = [next(i for i, event in enumerate(events)
+                          if event.get("type") == "message_chunk"
+                          and event.get("meta", {}).get("stage") == stage)
+                     for stage in analytic_stages]
+        positions.append(next(i for i, event in enumerate(events)
+                              if event.get("type") == "message_chunk"
+                              and event.get("step") == "output"))
+        assert positions == sorted(positions)
+
+
 def test_chat_endpoint():
     with TestClient(build_test_app()) as client:
         response = client.post(
             "/agent_chat",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "conversation_id": "c1",
                 "application_id": "app1",
                 "message_id": "m1",
@@ -80,6 +169,142 @@ def test_chat_endpoint():
     assert response.json()["intent_confidence"] == 0.95
 
 
+def test_stream_replaces_local_structure_with_exact_asl_json():
+    with TestClient(build_test_app()) as client:
+        response = client.post(
+            "/agent_chat/stream",
+            headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
+            json={
+                "semantic_model_id": 81,
+                "conversation_id": "asl-display-stream",
+                "application_id": "app1",
+                "message_id": "m1",
+                "question": "查询本月销售额",
+            },
+        )
+
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    intent = next(
+        event for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
+        and event.get("meta", {}).get("status") == "COMPLETED"
+    )
+    intent_message = intent["meta"]["message"]
+    assert "结构化提取" not in intent_message
+    assert "轮次关系：" not in intent_message
+    assert "上下文补全：" not in intent_message
+    assert "是否需要追问：" not in intent_message
+    assert "不追问理由：" not in intent_message
+
+    asl_event = next(
+        event for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "ASL_GENERATION"
+    )
+    asl_message = asl_event["meta"]["message"]
+    assert f"工具：{SEMANTIC_QUERY_TOOL_NAME}。" in asl_message
+    asl_json = asl_message.split("```json\n", 1)[1].rsplit("\n```", 1)[0]
+    assert json.loads(asl_json) == {
+        "version": "2.0",
+        "intent": "query",
+        "metrics": [{
+            "name": "metric.sales_amount",
+            "alias": "销售额",
+        }],
+        "ambiguity": [],
+    }
+    assert asl_event["meta"]["display_model"] == "OagentASL"
+    planning_content = thinking_content(
+        events, "TASK_PLANNING", status="COMPLETED"
+    )
+    execution_running_content = thinking_content(
+        events, "DATA_RETRIEVAL", status="RUNNING"
+    )
+    assert "规划调用：" not in planning_content
+    assert f"执行链路：{QUERY_EXECUTION_CHAIN}" in execution_running_content
+    assert "语义解析" not in QUERY_EXECUTION_CHAIN
+    assert QUERY_EXECUTION_CHAIN == (
+        f"{SEMANTIC_QUERY_TOOL_NAME} → {SQL_TRANSLATION_TOOL_NAME} → "
+        f"{SQL_EXECUTION_TOOL_NAME} → 数据集输出 → 结果校验 → 洞察分析"
+    )
+    planning_event = next(
+        event for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "TASK_PLANNING"
+        and event.get("meta", {}).get("status") == "COMPLETED"
+    )
+    asl_index = events.index(asl_event)
+    assert events.index(intent) < events.index(planning_event) < asl_index
+    retrieval_completed_index = next(
+        index for index, event in enumerate(events)
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "DATA_RETRIEVAL"
+        and event.get("meta", {}).get("status") == "COMPLETED"
+    )
+    assert asl_index < retrieval_completed_index
+    insight_content = thinking_content(
+        events, "INSIGHT_ANALYSIS", status="COMPLETED"
+    )
+    validation_content = thinking_content(
+        events, "RELIABILITY_CHECK", status="COMPLETED"
+    )
+    assert "#### ◉ 数据洞察分析" in insight_content
+    assert "本次查询共命中" in insight_content
+    assert "这次结果的核心值" in insight_content
+    assert "基于本次问题与查询数据" in insight_content
+    assert "推断性解释不代表已核实的业务原因" in insight_content
+    assert "任务1：" not in validation_content
+    assert "任务1：" not in insight_content
+
+
+def test_composite_progress_streams_each_stage_at_its_real_barrier():
+    orderer = _CompositeChildProgressOrderer()
+
+    def event(stage, status, task_index):
+        return {
+            "stage": stage,
+            "status": status,
+            "message": f"{stage}-{task_index}",
+            "is_child_task": True,
+            "task_id": f"task-{task_index + 1}",
+            "task_index": task_index,
+            "task_count": 2,
+        }
+
+    # Execution is visible immediately; task-1 validation/insight wait only
+    # for the truthful cross-task stage barriers, not for the whole DAG.
+    first_execution = orderer.push(event("DATA_RETRIEVAL", "RUNNING", 0))
+    assert [item["stage"] for item in first_execution] == ["DATA_RETRIEVAL"]
+    orderer.push(event("DATA_RETRIEVAL", "COMPLETED", 0))
+    assert orderer.push(event("RELIABILITY_CHECK", "COMPLETED", 0)) == []
+    assert orderer.push(event("INSIGHT_ANALYSIS", "COMPLETED", 0)) == []
+
+    second_execution = orderer.push(event("DATA_RETRIEVAL", "COMPLETED", 1))
+    assert [item["stage"] for item in second_execution] == [
+        "DATA_RETRIEVAL",
+        "RELIABILITY_CHECK",
+    ]
+    assert orderer.execution_barrier_open is True
+    assert orderer.validation_barrier_open is False
+
+    second_validation = orderer.push(
+        event("RELIABILITY_CHECK", "COMPLETED", 1)
+    )
+    assert [item["stage"] for item in second_validation] == [
+        "RELIABILITY_CHECK",
+        "INSIGHT_ANALYSIS",
+    ]
+    assert orderer.validation_barrier_open is True
+    assert orderer.push(event("INSIGHT_ANALYSIS", "COMPLETED", 1))[0][
+        "stage"
+    ] == "INSIGHT_ANALYSIS"
+    assert orderer.flush() == []
+
+
 def test_chat_collects_sync_and_stream_questions_but_not_refresh(tmp_path):
     document_path = tmp_path / "实际业务问题.md"
     app = build_test_app(
@@ -87,6 +312,7 @@ def test_chat_collects_sync_and_stream_questions_but_not_refresh(tmp_path):
         business_question_document_path=document_path,
     )
     base_payload = {
+        "semantic_model_id": 81,
         "conversation_id": "business-conversation",
         "application_id": "business-app",
     }
@@ -146,7 +372,7 @@ def test_question_collection_failure_does_not_break_chat(tmp_path):
     with TestClient(app) as client:
         response = client.post(
             "/agent_chat",
-            json={
+            json={"semantic_model_id": 81,
                 "conversation_id": "collector-failure-conversation",
                 "application_id": "collector-failure-app",
                 "message_id": "collector-failure-message",
@@ -179,6 +405,542 @@ def test_normal_answer_uses_small_streaming_chunks():
 def test_answer_transport_chunk_size_must_be_positive():
     with pytest.raises(ValueError, match="chunk_size must be greater than zero"):
         _answer_chunks("答案", chunk_size=0)
+
+
+def test_thinking_transport_streams_unicode_and_bounds_large_nodes():
+    short = "结构化提取：上海市销售趋势"
+    short_chunks = _thinking_chunks(short, chunk_size=4, max_chunks=120)
+    assert "".join(short_chunks) == short
+    assert len(short_chunks) > 1
+    assert all(len(chunk) == 4 for chunk in short_chunks[:-1])
+
+    large = "语义字段" * 2000
+    large_chunks = _thinking_chunks(large, chunk_size=4, max_chunks=120)
+    assert "".join(large_chunks) == large
+    assert len(large_chunks) <= 120
+    assert _thinking_chunk_delay(len(large_chunks)) == 0.03
+
+
+def test_thinking_transport_reconstructs_exact_asl_markdown():
+    asl = {"version": "2.0", "filters": [{"field": "城市", "value": "上海市"}]}
+    message = "结构化提取（ASL）：\n```json\n" + json.dumps(
+        asl, ensure_ascii=False, indent=2
+    ) + "\n```"
+    serialized = _thinking_events(
+        {
+            "stage": "ASL_GENERATION",
+            "status": "COMPLETED",
+            "message": message,
+            "display_model": "OagentASL",
+        },
+        heading="#### ◉ 调度执行",
+        chunk_size=3,
+    )
+    events = [
+        json.loads(item.removeprefix("data: ").strip())
+        for item in serialized
+    ]
+    chunks = [item for item in events if item["type"] == "message_chunk"]
+    reconstructed = "".join(item["content"] for item in chunks)
+    assert len(chunks) > 1
+    assert reconstructed.startswith("\n\n#### ◉ 调度执行")
+    assert reconstructed.endswith("\n\n")
+    normalized = reconstructed.replace("  \n", "\n")
+    extracted = normalized.split("```json\n", 1)[1].rsplit("\n```", 1)[0]
+    assert json.loads(extracted) == asl
+    assert chunks[0]["meta"]["display_model"] == "OagentASL"
+    assert "message" not in chunks[1]["meta"]
+    assert chunks[-1]["is_last"] is True
+
+
+def test_thinking_transport_preserves_inline_svg_chart_markup():
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 10">'
+        '<title>销售额趋势</title><path d="M0 9 L20 1"/></svg>'
+    )
+    serialized = _thinking_events(
+        {
+            "stage": "INSIGHT_ANALYSIS",
+            "status": "COMPLETED",
+            "message": f"数据洞察分析\n\n#### 图表\n\n{svg}",
+        },
+        heading="#### ◉ 数据洞察分析",
+        chunk_size=3,
+    )
+    events = [
+        json.loads(item.removeprefix("data: ").strip())
+        for item in serialized
+    ]
+    reconstructed = "".join(
+        item["content"] for item in events if item["type"] == "message_chunk"
+    )
+
+    assert svg in reconstructed
+    assert reconstructed.count("<svg") == 1
+    assert reconstructed.count("</svg>") == 1
+
+
+def test_thinking_transport_preserves_remote_markdown_image():
+    markdown = "![销售额趋势](https://charts.example/sales-trend.jpeg)"
+    serialized = _thinking_events(
+        {
+            "stage": "INSIGHT_ANALYSIS",
+            "status": "COMPLETED",
+            "message": f"数据洞察分析\n\n#### 图表\n\n{markdown}",
+        },
+        heading="#### ◉ 数据洞察分析",
+        chunk_size=1,
+    )
+    events = [
+        json.loads(item.removeprefix("data: ").strip())
+        for item in serialized
+    ]
+    reconstructed = "".join(
+        item["content"] for item in events if item["type"] == "message_chunk"
+    )
+
+    assert markdown in reconstructed
+    assert "![]\\(" not in reconstructed
+    assert "[https://charts.example" not in reconstructed
+
+
+def test_progress_heartbeat_uses_visible_existing_stage_contract():
+    serialized = _progress_heartbeat_events(
+        "INTENT_RECOGNITION",
+        elapsed_seconds=6.04,
+    )
+    events = [
+        json.loads(item.removeprefix("data: ").strip())
+        for item in serialized
+    ]
+
+    assert len(events) == 1
+    visible = events[0]
+    assert visible["type"] == "message_chunk"
+    assert visible["step"] == "step1"
+    assert visible["index"] == 6040
+    assert visible["is_last"] is False
+    assert visible["content"] == (
+        "<stage>⏳ 正在识别问题中的指标、维度与筛选条件"
+        "（已用时 6 秒）...</stage>"
+    )
+    assert visible["meta"] == {
+        "stage": "INTENT_RECOGNITION",
+        "status": "RUNNING",
+        "elapsed_seconds": 6.0,
+    }
+
+
+def test_progress_delivery_is_not_blocked_by_slow_telemetry():
+    delivered = asyncio.Event()
+
+    class SlowTracker:
+        def handle(self, _event):
+            time.sleep(0.15)
+            raise AssertionError("streaming progress must not wait for telemetry")
+
+    async def downstream(_event):
+        delivered.set()
+
+    async def exercise():
+        task = asyncio.create_task(
+            _forward_traced_progress(
+                SlowTracker(),
+                downstream,
+                {"stage": "INTENT_RECOGNITION", "status": "RUNNING"},
+            )
+        )
+        await asyncio.wait_for(delivered.wait(), timeout=0.03)
+        await asyncio.wait_for(task, timeout=0.03)
+
+    asyncio.run(exercise())
+
+
+def test_slow_stream_emits_visible_progress_while_waiting():
+    app = build_test_app(
+        runtime_mode="V1",
+        thinking_stream_heartbeat_seconds=0.05,
+    )
+
+    class SlowWorkflow:
+        async def ainvoke(self, state):
+            # Hidden internal events must not postpone visible progress. They
+            # used to restart the wait timeout even though the page could not
+            # render them, recreating a several-second frozen interval.
+            for _ in range(6):
+                await emit_progress(
+                    "QUESTION_REWRITE",
+                    "RUNNING",
+                    "internal context normalization",
+                )
+                await asyncio.sleep(0.03)
+            chat = state["chat"]
+            return {"response": AgentResponse(
+                request_id=uuid4(),
+                conversation_id=chat.conversation_id,
+                status="COMPLETED",
+                intent=PrimaryIntent.CHAT,
+                answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(app.state.container, "workflow", SlowWorkflow())
+        response = client.post(
+            "/agent_chat/stream",
+            json={
+                "semantic_model_id": 81,
+                "application_id": "app1",
+                "conversation_id": "visible-waiting-progress",
+                "message_id": "m1",
+                "question": "请处理这个问题",
+            },
+        )
+
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    heartbeats = [
+        event for event in events
+        if event.get("type") == "message_chunk"
+        and "已用时" in event.get("content", "")
+        and event.get("meta", {}).get("status") == "RUNNING"
+    ]
+
+    assert response.status_code == 200
+    assert len(heartbeats) >= 2
+    assert all(event["step"] == "step1" for event in heartbeats)
+    assert all(event["is_last"] is False for event in heartbeats)
+    assert len({event["index"] for event in heartbeats}) == len(heartbeats)
+    assert all("<stage>⏳ 正在识别问题" in event["content"] for event in heartbeats)
+    assert all("已用时" in event["content"] for event in heartbeats)
+    assert next(
+        event for event in events if event["type"] == "complete"
+    )["status"] == "COMPLETED"
+
+
+def test_deferred_planning_does_not_drive_heartbeat_before_intent_completion():
+    app = build_test_app(
+        runtime_mode="V1",
+        thinking_stream_heartbeat_seconds=0.05,
+    )
+
+    class PlanningBeforeIntentWorkflow:
+        async def ainvoke(self, state):
+            await emit_progress(
+                "TASK_PLANNING",
+                "RUNNING",
+                "正在生成任务拆分与调用计划",
+            )
+            await asyncio.sleep(0.12)
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "COMPLETED",
+                "意图识别完成",
+            )
+            chat = state["chat"]
+            return {"response": AgentResponse(
+                request_id=uuid4(),
+                conversation_id=chat.conversation_id,
+                status="COMPLETED",
+                intent=PrimaryIntent.CHAT,
+                answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(
+            app.state.container,
+            "workflow",
+            PlanningBeforeIntentWorkflow(),
+        )
+        response = client.post(
+            "/agent_chat/stream",
+            json={
+                "semantic_model_id": 81,
+                "application_id": "app1",
+                "conversation_id": "deferred-planning-heartbeat-order",
+                "message_id": "m1",
+                "question": "请处理这个问题",
+            },
+        )
+
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    intent_completed_index = next(
+        index for index, event in enumerate(events)
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
+        and event.get("meta", {}).get("status") == "COMPLETED"
+    )
+    planning_indexes = [
+        index for index, event in enumerate(events)
+        if event.get("type") == "message_chunk"
+        and event.get("meta", {}).get("stage") == "TASK_PLANNING"
+    ]
+
+    assert response.status_code == 200
+    assert planning_indexes
+    assert min(planning_indexes) > intent_completed_index
+
+
+def test_default_visible_progress_heartbeat_is_one_second():
+    assert (
+        Settings.model_fields["thinking_stream_heartbeat_seconds"].default
+        == 1.0
+    )
+
+
+@pytest.mark.parametrize("scenario", ["single", "composite", "clarification", "pending_resume"])
+def test_completed_question_moves_public_stream_to_planning_without_intent_regression(scenario):
+    app = build_test_app(runtime_mode="V1", thinking_stream_heartbeat_seconds=0.05)
+
+    class CompletedQuestionWorkflow:
+        async def ainvoke(self, state):
+            await emit_progress("INTENT_RECOGNITION", "RUNNING", "正在理解当前问题。")
+            await emit_progress(
+                "INTENT_RECOGNITION", "RUNNING", "补全后的问题：查询已确认业务范围的销售额。",
+                progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+            )
+            # Slow planner / extraction: heartbeat must already be planning.
+            await asyncio.sleep(0.12)
+            await emit_progress("INTENT_RECOGNITION", "RUNNING", "正在提取任务参数。")
+            await emit_progress("TASK_PLANNING", "RUNNING", "正在判断是否拆分。")
+            await emit_progress("TASK_PLANNING", "COMPLETED", "拆分判断完成。\n任务1：查询销售额")
+            await emit_progress(
+                "INTENT_RECOGNITION", "COMPLETED", "参数提取：销售额",
+                is_composite=scenario == "composite",
+                presentation_scenario="CLARIFICATION" if scenario == "clarification" else "ANALYTIC",
+            )
+            await emit_progress("COMPLETENESS_CHECK", "NEEDS_INPUT" if scenario == "clarification" else "COMPLETED", "参数校验完成")
+            if scenario != "clarification":
+                await emit_progress("SQL_EXECUTION", "RUNNING", "正在执行查询。")
+                await emit_progress("INTENT_RECOGNITION", "COMPLETED", "迟到的识别摘要不应重新开启节点")
+                await emit_progress("RELIABILITY_CHECK", "COMPLETED", "校验完成")
+                await emit_progress("INSIGHT_ANALYSIS", "COMPLETED", "分析完成")
+                await emit_progress("FINAL_OUTPUT", "COMPLETED", "结果已就绪")
+            return {"response": AgentResponse(
+                request_id=uuid4(), conversation_id=state["chat"].conversation_id,
+                status="NEEDS_CLARIFICATION" if scenario == "clarification" else "COMPLETED",
+                intent=PrimaryIntent.METRIC_QUERY, answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(app.state.container, "workflow", CompletedQuestionWorkflow())
+        response = client.post("/agent_chat/stream", json={
+            "semantic_model_id": 81, "application_id": "app1",
+            "conversation_id": "completion-boundary-" + scenario,
+            "message_id": "m1", "question": "1" if scenario == "pending_resume" else "查询销售额",
+        })
+    assert response.status_code == 200
+    events = [json.loads(b.removeprefix("data: ")) for b in response.text.strip().split("\n\n")]
+    chunks = [e for e in events if e.get("type") == "message_chunk" and e.get("meta", {}).get("stage")]
+    completion_end = max(i for i, e in enumerate(chunks)
+                         if e["meta"].get("stage") == "INTENT_RECOGNITION")
+    assert "补全后的问题" in "".join(e.get("content", "") for e in chunks[:completion_end + 1])
+    assert chunks[completion_end]["meta"]["status"] == "COMPLETED"
+    assert chunks[completion_end + 1]["meta"]["stage"] == "TASK_PLANNING"
+    heartbeats = [e for e in chunks[completion_end + 1:] if "已用时" in e.get("content", "")]
+    assert heartbeats and all(e["meta"]["stage"] == "TASK_PLANNING" for e in heartbeats)
+    text = "".join(e.get("content", "") for e in chunks)
+    assert text.count("#### ◉ 意图识别") == 1
+    assert text.count("#### ◉ 任务拆分与规划") == 1
+    assert "迟到的识别摘要" not in text
+    assert "参数提取：销售额" in thinking_content(events, "TASK_PLANNING", status="COMPLETED")
+    if scenario != "clarification":
+        stages = [e["meta"]["stage"] for e in chunks]
+        rank = {s: i for i, s in enumerate([
+            "INTENT_RECOGNITION", "TASK_PLANNING", "SQL_EXECUTION",
+            "RELIABILITY_CHECK", "INSIGHT_ANALYSIS", "FINAL_OUTPUT",
+        ])}
+        assert [rank[s] for s in stages] == sorted(rank[s] for s in stages)
+
+
+def test_default_thinking_text_uses_one_character_every_30ms():
+    assert Settings.model_fields["thinking_stream_chunk_size"].default == 1
+    assert (
+        Settings.model_fields[
+            "thinking_stream_chunk_interval_seconds"
+        ].default
+        == 0.03
+    )
+
+
+def test_character_pacing_does_not_block_background_execution():
+    publish_latencies = []
+    app = build_test_app(
+        env="development",
+        runtime_mode="V1",
+        session_store_mode="memory",
+        long_term_memory_mode="disabled",
+        thinking_stream_chunk_size=1,
+        thinking_stream_chunk_interval_seconds=0.02,
+        thinking_stream_heartbeat_seconds=1.0,
+    )
+
+    class TwoMilestoneWorkflow:
+        async def ainvoke(self, state):
+            started = time.monotonic()
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "正在理解当前问题，并核对本轮与会话上下文的关系。",
+            )
+            publish_latencies.append(time.monotonic() - started)
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "对话状态识别：独立新问题。",
+            )
+            chat = state["chat"]
+            return {"response": AgentResponse(
+                request_id=uuid4(),
+                conversation_id=chat.conversation_id,
+                status="COMPLETED",
+                intent=PrimaryIntent.CHAT,
+                answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(app.state.container, "workflow", TwoMilestoneWorkflow())
+        response = client.post(
+            "/agent_chat/stream",
+            json={
+                "semantic_model_id": 81,
+                "application_id": "app1",
+                "conversation_id": "paced-progress-does-not-block",
+                "message_id": "m1",
+                "question": "请处理这个问题",
+            },
+        )
+
+    assert response.status_code == 200
+    assert publish_latencies and publish_latencies[0] < 0.15
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    thinking = "".join(
+        event.get("content", "")
+        for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("step") == "step1"
+        and "已用时" not in event.get("content", "")
+    )
+    assert "正在理解当前问题，并核对本轮与会话上下文的关系。" in thinking
+    assert "对话状态识别：独立新问题。" in thinking
+
+
+def test_public_intent_stream_hides_internal_v2_milestones_but_releases_first_packet_progress():
+    app = build_test_app(
+        env="test",
+        runtime_mode="V1",
+        session_store_mode="memory",
+        long_term_memory_mode="disabled",
+    )
+
+    class IntentContractWorkflow:
+        async def ainvoke(self, state):
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "正在理解当前问题，并核对本轮与会话上下文的关系。",
+            )
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "对话状态识别：独立新问题。",
+            )
+            for phase, message in (
+                (
+                    "V2_SEMANTIC_CATALOG_READY",
+                    "业务域语义目录已加载，正在提取当前问题的查询要素。",
+                ),
+                (
+                    "V2_SEMANTIC_CANDIDATES_READY",
+                    "关键词语义候选已提取，正在校验绑定。",
+                ),
+            ):
+                await emit_progress(
+                    "INTENT_RECOGNITION",
+                    "RUNNING",
+                    message,
+                    progress_phase=phase,
+                )
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "用户原始问题：按月份分析上海地区产品最近一年的销售趋势。\n"
+                "补全后的问题：按月份分析上海地区产品最近一年的销售趋势。",
+                progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+            )
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "正在进行任务意图分析、参数提取和规范化。",
+            )
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "COMPLETED",
+                "结构化参数提取：月份（时间粒度）；上海地区（筛选值）；"
+                "销售趋势（指标）。\n业务域：医药销售域\n"
+                "任务意图：趋势分析（置信度 0.95）\n"
+                "意图判定依据：用户要求观察指标随时间的变化。",
+                display_model="IntentRecognitionDisplayV2",
+                display_version="V2",
+            )
+            chat = state["chat"]
+            return {"response": AgentResponse(
+                request_id=uuid4(),
+                conversation_id=chat.conversation_id,
+                status="COMPLETED",
+                intent=PrimaryIntent.TREND_ANALYSIS,
+                answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(app.state.container, "workflow", IntentContractWorkflow())
+        response = client.post(
+            "/agent_chat/stream",
+            json={
+                "semantic_model_id": 81,
+                "application_id": "app1",
+                "conversation_id": "public-intent-contract",
+                "message_id": "m1",
+                "question": "按月份分析上海地区产品最近一年的销售趋势。",
+            },
+        )
+
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    thinking = "".join(
+        event.get("content", "")
+        for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("step") in {"step1", "execute_plan"}
+        and "已用时" not in event.get("content", "")
+    )
+    forbidden = (
+        "业务域语义目录已加载",
+        "关键词语义候选已提取",
+    )
+    assert all(text not in thinking for text in forbidden)
+    ordered = (
+        "正在理解当前问题，并核对本轮与会话上下文的关系。",
+        "对话状态识别：独立新问题。",
+        "用户原始问题：按月份分析上海地区产品最近一年的销售趋势。",
+        "补全后的问题：按月份分析上海地区产品最近一年的销售趋势。",
+        "正在进行任务意图分析、参数提取和规范化。",
+        "结构化参数提取：月份（时间粒度）",
+        "业务域：医药销售域",
+        "任务意图：趋势分析（置信度 0.95）",
+        "意图判定依据：用户要求观察指标随时间的变化。",
+    )
+    positions = [thinking.index(text) for text in ordered]
+    assert positions == sorted(positions)
 
 
 def test_file_inspection_summary_reports_successful_parse_without_internal_path():
@@ -220,14 +982,14 @@ def test_intent_summary_marks_file_based_analysis_only_when_selected():
         file_status="READ_SUCCESS",
         file_based=False,
     )
-    assert "### 1、意图识别" in file_summary
-    assert "任务意图：基于用户文件进行趋势分析" in file_summary
+    assert "### ◉ 意图识别" in file_summary
+    assert "任务意图：" not in file_summary
     assert "文件判断：检测到用户上传文件，按文件数据链路处理" in file_summary
     assert "任务意图：基于用户文件进行" not in normal_summary
     assert "文件判断：检测到用户上传文件，但当前问题不使用该文件" in normal_summary
 
 
-def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
+def test_intent_summary_hides_internal_turn_and_clarification_diagnostics():
     standalone = CanonicalAnalysisRequest(
         conversation_id="turn-relation-display",
         application_id="app",
@@ -241,11 +1003,12 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
     standalone_summary = DataAnalysisOrchestrator._intent_think_summary(
         standalone
     )
-    assert "轮次关系：独立新问题" in standalone_summary
-    assert "上下文补全：否" in standalone_summary
-    assert "是否需要追问：否" in standalone_summary
-    assert "不追问理由：" in standalone_summary
-    assert "参数规范化：已完成" in standalone_summary
+    assert "轮次关系：" not in standalone_summary
+    assert "上下文补全：" not in standalone_summary
+    assert "是否需要追问：" not in standalone_summary
+    assert "不追问理由：" not in standalone_summary
+    assert "参数规范化：" not in standalone_summary
+    assert "任务意图：" not in standalone_summary
 
     followup = standalone.model_copy(
         deep=True,
@@ -256,8 +1019,8 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
         },
     )
     followup_summary = DataAnalysisOrchestrator._intent_think_summary(followup)
-    assert "轮次关系：当前主题追问" in followup_summary
-    assert "上下文补全：是" in followup_summary
+    assert "轮次关系：" not in followup_summary
+    assert "上下文补全：" not in followup_summary
 
     model_enriched = standalone.model_copy(
         deep=True,
@@ -272,11 +1035,11 @@ def test_intent_summary_distinguishes_followup_from_clarification_and_rewrite():
     model_summary = DataAnalysisOrchestrator._intent_think_summary(
         model_enriched
     )
-    assert "任务意图：趋势分析（置信度" in model_summary
-    assert "意图判定依据：" in model_summary
+    assert "任务意图：" not in model_summary
+    assert "意图判定依据：" not in model_summary
 
 
-def test_intent_summary_hides_unverified_and_empty_semantic_slots():
+def test_intent_summary_does_not_render_a_pre_asl_structure():
     request = CanonicalAnalysisRequest(
         conversation_id="vector-display-only",
         application_id="app",
@@ -303,16 +1066,17 @@ def test_intent_summary_hides_unverified_and_empty_semantic_slots():
 
     summary = DataAnalysisOrchestrator._intent_think_summary(request)
 
-    assert "查询字段：['经销商名称']" in summary
-    assert "实体：费森尤斯医疗用品股份有限公司" in summary
-    assert "商品品牌 EQ 费森尤斯医疗用品股份有限公司" in summary
-    assert "维度：[]" in summary
+    assert "结构化提取" not in summary
+    assert "查询字段：" not in summary
+    assert "实体：费森尤斯医疗用品股份有限公司" not in summary
+    assert "商品品牌 EQ 费森尤斯医疗用品股份有限公司" not in summary
+    assert "维度：" not in summary
     assert "商品名称 EQ 费森尤斯" not in summary
     assert "模型猜测值" not in summary
     assert "未提取" not in summary
 
 
-def test_intent_summary_omits_structure_line_when_nothing_is_vector_grounded():
+def test_intent_summary_omits_all_local_structure_when_nothing_is_grounded():
     request = CanonicalAnalysisRequest(
         conversation_id="no-vector-display",
         application_id="app",
@@ -328,8 +1092,9 @@ def test_intent_summary_omits_structure_line_when_nothing_is_vector_grounded():
 
     assert "模型猜测对象" not in summary
     assert "未提取" not in summary
-    assert "指标：[]（用户未要求统计指标）" in summary
-    assert "排序数量：无" in summary
+    assert "结构化提取" not in summary
+    assert "指标：" not in summary
+    assert "排序数量：" not in summary
 
 
 def test_intent_display_v2_is_multiline_and_does_not_mutate_execution_request():
@@ -356,19 +1121,23 @@ def test_intent_display_v2_is_multiline_and_does_not_mutate_execution_request():
     )
     before = request.model_copy(deep=True)
 
-    summary = DataAnalysisOrchestrator._intent_think_summary(request)
+    summary = DataAnalysisOrchestrator._intent_think_summary(
+        request,
+        business_domain_labels=("医药销售域",),
+    )
 
     assert request == before
-    assert summary.startswith("### 1、意图识别\n\n")
+    assert summary.startswith("### ◉ 意图识别\n\n")
     assert "\n用户原始问题：" in summary
     assert "\n补全后的问题：" in summary
+    assert "\n业务域：" not in summary
     assert "文件判断：" not in summary
-    assert "\n结构化提取：\n指标：[]" in summary
-    assert "商品品牌 EQ 费森尤斯（来源：用户原始输入，经当前语义模型向量库规范化）" in summary
-    assert "\n是否需要追问：否" in summary
+    assert "\n结构化提取" not in summary
+    assert "商品品牌 EQ 费森尤斯" not in summary
+    assert "\n是否需要追问：" not in summary
 
 
-def test_default_trend_time_display_waits_for_verified_source_watermark():
+def test_default_trend_time_is_not_reconstructed_before_asl_generation():
     request = CanonicalAnalysisRequest(
         conversation_id="intent-display-watermark-time",
         application_id="app",
@@ -385,11 +1154,11 @@ def test_default_trend_time_display_waits_for_verified_source_watermark():
 
     summary = DataAnalysisOrchestrator._intent_think_summary(request)
 
-    assert "最近12个完整业务月份（执行时按数据水位确定）" in summary
+    assert "时间区间：" not in summary
     assert "2025-09-04 至 2026-09-05" not in summary
 
 
-def test_intent_display_v2_renders_relation_enum_without_internal_code():
+def test_intent_display_v2_does_not_render_local_filter_or_entity_projection():
     request = CanonicalAnalysisRequest(
         conversation_id="intent-display-enum",
         application_id="app",
@@ -408,8 +1177,8 @@ def test_intent_display_v2_renders_relation_enum_without_internal_code():
 
     summary = DataAnalysisOrchestrator._intent_think_summary(request)
 
-    assert "适用科室类型 EQ 主要适用" in summary
-    assert "实体：TDC-3" in summary
+    assert "适用科室类型 EQ 主要适用" not in summary
+    assert "实体：TDC-3" not in summary
     assert "实体：1" not in summary
 
 
@@ -433,13 +1202,13 @@ def test_identity_headers_are_not_required():
     with TestClient(build_test_app()) as client:
         response = client.post(
             "/agent_chat",
-            json={"application_id": "app1", "conversation_id": "c1", "message_id": "m1", "question": "你好"},
+            json={"semantic_model_id": 81, "application_id": "app1", "conversation_id": "c1", "message_id": "m1", "question": "你好"},
         )
     assert response.status_code == 200
 
 
 def test_regeneration_keeps_conversation_and_removes_replaced_turn_from_history():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="message-original",
@@ -475,7 +1244,7 @@ def test_regeneration_keeps_conversation_and_removes_replaced_turn_from_history(
 
 
 def test_regeneration_message_id_is_idempotent_per_refresh_attempt():
-    common = {
+    common = {"semantic_model_id": 81,
         "application_id": "app-refresh",
         "conversation_id": "conversation-original",
         "message_id": "message-original",
@@ -498,6 +1267,7 @@ def test_regeneration_message_id_is_idempotent_per_refresh_attempt():
 
 def test_legacy_modified_resubmit_is_distinct_from_pure_refresh():
     common = {
+        "semantic_model_id": 81,
         "application_id": "app-refresh",
         "conversation_id": "conversation-original",
         "message_id": "original-message-id",
@@ -519,7 +1289,7 @@ def test_legacy_modified_resubmit_is_distinct_from_pure_refresh():
 
 
 def test_regeneration_accepts_explicit_id_only_for_last_user_turn():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -545,7 +1315,7 @@ def test_regeneration_accepts_explicit_id_only_for_last_user_turn():
 
 
 def test_regeneration_rejects_replacing_an_earlier_user_turn():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -572,7 +1342,7 @@ def test_regeneration_rejects_replacing_an_earlier_user_turn():
 
 
 def test_revise_last_question_does_not_require_history_or_replacement_id():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -591,7 +1361,7 @@ def test_revise_last_question_does_not_require_history_or_replacement_id():
 
 
 def test_legacy_replacement_id_without_history_is_accepted_for_last_turn_only():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -607,7 +1377,7 @@ def test_legacy_replacement_id_without_history_is_accepted_for_last_turn_only():
 
 
 def test_regeneration_text_fallback_normalizes_unicode_dash():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -627,7 +1397,7 @@ def test_regeneration_text_fallback_normalizes_unicode_dash():
 
 
 def test_regeneration_text_fallback_accepts_known_ui_question_prefix_only():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -647,7 +1417,7 @@ def test_regeneration_text_fallback_accepts_known_ui_question_prefix_only():
 
 def test_refresh_endpoint_is_idempotent_and_keeps_original_session_scope():
     app = build_test_app()
-    payload = {
+    payload = {"semantic_model_id": 81,
         "application_id": "app-refresh",
         "conversation_id": "conversation-original",
         "message_id": "external-message",
@@ -674,7 +1444,7 @@ def test_refresh_endpoint_is_idempotent_and_keeps_original_session_scope():
 
 def test_revise_last_question_endpoint_does_not_require_history():
     app = build_test_app()
-    payload = {
+    payload = {"semantic_model_id": 81,
         "application_id": "app-refresh",
         "conversation_id": "conversation-original",
         "message_id": "external-message",
@@ -691,7 +1461,7 @@ def test_revise_last_question_endpoint_does_not_require_history():
 
 
 def test_regeneration_rejects_unknown_explicit_replacement_message_id():
-    payload = ChatRequest(
+    payload = ChatRequest(semantic_model_id=81,
         application_id="app-refresh",
         conversation_id="conversation-original",
         message_id="refresh-attempt",
@@ -707,12 +1477,13 @@ def test_regeneration_rejects_unknown_explicit_replacement_message_id():
 
 
 def test_development_can_temporarily_use_fallback_identity():
-    with TestClient(
-        build_test_app(allow_missing_trusted_identity_headers=True)
+    with RawTestClient(
+        build_test_app(allow_missing_trusted_identity_headers=True),
+        headers={'Authorization': 'Bearer phase0c-fixture-token'},
     ) as client:
         response = client.post(
             "/agent_chat",
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "anonymous-development",
                 "message_id": "m1",
@@ -720,7 +1491,9 @@ def test_development_can_temporarily_use_fallback_identity():
             },
         )
 
+    # Current backend contract guarantees a globally unique conversation ID.
     assert response.status_code == 200
+    assert response.json()['status'] == 'COMPLETED'
 
 
 def test_application_header_is_ignored_and_body_scope_is_used():
@@ -732,15 +1505,15 @@ def test_application_header_is_ignored_and_body_scope_is_used():
                 "X-User-Id": "u1",
                 "X-Application-Id": "app-from-gateway",
             },
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "different-app",
                 "conversation_id": "c1",
                 "message_id": "m1",
                 "question": "你好",
             },
         )
-    assert response.status_code == 200
-    assert response.json()["conversation_id"] == "c1"
+    assert response.status_code == 403
+    assert response.json()['detail']['code'] == 'STATE_NAMESPACE_MISMATCH'
 
 
 def test_legacy_application_header_setting_no_longer_requires_header():
@@ -748,14 +1521,15 @@ def test_legacy_application_header_setting_no_longer_requires_header():
         response = client.post(
             "/agent_chat",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "c1",
                 "message_id": "m1",
                 "question": "你好",
             },
         )
-    assert response.status_code == 200
+    assert response.status_code == 401
+    assert response.json()['detail']['code'] == 'STATE_APPLICATION_REQUIRED'
 
 
 def test_stream_returns_sanitized_error_event_after_accepting_unexpected_failure():
@@ -770,7 +1544,7 @@ def test_stream_returns_sanitized_error_event_after_accepting_unexpected_failure
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "stream-error",
                 "message_id": "m1",
@@ -790,7 +1564,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "real-stream",
                 "message_id": "m1",
@@ -832,11 +1606,22 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
         data for data in events
         if data["type"] == "message_chunk" and data.get("step") != "output"
     ]
+    milestone_chunks: list[list[dict]] = []
+    for data in think_chunks:
+        if data.get("index") == 0:
+            milestone_chunks.append([])
+        assert milestone_chunks
+        milestone_chunks[-1].append(data)
     assert all(
-        data["content"].startswith("\n\n")
-        and data["content"].endswith("\n\n")
-        for data in think_chunks
+        "".join(chunk["content"] for chunk in chunks).startswith("\n\n")
+        for chunks in milestone_chunks
     )
+    assert all(
+        "".join(chunk["content"] for chunk in chunks).endswith("\n\n")
+        for chunks in milestone_chunks
+    )
+    assert all(chunks[-1]["is_last"] is True for chunks in milestone_chunks)
+    assert any(len(chunks) > 1 for chunks in milestone_chunks)
     assert {data["step"] for data in think_chunks} <= {
         "step1", "execute_plan", "execute_exe", "response_result"
     }
@@ -849,51 +1634,55 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     )
     all_thinking_content = "".join(data["content"] for data in think_chunks)
     expected_headings = [
-        "#### 1、意图识别",
+        "#### ◉ 意图识别",
         "#### ◉ 任务拆分与规划",
-        "#### ◉ 输出总结",
     ]
     assert all(all_thinking_content.count(heading) == 1 for heading in expected_headings)
-    assert len(re.findall(r"(?m)^\s*#{1,6}\s+", all_thinking_content)) == 3
+    assert len(re.findall(r"(?m)^\s*#{1,6}\s+", all_thinking_content)) == 2
     intent_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
     )
     assert intent_chunk["step"] == "step1"
-    assert "#### 1、意图识别" not in intent_chunk["content"]
+    assert "#### ◉ 意图识别" in thinking_content(
+        events, "INTENT_RECOGNITION", status="RUNNING"
+    )
     completed_intent_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
         and data.get("meta", {}).get("status") == "COMPLETED"
+        and data.get("index") == 0
     )
-    assert "#### 1、意图识别" in completed_intent_chunk["content"]
+    completed_intent_content = thinking_content(
+        events, "INTENT_RECOGNITION", status="COMPLETED"
+    )
+    assert "#### ◉ 意图识别" not in completed_intent_content
     assert completed_intent_chunk["meta"]["display_model"] == "IntentRecognitionDisplayV2"
     assert completed_intent_chunk["meta"]["display_version"] == "V2"
-    assert "#### 1、意图识别\n\n用户原始问题：" in completed_intent_chunk["content"]
+    assert "用户原始问题：" in completed_intent_content
     assert re.search(
         r"用户原始问题：[^\n]+  \n补全后的问题：",
-        completed_intent_chunk["content"],
+        completed_intent_content,
     )
     planning_completed_chunk = next(
         data for data in think_chunks
         if data.get("meta", {}).get("stage") == "TASK_PLANNING"
         and data.get("meta", {}).get("status") == "COMPLETED"
     )
-    assert "#### ◉ 任务拆分与规划" in planning_completed_chunk["content"]
-    assert "拆分判断完成" in planning_completed_chunk["content"]
-    assert "当前问题无需拆分，按单任务执行。  \n子任务1：" in planning_completed_chunk["content"]
-    summary_chunk = next(
-        data for data in think_chunks
-        if data.get("meta", {}).get("stage") == "OUTPUT_SUMMARY"
+    planning_completed_content = thinking_content(
+        events, "TASK_PLANNING", status="COMPLETED"
     )
-    assert summary_chunk["step"] == "response_result"
+    assert "#### ◉ 任务拆分与规划" in planning_completed_content
+    assert "拆分判断完成。当前问题无需拆分，按单任务执行。" in planning_completed_content
+    assert "当前问题无需拆分，按单任务执行。  \n任务1：" in planning_completed_content
+    assert "规划调用：" not in planning_completed_content
     completed_think_stages = [
         data.get("meta", {}).get("stage")
         for data in events
         if data["type"] == "message_chunk"
         and data.get("meta", {}).get("status") == "COMPLETED"
     ]
-    assert "OUTPUT_SUMMARY" in completed_think_stages
+    assert "OUTPUT_SUMMARY" not in completed_think_stages
     if "TASK_PLANNING" in completed_think_stages:
         assert completed_think_stages.index("INTENT_RECOGNITION") < completed_think_stages.index("TASK_PLANNING")
 
@@ -903,7 +1692,7 @@ def test_chat_stream_uses_document_chat_section_format():
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "document-chat-format",
                 "message_id": "m1",
@@ -920,25 +1709,29 @@ def test_chat_stream_uses_document_chat_section_format():
         if event["type"] == "message_chunk" and event.get("step") != "output"
     )
 
-    assert "#### 1、意图识别" in thinking
+    assert "#### ◉ 意图识别" in thinking
     assert "用户原始问句：今天工作辛苦了。" in thinking
-    assert "#### 4、输出总结" in thinking
-    assert "基于用户闲聊文本，由大模型直接生成自然语言闲聊回复" in thinking
-    assert "#### 5、最终输出" in thinking
+    assert "输出总结" not in thinking
+    assert "#### 2、最终输出" in thinking
     assert "任务拆分与规划" not in thinking
     assert "调度执行" not in thinking
 
 
 def test_missing_parameter_stream_uses_document_clarification_section_format():
+    # STALE_TEST(2026-09-18): ISSUE-20260918-020000 bound the vague phrase
+    # "销售数据" to the default metric 含税销售总额, so the old question now
+    # completes instead of clarifying. The format contract this test pins is
+    # "missing parameter -> document clarification sections"; the question is
+    # switched to one that still genuinely lacks a metric ("统计经销商").
     with TestClient(build_test_app()) as client:
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "document-clarification-format",
                 "message_id": "m1",
-                "question": "查询经销商销售数据",
+                "question": "统计经销商",
             },
         )
 
@@ -953,8 +1746,8 @@ def test_missing_parameter_stream_uses_document_clarification_section_format():
     completed = next(event for event in events if event["type"] == "complete")
 
     assert completed["status"] == "NEEDS_CLARIFICATION"
-    assert "#### 1、意图识别" in thinking
-    assert "用户原始问句：查询经销商销售数据" in thinking
+    assert "#### ◉ 意图识别" in thinking
+    assert "用户原始问句：统计经销商" in thinking
     assert "#### 2、任务拆分与规划" in thinking
     assert "当前任务参数不完整，暂停子任务拆分" in thinking
     assert "#### 3、调研执行" in thinking
@@ -993,17 +1786,34 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
         if event["type"] == "message_chunk"
         and event.get("meta", {}).get("stage") == "INTENT_RECOGNITION"
     ]
-    assert len(intent_chunks) == 1
+    assert len(intent_chunks) > 1
     intent = intent_chunks[0]
     assert intent["meta"]["display_model"] == "CompositeIntentRecognitionDisplayV2"
     assert intent["meta"]["is_composite"] is True
-    assert "查询 TDC-3 产品的主要适用科室、次要适用科室" in intent["content"]
-    assert "子任务 1" in intent["content"]
-    assert "子任务 2" in intent["content"]
+    intent_content = "".join(event["content"] for event in intent_chunks)
+    assert "查询 TDC-3 产品的主要适用科室、次要适用科室" in intent_content
+    assert "任务意图：" not in intent_content
+    assert "复合查询" not in intent_content
+    assert "共享业务标识" not in intent_content
+    assert "结构化拆分" not in intent_content
+    assert "参数规范化：已识别" not in intent_content
+    assert "1. 查询 TDC-3 产品的主要适用科室" in intent_content
+    assert "2. 查询 TDC-3 产品的次要适用科室" in intent_content
     assert not intent["meta"].get("is_child_task")
+    planning_content = "".join(
+        event["content"] for event in events
+        if event["type"] == "message_chunk"
+        and event.get("meta", {}).get("stage") == "TASK_PLANNING"
+    )
+    assert "任务1：查询 TDC-3 产品的主要适用科室" in planning_content
+    assert "任务2：查询 TDC-3 产品的次要适用科室" in planning_content
+    assert "拆分判断完成。已拆分为以下任务：" in planning_content
+    assert "规划调用：" not in planning_content
     completed = next(event for event in events if event["type"] == "complete")
     assert completed["execution_shape"] == "COMPOSITE"
     assert len(completed["task_results"]) == 2
+    assert "### ◉ 任务1：查询 TDC-3 产品的主要适用科室" in completed["answer"]
+    assert "### ◉ 任务2：查询 TDC-3 产品的次要适用科室" in completed["answer"]
     assert "| 查询目标 | 结果内容 |" not in completed["answer"]
     assert "\\|" not in completed["answer"]
     assert "<br>" not in completed["answer"]
@@ -1017,6 +1827,9 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert {event["meta"]["task_id"] for event in child_execution} == {
         "task-1", "task-2",
     }
+    child_execution_text = "".join(event["content"] for event in child_execution)
+    assert "任务1执行链路：" in child_execution_text
+    assert "任务2执行链路：" in child_execution_text
     child_public_progress = [
         event for event in events
         if event["type"] == "message_chunk"
@@ -1043,31 +1856,66 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
         if event["meta"]["stage"] == "DATA_RETRIEVAL"
         and event["meta"]["status"] == "COMPLETED"
     )
-    assert "查询字段：" in completed_retrieval_text
+    assert "数据集输出：" not in completed_retrieval_text
+    assert "查询字段：" not in completed_retrieval_text
     assert "返回行数：" in completed_retrieval_text
     assert "结果总行数：" in completed_retrieval_text
-    assert "数据质量：通过" in completed_retrieval_text
-    assert re.search(
-        r"查询快照时间：\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}（北京时间）",
-        completed_retrieval_text,
-    )
-    assert "数据预览：" in completed_retrieval_text
+    assert "数据质量：" not in completed_retrieval_text
+    assert "查询快照时间：" not in completed_retrieval_text
+    assert "数据预览：" not in completed_retrieval_text
+    assert "结果状态：" not in completed_retrieval_text
     for internal_label in (
         "columns=", "row_count=", "total_row_count=",
         "quality_status=", "data_as_of=", "rows_preview=",
     ):
         assert internal_label not in completed_retrieval_text
+    completed_validation_text = "".join(
+        event["content"] for event in child_public_progress
+        if event["meta"]["stage"] == "RELIABILITY_CHECK"
+        and event["meta"]["status"] == "COMPLETED"
+    )
+    assert "校验结论：高可信" in completed_validation_text
+    assert "数据质量：通过" in completed_validation_text
+    assert "证据（" in completed_validation_text
+    assert "查询结果：" in completed_validation_text
+    assert "（来源：本轮只读数据库查询返回的数据集" in completed_validation_text
+    assert "告警：无。" in completed_validation_text
+    assert "HIGH" not in completed_validation_text
+    assert "PASS" not in completed_validation_text
+    validation_by_task = {
+        task_id: "".join(
+            event["content"]
+            for event in child_public_progress
+            if event["meta"]["task_id"] == task_id
+            and event["meta"]["stage"] == "RELIABILITY_CHECK"
+            and event["meta"]["status"] == "COMPLETED"
+        )
+        for task_id in ("task-1", "task-2")
+    }
+    assert "任务1：查询 TDC-3 产品的主要适用科室" in validation_by_task["task-1"]
+    assert "任务2：查询 TDC-3 产品的次要适用科室" in validation_by_task["task-2"]
+    insight_by_task = {
+        task_id: "".join(
+            event["content"]
+            for event in child_public_progress
+            if event["meta"]["task_id"] == task_id
+            and event["meta"]["stage"] == "INSIGHT_ANALYSIS"
+            and event["meta"]["status"] == "COMPLETED"
+        )
+        for task_id in ("task-1", "task-2")
+    }
+    assert "任务1：查询 TDC-3 产品的主要适用科室" in insight_by_task["task-1"]
+    assert "任务2：查询 TDC-3 产品的次要适用科室" in insight_by_task["task-2"]
 
 
-def test_all_seven_thinking_stages_have_normalized_unnumbered_headings():
+def test_all_six_analytic_thinking_stages_have_normalized_headings():
     expected = {
-        "INTENT_RECOGNITION": "#### 1、意图识别",
+        "INTENT_RECOGNITION": "#### ◉ 意图识别",
         "FILE_INSPECTION": "#### ◉ 文件感知与解析",
         "TASK_PLANNING": "#### ◉ 任务拆分与规划",
         "DATA_RETRIEVAL": "#### ◉ 调度执行",
         "RELIABILITY_CHECK": "#### ◉ 结果校验",
         "INSIGHT_ANALYSIS": "#### ◉ 数据洞察分析",
-        "OUTPUT_SUMMARY": "#### ◉ 输出总结",
     }
 
     assert {
@@ -1108,7 +1956,7 @@ def test_stream_tool_result_preserves_new_agent_application_error_status():
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "web-tool-error-stream",
                 "message_id": "m1",
@@ -1131,7 +1979,7 @@ def test_stream_uses_complete_label_with_cancelled_business_status():
         response = client.post(
             "/agent_chat/stream",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1",
                 "conversation_id": "stream-cancel",
                 "message_id": "m1",
@@ -1148,7 +1996,7 @@ def test_stream_uses_complete_label_with_cancelled_business_status():
 def test_stream_message_id_conflict_is_http_409_before_accepted_event():
     app = build_test_app()
     headers = {"X-Tenant-Id": "t1", "X-User-Id": "u1"}
-    original = {
+    original = {"semantic_model_id": 81,
         "application_id": "app1",
         "conversation_id": "stream-conflict",
         "message_id": "same-message",
@@ -1176,20 +2024,23 @@ def test_removed_management_routes_are_not_exposed():
 
 
 def test_chat_accepts_platform_skill_tool_and_mcp_contract():
-    payload = {
+    payload = {"semantic_model_id": 81,
         "application_id": "app1",
         "conversation_id": "extension-contract",
         "message_id": "m1",
         "question": "你好",
         "use_longterm_memory": False,
         "tools": [{
-            "name": "inventory_lookup", "url": "http://192.168.1.20/tool",
+            "name": "inventory_lookup", "url": "http://tool.example.invalid/tool",
             "http_method": "post", "inputSchema": {"type": "object"},
         }],
         "skills": [{"code": "analysis", "slug": "metric_query"}],
         "mcp": [{
-            "mcp_server_url": "http://192.168.1.21/mcp",
+            "mcp_server_url": "http://mcp.example.invalid/mcp",
             "connect_type": "streamable_http",
+            "slug": "",
+            "display_name": "Excel数据分析",
+            "time_out": 120,
         }],
         "temp_file_paths": [],
     }
@@ -1207,7 +2058,7 @@ def test_chat_rejects_ambiguous_multiple_spreadsheets():
         response = client.post(
             "/agent_chat",
             headers={"X-Tenant-Id": "t1", "X-User-Id": "u1"},
-            json={
+            json={"semantic_model_id": 81,
                 "application_id": "app1", "conversation_id": "files",
                 "message_id": "m1", "question": "分析这些文件",
                 "temp_file_paths": ["uploads/a.xlsx", "uploads/b.xlsx"],
@@ -1215,3 +2066,28 @@ def test_chat_rejects_ambiguous_multiple_spreadsheets():
         )
     assert response.status_code == 422
     assert "一个CSV/XLSX" in response.json()["detail"]
+
+
+class TestRuntimeModeIsolation:
+    def test_conftest_pin_overrides_machine_dotenv_runtime_mode(self, tmp_path, monkeypatch):
+        """A developer .env selecting V2 must not leak into default tests."""
+        dotenv = tmp_path / "env"
+        dotenv.write_text(
+            "DATA_AGENT_RUNTIME_MODE=V2_CONTEXT_V1_EXECUTION\n", encoding="utf-8"
+        )
+
+        # Without the process pin, a machine .env selecting V2 leaks into
+        # Settings; this documents the drift tests/conftest.py isolates.
+        monkeypatch.delenv("DATA_AGENT_RUNTIME_MODE", raising=False)
+        assert Settings(_env_file=dotenv).runtime_mode == "V2_CONTEXT_V1_EXECUTION"
+
+        # With the conftest pin present, the same .env can no longer change
+        # the runtime mode observed by ordinary offline tests.
+        monkeypatch.setenv("DATA_AGENT_RUNTIME_MODE", "V1")
+        assert Settings(_env_file=dotenv).runtime_mode == "V1"
+        assert Settings().runtime_mode == "V1"
+
+    def test_explicit_v2_construction_still_wins(self):
+        """conftest pinning must not override tests that choose V2 explicitly."""
+        settings = Settings(runtime_mode="V2_CONTEXT_V1_EXECUTION")
+        assert settings.runtime_mode == "V2_CONTEXT_V1_EXECUTION"

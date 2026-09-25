@@ -1,0 +1,1292 @@
+{
+  "adapter_version": "v1-native-outcome-observer-v1",
+  "receipts": [
+    {
+      "case_id": "G81-001",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-002",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-003",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-004",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-005",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-006",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-007",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-008",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-009",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-010",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-011",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-012",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-013",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-014",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-015",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-016",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-017",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-018",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-019",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-020",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-021",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-022",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-023",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-024",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-025",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-026",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-027",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-028",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-029",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-030",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-031",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-032",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-033",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-034",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-035",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-036",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-037",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-038",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-039",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-040",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-041",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-042",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-043",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-044",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-045",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-046",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-047",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-048",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-049",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-050",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-051",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-052",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-053",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-054",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-055",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-056",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-057",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-058",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-059",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-060",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-061",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-062",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-063",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-064",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-065",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-066",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-067",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-068",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-069",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-070",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-071",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-072",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-073",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-074",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-075",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-076",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-077",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-078",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-079",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-080",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-081",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-082",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-083",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-084",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-085",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-086",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-087",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-088",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-089",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-090",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-091",
+      "status": "NOT_COMPARABLE",
+      "reason": "FROZEN_V1_NATIVE_HISTORY_OR_PENDING_DATASET_RECEIPT_REQUIRED",
+      "runtime_called": false,
+      "observed_axes": []
+    },
+    {
+      "case_id": "G81-092",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-093",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-094",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-095",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-096",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-097",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-098",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-099",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    },
+    {
+      "case_id": "G81-100",
+      "status": "BLOCKED",
+      "reason": "FROZEN_V1_DEPENDENCY_RECORD_MISSING:HTTP",
+      "runtime_called": true,
+      "observed_axes": [],
+      "terminal_response_observed": false,
+      "blocked_dependency_attempts": [
+        "HTTP",
+        "HTTP"
+      ],
+      "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "scope_request_fingerprint": "4f5aa9b16d57d23f479a3e610cf7a4ae83958c0e56f667ef099edc8514c01f6b",
+      "as_of": "2026-09-09T09:00:00+08:00",
+      "external_calls": 0,
+      "production_state_writes": 0
+    }
+  ],
+  "request_count": 58,
+  "external_calls": 0,
+  "production_state_writes": 0,
+  "test_only_mock_parity_used_as_production_result": false,
+  "entry": "DataAnalysisOrchestrator.handle",
+  "mode": "ISOLATED_NATIVE_ENTRY_WITH_UNRECORDED_DEPENDENCIES_BLOCKED",
+  "limits": "Memory-only state, current HTTP adapters/classifier/rewriter/planner. No completed V1 outcome or full production-topology parity claimed."
+}

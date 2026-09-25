@@ -1,0 +1,26 @@
+{
+  "production_files": [
+    "app/semantic_v2/source_value_recognition.py",
+    "app/semantic_v2/recognition.py"
+  ],
+  "test_files": [
+    "tests/test_v2_entity_instance_preservation_round23.py"
+  ],
+  "evidence_files": [
+    "docs/v2_context_benchmark/failure_closure_round2_3/SPECIFIC_ENTITY_FIRST_DIVERGENCE.md",
+    "docs/v2_context_benchmark/failure_closure_round2_3/ROUND23_PRE_TARGETED_GATE.md",
+    "docs/v2_context_benchmark/failure_closure_round2_3/round23_summary.md",
+    "docs/v2_context_benchmark/failure_closure_round2_3/test_delta.json",
+    "docs/v2_context_benchmark/failure_closure_round2_3/evidence_index.json",
+    "docs/v2_context_benchmark/failure_closure_round2_3/change_manifest.json",
+    "docs/v2_context_benchmark/failure_closure_round2_3/rollback.md"
+  ],
+  "excluded": [
+    ".env",
+    ".eval_private",
+    "logs",
+    "cache",
+    "raw model responses",
+    "credentials"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "status": "PASS",
+  "reviewer": "Autonomous lead self-review; no separate reviewer claimed",
+  "proven_root_causes": [
+    {
+      "stage": "V2_TASK_CONTRACT",
+      "reason": "Flat RelationshipSpec cannot encode intermediate or repeated entity occurrences"
+    },
+    {
+      "stage": "V2_RECOGNITION_HYDRATION",
+      "reason": "Field hydration previously preceded relation construction; no current path selector existed"
+    },
+    {
+      "stage": "V2_RESULT_CONTRACT",
+      "reason": "Canonical field/entity reference alone cannot distinguish self/repeated positions"
+    }
+  ],
+  "review_corrections": [
+    "Put aliased subclasses before base classes in unions to retain alias fields during Pydantic serialization.",
+    "Retain actual predicate subclass during membership edits and Boolean round-trips.",
+    "Reject a flat self relationship instead of accepting a direction that its old representation cannot distinguish.",
+    "Reject output identity collisions that would hide target occurrence.",
+    "Publish alternate scopes into test doubles before restore tests, so they prove the state boundary rather than absent catalog.",
+    "Verify current schemas against source and keep frozen 0.2.1 files unchanged."
+  ],
+  "invariants": [
+    "Every ordered hop and endpoint rederived from the same current catalog pin, including direction/cardinality.",
+    "Aliases hash the root and directed prefix; append retains prior occurrence meaning, replacement never silently rebinds it.",
+    "Attributes require exact current node owner; repeated entity fields require an explicit occurrence.",
+    "Default display belongs to terminal occurrence; aliased result output and semantic fingerprint preserve it.",
+    "Unscoped aliases and unknown physical/dimension/computed ownership fail closed.",
+    "Scoped state restore, pin finish acceptance, V1 public I/O and SHADOW_ONLY remain unchanged."
+  ],
+  "prompt_version": "v2-current-recognition-v5",
+  "prompt_change_reason": "Expose the newly typed ordered-hop and occurrence selectors; deterministic code supplies all endpoints, aliases, cardinality and field ownership. Natural-language path selection still requires model evaluation.",
+  "regex_changes": 0,
+  "legacy_expectation_changes": 0,
+  "public_io_changed": false,
+  "production_v2_routing_changed": false,
+  "retained_gaps": [
+    "Native isolated catalog publication and deployed identity/cache verification",
+    "Path translation to actual ASL/SQL and physical alias/result binding proofs",
+    "Dependent comparisons, external entity values, remaining analytical/decision types",
+    "Gold and real-model recognition accuracy, followed by actual plan-only shadow and rollback"
+  ]
+}

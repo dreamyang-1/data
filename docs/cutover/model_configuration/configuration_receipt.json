@@ -1,0 +1,25 @@
+{
+  "observed_at": "2026-09-09T03:09:17.484138+00:00",
+  "status": "LOCAL_CONFIG_UPDATED_AND_VERIFIED",
+  "source": {
+    "database": "info_sec_kb_v3",
+    "table": "sys_api_model",
+    "record_id": "2073009136548741121",
+    "name": "qwen3.7-max",
+    "model_id": "qwen3.7-max"
+  },
+  "key_present": true,
+  "key_changed": true,
+  "configured_fields": [
+    "DATA_AGENT_INTENT_MODEL_API_KEY",
+    "DATA_AGENT_INTENT_MODEL_BASE_URL",
+    "DATA_AGENT_INTENT_MODEL_NAME",
+    "DATA_AGENT_ANALYSIS_SYNTHESIS_MODEL_NAME",
+    "DATA_AGENT_CHAT_MODEL_NAME"
+  ],
+  "key_persisted_only_in": "DataAnalysis_Agent/.env (untracked)",
+  "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "unrelated_config_preserved": true,
+  "database_writes": 0,
+  "production_routing_changed": false
+}

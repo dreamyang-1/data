@@ -1,0 +1,140 @@
+{
+  "contract": "semantic-axis-evaluation-v1",
+  "cases": 2,
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "missing_or_failed_predictions": 0,
+  "metrics": {
+    "critical_mention_recall": {
+      "passed": 1,
+      "denominator": 2,
+      "value": 0.5
+    },
+    "critical_role_purity": {
+      "passed": 0,
+      "denominator": 2,
+      "value": 0.0
+    },
+    "critical_role_recall": {
+      "passed": 0,
+      "denominator": 2,
+      "value": 0.0
+    },
+    "query_shape": {
+      "passed": 0,
+      "denominator": 2,
+      "value": 0.0
+    },
+    "turn_relation": {
+      "passed": 2,
+      "denominator": 2,
+      "value": 1.0
+    }
+  },
+  "unlabeled_axes": [
+    "SQL_EXECUTION",
+    "RESULT_ACCURACY",
+    "FULL_STATE_MUTATION",
+    "CANONICAL_BINDING",
+    "EXACT_ENTITY_COUNT"
+  ],
+  "critical_mention_precision": "NOT_LABELED",
+  "end_to_end_acceptance": "NOT_EVALUATED",
+  "production_cutover_pass": false,
+  "details": [
+    {
+      "case_id": "G81-001",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    },
+    {
+      "case_id": "G81-002",
+      "axes": {
+        "query_shape": false,
+        "turn_relation": true,
+        "mentions": false
+      },
+      "prediction_status": "OK"
+    }
+  ],
+  "component": "EXISTING_V2_CURRENT_TURN_PARSER",
+  "model": "qwen3.6-plus",
+  "thinking": false,
+  "observed_at": "2026-09-09T01:33:30.118152+00:00",
+  "prompt_version": "v2-current-recognition-v7",
+  "prompt_hash": "ff29f7c1ddffb368a48999dce8536231216f9f7bd1805f02b56c513668c8d1de",
+  "schema_hash": "33ff426f52da71efa99cf07a3aca1461ff5189ec4f3e7fa79974cb9f4924c2eb",
+  "gold_hash": "b2db7b903c691d2f696edeba3dbb90e4e1af7da80566d2a0635e1a7c9fd381b6",
+  "requests": [
+    {
+      "input_hash": "c2893e1b83c3f1202078d6b4e01321ef228d97fe6f9d16bd46961b0364305326",
+      "model": "qwen3.6-plus",
+      "thinking": false,
+      "schema_transport": "json_object"
+    },
+    {
+      "input_hash": "e355a2db3afeb53960a0c28b67eb6d299470c0edf255cfe07ef61b2253c3469f",
+      "model": "qwen3.6-plus",
+      "thinking": false,
+      "schema_transport": "json_object"
+    }
+  ],
+  "request_count": 2,
+  "response_usage": [
+    {
+      "status": 200,
+      "model": "qwen3.6-plus",
+      "usage": {
+        "prompt_tokens": 1786,
+        "completion_tokens": 325,
+        "total_tokens": 2111,
+        "completion_tokens_details": {
+          "text_tokens": 325
+        },
+        "prompt_tokens_details": {
+          "text_tokens": 1786
+        }
+      },
+      "provider_code": null
+    },
+    {
+      "status": 200,
+      "model": "qwen3.6-plus",
+      "usage": {
+        "prompt_tokens": 1786,
+        "completion_tokens": 517,
+        "total_tokens": 2303,
+        "completion_tokens_details": {
+          "text_tokens": 517
+        },
+        "prompt_tokens_details": {
+          "text_tokens": 1786
+        }
+      },
+      "provider_code": null
+    }
+  ],
+  "temperature": 0,
+  "retries": 0,
+  "timeout_seconds": 30.0,
+  "production_default_model_changed": false,
+  "catalog_usage": "FROZEN_LABEL_EVIDENCE_ONLY_NO_RETRIEVAL_IN_CURRENT_TURN_STAGE",
+  "history_usage": "CURRENT_TURN_STAGE_DOES_NOT_RECEIVE_HISTORY",
+  "sql_executions": 0,
+  "production_state_writes": 0,
+  "latency_seconds": {
+    "mean": 8.43,
+    "p95": 10.156
+  }
+}

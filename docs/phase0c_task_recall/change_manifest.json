@@ -1,0 +1,76 @@
+{
+  "baseline_commit": "8bbf35167b15492b37e1ed141abbefef18c90204",
+  "feature_branch": "phase0c-task-recall-20260908-01",
+  "files": [
+    {
+      "repository_path": "app/services/working_memory.py",
+      "source_sha256": "4755ec178e04f25590ad11062b01f544c70ce56358d975bb3e835c2d8cfde2b8",
+      "published_sha256": "4755ec178e04f25590ad11062b01f544c70ce56358d975bb3e835c2d8cfde2b8",
+      "baseline_sha256": "77d9942551f3616abce7021b543d7fc99c5fb58df22297ad92edfa7ec7152643"
+    },
+    {
+      "repository_path": "app/services/orchestrator.py",
+      "source_sha256": "d4188a81242c93c270e1331f948371682d568957a0aa77e7f9b6e508e3797ff2",
+      "published_sha256": "d4188a81242c93c270e1331f948371682d568957a0aa77e7f9b6e508e3797ff2",
+      "baseline_sha256": "87c81c701f85b07517c3af9f7d55da296ad6f92bf40cee2ecaa53a428a202f99"
+    },
+    {
+      "repository_path": "tests/test_task_recall_contract.py",
+      "source_sha256": "b2d5e4344729b9bd90383d6b1ad140aac2196a0364c8df4b08b5fc690216a885",
+      "published_sha256": "b2d5e4344729b9bd90383d6b1ad140aac2196a0364c8df4b08b5fc690216a885",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c/trust_semantic_scope_contract.md",
+      "source_sha256": "ad8b72fd9eb17a7d57b5e7510ebfc66fbc8f6a1a886753e7070021c1785d4ee9",
+      "published_sha256": "ad8b72fd9eb17a7d57b5e7510ebfc66fbc8f6a1a886753e7070021c1785d4ee9",
+      "baseline_sha256": "3b0536104e0dcbb3972459108988986e888117eef50bd7a5770e285e916b9ae2"
+    },
+    {
+      "repository_path": "docs/phase0c_task_recall/audit_inventory.json",
+      "source_sha256": "0d1d547eb25adc0c83d93272d949db7a39e5e4f22d8ceffe23f5db0dd26a4118",
+      "published_sha256": "0d1d547eb25adc0c83d93272d949db7a39e5e4f22d8ceffe23f5db0dd26a4118",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_task_recall/closure_report.md",
+      "source_sha256": "7100a56f154c5e43c9a70185c2a256e17b86d1b78469545196a97778bbe6cefb",
+      "published_sha256": "7100a56f154c5e43c9a70185c2a256e17b86d1b78469545196a97778bbe6cefb",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_task_recall/final_DataAnalysis_Agent.json",
+      "source_sha256": "c7bd658c4158a6d3de78f0dfadb23cf179e849727d1af710ff4f6b68b371d851",
+      "published_sha256": "c7bd658c4158a6d3de78f0dfadb23cf179e849727d1af710ff4f6b68b371d851",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_task_recall/final_Oagnet.json",
+      "source_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "published_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_task_recall/final_SQL_Translator.json",
+      "source_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "published_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_task_recall/rollback_manifest.json",
+      "source_sha256": "e63c7991b680d89547b6355e2ea7119a1e9eac1dde195c7663e5c77e16d94d1c",
+      "published_sha256": "e63c7991b680d89547b6355e2ea7119a1e9eac1dde195c7663e5c77e16d94d1c",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_task_recall/test_delta.json",
+      "source_sha256": "542ba37821ae1d06a5a559bfce05f1ae6aeb6c509bfb307235bb6fef07980da6",
+      "published_sha256": "542ba37821ae1d06a5a559bfce05f1ae6aeb6c509bfb307235bb6fef07980da6",
+      "baseline_sha256": null
+    }
+  ],
+  "secret_scan_findings": 0,
+  "publication_policy": "Explicit files only; no credentials, environments, logs, private diagnostic text, runtime data or snapshots",
+  "original_oagnet_index_preserved": true,
+  "manifest_self_hash": "Committed Git blob; no circular hash"
+}

@@ -1,0 +1,16 @@
+{
+  "baseline_commit": "6b3a6e91e06ee5897a44ca2fd5d28532ecb68a79",
+  "candidate_code_commit": "f700b624536b448607e70c5ed54679e6e10c82a2",
+  "final_evidence_commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_12/git_commit_manifest.json",
+  "branch": "v2-limited-scalar-deployment-ready-20260910T164141Z",
+  "draft_pr": {
+    "number": 71,
+    "url": "https://github.com/dreamyang-1/data/pull/71",
+    "state": "OPEN",
+    "draft": true,
+    "base": "v2-scalar-persisted-api-20260910T230446Z",
+    "head": "v2-limited-scalar-deployment-ready-20260910T164141Z"
+  },
+  "pushed": true,
+  "merged": false
+}

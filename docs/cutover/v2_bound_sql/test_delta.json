@@ -1,0 +1,157 @@
+{
+  "baseline_commit": "e80132164b4335d38edd7081fd8d884551baa7fe",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline": {
+        "passed": 2681,
+        "failed": 27
+      },
+      "final": {
+        "passed": 2697,
+        "failed": 27
+      },
+      "new_tests": [
+        "tests/test_v2_bound_sql.py::test_callback_cannot_downgrade_parameterized_request_to_inline_sql",
+        "tests/test_v2_bound_sql.py::test_changed_or_missing_binding_receipt_never_leaves_agent[asl]",
+        "tests/test_v2_bound_sql.py::test_changed_or_missing_binding_receipt_never_leaves_agent[count]",
+        "tests/test_v2_bound_sql.py::test_changed_or_missing_binding_receipt_never_leaves_agent[missing_receipt]",
+        "tests/test_v2_bound_sql.py::test_changed_or_missing_binding_receipt_never_leaves_agent[missing_values]",
+        "tests/test_v2_bound_sql.py::test_changed_or_missing_binding_receipt_never_leaves_agent[sql]",
+        "tests/test_v2_bound_sql.py::test_changed_or_missing_binding_receipt_never_leaves_agent[style]",
+        "tests/test_v2_bound_sql.py::test_changed_or_missing_binding_receipt_never_leaves_agent[value]",
+        "tests/test_v2_bound_sql.py::test_typed_value_stays_data_through_bound_sql_and_actual_fixture_execution[%s %(v2_p0)s]",
+        "tests/test_v2_bound_sql.py::test_typed_value_stays_data_through_bound_sql_and_actual_fixture_execution[O'Reilly]",
+        "tests/test_v2_bound_sql.py::test_typed_value_stays_data_through_bound_sql_and_actual_fixture_execution[\\U0001f600]",
+        "tests/test_v2_bound_sql.py::test_typed_value_stays_data_through_bound_sql_and_actual_fixture_execution[\\u6d4b\\u8bd5\\u533b\\u9662]",
+        "tests/test_v2_bound_sql.py::test_typed_value_stays_data_through_bound_sql_and_actual_fixture_execution[a\\\\b]",
+        "tests/test_v2_bound_sql.py::test_typed_value_stays_data_through_bound_sql_and_actual_fixture_execution[a\\x00b]",
+        "tests/test_v2_bound_sql.py::test_typed_value_stays_data_through_bound_sql_and_actual_fixture_execution[normal]",
+        "tests/test_v2_bound_sql.py::test_typed_value_stays_data_through_bound_sql_and_actual_fixture_execution[x' OR 1=1 --]"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "remaining_failures": [
+        "tests/test_clarification_flow.py::test_clarification_echoes_normalized_date_and_only_asks_for_metric",
+        "tests/test_clarification_flow.py::test_natural_date_reply_completes_the_existing_metric_request",
+        "tests/test_clarification_quality.py::test_model_metric_must_be_grounded_in_the_users_words",
+        "tests/test_clarification_quality.py::test_only_ambiguities_for_actually_missing_slots_are_kept_and_deduplicated",
+        "tests/test_forecast_readiness.py::test_question_preflight_requests_target_and_history_when_both_missing",
+        "tests/test_memory_manager.py::test_orchestrator_records_memory_write_and_recall_events",
+        "tests/test_pending_execution_transition.py::test_closed_form_pending_reply_skips_async_intent_model_path",
+        "tests/test_pending_execution_transition.py::test_corrected_pending_request_sends_no_negated_metric_to_retrieval",
+        "tests/test_pending_execution_transition.py::test_filled_slot_can_transition_to_asl_clarification_then_complete",
+        "tests/test_pending_execution_transition.py::test_terminal_dependency_failure_clears_resolved_pending_state",
+        "tests/test_runtime_regressions.py::test_relationship_wording_does_not_deduplicate_order_facts",
+        "tests/test_semantic_clarification_session_recovery.py::test_explicit_day_range_resolves_report_time_without_model_reinterpretation",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u4f60\\u597d-CHAT-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u53d6\\u6d88-REPORT_GENERATION-CANCELLED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u6362\\u4e2a\\u95ee\\u9898\\uff0c\\u67e5\\u8be2\\u672c\\u6708\\u9500\\u552e\\u989d-METRIC_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_semantic_clarification_keeps_explicit_interrupt_semantics[\\u67e5\\u8be2\\u6628\\u5929\\u8ba2\\u5355\\u660e\\u7ec6\\uff0c\\u663e\\u793a\\u8ba2\\u5355\\u53f7\\u548c\\u91d1\\u989d-DETAIL_QUERY-COMPLETED]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[False]",
+        "tests/test_semantic_clarification_session_recovery.py::test_three_turn_subject_clarification_recovers_pending_request[True]",
+        "tests/test_session_event_log.py::test_orchestrator_records_replayable_request_intent_and_final_events",
+        "tests/test_task_dag.py::test_real_report_classifier_resumes_all_facets_with_one_period",
+        "tests/test_tracing_evaluation.py::test_orchestrator_records_trace_summary_after_final_event",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ANOMALY_ANALYSIS-\\u68c0\\u6d4b\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPARISON_ANALYSIS-\\u5bf9\\u6bd4\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u540c\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[COMPOSITION_ANALYSIS-\\u6309\\u533a\\u57df\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u6784\\u6210\\u5360\\u6bd4-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[ROOT_CAUSE_ANALYSIS-\\u5f52\\u56e0\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u5f02\\u5e38\\u539f\\u56e0-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_advanced_intents_obey_data_and_input_gates[TREND_ANALYSIS-\\u5206\\u6790\\u672c\\u6708\\u9500\\u552e\\u989d\\u7684\\u8d8b\\u52bf-SAFE_FALLBACK]",
+        "tests/test_workflow.py::test_workflow_clarify_then_complete"
+      ]
+    },
+    "Oagnet": {
+      "baseline": {
+        "passed": 663,
+        "failed": 8
+      },
+      "final": {
+        "passed": 663,
+        "failed": 8
+      },
+      "new_tests": [],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "remaining_failures": [
+        "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+        "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+        "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+        "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+        "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter"
+      ]
+    },
+    "SQL_Translator": {
+      "baseline": {
+        "passed": 319
+      },
+      "final": {
+        "passed": 354
+      },
+      "new_tests": [
+        "test_bound_sql.py::test_changed_parameter_receipt_is_rejected_before_connect",
+        "test_bound_sql.py::test_compiler_marker_cannot_collide_with_catalog_text[SELECT '__v2_bind_0__']",
+        "test_bound_sql.py::test_compiler_marker_cannot_collide_with_catalog_text[SELECT __v2_bind_0__,__v2_bind_0__]",
+        "test_bound_sql.py::test_compiler_marker_cannot_collide_with_catalog_text[SELECT __v2_bind_1__]",
+        "test_bound_sql.py::test_existing_executor_passes_copied_values_to_driver_and_binds_snapshot",
+        "test_bound_sql.py::test_installed_pymysql_binds_for_the_actual_connection_mode_without_connecting[0-O'Reilly-SELECT 'O\\\\'Reilly' AS value]",
+        "test_bound_sql.py::test_installed_pymysql_binds_for_the_actual_connection_mode_without_connecting[0-a\\\\b-SELECT 'a\\\\\\\\b' AS value]",
+        "test_bound_sql.py::test_installed_pymysql_binds_for_the_actual_connection_mode_without_connecting[0-a\\x00b-SELECT 'a\\\\0b' AS value]",
+        "test_bound_sql.py::test_installed_pymysql_binds_for_the_actual_connection_mode_without_connecting[1-O'Reilly-SELECT 'O''Reilly' AS value]",
+        "test_bound_sql.py::test_installed_pymysql_binds_for_the_actual_connection_mode_without_connecting[1-a\\\\b-SELECT 'a\\\\b' AS value]",
+        "test_bound_sql.py::test_installed_pymysql_binds_for_the_actual_connection_mode_without_connecting[1-a\\x00b-SELECT 'a\\x00b' AS value]",
+        "test_bound_sql.py::test_literal_percent_modulo_and_values_are_not_format_instructions",
+        "test_bound_sql.py::test_parameter_error_does_not_echo_business_values",
+        "test_bound_sql.py::test_parameter_mode_is_not_truthy_configuration",
+        "test_bound_sql.py::test_parameterized_query_still_checks_final_native_pin",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT %(v2_p0)d-params5]",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT %(v2_p0)s + %(v2_p0)s-params1]",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT %(v2_p0)s-params10]",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT %(v2_p0)s-params9]",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT %(v2_p1)s-params2]",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT %(wrong)s-params11]",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT %s-params4]",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT '%(v2_p0)s'-params0]",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT 'a\\\\b', %(v2_p0)s-params8]",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT 1 # %(v2_p0)s-params6]",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT 1 /* %(v2_p0)s */-params7]",
+        "test_bound_sql.py::test_quoted_missing_repeated_or_untyped_parameters_are_rejected[SELECT 1-params3]",
+        "test_bound_sql.py::test_real_pinned_consumer_binds_each_literal_and_keeps_original_pin[!=-%s]",
+        "test_bound_sql.py::test_real_pinned_consumer_binds_each_literal_and_keeps_original_pin[=-a\\\\'b]",
+        "test_bound_sql.py::test_real_pinned_consumer_binds_each_literal_and_keeps_original_pin[BETWEEN-value4]",
+        "test_bound_sql.py::test_real_pinned_consumer_binds_each_literal_and_keeps_original_pin[IN-value2]",
+        "test_bound_sql.py::test_real_pinned_consumer_binds_each_literal_and_keeps_original_pin[IS NULL-None]",
+        "test_bound_sql.py::test_real_pinned_consumer_binds_each_literal_and_keeps_original_pin[LIKE-A%]",
+        "test_bound_sql.py::test_real_pinned_consumer_binds_each_literal_and_keeps_original_pin[NOT IN-value3]",
+        "test_bound_sql.py::test_real_pinned_consumer_binds_each_literal_and_keeps_original_pin[NOT LIKE-B_]"
+      ],
+      "old_pass_to_new_fail": 0,
+      "old_fail_to_new_pass": 0,
+      "remaining_failures": []
+    }
+  },
+  "new_tests": 51,
+  "critical": {
+    "total": 160,
+    "passed": 160
+  },
+  "clarification_coverage": {
+    "public_clarification_responses": 89,
+    "with_reason_trace": 89
+  },
+  "collection_errors": 0,
+  "old_pass_to_new_fail": 0,
+  "real_model_calls": 0,
+  "business_source_reads": 0,
+  "external_sql_executions": 0,
+  "production_writes": 0,
+  "fixture_sql_executed": true,
+  "driver_evidence": {
+    "installed_package": "PyMySQL",
+    "version": "1.2.0",
+    "mode_tests": "Actual installed Cursor.mogrify and Connection.escape_string with explicit server-status modes; defer_connect=True, no network connection"
+  },
+  "existing_test_changes": "Existing filter/rank fixture executors now pass bound parameters separately. Backslash/NUL contrasts require binding and its receipt instead of rejecting the value. Quote contrasts verify the parameter value instead of an inline SQL literal. No old failing expectation or frozen schema was changed."
+}

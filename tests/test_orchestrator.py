@@ -18,6 +18,7 @@ from app.domain.models import (
     DataQueryResult,
     Dataset,
     HistoryMessage,
+    KnowledgeContext,
     MetricRef,
     PendingState,
     PrimaryIntent,
@@ -32,6 +33,7 @@ from app.intent import RuleBasedIntentClassifier
 from app.api import _prepare_regeneration
 from app.services import DataAnalysisOrchestrator
 from app.services.orchestrator import SEMANTIC_QUERY_RETRY_CODES
+from app.services.question_rewriter import QuestionRewriter
 from app.stores import InMemorySessionStore
 from app.stores.long_memory import (
     InMemoryLongTermMemoryStore,
@@ -43,11 +45,218 @@ from app.stores.long_memory import (
 
 def service() -> DataAnalysisOrchestrator:
     return DataAnalysisOrchestrator(
-        settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
+        settings=Settings(
+            _env_file=None,
+            env="test",
+            adapter_mode="mock",
+            intent_model_enabled=False,
+        ),
         classifier=RuleBasedIntentClassifier(),
         adapters=build_mock_adapters(),
         sessions=InMemorySessionStore(),
     )
+
+
+@pytest.mark.asyncio
+async def test_completed_question_execution_does_not_restore_v1_semantic_context():
+    class ContextReadTrapStore(InMemorySessionStore):
+        async def get_pending(self, *args, **kwargs):
+            raise AssertionError("completed question must not restore V1 Pending")
+
+        async def get_dag_pending(self, *args, **kwargs):
+            raise AssertionError("completed question must not restore V1 DAG state")
+
+        async def get_task_frame(self, *args, **kwargs):
+            raise AssertionError("completed question must not restore V1 TaskFrame")
+
+        async def get_last_request(self, *args, **kwargs):
+            raise AssertionError("completed question must not restore V1 LastRequest")
+
+        async def get_recent_task_frames(self, *args, **kwargs):
+            raise AssertionError("completed question must not restore V1 task history")
+
+    class PreviousContextTrap(QuestionRewriter):
+        def _apply_context(self, *args, **kwargs):
+            raise AssertionError(
+                "completed question must not restore context in V1 rewriter"
+            )
+
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(
+            _env_file=None,
+            env="test",
+            adapter_mode="mock",
+            intent_model_enabled=False,
+        ),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=build_mock_adapters(),
+        sessions=ContextReadTrapStore(),
+        question_rewriter=PreviousContextTrap(None),
+    )
+    chat = ChatRequest(
+        semantic_model_id=81,
+        application_id="app1",
+        conversation_id="v2-completed-question",
+        message_id="v2-completed-question-1",
+        question="查询本月销售额",
+        history=[],
+    )
+    chat._completed_question_execution = True
+
+    response = await agent.handle(
+        chat,
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+    )
+
+    assert response.status == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_completed_question_replaces_stale_v1_pending_before_new_clarification():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    conversation_id = "completed-question-replaces-stale-pending"
+    stale = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id=conversation_id,
+        tenant_id="t1",
+        user_id="u1",
+        original_question="请提供旧产品使用科室",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["entity", "fields"],
+    )
+    await agent.sessions.put_pending(
+        PendingState(request=stale, clarification_rounds=1, state_version=1),
+        expected_version=0,
+    )
+    chat = ChatRequest(
+        semantic_model_id=81,
+        application_id="app1",
+        conversation_id=conversation_id,
+        message_id="new-completed-question",
+        question="请查询明细",
+        history=[],
+    )
+
+    response = await agent.execute_v1_from_completed_question(chat, identity)
+    pending = await agent.sessions.get_pending(
+        "t1", "u1", "app1", conversation_id
+    )
+
+    assert response.status == "NEEDS_CLARIFICATION"
+    assert response.answer != "会话状态已被另一条消息更新，请基于最新追问重新回答。"
+    assert pending is not None
+    assert pending.request.original_question == "请查询明细"
+    assert pending.state_version == 1
+
+
+@pytest.mark.asyncio
+async def test_complete_product_department_question_executes_after_stale_pending():
+    agent = service()
+    identity = TrustedIdentity(tenant_id="t1", user_id="u1")
+    conversation_id = "complete-product-department-after-pending"
+    stale = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id=conversation_id,
+        tenant_id="t1",
+        user_id="u1",
+        original_question="旧的不完整问题",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["entity", "fields"],
+    )
+    await agent.sessions.put_pending(
+        PendingState(request=stale, clarification_rounds=1, state_version=1),
+        expected_version=0,
+    )
+    chat = ChatRequest(
+        semantic_model_id=81,
+        application_id="app1",
+        conversation_id=conversation_id,
+        message_id="complete-product-department",
+        question="请提供百特Prismaflex M60 set使用科室。",
+        history=[],
+    )
+
+    response = await agent.execute_v1_from_completed_question(chat, identity)
+
+    assert response.status == "COMPLETED"
+    assert response.missing_slots == []
+    assert "适用科室" in response.answer
+    assert await agent.sessions.get_pending(
+        "t1", "u1", "app1", conversation_id
+    ) is None
+
+
+def test_missing_slot_questions_name_the_parameter_and_give_examples():
+    request = CanonicalAnalysisRequest(
+        conversation_id="detailed-missing-slot-prompts",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询一下",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["entity", "fields", "time_range"],
+    )
+
+    questions = DataAnalysisOrchestrator._clarification_questions(request)
+
+    assert "缺少要返回的业务对象" in questions[0]
+    assert "经销商名单" in questions[0]
+    assert "缺少明细返回字段" in questions[1]
+    assert "产品名称和适用科室" in questions[1]
+    assert "缺少查询时间范围" in questions[2]
+    assert "2026年5月1日至5月10日" in questions[2]
+
+
+@pytest.mark.asyncio
+async def test_completed_question_execution_pins_all_v1_question_contracts():
+    class CompletionChangingClassifier(RuleBasedIntentClassifier):
+        async def classify(self, question, identity, conversation_id):
+            request = super().classify(question, identity, conversation_id)
+            request.rewritten_question = (
+                "查询2026-01-01至2026-12-31期间销售过2026年"
+                "空心纤维血液透析器产品的经销商名单"
+            )
+            request.assumptions.append("MODEL_QUESTION_COMPLETION_APPLIED")
+            return request
+
+    sessions = InMemorySessionStore()
+    question = "查询2026年空心纤维血液透析器产品合作的经销商名单。"
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(
+            _env_file=None,
+            env="test",
+            adapter_mode="mock",
+            intent_model_enabled=False,
+        ),
+        classifier=CompletionChangingClassifier(),
+        adapters=build_mock_adapters(),
+        sessions=sessions,
+    )
+    chat = ChatRequest(
+        semantic_model_id=81,
+        application_id="app1",
+        conversation_id="v2-completed-question-pinned",
+        message_id="v2-completed-question-pinned-1",
+        question=question,
+        history=[],
+    )
+    chat._completed_question_execution = True
+
+    response = await agent.handle(
+        chat,
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+    )
+    frame = await sessions.get_task_frame("t1", "u1", "app1", chat.conversation_id)
+
+    assert response.status == "COMPLETED"
+    assert frame is not None
+    assert frame.original_question == question
+    assert frame.rewritten_question == question
+    assert "2026年空心纤维血液透析器产品" in frame.rewritten_question
+    assert "销售过2026年空心纤维血液透析器产品" not in frame.rewritten_question
+    assert "MODEL_QUESTION_COMPLETION_APPLIED" not in frame.assumptions
+    assert "V2_COMPLETED_QUESTION_PRESERVED" in frame.assumptions
+    assert "EXECUTION_QUERY_SOURCE=V2_COMPLETED_QUESTION" in frame.assumptions
 
 
 @pytest.mark.asyncio
@@ -76,7 +285,7 @@ async def test_regeneration_replaces_stale_continuation_state_in_original_scope(
         {"state_version": 1, "stale": True},
         expected_version=0,
     )
-    execution, _, _ = _prepare_regeneration(ChatRequest(
+    execution, _, _ = _prepare_regeneration(ChatRequest(semantic_model_id=81,
         application_id="app1",
         conversation_id=conversation_id,
         message_id="refresh-message",
@@ -101,6 +310,8 @@ async def test_regeneration_replaces_stale_continuation_state_in_original_scope(
 def test_recoverable_asl_contract_failures_receive_one_semantic_retry():
     assert "ASL_DETAIL_FIELDS_INCOMPLETE" in SEMANTIC_QUERY_RETRY_CODES
     assert "ASL_REQUIRED_FILTER_MISSING" in SEMANTIC_QUERY_RETRY_CODES
+    assert "ASL_AMBIGUOUS" not in SEMANTIC_QUERY_RETRY_CODES
+    assert "SQL_TRANSLATION_AMBIGUOUS" not in SEMANTIC_QUERY_RETRY_CODES
 
 
 def test_vector_ambiguity_clarification_returns_all_canonical_candidate_details():
@@ -143,6 +354,27 @@ def test_vector_ambiguity_clarification_returns_all_canonical_candidate_details(
     assert items[0]["options"] == request.semantic_ambiguities[0].candidates
     assert items[0]["option_details"] == request.semantic_ambiguities[0].candidate_details
     assert items[0]["multi_select"] is False
+
+
+def test_semantic_clarification_names_the_ambiguous_phrase() -> None:
+    request = CanonicalAnalysisRequest(
+        conversation_id="specific-ambiguity-question",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询费森尤斯产品",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        missing_slots=["semantic_ambiguity"],
+        semantic_ambiguities=[SemanticAmbiguity(
+            type="entity_role",
+            phrase="费森尤斯",
+            question="请确认需要使用哪个业务字段。",
+            candidates=["母厂牌", "厂家名称"],
+        )],
+    )
+
+    questions = DataAnalysisOrchestrator._clarification_questions(request)
+
+    assert questions == ["关于“费森尤斯”：请确认需要使用哪个业务字段。"]
 
 
 def _shanghai_region_ambiguity_request() -> CanonicalAnalysisRequest:
@@ -223,6 +455,40 @@ async def test_semantic_ambiguity_choices_are_visible_in_clarification_answer():
         "省份名称：省份",
         "城市名称：市",
     ]
+
+
+@pytest.mark.asyncio
+async def test_all_time_default_suppresses_optional_time_range_pending():
+    agent = service()
+    request = CanonicalAnalysisRequest(
+        application_id="app1",
+        conversation_id="optional-time-range-pending",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询销售额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        assumptions=["TIME_SCOPE=ALL_TIME"],
+        missing_slots=["semantic_ambiguity"],
+        semantic_ambiguities=[SemanticAmbiguity(
+            type="time_anchor",
+            question="请选择查询时间范围。",
+            candidates=["this_month", "last_month", "this_year", "custom"],
+            affected_slots=["time_range"],
+        )],
+    )
+
+    response = await agent._request_clarification(
+        request,
+        rounds=1,
+        source_stage="OAGNET_ASL_GENERATION",
+    )
+
+    assert response.status == "SAFE_FALLBACK"
+    assert response.clarification_decision_traces[0].safe_default_available is True
+    assert response.clarification_decision_traces[0].decision == "SUPPRESS"
+    assert await agent.sessions.get_pending(
+        "t1", "u1", "app1", "optional-time-range-pending"
+    ) is None
 
 
 def test_semantic_ambiguity_numeric_choice_binds_selected_catalog_attribute():
@@ -322,84 +588,31 @@ def test_requested_business_column_renames_existing_semantic_alias():
     assert dataset.rows == [{"医院名称": "测试医院", "医院等级": "三级"}]
 
 
-def test_complete_name_list_drops_null_and_placeholder_members():
+def test_detail_result_presentation_preserves_null_placeholder_and_duplicate_rows():
     request = CanonicalAnalysisRequest(
-        conversation_id="name-integrity",
+        conversation_id="raw-detail-result",
         tenant_id="t1",
         user_id="u1",
-        original_question="查询产品合作的医院名单",
+        original_question="查询医院名单",
         primary_intent=PrimaryIntent.DETAIL_QUERY,
         entity="医院",
         fields=["医院名称"],
-        assumptions=["REQUIRED_NAME_NON_NULL=医院名称"],
     )
-    result = DataQueryResult(
-        asl={},
-        sql="SELECT hospital_name FROM hospital",
-        dataset=Dataset(
-            columns=["医院名称"],
-            rows=[
-                {"医院名称": "测试医院"},
-                {"医院名称": None},
-                {"医院名称": "—"},
-            ],
-            row_count=3,
-            total_row_count=3,
-            snapshot_id="name-integrity-snapshot",
-            data_as_of=datetime(2025, 12, 30, tzinfo=timezone.utc),
-        ),
+    answer = DataAnalysisOrchestrator._analyze(
+        request,
+        ["医院名称"],
+        [
+            {"医院名称": "测试医院"},
+            {"医院名称": None},
+            {"医院名称": "—"},
+            {"医院名称": "测试医院"},
+        ],
+        KnowledgeContext(query="查询医院名单"),
     )
 
-    cleaned = DataAnalysisOrchestrator._enforce_name_projection_integrity(
-        request, result
-    )
-
-    assert cleaned.dataset.rows == [{"医院名称": "测试医院"}]
-    assert cleaned.dataset.row_count == 1
-    assert cleaned.dataset.total_row_count == 1
-    assert cleaned.execution_transforms[-1] == {
-        "type": "DROP_INVALID_NAME_PROJECTION_ROWS",
-        "fields": ["医院名称"],
-        "removed_row_count": 2,
-        "verified_complete_result": True,
-    }
-    assert "INVALID_NAME_ROWS_REMOVED=2" in request.assumptions
-
-
-def test_truncated_name_list_with_invalid_members_fails_closed():
-    request = CanonicalAnalysisRequest(
-        conversation_id="name-integrity-truncated",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="查询经销商名单",
-        primary_intent=PrimaryIntent.DETAIL_QUERY,
-        entity="经销商",
-        fields=["经销商名称"],
-        assumptions=["REQUIRED_NAME_NON_NULL=经销商名称"],
-    )
-    result = DataQueryResult(
-        asl={},
-        sql="SELECT dealer_name FROM dealer",
-        dataset=Dataset(
-            columns=["经销商名称"],
-            rows=[{"经销商名称": "有效公司"}, {"经销商名称": None}],
-            row_count=2,
-            total_row_count=20,
-            truncated=True,
-            snapshot_id="name-integrity-truncated-snapshot",
-            data_as_of=datetime(2025, 12, 30, tzinfo=timezone.utc),
-        ),
-        result_file_url="https://example.test/result.xlsx",
-    )
-
-    cleaned = DataAnalysisOrchestrator._enforce_name_projection_integrity(
-        request, result
-    )
-
-    assert cleaned.dataset.quality_status == "FAIL"
-    assert cleaned.dataset.rows == [{"经销商名称": "有效公司"}]
-    assert cleaned.dataset.total_row_count == 20
-    assert cleaned.result_file_url is None
+    assert "共查询到 4 条明细" in answer
+    assert answer.count("测试医院") == 2
+    assert "—" in answer
 
 
 def test_singular_product_pronoun_is_bound_from_previous_result_table():
@@ -948,6 +1161,8 @@ async def test_relationship_count_projection_is_accepted_as_verified_metric_evid
         "source_watermark_verified": True,
     }
     assert "101" in response.answer
+    assert "数据水位：" not in response.answer
+    assert "查询快照时间仅表示本次读取时间" not in response.answer
     derived = next(
         item for item in response.evidence
         if item.kind == "DERIVED_METRIC_RESOLUTION"
@@ -1060,7 +1275,7 @@ def test_asl_metric_binding_preserves_semantic_model_scope_for_followups():
 @pytest.mark.asyncio
 async def test_business_only_lineage_is_structured_and_not_claimed_high_reliability():
     response = await service().handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app-lineage",
             conversation_id="lineage-conversation",
             message_id="lineage-message",
@@ -1111,7 +1326,7 @@ async def test_unqualified_sales_metric_uses_auditable_default_time_range():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="c1", message_id="m1", question="帮我查一下销售额"),
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="c1", message_id="m1", question="帮我查一下销售额"),
         identity,
     )
     assert first.status == "COMPLETED"
@@ -1131,6 +1346,84 @@ async def test_unqualified_sales_metric_uses_auditable_default_time_range():
 
 
 @pytest.mark.asyncio
+async def test_all_time_default_retries_optional_time_anchor_ambiguity_once():
+    base = build_mock_adapters()
+
+    class OptionalTimeAmbiguityOnce:
+        def __init__(self):
+            self.calls = 0
+            self.retry_request = None
+
+        async def health(self):
+            return True
+
+        async def rewrite_health(self):
+            return True
+
+        async def query(
+            self, request, identity, *, semantic_model_id, business_domain_id
+        ):
+            self.calls += 1
+            if self.calls == 1:
+                raise AdapterError(
+                    "ASL_AMBIGUOUS",
+                    "optional time scope was treated as blocking",
+                    details=[{
+                        "type": "time_anchor",
+                        "question": "请选择查询时间范围。",
+                        "candidates": [
+                            "this_month", "last_month", "this_year", "custom",
+                        ],
+                        "affected_slots": ["time_range"],
+                    }],
+                )
+            self.retry_request = request.model_copy(deep=True)
+            return await base.retrieval.query(
+                request,
+                identity,
+                semantic_model_id=semantic_model_id,
+                business_domain_id=business_domain_id,
+            )
+
+    retrieval = OptionalTimeAmbiguityOnce()
+    agent = DataAnalysisOrchestrator(
+        settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
+        classifier=RuleBasedIntentClassifier(),
+        adapters=AdapterBundle(
+            semantic=base.semantic,
+            retrieval=retrieval,
+            knowledge=base.knowledge,
+            policy=base.policy,
+            analysis=base.analysis,
+        ),
+        sessions=InMemorySessionStore(),
+    )
+
+    response = await agent.handle(
+        ChatRequest(
+            semantic_model_id=81,
+            application_id="app1",
+            conversation_id="optional-time-anchor-default",
+            message_id="m1",
+            question="帮我查一下销售额",
+        ),
+        TrustedIdentity(tenant_id="t1", user_id="u1"),
+    )
+
+    assert response.status == "COMPLETED"
+    assert retrieval.calls == 2
+    assert retrieval.retry_request is not None
+    assert "TIME_SCOPE=ALL_TIME" in retrieval.retry_request.assumptions
+    assert any(
+        value.startswith("SEMANTIC_QUERY_RETRY:")
+        for value in retrieval.retry_request.assumptions
+    )
+    assert await agent.sessions.get_pending(
+        "t1", "u1", "app1", "optional-time-anchor-default"
+    ) is None
+
+
+@pytest.mark.asyncio
 async def test_time_clarification_preserves_ranked_comparison_execution_contract():
     retrieval = CapturingRankingRetrieval()
     base = build_mock_adapters()
@@ -1147,24 +1440,26 @@ async def test_time_clarification_preserves_ranked_comparison_execution_contract
         sessions=InMemorySessionStore(),
     )
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    first = await agent.handle(
-        ChatRequest(
-            application_id="app1",
-            conversation_id="ranked-time-clarification",
-            message_id="m1",
-            question=(
-                "帮我找出上海地区正在销售振德医疗品牌的医用外科口罩产品的"
-                "经销商名单，并按他们现有的整体业务规模排序。"
-            ),
-        ),
-        identity,
+    # ST-0B-02: seed a genuinely missing-period pending contract. The normal
+    # first-turn parser now provides a safe default, so forcing a missing slot
+    # on that ready request no longer exercises a valid clarification setup.
+    pending_request = agent.classifier.classify(
+        "帮我找出上海地区正在销售振德医疗品牌的医用外科口罩产品的"
+        "经销商名单，并按他们现有的整体业务规模排序。",
+        identity, "ranked-time-clarification",
     )
+    pending_request.application_id = "app1"
+    pending_request.semantic_model_id = 81
+    pending_request.filters = RuleBasedIntentClassifier().classify(
+        pending_request.original_question, identity, pending_request.conversation_id
+    ).filters
+    first = await agent._request_clarification(pending_request, 1)
     assert first.status == "NEEDS_CLARIFICATION"
     assert first.intent == PrimaryIntent.COMPARISON_ANALYSIS
     assert first.missing_slots == ["time_range"]
 
     second = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="ranked-time-clarification",
             message_id="m2",
@@ -1314,7 +1609,7 @@ async def test_complete_new_query_discards_unanswered_pending_clarification():
 @pytest.mark.asyncio
 async def test_detail_query_runs_without_permission_module_for_now():
     response = await service().handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="c2",
             message_id="m1",
@@ -1328,7 +1623,7 @@ async def test_detail_query_runs_without_permission_module_for_now():
 @pytest.mark.asyncio
 async def test_forecast_fails_closed_when_history_is_insufficient():
     response = await service().handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="c3", message_id="m1", question="预测下个月销售额"
         ),
@@ -1343,12 +1638,12 @@ async def test_forecast_fails_closed_when_history_is_insufficient():
 async def test_duplicate_message_id_returns_cached_response_without_advancing_round():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    chat = ChatRequest(application_id="app1", conversation_id="idem", message_id="same", question="帮我查销售额")
+    chat = ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="idem", message_id="same", question="帮我查销售额")
     first = await agent.handle(chat, identity)
     duplicate = await agent.handle(chat, identity)
     assert duplicate == first
     completed = await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="idem", message_id="next", question="本月"), identity
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="idem", message_id="next", question="本月"), identity
     )
     assert completed.status == "COMPLETED"
 
@@ -1358,14 +1653,14 @@ async def test_repeated_self_contained_query_with_new_message_id_reuses_response
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="repeat-query",
             message_id="m1", question="查询最近一年销售额。",
         ),
         identity,
     )
     repeated = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="repeat-query",
             message_id="m2", question="查询最近一年销售额",
         ),
@@ -1380,7 +1675,7 @@ async def test_repeated_self_contained_query_with_new_message_id_reuses_response
 def test_elliptical_followups_are_not_repeat_cache_candidates():
     for question in ("展示20条结果", "其中最高的是哪个", "那再查询最近一个月"):
         assert not DataAnalysisOrchestrator._is_repeat_cache_candidate(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="app1", conversation_id="repeat-query",
                 message_id=question, question=question,
             )
@@ -1391,7 +1686,7 @@ def test_elliptical_followups_are_not_repeat_cache_candidates():
 async def test_explicit_dataset_unavailable_fails_closed_without_database_fallback():
     agent = service()
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="missing-dataset",
             message_id="m1",
@@ -1408,10 +1703,10 @@ async def test_explicit_dataset_unavailable_fails_closed_without_database_fallba
 async def test_cancel_clears_pending_clarification():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    await agent.handle(ChatRequest(application_id="app1", conversation_id="cancel", message_id="m1", question="查销售额"), identity)
-    cancelled = await agent.handle(ChatRequest(application_id="app1", conversation_id="cancel", message_id="m2", question="算了，不用了"), identity)
+    await agent.handle(ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="cancel", message_id="m1", question="查销售额"), identity)
+    cancelled = await agent.handle(ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="cancel", message_id="m2", question="算了，不用了"), identity)
     assert cancelled.status == "CANCELLED"
-    fresh = await agent.handle(ChatRequest(application_id="app1", conversation_id="cancel", message_id="m3", question="你好"), identity)
+    fresh = await agent.handle(ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="cancel", message_id="m3", question="你好"), identity)
     assert fresh.intent == PrimaryIntent.CHAT
 
 
@@ -1421,7 +1716,7 @@ async def test_cancel_command_stops_running_request_in_same_trusted_conversation
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     running = asyncio.create_task(
         agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="app1",
                 conversation_id="running-cancel",
                 message_id="m1",
@@ -1433,7 +1728,7 @@ async def test_cancel_command_stops_running_request_in_same_trusted_conversation
     await asyncio.wait_for(agent.started.wait(), timeout=1)
 
     command = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="running-cancel",
             message_id="m2",
@@ -1457,7 +1752,7 @@ async def test_cancel_command_cannot_stop_another_users_running_request():
     other = TrustedIdentity(tenant_id="t1", user_id="other")
     running = asyncio.create_task(
         agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="app1",
                 conversation_id="shared-id",
                 message_id="m1",
@@ -1469,7 +1764,7 @@ async def test_cancel_command_cannot_stop_another_users_running_request():
     await asyncio.wait_for(agent.started.wait(), timeout=1)
 
     unrelated = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="shared-id",
             message_id="m2",
@@ -1482,7 +1777,7 @@ async def test_cancel_command_cannot_stop_another_users_running_request():
     assert not running.done()
 
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="shared-id",
             message_id="m3",
@@ -1497,11 +1792,11 @@ async def test_cancel_command_cannot_stop_another_users_running_request():
 async def test_same_conversation_id_is_isolated_between_users():
     agent = service()
     await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="shared", message_id="m1", question="查销售额"),
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="shared", message_id="m1", question="查销售额"),
         TrustedIdentity(tenant_id="t1", user_id="u1"),
     )
     other = await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="shared", message_id="m1", question="你好"),
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="shared", message_id="m1", question="你好"),
         TrustedIdentity(tenant_id="t1", user_id="u2"),
     )
     assert other.intent == PrimaryIntent.CHAT
@@ -1512,11 +1807,11 @@ async def test_follow_up_inherits_last_completed_request():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="follow", message_id="m1", question="查询本月销售额"), identity
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="follow", message_id="m1", question="查询本月销售额"), identity
     )
     assert first.status == "COMPLETED"
     follow = await agent.handle(
-        ChatRequest(application_id="app1", conversation_id="follow", message_id="m2", question="那华东呢"), identity
+        ChatRequest(semantic_model_id=81, application_id="app1", conversation_id="follow", message_id="m2", question="那华东呢"), identity
     )
     assert follow.status == "COMPLETED"
     remembered = await agent.sessions.get_last_request("t1", "u1", "app1", "follow")
@@ -1543,7 +1838,7 @@ async def test_failed_provisional_frame_cannot_replace_verified_product_scope():
         sessions=sessions,
     )
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    verified = CanonicalAnalysisRequest(
+    verified = CanonicalAnalysisRequest(semantic_model_id=81,
         conversation_id="verified-frame-wins",
         application_id="app1",
         tenant_id="t1",
@@ -1577,7 +1872,7 @@ async def test_failed_provisional_frame_cannot_replace_verified_product_scope():
     await sessions.put_task_frame(provisional)
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="verified-frame-wins",
             message_id="follow-up",
@@ -1597,7 +1892,7 @@ async def test_failed_provisional_frame_cannot_replace_verified_product_scope():
 async def test_recent_two_region_reference_builds_verified_set_aggregation():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
-    base = CanonicalAnalysisRequest(
+    base = CanonicalAnalysisRequest(semantic_model_id=81,
         conversation_id="two-region-set",
         application_id="app1",
         tenant_id="t1",
@@ -1638,7 +1933,7 @@ async def test_recent_two_region_reference_builds_verified_set_aggregation():
 
     await agent._apply_recent_region_set_reference(
         request,
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="two-region-set",
             message_id="m4",
@@ -1675,7 +1970,7 @@ async def test_relationship_count_followup_preserves_verified_subject_filter():
     )
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="relationship-count-followup",
             message_id="m1",
@@ -1685,7 +1980,7 @@ async def test_relationship_count_followup_preserves_verified_subject_filter():
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="relationship-count-followup",
             message_id="m2",
@@ -1722,12 +2017,13 @@ async def test_metric_only_followup_preserves_verified_region_filter():
         "metric-scope-followup",
     )
     previous.application_id = "app1"
+    previous.semantic_model_id = 81
     previous.asl_template = {"metrics": [{"name": "annual_total_sales"}]}
     await agent.sessions.put_task_frame(previous)
     await agent.sessions.put_last_request(previous)
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="metric-scope-followup",
             message_id="m2",
@@ -1760,12 +2056,13 @@ async def test_relationship_list_followup_preserves_verified_subject_filter():
         "relationship-list-followup",
     )
     previous.application_id = "app1"
+    previous.semantic_model_id = 81
     previous.asl_template = {"dimensions": [{"name": "product.product_name"}]}
     await agent.sessions.put_task_frame(previous)
     await agent.sessions.put_last_request(previous)
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="relationship-list-followup",
             message_id="m2",
@@ -1800,12 +2097,13 @@ async def test_sort_only_followup_preserves_relationship_set_and_adds_grouping()
         "sort-only-followup",
     )
     previous.application_id = "app1"
+    previous.semantic_model_id = 81
     previous.asl_template = {"dimensions": [{"name": "dealer.dealer_name"}]}
     await agent.sessions.put_task_frame(previous)
     await agent.sessions.put_last_request(previous)
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="sort-only-followup",
             message_id="m2",
@@ -1938,7 +2236,7 @@ async def test_sort_after_relationship_count_restores_counted_entity_grouping():
         1,
     ):
         response = await agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="app1",
                 conversation_id=conversation_id,
                 message_id=f"m{turn}",
@@ -1990,7 +2288,7 @@ async def test_explicit_group_ranking_replaces_prior_relationship_projection():
         1,
     ):
         response = await agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="app1",
                 conversation_id=conversation_id,
                 message_id=f"m{turn}",
@@ -2024,12 +2322,13 @@ async def test_top_n_only_followup_ranks_an_unordered_relationship_list():
         "top-only-followup",
     )
     previous.application_id = "app1"
+    previous.semantic_model_id = 81
     previous.asl_template = {"dimensions": [{"name": "dealer.dealer_name"}]}
     await agent.sessions.put_task_frame(previous)
     await agent.sessions.put_last_request(previous)
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="top-only-followup",
             message_id="m2",
@@ -2069,7 +2368,7 @@ async def test_follow_up_uses_task_frame_after_upstream_failure():
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
 
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="failed-follow",
             message_id="m1", question="查询2026年7月销售额",
         ), identity,
@@ -2081,7 +2380,7 @@ async def test_follow_up_uses_task_frame_after_upstream_failure():
     assert frame.asl_template is None
 
     follow = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="failed-follow",
             message_id="m2", question="按日统计",
         ), identity,
@@ -2097,7 +2396,7 @@ async def test_granularity_only_follow_up_inherits_metric_and_becomes_trend():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="daily-follow",
             message_id="m1", question="查询2026年7月销售额",
         ),
@@ -2106,7 +2405,7 @@ async def test_granularity_only_follow_up_inherits_metric_and_becomes_trend():
     assert first.status == "COMPLETED"
 
     follow = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="daily-follow",
             message_id="m2", question="按日统计",
         ),
@@ -2132,7 +2431,7 @@ async def test_natural_elliptical_follow_up_recovers_task_frame(follow_up):
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id=f"natural-{follow_up}",
             message_id="m1", question="查询2026年7月销售额",
         ), identity,
@@ -2140,7 +2439,7 @@ async def test_natural_elliptical_follow_up_recovers_task_frame(follow_up):
     assert first.status == "COMPLETED"
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id=f"natural-{follow_up}",
             message_id="m2", question=follow_up,
         ), identity,
@@ -2158,7 +2457,7 @@ async def test_history_recovers_clarification_after_short_memory_is_missing():
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="cold-session",
             message_id="m3",
@@ -2211,7 +2510,7 @@ async def test_confirmed_long_term_preference_is_applied_and_auditable():
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="memory-use",
             message_id="m1",
@@ -2262,7 +2561,7 @@ async def test_confirmed_default_fills_only_a_missing_slot(monkeypatch):
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="memory-default",
             message_id="m1",
@@ -2282,7 +2581,7 @@ async def test_confirmed_default_fills_only_a_missing_slot(monkeypatch):
     assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in remembered.assumptions
 
     explicit = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1", conversation_id="memory-explicit",
             message_id="m1", question="查询2026年7月销售额",
             use_longterm_memory=True,
@@ -2302,7 +2601,7 @@ async def test_contextual_follow_up_inherits_slots_but_switches_to_analysis_inte
     agent = service()
     identity = TrustedIdentity(tenant_id="t1", user_id="u1")
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="analysis-follow-up",
             message_id="m1",
@@ -2313,7 +2612,7 @@ async def test_contextual_follow_up_inherits_slots_but_switches_to_analysis_inte
     assert first.status == "COMPLETED"
 
     follow_up = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app1",
             conversation_id="analysis-follow-up",
             message_id="m2",

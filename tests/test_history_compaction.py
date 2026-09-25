@@ -27,7 +27,7 @@ def test_compaction_keeps_task_origin_correction_clarification_and_recent_turns(
 
 
 def test_chat_request_accepts_100_history_items_but_rejects_unbounded_history():
-    base = {
+    base = {"semantic_model_id": 81,
         "application_id": "app",
         "conversation_id": "conversation",
         "message_id": "current",
@@ -41,7 +41,7 @@ def test_chat_request_accepts_100_history_items_but_rejects_unbounded_history():
 
 
 def test_chat_request_rejects_excessive_aggregate_history_content():
-    base = {
+    base = {"semantic_model_id": 81,
         "application_id": "app",
         "conversation_id": "conversation",
         "message_id": "current",

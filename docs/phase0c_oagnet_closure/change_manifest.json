@@ -1,0 +1,148 @@
+{
+  "baseline_commit": "cdb2a8cfb059c841fbd8de51eb3c3a59cb0cf981",
+  "feature_branch": "phase0c-oagnet-scope-closure-20260908-01",
+  "files": [
+    {
+      "repository_path": "Oagnet/api.py",
+      "source_sha256": "bb33b13e7aa2941c3c27cb3ca6ed71d2f0fefb2ae138b8604cdbab7a61f12349",
+      "published_sha256": "bb33b13e7aa2941c3c27cb3ca6ed71d2f0fefb2ae138b8604cdbab7a61f12349",
+      "baseline_sha256": "bfaad1ac7faf3d82ddfae40281680ff73b4d97e0b12bed4b6cf49f52b89ecb12"
+    },
+    {
+      "repository_path": "Oagnet/mysql_tool.py",
+      "source_sha256": "825f62818c73cf46878feb41c0e756a86559967be7586aa7b596f30160539af1",
+      "published_sha256": "825f62818c73cf46878feb41c0e756a86559967be7586aa7b596f30160539af1",
+      "baseline_sha256": "78f181a6696f8346a2e6dfd4d1982e999b99e84b8889dc3275a9085007b1e0d7"
+    },
+    {
+      "repository_path": "Oagnet/prompt_build.py",
+      "source_sha256": "c91a03408e442eeb322fc02d910b16d6c7d402fb37bb4f2058efe87bda6a8ef3",
+      "published_sha256": "c91a03408e442eeb322fc02d910b16d6c7d402fb37bb4f2058efe87bda6a8ef3",
+      "baseline_sha256": "5fdcf431cbf6aa9e5d546b97d33bfd70debd73965a5d9187d54436a9ad1d0e20"
+    },
+    {
+      "repository_path": "Oagnet/scope_contract.py",
+      "source_sha256": "d199fda72b5c318d6996d09e5910b816b13ea45a4339298070640d6e63a0a82c",
+      "published_sha256": "d199fda72b5c318d6996d09e5910b816b13ea45a4339298070640d6e63a0a82c",
+      "baseline_sha256": "3cde89d5341d13fae5855babac8b6f736fd6f0bf4d7a47b86b25beef50c57894"
+    },
+    {
+      "repository_path": "Oagnet/vector_store.py",
+      "source_sha256": "cbed7ee0812873581ed5b6db97752d2330ff6854367628de1c92b1e831a3cb2a",
+      "published_sha256": "cbed7ee0812873581ed5b6db97752d2330ff6854367628de1c92b1e831a3cb2a",
+      "baseline_sha256": "6e0402df97374d55c28b2547983483442c7d90bdf9857828787afe3d8f0cb63c"
+    },
+    {
+      "repository_path": "Oagnet/dimension_scope.py",
+      "source_sha256": "e92b9498c9eb775d175d6c7050faf6f8c0fd55cf93ab9ec7e0f0788faefff16c",
+      "published_sha256": "e92b9498c9eb775d175d6c7050faf6f8c0fd55cf93ab9ec7e0f0788faefff16c",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "Oagnet/scripts/audit_semantic_snapshot.py",
+      "source_sha256": "78d7f83eafe20594e99bfadb36d3ed85ee772f7eb40407234be02f31542a87b3",
+      "published_sha256": "78d7f83eafe20594e99bfadb36d3ed85ee772f7eb40407234be02f31542a87b3",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "Oagnet/tests/test_scope_closure.py",
+      "source_sha256": "ba02bcdd0f329268b952837f0c8797061eb302c8e5b78315a6dd15d1cd69a009",
+      "published_sha256": "ba02bcdd0f329268b952837f0c8797061eb302c8e5b78315a6dd15d1cd69a009",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "Oagnet/tests/test_cross_domain_hardening.py",
+      "source_sha256": "656dd9c9329814c14931202c1e1bb62f8789c82bf797ae820ebc88b89da24fec",
+      "published_sha256": "656dd9c9329814c14931202c1e1bb62f8789c82bf797ae820ebc88b89da24fec",
+      "baseline_sha256": "96e16faef7d463427f03305ea7e9c8a634579ae5458c98a692accd07746e3be2"
+    },
+    {
+      "repository_path": "Oagnet/tests/test_entity_attribute_integration.py",
+      "source_sha256": "c449f4ed939a09260efc23f0b5aa68c58038c6e59b84682619b7dd459a2a57ed",
+      "published_sha256": "c449f4ed939a09260efc23f0b5aa68c58038c6e59b84682619b7dd459a2a57ed",
+      "baseline_sha256": "f04f0b26a919deb236bdfb4006ac1429125310155ebe0075f76b39ac279f323e"
+    },
+    {
+      "repository_path": "Oagnet/tests/test_live_semantic_regressions.py",
+      "source_sha256": "499df4d9454fb9e0b5508a7901a504b3c15e4671063c5bd1f49dc0060d6e6366",
+      "published_sha256": "499df4d9454fb9e0b5508a7901a504b3c15e4671063c5bd1f49dc0060d6e6366",
+      "baseline_sha256": "cab0e019821e8ecb05e74d433d562da18fc4b8a084c5394817624325b61da542"
+    },
+    {
+      "repository_path": "Oagnet/tests/test_relational_semantic_scope.py",
+      "source_sha256": "4407c2f68ebf7bb3a6d841966334e682f9f819fa54eaea481d7f222543d978d1",
+      "published_sha256": "4407c2f68ebf7bb3a6d841966334e682f9f819fa54eaea481d7f222543d978d1",
+      "baseline_sha256": "35845b1a633a6ec53ab0c1ef2483132271cb58875d72c28ec3640f69f4bc41e9"
+    },
+    {
+      "repository_path": "Oagnet/tests/test_temporal_metric_invariants.py",
+      "source_sha256": "99327d6c21303e08b54645b7d80870403125d87ab690965f1fd6809e6d671479",
+      "published_sha256": "99327d6c21303e08b54645b7d80870403125d87ab690965f1fd6809e6d671479",
+      "baseline_sha256": "5dafe4626365c0c9645110611ad0616e5ccacbf24956b56402800396bfeb201b"
+    },
+    {
+      "repository_path": "Oagnet/SEMANTIC_SCOPE_PUBLICATION_CONTRACT.md",
+      "source_sha256": "787dda37534d4660b91d33ffe14dd07ec4f661fd8b432afa71c1fb4d0fd92b46",
+      "published_sha256": "787dda37534d4660b91d33ffe14dd07ec4f661fd8b432afa71c1fb4d0fd92b46",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_oagnet_closure/baseline_Oagnet.json",
+      "source_sha256": "c7751ebcc457d96c0d9ab9a0748779b8c45d88db2caa9aded1f63c9b4c93c5dc",
+      "published_sha256": "c7751ebcc457d96c0d9ab9a0748779b8c45d88db2caa9aded1f63c9b4c93c5dc",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_oagnet_closure/catalog_publication_plan.md",
+      "source_sha256": "b378871444fdc756a302078d2e485ae3df1895aad026c496c4a1da815872182b",
+      "published_sha256": "b378871444fdc756a302078d2e485ae3df1895aad026c496c4a1da815872182b",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_oagnet_closure/catalog_snapshot_aggregate.json",
+      "source_sha256": "67c6b95c3d97d6caa4555c351ca75094b7011cbf91b5b00f4b5ae418ef7d0097",
+      "published_sha256": "67c6b95c3d97d6caa4555c351ca75094b7011cbf91b5b00f4b5ae418ef7d0097",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_oagnet_closure/closure_report.md",
+      "source_sha256": "d11b88e8732ece83c386458e85d93ae9773aaaa75f445d5ae0d20779279b8d6f",
+      "published_sha256": "d11b88e8732ece83c386458e85d93ae9773aaaa75f445d5ae0d20779279b8d6f",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_oagnet_closure/final_DataAnalysis_Agent.json",
+      "source_sha256": "239c09601e560eff2b5ba3e96cc0a91380d4e96ac9246a33d01d723c6c78d65f",
+      "published_sha256": "239c09601e560eff2b5ba3e96cc0a91380d4e96ac9246a33d01d723c6c78d65f",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_oagnet_closure/final_Oagnet.json",
+      "source_sha256": "99541c903ed4df016672bc89c00f60eeedd5ecec1ca03b6060568c71ee39fef1",
+      "published_sha256": "99541c903ed4df016672bc89c00f60eeedd5ecec1ca03b6060568c71ee39fef1",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_oagnet_closure/final_SQL_Translator.json",
+      "source_sha256": "c4b084cca62572448f1b30fb2e721c1420fb1fcb7c307d61a8421c07a2595365",
+      "published_sha256": "c4b084cca62572448f1b30fb2e721c1420fb1fcb7c307d61a8421c07a2595365",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_oagnet_closure/source_audit.json",
+      "source_sha256": "bfb4a7e1c33ff41b40255583c288285a46fb147776ff244f6fbe411b5e4715ee",
+      "published_sha256": "bfb4a7e1c33ff41b40255583c288285a46fb147776ff244f6fbe411b5e4715ee",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_oagnet_closure/test_delta.json",
+      "source_sha256": "20b88059429729682345be6f5e0164ddbb57b2404e5398c5b1a6f2008be94eb2",
+      "published_sha256": "20b88059429729682345be6f5e0164ddbb57b2404e5398c5b1a6f2008be94eb2",
+      "baseline_sha256": null
+    }
+  ],
+  "secret_scan_findings": 0,
+  "publication_policy": "Explicit per-file sync; no environment, runtime logs, snapshot rows or credentials",
+  "original_oagnet_index_preserved": true,
+  "manifest_self_hash": "Committed Git blob, no circular hash"
+}

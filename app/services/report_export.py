@@ -11,6 +11,8 @@ from xml.sax.saxutils import escape
 
 from minio_followup_store import DatasetReference, DatasetScope, HybridMinioFollowupStore
 
+from app.analysis.visualization import render_chart_svg
+
 
 class ReportExportError(ValueError):
     pass
@@ -28,7 +30,7 @@ class DatasetReportExporter:
 
     @staticmethod
     def _scope_prefix(scope: DatasetScope) -> str:
-        raw = "\x1f".join((scope.tenant_id, scope.user_id, scope.application_id)).encode()
+        raw = "\x1f".join((scope.tenant_id, scope.user_id, scope.application_id, scope.authorized_semantic_scope_fingerprint)).encode()
         return hashlib.sha256(raw).hexdigest()[:24]
 
     @staticmethod
@@ -258,6 +260,7 @@ class DatasetReportExporter:
             "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "pdf": "application/pdf",
+            "svg": "image/svg+xml",
         }
         created_at = datetime.now(timezone.utc)
         expires_at = created_at + timedelta(seconds=self.object_ttl_seconds)
@@ -296,6 +299,7 @@ class DatasetReportExporter:
                     "user_id": scope.user_id,
                     "application_id": scope.application_id,
                     "conversation_id": scope.conversation_id,
+                    "authorized_semantic_scope_fingerprint": scope.authorized_semantic_scope_fingerprint,
                 },
                 "dataset_ids": list(dataset_ids),
                 "created_at": created_at.isoformat(),
@@ -348,6 +352,7 @@ class DatasetReportExporter:
                 reference.scope.tenant_id != scope.tenant_id
                 or reference.scope.user_id != scope.user_id
                 or reference.scope.application_id != scope.application_id
+                or reference.scope.authorized_semantic_scope_fingerprint != scope.authorized_semantic_scope_fingerprint
             ):
                 raise ReportExportError(
                     "composite report datasets must belong to the same tenant, user and application"
@@ -371,6 +376,25 @@ class DatasetReportExporter:
         return self._publish(
             payload,
             file_format=file_format,
+            scope=scope,
+            dataset_ids=dataset_ids,
+        )
+
+    def publish_chart(
+        self,
+        chart_spec: Mapping[str, Any],
+        *,
+        scope: DatasetScope,
+        dataset_ids: Sequence[str],
+    ) -> dict[str, Any]:
+        """Publish a renderer-neutral chart as a scoped, short-lived SVG."""
+
+        payload = render_chart_svg(chart_spec)
+        if payload is None:
+            raise ReportExportError("chart specification has no renderable data")
+        return self._publish(
+            payload,
+            file_format="svg",
             scope=scope,
             dataset_ids=dataset_ids,
         )

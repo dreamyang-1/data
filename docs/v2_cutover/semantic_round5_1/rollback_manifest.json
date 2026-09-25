@@ -1,0 +1,25 @@
+{
+  "baseline": "76da2d0818dafe851ed2b2dc345ec5cf972242fe",
+  "production_changes": 0,
+  "configuration_changes": 0,
+  "added_files": [
+    "docs/v2_cutover/semantic_round5_1/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_1/closure_report.md",
+    "docs/v2_cutover/semantic_round5_1/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_1/live_case_inventory.json",
+    "docs/v2_cutover/semantic_round5_1/live_scenarios.json",
+    "docs/v2_cutover/semantic_round5_1/performance_receipt.json",
+    "docs/v2_cutover/semantic_round5_1/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round5_1/round5_1_manifest.json",
+    "docs/v2_cutover/semantic_round5_1/test_delta.json",
+    "docs/v2_cutover/semantic_round5_1/validation_receipt.json",
+    "docs/v2_cutover/semantic_round5_1/verify_round5_1.py",
+    "docs/v2_cutover/semantic_round5_1/workspace_git_hash_verification.json",
+    "tests/test_round51_readiness_accounting.py",
+    "tools/cutover/followup_readiness_evidence.py",
+    "tools/cutover/live_followup_round5_1.py"
+  ],
+  "procedure": "Revert the introducing evidence/tool/test commit on an isolated branch; no runtime rollback or data migration required",
+  "private_captures": "Retained locally, outside versioned repository",
+  "final_commit_resolution": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round5_1/git_commit_manifest.json"
+}

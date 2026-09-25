@@ -1,0 +1,42 @@
+{
+  "checkpoint_verification": {
+    "status": "CHECKPOINT_VERIFIED",
+    "cases": 120,
+    "primary_divergences": 41,
+    "root_groups": 11,
+    "model_benchmark_gate": "FAIL",
+    "network_calls": 0,
+    "production_writes": 0
+  },
+  "validation": [
+    "120 unique cases; status totals and CSV/JSON parity",
+    "41 nonpassing records each map to exactly one primary stage and root",
+    "11 root groups and all 17 stage totals reconcile",
+    "Current source and historical evidence hashes verified with documented LF policy",
+    "Original single and transition evaluator fields recomputed without changed labels"
+  ],
+  "inherited_runtime_baseline": {
+    "commit": "0e408509126aae0a3a324aff02aef848fd0d3c56",
+    "agent": {
+      "passed": 3062,
+      "failed": 27
+    },
+    "oagnet": {
+      "passed": 677,
+      "failed": 8
+    },
+    "sql_translator": {
+      "passed": 381,
+      "failed": 0
+    },
+    "collection_errors": 0,
+    "old_pass_to_new_fail": 0,
+    "critical_regressions_passed": 160,
+    "source": "docs/v2_cutover/test_delta.json",
+    "rerun_in_this_document_only_checkpoint": false
+  },
+  "production_code_changes": 0,
+  "model_calls": 0,
+  "source_SQL": 0,
+  "production_writes": 0
+}

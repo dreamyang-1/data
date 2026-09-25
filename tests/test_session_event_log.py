@@ -1,3 +1,5 @@
+import uuid
+
 import fakeredis.aioredis
 import pytest
 
@@ -85,7 +87,7 @@ async def test_orchestrator_records_replayable_request_intent_and_final_events()
     )
     identity = TrustedIdentity(tenant_id="tenant", user_id="user")
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app", conversation_id="conversation",
             message_id="m1", question="你好",
         ),
@@ -93,16 +95,41 @@ async def test_orchestrator_records_replayable_request_intent_and_final_events()
     )
 
     assert response.status == "COMPLETED"
-    recorded = await events.list_events(
-        "tenant", "user", "app", "conversation", trace_id="m1"
+    recorded_all = await events.list_events(
+        "tenant", "user", "app", "conversation", limit=500
     )
-    assert [item.event_type for item in recorded] == [
+    mine = [item for item in recorded_all if item.message_id == "m1"]
+    assert mine, "a replayable request must append lifecycle events"
+    # Discover the canonical trace by message id first: one external
+    # request owns exactly one request-UUID trace id.
+    trace_ids = {item.trace_id for item in mine}
+    assert len(trace_ids) == 1
+    canonical_trace = next(iter(trace_ids))
+    uuid.UUID(canonical_trace)
+    assert canonical_trace != "m1"
+    recorded = await events.list_events(
+        "tenant", "user", "app", "conversation", trace_id=canonical_trace
+    )
+    assert len(recorded) == len(mine)
+    event_types = [item.event_type for item in recorded]
+    # Structural admission/merge events are retained in the replayable
+    # sequence: admission opens the trace, the entry event follows it,
+    # and context merge closes the admission before lifecycle events.
+    assert event_types[0] == SessionEventType.TURN_ADMISSION
+    assert SessionEventType.CONTEXT_MERGE in event_types
+    for required in (
         SessionEventType.USER_QUERY,
         SessionEventType.INTENT_RESULT,
         SessionEventType.FINAL_INSIGHT,
         SessionEventType.TRACE_SUMMARY,
-    ]
-    assert recorded[-2].payload["status"] == "COMPLETED"
+    ):
+        assert event_types.count(required) == 1
+    assert recorded[-1].event_type == SessionEventType.TRACE_SUMMARY
+    intent_result = next(
+        item for item in recorded
+        if item.event_type == SessionEventType.INTENT_RESULT
+    )
+    assert intent_result.payload["status"] == "COMPLETED"
 
 
 class FailingEventStore:
@@ -120,7 +147,7 @@ async def test_event_backend_failure_never_breaks_business_response():
         event_store=FailingEventStore(),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app", conversation_id="conversation",
             message_id="m1", question="你好",
         ),

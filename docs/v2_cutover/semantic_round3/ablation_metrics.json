@@ -1,0 +1,2956 @@
+{
+  "protocol": "CONTEXT-ARBITRATION-ABLATION-v1",
+  "public_metrics": {
+    "public_dev/A_MODEL_HARD": {
+      "captured_current_turns": 70,
+      "target_task_exact_match": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "followup_recall_by_attachment": {
+        "n": 7,
+        "N": 7,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_precision": {
+        "n": 51,
+        "N": 51,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "historical_return_success": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "strict_relation_label_match": {
+        "n": 58,
+        "N": 58,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "target_labels_without_receipt_mapping": 0,
+      "wrong_inheritance": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "unnecessary_clarification": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "pending_hijack": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "wrong_state_mutation": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      }
+    },
+    "public_dev/B_RULE_ONLY": {
+      "captured_current_turns": 70,
+      "target_task_exact_match": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "followup_recall_by_attachment": {
+        "n": 7,
+        "N": 7,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_precision": {
+        "n": 45,
+        "N": 45,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "historical_return_success": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "strict_relation_label_match": {
+        "n": 52,
+        "N": 52,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "target_labels_without_receipt_mapping": 0,
+      "wrong_inheritance": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "unnecessary_clarification": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "pending_hijack": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "wrong_state_mutation": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      }
+    },
+    "public_dev/C_CURRENT_HYBRID": {
+      "captured_current_turns": 70,
+      "target_task_exact_match": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "followup_recall_by_attachment": {
+        "n": 7,
+        "N": 7,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_precision": {
+        "n": 51,
+        "N": 51,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "historical_return_success": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "strict_relation_label_match": {
+        "n": 57,
+        "N": 58,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "target_labels_without_receipt_mapping": 0,
+      "wrong_inheritance": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "unnecessary_clarification": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "pending_hijack": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "wrong_state_mutation": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      }
+    },
+    "transition/A_MODEL_HARD": {
+      "captured_current_turns": 9,
+      "target_task_exact_match": {
+        "n": 9,
+        "N": 9,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "followup_recall_by_attachment": {
+        "n": 3,
+        "N": 3,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_precision": {
+        "n": 1,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "historical_return_success": {
+        "n": 1,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "strict_relation_label_match": {
+        "n": 5,
+        "N": 5,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "target_labels_without_receipt_mapping": 0,
+      "wrong_inheritance": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "unnecessary_clarification": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "pending_hijack": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "wrong_state_mutation": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      }
+    },
+    "transition/B_RULE_ONLY": {
+      "captured_current_turns": 9,
+      "target_task_exact_match": {
+        "n": 8,
+        "N": 9,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "followup_recall_by_attachment": {
+        "n": 3,
+        "N": 3,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_precision": {
+        "n": 1,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "historical_return_success": {
+        "n": 0,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "strict_relation_label_match": {
+        "n": 4,
+        "N": 4,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "target_labels_without_receipt_mapping": 0,
+      "wrong_inheritance": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "unnecessary_clarification": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "pending_hijack": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "wrong_state_mutation": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      }
+    },
+    "transition/C_CURRENT_HYBRID": {
+      "captured_current_turns": 9,
+      "target_task_exact_match": {
+        "n": 9,
+        "N": 9,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "followup_recall_by_attachment": {
+        "n": 3,
+        "N": 3,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_precision": {
+        "n": 1,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "historical_return_success": {
+        "n": 1,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "strict_relation_label_match": {
+        "n": 4,
+        "N": 5,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "target_labels_without_receipt_mapping": 0,
+      "wrong_inheritance": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "unnecessary_clarification": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "pending_hijack": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "wrong_state_mutation": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      }
+    }
+  },
+  "controlled_metrics": {
+    "A_MODEL_HARD": {
+      "target_task_exact_match": {
+        "n": 9,
+        "N": 18,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "common_model_evidence_target_exact_match": {
+        "n": 9,
+        "N": 9,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "followup_recall": {
+        "n": 7,
+        "N": 7,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_precision": {
+        "n": 1,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "historical_return_success": {
+        "n": 1,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "explicit_delta_preservation": {
+        "n": 6,
+        "N": 6,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "inheritance_precision_untouched_slots": {
+        "n": 14,
+        "N": 14,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "inheritance_recall_untouched_slots": {
+        "n": 14,
+        "N": 14,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "wrong_inheritance_untouched_slots": {
+        "n": 0,
+        "N": 14,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "wrong_state_mutation_labeled_final_axes": {
+        "n": 0,
+        "N": 8,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "forbidden_resurrection": {
+        "n": 0,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "unnecessary_clarification": {
+        "n": 0,
+        "N": 10,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "pending_hijack": {
+        "n": 0,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_false_inheritance": {
+        "n": 0,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "execution": {
+        "V2_TURN_REFERENCE_UNRESOLVED": 9,
+        "ACCEPTED": 9
+      }
+    },
+    "B_RULE_ONLY": {
+      "target_task_exact_match": {
+        "n": 15,
+        "N": 18,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "common_model_evidence_target_exact_match": {
+        "n": 6,
+        "N": 9,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "followup_recall": {
+        "n": 5,
+        "N": 7,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_precision": {
+        "n": 10,
+        "N": 13,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "historical_return_success": {
+        "n": 0,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "explicit_delta_preservation": {
+        "n": 4,
+        "N": 6,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "inheritance_precision_untouched_slots": {
+        "n": 10,
+        "N": 10,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "inheritance_recall_untouched_slots": {
+        "n": 10,
+        "N": 14,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "wrong_inheritance_untouched_slots": {
+        "n": 0,
+        "N": 10,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "wrong_state_mutation_labeled_final_axes": {
+        "n": 0,
+        "N": 5,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "forbidden_resurrection": {
+        "n": 0,
+        "N": 0,
+        "status": "NO_GROUND_TRUTH_OR_NOT_OBSERVED"
+      },
+      "unnecessary_clarification": {
+        "n": 0,
+        "N": 10,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "pending_hijack": {
+        "n": 0,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_false_inheritance": {
+        "n": 0,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "execution": {
+        "ACCEPTED": 15,
+        "V2_TEMPORAL_BASE_REQUIRED": 1,
+        "V2_FILTER_TARGET_NOT_CURRENT_TASK": 1,
+        "V2_PRIOR_PAYLOAD_IDENTITY_REQUIRED": 1
+      }
+    },
+    "C_CURRENT_HYBRID": {
+      "target_task_exact_match": {
+        "n": 18,
+        "N": 18,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "common_model_evidence_target_exact_match": {
+        "n": 9,
+        "N": 9,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "followup_recall": {
+        "n": 7,
+        "N": 7,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_precision": {
+        "n": 10,
+        "N": 10,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "historical_return_success": {
+        "n": 1,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "explicit_delta_preservation": {
+        "n": 6,
+        "N": 6,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "inheritance_precision_untouched_slots": {
+        "n": 14,
+        "N": 14,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "inheritance_recall_untouched_slots": {
+        "n": 14,
+        "N": 14,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "wrong_inheritance_untouched_slots": {
+        "n": 0,
+        "N": 14,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "wrong_state_mutation_labeled_final_axes": {
+        "n": 0,
+        "N": 8,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "forbidden_resurrection": {
+        "n": 0,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "unnecessary_clarification": {
+        "n": 0,
+        "N": 10,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "pending_hijack": {
+        "n": 0,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "new_topic_false_inheritance": {
+        "n": 0,
+        "N": 1,
+        "status": "OBSERVED_DIAGNOSTIC_ONLY"
+      },
+      "execution": {
+        "ACCEPTED": 18
+      }
+    }
+  },
+  "rows": [
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-001",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-002",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-003",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-004",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-005",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-006",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-007",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-008",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-009",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-010",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-011",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-012",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-013",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-014",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_QUERY_SHAPE_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-015",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-016",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-017",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-018",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-019",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-020",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-021",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-022",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-023",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-024",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-025",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-026",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-027",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-028",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-029",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-030",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-031",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-032",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-033",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-034",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_RELATION_BINDING_ROLE_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-035",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-036",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-037",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-038",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-039",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-040",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-041",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-042",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-043",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-044",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-045",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-046",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-047",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-048",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-049",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-053",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-054",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-055",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-072",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-075",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_FILTER_CURRENT_EVIDENCE_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-077",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-079",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-081",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_CATALOG_AMBIGUITY_NOT_PROVEN"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-082",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-083",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-086",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-089",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-092",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-093",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_SLOT_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-094",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SOURCE_VALUE_FIELD_ROLE_INVALID"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-095",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-096",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-097",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-098",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-099",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_RECOGNITION_UNRESOLVED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-100",
+      "arm": "A_MODEL_HARD",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-001",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-002",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-003",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-004",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-005",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-006",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-007",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-008",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-009",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-010",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-011",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-012",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-013",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-014",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_QUERY_SHAPE_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-015",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-016",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-017",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-018",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-019",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-020",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-021",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-022",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-023",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-024",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-025",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-026",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-027",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-028",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-029",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-030",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-031",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-032",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-033",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-034",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_RELATION_BINDING_ROLE_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-035",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-036",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-037",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "UNRESOLVED",
+      "accepted_plan": false,
+      "reason": "V2_TURN_REFERENCE_UNRESOLVED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-038",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-039",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-040",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-041",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "UNRESOLVED",
+      "accepted_plan": false,
+      "reason": "V2_TURN_REFERENCE_UNRESOLVED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-042",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "UNRESOLVED",
+      "accepted_plan": false,
+      "reason": "V2_TURN_REFERENCE_UNRESOLVED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-043",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-044",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "UNRESOLVED",
+      "accepted_plan": false,
+      "reason": "V2_TURN_REFERENCE_UNRESOLVED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-045",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "UNRESOLVED",
+      "accepted_plan": false,
+      "reason": "V2_TURN_REFERENCE_UNRESOLVED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-046",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-047",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-048",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "UNRESOLVED",
+      "accepted_plan": false,
+      "reason": "V2_TURN_REFERENCE_UNRESOLVED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-049",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-053",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-054",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-055",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-072",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-075",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_FILTER_CURRENT_EVIDENCE_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-077",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-079",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-081",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_CATALOG_AMBIGUITY_NOT_PROVEN"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-082",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-083",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-086",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-089",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-092",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-093",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_SLOT_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-094",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SOURCE_VALUE_FIELD_ROLE_INVALID"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-095",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-096",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-097",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-098",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-099",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_RECOGNITION_UNRESOLVED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-100",
+      "arm": "B_RULE_ONLY",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-001",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-002",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-003",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-004",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-005",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-006",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-007",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-008",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-009",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-010",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-011",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-012",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-013",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "CATALOG_RELATIONSHIP_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-014",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_QUERY_SHAPE_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-015",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-016",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-017",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-018",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-019",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-020",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-021",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-022",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-023",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-024",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-025",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-026",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-027",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-028",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-029",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-030",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-031",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-032",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-033",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_OPERATION_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-034",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_RELATION_BINDING_ROLE_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-035",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-036",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-037",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-038",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-039",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-040",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-041",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-042",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-043",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-044",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-045",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-046",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-047",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-048",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-049",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-053",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-054",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-055",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-072",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-075",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_FILTER_CURRENT_EVIDENCE_REQUIRED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-077",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-079",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-081",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_CATALOG_AMBIGUITY_NOT_PROVEN"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-082",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-083",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-086",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-089",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-092",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-093",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_EXPLICIT_SLOT_DROPPED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-094",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SOURCE_VALUE_FIELD_ROLE_INVALID"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-095",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-096",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_CONTRACT_VALIDATION_FAILURE"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-097",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-098",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_ENTITY_ALIAS_REQUIRES_PATH"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-099",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_RECOGNITION_UNRESOLVED"
+    },
+    {
+      "cohort": "public_dev",
+      "case_id": "G81-100",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": null,
+      "target_correct": null,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-001",
+      "arm": "A_MODEL_HARD",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-002",
+      "arm": "A_MODEL_HARD",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-003",
+      "arm": "A_MODEL_HARD",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-011",
+      "arm": "A_MODEL_HARD",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-012",
+      "arm": "A_MODEL_HARD",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-013",
+      "arm": "A_MODEL_HARD",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-014",
+      "arm": "A_MODEL_HARD",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-016",
+      "arm": "A_MODEL_HARD",
+      "target_label": "NEW",
+      "target_correct": true,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-017",
+      "arm": "A_MODEL_HARD",
+      "target_label": "HISTORY:0",
+      "target_correct": true,
+      "semantic_attachment": "RETURN_TO_TOPIC",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-001",
+      "arm": "B_RULE_ONLY",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-002",
+      "arm": "B_RULE_ONLY",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-003",
+      "arm": "B_RULE_ONLY",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-011",
+      "arm": "B_RULE_ONLY",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-012",
+      "arm": "B_RULE_ONLY",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-013",
+      "arm": "B_RULE_ONLY",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-014",
+      "arm": "B_RULE_ONLY",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-016",
+      "arm": "B_RULE_ONLY",
+      "target_label": "NEW",
+      "target_correct": true,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-017",
+      "arm": "B_RULE_ONLY",
+      "target_label": "HISTORY:0",
+      "target_correct": false,
+      "semantic_attachment": "UNRESOLVED",
+      "accepted_plan": false,
+      "reason": "V2_TURN_REFERENCE_UNRESOLVED"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-001",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-002",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-003",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-011",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-012",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": false,
+      "reason": "V2_SLOT_OPERATION_CONFLICT"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-013",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-014",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": "PREVIOUS",
+      "target_correct": true,
+      "semantic_attachment": "FOLLOW_UP",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-016",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": "NEW",
+      "target_correct": true,
+      "semantic_attachment": "NEW_TASK",
+      "accepted_plan": false,
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED"
+    },
+    {
+      "cohort": "transition",
+      "case_id": "S81-017",
+      "arm": "C_CURRENT_HYBRID",
+      "target_label": "HISTORY:0",
+      "target_correct": true,
+      "semantic_attachment": "RETURN_TO_TOPIC",
+      "accepted_plan": true,
+      "reason": "ACCEPTED_DIAGNOSTIC_ONLY"
+    }
+  ],
+  "common_controlled_turns": [
+    [
+      "CFCS-01",
+      1
+    ],
+    [
+      "CFCS-02",
+      1
+    ],
+    [
+      "CFCS-03",
+      1
+    ],
+    [
+      "CFCS-04",
+      1
+    ],
+    [
+      "CFCS-04",
+      2
+    ],
+    [
+      "CFCS-05",
+      1
+    ],
+    [
+      "CFCS-06",
+      1
+    ],
+    [
+      "CFCS-07",
+      2
+    ],
+    [
+      "CFCS-08",
+      1
+    ]
+  ],
+  "arms": {
+    "A": "Existing recorded model propositions + native hard validators. No independent context-aware relation model exists; no model score thresholds. Active historical target is the same attachment; label normalization is diagnostic only.",
+    "B": "Existing V1 RuleBasedIntentClassifier + TurnAdmissionGate, RELATION only; canonical edits held as frozen model artifacts. No full V1 orchestration or independent historical selector.",
+    "C": "Unchanged actual V2 RawTurnPlanner/TurnResolver with frozen model artifacts."
+  },
+  "limits": [
+    "Per-turn interventions use identical frozen BEFORE state; these are not end-to-end counterfactual rollouts.",
+    "A/B context changes do not regenerate downstream recorded model outputs.",
+    "9 controlled initial turns have no explicit model relation proposition; A abstains. Common comparable controlled subset is 9 turns.",
+    "Public/Transition metrics use only existing labeled CURRENT turns with typed captures. Missing history/timeout/runtime is not silently scored PASS.",
+    "Untouched-slot inheritance compares nonempty metrics/filter/time under the explicit preserve-other-slots business contract; it does not certify every changed-slot/member operation.",
+    "0/0 is unknown. No unsafe inheritance inferred merely from a differing relation label."
+  ],
+  "stronger_hybrid_superiority_proven": false,
+  "diagnostic_attachment_gain_over_legacy_rule_gate": true,
+  "formal_Gold_labels_or_scores_changed": false
+}

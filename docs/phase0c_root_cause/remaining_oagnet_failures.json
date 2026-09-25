@@ -1,0 +1,82 @@
+[
+  {
+    "nodeid": "tests/test_cross_domain_hardening.py::test_entity_attribute_search_allows_semantic_model_wide_scope",
+    "preexisting": true,
+    "classification": "MOCK_DRIFT",
+    "evidence_level": "HIGH_CONFIDENCE",
+    "evidence": "E   assert 503 == 200\n     +  where 503 = <Response [503 Service Unavailable]>.status_code",
+    "missing_evidence": "Mock the existing exact-value vector lookup as well as search, then re-run independently."
+  },
+  {
+    "nodeid": "tests/test_entity_attribute_search_api.py::EntityAttributeSearchApiTest::test_search_is_scoped_and_returns_metadata",
+    "preexisting": true,
+    "classification": "MOCK_DRIFT",
+    "evidence_level": "HIGH_CONFIDENCE",
+    "evidence": "E   AssertionError: 503 != 200",
+    "missing_evidence": "Mock the existing exact-value vector lookup as well as search, then re-run independently."
+  },
+  {
+    "nodeid": "tests/test_intent_asl_contract.py::test_metricless_attribute_detail_uses_registered_subject_event_time",
+    "preexisting": true,
+    "classification": "ENVIRONMENT_DEPENDENCY",
+    "evidence_level": "PROVEN",
+    "evidence": "E   RuntimeError: OAGNET_MYSQL_HOST/MYSQL_HOST is not configured",
+    "missing_evidence": "Provide complete MySQL test doubles for the registered-attribute fallback; do not supply production credentials."
+  },
+  {
+    "nodeid": "tests/test_intent_asl_contract.py::test_filter_contract_prefers_unique_published_main_attribute_for_value_tie",
+    "preexisting": true,
+    "classification": "ENVIRONMENT_DEPENDENCY",
+    "evidence_level": "PROVEN",
+    "evidence": "E   RuntimeError: OAGNET_MYSQL_HOST/MYSQL_HOST is not configured",
+    "missing_evidence": "Provide complete MySQL test doubles for the registered-attribute fallback; do not supply production credentials."
+  },
+  {
+    "nodeid": "tests/test_intent_asl_contract.py::test_untyped_entity_mention_is_bound_to_unique_source_catalog_value",
+    "preexisting": true,
+    "classification": "ENVIRONMENT_DEPENDENCY",
+    "evidence_level": "PROVEN",
+    "evidence": "E   RuntimeError: OAGNET_MYSQL_HOST/MYSQL_HOST is not configured",
+    "missing_evidence": "Provide complete MySQL test doubles for the registered-attribute fallback; do not supply production credentials."
+  },
+  {
+    "nodeid": "tests/test_intent_asl_contract.py::test_untyped_entity_mention_whitespace_variant_reuses_role_bound_filter",
+    "preexisting": true,
+    "classification": "ENVIRONMENT_DEPENDENCY",
+    "evidence_level": "PROVEN",
+    "evidence": "E   RuntimeError: OAGNET_MYSQL_HOST/MYSQL_HOST is not configured",
+    "missing_evidence": "Provide complete MySQL test doubles for the registered-attribute fallback; do not supply production credentials."
+  },
+  {
+    "nodeid": "tests/test_intent_asl_contract.py::test_untyped_entity_mention_searches_all_catalog_chunks",
+    "preexisting": true,
+    "classification": "ENVIRONMENT_DEPENDENCY",
+    "evidence_level": "PROVEN",
+    "evidence": "E   RuntimeError: OAGNET_MYSQL_HOST/MYSQL_HOST is not configured",
+    "missing_evidence": "Provide complete MySQL test doubles for the registered-attribute fallback; do not supply production credentials."
+  },
+  {
+    "nodeid": "tests/test_intent_asl_contract.py::test_untyped_entity_mention_fails_closed_when_source_value_is_not_unique",
+    "preexisting": true,
+    "classification": "ENVIRONMENT_DEPENDENCY",
+    "evidence_level": "PROVEN",
+    "evidence": "E   RuntimeError: OAGNET_MYSQL_HOST/MYSQL_HOST is not configured",
+    "missing_evidence": "Provide complete MySQL test doubles for the registered-attribute fallback; do not supply production credentials."
+  },
+  {
+    "nodeid": "tests/test_relational_semantic_scope.py::test_relationship_code_filter_with_name_value_uses_unique_authorized_name_field",
+    "preexisting": true,
+    "classification": "UNKNOWN",
+    "evidence_level": "UNKNOWN",
+    "evidence": "E   AssertionError: assert [{'field': 'p...超声血管导引穿刺套件%'}] == [{'field': 'p...'超声血管导引穿刺套件'}]\n      \n      At index 0 diff: {'field': 'product.product_name', 'operator': 'LIKE', 'value': '%超声血管导引穿刺套件%'} != {'field': 'product.product_name', 'operator': '=', 'value': '超声血管导引穿刺套件'}\n      Use -v to get more diff",
+    "missing_evidence": "Re-run with an exact-value resolver test double to distinguish missing backend evidence from a production equality/LIKE normalization bug."
+  },
+  {
+    "nodeid": "tests/test_relational_semantic_scope.py::test_relationship_name_filter_resolves_one_field_among_multiple_endpoint_names",
+    "preexisting": true,
+    "classification": "UNKNOWN",
+    "evidence_level": "UNKNOWN",
+    "evidence": "E   AssertionError: assert [{'field': 'p...杉醇释放冠脉球囊导管%'}] == [{'field': 'p...紫杉醇释放冠脉球囊导管'}]\n      \n      At index 0 diff: {'field': 'product.product_name', 'operator': 'LIKE', 'value': '%紫杉醇释放冠脉球囊导管%'} != {'field': 'product.product_name', 'operator': '=', 'value': '紫杉醇释放冠脉球囊导管'}\n      Use -v to get more diff",
+    "missing_evidence": "Re-run with an exact-value resolver test double to distinguish missing backend evidence from a production equality/LIKE normalization bug."
+  }
+]

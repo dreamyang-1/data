@@ -1,0 +1,394 @@
+[
+  {
+    "case_id": "G81-001",
+    "current_utterance": "列出产品线名单",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-002",
+    "current_utterance": "列出科室名单",
+    "failed_axes": [
+      "query_shape",
+      "mentions"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-003",
+    "current_utterance": "列出城市名单",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-004",
+    "current_utterance": "列出商品科室关联记录",
+    "failed_axes": [
+      "query_shape",
+      "mentions"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-005",
+    "current_utterance": "列出商品名单",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-006",
+    "current_utterance": "列出销售订单记录",
+    "failed_axes": [
+      "mentions"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-007",
+    "current_utterance": "列出经销商名单",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-008",
+    "current_utterance": "列出生产厂家名单",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-009",
+    "current_utterance": "列出销售项目名单",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-010",
+    "current_utterance": "列出销售公司名单",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-011",
+    "current_utterance": "列出业务员名单",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-012",
+    "current_utterance": "列出省份名单",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-013",
+    "current_utterance": "列出产品分类名单",
+    "failed_axes": [
+      "query_shape",
+      "mentions"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-014",
+    "current_utterance": "列出医院名单",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-029",
+    "current_utterance": "查询区域全部医院总数",
+    "failed_axes": [
+      "mentions"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-030",
+    "current_utterance": "请告诉我区域全部医院总数",
+    "failed_axes": [
+      "mentions"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-033",
+    "current_utterance": "查询医院下属科室数量",
+    "failed_axes": [
+      "mentions"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-034",
+    "current_utterance": "请告诉我医院下属科室数量",
+    "failed_axes": [
+      "mentions"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-071",
+    "current_utterance": "换成江苏",
+    "failed_axes": [
+      "turn_relation"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-072",
+    "current_utterance": "不要订单笔数",
+    "failed_axes": [
+      "turn_relation",
+      "operation"
+    ],
+    "prediction_status": "FAILED",
+    "reason": "CURRENT_TURN_VALIDATION_FAILED",
+    "diagnostics": {
+      "invalid_surface_spans": 0,
+      "foreign_turn_mentions": 0,
+      "duplicate_mention_ids": 0,
+      "missing_mention_references": 1
+    },
+    "classification": "CURRENT_TURN_REFERENCE_VALIDATION_FAILURE",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-073",
+    "current_utterance": "不限地区",
+    "failed_axes": [
+      "turn_relation"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-080",
+    "current_utterance": "取消地区限制",
+    "failed_axes": [
+      "operation"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-082",
+    "current_utterance": "把医院换成经销商",
+    "failed_axes": [
+      "operation"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-083",
+    "current_utterance": "不要按业务员分组",
+    "failed_axes": [
+      "turn_relation",
+      "operation"
+    ],
+    "prediction_status": "FAILED",
+    "reason": "CURRENT_TURN_VALIDATION_FAILED",
+    "diagnostics": {
+      "invalid_surface_spans": 0,
+      "foreign_turn_mentions": 0,
+      "duplicate_mention_ids": 0,
+      "missing_mention_references": 1
+    },
+    "classification": "CURRENT_TURN_REFERENCE_VALIDATION_FAILURE",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-084",
+    "current_utterance": "取消时间限制",
+    "failed_axes": [
+      "turn_relation"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-091",
+    "current_utterance": "只看前5条",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-093",
+    "current_utterance": "医院名称字段来自哪个表？",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-094",
+    "current_utterance": "列出TDC-3合作医院",
+    "failed_axes": [
+      "mentions"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  },
+  {
+    "case_id": "G81-098",
+    "current_utterance": "列出订单中的销售数量字段",
+    "failed_axes": [
+      "query_shape"
+    ],
+    "prediction_status": "OK",
+    "reason": null,
+    "diagnostics": null,
+    "classification": "CURRENT_TURN_AXIS_MISMATCH",
+    "first_divergence": "CURRENT_TURN_RECOGNITION",
+    "disposition": "REQUIRES_FULL_PIPELINE_OR_CAPTURED_OUTPUT_EVIDENCE; EXPECTATIONS_UNCHANGED"
+  }
+]

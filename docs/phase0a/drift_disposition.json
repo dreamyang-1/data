@@ -1,0 +1,128 @@
+[
+  {
+    "path": "AGENTS.md",
+    "workspace_hash": null,
+    "git_hash": "0e655d69c6a08700468a48319bded509d4665c66bd4b791cd3863d671f0cd816",
+    "disposition": "FORMAL_DOC_SHOULD_SYNC",
+    "difference_summary": "Repository instructions absent in workspace; parent instructions also apply.",
+    "origin": "PREEXISTING_WORKSPACE_DRIFT recorded before Phase 2.5.1; original author/time unknown",
+    "authoritative_version": "6c1c6e5242a4b42b302e141f66b5886632aa21ec",
+    "reason": "Repository instructions absent in workspace; parent instructions also apply.",
+    "should_be_tracked": true,
+    "action": "COPY_REVIEWED_GIT_DOCUMENT_TO_WORKSPACE",
+    "evidence": [
+      "docs/phase25_1/preexisting_workspace_drift.json",
+      "docs/phase25_1/phase25_1_closure_report.md",
+      "docs/phase0a/test_gate.json"
+    ],
+    "status": "RESOLVED_BY_RECONCILIATION_MANIFEST"
+  },
+  {
+    "path": "CODE_REVIEW_ISSUES.md",
+    "workspace_hash": "9537974ea6a2fbb80251d0fb3aa7676063451cd36130cba244289362d9258b3e",
+    "git_hash": "1566e96b5720a18f3a4c024fae39aeb86db6864e22f1027922a7d4f448be461c",
+    "disposition": "FORMAL_DOC_SHOULD_SYNC",
+    "difference_summary": "Workspace retained a credential in a quotation; Git version already redacts it.",
+    "origin": "PREEXISTING_WORKSPACE_DRIFT recorded before Phase 2.5.1; original author/time unknown",
+    "authoritative_version": "6c1c6e5242a4b42b302e141f66b5886632aa21ec",
+    "reason": "Workspace retained a credential in a quotation; Git version already redacts it.",
+    "should_be_tracked": true,
+    "action": "COPY_REVIEWED_GIT_DOCUMENT_TO_WORKSPACE",
+    "evidence": [
+      "docs/phase25_1/preexisting_workspace_drift.json",
+      "docs/phase25_1/phase25_1_closure_report.md",
+      "docs/phase0a/test_gate.json"
+    ],
+    "status": "RESOLVED_BY_RECONCILIATION_MANIFEST"
+  },
+  {
+    "path": "app/adapters/semantic_query.py",
+    "workspace_hash": "9ba7da8207ff565b1dae26baf8dee6d230bf90b6408a3da1baaf7afffcb44d3e",
+    "git_hash": "858ae0eca39b8723042c7faf816a30b1c0db2e52ba7ca925c8ccc4a336428af7",
+    "disposition": "SOURCE_CODE_SHOULD_SYNC",
+    "difference_summary": "Existing internal semantic context snapshot attached before retrieval.",
+    "origin": "PREEXISTING_WORKSPACE_DRIFT recorded before Phase 2.5.1; original author/time unknown",
+    "authoritative_version": "WORKSPACE_FROZEN_TESTED_BYTES",
+    "reason": "Preserve tested development behavior and make its dependencies reproducible.",
+    "should_be_tracked": true,
+    "action": "SYNC_EXACT_WORKSPACE_BYTES",
+    "evidence": [
+      "docs/phase25_1/preexisting_workspace_drift.json",
+      "docs/phase25_1/phase25_1_closure_report.md",
+      "docs/phase0a/test_gate.json"
+    ],
+    "status": "RESOLVED_BY_RECONCILIATION_MANIFEST"
+  },
+  {
+    "path": "app/analysis/synthesis.py",
+    "workspace_hash": "7b9d8bfb41f6c76abe1ab327f2d9f54f42f3d891cebd898e5239e0ddc930dae7",
+    "git_hash": "a9a5ba336a0c4702739a4c18a1d3a08cf7b29da0bc2d25e62fdfdfff1779f31c",
+    "disposition": "SOURCE_CODE_SHOULD_SYNC",
+    "difference_summary": "Existing optional bounded context argument used by already tracked callers.",
+    "origin": "PREEXISTING_WORKSPACE_DRIFT recorded before Phase 2.5.1; original author/time unknown",
+    "authoritative_version": "WORKSPACE_FROZEN_TESTED_BYTES",
+    "reason": "Preserve tested development behavior and make its dependencies reproducible.",
+    "should_be_tracked": true,
+    "action": "SYNC_EXACT_WORKSPACE_BYTES",
+    "evidence": [
+      "docs/phase25_1/preexisting_workspace_drift.json",
+      "docs/phase25_1/phase25_1_closure_report.md",
+      "docs/phase0a/test_gate.json"
+    ],
+    "status": "RESOLVED_BY_RECONCILIATION_MANIFEST"
+  },
+  {
+    "path": "app/domain/models.py",
+    "workspace_hash": "f374a95f642185fb9fab07d93cc16f066b78334b22c8d849d1311008a2bb7186",
+    "git_hash": "a2887d285f7007c4e5546863f636ea594fed44e11bd1f46d9751077319b907e5",
+    "disposition": "SOURCE_CODE_SHOULD_SYNC",
+    "difference_summary": "Existing evidence/runtime model definitions required by already tracked services and tests.",
+    "origin": "PREEXISTING_WORKSPACE_DRIFT recorded before Phase 2.5.1; original author/time unknown",
+    "authoritative_version": "WORKSPACE_FROZEN_TESTED_BYTES",
+    "reason": "Preserve tested development behavior and make its dependencies reproducible.",
+    "should_be_tracked": true,
+    "action": "SYNC_EXACT_WORKSPACE_BYTES",
+    "evidence": [
+      "docs/phase25_1/preexisting_workspace_drift.json",
+      "docs/phase25_1/phase25_1_closure_report.md",
+      "docs/phase0a/test_gate.json"
+    ],
+    "status": "RESOLVED_BY_RECONCILIATION_MANIFEST"
+  },
+  {
+    "path": "app/stores/session.py",
+    "workspace_hash": "58c21533db69b115b67d876cf5b2bc01b7cf76526b4fcf1081f52e5e265aa2e0",
+    "git_hash": "04c1cf4de2b48c6314b5d09acce40fb7131511284daa4745a4ec95e6d44d01ef",
+    "disposition": "SOURCE_CODE_SHOULD_SYNC",
+    "difference_summary": "Existing scoped validated-query store methods; no method behavior edited in Phase 0A.",
+    "origin": "PREEXISTING_WORKSPACE_DRIFT recorded before Phase 2.5.1; original author/time unknown",
+    "authoritative_version": "WORKSPACE_FROZEN_TESTED_BYTES",
+    "reason": "Preserve tested development behavior and make its dependencies reproducible.",
+    "should_be_tracked": true,
+    "action": "SYNC_EXACT_WORKSPACE_BYTES",
+    "evidence": [
+      "docs/phase25_1/preexisting_workspace_drift.json",
+      "docs/phase25_1/phase25_1_closure_report.md",
+      "docs/phase0a/test_gate.json"
+    ],
+    "status": "RESOLVED_BY_RECONCILIATION_MANIFEST"
+  },
+  {
+    "path": "实际业务问题.md",
+    "workspace_hash": "cb8d814325607ae74c72c23df5aaee7b5f32f7f5be94eeb0093b755bbc3419b0",
+    "git_hash": "14498644bc77235c048db4d03a22bb288ac7ba02a593ed8abd37522236a36aef",
+    "disposition": "RUNTIME_FILE_SHOULD_NOT_TRACK",
+    "difference_summary": "Append-only runtime business-question collector output with conversation/message identifiers.",
+    "origin": "PREEXISTING_WORKSPACE_DRIFT recorded before Phase 2.5.1; original author/time unknown",
+    "authoritative_version": "LOCAL_RUNTIME_ONLY",
+    "reason": "Append-only runtime business-question collector output with conversation/message identifiers.",
+    "should_be_tracked": false,
+    "action": "REMOVE_INDEX_ONLY_AND_IGNORE",
+    "evidence": [
+      "docs/phase25_1/preexisting_workspace_drift.json",
+      "docs/phase25_1/phase25_1_closure_report.md",
+      "docs/phase0a/test_gate.json"
+    ],
+    "status": "RESOLVED_BY_RECONCILIATION_MANIFEST"
+  }
+]

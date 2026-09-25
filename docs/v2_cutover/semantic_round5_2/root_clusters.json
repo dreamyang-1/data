@@ -1,0 +1,817 @@
+{
+  "original_failure_turns": 6,
+  "original_root_clusters": 5,
+  "original_slot_failures": 4,
+  "original_slot_root_clusters": 3,
+  "clusters": [
+    {
+      "root_id": "RC-S1",
+      "stage": "SLOT_OPERATION",
+      "case_ids": [
+        "LF51-B",
+        "LF51-C"
+      ],
+      "invariant": "Initial assignment on a proven empty new task; never mix evidence or change an existing task operation",
+      "status": "PARTIAL",
+      "fixed_boundary": "C unmarked ADD collection now forms one validated SET",
+      "remaining": "B additionally emits CURRENT_DATASET in a structured ADD; original CURRENT_TASK constraint is preserved. B/C selected sales metric has no declared time anchor."
+    },
+    {
+      "root_id": "RC-S2",
+      "stage": "SLOT_OPERATION",
+      "case_ids": [
+        "LF51-D"
+      ],
+      "invariant": "Initialize current RANGE/SET with current calendar and a unique governed metric time anchor",
+      "status": "CLOSED_ON_RECORDED_AND_LIVE",
+      "fixed_boundary": "Initial TimeSpec no longer requires fabricated model anchor handle",
+      "remaining": null
+    },
+    {
+      "root_id": "RC-S3",
+      "stage": "SLOT_OPERATION",
+      "case_ids": [
+        "LF51-J"
+      ],
+      "invariant": "Every requested source value must be consumed in an explicit filter edit",
+      "status": "OPEN",
+      "fixed_boundary": null,
+      "remaining": "Do not infer EQ or add a missing predicate silently; Oracle reaches an uncaptured value-choice stage."
+    },
+    {
+      "root_id": "RC-B1",
+      "stage": "CANONICAL_BINDING",
+      "case_ids": [
+        "LF51-A"
+      ],
+      "invariant": "Source value lookup field must be an offered ATTRIBUTE, not any generic FILTER_FIELD role",
+      "status": "GENERATION_CONTRACT_NARROWED_NOT_CAUSALLY_CLOSED",
+      "fixed_boundary": "Generation enum excludes dimensions; native rejection of invalid selected dimension remains",
+      "remaining": "Live A selects an attribute but its Parse/candidate roles also changed; no causal model-accuracy claim. Grounding then rejects."
+    },
+    {
+      "root_id": "RC-V1",
+      "stage": "ENTITY_VALUE_GROUNDING",
+      "case_ids": [
+        "LF51-F"
+      ],
+      "invariant": "Only complete bounded source evidence and exact canonical revalidation authorize a value",
+      "status": "OPEN_SOURCE_VALUE_GAP",
+      "fixed_boundary": null,
+      "remaining": "city.city_name exact empty and 64-value probe incomplete. Alternate offered province field requires another model decision; no guessed alias or field switch."
+    },
+    {
+      "root_id": "RC-S4",
+      "stage": "SLOT_OPERATION",
+      "case_ids": [
+        "LF51-D:turn1"
+      ],
+      "newly_observed": true,
+      "invariant": "REMOVE/CLEAR of the same current scoped subtree with no member value have identical native lowering and barrier",
+      "status": "CLOSED_ON_RECORDED_AND_LIVE",
+      "fixed_boundary": "Align only the equivalent deletion with every current operation marker; preserve value removal and illegal-target rejection",
+      "remaining": null
+    }
+  ],
+  "fully_closed_roots": 2,
+  "not_fully_closed_roots": 4,
+  "count_scope": "Five original clusters plus one newly observed deletion-representation root; not a universal bug lower bound",
+  "cases": [
+    {
+      "case_id": "LF51-A",
+      "turn_id": "38cab6c42ec2fbdba2d13f16",
+      "raw_user_input": "查询去年上海销售额",
+      "expected_semantic": "2025 / 上海 / 销售额",
+      "relation": "NEW_TASK",
+      "target": null,
+      "mentions": [
+        {
+          "mention_id": "m-time-last-year",
+          "surface": "去年",
+          "roles": [
+            "TIME_RANGE"
+          ]
+        },
+        {
+          "mention_id": "m-filter-shanghai",
+          "surface": "上海",
+          "roles": [
+            "FILTER_VALUE",
+            "FILTER_FIELD"
+          ]
+        },
+        {
+          "mention_id": "m-metric-sales",
+          "surface": "销售额",
+          "roles": [
+            "MEASURE"
+          ]
+        }
+      ],
+      "explicit_slots": {
+        "subject": [],
+        "metrics": [
+          "m-metric-sales"
+        ],
+        "dimensions": [],
+        "projection_spec": [],
+        "filter_expression": [
+          "m-filter-shanghai"
+        ],
+        "time_spec": [
+          "m-time-last-year"
+        ],
+        "ranking_spec": [],
+        "comparison_spec": [],
+        "delivery_spec": [],
+        "relationship_spec": []
+      },
+      "operation_markers": [
+        {
+          "mention_id": "m-time-last-year",
+          "operation_hint": "SET",
+          "slot_name": "time_spec"
+        },
+        {
+          "mention_id": "m-filter-shanghai",
+          "operation_hint": "ADD",
+          "slot_name": "filter_expression"
+        },
+        {
+          "mention_id": "m-metric-sales",
+          "operation_hint": "ADD",
+          "slot_name": "metrics"
+        }
+      ],
+      "draft_operations": [
+        {
+          "slot": "metrics",
+          "operation": "ADD",
+          "evidence": [
+            "m-metric-sales"
+          ]
+        },
+        {
+          "slot": "time_spec",
+          "operation": "SET",
+          "evidence": [
+            "m-time-last-year"
+          ]
+        }
+      ],
+      "structured_operations": [
+        {
+          "slot": "filter_expression",
+          "operation": "ADD",
+          "evidence": [
+            "m-filter-shanghai"
+          ]
+        }
+      ],
+      "selected_field_candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "city_name",
+          "role": "FILTER_FIELD",
+          "owner": "city"
+        },
+        {
+          "catalog_type": "DIMENSION",
+          "code": "city",
+          "role": "FILTER_FIELD",
+          "owner": null
+        }
+      ],
+      "first_rejection": "CONTRACT_OR_HARNESS_FAILURE",
+      "rejecting_boundary": {
+        "file": "app/semantic_v2/source_value_binding.py",
+        "function": "lookup_values",
+        "line": 14
+      },
+      "root_id": "RC-B1",
+      "oracle_artifact": "SEMANTIC_TASK_DRAFT",
+      "oracle_mode": "ATTRIBUTE_ONLY",
+      "oracle_result": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+      "causal_status": "FIRST_BOUNDARY_CROSSED_NEXT_DIVERGENCE",
+      "final_recorded_result": "CONTRACT_OR_HARNESS_FAILURE",
+      "downstream_effects": [
+        "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED"
+      ],
+      "immutable_capture_hash": "72383b33aeac1c9b698423f3e1759048ec8384721b84880584c6eb6a01b0293d",
+      "model_or_gold_pass_from_oracle": false
+    },
+    {
+      "case_id": "LF51-B",
+      "turn_id": "0b81b399f27444b20b65c3ec",
+      "raw_user_input": "查询去年江苏销售额",
+      "expected_semantic": "2025 / 江苏 / 销售额",
+      "relation": "NEW_TASK",
+      "target": null,
+      "mentions": [
+        {
+          "mention_id": "m-time-01",
+          "surface": "去年",
+          "roles": [
+            "TIME_RANGE"
+          ]
+        },
+        {
+          "mention_id": "m-filter-val-01",
+          "surface": "江苏",
+          "roles": [
+            "FILTER_VALUE"
+          ]
+        },
+        {
+          "mention_id": "m-metric-01",
+          "surface": "销售额",
+          "roles": [
+            "MEASURE"
+          ]
+        }
+      ],
+      "explicit_slots": {
+        "subject": [],
+        "metrics": [
+          "m-metric-01"
+        ],
+        "dimensions": [],
+        "projection_spec": [],
+        "filter_expression": [
+          "m-filter-val-01"
+        ],
+        "time_spec": [
+          "m-time-01"
+        ],
+        "ranking_spec": [],
+        "comparison_spec": [],
+        "delivery_spec": [],
+        "relationship_spec": []
+      },
+      "operation_markers": [],
+      "draft_operations": [
+        {
+          "slot": "metrics",
+          "operation": "SET",
+          "evidence": [
+            "m-metric-01"
+          ]
+        },
+        {
+          "slot": "time_spec",
+          "operation": "SET",
+          "evidence": [
+            "m-time-01"
+          ]
+        }
+      ],
+      "structured_operations": [
+        {
+          "slot": "filter_expression",
+          "operation": "ADD",
+          "evidence": [
+            "m-filter-val-01"
+          ]
+        }
+      ],
+      "selected_field_candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "province_name",
+          "role": "FILTER_FIELD",
+          "owner": "province"
+        }
+      ],
+      "first_rejection": "V2_SLOT_OPERATION_CONFLICT",
+      "rejecting_boundary": {
+        "file": "app/semantic_v2/recognition.py",
+        "function": "_patch",
+        "line": 562
+      },
+      "root_id": "RC-S1",
+      "oracle_artifact": "SEMANTIC_TASK_DRAFT",
+      "oracle_mode": "INITIAL_FILTER_ASSIGNMENT",
+      "oracle_result": "CATALOG_METRIC_TIME_ANCHOR_MISSING",
+      "causal_status": "FIRST_BOUNDARY_CROSSED_NEXT_DIVERGENCE",
+      "final_recorded_result": "V2_SLOT_OPERATION_CONFLICT",
+      "downstream_effects": [
+        "CATALOG_METRIC_TIME_ANCHOR_MISSING"
+      ],
+      "immutable_capture_hash": "e05f8dfa05c4beb947d5dfaa11cbbbfd2a49059484e3dab2acc1234c2dcbe4cd",
+      "model_or_gold_pass_from_oracle": false
+    },
+    {
+      "case_id": "LF51-C",
+      "turn_id": "d484d5fccffa9a3be2e49823",
+      "raw_user_input": "查询去年江苏销售额和订单笔数",
+      "expected_semantic": "2025 / 江苏 / 销售额+订单笔数",
+      "relation": "NEW_TASK",
+      "target": null,
+      "mentions": [
+        {
+          "mention_id": "m-time-1",
+          "surface": "去年",
+          "roles": [
+            "TIME_RANGE"
+          ]
+        },
+        {
+          "mention_id": "m-filter-val-1",
+          "surface": "江苏",
+          "roles": [
+            "FILTER_VALUE"
+          ]
+        },
+        {
+          "mention_id": "m-metric-1",
+          "surface": "销售额",
+          "roles": [
+            "MEASURE"
+          ]
+        },
+        {
+          "mention_id": "m-metric-2",
+          "surface": "订单笔数",
+          "roles": [
+            "MEASURE"
+          ]
+        }
+      ],
+      "explicit_slots": {
+        "subject": [],
+        "metrics": [
+          "m-metric-1",
+          "m-metric-2"
+        ],
+        "dimensions": [],
+        "projection_spec": [],
+        "filter_expression": [
+          "m-filter-val-1"
+        ],
+        "time_spec": [
+          "m-time-1"
+        ],
+        "ranking_spec": [],
+        "comparison_spec": [],
+        "delivery_spec": [],
+        "relationship_spec": []
+      },
+      "operation_markers": [],
+      "draft_operations": [
+        {
+          "slot": "metrics",
+          "operation": "ADD",
+          "evidence": [
+            "m-metric-1"
+          ]
+        },
+        {
+          "slot": "metrics",
+          "operation": "ADD",
+          "evidence": [
+            "m-metric-2"
+          ]
+        },
+        {
+          "slot": "filter_expression",
+          "operation": "SET",
+          "evidence": [
+            "m-filter-val-1"
+          ]
+        }
+      ],
+      "structured_operations": [
+        {
+          "slot": "time_spec",
+          "operation": "SET",
+          "evidence": [
+            "m-time-1"
+          ]
+        }
+      ],
+      "selected_field_candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "province_name",
+          "role": "FILTER_FIELD",
+          "owner": "province"
+        }
+      ],
+      "first_rejection": "V2_SLOT_OPERATION_CONFLICT",
+      "rejecting_boundary": {
+        "file": "app/semantic_v2/recognition.py",
+        "function": "_patch",
+        "line": 593
+      },
+      "root_id": "RC-S1",
+      "oracle_artifact": "SEMANTIC_TASK_DRAFT",
+      "oracle_mode": "INITIAL_METRIC_ASSIGNMENT",
+      "oracle_result": "V2_TEMPORAL_BASE_REQUIRED",
+      "causal_status": "FIRST_BOUNDARY_CROSSED_NEXT_DIVERGENCE",
+      "final_recorded_result": "CATALOG_METRIC_TIME_ANCHOR_MISSING",
+      "downstream_effects": [
+        "V2_TEMPORAL_BASE_REQUIRED"
+      ],
+      "immutable_capture_hash": "c53b0cf2035b538bfe51431cd23ddcb081ea97751a88880cac5e1577a4aba5df",
+      "model_or_gold_pass_from_oracle": false
+    },
+    {
+      "case_id": "LF51-D",
+      "turn_id": "73de003cd145373786a7a509",
+      "raw_user_input": "查询去年江苏订单笔数",
+      "expected_semantic": "2025 / 江苏 / 订单笔数",
+      "relation": "NEW_TASK",
+      "target": null,
+      "mentions": [
+        {
+          "mention_id": "m-time-1",
+          "surface": "去年",
+          "roles": [
+            "TIME_RANGE"
+          ]
+        },
+        {
+          "mention_id": "m-filter-val-1",
+          "surface": "江苏",
+          "roles": [
+            "FILTER_VALUE"
+          ]
+        },
+        {
+          "mention_id": "m-subject-1",
+          "surface": "订单",
+          "roles": [
+            "SUBJECT_ENTITY"
+          ]
+        },
+        {
+          "mention_id": "m-metric-1",
+          "surface": "笔数",
+          "roles": [
+            "MEASURE"
+          ]
+        }
+      ],
+      "explicit_slots": {
+        "subject": [
+          "m-subject-1"
+        ],
+        "metrics": [
+          "m-metric-1"
+        ],
+        "dimensions": [],
+        "projection_spec": [],
+        "filter_expression": [
+          "m-filter-val-1"
+        ],
+        "time_spec": [
+          "m-time-1"
+        ],
+        "ranking_spec": [],
+        "comparison_spec": [],
+        "delivery_spec": [],
+        "relationship_spec": []
+      },
+      "operation_markers": [],
+      "draft_operations": [
+        {
+          "slot": "metrics",
+          "operation": "SET",
+          "evidence": [
+            "m-metric-1"
+          ]
+        },
+        {
+          "slot": "filter_expression",
+          "operation": "SET",
+          "evidence": [
+            "m-filter-val-1"
+          ]
+        }
+      ],
+      "structured_operations": [
+        {
+          "slot": "time_spec",
+          "operation": "SET",
+          "evidence": [
+            "m-time-1"
+          ]
+        }
+      ],
+      "selected_field_candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "province_name",
+          "role": "FILTER_FIELD",
+          "owner": "province"
+        }
+      ],
+      "first_rejection": "V2_TEMPORAL_BASE_REQUIRED",
+      "rejecting_boundary": {
+        "file": "app/semantic_v2/structured_edits.py",
+        "function": "temporal_edits",
+        "line": 162
+      },
+      "root_id": "RC-S2",
+      "oracle_artifact": "INITIAL_TIMESPEC_LOWERING",
+      "oracle_mode": "INITIAL_TIME_ASSIGNMENT",
+      "oracle_result": "DIAGNOSTIC_PLAN",
+      "causal_status": "CAUSAL_ROOT_CONFIRMED",
+      "final_recorded_result": "PLAN",
+      "downstream_effects": [],
+      "immutable_capture_hash": "0c01b2466c681dd1aa6d8a23cf7da0d5bcc96ac9ac3a269f50c0e99a545dad54",
+      "model_or_gold_pass_from_oracle": false
+    },
+    {
+      "case_id": "LF51-F",
+      "turn_id": "5302e958a7ea50f787715e82",
+      "raw_user_input": "查询上海销售额",
+      "expected_semantic": "上海 / 销售额",
+      "relation": "NEW_TASK",
+      "target": null,
+      "mentions": [
+        {
+          "mention_id": "m-shanghai",
+          "surface": "上海",
+          "roles": [
+            "FILTER_VALUE",
+            "SUBJECT_ENTITY"
+          ]
+        },
+        {
+          "mention_id": "m-sales",
+          "surface": "销售额",
+          "roles": [
+            "MEASURE"
+          ]
+        }
+      ],
+      "explicit_slots": {
+        "subject": [],
+        "metrics": [
+          "m-sales"
+        ],
+        "dimensions": [],
+        "projection_spec": [],
+        "filter_expression": [
+          "m-shanghai"
+        ],
+        "time_spec": [],
+        "ranking_spec": [],
+        "comparison_spec": [],
+        "delivery_spec": [],
+        "relationship_spec": []
+      },
+      "operation_markers": [],
+      "draft_operations": [
+        {
+          "slot": "metrics",
+          "operation": "SET",
+          "evidence": [
+            "m-sales"
+          ]
+        },
+        {
+          "slot": "filter_expression",
+          "operation": "SET",
+          "evidence": [
+            "m-shanghai"
+          ]
+        }
+      ],
+      "structured_operations": [],
+      "selected_field_candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "city_name",
+          "role": "FILTER_FIELD",
+          "owner": "city"
+        }
+      ],
+      "first_rejection": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+      "rejecting_boundary": {
+        "file": "app/semantic_v2/source_value_probe.py",
+        "function": "select_probed_value",
+        "line": 50
+      },
+      "root_id": "RC-V1",
+      "oracle_artifact": "SEMANTIC_TASK_DRAFT",
+      "oracle_mode": "ALTERNATE_OFFERED_FIELD_DIAGNOSTIC",
+      "oracle_result": "ORACLE_NEXT_MODEL_OUTPUT_NOT_RECORDED",
+      "causal_status": "FIRST_BOUNDARY_CROSSED_NEXT_DIVERGENCE",
+      "final_recorded_result": "V2_SOURCE_VALUE_PROBE_CARDINALITY_EXCEEDED",
+      "downstream_effects": [
+        "ORACLE_NEXT_MODEL_OUTPUT_NOT_RECORDED"
+      ],
+      "immutable_capture_hash": "7a987e4c52f82f43f8ed67ff182fc48e93daab2c51d7e8f9bcc68f4e1c3a177d",
+      "model_or_gold_pass_from_oracle": false
+    },
+    {
+      "case_id": "LF51-J",
+      "turn_id": "cc217d4c0ae4185dda7b2d5f",
+      "raw_user_input": "江苏有哪些医院？",
+      "expected_semantic": "NEW_TASK / 江苏 / 医院列表",
+      "relation": "NEW_TASK",
+      "target": null,
+      "mentions": [
+        {
+          "mention_id": "m-jiangsu",
+          "surface": "江苏",
+          "roles": [
+            "FILTER_VALUE",
+            "SUBJECT_ENTITY"
+          ]
+        },
+        {
+          "mention_id": "m-hospitals",
+          "surface": "医院",
+          "roles": [
+            "SUBJECT_ENTITY",
+            "SOURCE_ENTITY"
+          ]
+        }
+      ],
+      "explicit_slots": {
+        "subject": [
+          "m-hospitals"
+        ],
+        "filter_expression": [
+          "m-jiangsu"
+        ]
+      },
+      "operation_markers": [],
+      "draft_operations": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "evidence": [
+            "m-hospitals"
+          ]
+        }
+      ],
+      "structured_operations": [],
+      "selected_field_candidates": [
+        {
+          "catalog_type": "ATTRIBUTE",
+          "code": "province_name",
+          "role": "FILTER_FIELD",
+          "owner": "province"
+        }
+      ],
+      "first_rejection": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "rejecting_boundary": {
+        "file": "app/semantic_v2/source_value_recognition.py",
+        "function": "resolve_requests",
+        "line": 41
+      },
+      "root_id": "RC-S3",
+      "oracle_artifact": "SEMANTIC_TASK_DRAFT",
+      "oracle_mode": "CONSUME_SOURCE_REQUEST",
+      "oracle_result": "ORACLE_NEXT_MODEL_OUTPUT_NOT_RECORDED",
+      "causal_status": "FIRST_BOUNDARY_CROSSED_NEXT_DIVERGENCE",
+      "final_recorded_result": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "downstream_effects": [
+        "ORACLE_NEXT_MODEL_OUTPUT_NOT_RECORDED"
+      ],
+      "immutable_capture_hash": "9fb3e0d5e3277246788a53180e783acb1d5ee199c7d157fa0b32e154cbfc8be5",
+      "model_or_gold_pass_from_oracle": false
+    }
+  ],
+  "new_root_oracle": {
+    "root_id": "RC-S4",
+    "artifact": "SEMANTIC_TASK_DRAFT",
+    "sole_change": "CLEAR -> declared REMOVE on the same offered subtree; null value unchanged",
+    "result": "PLAN_WITH_FILTER_CLEAR_BARRIER",
+    "receipt_hash": "4e5f0adf45e0fe8a4e23052daa1d566056fa11b2002f64f6e2224b86ccecb8f8"
+  },
+  "earlier_mention_or_role_root": "NOT_PROVEN; D existing compound metric normalization remains effective",
+  "catalog_time_evidence": [
+    {
+      "case": "LF51-A",
+      "metric_code": "sales_total_including_tax",
+      "metric_name": "含税销售总额",
+      "fact_count": 1,
+      "time_caliber": [
+        {
+          "stat_cycle": null,
+          "time_anchor": null,
+          "special_rule": null
+        }
+      ],
+      "source_dependency": [
+        {
+          "bind_entity": [
+            "sales_order"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "LF51-B",
+      "metric_code": "sales_total_including_tax",
+      "metric_name": "含税销售总额",
+      "fact_count": 1,
+      "time_caliber": [
+        {
+          "stat_cycle": null,
+          "time_anchor": null,
+          "special_rule": null
+        }
+      ],
+      "source_dependency": [
+        {
+          "bind_entity": [
+            "sales_order"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "LF51-C",
+      "metric_code": "order_count",
+      "metric_name": "订单笔数",
+      "fact_count": 1,
+      "time_caliber": [
+        {
+          "stat_cycle": null,
+          "time_anchor": "sales_order.created_date",
+          "special_rule": null
+        }
+      ],
+      "source_dependency": [
+        {
+          "bind_entity": [
+            "sales_order"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "LF51-C",
+      "metric_code": "sales_total_including_tax",
+      "metric_name": "含税销售总额",
+      "fact_count": 1,
+      "time_caliber": [
+        {
+          "stat_cycle": null,
+          "time_anchor": null,
+          "special_rule": null
+        }
+      ],
+      "source_dependency": [
+        {
+          "bind_entity": [
+            "sales_order"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "LF51-D",
+      "metric_code": "order_count",
+      "metric_name": "订单笔数",
+      "fact_count": 1,
+      "time_caliber": [
+        {
+          "stat_cycle": null,
+          "time_anchor": "sales_order.created_date",
+          "special_rule": null
+        }
+      ],
+      "source_dependency": [
+        {
+          "bind_entity": [
+            "sales_order"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "LF51-F",
+      "metric_code": "sales_total_including_tax",
+      "metric_name": "含税销售总额",
+      "fact_count": 1,
+      "time_caliber": [
+        {
+          "stat_cycle": null,
+          "time_anchor": null,
+          "special_rule": null
+        }
+      ],
+      "source_dependency": [
+        {
+          "bind_entity": [
+            "sales_order"
+          ]
+        }
+      ]
+    }
+  ],
+  "source_scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ]
+  },
+  "source_value_policy": "Exact verification and max64 complete probe unchanged; no inferred Shanghai/Jiangsu suffix or widened field search"
+}

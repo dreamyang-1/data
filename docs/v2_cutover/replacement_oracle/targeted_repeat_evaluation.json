@@ -1,0 +1,131 @@
+{
+  "contract": "multiturn-transition-evaluation-v1",
+  "component": "V2_RAW_TURN_PLANNER",
+  "mode": "LIVE_MODEL_PLAN_ONLY",
+  "cases": 1,
+  "gold_hash": "be0ace14a3a5e9d92e593d52bdeae6ce4c52b40e2f8ec57cc39db16fdb73e3a9",
+  "catalog_ref": "b72b9d421365935f9b5bc2a3a2ec07c2f277bae7e0928c00ea64ae04ba0eb05e",
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "scope": {
+    "semantic_model_id": 81,
+    "business_domain_ids": [
+      205
+    ],
+    "scope_mode": "EXPLICIT_DOMAINS"
+  },
+  "metrics": {
+    "metric_operations": {
+      "passed": 1,
+      "denominator": 1,
+      "unobserved": 0,
+      "value": 1.0
+    },
+    "metric_surfaces": {
+      "passed": 1,
+      "denominator": 1,
+      "unobserved": 0,
+      "value": 1.0
+    },
+    "target_task": {
+      "passed": 1,
+      "denominator": 1,
+      "unobserved": 0,
+      "value": 1.0
+    },
+    "turn_relation": {
+      "passed": 1,
+      "denominator": 1,
+      "unobserved": 0,
+      "value": 1.0
+    }
+  },
+  "safety": {
+    "cross_scope_dataset_reuse": {
+      "required_or_supplied_observations": 0,
+      "violations": 0,
+      "unobserved": 0,
+      "gate": "NOT_EVALUATED"
+    },
+    "cross_scope_pending_reuse": {
+      "required_or_supplied_observations": 0,
+      "violations": 0,
+      "unobserved": 0,
+      "gate": "NOT_EVALUATED"
+    },
+    "pending_hijack": {
+      "required_or_supplied_observations": 0,
+      "violations": 0,
+      "unobserved": 0,
+      "gate": "NOT_EVALUATED"
+    },
+    "scope_expansion": {
+      "required_or_supplied_observations": 0,
+      "violations": 0,
+      "unobserved": 0,
+      "gate": "NOT_EVALUATED"
+    },
+    "unsafe_truncated_ranking": {
+      "required_or_supplied_observations": 0,
+      "violations": 0,
+      "unobserved": 0,
+      "gate": "NOT_EVALUATED"
+    },
+    "wrong_inheritance": {
+      "required_or_supplied_observations": 1,
+      "violations": 0,
+      "unobserved": 1,
+      "gate": "NOT_EVALUATED"
+    },
+    "wrong_silent_auto_accept": {
+      "required_or_supplied_observations": 0,
+      "violations": 0,
+      "unobserved": 0,
+      "gate": "NOT_EVALUATED"
+    }
+  },
+  "unlabeled_safety_checks": [
+    "cross_scope_dataset_reuse",
+    "cross_scope_pending_reuse",
+    "pending_hijack",
+    "scope_expansion",
+    "unsafe_truncated_ranking",
+    "wrong_silent_auto_accept"
+  ],
+  "full_pipeline_accuracy": "NOT_ESTABLISHED_BY_COMPONENT_RESULTS",
+  "production_cutover_pass": false,
+  "details": [
+    {
+      "case_id": "S81-002",
+      "axes": {
+        "metric_surfaces": "PASS",
+        "turn_relation": "PASS",
+        "target_task": "PASS",
+        "metric_operations": "PASS"
+      },
+      "safety": {
+        "wrong_inheritance": "NOT_OBSERVED"
+      },
+      "observation_status": "OK"
+    }
+  ],
+  "model": "qwen3.7-max",
+  "thinking": false,
+  "real_model_calls": 4,
+  "model_transport_requests": 4,
+  "source_value_reads_denied": 0,
+  "source_SQL_executions": 0,
+  "production_external_writes": 0,
+  "catalog_storage_mode": "FROZEN_CATALOG_IN_MEMORY_PUBLICATION",
+  "query_vector_quality_evaluated": false,
+  "prompt_version": "v2-current-recognition-v8",
+  "current_turn_prompt_hash": "621522c249ef4ab58a08eba2e0a8140a40f9afcf21f0bff85cea05e3baa62412",
+  "current_turn_schema_hash": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+  "semantic_edit_prompt_hash": "446b110d7b3411d585858c8e6919dafc7739c5152b5d3934127908e91ff1122d",
+  "history_policy": "STOP_ON_UNRESOLVED_OR_FAILED_HISTORY; NO_SUCCESS_INJECTION",
+  "network_policy": "ONLY_VALIDATED_MODEL_TRANSPORT_CAN_CONNECT",
+  "max_model_requests": 6,
+  "private_diagnostics_enabled": false,
+  "observation_counts": {
+    "OK": 1
+  }
+}

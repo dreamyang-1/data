@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "80533c309a69851542dd182de92fff70b1e39e4c",
+  "feature_branch": "phase0c-region-list-20260908-01",
+  "final_commit": "Commit containing this manifest",
+  "procedure": "Review git revert of this stage commit; synchronize only manifest paths and rerun matching offline tests",
+  "production_rollbacks_required": false,
+  "index_rollbacks_required": false,
+  "automatic_merge": false,
+  "v1_replacement": "Not ready; user confirmation required before any switch"
+}

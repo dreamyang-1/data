@@ -1,0 +1,133 @@
+{
+  "baseline_commit": "037839d7df9127fa946b1580363ddf84d32c50bb",
+  "services": {
+    "DataAnalysis_Agent": {
+      "baseline_counts": {
+        "passed": 2799,
+        "failed": 27
+      },
+      "final_counts": {
+        "passed": 2828,
+        "failed": 27
+      },
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {
+        "tests/test_v2_raw_turn_recognition.py::test_recorded_single_item_add_shape_preserves_multiple_metrics_and_followup": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_collection_edit_matches_array_and_preserves_other_state[metrics-ADD]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_collection_edit_matches_array_and_preserves_other_state[metrics-REMOVE]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_collection_edit_matches_array_and_preserves_other_state[dimensions-ADD]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_collection_edit_matches_array_and_preserves_other_state[dimensions-REMOVE]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_assignment_still_requires_the_complete_collection[SET]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_assignment_still_requires_the_complete_collection[REPLACE]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_edits_keep_handle_role_and_current_evidence_guards[foreign_handle-ADD]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_edits_keep_handle_role_and_current_evidence_guards[foreign_handle-REMOVE]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_edits_keep_handle_role_and_current_evidence_guards[wrong_role-ADD]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_edits_keep_handle_role_and_current_evidence_guards[wrong_role-REMOVE]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_edits_keep_handle_role_and_current_evidence_guards[outside_evidence-ADD]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_edits_keep_handle_role_and_current_evidence_guards[outside_evidence-REMOVE]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_edits_keep_handle_role_and_current_evidence_guards[null_value-ADD]": "passed",
+        "tests/test_v2_raw_turn_recognition.py::test_single_item_edits_keep_handle_role_and_current_evidence_guards[null_value-REMOVE]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_keeps_identity_role_operation_and_evidence[True-metrics]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_keeps_identity_role_operation_and_evidence[True-dimensions]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_keeps_identity_role_operation_and_evidence[False-metrics]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_keeps_identity_role_operation_and_evidence[False-dimensions]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence[repeated_surface]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence[catalog_collision]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence[alias_only]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence[outside_evidence]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence[unresolved]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence[foreign_handle]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence[wrong_role]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence[authority_fields]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence[missing_correct_handle]": "passed",
+        "tests/test_v2_model_parse_repairs.py::test_collection_handle_repair_does_not_guess_ambiguous_or_foreign_evidence[different_identity]": "passed"
+      },
+      "removed_tests": [],
+      "collection_errors": [],
+      "final_receipt_sha256": "e7b825fec68559d422427c375f78c1a231ebbf675e6d6d9e5a241a55d7d39844",
+      "all_existing_node_outcomes_unchanged": true,
+      "real_model_calls": 0,
+      "production_external_writes": 0,
+      "critical": {
+        "passed": 160,
+        "failed": 0
+      },
+      "clarification_coverage": {
+        "public_clarification_responses": 89,
+        "with_reason_trace": 89
+      }
+    },
+    "Oagnet": {
+      "baseline_counts": {
+        "passed": 663,
+        "failed": 8
+      },
+      "final_counts": {
+        "passed": 663,
+        "failed": 8
+      },
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {},
+      "removed_tests": [],
+      "collection_errors": [],
+      "final_receipt_sha256": "79b32909c6165535d980c2d31c84c79fa64f95c01b7a39adec3fed5a39b7c6a7",
+      "all_existing_node_outcomes_unchanged": true,
+      "real_model_calls": 0,
+      "production_external_writes": 0
+    },
+    "SQL_Translator": {
+      "baseline_counts": {
+        "passed": 381
+      },
+      "final_counts": {
+        "passed": 381
+      },
+      "old_pass_to_new_fail": [],
+      "old_fail_to_new_pass": [],
+      "new_tests": {},
+      "removed_tests": [],
+      "collection_errors": [],
+      "final_receipt_sha256": "ff47ab9bcb6773bb0421db0a9646800f27bf1c1f9f432901e13a9cd3f416abe1",
+      "all_existing_node_outcomes_unchanged": true,
+      "real_model_calls": 0,
+      "production_external_writes": 0
+    }
+  },
+  "red_green_evidence": {
+    "before": {
+      "failed": 5,
+      "passed": 10
+    },
+    "focused_final": {
+      "passed": 128
+    },
+    "new_tests": 29,
+    "before_singleton_failure_count": 5
+  },
+  "observed_flake": {
+    "nodeid": "test_api_contract.py::APIContractTests::test_route_matching_is_exact",
+    "initial_full_counts": {
+      "passed": 380,
+      "failed": 1
+    },
+    "error": "ConnectionAbortedError / WinError 10053 on the test-owned loopback HTTP server",
+    "independent_node_reruns": [
+      {
+        "passed": 1
+      },
+      {
+        "passed": 1
+      }
+    ],
+    "full_rerun_counts": {
+      "passed": 381
+    },
+    "source_or_expectation_changed": false,
+    "classification": "ENVIRONMENT_DEPENDENT_INTERMITTENT_CONNECTION",
+    "exact_OS_cause": "UNKNOWN",
+    "initial_receipt_sha256": "05a55b2834010c5334eb51998072b00a9c0813d0729c6706475ddf7e7a7edeae"
+  },
+  "receipt_policy": "Previous committed node outcomes plus these exact new-test deltas reconstruct final results; initial SQL fluctuation is retained rather than hidden."
+}

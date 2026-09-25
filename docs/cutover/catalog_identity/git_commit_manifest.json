@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "a1708a796c9eb103309bc189280a94fb51b0ebfd",
+  "feature_branch": "cutover-catalog-identity-20260908-01",
+  "base_branch": "cutover-catalog-publication-20260908-01",
+  "uuid_identity_commit": "fe3a6fa6df4550b02c71162dd0c067254e84e66e",
+  "model_isolation_commit": "82d67f304589d46608da9d6f17edad69c90b7f18",
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "live_reads_performed": true,
+  "production_writes": 0,
+  "index_publications": 0
+}

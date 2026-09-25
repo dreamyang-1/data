@@ -1,0 +1,28 @@
+{
+  "baseline_commit": "466482b67703bf19214ef54c852c606ee14be109",
+  "parent_draft_pr": 57,
+  "base_branch": "semantic-context-round3-20260909t141050z",
+  "feature_branch": "semantic-context-proposal-round4-20260910t004000z",
+  "planned_commits": [
+    {
+      "title": "cutover: define experimental context proposal schema",
+      "scope": "diagnostic schema and contract only"
+    },
+    {
+      "title": "cutover: validate bounded context and relation proposals",
+      "scope": "diagnostic code, tests, evidence; production changes 0"
+    }
+  ],
+  "final_commit": {
+    "resolution": "Commit introducing this manifest; no recursive self-SHA",
+    "command": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round4/git_commit_manifest.json"
+  },
+  "publication": {
+    "remote": "https://github.com/dreamyang-1/data",
+    "head": "semantic-context-proposal-round4-20260910t004000z",
+    "base": "semantic-context-round3-20260909t141050z",
+    "draft": true,
+    "auto_merge": false,
+    "receipt": "Local post-publication receipt outside committed tree"
+  }
+}

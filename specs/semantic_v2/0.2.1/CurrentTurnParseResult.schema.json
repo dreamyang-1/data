@@ -1,0 +1,358 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "DialogueAct": {
+      "enum": [
+        "NEW_TASK",
+        "CONTINUE",
+        "MODIFY",
+        "ADD",
+        "REPLACE",
+        "REMOVE",
+        "CLEAR",
+        "CORRECT",
+        "DRILL_DOWN",
+        "SWITCH_TOPIC",
+        "RETURN_TO_TOPIC",
+        "ANSWER_CLARIFICATION",
+        "CANCEL",
+        "CONFIRM",
+        "FEEDBACK",
+        "REFRESH",
+        "REVISE",
+        "CHAT"
+      ],
+      "title": "DialogueAct",
+      "type": "string"
+    },
+    "Mention": {
+      "additionalProperties": false,
+      "description": "Unicode code-point span in the current user utterance.",
+      "properties": {
+        "mention_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Mention Id",
+          "type": "string"
+        },
+        "surface": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Surface",
+          "type": "string"
+        },
+        "normalized_surface": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Normalized Surface",
+          "type": "string"
+        },
+        "start_char": {
+          "minimum": 0,
+          "title": "Start Char",
+          "type": "integer"
+        },
+        "end_char": {
+          "exclusiveMinimum": 0,
+          "title": "End Char",
+          "type": "integer"
+        },
+        "candidate_roles": {
+          "items": {
+            "$ref": "#/$defs/SemanticRole"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Candidate Roles",
+          "type": "array"
+        },
+        "explicit": {
+          "default": true,
+          "title": "Explicit",
+          "type": "boolean"
+        },
+        "negated": {
+          "default": false,
+          "title": "Negated",
+          "type": "boolean"
+        },
+        "clause_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clause Id"
+        },
+        "coordination_group_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coordination Group Id"
+        },
+        "modifier_ids": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Modifier Ids",
+          "type": "array"
+        },
+        "source_turn_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source Turn Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mention_id",
+        "surface",
+        "normalized_surface",
+        "start_char",
+        "end_char",
+        "candidate_roles",
+        "source_turn_id"
+      ],
+      "title": "Mention",
+      "type": "object"
+    },
+    "OperationMarker": {
+      "additionalProperties": false,
+      "properties": {
+        "mention_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Mention Id",
+          "type": "string"
+        },
+        "operation_hint": {
+          "enum": [
+            "ADD",
+            "REPLACE",
+            "REMOVE",
+            "CLEAR",
+            "SET",
+            "INHERIT"
+          ],
+          "title": "Operation Hint",
+          "type": "string"
+        },
+        "slot_name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Slot Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mention_id",
+        "operation_hint",
+        "slot_name"
+      ],
+      "title": "OperationMarker",
+      "type": "object"
+    },
+    "QueryShape": {
+      "enum": [
+        "CAPABILITY_HELP",
+        "OUT_OF_SCOPE",
+        "SCALAR_AGGREGATE",
+        "GROUPED_AGGREGATE",
+        "TIME_SERIES",
+        "RANKING",
+        "COMPARISON_SET",
+        "RELATION_LIST",
+        "DETAIL_ROWS",
+        "DATASET_TRANSFORM",
+        "METADATA_LOOKUP",
+        "LINEAGE_GRAPH",
+        "QUALITY_CHECK",
+        "ANOMALY_SERIES",
+        "ROOT_CAUSE_PIPELINE",
+        "FORECAST_SERIES",
+        "REPORT_PIPELINE",
+        "CONTROL_ONLY",
+        "CHAT_ONLY"
+      ],
+      "title": "QueryShape",
+      "type": "string"
+    },
+    "SemanticRole": {
+      "enum": [
+        "MEASURE",
+        "GROUP_BY",
+        "FILTER_FIELD",
+        "FILTER_VALUE",
+        "SOURCE_ENTITY",
+        "TARGET_ENTITY",
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD",
+        "RELATIONSHIP",
+        "RELATION_TARGET",
+        "TIME_FIELD",
+        "TIME_RANGE",
+        "TIME_GRAIN",
+        "COMPARISON_BASELINE",
+        "ORDER_BY",
+        "SORT_DIRECTION",
+        "LIMIT",
+        "DATASET_SOURCE",
+        "DELIVERY_TARGET"
+      ],
+      "title": "SemanticRole",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "mentions": {
+      "items": {
+        "$ref": "#/$defs/Mention"
+      },
+      "title": "Mentions",
+      "type": "array"
+    },
+    "dialogue_act_candidates": {
+      "items": {
+        "$ref": "#/$defs/DialogueAct"
+      },
+      "title": "Dialogue Act Candidates",
+      "type": "array"
+    },
+    "operation_markers": {
+      "items": {
+        "$ref": "#/$defs/OperationMarker"
+      },
+      "title": "Operation Markers",
+      "type": "array"
+    },
+    "reference_signals": {
+      "items": {
+        "enum": [
+          "PRONOUN",
+          "ELLIPSIS",
+          "HISTORICAL",
+          "ORDINAL"
+        ],
+        "type": "string"
+      },
+      "title": "Reference Signals",
+      "type": "array"
+    },
+    "followup_signals": {
+      "items": {
+        "enum": [
+          "CONTINUE",
+          "MODIFY",
+          "ADD",
+          "DRILL_DOWN"
+        ],
+        "type": "string"
+      },
+      "title": "Followup Signals",
+      "type": "array"
+    },
+    "topic_shift_signals": {
+      "items": {
+        "const": "EXPLICIT_NEW_TASK",
+        "type": "string"
+      },
+      "title": "Topic Shift Signals",
+      "type": "array"
+    },
+    "negations": {
+      "items": {
+        "maxLength": 256,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Negations",
+      "type": "array"
+    },
+    "coordination_groups": {
+      "items": {
+        "items": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Coordination Groups",
+      "type": "array"
+    },
+    "temporal_expressions": {
+      "items": {
+        "maxLength": 256,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Temporal Expressions",
+      "type": "array"
+    },
+    "query_shape_prediction": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/QueryShape"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "explicit_slot_mentions": {
+      "additionalProperties": {
+        "items": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Explicit Slot Mentions",
+      "type": "object"
+    },
+    "turn_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Turn Id",
+      "type": "string"
+    },
+    "text_ref": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Text Ref",
+      "type": "string"
+    },
+    "text_digest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Text Digest",
+      "type": "string"
+    }
+  },
+  "required": [
+    "turn_id",
+    "text_ref",
+    "text_digest"
+  ],
+  "title": "CurrentTurnParseResult",
+  "type": "object"
+}

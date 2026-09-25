@@ -1,0 +1,20 @@
+{
+  "baseline_commit": "6cc55e217574a68d7faa66e6d4c4de4c101341c9",
+  "parent_draft_pr": "https://github.com/dreamyang-1/data/pull/54",
+  "base_branch": "pre-semantic-calibration-20260909t111841z",
+  "feature_branch": "semantic-operation-round1-20260909t122901z",
+  "new_commits": 1,
+  "independent_production_contract_fixes": 0,
+  "final_commit": {
+    "resolution": "Commit introducing this exact manifest; its SHA is not embedded in its own tree.",
+    "command": "git log --diff-filter=A -1 --format=%H -- docs/v2_cutover/semantic_round1/git_commit_manifest.json"
+  },
+  "publication": {
+    "remote": "https://github.com/dreamyang-1/data",
+    "head": "semantic-operation-round1-20260909t122901z",
+    "base": "pre-semantic-calibration-20260909t111841z",
+    "draft": true,
+    "auto_merge": false,
+    "verification": "Remote head and open Draft PR head/base are checked after commit; exact receipt stays outside its own commit."
+  }
+}

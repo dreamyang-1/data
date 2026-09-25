@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "b80492044882b409559a67d7e4bd60c1497be3fc",
+  "feature_branch": "phase0c-metric-edit-grounding-20260908-01",
+  "final_commit": "The commit containing this manifest",
+  "procedure": "Review git revert of this stage commit; sync only its explicit manifest paths to development and rerun matching offline tests",
+  "production_rollbacks_required": false,
+  "index_rollbacks_required": false,
+  "automatic_merge": false,
+  "v1_replacement": "Not ready; user confirmation required before any replacement"
+}

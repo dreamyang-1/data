@@ -1,0 +1,40 @@
+{
+  "status": "SELF_REVIEW_PASS",
+  "baseline_commit": "0bb3f92327e69372e8450c7f49c2a8e2c0871630",
+  "service": "Oagnet",
+  "first_divergence": "CATALOG_SOURCE_CAPTURE",
+  "confidence": "PROVEN",
+  "before": "Catalog capture omitted entity-value source ownership and connection routing configuration; a reused attribute mapping or source locator could be invisible to catalog identity. Legacy value rows are not published catalog members.",
+  "after": "Private capture includes active scoped field identities and route configuration hashes. Internal pin lookup verifies the selected published attribute against those facts and freshly joined metadata, then performs an exact read-only source SELECT and reobserves at finish.",
+  "actual_evidence": "81/[205]: 89 active governed field mappings verified; one distinct locator; 290 supported static records. Metadata only, no business-value query.",
+  "initial_findings": [
+    "First test fixture incorrectly used logical IDs instead of publication generation record IDs; corrected the new fixture to use actual pinned candidates.",
+    "Two existing capture fixtures returned server identity for every new query; narrowed them to return no source mappings. Existing assertions unchanged.",
+    "Actual entity/attribute PKs are VARCHAR UUIDs and port is VARCHAR. Reused existing normalize_governed_id; normalized only metadata port, retaining strict request IDs.",
+    "Coverage distinguishes route configuration from actual server identity and mutable business values.",
+    "Initial SQL loopback transport failure retained; two independent reruns and final complete suite pass without source changes.",
+    "An incorrectly scoped Oagnet runner invocation collected backups. Corrected to its real tests directory; final collection errors zero."
+  ],
+  "public_io_changed": false,
+  "v1_behavior_changed": false,
+  "production_v2_routing_changed": false,
+  "prompt_changes": 0,
+  "regex_changes": 0,
+  "independent_reviewer": false,
+  "safety_checks": [
+    "Exact current model/domain and active entity/attribute/data-source/table/field joins",
+    "Published attribute record ID, canonical owner, mapping and source agreement",
+    "Parameterized exact SELECT, quoted governed identifiers, read-only transaction, rollback/close on errors",
+    "Binary matching retains distinct normalization collisions; truncation is explicit",
+    "Mutable business values are transient observations; stale/deleted/foreign values cannot be accepted as catalog members",
+    "Errors are bounded codes; snapshots/reports exclude credentials, private locators and business values"
+  ],
+  "remaining": [
+    "Agent Raw/Pending/filter bindings and restored observations still require integration; this is not an end-to-end entity-value PASS",
+    "Platform database_id must use existing database-load mapping; it is not interchangeable with Oagnet data_source_id",
+    "Unqualified/fuzzy value selection still requires governed search policy, complete candidate evidence and real ambiguity handling",
+    "Route hash proves configured locator, not DNS/server UUID or SQL execution snapshot; no point-in-time cross-source atomicity is claimed",
+    "Native catalog publication remains absent; current candidate must be regenerated after operational authorization",
+    "No real model, value-query, Gold, runtime shadow or production replacement proof in this stage"
+  ]
+}

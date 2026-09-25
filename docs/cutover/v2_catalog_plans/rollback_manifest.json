@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "5583d8c48db49e22d236e2ee543b26dc89fa3264",
+  "feature_branch": "cutover-v2-catalog-plans-20260908-01",
+  "rollback": "Reviewed revert of Agent catalog-plan and Oagnet relation-declaration commits, explicit file resync, affected/critical validation. Reprepare any later unpublished catalog candidate; do not reactivate mismatched snapshots.",
+  "native_publication_performed": false,
+  "production_traffic_rollback_proven": false,
+  "auto_merge": false
+}

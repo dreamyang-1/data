@@ -1,0 +1,87 @@
+{
+  "actual_read_only_capture": {
+    "observed_at": "2026-09-08T14:31:14.704231+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "c054d927062b4728fe40d28efa87bd45336f230f62282c257b4c13233a664d92",
+    "source_identity_hash": "88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1",
+    "status": "ACTUAL_READ_ONLY_CAPTURE_LOCAL_PLACEHOLDER_BUILD",
+    "entity_count": 14,
+    "entities_by_main_attribute_count": {
+      "1": 14
+    },
+    "declared_main_attributes": 14,
+    "relation_count": 24,
+    "cardinalities": {
+      "ONE_TO_MANY": 11,
+      "MANY_TO_ONE": 13
+    },
+    "relation_endpoints_present": 24,
+    "relation_join_pairs_present": 24,
+    "generated_records": 290,
+    "coverage": {
+      "contract": "catalog-generation-v1",
+      "catalog_version": "c054d927062b4728fe40d28efa87bd45336f230f62282c257b4c13233a664d92",
+      "source_counts": {
+        "domain_documents": 1,
+        "physical_data_sources": 1
+      },
+      "by_type": {
+        "entity": 14,
+        "attribute": 89,
+        "relation": 24,
+        "scoped_dimension": 13,
+        "scoped_enum": 15,
+        "metric": 11,
+        "table": 14,
+        "field": 110
+      },
+      "records_generated": 290,
+      "explicit_exclusions": {
+        "MODEL_WIDE_SHARED_ORIGINAL": 28
+      },
+      "capability_coverage_verified": false,
+      "excluded_dependencies": [
+        "external_entity_values",
+        "data_source_routing",
+        "SQL_independent_catalog_reads"
+      ]
+    },
+    "real_embedding_calls": 0,
+    "real_model_calls": 0,
+    "production_external_writes": 0,
+    "native_publication": false,
+    "private_snapshot_committed": false
+  },
+  "local_typed_path_acceptance": {
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "c054d927062b4728fe40d28efa87bd45336f230f62282c257b4c13233a664d92",
+    "directed_edges": 48,
+    "declared_two_hop_walks": 250,
+    "accepted": 250,
+    "repeated_entity_walks": 76,
+    "status": "ACTUAL_CAPTURE_OFFLINE_TYPED_PATH_ACCEPTANCE",
+    "semantic_recognition_evaluated": false,
+    "native_index_publication": false,
+    "model_calls": 0,
+    "real_embedding_calls": 0,
+    "production_external_writes": 0,
+    "coverage": "All ordered directed two-hop walks, including return paths; not all business meanings or arbitrary-length paths"
+  },
+  "evidence_limits": [
+    "Native catalog publication has not occurred. This lab publishes into offline test doubles only.",
+    "All current directed two-hop walks are checked, including return paths. This is not NLU quality or arbitrary business path ground truth.",
+    "Raw snapshot stays outside Git. No row-level business results were queried."
+  ]
+}

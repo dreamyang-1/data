@@ -1,0 +1,76 @@
+{
+  "primary_classification": "C_FIELD_SELECTION_ALLOWS_INCOMPATIBLE_FIELD",
+  "secondary_contract_gap": "F_GENERATED_SCHEMA_OMITS_EXISTING_TARGET_SELECTOR_CONSTRAINT",
+  "first_divergence": "SOURCE_VALUE_REQUEST_FIELD_SELECTION",
+  "baseline_path": "Current province FilterEdit target -> independent city SourceValueRequest -> city candidate -> late field validation reject",
+  "current_path": "Current FilterEdit target -> canonical field constraint before lookup -> exact same-field request only -> existing grounding and final guard",
+  "source_value_consumer_missing": false,
+  "context_changed": false,
+  "field_equivalence_inferred": false,
+  "oracle": {
+    "capture_hash": "4f26f8bf6e76d53e5f65fe6fd13c00d7b13a610a382c4c1308a9a1525ce3538f",
+    "candidate_fixed_error": {
+      "type": "ValueError",
+      "reason": "CONTRACT_OR_HARNESS_FAILURE"
+    },
+    "strict_candidate_fixed_complete": false,
+    "original_errors": [
+      "SOURCE_VALUE_FILTER_FIELD_MISMATCH",
+      "SOURCE_VALUE_FILTER_FIELD_MISMATCH"
+    ],
+    "original_error": {
+      "type": "ValueError",
+      "reason": "CONTRACT_OR_HARNESS_FAILURE"
+    },
+    "oracle_error": null,
+    "oracle_plan": true,
+    "artifact": "SourceValueRequestDraft field/target selector ONLY",
+    "filter_operation_unchanged": true,
+    "context_unchanged": true,
+    "source_snapshot_unchanged": true,
+    "grounding_field_changed": true,
+    "not_filter_operation_only_oracle": true,
+    "causal_classification": "SOURCE_FIELD_SELECTION_CONTRADICTS_CURRENT_FILTER_TARGET",
+    "model_calls": 0,
+    "sql_calls": 0,
+    "production_writes": 0,
+    "oracle_is_live_or_gold_pass": false
+  },
+  "strict_candidate_fixed_oracle": "FAIL_EXPECTED_FIELD_IDENTITY_CONFLICT",
+  "SOURCE_VALUE_FILTER_ALIGNMENT_CAUSAL_ROOT_CONFIRMED": "NOT_CLAIMED_UNDER_CANDIDATE_FIXED_CONDITION",
+  "selector_only_comparison": "PASS_NATIVE_STATE_IR_PLAN; different field necessarily gives different proven candidate identity",
+  "before_after_frozen_outputs": {
+    "after_reject": {
+      "type": "RecognitionFailure",
+      "reason": "SOURCE_VALUE_FILTER_FIELD_MISMATCH"
+    },
+    "aligned_plan": true,
+    "strict_replay": false,
+    "reason": "Generated schema changed; unchanged old outputs consumed as runtime regression"
+  },
+  "live_alignment": {
+    "case_id": "HC55-A",
+    "status": "PASS",
+    "target_field": "province.province_name",
+    "selected_field": "province.province_name",
+    "canonical_value": "北京市",
+    "model_selected_target": true
+  },
+  "closure": "DETERMINISTIC_CONTRACT_ENFORCED; LIVE_GENERALIZATION_PARTIAL",
+  "next_roots": [
+    {
+      "stage": "TASK_OPERATION",
+      "reason": "METRICS_SET_SCALAR_OBJECT_WHERE_LIST_REQUIRED",
+      "effect": "Fresh first task rejected",
+      "production_patch_this_round": false
+    },
+    {
+      "stage": "TURN_RESOLUTION",
+      "reason": "SELF_CONTAINED_NEW_TASK_PREDICTED_MODIFY",
+      "effect": "Wrong target proposal; downstream incompatible city request blocked; no state publish",
+      "production_patch_this_round": false
+    }
+  ],
+  "model_calls_for_oracles": 0,
+  "production_writes": 0
+}

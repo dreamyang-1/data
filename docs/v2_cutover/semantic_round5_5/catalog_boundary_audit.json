@@ -1,0 +1,56 @@
+{
+  "current_catalog_read": {
+    "status": "PASS",
+    "same_catalog_version": true,
+    "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21"
+  },
+  "raw_read_receipt_sha256": "3f7a4c6987208af1f84a779f255412691674880aa179543f4f9da8b229f39c23",
+  "formula_evidence_location": "calculation_rule.calc_formula in actual snapshot; top-level formula in the quick private receipt is not the catalog contract",
+  "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+  "catalog_snapshot_sha256": "7fb70be719278958dcb0c549aa22227566070910ae9bd433d89f65c28491c654",
+  "sales_amount": "CATALOG_TIME_CONTRACT_GAP_UNCHANGED",
+  "J": {
+    "status": "MODEL_QUERY_SHAPE_RELATION_SELECTION_GAP",
+    "catalog_relationship_gap": false,
+    "engine_propagation_defect": "NOT_PROVEN",
+    "evidence": {
+      "relations": {
+        "hospital_located_in_province": {
+          "relation_code": "hospital_located_in_province",
+          "relation_name": "所在",
+          "relation_type": "N:1",
+          "target_entity": "province",
+          "relation_semantic": "",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "hospital.province_id",
+            "target_field": "dim_province.province_id"
+          },
+          "description": ""
+        },
+        "hospital_located_in_city": {
+          "relation_code": "hospital_located_in_city",
+          "relation_name": "所在",
+          "relation_type": "N:1",
+          "target_entity": "city",
+          "relation_semantic": "",
+          "relation_constraint": null,
+          "join_key": {
+            "source_field": "hospital.city_id",
+            "target_field": "dim_city.city_id"
+          },
+          "description": ""
+        }
+      },
+      "raw_shape": "RELATION_LIST",
+      "relation_mentions": 0,
+      "offered_relation_candidates": 0,
+      "selected_relationship_edits": 0
+    },
+    "stop_reason": "RELATION_LIST predicted for ordinary entity listing without relationship evidence; not a missing declared relation"
+  },
+  "catalog_writes": 0,
+  "business_relationships_invented": false,
+  "time_anchor_guessed": false,
+  "note": "No query attribution or SQL executability certification beyond the declared metadata graph"
+}

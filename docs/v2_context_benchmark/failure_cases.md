@@ -1,0 +1,99 @@
+# V2 Failure and Blocked Cases
+
+生产语义侧 FAIL：32；评测阻塞：13。安全拒绝仍计FAIL。
+
+## Production semantic failures
+
+- **68603e64a0** `CANONICAL_MAPPING_ERROR` — 对比一下全部产品的月度含税销售总额趋势。
+  - 观察：V2_EXPLICIT_TIME_RANGE_EVIDENCE_REQUIRED；该轮要求清除具体产品并保留月度含税销售趋势。V1把它建立为独立话题，未证明CLEAR屏障；V2在时间证据合同处拒绝。
+- **eab29d544a** `CANONICAL_MAPPING_ERROR` — 查询累计销售额排名前 5 的经销商，并显示合作时长和合作次数。
+  - 观察：V2_BINDING_OUTSIDE_EDIT_EVIDENCE；V1把“累计”误作产品值并修改旧任务；V2未能把已绑定字段与显式编辑证据对齐。
+- **e6c538faee** `MODEL_REASONING_ERROR` — 查询含税销售总额排名前 10 的医院，并显示医院名称、医院等级和订单笔数。
+  - 观察：CONTRACT_OR_HARNESS_FAILURE；V1继承上海和医用外科口罩旧条件；V2模型输出了非法mention边界，未形成计划。
+- **3fc7071c34** `CANONICAL_MAPPING_ERROR` — 查询外周插管中心静脉导管合作的医院名单。
+  - 观察：V2_SOURCE_VALUE_REQUEST_NOT_APPLIED；V1正确形成产品到合作医院名单；V2声明了源值请求却未在Filter编辑中消费。
+- **aa39b0919e** `CANONICAL_MAPPING_ERROR` — 查询超声血管导引穿刺套件适用的科室。
+  - 观察：V2_SOURCE_VALUE_REQUEST_NOT_APPLIED；V1虽返回适用科室字段，但最终请求丢失指定产品条件；V2同样未消费源值请求。
+- **9488328a1b** `CANONICAL_MAPPING_ERROR` — 查询空心纤维血液透析器产品合作的经销商名单
+  - 观察：V2_SOURCE_VALUE_CURRENT_MENTION_REQUIRED；V1正确形成指定产品的合作经销商名单；V2的当前mention与源值合同不一致。
+- **578bad813e** `CONTEXT_STATE_ERROR` — 那销售数量是多少？
+  - 观察：PLAN；V1最终请求暗中带入产品但关系和展示仍是独立短句；V2因前置任务未建立，只生成无产品的全局销售数量。
+- **b55913126a** `CONTEXT_STATE_ERROR` — 订单笔数呢？
+  - 观察：PLAN；V1正确保留产品并把指标替换为订单笔数；V2只继承了上一条错误的全局任务，完整问题缺少产品。
+- **bb3846c861** `MODEL_REASONING_ERROR` — 按月看销售额。
+  - 观察：V2_CONTRACT_VALIDATION_FAILURE；V1丢失产品条件；V2生成编辑草案时违反合同，均未得到正确月度产品销售额。
+- **3948db1f06** `MODEL_REASONING_ERROR` — 它在哪个省卖得最好？
+  - 观察：V2_EXPLICIT_OPERATION_DROPPED；V1把“哪个省”“得最好”伪造成过滤值；V2丢弃显式操作，均未形成按省排名。
+- **f6cf699231** `TASK_RESOLUTION_ERROR` — 按城市呢？
+  - 观察：V2_CONTEXT_UNRESOLVED；V1正确保留产品和指标并把分组改为城市；V2因基础任务未建立而无法解析追问目标。
+- **00dd238dae** `TASK_RESOLUTION_ERROR` — 换成按月看。
+  - 观察：V2_CONTEXT_UNRESOLVED；V1增加月份但保留了城市分组，没有完成替换；V2未解析到可用目标任务。
+- **bb7eff7c49** `TASK_RESOLUTION_ERROR` — 那最低的省份呢？
+  - 观察：V2_CONTEXT_UNRESOLVED；V1仍按城市且缺少最低省份排序；V2未解析到历史链中的目标。
+- **69fff7dbfc** `TASK_RESOLUTION_ERROR` — 按月看。
+  - 观察：V2_CONTEXT_UNRESOLVED；V1把医院名称错误绑定为商品并附加城市；V2没有恢复可用上下文任务。
+- **cf83e60982** `CONTEXT_STATE_ERROR` — 订单笔数是多少？
+  - 观察：PLAN；V1安全降级而未补全医院上下文；V2只生成全局订单笔数新任务，丢失医院条件。
+- **5365c12ec5** `TASK_RESOLUTION_ERROR` — 再回到胸腹腔内窥镜手术系统用手术器械，它的订单笔数是多少？
+  - 观察：V2_CONTEXT_UNRESOLVED；V1正确返回点名的历史产品并改查订单笔数；V2因前序任务未发布而无法选择历史目标。
+- **e3580afd37** `CANONICAL_MAPPING_ERROR` — 那血液透析设备呢？
+  - 观察：V2_SOURCE_VALUE_REQUEST_NOT_APPLIED；V1未把产品替换为血液透析设备；V2源值请求未落入Filter编辑。
+- **e256ffc0f6** `TASK_RESOLUTION_ERROR` — 再回到经导管主动脉瓣膜系统，它的订单笔数是多少？
+  - 观察：V2_CONTEXT_UNRESOLVED；V1正确返回主动脉瓣膜系统历史任务并改查订单笔数；V2没有可用历史目标。
+- **49b82e0578** `CANONICAL_MAPPING_ERROR` — 那一次性使用静脉留置针呢？
+  - 观察：V2_SOURCE_VALUE_REQUEST_NOT_APPLIED；V1保留了旧产品而未替换为静脉留置针；V2未消费当前源值请求。
+- **9024b5665e** `TASK_RESOLUTION_ERROR` — 再回到一次性使用血液透析滤过器及配套管路，它的订单笔数是多少？
+  - 观察：V2_CONTEXT_UNRESOLVED；V1正确返回指定历史产品并改查订单笔数；V2没有可用历史目标。
+- **46a68b6d6c** `CANONICAL_MAPPING_ERROR` — 那人工心肺机系统呢？
+  - 观察：V2_PAYLOAD_WOULD_DROP_SEMANTICS；V1丢失人工心肺机产品条件；V2因计划会丢失显式语义而安全拒绝。
+- **5e19b6252c** `TASK_RESOLUTION_ERROR` — 再回到血液透析设备，它的订单笔数是多少？
+  - 观察：V2_CONTEXT_UNRESOLVED；V1正确返回血液透析设备历史任务并改查订单笔数；V2没有可用历史目标。
+- **c5d908fd82** `CANONICAL_MAPPING_ERROR` — 那紫杉醇释放冠脉球囊导管呢？
+  - 观察：V2_SOURCE_VALUE_REQUEST_NOT_APPLIED；V1正确把当前产品替换为紫杉醇释放冠脉球囊导管；V2未消费当前源值请求。
+- **f7aea23b82** `TASK_RESOLUTION_ERROR` — 这两个省加起来是多少？
+  - 观察：V2_CONTEXT_UNRESOLVED；V1没有保留新疆和上海两个省值；V2没有恢复前序任务，无法解析“这两个省”。
+- **5311231562** `TASK_RESOLUTION_ERROR` — 那全国整体呢？
+  - 观察：V2_CONTEXT_UNRESOLVED；V1正确清除省份限制并保留产品和指标；V2没有可用的前序任务。
+- **620a47a119** `CANONICAL_MAPPING_ERROR` — 含税销售额排名前5的经销商。
+  - 观察：V2_BINDING_OUTSIDE_EDIT_EVIDENCE；V1把无历史首问标成Follow-up且把含税销售额降成销售额；V2绑定与显式编辑证据不一致。
+- **384f7d4ffc** `CANONICAL_MAPPING_ERROR` — 含税销售额排名前5的产品。
+  - 观察：V2_BINDING_OUTSIDE_EDIT_EVIDENCE；V1把首问标成Follow-up且含税指标映射不完整，随后执行安全降级；V2绑定与编辑证据不一致。
+- **2e768315c1** `CANONICAL_MAPPING_ERROR` — 切换话题：查询耐高压植入式给药装置及附件的含税销售总额。
+  - 观察：V2_SOURCE_VALUE_CURRENT_MENTION_REQUIRED；V1正确隔离新产品新任务；V2当前mention与源值合同不一致。
+- **4468e37a09** `TASK_RESOLUTION_ERROR` — 这两个产品谁的销售额更高？
+  - 观察：V2_CONTEXT_UNRESOLVED；V1只保留最近产品，没有比较两个产品；V2未解析跨任务指代。
+- **a131c6a4b8** `CANONICAL_MAPPING_ERROR` — 统计绝对计数管整体的含税销售总额和订单笔数。
+  - 观察：V2_SOURCE_VALUE_CURRENT_MENTION_REQUIRED；V1正确建立指定产品的两个指标新任务；V2当前mention与源值合同不一致。
+- **0e104a7bed** `MODEL_REASONING_ERROR` — 总共有哪些设备
+  - 观察：V2_RECOGNITION_UNRESOLVED；当前表达的设备范围仍有歧义；V1未提出针对性问题，V2只终止为未解析，均未形成可答澄清。
+- **82525cead3** `MODEL_REASONING_ERROR` — 按月份呢？
+  - 观察：V2_SLOT_OPERATION_CONFLICT；两者都未完成从医院等级分组到月份分组的替换；V1保留医院等级，V2发生操作冲突。
+
+## Evaluation blocked
+
+- **5f57fcdf9f** `EVALUATION_ERROR` — 回到透析器，它在各省份的销售订单分布如何？
+  - V1未恢复用户点名的透析器历史任务。V2所需的早期产品任务因冻结源值fixture缺失未建立，无法公平判定历史目标选择。
+- **edd1672bc2** `EVALUATION_ERROR` — 查询四川省的含税销售总额。
+  - V1正确保留四川省与含税销售总额；V2缺少该原句对应的冻结精确源值观察，记评测阻塞。
+- **adb345fb96** `EVALUATION_ERROR` — 查询上海市皮肤病医院有多少个科室
+  - 用户信息足够，V1却追问业务明细类型；V2同样缺少该医院原句的冻结精确源值观察。
+- **23155b2717** `EVALUATION_ERROR` — 第一名的销售额是多少？
+  - “第一名”需要同一排序结果集及实体身份；本轮没有V1/V2共用的已执行Dataset fixture，不能比较。
+- **9c50b5f3e3** `EVALUATION_ERROR` — 第一名供货哪些医院？
+  - “第一名供货医院”需要同一排序结果集、经销商身份和关系证据；缺少共用Dataset fixture。
+- **a1db93e61a** `EVALUATION_ERROR` — 那第二名呢？
+  - “第二名”依赖前一结果及其排序身份；缺少共用Dataset fixture。
+- **6aa7de9610** `EVALUATION_ERROR` — 按月统计该省份的含税销售总额。
+  - V1把已固定四川省又作为分组维度，改变了查询形状；V2所需四川任务因冻结精确源值fixture缺失而不可评。
+- **247dcff224** `EVALUATION_ERROR` — 这些医院里采购金额最高的是哪家？
+  - 指代依赖上一轮真实排名结果和医院身份；本轮没有V1/V2共用的已执行Dataset fixture。
+- **4fbce198f3** `EVALUATION_ERROR` — 查询空心纤维血液透析器产品合作的经销商名单。
+  - V1正确形成指定产品合作经销商名单；V2缺少该原句对应的冻结精确源值观察。
+- **4a8528844e** `EVALUATION_ERROR` — 补充上一轮
+  - V1意识到需要澄清但错误追问指标；V2的基础科室任务因冻结源值fixture缺失，无法公平评估。
+- **f8266456d4** `EVALUATION_ERROR` — 那空心纤维血液透析器呢
+  - V1未把费森尤斯替换为空心纤维血液透析器；V2的基础任务因冻结源值fixture缺失，无法公平评估。
+- **d79056e854** `EVALUATION_ERROR` — 查询上海地区销售 BD 品牌超声血管导引穿刺套件的经销商名单。
+  - V1正确建立上海、BD品牌、指定产品的经销商名单新任务；V2缺少该组合的冻结精确源值观察。
+- **68c75fd936** `EVALUATION_ERROR` — 2
+  - 数字“2”必须绑定实际Pending问题及候选顺序；当前数据只有用户历史，没有两端共用的typed Pending fixture。

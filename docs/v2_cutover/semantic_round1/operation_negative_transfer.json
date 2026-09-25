@@ -1,0 +1,60 @@
+{
+  "formal_scores_changed": false,
+  "unit": "Original cluster cases grouped by unconsumed MODEL marker; these are not genuine user ADD/SET commands.",
+  "rows": [
+    {
+      "operation": "ADD",
+      "before_failed": 6,
+      "after_failed": 6,
+      "new_pass": 0,
+      "new_fail": 0,
+      "reclassified": 6,
+      "blocked": 0,
+      "zero_cases_is_not_pass": true
+    },
+    {
+      "operation": "REPLACE",
+      "before_failed": 0,
+      "after_failed": 0,
+      "new_pass": 0,
+      "new_fail": 0,
+      "reclassified": 0,
+      "blocked": 0,
+      "zero_cases_is_not_pass": true
+    },
+    {
+      "operation": "REMOVE",
+      "before_failed": 0,
+      "after_failed": 0,
+      "new_pass": 0,
+      "new_fail": 0,
+      "reclassified": 0,
+      "blocked": 0,
+      "zero_cases_is_not_pass": true
+    },
+    {
+      "operation": "CLEAR",
+      "before_failed": 0,
+      "after_failed": 0,
+      "new_pass": 0,
+      "new_fail": 0,
+      "reclassified": 0,
+      "blocked": 0,
+      "zero_cases_is_not_pass": true
+    },
+    {
+      "operation": "SET",
+      "before_failed": 7,
+      "after_failed": 7,
+      "new_pass": 0,
+      "new_fail": 0,
+      "reclassified": 7,
+      "blocked": 0,
+      "zero_cases_is_not_pass": true
+    }
+  ],
+  "business_initialization_cases": 13,
+  "business_followup_edits_reached_in_original_cluster": 0,
+  "reclassified_and_failed_are_different_dimensions": true,
+  "separate_operation_safety": "operation_safety_matrix.json; controlled current-runtime integration tests, not live Gold accuracy"
+}

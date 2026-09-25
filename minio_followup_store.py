@@ -112,9 +112,12 @@ class DatasetScope:
     user_id: str
     application_id: str
     conversation_id: str
+    authorized_semantic_scope_fingerprint: str = ''
 
     def validate(self) -> None:
         for name, value in asdict(self).items():
+            if name == 'authorized_semantic_scope_fingerprint' and value == '':
+                continue  # Legacy standalone store records cannot match a scoped request.
             if not isinstance(value, str) or not value.strip() or len(value) > 128:
                 raise ValueError(f"{name} must be a non-empty string of at most 128 characters")
 
@@ -156,6 +159,40 @@ class DatasetReference:
 class LoadedDataset:
     reference: DatasetReference
     rows: tuple[dict[str, Any], ...]
+
+
+def dataset_source_complete(reference: DatasetReference | Mapping[str, Any], loaded_row_count: int) -> bool:
+    """Check population coverage, not merely successful loading of a small view.
+
+    Limits retain only a slice even when every persisted slice row was loaded.
+    Completeness cannot be restored by subsequent filtering, aggregation or joins.
+    Old joined snapshots without input coverage evidence deliberately fail closed.
+    """
+    value = reference.to_dict() if isinstance(reference, DatasetReference) else reference
+    if loaded_row_count != value.get('row_count'):
+        return False
+
+    def complete(operation: Mapping[str, Any]) -> bool:
+        if not isinstance(operation, Mapping):
+            return False
+        if any(key in operation and operation[key] is not False for key in ('truncated', 'source_truncated')):
+            return False
+        kind = str(operation.get('type') or '').lower()
+        if kind == 'pipeline':
+            steps = operation.get('operations')
+            return isinstance(steps, list) and bool(steps) and all(complete(step) for step in steps)
+        if kind == 'inner_join':
+            return operation.get('source_truncated') is False
+        return kind in {'query_provenance', 'filter', 'select', 'sort', 'derive', 'aggregate'}
+
+    log = value.get('transformation_log', ())
+    if not isinstance(log, (list, tuple)) or (value.get('parent_dataset_ids') and not log):
+        return False
+    if value.get('source_type') == 'JOINED_DATASET' and not any(
+        isinstance(item, Mapping) and str(item.get('type') or '').lower() == 'inner_join' for item in log
+    ):
+        return False
+    return all(complete(operation) for operation in log)
 
 
 @dataclass(frozen=True)
@@ -207,7 +244,10 @@ def _canonical_json(value: Any) -> bytes:
 
 
 def _scope_digest(scope: DatasetScope) -> str:
-    raw = "\x1f".join(asdict(scope).values()).encode("utf-8")
+    values = asdict(scope)
+    if not scope.authorized_semantic_scope_fingerprint:
+        values.pop('authorized_semantic_scope_fingerprint')
+    raw = "\x1f".join(values.values()).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()[:32]
 
 
@@ -1172,6 +1212,7 @@ def _join_with_store(
             ref.scope.tenant_id != current_scope.tenant_id
             or ref.scope.user_id != current_scope.user_id
             or ref.scope.application_id != current_scope.application_id
+            or ref.scope.authorized_semantic_scope_fingerprint != current_scope.authorized_semantic_scope_fingerprint
         ):
             raise DatasetScopeMismatch("joined datasets must belong to the same tenant, user and application")
     # Branch datasets intentionally have distinct internal conversation ids.
@@ -1239,6 +1280,7 @@ def _join_with_store(
     conservative_as_of = min(source_times)
     transformation = {
         "type": "INNER_JOIN",
+        "source_truncated": any(not dataset_source_complete(item.reference, len(item.rows)) for item in loaded),
         "join_keys": list(keys),
         "cardinality_guard": "RIGHT_UNIQUE_EACH_STEP",
         "source_row_counts": {

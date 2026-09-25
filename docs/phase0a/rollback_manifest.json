@@ -1,0 +1,9 @@
+{
+  "starting_commit": "6c1c6e5242a4b42b302e141f66b5886632aa21ec",
+  "phase0a_commit_resolution": "git log -1 --format=%H -- docs/phase0a/phase0a_closure_report.md",
+  "strategy": "Separate inspection checkout or reviewed revert on a new branch; preserve ignored runtime files",
+  "production_migrations": false,
+  "removed_tracking": [
+    "??????.md"
+  ]
+}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import asyncio
 import copy
+import difflib
 import hashlib
 import hmac
 import json
@@ -16,7 +17,6 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import unquote, urlparse
 from uuid import uuid4
-from zoneinfo import ZoneInfo
 
 from app.adapters.base import AdapterBundle, AdapterError
 import httpx
@@ -27,13 +27,17 @@ from app.analysis import (
     AnalysisPlanner,
     QwenAnalysisSynthesizer,
     SynthesisValidationError,
+    build_query_result_insight,
 )
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
+from app.analysis.visualization import render_chart_svg
 from app.services.chat_responder import QwenChatResponder
+from app.services.result_cleanup import clean_name_list, cleanup_message
+from app.services.memory_manager import MemoryManager
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
-from app.domain.models import AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
-from app.planning import MultiQuestionPlanner, TaskPlanningError
+from app.domain.models import AgentPromptConfig, AnalysisOperator, AnalysisProcessStep, AnalysisRequirement, AgentResponse, AtomicTask, CanonicalAnalysisRequest, ChatRequest, ClarificationItem, ContextMode, ConversationControl, DataQueryResult, Dataset, DependencyConstraint, EvidenceItem, ExtensionExecution, GeneratedFile, HistoryMessage, KnowledgeContext, MetricRef, PendingState, PlannerExtraction, PrimaryIntent, ReliabilityReport, SemanticAmbiguity, SemanticFilterBinding, TaskExecutionResult, TaskPlan, TimeRange, TrustedIdentity, TurnAdmissionDecision, TurnRelation
+from app.planning import MultiQuestionPlanner, TaskPlanningError, extract_semantic_spec_section, parse_parameter_mentions
 from app.intent.classifier import (
     RuleBasedIntentClassifier,
     applicable_department_filter_slot,
@@ -49,9 +53,12 @@ from app.stores.events import (
     SessionEventType,
 )
 from app.stores.long_memory import LongTermMemory, LongTermMemoryStore, MemoryScope, MemoryType
+from app.domain.state_identity import has_stable_user_principal
 from app.services.dataset_followup import (
     is_dataset_operation_followup,
     plan_dataset_followup,
+    dataset_operation_family,
+    presentation_ancestors,
     restore_reference,
     scope_for_request,
 )
@@ -62,25 +69,45 @@ from app.services.conversation_followup import (
     resolve_conversation_temporal_context,
 )
 from app.services.turn_admission import TurnAdmissionGate
+from app.services.clarification_policy import (
+    decide_clarification,
+    restore_clarification_keys,
+    semantic_ambiguity_has_safe_time_default,
+)
+from app.services.dependency_error_messages import render_dependency_error
+from app.services.authorized_scope import bind_authorized_scope, state_scope_matches
+from app.services.semantic_decision import (
+    canonical_request_from_semantic_decision,
+    semantic_decision_for_task_plan,
+    semantic_decision_with_v1_fallback,
+)
+from app.services.legacy_guards import pending_answer_admissibility, extract_quoted_choice_candidate, apply_snapshot_display_default, apply_region_clear_barrier
 from app.services.history_compaction import compact_history
-from app.services.working_memory import recalls_prior_task, select_recalled_task_frame
+from app.services.working_memory import recalls_prior_task, requires_prior_task_resolution, select_recalled_task_frame
 from app.services.extension_dispatcher import ExtensionDispatcher
+from app.services.mcp_file_analysis import (
+    McpFileAnalysisRunner,
+    pick_primary_artifact,
+)
 from app.services.tool_selector import OptionalToolSelector
 from app.services.progress import emit_progress, task_progress_scope
+from app.observability import TraceSummary
+from app.observability.call_timing import track_operation
+from app.observability.langfuse_client import trace_generation
 from app.presentation import (
+    QUERY_EXECUTION_CHAIN,
     build_composite_intent_recognition_display_v2,
     build_intent_recognition_display_v2,
     render_composite_intent_recognition_display_v2,
     render_intent_recognition_display_v2,
-)
-from app.services.relationship_projection import (
-    requires_distinct_relationship_projection,
+    render_reliability_validation,
 )
 from app.skills import DynamicSkillLoader, skill_for_intent
 from minio_followup_store import (
     DatasetScope,
     HybridMinioFollowupStore,
     MinioFollowupStore,
+    dataset_source_complete,
 )
 
 NO_DATA_INTENTS = {PrimaryIntent.CHAT, PrimaryIntent.CAPABILITY_HELP, PrimaryIntent.OUT_OF_SCOPE}
@@ -96,13 +123,11 @@ ANALYSIS_INTENTS = {
 # published semantic snapshot.  The second attempt receives the exact missing
 # fields/filters in ``SEMANTIC_QUERY_RETRY`` and is still fail-closed.
 SEMANTIC_QUERY_RETRY_CODES = frozenset({
-    "ASL_AMBIGUOUS",
     "ASL_DIMENSION_INVALID",
     "ASL_DETAIL_FIELDS_INCOMPLETE",
     "ASL_REQUIRED_FILTER_MISSING",
     "ASL_REQUIRED_DIMENSION_MISSING",
     "ASL_UNREQUESTED_DIMENSION",
-    "SQL_TRANSLATION_AMBIGUOUS",
     "SQL_QUERY_ENTITY_ALIGNMENT_FAILED",
     "SQL_QUERY_FILTER_OPERATOR_FAILED",
     "SQL_RELATIONSHIP_GRAPH_INCOMPLETE",
@@ -111,16 +136,6 @@ _SALES_RECORD_TIME_ASSUMPTION = "TRANSACTION_TIME_SCOPE=SALES_RECORD"
 _INTERNAL_ASSUMPTIONS: ContextVar[tuple[str, ...]] = ContextVar(
     "data_agent_internal_assumptions", default=()
 )
-_BUSINESS_TIMEZONE = ZoneInfo("Asia/Shanghai")
-_QUALITY_STATUS_LABELS = {
-    "PASS": "通过",
-    "FAIL": "不通过",
-    "FAILED": "不通过",
-    "WARNING": "警告",
-    "WARN": "警告",
-    "DEGRADED": "降级",
-    "LIMITED": "受限",
-}
 _SORT_ONLY_FOLLOWUP_PATTERN = re.compile(
     r"(?:按)?[^，,。；;！!？?]{0,100}?(?:按)?"
     r"(?:从高到低|从低到高|由高到低|由低到高|"
@@ -146,17 +161,6 @@ def _sort_only_followup_direction(text: str) -> str | None:
     return "ASC" if _ASCENDING_SORT_PATTERN.search(compact) else "DESC"
 
 
-def _business_datetime_text(value: datetime) -> str:
-    """Render user-visible timestamps consistently in business local time."""
-
-    localized = value.astimezone(_BUSINESS_TIMEZONE)
-    return localized.strftime("%Y-%m-%d %H:%M:%S（北京时间）")
-
-
-def _quality_status_text(value: str) -> str:
-    return _QUALITY_STATUS_LABELS.get(value.strip().upper(), "待确认")
-
-
 def _requires_deterministic_analysis(request: CanonicalAnalysisRequest) -> bool:
     return (
         request.primary_intent in ANALYSIS_INTENTS
@@ -166,18 +170,6 @@ def _requires_deterministic_analysis(request: CanonicalAnalysisRequest) -> bool:
     )
 
 logger = logging.getLogger(__name__)
-
-
-def _compact_trace_value(value: Any, limit: int) -> str:
-    rendered = json.dumps(
-        value,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        default=str,
-    )
-    if len(rendered) <= limit:
-        return rendered
-    return f"{rendered[:limit]}…（已省略 {len(rendered) - limit} 字符）"
 
 
 def select_data_execution_question(
@@ -194,6 +186,15 @@ def select_data_execution_question(
     """
 
     canonical = render_execution_question(request)
+    if (
+        "SEMANTIC_AMBIGUITY_CONFIRMED_SURFACE_ONLY" in request.assumptions
+        and request.rewritten_question
+    ):
+        return (
+            request.rewritten_question,
+            canonical,
+            "CONFIRMED_PENDING_COMPLETION",
+        )
     if (
         decision.relation == TurnRelation.STANDALONE_NEW_TOPIC
         and decision.context_mode == ContextMode.NONE
@@ -249,15 +250,22 @@ class DataAnalysisOrchestrator:
         report_exporter: Any | None = None,
         file_importer: Any | None = None,
         extension_dispatcher: ExtensionDispatcher | None = None,
+        mcp_file_analysis_runner: McpFileAnalysisRunner | None = None,
         chat_responder: QwenChatResponder | None = None,
         event_store: SessionEventStore | None = None,
         turn_admission_gate: TurnAdmissionGate | None = None,
+        agent_prompt_store: Any | None = None,
     ) -> None:
         self.settings = settings
+        # 挂起分诊的 HTTP 连接复用同一客户端，避免每轮重建连接池
+        self._triage_http_client: httpx.AsyncClient | None = None
         self.classifier = classifier
         self.adapters = adapters
         self.sessions = sessions
         self.memories = memories
+        self.memory_manager = (
+            MemoryManager(memories) if memories is not None else None
+        )
         self.analysis_engine = analysis_engine or AnalysisEngine()
         self.analysis_planner = AnalysisPlanner()
         self.insight_interpreter = InsightInterpretationLayer()
@@ -281,6 +289,11 @@ class DataAnalysisOrchestrator:
                 else None
             )
         )
+        self.mcp_file_analysis_runner = mcp_file_analysis_runner or (
+            McpFileAnalysisRunner(settings, self.extension_dispatcher)
+            if settings.mcp_file_analysis_enabled
+            else None
+        )
         self.analysis_synthesizer = analysis_synthesizer or (
             QwenAnalysisSynthesizer(settings)
             if settings.analysis_synthesis_enabled and settings.env != "test"
@@ -293,6 +306,7 @@ class DataAnalysisOrchestrator:
             and settings.intent_model_api_key is not None
             else None
         )
+        self.agent_prompt_store = agent_prompt_store
 
         # Running requests are process-local because asyncio tasks cannot be
         # transferred between service instances.  The scope includes the
@@ -311,8 +325,20 @@ class DataAnalysisOrchestrator:
         identity: TrustedIdentity,
         event_type: SessionEventType,
         payload: dict[str, Any],
-        trace_id: str,
     ) -> None:
+        # An internal V1 retry under the V2_CONTEXT_V1_EXECUTION bridge stays
+        # completely silent: the main execution already recorded the
+        # structural events and the bridge closes the trace once.
+        if getattr(chat, "_external_lifecycle_silent", False):
+            return
+        # One external request owns one canonical request-UUID trace id; the
+        # user-facing message id stays an independent per-event correlation
+        # field.  The first event of the request lazily creates the trace id
+        # and every later event reuses it, including bridge-internal retries.
+        trace_id = getattr(chat, "_trace_id", None)
+        if trace_id is None:
+            trace_id = str(uuid4())
+            object.__setattr__(chat, "_trace_id", trace_id)
         try:
             await self.event_store.append(SessionEvent(
                 session_id=chat.conversation_id,
@@ -367,12 +393,32 @@ class DataAnalysisOrchestrator:
                 chat, cancelled_count, cancelled_intent
             )
 
+        # Resolve the platform's data_ask_agent_version prompt once per turn.
+        # The same immutable request snapshot is then consumed by both model
+        # boundaries: intent recognition and data-insight
+        # synthesis.  Loading it lazily inside each node could make the two
+        # nodes observe different prompt versions (or let a routed fast path
+        # miss the platform prompt altogether).
+        chat = await self._with_platform_agent_prompt(chat)
+
+        replayable_turn = not (
+            chat._is_regeneration_execution
+            or chat._completed_question_execution
+            # In the official V2_CONTEXT_V1_EXECUTION runtime the bridge owns
+            # the external request lifecycle and emits the entry/closing
+            # events itself; the internal V1 execution stays silent.
+            or getattr(chat, "_external_lifecycle_owner", False)
+        )
+        turn_started = time.monotonic()
+        if replayable_turn:
+            await self.open_external_turn(chat, identity)
+
         cancelled_by_user = asyncio.Event()
         execution = asyncio.create_task(self._handle_request(chat, identity))
         async with self._running_lock:
             self._running_requests.setdefault(scope, {})[execution] = cancelled_by_user
         try:
-            return await execution
+            response = await execution
         except asyncio.CancelledError:
             # A cancellation command from the same trusted conversation should
             # become a normal terminal response.  Transport disconnects and
@@ -380,7 +426,7 @@ class DataAnalysisOrchestrator:
             if not cancelled_by_user.is_set():
                 execution.cancel()
                 raise
-            return self._running_cancelled_response(chat)
+            response = self._running_cancelled_response(chat)
         finally:
             async with self._running_lock:
                 running = self._running_requests.get(scope)
@@ -388,6 +434,415 @@ class DataAnalysisOrchestrator:
                     running.pop(execution, None)
                     if not running:
                         self._running_requests.pop(scope, None)
+        if replayable_turn:
+            await self._record_turn_lifecycle_events(
+                chat, identity, response, turn_started
+            )
+        return response
+
+    async def _with_platform_agent_prompt(self, chat: ChatRequest) -> ChatRequest:
+        """Attach the latest platform user prompt to one request snapshot."""
+
+        if chat.prompt is not None:
+            return chat
+        store = getattr(self, "agent_prompt_store", None)
+        if store is None:
+            return chat
+        try:
+            latest = await store.resolve(
+                chat.application_id,
+                semantic_model_id=chat.semantic_model_id,
+            )
+        except Exception as exc:
+            logger.warning(
+                "agent prompt lookup failed before model nodes: %s", exc
+            )
+            return chat
+        if not latest:
+            return chat
+        return chat.model_copy(
+            deep=True,
+            update={"prompt": AgentPromptConfig(**latest)},
+        )
+
+    async def _record_turn_lifecycle_events(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        response: AgentResponse,
+        started: float,
+    ) -> None:
+        """Emit the replayable closing events of one request.
+
+        ``INTENT_RESULT`` and ``FINAL_INSIGHT`` describe the terminal response;
+        ``TRACE_SUMMARY`` must always be the last event of the request so a
+        replay can close the trace deterministically.  Every append is
+        fail-open and never affects the business response.
+        """
+        await self._append_session_event(
+            chat=chat,
+            identity=identity,
+            event_type=SessionEventType.INTENT_RESULT,
+            payload={
+                "intent": response.intent.value,
+                "intent_source": response.intent_source,
+                "intent_confidence": response.intent_confidence,
+                "status": response.status,
+            },
+        )
+        await self._append_session_event(
+            chat=chat,
+            identity=identity,
+            event_type=SessionEventType.FINAL_INSIGHT,
+            payload={
+                "status": response.status,
+                "intent": response.intent.value,
+                "answer_length": len(response.answer or ""),
+                "evidence_count": len(response.evidence),
+            },
+        )
+        latency_ms = max(0, int((time.monotonic() - started) * 1000))
+        prior_events: list[SessionEvent] = []
+        try:
+            prior_events = await self.event_store.list_events(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+                trace_id=getattr(chat, "_trace_id", None),
+            )
+        except Exception as exc:  # pragma: no cover - backend-specific failure
+            # Reading the replay log only enriches the summary spans.  A
+            # failing read falls back to response-derived spans and must
+            # never discard the business response.
+            logger.warning(
+                "trace summary event read failed: message_id=%s error=%s",
+                chat.message_id,
+                exc,
+            )
+        summary = TraceSummary.from_response(
+            trace_id=getattr(chat, "_trace_id", chat.message_id),
+            session_id=chat.conversation_id,
+            response=response,
+            latency_ms=latency_ms,
+            events=prior_events,
+        )
+        await self._append_session_event(
+            chat=chat,
+            identity=identity,
+            event_type=SessionEventType.TRACE_SUMMARY,
+            payload=summary.model_dump(mode="json"),
+        )
+
+    async def open_external_turn(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> None:
+        """Establish the request-level canonical trace id for one external turn.
+
+        The direct V1 ingress and the V2_CONTEXT_V1_EXECUTION bridge share this
+        owner hook.  It creates the per-request UUID trace id (when missing) so
+        the outer request object and every internal ``model_copy`` reuse one
+        canonical trace; the entry and structural events are then appended by
+        the execution path in replay order.  No event is appended here, keeping
+        the lifecycle owner independent of the structural ``TURN_ADMISSION``
+        event that must remain the first recorded event.
+        """
+        _ = identity
+        if getattr(chat, "_trace_id", None) is None:
+            object.__setattr__(chat, "_trace_id", str(uuid4()))
+
+    async def close_external_turn(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        response: AgentResponse,
+        started: float,
+    ) -> None:
+        """Record the closing lifecycle events of one external request."""
+        await self._record_turn_lifecycle_events(chat, identity, response, started)
+
+    async def execute_v1_from_completed_question(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> AgentResponse:
+        """Run original V1 planning/execution for a V2-completed question.
+
+        The request keeps every execution field supplied by the caller.  Only
+        transport history is neutralized and the internal context mode is set
+        so legacy Pending/TaskFrame/LastRequest inheritance cannot run again.
+        """
+        # V2 has already admitted this turn as a complete question. Any V1
+        # Pending entry belongs to an older clarification and must not occupy
+        # version 1 when this new request needs to create its own clarification.
+        # Clear by exact version so a newer concurrent turn is never deleted.
+        sessions = getattr(self, "sessions", None)
+        pending = (
+            await sessions.get_pending(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+            if sessions is not None else None
+        )
+        if pending is not None:
+            cleared = await sessions.clear_pending(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+                expected_version=pending.state_version,
+            )
+            if not cleared:
+                current = await sessions.get_pending(
+                    identity.tenant_id,
+                    identity.user_id,
+                    chat.application_id,
+                    chat.conversation_id,
+                )
+                if (
+                    current is not None
+                    and current.request.request_id == pending.request.request_id
+                ):
+                    cleared = await sessions.clear_pending(
+                        identity.tenant_id,
+                        identity.user_id,
+                        chat.application_id,
+                        chat.conversation_id,
+                        expected_version=current.state_version,
+                    )
+                elif current is None:
+                    cleared = True
+            if not cleared:
+                request = self._classify_with_rules(
+                    chat.question, identity, chat.conversation_id
+                )
+                return self._fallback(
+                    request,
+                    "当前会话已有更新正在处理，请稍后重新提交本问题。",
+                )
+        execution_chat = chat.model_copy(deep=True, update={"history": []})
+        execution_chat._completed_question_execution = True
+        return await self.handle(execution_chat, identity)
+
+    async def is_v1_pending_clarification_answer(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> bool:
+        """Return true only when this turn can safely consume V1 Pending.
+
+        A completed V2 question can still encounter a V1 execution ambiguity.
+        That Pending belongs to the original V1 session store.  The live bridge
+        may defer a compact option/slot answer back to V1, but it must never
+        route an unrelated new request through legacy context inheritance.
+        """
+
+        pending = await self.sessions.get_pending(
+            identity.tenant_id,
+            identity.user_id,
+            chat.application_id,
+            chat.conversation_id,
+        )
+        # 快照留在 chat 上，同轮紧随其后的分诊直接复用，不用再读一次
+        chat._v1_pending_snapshot = pending
+        if pending is None or not self._pending_scope_matches(pending.request, chat):
+            return False
+        return bool(
+            self._semantic_clarification_choice(
+                pending.request, chat.question
+            ) is not None
+            or self._is_deterministic_pending_reply(
+                chat.question, pending.request
+            )
+        )
+
+    async def triage_v1_pending_reply(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> tuple[str, str | None] | None:
+        """挂起待确认项时对自由文本输入的分诊。
+
+        选项序号、候选名这类精确输入由 is_v1_pending_clarification_answer
+        覆盖；这里处理匹配不上的自由文本，用识别模型判一次：
+        - ('ANSWER', merged)：仍在原话题内，merged 是原问题合并用户输入后
+          的完整问题，调用方作废旧挂起后按它重新执行；
+        - ('NEW_TASK', None)：用户抛开原话题，调用方作废旧挂起走正常新问流程。
+
+        无挂起返回 None。模型不可用时按新话题兜底，避免旧挂起把后续
+        每轮都拖进澄清延续、回答永远对不上待确认项。
+        """
+        # 精确匹配探针同轮已读过挂起并存在 chat 上，直接复用；探针未跑时才读
+        pending = getattr(chat, "_v1_pending_snapshot", None)
+        if pending is None:
+            pending = await self.sessions.get_pending(
+                identity.tenant_id,
+                identity.user_id,
+                chat.application_id,
+                chat.conversation_id,
+            )
+        if pending is None or not self._pending_scope_matches(pending.request, chat):
+            return None
+        settings = self.settings
+        if not (settings.intent_model_enabled and settings.intent_model_api_key):
+            return ("NEW_TASK", None)
+        pending_request = pending.request
+        original = (
+            pending_request.original_question or pending_request.question or ""
+        ).strip()
+        asked = [
+            str(slot)
+            for slot in (pending_request.missing_slots or [])
+            if slot != "semantic_ambiguity"
+        ]
+        ambiguity = next(
+            (
+                item
+                for item in (pending_request.semantic_ambiguities or [])
+                if item.blocking and item.candidates
+            ),
+            None,
+        )
+        options: list[str] = []
+        if ambiguity is not None:
+            for index, candidate in enumerate(ambiguity.candidates):
+                detail = (
+                    ambiguity.candidate_details[index]
+                    if index < len(ambiguity.candidate_details)
+                    else {}
+                )
+                label = str(
+                    detail.get("label")
+                    or detail.get("canonical_name")
+                    or candidate
+                ).strip()
+                if label:
+                    options.append(label)
+        prompt = (
+            "你在判断用户最新输入与系统挂起的追问之间的关系。\n\n"
+            f"用户此前的问题：{original or '（无记录）'}\n"
+            f"系统因信息不全暂停执行，挂起的待确认项：{'；'.join(asked) or '无'}"
+            + (f"\n系统给出的候选：{'、'.join(options[:8])}" if options else "")
+            + f"\n用户最新输入：{chat.question.strip()}\n\n"
+            "判断属于哪一类，只输出 JSON：\n"
+            '- 用户仍在原话题内（直接给值、换一种说法、只补了部分条件、'
+            "表达仍模糊但没换话题）："
+            '{"relation": "ANSWER", "merged_question": "原问题与用户输入合并成的'
+            '一句完整自包含的业务问题"}\n'
+            '- 用户抛开原话题提出无关新问题：{"relation": "NEW_TASK"}\n'
+            "merged_question 只合并原问题和用户输入里出现过的指标、维度、"
+            "筛选和时间，不发明两边都没有的条件。\n"
+            "用户输入与某个候选名称近似（同义、错字、增减“总额/金额”等"
+            "通用字）时视为选择了该候选，merged_question 里统一用候选的"
+            "规范名称。\n"
+        )
+        body = {
+            "model": settings.intent_model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0,
+            "enable_thinking": False,
+            "response_format": {"type": "json_object"},
+        }
+        headers = {
+            "Authorization": "Bearer " + settings.intent_model_api_key.get_secret_value(),
+            "Content-Type": "application/json",
+        }
+        try:
+            with trace_generation(
+                name="v1-pending-triage",
+                model=body["model"],
+                messages=body["messages"],
+            ) as generation:
+                client = self._triage_http_client
+                if client is None or client.is_closed:
+                    client = httpx.AsyncClient(
+                        base_url=settings.intent_model_base_url.rstrip("/"),
+                        timeout=settings.pending_triage_timeout_seconds,
+                    )
+                    self._triage_http_client = client
+                resp = await client.post(
+                    "/chat/completions", headers=headers, json=body
+                )
+                resp.raise_for_status()
+                payload = resp.json()
+                generation.set_response(payload)
+            content = payload["choices"][0]["message"].get("content") or ""
+            data = json.loads(content)
+            relation = str(data.get("relation") or "").strip().upper()
+            if relation == "ANSWER":
+                merged = str(data.get("merged_question") or "").strip()
+                if merged:
+                    return ("ANSWER", merged)
+            return ("NEW_TASK", None)
+        except Exception:
+            logger.warning(
+                "v1 pending triage failed; treating as new task: message_id=%s",
+                chat.message_id,
+                exc_info=True,
+            )
+            return ("NEW_TASK", None)
+
+    async def discard_v1_pending(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> None:
+        """作废旧挂起：用户已离开原话题，或合并后的完整问题将重新执行。"""
+        await self.sessions.clear_pending(
+            identity.tenant_id,
+            identity.user_id,
+            chat.application_id,
+            chat.conversation_id,
+        )
+
+    async def execute_v1_pending_clarification_answer(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> AgentResponse:
+        """Resume one already-verified V1 clarification without V2 rewriting."""
+
+        execution_chat = chat.model_copy(deep=True, update={"history": []})
+        return await self.handle(execution_chat, identity)
+
+    async def read_completed_question_execution_context(
+        self, chat: ChatRequest, identity: TrustedIdentity
+    ) -> CanonicalAnalysisRequest | None:
+        """Read V1's semantic result for the exact completed-question session.
+
+        The context bridge may use this only as evidence for conversational
+        wording after a successful query. Authorization, retrieval and
+        execution remain owned by the original V1 request path.
+        """
+        return await self.sessions.get_last_request(
+            identity.tenant_id,
+            identity.user_id,
+            chat.application_id,
+            chat.conversation_id,
+        )
+
+    async def resolve_completed_question_context_value(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        surface: str,
+        expected_family: str,
+        preferred_attribute_code: str | None = None,
+    ) -> SemanticFilterBinding | None:
+        """Resolve a terse follow-up value through V1's semantic retriever.
+
+        The trusted identity has already passed the ordinary API ingress.  The
+        resolver intentionally uses the untouched V1 request scope and returns
+        only semantic evidence to the context layer; it does not materialize
+        authorization or any execution request on V2's behalf.
+        """
+        _ = identity
+        if self.question_rewriter is None:
+            return None
+        return await self.question_rewriter.resolve_context_filter_value(
+            surface,
+            expected_family=expected_family,
+            preferred_attribute_code=preferred_attribute_code,
+            semantic_model_id=chat.semantic_model_id,
+            business_domain_id=self._effective_business_domain_id(chat),
+            business_domain_ids=list(chat.business_domain_ids),
+            tenant_id=identity.tenant_id,
+            user_id=identity.user_id,
+            application_id=chat.application_id,
+            conversation_id=chat.conversation_id,
+        )
 
     async def _handle_request(
         self, chat: ChatRequest, identity: TrustedIdentity
@@ -413,6 +868,7 @@ class DataAnalysisOrchestrator:
             cached.business_domain_selection_mode = (
                 "EXPLICIT" if chat.business_domain_ids else "AUTO"
             )
+            await self._ensure_clarification_trace(cached, chat)
             return cached
         repeat_fingerprint = (
             self._repeat_query_fingerprint(chat, identity)
@@ -495,10 +951,42 @@ class DataAnalysisOrchestrator:
             raw_request = self._classify_with_rules(
                 chat.question, identity, chat.conversation_id
             )
-            independent_chat = raw_request.primary_intent == PrimaryIntent.CHAT
+            # 同一轮 _handle 内部还会对（可能归一化过的）同一问题再算一次，
+            # 文本一致时直接复用这份确定性结果
+            chat._rules_classification_cache = (chat.question, raw_request)
+            planning_question = chat.question
+            confirmed_pending_choice = None
+            if not (
+                chat._is_regeneration_execution
+                or chat._completed_question_execution
+            ):
+                planning_pending = await self.sessions.get_pending(
+                    identity.tenant_id,
+                    identity.user_id,
+                    chat.application_id,
+                    chat.conversation_id,
+                )
+                if (
+                    planning_pending is not None
+                    and self._pending_scope_matches(planning_pending.request, chat)
+                ):
+                    confirmed_pending_choice = self._semantic_clarification_choice(
+                        planning_pending.request, chat.question
+                    )
+                    if confirmed_pending_choice is not None:
+                        planning_question = self._completed_question_with_choice(
+                            planning_pending.request, confirmed_pending_choice
+                        )
+            independent_chat = (
+                raw_request.primary_intent == PrimaryIntent.CHAT
+                and confirmed_pending_choice is None
+            )
             dag_pending = (
                 None
-                if chat._is_regeneration_execution
+                if (
+                    chat._is_regeneration_execution
+                    or chat._completed_question_execution
+                )
                 else await self.sessions.get_dag_pending(
                     identity.tenant_id,
                     identity.user_id,
@@ -506,7 +994,21 @@ class DataAnalysisOrchestrator:
                     chat.conversation_id,
                 )
             )
-            if independent_chat:
+            mcp_response = (
+                await self._run_mcp_file_analysis(chat, raw_request)
+                if self._should_dispatch_mcp_file_analysis(chat)
+                else None
+            )
+            if mcp_response is not None:
+                response = mcp_response
+                if dag_pending is not None:
+                    await self.sessions.clear_dag_pending(
+                        identity.tenant_id,
+                        identity.user_id,
+                        chat.application_id,
+                        chat.conversation_id,
+                    )
+            elif independent_chat:
                 # A standalone social/lifestyle turn is never a DAG answer or
                 # a multi-question analytical task, even when it contains a
                 # conjunction such as “草莓和可乐”. Drop stale analytical DAG
@@ -520,7 +1022,17 @@ class DataAnalysisOrchestrator:
                     )
                 response = await self._handle(chat, identity)
             elif dag_pending is not None:
-                response = await self._resume_task_plan(chat, identity, dag_pending)
+                cached_rules = chat._rules_classification_cache
+                if cached_rules is not None and cached_rules[0] == chat.question:
+                    current = cached_rules[1]
+                else:
+                    current = self._classify_with_rules(chat.question, identity, chat.conversation_id)
+                facts = self.turn_admission_gate.extract_current_turn_facts(question=chat.question, current=current, message_id=chat.message_id)
+                if facts.is_self_contained and not chat.task_answers:
+                    await self.sessions.clear_dag_pending(identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id, expected_version=int(dag_pending.get('state_version', 0)))
+                    response = await self._handle(chat, identity)
+                else:
+                    response = await self._resume_task_plan(chat, identity, dag_pending)
             elif chat.dag_resume_token is not None:
                 response = self._dag_resume_error(
                     chat,
@@ -534,50 +1046,228 @@ class DataAnalysisOrchestrator:
                         "RUNNING",
                         "### ◉ 规划与执行\n正在判断是否需要拆分多个分析任务。",
                     )
-                    try:
-                        plan = await self.task_planner.plan(chat.question)
-                    except TaskPlanningError as exc:
-                        logger.warning("multi-question plan rejected: %s", exc)
+                    semantic_decision = chat._semantic_decision
+                    semantic_decision_ready = bool(
+                        chat._completed_question_execution
+                        and semantic_decision is not None
+                        and callable(getattr(
+                            semantic_decision, "request_mismatch_reason", None
+                        ))
+                        and semantic_decision.request_mismatch_reason(
+                            message_id=chat.message_id,
+                            conversation_id=chat.conversation_id,
+                            application_id=chat.application_id,
+                            completed_question=chat.question,
+                            authorized_scope=chat.authorized_semantic_scope,
+                        ) is None
+                    )
+                    # V2 ACCEPTED 授权计划已含任务边界与提取结果，不重复规划；
+                    # 其余新问统一走拆分器，由拆分模型一次产出任务边界、
+                    # 任务意图和结构化参数（闲聊已在上方独立分支拦截）。
+                    # surface 直通兜底决策不带任务边界（复合问题也只是单个
+                    # 兜底任务），跳过拆分器会导致多问题不再拆分，不能省。
+                    if confirmed_pending_choice is None and not semantic_decision_ready:
+                        try:
+                            # 核心指令里的业务语义规范段随请求传给拆分模型，
+                            # 参数角色按规范分类对齐（指标/实体/维度）。
+                            planner_semantic_context = extract_semantic_spec_section(
+                                await self._agent_prompt_text(chat)
+                            )
+                            planner_parameters = inspect.signature(
+                                self.task_planner.plan
+                            ).parameters
+                            planner_kwargs = (
+                                {"semantic_context": planner_semantic_context}
+                                if "semantic_context" in planner_parameters
+                                else {}
+                            )
+                            with track_operation(
+                                "V1_ORCHESTRATION",
+                                "v1.task_decomposition",
+                            ) as timing:
+                                outcome = await self.task_planner.plan(
+                                    planning_question,
+                                    **planner_kwargs,
+                                )
+                                timing.mark_first_result()
+                                timing.set_attribute(
+                                    "task_count",
+                                    len(outcome.plan.tasks)
+                                    if outcome.plan is not None
+                                    else 1,
+                                )
+                            plan = outcome.plan
+                            if plan is None and outcome.single_extraction is not None:
+                                chat._planner_extraction = outcome.single_extraction
+                        except TaskPlanningError as exc:
+                            logger.warning("multi-question plan rejected: %s", exc)
                     if plan is not None:
+                        task_requests = []
+                        for task in plan.tasks:
+                            task_request = self._classify_with_rules(
+                                task.question,
+                                identity,
+                                chat.conversation_id,
+                            )
+                            task_request._planner_extraction = PlannerExtraction(
+                                intent=task.primary_intent,
+                                parameters=list(task.parameters),
+                                structured=task.extraction,
+                            )
+                            if task.primary_intent is not None:
+                                task_request.primary_intent = task.primary_intent
+                                task_request.intent_source = "TASK_PLANNER"
+                            task_requests.append(task_request)
+                        if chat._semantic_decision is not None:
+                            with track_operation(
+                                "V1_ORCHESTRATION",
+                                "semantic.contract.validation",
+                                attributes={
+                                    "source": "V1_SEMANTIC_FALLBACK",
+                                    "task_count": len(plan.tasks),
+                                },
+                            ) as semantic_timing:
+                                chat._semantic_decision = (
+                                    semantic_decision_for_task_plan(
+                                        chat=chat,
+                                        plan=plan,
+                                        preliminary_requests=task_requests,
+                                    )
+                                )
+                                semantic_timing.mark_first_result()
+                                semantic_timing.set_attribute("accepted", False)
+                                semantic_timing.set_attribute(
+                                    "fallback_reason",
+                                    chat._semantic_decision.fallback_reason,
+                                )
+                        task_intents = [
+                            request.primary_intent for request in task_requests
+                        ]
                         composite_view = (
                             build_composite_intent_recognition_display_v2(
                                 chat.question,
                                 plan,
+                                task_intents=task_intents,
+                                task_requests=task_requests,
+                                business_domains=(
+                                    chat._business_domain_labels
+                                    or tuple(
+                                        f"ID {domain_id}"
+                                        for domain_id in chat.business_domain_ids
+                                    )
+                                ),
+                                semantic_extractions=(
+                                    chat._semantic_extraction_items
+                                ),
                             )
                         )
                         await emit_progress(
                             "INTENT_RECOGNITION",
                             "COMPLETED",
                             render_composite_intent_recognition_display_v2(
-                                composite_view
+                                composite_view,
+                                include_resolved_context=(
+                                    not chat._intent_context_progress_emitted
+                                ),
                             ),
-                            intent="COMPOSITE_QUERY",
-                            confidence=1.0,
+                            intent=",".join(dict.fromkeys(
+                                item.value for item in task_intents
+                            )),
+                            confidence=min(
+                                request.intent_confidence
+                                for request in task_requests
+                            ),
                             display_model="CompositeIntentRecognitionDisplayV2",
                             display_version="V2",
                             presentation_scenario="ANALYTIC",
                             is_composite=True,
                             task_count=len(plan.tasks),
                         )
+                    planning_domain_labels = (
+                        chat._business_domain_labels
+                        or tuple(
+                            f"ID {domain_id}"
+                            for domain_id in chat.business_domain_ids
+                        )
+                    )
+                    planning_domain_line = (
+                        f"业务域：{'、'.join(planning_domain_labels)}\n"
+                        if planning_domain_labels
+                        else ""
+                    )
+
+                    def _planning_task_block(
+                        index: int,
+                        question: str,
+                        intent: PrimaryIntent | None,
+                        parameters: list[str],
+                        structured: dict | None = None,
+                    ) -> str:
+                        intent_line = (
+                            f"任务意图：{self._intent_label(intent)}\n"
+                            if intent is not None
+                            else ""
+                        )
+                        is_data_task = (
+                            intent not in NO_DATA_INTENTS | METADATA_INTENTS
+                        )
+                        if structured is not None and is_data_task:
+                            # 结构化提取按国药语义解析规范原样输出JSON。
+                            parameters_line = (
+                                "参数提取："
+                                + json.dumps(structured, ensure_ascii=False)
+                                + "\n"
+                            )
+                        elif parameters and is_data_task:
+                            parameters_line = f"参数提取：{'；'.join(parameters)}\n"
+                        else:
+                            parameters_line = ""
+                        return (
+                            f"任务{index}：{question}\n"
+                            + intent_line
+                            + planning_domain_line
+                            + parameters_line
+                        ).rstrip()
+
+                    if plan is not None:
+                        planning_detail = "已拆分为以下任务：\n" + "\n\n".join(
+                            _planning_task_block(
+                                index,
+                                task.question,
+                                task_requests[index - 1].primary_intent,
+                                list(task.parameters),
+                                task.extraction,
+                            )
+                            for index, task in enumerate(plan.tasks, 1)
+                        )
+                    else:
+                        single_extraction = chat._planner_extraction
+                        planning_detail = (
+                            "当前问题无需拆分，按单任务执行。\n"
+                            + _planning_task_block(
+                                1,
+                                planning_question,
+                                (
+                                    single_extraction.intent
+                                    if single_extraction is not None
+                                    else None
+                                ),
+                                (
+                                    list(single_extraction.parameters)
+                                    if single_extraction is not None
+                                    else []
+                                ),
+                                (
+                                    single_extraction.structured
+                                    if single_extraction is not None
+                                    else None
+                                ),
+                            )
+                        )
                     await emit_progress(
                         "TASK_PLANNING",
                         "COMPLETED",
-                        (
-                            "拆分判断完成。"
-                            + (
-                                "已拆分为以下任务：\n"
-                                + "\n".join(
-                                    f"{index}. {task.question}"
-                                    for index, task in enumerate(plan.tasks, 1)
-                                )
-                                if plan is not None
-                                else (
-                                    "当前问题无需拆分，按单任务执行。\n"
-                                    f"子任务1：{chat.question}"
-                                )
-                            )
-                            + "\n规划调用：语义解析 → ASL 查询规划 → 只读 SQL → 结果校验"
-                        ),
+                        "拆分判断完成。" + planning_detail,
                         task_count=len(plan.tasks) if plan is not None else 1,
                     )
                 response = (
@@ -585,6 +1275,7 @@ class DataAnalysisOrchestrator:
                     if plan is not None
                     else await self._handle(chat, identity)
                 )
+            await self._ensure_clarification_trace(response, chat)
             # Echo the effective routing contract on every outcome, including
             # clarification and safe-fallback responses which are not terminalized
             # through _finish_terminal.
@@ -632,6 +1323,102 @@ class DataAnalysisOrchestrator:
                     identity.tenant_id, identity.user_id, chat.application_id,
                     chat.conversation_id, chat.message_id, owner_token,
                 )
+
+    def _should_dispatch_mcp_file_analysis(self, chat: ChatRequest) -> bool:
+        """Use MCP as a primary executor only for an explicit file request."""
+
+        return bool(
+            self.settings.mcp_file_analysis_enabled
+            and self.mcp_file_analysis_runner is not None
+            and chat.temp_file_paths
+            and chat.mcp
+        )
+
+    async def _run_mcp_file_analysis(
+        self,
+        chat: ChatRequest,
+        request: CanonicalAnalysisRequest,
+    ) -> AgentResponse | None:
+        """Try the generic-agent style MCP loop, then preserve V1 fallback."""
+
+        runner = self.mcp_file_analysis_runner
+        if runner is None:
+            return None
+        await emit_progress(
+            "MCP_ANALYSIS",
+            "RUNNING",
+            "正在检查平台配置的MCP工具是否可用于本次上传文件。",
+        )
+        try:
+            outcome = await runner.run(chat)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.warning("MCP file analysis channel failed: %s", type(exc).__name__)
+            return None
+        if not outcome.applicable or not outcome.usable:
+            return None
+
+        warnings = list(outcome.warnings)
+        if len(outcome.executions) > 10:
+            warnings.append(
+                f"共调用{len(outcome.executions)}次MCP工具，响应仅保留前10条明细"
+            )
+        intent = request.primary_intent
+        if intent in {PrimaryIntent.CHAT, PrimaryIntent.OUT_OF_SCOPE}:
+            intent = PrimaryIntent.DATA_QUALITY
+        completed = [
+            item.name
+            for item in outcome.executions
+            if item.status == "COMPLETED"
+        ]
+        evidence = [
+            EvidenceItem(
+                evidence_id=f"mcp-tool-{index}",
+                kind="MCP_TOOL_RESULT",
+                source_ref="platform-configured-mcp",
+                payload={"tool": name, "status": "COMPLETED"},
+            )
+            for index, name in enumerate(completed[:20], 1)
+        ]
+        answer = outcome.answer.strip()
+        for url in outcome.artifact_urls:
+            if url not in answer:
+                answer += f"\n\n下载结果：{url}"
+        return AgentResponse(
+            request_id=request.request_id,
+            conversation_id=request.conversation_id,
+            status="COMPLETED",
+            intent=intent,
+            intent_source="PLATFORM_MCP_FILE_ANALYSIS",
+            intent_confidence=max(request.intent_confidence, 0.9),
+            answer=answer,
+            evidence=evidence,
+            analysis_process=[
+                AnalysisProcessStep(
+                    stage="DETERMINISTIC_ANALYSIS",
+                    status="COMPLETED",
+                    title="平台MCP文件分析",
+                    summary=(
+                        f"模型依据工具Schema完成{outcome.turns_used}轮调度，"
+                        f"其中{len(completed)}次工具调用成功。"
+                    ),
+                    evidence_ids=[item.evidence_id for item in evidence],
+                )
+            ],
+            extension_executions=outcome.executions[:10],
+            result_file_url=pick_primary_artifact(outcome.artifact_urls),
+            reliability=ReliabilityReport(
+                level="LIMITED",
+                score=0.8,
+                gates={
+                    "mcp_tool_discovered": True,
+                    "mcp_tool_completed": bool(completed),
+                    "mcp_answer_present": bool(answer),
+                },
+                warnings=warnings,
+            ),
+        )
 
     @staticmethod
     def _running_scope(
@@ -755,6 +1542,8 @@ class DataAnalysisOrchestrator:
     @staticmethod
     def _dag_scope_fingerprint(chat: ChatRequest) -> str:
         payload = {
+            'scope_contract': 'phase0c-v1',
+            'authorized_scope': chat.authorized_semantic_scope.fingerprint(),
             "semantic_model_id": chat.semantic_model_id,
             "database_id": chat.database_id,
             "business_domain_ids": sorted(chat.business_domain_ids),
@@ -825,7 +1614,7 @@ class DataAnalysisOrchestrator:
         if not hmac.compare_digest(stored_scope, self._dag_scope_fingerprint(chat)):
             return self._dag_resume_error(
                 chat,
-                "本轮语义模型、业务域、知识库或数据集范围与原任务不一致；请保持原范围后重试。",
+                "原任务不适用于本次访问范围，请在当前范围内重新提交完整问题。",
             )
 
         normalized = chat.question.replace(" ", "")
@@ -873,43 +1662,46 @@ class DataAnalysisOrchestrator:
             if RuleBasedIntentClassifier._time_range(chat.question) is not None:
                 answers.update({task_id: chat.question for task_id in awaiting})
             else:
-                questions = [
-                    str(item) for item in state.get("clarification_questions", [])
-                ]
+                seed = CanonicalAnalysisRequest(tenant_id=identity.tenant_id, user_id=identity.user_id,
+                    conversation_id=chat.conversation_id, original_question=chat.question, primary_intent=PrimaryIntent.REPORT_GENERATION)
+                key, _ = decide_clarification(seed, 'time_range', source_stage='SESSION_STATE', asked_keys=set())
+                _, trace = decide_clarification(seed, 'time_range', source_stage='SESSION_STATE', asked_keys={key})
+                trace.pending_reference = str(state_version)
+                trace.base_task_reference = root_message_id
                 return AgentResponse(
                     request_id=uuid4(), conversation_id=chat.conversation_id,
-                    status="NEEDS_CLARIFICATION",
+                    status="SAFE_FALLBACK",
                     intent=PrimaryIntent.REPORT_GENERATION,
                     intent_source="TASK_DAG", intent_confidence=1.0,
-                    answer=(
-                        "这些报告维度共用一个时间范围，但本轮没有识别出完整、"
-                        "有效的起止时间，请补充后再继续。"
-                    ),
-                    clarification_questions=questions[:1],
-                    clarification_items=[ClarificationItem(
-                        slot="shared:time_range",
-                        title="共享时间范围",
-                        question=(questions[0] if questions else "这份报告要分析哪个时间范围？"),
-                        options=["本月", "上月", "最近30天", "自定义起止日期"],
-                        multi_select=False,
-                    )],
+                    answer='本轮内容未能确定共享时间范围，原待确认任务和选项继续保留。',
+                    clarification_decision_traces=[trace],
                     missing_slots=["shared:time_range"],
                     task_plan=plan,
                     dag_resume_token=supplied_token or None,
                     awaiting_task_ids=awaiting,
                 )
         elif len(awaiting) > 1 and not answers:
-            questions = state.get("clarification_questions", [])
+            seed = CanonicalAnalysisRequest(tenant_id=identity.tenant_id, user_id=identity.user_id,
+                conversation_id=chat.conversation_id, original_question=chat.question, primary_intent=PrimaryIntent.OUT_OF_SCOPE)
+            key, trace = decide_clarification(seed, 'task_answer_mapping', source_stage='SESSION_STATE', asked_keys=set(state.get('asked_clarification_keys', [])))
+            trace.candidate_ids = awaiting
+            trace.pending_reference = str(state_version)
+            trace.base_task_reference = root_message_id
+            if trace.decision == 'ASK':
+                updated = {**state, 'state_version': state_version + 1,
+                    'asked_clarification_keys': [*state.get('asked_clarification_keys', []), key]}
+                try:
+                    await self.sessions.put_dag_pending(identity.tenant_id, identity.user_id,
+                        chat.application_id, chat.conversation_id, updated, expected_version=state_version)
+                except SessionConflictError:
+                    return self._dag_resume_error(chat, '待确认任务已更新，请基于最新响应继续。')
             return AgentResponse(
                 request_id=uuid4(), conversation_id=chat.conversation_id,
-                status="NEEDS_CLARIFICATION", intent=PrimaryIntent.OUT_OF_SCOPE,
+                status="NEEDS_CLARIFICATION" if trace.decision == 'ASK' else 'SAFE_FALLBACK', intent=PrimaryIntent.OUT_OF_SCOPE,
                 intent_source="TASK_DAG", intent_confidence=1.0,
-                answer=(
-                    "有多个子任务同时需要补充信息。为避免把答案填错任务，请在 task_answers "
-                    "中按 task_id 分别提交。"
-                ),
-                clarification_questions=[str(item) for item in questions][:5],
-                remaining_question_count=max(0, len(questions) - 5),
+                answer='这份补充信息分别用于哪个问题？' if trace.decision == 'ASK' else '问题对应关系尚未确定，原待确认任务继续保留。',
+                clarification_questions=['这份补充信息分别用于哪个问题？'] if trace.decision == 'ASK' else [],
+                clarification_decision_traces=[trace],
                 task_plan=plan,
                 dag_resume_token=supplied_token,
                 awaiting_task_ids=awaiting,
@@ -1173,6 +1965,7 @@ class DataAnalysisOrchestrator:
                 identity.user_id,
                 chat.application_id,
                 source_conversation,
+                chat.authorized_semantic_scope.fingerprint(),
             )
             loaded = await asyncio.to_thread(
                 self.dataset_store.load_dataset,
@@ -1303,7 +2096,8 @@ class DataAnalysisOrchestrator:
             identity.tenant_id, identity.user_id, chat.application_id,
             chat.conversation_id, root_message_id,
         )
-        if checkpoint and checkpoint.get("plan_fingerprint") == plan_fingerprint:
+        if (checkpoint and checkpoint.get("plan_fingerprint") == plan_fingerprint
+                and checkpoint.get('authorized_scope') == chat.authorized_semantic_scope.fingerprint()):
             for task_id, raw in checkpoint.get("completed", {}).items():
                 try:
                     responses[task_id] = AgentResponse.model_validate(raw)
@@ -1331,6 +2125,7 @@ class DataAnalysisOrchestrator:
                     {
                         "schema_version": "1.0",
                         "plan_fingerprint": plan_fingerprint,
+                        'authorized_scope': chat.authorized_semantic_scope.fingerprint(),
                         "completed": completed,
                         "conversations": conversation_by_task,
                     },
@@ -1435,6 +2230,7 @@ class DataAnalysisOrchestrator:
                 web_search=chat.web_search,
                 temp_file_paths=chat.temp_file_paths,
                 department=chat.department,
+                prompt=chat.prompt.model_copy(deep=True) if chat.prompt else None,
                 dependency_constraints=dependency_constraints,
                 dataset_id=next(
                     (
@@ -1448,12 +2244,36 @@ class DataAnalysisOrchestrator:
                     None,
                 ) if not requires_new_entity else None,
             )
+            # A split of an already completed question retains the same ASL
+            # boundary. A reply to Pending or a dependent/contextual task must
+            # still resolve its own execution envelope through the legacy path.
+            child._completed_question_execution = bool(
+                chat._completed_question_execution
+                and task.task_id not in task_answers
+                and not task.depends_on
+                and not contextual_root_task
+                and not (
+                    chat._semantic_decision is not None
+                    and str(chat._semantic_decision.source) == "V2_AUTHORIZED_PLAN"
+                )
+            )
+            child._business_domain_labels = chat._business_domain_labels
+            child._demo_execution_resolved_business_domain_ids = (
+                chat._demo_execution_resolved_business_domain_ids
+            )
+            if task.primary_intent is not None or task.parameters or task.extraction:
+                child._planner_extraction = PlannerExtraction(
+                    intent=task.primary_intent,
+                    parameters=list(task.parameters),
+                    structured=task.extraction,
+                )
             try:
                 with task_progress_scope(
                     parent_message_id=root_message_id,
                     task_id=task.task_id,
                     task_index=task_index_by_id[task.task_id],
                     task_count=len(plan.tasks),
+                    task_question=task.question,
                     is_child_task=True,
                 ):
                     if len(task.depends_on) >= 2 and self._is_join_task(task.question):
@@ -1486,13 +2306,49 @@ class DataAnalysisOrchestrator:
                 logger.exception("atomic task failed: %s", task.task_id)
                 return task.task_id, exc
 
+        async def report_terminal(task: AtomicTask, value: AgentResponse | Exception) -> None:
+            status = value.status if isinstance(value, AgentResponse) else (
+                "SKIPPED" if str(value) == "DEPENDENCY_NOT_COMPLETED" else "FAILED"
+            )
+            if status == "NEEDS_CLARIFICATION":
+                message = "本任务需要补充条件，暂未完成；其他独立任务不受影响。"
+                if value.clarification_questions:
+                    message += "\n" + "；".join(value.clarification_questions)
+            elif status in {"COMPLETED", "PARTIAL_SUCCESS"}:
+                message = "本任务处理完成。"
+            elif status == "SKIPPED":
+                message = "依赖任务尚未完成，本任务未执行；其他独立任务不受影响。"
+            else:
+                message = "本任务未完成，请查看本任务最终输出；其他独立任务不受影响。"
+            progress_status = (
+                "COMPLETED" if status in {"COMPLETED", "PARTIAL_SUCCESS"}
+                else "SKIPPED" if status in {"NEEDS_CLARIFICATION", "SKIPPED"}
+                else "FAILED"
+            )
+            with task_progress_scope(
+                parent_message_id=root_message_id, task_id=task.task_id,
+                task_index=task_index_by_id[task.task_id], task_count=len(plan.tasks),
+                task_question=task.question, is_child_task=True,
+            ):
+                await emit_progress(
+                    "DATA_RETRIEVAL",
+                    progress_status,
+                    message, task_terminal=True, task_result_status=status,
+                )
+
+        async def run_and_report(task: AtomicTask) -> tuple[str, AgentResponse | Exception]:
+            task_id, value = await run(task)
+            await report_terminal(task, value)
+            return task_id, value
+
         for layer in layers:
-            layer_results = await asyncio.gather(*(run(task) for task in layer))
+            layer_results = await asyncio.gather(*(run_and_report(task) for task in layer))
             responses.update(layer_results)
 
         for alias_id, canonical_id in aliases.items():
             responses[alias_id] = responses[canonical_id]
             conversation_by_task[alias_id] = conversation_by_task.get(canonical_id, "")
+            await report_terminal(next(task for task in plan.tasks if task.task_id == alias_id), responses[alias_id])
 
         task_results: list[TaskExecutionResult] = []
         evidence: list[EvidenceItem] = []
@@ -1506,7 +2362,7 @@ class DataAnalysisOrchestrator:
         answer_parts: list[str] = []
         scores: list[float] = []
         all_high = True
-        for task in plan.tasks:
+        for task_number, task in enumerate(plan.tasks, 1):
             value = responses[task.task_id]
             if isinstance(value, AgentResponse):
                 if value.status in {"COMPLETED", "PARTIAL_SUCCESS"}:
@@ -1549,7 +2405,9 @@ class DataAnalysisOrchestrator:
                     chart_specs=value.chart_specs,
                     evidence_ids=prefixed_ids,
                 ))
-                answer_parts.append(f"### ◉ {task.question}\n{value.answer}")
+                answer_parts.append(
+                    f"### ◉ 任务{task_number}：{task.question}\n{value.answer}"
+                )
             else:
                 task_results.append(TaskExecutionResult(
                     task_id=task.task_id,
@@ -1562,7 +2420,8 @@ class DataAnalysisOrchestrator:
                     ),
                 ))
                 answer_parts.append(
-                    f"### ◉ {task.question}\n{task_results[-1].answer}"
+                    f"### ◉ 任务{task_number}：{task.question}\n"
+                    f"{task_results[-1].answer}"
                 )
                 all_high = False
 
@@ -1751,6 +2610,7 @@ class DataAnalysisOrchestrator:
                 + combined_answer
             )
         final_response = AgentResponse(
+            clarification_decision_traces=[trace.model_copy(deep=True) for value in responses.values() if isinstance(value, AgentResponse) for trace in value.clarification_decision_traces],
             request_id=uuid4(),
             conversation_id=chat.conversation_id,
             status=status,
@@ -1866,7 +2726,7 @@ class DataAnalysisOrchestrator:
                 chat.application_id,
                 child_conversation,
             )
-            if child_request is None:
+            if child_request is None or not state_scope_matches(child_request, chat):
                 continue
             root_request = child_request.model_copy(
                 deep=True,
@@ -2002,6 +2862,7 @@ class DataAnalysisOrchestrator:
             user_id=identity.user_id,
             application_id=chat.application_id,
             conversation_id=chat.conversation_id,
+            authorized_semantic_scope_fingerprint=chat.authorized_semantic_scope.fingerprint(),
         )
         result = await asyncio.to_thread(
             self.dataset_store.join_datasets,
@@ -2021,8 +2882,11 @@ class DataAnalysisOrchestrator:
         ]
         minimum_match_rate = min(match_rates, default=1.0)
         snapshot_skew = float(join_audit.get("snapshot_skew_seconds", 0.0))
-        limited = minimum_match_rate < 0.8 or snapshot_skew > 86_400
+        incomplete_source = not dataset_source_complete(result.reference, result.reference.row_count)
+        limited = minimum_match_rate < 0.8 or snapshot_skew > 86_400 or incomplete_source
         warnings = []
+        if incomplete_source:
+            warnings.append("来源数据不完整，关联结果仅覆盖已有数据，不能用于全局排名或汇总。")
         if minimum_match_rate < 0.8:
             warnings.append("关联匹配率低于80%，请核对关联键和两侧数据范围。")
         if snapshot_skew > 86_400:
@@ -2060,8 +2924,9 @@ class DataAnalysisOrchestrator:
         """Hash every effective input using a deterministic JSON representation."""
         payload = {
             "chat": chat.model_dump(mode="json"),
-            # Roles are trusted request context and may affect authorization or
-            # data visibility even though they are not part of the JSON body.
+            'scope_contract': 'phase0c-v1',
+            'authorized_scope': chat.authorized_semantic_scope.fingerprint(),
+            # Roles may vary presentation; they never grant semantic access.
             "roles": sorted(set(identity.roles)),
         }
         canonical = json.dumps(
@@ -2093,6 +2958,8 @@ class DataAnalysisOrchestrator:
         ).lower()
         payload = {
             "question": normalized_question,
+            'scope_contract': 'phase0c-v1',
+            'authorized_scope': chat.authorized_semantic_scope.fingerprint(),
             "semantic_model_id": chat.semantic_model_id,
             "database_id": chat.database_id,
             "business_domain_ids": sorted(chat.business_domain_ids),
@@ -2110,12 +2977,10 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _effective_business_domain_id(chat: ChatRequest) -> int | None:
-        """Return a hard domain constraint only when exactly one was selected.
+        """Legacy scalar alias; request.business_domain_ids always carries the set.
 
-        Oagnet already treats a null business_domain_id as semantic-model-wide
-        retrieval and lets ASL resolve one or more relevant domains. Multiple
-        requested/allowed domains therefore deliberately use that routing mode;
-        a single explicit domain remains a strict backwards-compatible hint.
+        A None alias for multiple domains is safe only together with the full
+        explicit list supported by Oagnet. It is never a model-wide grant.
         """
         if len(chat.business_domain_ids) == 1:
             return chat.business_domain_ids[0]
@@ -2127,7 +2992,7 @@ class DataAnalysisOrchestrator:
         request: CanonicalAnalysisRequest,
         chat: ChatRequest,
     ) -> int | None:
-        """Use a unique vector-resolved domain only in caller AUTO mode."""
+        """Optionally narrow execution within current MODEL_WIDE authorization."""
 
         explicit = cls._effective_business_domain_id(chat)
         if explicit is not None:
@@ -2148,41 +3013,12 @@ class DataAnalysisOrchestrator:
         request: CanonicalAnalysisRequest,
         dataset: Dataset,
     ) -> TimeRange | None:
-        """Return 12 complete source months for a system-default trend range."""
+        """Compatibility for historical requests: never create a default year.
 
-        if (
-            request.primary_intent != PrimaryIntent.TREND_ANALYSIS
-            or request.time_range is None
-            or "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in request.assumptions
-            or dataset.source_data_as_of is None
-        ):
-            return None
-        watermark = (
-            dataset.source_data_as_of.date()
-            if isinstance(dataset.source_data_as_of, datetime)
-            else dataset.source_data_as_of
-        )
-        if request.time_range.end_exclusive <= watermark + timedelta(days=1):
-            return None
-        watermark_month = watermark.replace(day=1)
-        next_month = cls._shift_month_start(watermark_month, 1)
-        # A month is complete only when the verified source watermark reached
-        # its final calendar day. Partial current months are deliberately not
-        # mixed into a default trend without disclosure.
-        end_exclusive = (
-            next_month
-            if watermark == next_month - timedelta(days=1)
-            else watermark_month
-        )
-        start = cls._shift_month_start(end_exclusive, -12)
-        candidate = TimeRange(
-            start=start,
-            end_exclusive=end_exclusive,
-            timezone=request.time_range.timezone,
-        )
-        if candidate == request.time_range:
-            return None
-        return candidate
+        A source watermark may qualify the answer, but cannot invent a new
+        twelve-month filter. Explicit user periods remain unchanged.
+        """
+        return None
 
     async def _requery_system_default_trend_at_watermark(
         self,
@@ -2547,19 +3383,156 @@ class DataAnalysisOrchestrator:
     @staticmethod
     def _pending_scope_matches(request: CanonicalAnalysisRequest, chat: ChatRequest) -> bool:
         return (
-            request.semantic_model_id == chat.semantic_model_id
-            and request.database_id == chat.database_id
-            and sorted(request.business_domain_ids) == sorted(chat.business_domain_ids)
-            and sorted(request.knowledge_base_names) == sorted(chat.knowledge_base_names)
+            state_scope_matches(request, chat)
             and (
                 chat.dataset_id is None
                 or request.source_dataset_id == chat.dataset_id
             )
         )
 
+    async def _handle_surface_query(self, chat, identity, *, request=None):
+        """Execute a completed ordinary query with ASL-owned catalog binding."""
+        if not callable(getattr(self.adapters.query, "query_surface", None)):
+            return None
+        # Dataset selection and dependency envelopes still belong to the
+        # existing executor; never lose them in the ordinary-query shortcut.
+        if (chat.dataset_id is not None or chat.dependency_constraints
+                or chat.temp_file_paths or chat._is_regeneration_execution):
+            return None
+        decision = chat._semantic_decision
+        if decision is not None and str(decision.source) == 'V2_AUTHORIZED_PLAN':
+            # Previously confirmed/native plans retain their existing guarded
+            # execution envelope rather than being reduced to surface hints.
+            return None
+        supplied_request = request is not None
+        if request is None:
+            request = await self._classify(
+                chat.question,
+                identity,
+                chat.conversation_id,
+                pre_resolved=True,
+                agent_prompt=await self._agent_prompt_text(chat),
+                planner_extraction=chat._planner_extraction,
+            )
+        if request.primary_intent not in {
+            PrimaryIntent.METRIC_QUERY, PrimaryIntent.DETAIL_QUERY,
+            PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
+        }:
+            return None
+        request.application_id = chat.application_id
+        if not supplied_request:
+            request.original_question = chat.question
+            # ``_classify`` may have normalized a platform-configured business
+            # alias (for example 销售趋势 -> 含税销售总额趋势).  Keep that completed
+            # executable question; resetting it to the raw surface here makes
+            # ASL reopen an ambiguity that intent recognition already resolved.
+            request.rewritten_question = (
+                request.rewritten_question or chat.question
+            )
+        bind_authorized_scope(
+            request,
+            chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=(
+                chat._demo_execution_resolved_business_domain_ids
+            ),
+        )
+        # This classifier read ``chat.question``, which is the completed
+        # question supplied by the context bridge.  Build every advisory ASL
+        # mention from that same completed question.  Raw-turn extraction (for
+        # example only “上海市” from “上海市呢”) must never replace inherited
+        # product, metric, result-object or time evidence.
+        # The second classifier reads the completed standalone question. Pass
+        # its fine-grained filter roles as advisory hints so Oagnet can
+        # distinguish a brand value from an equally similar project/product
+        # value. Oagnet still owns catalog binding and may correct these hints.
+        mention_roles: dict[str, str | None] = {}
+        planner_extraction = request._planner_extraction
+        planner_mentions = (
+            parse_parameter_mentions(list(planner_extraction.parameters))
+            if planner_extraction is not None and planner_extraction.parameters
+            else []
+        )
+        if planner_mentions:
+            # 规划阶段产出的参数已做词面校验，直接作为 mentions 传给下游，
+            # 不再从 filters 做二次提取。
+            for item in planner_mentions:
+                mention_roles[item["text"]] = item["role_hint"] or None
+        else:
+            completed_compact = re.sub(r"\s+", "", request.rewritten_question)
+            for item in request.filters:
+                if not isinstance(item, dict):
+                    continue
+                role_hint = str(item.get("field") or "").strip() or None
+                raw_values = item.get("value")
+                values = raw_values if isinstance(raw_values, list) else [raw_values]
+                for value in values:
+                    text = str(value or "").strip()
+                    if text and re.sub(r"\s+", "", text) in completed_compact:
+                        mention_roles[text] = role_hint
+            for item in request.semantic_entity_mentions:
+                text = str(item).strip()
+                if text:
+                    mention_roles.setdefault(text, None)
+        mentions = [
+            {"text": text, "role_hint": role_hint}
+            for text, role_hint in mention_roles.items()
+        ]
+        await emit_progress("INTENT_RECOGNITION", "COMPLETED", self._intent_think_summary(
+            request, business_domain_labels=chat._business_domain_labels,
+            semantic_extractions=chat._semantic_extraction_items,
+            question_chain=[turn.content for turn in chat.history if turn.role == "user"],
+            include_resolved_context=not chat._intent_context_progress_emitted,
+        ))
+        try:
+            # 规划产出的结构化提取JSON原样透传给语义查询器，消费方式由下游负责；
+            # mentions 保留作兼容，语义查询器未适配前行为不变。
+            result = await self.adapters.query.query_surface(
+                request, identity, mentions=mentions,
+                structured_extraction=(
+                    planner_extraction.structured
+                    if planner_extraction is not None else None
+                ),
+            )
+        except AdapterError as exc:
+            if exc.code in {"ASL_AMBIGUOUS", "SQL_TRANSLATION_AMBIGUOUS"}:
+                request.semantic_ambiguities = self._semantic_ambiguities(exc)
+                request.ambiguities = self._ambiguity_texts(exc)
+                request.missing_slots = ["semantic_ambiguity"]
+                return await self._request_clarification(
+                    request, 1, source_stage="OAGNET_ASL_GENERATION",
+                    semantic_extractions=chat._semantic_extraction_items,
+                )
+            return await self._finish_terminal(request, self._fallback(
+                request, self._dependency_message(exc), error_code=exc.code))
+        # Only the executed, scoped ASL supplies persisted query semantics.
+        request.filters = copy.deepcopy(result.asl.get("filters") or [])
+        request.dimensions = [str(item["name"]) for item in result.asl.get("dimensions", [])
+                              if isinstance(item, dict) and item.get("name")]
+        request.missing_slots = []
+        request.asl_template = copy.deepcopy(result.asl)
+        request.assumptions = [value for value in request.assumptions
+                               if not value.startswith("DEFAULT_TIME_")]
+        time_context = result.asl.get("time_context") or {}
+        request.time_range = None
+        if time_context.get("start") and time_context.get("end"):
+            request.time_range = TimeRange(
+                start=date.fromisoformat(str(time_context["start"])[:10]),
+                end_exclusive=date.fromisoformat(str(time_context["end"])[:10]) + timedelta(days=1),
+            )
+        await self.sessions.put_task_frame(request)
+        return await self._complete_query_result(chat, identity, request, result)
+
     async def _handle(self, chat: ChatRequest, identity: TrustedIdentity) -> AgentResponse:
+        if getattr(self.settings, "surface_asl_execution_enabled", False) and chat._completed_question_execution:
+            surface_response = await self._handle_surface_query(chat, identity)
+            if surface_response is not None:
+                return surface_response
         preserve_merged_question = False
         recalled_task_frame = False
+        restore_legacy_semantic_context = not (
+            chat._is_regeneration_execution
+            or chat._completed_question_execution
+        )
         admission_question, _ = QuestionRewriter._normalize_polite_word_order(
             chat.question
         )
@@ -2573,7 +3546,7 @@ class DataAnalysisOrchestrator:
         )
         pending = (
             None
-            if chat._is_regeneration_execution
+            if not restore_legacy_semantic_context
             else await self.sessions.get_pending(
                 identity.tenant_id,
                 identity.user_id,
@@ -2581,12 +3554,88 @@ class DataAnalysisOrchestrator:
                 chat.conversation_id,
             )
         )
+        if (
+            pending is not None
+            and not chat._semantic_extraction_items
+            and pending.semantic_extractions
+        ):
+            chat._semantic_extraction_items = tuple(
+                copy.deepcopy(pending.semantic_extractions)
+            )
         # Recognize an unmistakable standalone chat turn before applying any
         # business task frame. Otherwise a previous data query can rewrite a
         # later lifestyle question back into the old product/dealer task.
-        raw_rule_request = self._classify_with_rules(
-            admission_question, identity, chat.conversation_id
+        cached_rules = chat._rules_classification_cache
+        if cached_rules is not None and cached_rules[0] == admission_question:
+            raw_rule_request = cached_rules[1]
+        else:
+            raw_rule_request = self._classify_with_rules(
+                admission_question, identity, chat.conversation_id
+            )
+        bind_authorized_scope(
+            raw_rule_request,
+            chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=(
+                chat._demo_execution_resolved_business_domain_ids
+            ),
         )
+        raw_rule_request.application_id = chat.application_id
+        semantic_decision_request = None
+        semantic_decision_fallback_reason = None
+        semantic_decision = chat._semantic_decision
+        if semantic_decision is not None:
+            with track_operation(
+                "V1_ORCHESTRATION",
+                "semantic.contract.validation",
+                attributes={
+                    "source": getattr(
+                        getattr(semantic_decision, "source", None),
+                        "value",
+                        str(getattr(semantic_decision, "source", "INVALID")),
+                    ),
+                },
+            ) as semantic_timing:
+                if not chat._completed_question_execution:
+                    semantic_decision_fallback_reason = (
+                        "SEMANTIC_DECISION_PRE_RESOLUTION_REQUIRED"
+                    )
+                else:
+                    rules = getattr(self.classifier, "rules", None)
+                    if not isinstance(rules, RuleBasedIntentClassifier):
+                        rules = (
+                            self.classifier
+                            if isinstance(self.classifier, RuleBasedIntentClassifier)
+                            else RuleBasedIntentClassifier()
+                        )
+                    (
+                        semantic_decision_request,
+                        semantic_decision_fallback_reason,
+                    ) = canonical_request_from_semantic_decision(
+                        semantic_decision,
+                        chat=chat,
+                        identity=identity,
+                        rules=rules,
+                    )
+                semantic_timing.mark_first_result()
+                semantic_timing.set_attribute(
+                    "accepted", semantic_decision_request is not None
+                )
+                semantic_timing.set_attribute(
+                    "fallback_reason", semantic_decision_fallback_reason
+                )
+            if semantic_decision_request is None:
+                chat._semantic_decision = semantic_decision_with_v1_fallback(
+                    semantic_decision,
+                    semantic_decision_fallback_reason
+                    or "SEMANTIC_DECISION_NOT_EXECUTION_READY",
+                )
+                logger.info(
+                    "semantic decision requires V1 semantic fallback",
+                    extra={
+                        "message_id": chat.message_id,
+                        "fallback_reason": semantic_decision_fallback_reason,
+                    },
+                )
         independent_chat = raw_rule_request.primary_intent == PrimaryIntent.CHAT
         standalone_complete_business = bool(
             pending is None
@@ -2631,9 +3680,10 @@ class DataAnalysisOrchestrator:
                 chat.conversation_id, expected_version=pending.state_version,
             )
             pending = None
+            chat = chat.model_copy(update={'history': []})
         previous_for_rewrite = (
             None
-            if standalone_complete_business or chat._is_regeneration_execution
+            if standalone_complete_business or not restore_legacy_semantic_context
             else pending.request if pending else await self.sessions.get_task_frame(
                 identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id
             )
@@ -2643,7 +3693,7 @@ class DataAnalysisOrchestrator:
         # “补充上一轮” can restore authoritative metric IDs, grain, filters and
         # time semantics instead of treating the provisional parse as history.
         completed_before_pending = None
-        if pending is not None and not chat._is_regeneration_execution:
+        if pending is not None and restore_legacy_semantic_context:
             completed_before_pending = await self.sessions.get_last_request(
                 identity.tenant_id,
                 identity.user_id,
@@ -2656,8 +3706,9 @@ class DataAnalysisOrchestrator:
             ):
                 completed_before_pending = None
         if (
-            not chat._is_regeneration_execution
-            and pending is None
+            restore_legacy_semantic_context
+            and (pending is None or requires_prior_task_resolution(chat.question))
+            and not standalone_complete_business
             and recalls_prior_task(chat.question)
         ):
             recall = getattr(self.sessions, "get_recent_task_frames", None)
@@ -2673,16 +3724,33 @@ class DataAnalysisOrchestrator:
             )
             recalled = select_recalled_task_frame(chat.question, recalled_frames)
             if recalled is not None and self._pending_scope_matches(recalled, chat):
+                if pending is not None:
+                    cleared = await self.sessions.clear_pending(
+                        identity.tenant_id, identity.user_id, chat.application_id,
+                        chat.conversation_id, expected_version=pending.state_version,
+                    )
+                    if not cleared:
+                        return self._fallback(raw_rule_request, "待确认任务已更新，本轮历史恢复未执行。")
+                    pending = None
                 previous_for_rewrite = recalled
                 recalled_task_frame = True
+            elif requires_prior_task_resolution(chat.question):
+                # A missing, tied or out-of-scope historical target cannot
+                # silently become the active/latest task via a later fallback.
+                raw_rule_request.assumptions.append("HISTORICAL_TASK_REFERENCE_UNRESOLVED")
+                return self._fallback(
+                    raw_rule_request,
+                    "当前授权范围内尚未唯一定位所指的历史问题，本轮未执行查询。",
+                )
         if independent_chat:
             previous_for_rewrite = None
         if previous_for_rewrite is not None and not self._pending_scope_matches(
             previous_for_rewrite, chat
         ):
             previous_for_rewrite = None
+            chat = chat.model_copy(update={'history': []})
         if (
-            not chat._is_regeneration_execution
+            restore_legacy_semantic_context
             and not independent_chat
             and previous_for_rewrite is None
             and pending is None
@@ -2691,9 +3759,10 @@ class DataAnalysisOrchestrator:
                 identity.tenant_id, identity.user_id, chat.application_id, chat.conversation_id
             )
         elif (
-            not chat._is_regeneration_execution
+            restore_legacy_semantic_context
             and pending is None
             and not independent_chat
+            and not recalled_task_frame
         ):
             # A task frame is provisional: it is written before ASL/SQL runs and
             # may contain an entity or slot interpretation that execution later
@@ -2719,6 +3788,11 @@ class DataAnalysisOrchestrator:
                     previous_for_rewrite.assumptions.append(
                         "VERIFIED_EXECUTION_FRAME_SELECTED"
                     )
+        # The last-request fallback must pass the same scope check as Pending
+        # and task frames; otherwise a rejected frame re-enters through here.
+        if previous_for_rewrite is not None and not self._pending_scope_matches(previous_for_rewrite, chat):
+            previous_for_rewrite = None
+            chat = chat.model_copy(update={'history': []})
         turn_decision = self.turn_admission_gate.evaluate(
             question=admission_question,
             current=raw_rule_request,
@@ -2726,6 +3800,24 @@ class DataAnalysisOrchestrator:
             message_id=chat.message_id,
             pending=pending is not None,
         )
+        # 输入已被识别为对挂起候选的选择（含近似名称）时，UNBOUND 拦截要让路，
+        # 否则有效回答会在合并执行前被误判成无关输入。
+        admission_pending_choice = (
+            self._semantic_clarification_choice(pending.request, chat.question)
+            if pending is not None
+            else None
+        )
+        if (
+            pending is not None
+            and admission_pending_choice is None
+            and not turn_decision.current_turn_facts.is_self_contained
+            and pending_answer_admissibility(
+                raw_rule_request, pending.request, self_contained=False
+            ) == 'UNBOUND'
+        ):
+            # Keep the existing pending state without binding unrelated input
+            # or repeating its question. A complete new task was handled first.
+            return self._fallback(raw_rule_request, '本轮输入未能对应当前待确认项，原任务保持待确认状态。')
         turn_decision.selected_thread_id = (
             f"thread-{uuid4()}"
             if turn_decision.create_new_analysis_thread
@@ -2744,12 +3836,15 @@ class DataAnalysisOrchestrator:
             # proved this is a complete new topic, old task state must not be
             # supplied to the rewriter or the later merge path.
             previous_for_rewrite = None
+        # Structural admission opens every replayable request, including
+        # standalone chat turns; the replay contract keys on it first and the
+        # entry event follows it.
         await self._append_session_event(
             chat=chat,
             identity=identity,
             event_type=SessionEventType.TURN_ADMISSION,
-            trace_id=str(raw_rule_request.request_id),
             payload={
+                "request_id": str(raw_rule_request.request_id),
                 "turn_relation": turn_decision.relation.value,
                 "context_mode": turn_decision.context_mode.value,
                 "self_contained": turn_decision.current_turn_facts.is_self_contained,
@@ -2769,6 +3864,16 @@ class DataAnalysisOrchestrator:
                 "reason_codes": turn_decision.reason_codes,
             },
         )
+        await self._append_session_event(
+            chat=chat,
+            identity=identity,
+            event_type=SessionEventType.USER_QUERY,
+            payload={
+                "question_length": len(chat.question or ""),
+                "semantic_model_id": chat.semantic_model_id,
+                "use_longterm_memory": chat.use_longterm_memory,
+            },
+        )
         await emit_progress(
             "CONTEXT_RESTORE",
             "COMPLETED",
@@ -2779,19 +3884,31 @@ class DataAnalysisOrchestrator:
         await emit_progress(
             "QUESTION_REWRITE", "RUNNING", "正在结合上下文和实体别名规范化问题。"
         )
-        if (
-            self.question_rewriter is not None
-            and not independent_chat
-            and not deterministic_business_fast_path
+        if self.question_rewriter is not None and semantic_decision_request is None and (
+            chat._completed_question_execution
+            or (not independent_chat and not deterministic_business_fast_path)
         ):
-            rewrite = await self.question_rewriter.rewrite(
-                chat.question,
-                previous=previous_for_rewrite,
-                semantic_model_id=chat.semantic_model_id,
-                business_domain_id=self._effective_business_domain_id(chat),
-                business_domain_ids=list(chat.business_domain_ids),
-                force_context=turn_decision.inherit_business_context,
-            )
+            with track_operation(
+                "V1_ORCHESTRATION",
+                "v1.question_rewrite",
+            ) as timing:
+                rewrite = await self.question_rewriter.rewrite(
+                    chat.question,
+                    previous=(
+                        None if chat._completed_question_execution
+                        else previous_for_rewrite
+                    ),
+                    semantic_model_id=chat.semantic_model_id,
+                    business_domain_id=self._effective_business_domain_id(chat),
+                    business_domain_ids=list(chat.business_domain_ids),
+                    force_context=(
+                        False if chat._completed_question_execution
+                        else turn_decision.inherit_business_context
+                    ),
+                    apply_previous_context=not chat._completed_question_execution,
+                )
+                timing.mark_first_result()
+                timing.set_attribute("degraded", bool(rewrite.degraded))
             classification_question = rewrite.rewritten_question
         await emit_progress(
             "QUESTION_REWRITE",
@@ -2803,7 +3920,9 @@ class DataAnalysisOrchestrator:
             ),
         )
         await emit_progress(
-            "INTENT_RECOGNITION", "RUNNING", "正在识别查询意图和关键分析参数。"
+            "INTENT_RECOGNITION",
+            "RUNNING",
+            "正在判断本轮问题与会话上下文的关系，并补全问题。",
         )
         model_entity_mentions: list[str] = []
         filter_semantic_ambiguities: list[SemanticAmbiguity] = []
@@ -2824,13 +3943,31 @@ class DataAnalysisOrchestrator:
             )
             if semantic_choice is not None:
                 clarification_answer = semantic_choice["confirmation"]
+                turn_decision.relation = TurnRelation.CLARIFICATION_RESPONSE
+                turn_decision.context_mode = ContextMode.CLARIFICATION_RESUME
+                turn_decision.context_dependent = True
+                turn_decision.inherit_business_context = True
+                turn_decision.create_new_analysis_thread = False
+                turn_decision.selected_thread_id = (
+                    pending.request.analysis_thread_id
+                    or f"thread-{pending.request.request_id}"
+                )
+                turn_decision.selected_episode_id = str(pending.request.request_id)
+                turn_decision.reason_codes = list(dict.fromkeys([
+                    *turn_decision.reason_codes,
+                    "EXACT_PENDING_OPTION",
+                ]))
             incoming = (
                 self._classify_with_rules(
                     clarification_answer, identity, chat.conversation_id
                 )
                 if deterministic_slot_reply
                 else await self._classify(
-                    classification_question, identity, chat.conversation_id
+                    classification_question,
+                    identity,
+                    chat.conversation_id,
+                    pre_resolved=chat._completed_question_execution,
+                    agent_prompt=await self._agent_prompt_text(chat),
                 )
             )
             if (
@@ -2848,9 +3985,9 @@ class DataAnalysisOrchestrator:
                 pending.request.model_copy(deep=True), clarification_answer
             )
             resolved_slots = set(pending.request.missing_slots) - set(merged.missing_slots)
-            if explicit_replacement_task or self._should_replace_pending(
+            if turn_decision.relation == TurnRelation.STANDALONE_NEW_TOPIC or explicit_replacement_task or (semantic_choice is None and self._should_replace_pending(
                 pending.request, incoming, resolved_slots, raw_question=chat.question
-            ):
+            )):
                 # A clear new task must not be forced into an unrelated pending
                 # clarification.  Delete the old state before creating a possible
                 # new pending state so its CAS starts from version zero.
@@ -2870,7 +4007,11 @@ class DataAnalysisOrchestrator:
                     )
                     if explicit_replacement_task
                     else await self._classify(
-                        chat.question, identity, chat.conversation_id
+                        chat.question,
+                        identity,
+                        chat.conversation_id,
+                        pre_resolved=chat._completed_question_execution,
+                        agent_prompt=await self._agent_prompt_text(chat),
                     )
                 )
                 rounds = 1
@@ -2882,23 +4023,90 @@ class DataAnalysisOrchestrator:
                     incoming=incoming,
                     completed_before_pending=completed_before_pending,
                 )
+                # Any terminal response produced while resuming this exact
+                # Pending version must clear it. Set the CAS version before a
+                # temporal choice can take the surface-ASL fast path.
+                request.pending_state_version = pending.state_version
                 if semantic_choice is not None:
                     request = self._apply_semantic_clarification_choice(
                         pending.request,
                         request,
                         semantic_choice,
                     )
+                    if "SEMANTIC_CHOICE_TARGET_UNRESOLVED" in request.assumptions:
+                        return self._fallback(
+                            request,
+                            "当前语义目录尚未明确该选项对应的原有查询项，原任务保持待确认状态。",
+                        )
+                    if (
+                        getattr(self.settings, "surface_asl_execution_enabled", False)
+                        and self._semantic_choice_is_temporal(semantic_choice)
+                    ):
+                        # A time option changes only the temporal scope. Resume
+                        # the already complete business question through the
+                        # same surface-ASL boundary used by a standalone turn,
+                        # retaining the typed city/brand/product roles from
+                        # Pending. The legacy contract path represented those
+                        # values a second time as untyped mentions and could
+                        # reject 万益特 after its 商品品牌 filter was valid.
+                        surface_request = request.model_copy(deep=True)
+                        surface_request.rewritten_question = (
+                            build_intent_recognition_display_v2(
+                                surface_request,
+                                business_domain_labels=chat._business_domain_labels,
+                                semantic_extractions=chat._semantic_extraction_items,
+                            ).completed_question
+                        )
+                        surface_request.semantic_filter_bindings = []
+                        surface_request.trusted_dimension_bindings = []
+                        bind_authorized_scope(
+                            surface_request,
+                            chat.authorized_semantic_scope,
+                            execution_resolved_business_domain_ids=(
+                                chat._demo_execution_resolved_business_domain_ids
+                            ),
+                        )
+                        surface_response = await self._handle_surface_query(
+                            chat,
+                            identity,
+                            request=surface_request,
+                        )
+                        if surface_response is not None:
+                            return surface_response
                 preserve_merged_question = True
-                request.pending_state_version = pending.state_version
                 rounds = pending.clarification_rounds + 1
+                if semantic_choice is not None and any(
+                    item.blocking for item in request.semantic_ambiguities
+                ):
+                    # One answer consumes one catalog ambiguity. Slot-readiness
+                    # recalculation below cannot decide the remaining semantic
+                    # choices; advance Pending before any planning/retrieval.
+                    bind_authorized_scope(
+                        request,
+                        chat.authorized_semantic_scope,
+                        execution_resolved_business_domain_ids=(
+                            chat._demo_execution_resolved_business_domain_ids
+                        ),
+                    )
+                    return await self._request_clarification(
+                        request, rounds, source_stage="SLOT_MERGE",
+                        semantic_extractions=chat._semantic_extraction_items,
+                    )
             if deterministic_slot_reply:
                 request.assumptions.append("DETERMINISTIC_SLOT_FAST_PATH")
         else:
             request = (
-                raw_rule_request
+                semantic_decision_request
+                if semantic_decision_request is not None
+                else raw_rule_request
                 if independent_chat or deterministic_business_fast_path
                 else await self._classify(
-                    classification_question, identity, chat.conversation_id
+                    classification_question,
+                    identity,
+                    chat.conversation_id,
+                    pre_resolved=chat._completed_question_execution,
+                    agent_prompt=await self._agent_prompt_text(chat),
+                    planner_extraction=chat._planner_extraction,
                 )
             )
             current_request = request.model_copy(deep=True)
@@ -3074,7 +4282,28 @@ class DataAnalysisOrchestrator:
                                 request.missing_slots = required_missing_slots(request)
                         request.rewritten_question = render_execution_question(request)
 
-        if rewrite is not None:
+        if chat._completed_question_execution:
+            # V2 already owns historical completion. V1 keeps context-free
+            # normalization of this current question, then owns all planning
+            # and execution stages as usual.
+            request.original_question = chat.question
+            request.rewritten_question = (
+                rewrite.rewritten_question if rewrite is not None else chat.question
+            )
+            request.rewrite_context_applied = False
+            request.rewrite_degraded = bool(rewrite and rewrite.degraded)
+            request.rewrite_events = (
+                [event.__dict__ for event in rewrite.events]
+                if rewrite is not None else []
+            )
+            if rewrite is not None and rewrite.semantic_model_version:
+                request.semantic_model_version = rewrite.semantic_model_version
+            request.assumptions = [
+                value for value in request.assumptions
+                if value != "MODEL_QUESTION_COMPLETION_APPLIED"
+            ]
+            request.assumptions.append("V2_COMPLETED_QUESTION_PRESERVED")
+        elif rewrite is not None:
             model_completion_applied = (
                 "MODEL_QUESTION_COMPLETION_APPLIED" in request.assumptions
             )
@@ -3124,6 +4353,13 @@ class DataAnalysisOrchestrator:
             request.asl_template = copy.deepcopy(previous_for_rewrite.asl_template)
             request.assumptions.append("DETERMINISTIC_TIME_FAST_PATH")
 
+        bind_authorized_scope(
+            request,
+            chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=(
+                chat._demo_execution_resolved_business_domain_ids
+            ),
+        )
         if rewrite is not None and rewrite.semantic_matches:
             # The entity-attribute endpoint is scoped to the current semantic
             # model/domain.  Use its latest dimension labels for both the raw
@@ -3174,9 +4410,34 @@ class DataAnalysisOrchestrator:
                     "missing_slots": [],
                 },
             )
+        admission_current = raw_rule_request
+        if semantic_decision_request is not None:
+            # The accepted V2 plan has already bound the complete current
+            # semantic shape to an authorized catalog.  The early rule parse is
+            # still authoritative for turn relation, but must not overwrite the
+            # plan's metrics, dimensions or filters during slot protection.
+            self.turn_admission_gate.rebind_current_semantic_shape(
+                turn_decision,
+                request,
+                replace_filters=True,
+            )
+            admission_current = request
+        elif "MODEL_FILTER_EXTRACTION_AUTHORITATIVE" in request.assumptions:
+            # Turn admission is intentionally evaluated early from a cheap rule
+            # parse so it can decide whether history may be read.  Once the
+            # structured model has produced literal-grounded filters, refresh
+            # only the current semantic slots and protect those values instead
+            # of replaying the earlier phrase-shaped rule guess.  Relation and
+            # inheritance decisions remain unchanged.
+            self.turn_admission_gate.rebind_current_semantic_shape(
+                turn_decision,
+                request,
+                replace_filters=True,
+            )
+            admission_current = request
         request = self.turn_admission_gate.apply_explicit_slot_protection(
             admission_base,
-            raw_rule_request,
+            admission_current,
             turn_decision,
         )
         # A relationship qualifier replacement (for example ``主要科室`` ->
@@ -3236,6 +4497,7 @@ class DataAnalysisOrchestrator:
             count_context = previous_for_rewrite
             if (
                 count_context is None
+                and restore_legacy_semantic_context
                 and not re.search(
                     r"切换话题|换个话题|另一个问题|重新开始|不看(?:之前|上面)",
                     chat.question,
@@ -3300,7 +4562,11 @@ class DataAnalysisOrchestrator:
             )
         )
         relationship_scope_context = previous_for_rewrite
-        if relationship_projection_followup and relationship_scope_context is None:
+        if (
+            relationship_projection_followup
+            and relationship_scope_context is None
+            and restore_legacy_semantic_context
+        ):
             relationship_scope_context = await self.sessions.get_last_request(
                 identity.tenant_id,
                 identity.user_id,
@@ -3366,7 +4632,11 @@ class DataAnalysisOrchestrator:
             )
         )
         metric_scope_context = previous_for_rewrite
-        if metric_only_followup and metric_scope_context is None:
+        if (
+            metric_only_followup
+            and metric_scope_context is None
+            and restore_legacy_semantic_context
+        ):
             metric_scope_context = await self.sessions.get_last_request(
                 identity.tenant_id,
                 identity.user_id,
@@ -3462,7 +4732,10 @@ class DataAnalysisOrchestrator:
             )
             if callable(sanitize_mentions):
                 sanitize_mentions(request)
-        if self.question_rewriter is not None:
+        if (
+            self.question_rewriter is not None
+            and semantic_decision_request is None
+        ):
             # Resolve extracted filter literals separately from the whole
             # question.  A small whole-query top-k can otherwise omit an exact
             # entity value (for example 费森尤斯=母厂牌) and leave the model's
@@ -3473,6 +4746,9 @@ class DataAnalysisOrchestrator:
                     semantic_model_id=chat.semantic_model_id,
                     business_domain_id=self._effective_business_domain_id(chat),
                     business_domain_ids=list(chat.business_domain_ids),
+                    verified_filter_bindings=getattr(
+                        chat, "_context_verified_filter_bindings", ()
+                    ),
                 )
             )
             if callable(sanitize_mentions):
@@ -3598,7 +4874,11 @@ class DataAnalysisOrchestrator:
                 or sort_scope_context is not None
             )
         )
-        if sort_only_turn and sort_scope_context is None:
+        if (
+            sort_only_turn
+            and sort_scope_context is None
+            and restore_legacy_semantic_context
+        ):
             sort_scope_context = await self.sessions.get_last_request(
                 identity.tenant_id,
                 identity.user_id,
@@ -3794,7 +5074,11 @@ class DataAnalysisOrchestrator:
             re.sub(r"\s+", "", chat.question).lower(),
         ))
         limit_scope_context = previous_for_rewrite
-        if limit_only_turn and limit_scope_context is None:
+        if (
+            limit_only_turn
+            and limit_scope_context is None
+            and restore_legacy_semantic_context
+        ):
             limit_scope_context = await self.sessions.get_last_request(
                 identity.tenant_id,
                 identity.user_id,
@@ -3914,6 +5198,8 @@ class DataAnalysisOrchestrator:
         await self._apply_recent_region_set_reference(request, chat, identity)
         rules = getattr(self.classifier, "rules", self.classifier)
         required_missing_slots = getattr(rules, "required_missing_slots", None)
+        apply_region_clear_barrier(request)
+        apply_snapshot_display_default(request)
         if callable(required_missing_slots):
             request.missing_slots = required_missing_slots(request)
         rewrite_ambiguities = (
@@ -3932,6 +5218,7 @@ class DataAnalysisOrchestrator:
             ]
             if request.semantic_ambiguities and "semantic_ambiguity" not in request.missing_slots:
                 request.missing_slots.append("semantic_ambiguity")
+        self._suppress_confirmed_slot_ambiguities(request)
         if turn_decision.relation == TurnRelation.AMBIGUOUS_RELATION:
             relation_ambiguity = SemanticAmbiguity(
                 ambiguity_id=f"turn-relation-{request.request_id}",
@@ -3965,9 +5252,14 @@ class DataAnalysisOrchestrator:
             turn_decision,
             chat.question,
         )
-        execution_question, canonical_question, execution_source = (
-            select_data_execution_question(request, turn_decision, chat.question)
-        )
+        if chat._completed_question_execution:
+            execution_question = request.rewritten_question or chat.question
+            canonical_question = execution_question
+            execution_source = "V2_COMPLETED_QUESTION"
+        else:
+            execution_question, canonical_question, execution_source = (
+                select_data_execution_question(request, turn_decision, chat.question)
+            )
         request.rewritten_question = execution_question
         request.assumptions.append(f"EXECUTION_QUERY_SOURCE={execution_source}")
         turn_decision.context_after = self.turn_admission_gate.context_snapshot(request)
@@ -3977,12 +5269,14 @@ class DataAnalysisOrchestrator:
             )
         )
         request.turn_admission = turn_decision
+        # CONTEXT_MERGE is a mandatory structural event for every request,
+        # including standalone chat turns; it closes the replayable admission.
         await self._append_session_event(
             chat=chat,
             identity=identity,
             event_type=SessionEventType.CONTEXT_MERGE,
-            trace_id=str(request.request_id),
             payload={
+                "request_id": str(request.request_id),
                 "turn_relation": turn_decision.relation.value,
                 "context_mode": turn_decision.context_mode.value,
                 "inheritance_allowed": turn_decision.inherit_business_context,
@@ -4008,7 +5302,9 @@ class DataAnalysisOrchestrator:
                     request.resolved_comparison.model_dump(mode="json")
                     if request.resolved_comparison else None
                 ),
-                "canonical_query": canonical_question,
+                # Only the bounded length is replayable; the full
+                # question text never enters an event payload.
+                "canonical_query_length": len(canonical_question or ""),
                 "execution_query_source": execution_source,
             },
         )
@@ -4025,18 +5321,22 @@ class DataAnalysisOrchestrator:
             if turn_decision.inherit_business_context
             else None
         )
-        request.semantic_model_id = chat.semantic_model_id
-        request.database_id = chat.database_id
-        request.business_domain_ids = list(chat.business_domain_ids)
-        request.business_domain_selection_mode = (
-            "EXPLICIT" if chat.business_domain_ids else "AUTO"
+        bind_authorized_scope(
+            request,
+            chat.authorized_semantic_scope,
+            execution_resolved_business_domain_ids=(
+                chat._demo_execution_resolved_business_domain_ids
+            ),
         )
         request.dependency_constraints = list(chat.dependency_constraints)
+        internal_assumptions = _INTERNAL_ASSUMPTIONS.get()
         request.assumptions = list(dict.fromkeys([
             *request.assumptions,
-            *_INTERNAL_ASSUMPTIONS.get(),
+            *internal_assumptions,
             *(["STRUCTURED_TASK_RECALL"] if recalled_task_frame else []),
         ]))
+        # A sales-record relationship is not a time interval. Child tasks keep
+        # the parent's explicit period, or remain unbounded when it has none.
         if (
             "LATEST_RESULT_DATASET_NOT_REUSABLE" in request.assumptions
             and re.search(
@@ -4075,6 +5375,12 @@ class DataAnalysisOrchestrator:
                 request,
                 file_status=str(chat._file_inspection.get("status") or "NOT_PROVIDED"),
                 file_based=bool(chat._file_inspection.get("file_based")),
+                business_domain_labels=chat._business_domain_labels,
+                semantic_extractions=chat._semantic_extraction_items,
+                question_chain=[turn.content for turn in chat.history if turn.role == "user"],
+                include_resolved_context=(
+                    not chat._intent_context_progress_emitted
+                ),
             ),
             intent=request.primary_intent.value,
             confidence=round(float(request.intent_confidence), 4),
@@ -4103,11 +5409,56 @@ class DataAnalysisOrchestrator:
             sheet_count=file_inspection.get("sheet_count"),
         )
 
-        if chat.use_longterm_memory and self.memories is not None:
+        if (chat.use_longterm_memory and self.memories is not None
+                and has_stable_user_principal(identity.tenant_id, identity.user_id)):
             await emit_progress(
                 "MEMORY_RETRIEVAL", "RUNNING", "正在加载用户确认过的长期记忆。"
             )
             await self._apply_confirmed_memories(request)
+            await self._append_session_event(
+                chat=chat,
+                identity=identity,
+                event_type=SessionEventType.MEMORY_RECALL,
+                payload={
+                    "request_id": str(request.request_id),
+                    "recalled_memory_ids": request.confirmed_memory_ids,
+                    "recall_available": (
+                        "LONG_TERM_MEMORY_UNAVAILABLE" not in request.assumptions
+                    ),
+                },
+            )
+            if self.memory_manager is not None:
+                try:
+                    written = await self.memory_manager.remember_explicit_defaults(
+                        request,
+                        question=chat.question,
+                        scope=MemoryScope(
+                            tenant_id=request.tenant_id,
+                            user_id=request.user_id,
+                            application_id=request.application_id,
+                        ),
+                        session_id=chat.conversation_id,
+                        message_id=chat.message_id,
+                        actor=identity.user_id,
+                    )
+                except Exception as exc:
+                    # Remembering a preference is enrichment only; a memory
+                    # backend outage must never discard the business answer.
+                    written = []
+                    logger.warning("long-term memory write failed: %s", exc)
+                for memory in written:
+                    await self._append_session_event(
+                        chat=chat,
+                        identity=identity,
+                        event_type=SessionEventType.MEMORY_WRITE,
+                        payload={
+                            "request_id": str(request.request_id),
+                            "memory_id": memory.memory_id,
+                            "memory_type": memory.memory_type.value,
+                            "memory_key": memory.memory_key,
+                            "summary": memory.summary,
+                        },
+                    )
             await emit_progress(
                 "MEMORY_RETRIEVAL", "COMPLETED", "长期记忆加载完成。"
             )
@@ -4171,9 +5522,11 @@ class DataAnalysisOrchestrator:
                 chat=chat,
                 identity=identity,
                 event_type=SessionEventType.QUERY_RESOLUTION,
-                trace_id=str(request.request_id),
                 payload={
-                    "raw_query": chat.question,
+                    "request_id": str(request.request_id),
+                    # Only the bounded length is replayable; the full
+                    # question text never enters an event payload.
+                    "raw_query_length": len(chat.question or ""),
                     "turn_relation": (
                         request.turn_relation.value
                         if request.turn_relation else None
@@ -4302,7 +5655,11 @@ class DataAnalysisOrchestrator:
                 "生成自然语言追问文本，引导用户补充缺失条件。",
                 missing_slots=list(request.missing_slots),
             )
-            return await self._request_clarification(request, rounds)
+            return await self._request_clarification(
+                request,
+                rounds,
+                semantic_extractions=chat._semantic_extraction_items,
+            )
 
         await emit_progress(
             "COMPLETENESS_CHECK", "COMPLETED", "执行所需的关键信息已满足。"
@@ -4329,8 +5686,8 @@ class DataAnalysisOrchestrator:
                 "DATA_RETRIEVAL",
                 "RUNNING",
                 "### ◉ 规划与执行\n"
-                "分析链路：智能语义查询器 → 独立 SQL 执行服务 → 数据集 → 分析。\n"
-                "正在按顺序执行查询规划与数据读取。",
+                f"执行链路：{QUERY_EXECUTION_CHAIN}。\n"
+                "正在按以上链路执行查询规划与数据读取。",
             )
             try:
                 relationship_count_request = self._relationship_count_projection_request(request)
@@ -4348,12 +5705,40 @@ class DataAnalysisOrchestrator:
                             request, query_result
                         )
                 except AdapterError as first_error:
+                    retry_question: str | None = None
                     retry_code = (
                         first_error.upstream_code
                         if first_error.upstream_code in SEMANTIC_QUERY_RETRY_CODES
                         else first_error.code
                     )
-                    if first_error.code == "ANALYSIS_RESULT_CONTRACT_INVALID":
+                    optional_time_ambiguities = (
+                        self._semantic_ambiguities(first_error)
+                        if first_error.code == "ASL_AMBIGUOUS"
+                        else []
+                    )
+                    if semantic_ambiguity_has_safe_time_default(
+                        retrieval_request,
+                        optional_time_ambiguities,
+                    ):
+                        await emit_progress(
+                            "DATA_RETRIEVAL",
+                            "RUNNING",
+                            "时间范围已有受控默认值，正在按该口径重新规划一次。",
+                            error_code=first_error.code,
+                        )
+                        retry_assumption = (
+                            "SEMANTIC_QUERY_RETRY:"
+                            + json.dumps(
+                                first_error.details,
+                                ensure_ascii=False,
+                                separators=(",", ":"),
+                                default=str,
+                            )[:4000]
+                        )
+                        retry_question = render_execution_question(
+                            retrieval_request
+                        )
+                    elif first_error.code == "ANALYSIS_RESULT_CONTRACT_INVALID":
                         await emit_progress(
                             "DATA_RETRIEVAL",
                             "RUNNING",
@@ -4390,6 +5775,7 @@ class DataAnalysisOrchestrator:
                     retry_request = retrieval_request.model_copy(deep=True, update={
                         "request_id": uuid4(),
                         "asl_template": None,
+                        **({"rewritten_question": retry_question} if retry_question else {}),
                         "assumptions": [
                             *retrieval_request.assumptions,
                             retry_assumption,
@@ -4411,7 +5797,12 @@ class DataAnalysisOrchestrator:
                     request.semantic_ambiguities = self._semantic_ambiguities(exc)
                     request.ambiguities = self._ambiguity_texts(exc)
                     request.missing_slots = ["semantic_ambiguity"]
-                    return await self._request_clarification(request, rounds)
+                    return await self._request_clarification(
+                        request,
+                        rounds,
+                        source_stage='SQL_TRANSLATOR' if exc.code == 'SQL_TRANSLATION_AMBIGUOUS' else 'OAGNET_ASL_GENERATION',
+                        semantic_extractions=chat._semantic_extraction_items,
+                    )
                 if exc.code == "ANALYSIS_RESULT_CONTRACT_INVALID":
                     requirements = self._analysis_contract_requirements(exc)
                     response = self._fallback(
@@ -4444,9 +5835,13 @@ class DataAnalysisOrchestrator:
                     error_code=exc.code,
                     upstream_code=exc.upstream_code,
                 )
-                return await self._finish_terminal(
-                    request, self._fallback(request, self._dependency_message(exc))
+                failure = self._fallback(
+                    request,
+                    self._dependency_message(exc),
+                    error_code=exc.code,
                 )
+                failure._upstream_error_code = exc.upstream_code
+                return await self._finish_terminal(request, failure)
 
         query_result = await self._requery_system_default_trend_at_watermark(
             request,
@@ -4454,42 +5849,49 @@ class DataAnalysisOrchestrator:
             chat,
             identity,
         )
-        self._restore_projected_filter_columns(request, query_result.dataset)
-        query_result = self._enforce_name_projection_integrity(
-            request, query_result
+        return await self._complete_query_result(
+            chat, identity, request, query_result,
+            dataset_id=dataset_id, external_search_mode=external_search_mode,
         )
+
+    async def _complete_query_result(
+        self, chat, identity, request, query_result, *,
+        dataset_id=None, external_search_mode=None,
+    ):
+        self._restore_projected_filter_columns(request, query_result.dataset)
+        cleaned_result = clean_name_list(request.primary_intent, query_result)
+        if cleaned_result is not query_result:
+            # A cached/imported raw dataset must not masquerade as the cleaned list.
+            dataset_id = None
+        query_result = cleaned_result
+        list_cleanup_note = cleanup_message(query_result)
         await emit_progress(
             "DATA_RETRIEVAL",
             "COMPLETED",
             (
                 "调度执行完成。\n"
-                "数据集输出：\n"
-                f"查询字段：{_compact_trace_value(query_result.dataset.columns, 800)}；\n"
                 f"返回行数：{query_result.dataset.row_count}；\n"
-                f"结果总行数：{query_result.dataset.total_row_count}；\n"
-                f"数据质量：{_quality_status_text(query_result.dataset.quality_status)}；\n"
-                f"查询快照时间：{_business_datetime_text(query_result.dataset.data_as_of)}；\n"
-                f"数据预览：{_compact_trace_value(query_result.dataset.rows[:2], 1200)}。\n"
-                f"结果状态：{'结果已截断，完整数据通过结果文件提供。' if query_result.dataset.truncated else '当前结果未截断。'}"
+                + (
+                    "全量清理后行数：未知。"
+                    if list_cleanup_note and query_result.dataset.truncated
+                    else f"结果总行数：{query_result.dataset.total_row_count}。"
+                )
+                + (f"\n{list_cleanup_note}" if list_cleanup_note else "")
             ),
             row_count=query_result.dataset.row_count,
             truncated=query_result.dataset.truncated,
         )
 
-        self._bind_metrics_from_asl(request, query_result.asl, chat.semantic_model_id)
+        with track_operation(
+            "V1_ORCHESTRATION",
+            "v1.semantic_binding",
+        ) as timing:
+            self._bind_metrics_from_asl(
+                request, query_result.asl, chat.semantic_model_id
+            )
+            timing.mark_first_result()
         if query_result.sql not in {"DATASET_FOLLOWUP_NO_SQL", "UPLOADED_DATASET_NO_SQL"}:
             request.asl_template = query_result.asl
-        if query_result.dataset.quality_status.upper() in {
-            "FAIL",
-            "FAILED",
-            "INVALID",
-            "ERROR",
-        }:
-            response = self._fallback(
-                request, "上游数据质量校验失败，本次不生成分析结论，请先修复数据后重试。"
-            )
-            response.result_file_url = query_result.result_file_url
-            return await self._finish_terminal(request, response)
         total_row_count = (
             query_result.dataset.total_row_count
             if query_result.dataset.total_row_count is not None
@@ -4578,6 +5980,64 @@ class DataAnalysisOrchestrator:
             request.assumptions.append("LATEST_RESULT_DATASET_NOT_REUSABLE")
             await self.sessions.put_last_request(request)
             return await self._finish_terminal(request, response)
+        if query_result.result_export_error and not query_result.result_file_url:
+            # Export failure is a delivery failure, not a query failure. Keep
+            # the preview separate from full-data calculations and follow-ups.
+            preview = query_result.dataset.rows[:20]
+            note = query_result.result_export_error
+            evidence = [EvidenceItem(
+                evidence_id=f"query:{query_result.dataset.snapshot_id}",
+                kind="QUERY_RESULT",
+                source_ref=f"data-source:{query_result.data_source_id or 'unknown'}",
+                payload={
+                    "columns": query_result.dataset.columns,
+                    "row_count": total_row_count,
+                    "returned_row_count": len(preview),
+                    "total_row_count_confirmed": total_row_count_confirmed,
+                    "truncated": True,
+                    "complete_result_file": False,
+                    "complete_analysis_statistics": False,
+                },
+            )]
+            reliability = ReliabilityReport(
+                level="LIMITED", score=0.65,
+                gates={"query_succeeded": True, "complete_result_available": False,
+                       "preview_disclosed": True},
+                warnings=[note, "以下仅为结果预览，不代表完整清单，未据此计算全量统计。"],
+            )
+            await emit_progress(
+                "RELIABILITY_CHECK", "COMPLETED",
+                render_reliability_validation(
+                    reliability, evidence, query_result.dataset.quality_status,
+                ),
+                reliability_level=reliability.level,
+                reliability_score=reliability.score,
+            )
+            await emit_progress(
+                "INSIGHT_ANALYSIS", "COMPLETED",
+                "查询已成功，但当前仅提供预览；未使用预览推算全量合计、排名或趋势。",
+            )
+            answer = (
+                (f"查询成功，共 {total_row_count} 条结果。" if total_row_count_confirmed
+                 else "查询成功，但上游未确认完整结果条数。")
+                + f"以下展示前 {len(preview)} 条预览，不是完整清单。\n\n"
+                + self._markdown_result_table(
+                    query_result.dataset.columns, preview,
+                    question=request.rewritten_question or request.original_question,
+                )
+                + "\n\n附件说明：" + note
+                + " 本次暂无可下载的完整附件，未基于预览生成全量分析结论。"
+            )
+            if list_cleanup_note:
+                answer += "\n\n" + list_cleanup_note
+            request.assumptions.append("LATEST_RESULT_DATASET_NOT_REUSABLE")
+            await self.sessions.put_last_request(request)
+            return await self._finish_terminal(request, AgentResponse(
+                request_id=request.request_id, conversation_id=request.conversation_id,
+                status="PARTIAL_SUCCESS", intent=request.primary_intent,
+                intent_source=request.intent_source, intent_confidence=request.intent_confidence,
+                answer=answer, evidence=evidence, reliability=reliability,
+            ))
         if (
             total_row_count > self.settings.data_query_max_rows
             and not query_result.result_file_url
@@ -4598,6 +6058,7 @@ class DataAnalysisOrchestrator:
             dataset_id is None
             and query_result.result_file_url
             and request.primary_intent == PrimaryIntent.DETAIL_QUERY
+            and not list_cleanup_note
         ):
             dataset_id = await self._import_query_result_file(
                 request, query_result.result_file_url
@@ -4642,6 +6103,7 @@ class DataAnalysisOrchestrator:
         )
         if (
             not query_result.dataset.rows and not query_result.result_file_url
+            and not (list_cleanup_note and query_result.dataset.truncated)
         ) or no_effective_values:
             # The SQL/ASL contract is still verified when its result is empty.
             # Preserve it as the latest executable context so a subsequent
@@ -4691,7 +6153,7 @@ class DataAnalysisOrchestrator:
                             else "当前没有可用于计算该指标的数据；无数据不等同于指标值为 0。"
                         )
                     ),
-                    evidence=[evidence],
+                    evidence=[evidence, *self._derived_metric_evidence(request, query_result)],
                     reliability=ReliabilityReport(
                         level="HIGH",
                         score=1,
@@ -4699,6 +6161,8 @@ class DataAnalysisOrchestrator:
                     ),
                     dataset_id=dataset_id,
                 )
+                if list_cleanup_note:
+                    response.answer = "查询已完成，清理后没有可展示的有效名称。\n\n" + list_cleanup_note
                 return await self._finish_terminal(request, response)
             scope = "、".join(
                 f"{item.get('field')}={item.get('value')}"
@@ -4725,11 +6189,14 @@ class DataAnalysisOrchestrator:
             if scope:
                 message += f"当前筛选条件：{scope}。"
                 if request.semantic_filter_bindings:
-                    message += "筛选字段和值已经按当前语义模型的实体属性向量库规范化。"
+                    message += (
+                        "筛选字段和值已按当前语义模型核验；该结果表示在此条件下"
+                        "没有匹配的业务记录，可调整时间范围或筛选条件后重试。"
+                    )
                 else:
                     message += (
-                        "本次没有获得可核验的实体属性向量绑定；"
-                        "请使用更完整的业务名称重新查询。"
+                        "筛选条件中的实体名称未能匹配到可核验的业务属性；"
+                        "请使用更完整的业务名称或表述重新查询。"
                     )
             response = self._fallback(request, message)
             response.dataset_id = dataset_id
@@ -4792,11 +6259,6 @@ class DataAnalysisOrchestrator:
                 )
                 + f"\n\n数据充足性说明：{insufficiency}"
             )
-            source_watermark_note = self._source_watermark_note(
-                request, query_result.dataset
-            )
-            if source_watermark_note:
-                answer += f"\n{source_watermark_note}"
             reliability = ReliabilityReport(
                 level="LIMITED",
                 score=(
@@ -4815,8 +6277,11 @@ class DataAnalysisOrchestrator:
             await emit_progress(
                 "RELIABILITY_CHECK",
                 "COMPLETED",
-                "查询结果已通过数据证据校验；分析样本不足，已保留并展示实际数据，"
-                "同时跳过不可靠的分析结论。",
+                render_reliability_validation(
+                    reliability,
+                    evidence,
+                    query_result.dataset.quality_status,
+                ),
                 reliability_level=reliability.level,
                 reliability_score=reliability.score,
             )
@@ -4852,27 +6317,6 @@ class DataAnalysisOrchestrator:
                     "quality_status": query_result.dataset.quality_status,
                     "result_fingerprint": query_result.dataset.snapshot_id,
                     **self._source_watermark_payload(request, query_result.dataset),
-                    **(
-                        {
-                            "presentation": {
-                                "mode": "UNIQUE_RELATIONSHIP_PROJECTION",
-                                "original_relationship_row_count": query_result.dataset.row_count,
-                                "unique_combination_count": len(unique_projection_rows),
-                            }
-                        }
-                        if (
-                            not query_result.dataset.truncated
-                            and (
-                                unique_projection_rows := self._relationship_projection_rows(
-                                    request,
-                                    query_result.dataset.columns,
-                                    query_result.dataset.rows,
-                                )
-                            )
-                            is not None
-                        )
-                        else {}
-                    ),
                 },
             )
         ]
@@ -4937,29 +6381,36 @@ class DataAnalysisOrchestrator:
             )
 
         analysis_output = None
+        insight_output = None
         synthesized_answer: str | None = None
         if _requires_deterministic_analysis(request):
             await emit_progress(
                 "DETERMINISTIC_ANALYSIS", "RUNNING", "正在使用确定性算法计算分析结果。"
             )
             try:
-                analysis_output = (
-                    self.analysis_engine.analyze_ranking(
-                        request,
-                        query_result.dataset.columns,
-                        query_result.dataset.rows,
-                        knowledge_context,
+                with track_operation(
+                    "ANALYSIS",
+                    "analysis.deterministic",
+                    attributes={"intent": request.primary_intent.value},
+                ) as timing:
+                    analysis_output = (
+                        self.analysis_engine.analyze_ranking(
+                            request,
+                            query_result.dataset.columns,
+                            query_result.dataset.rows,
+                            knowledge_context,
+                        )
+                        if ordered_entity_metric_ranking_request(request)
+                        or AnalysisOperator.TOP_N in request.operators
+                        or AnalysisOperator.BOTTOM_N in request.operators
+                        else self.analysis_engine.analyze(
+                            request,
+                            query_result.dataset.columns,
+                            query_result.dataset.rows,
+                            knowledge_context,
+                        )
                     )
-                    if ordered_entity_metric_ranking_request(request)
-                    or AnalysisOperator.TOP_N in request.operators
-                    or AnalysisOperator.BOTTOM_N in request.operators
-                    else self.analysis_engine.analyze(
-                        request,
-                        query_result.dataset.columns,
-                        query_result.dataset.rows,
-                        knowledge_context,
-                    )
-                )
+                    timing.mark_first_result()
             except AnalysisError as exc:
                 fallback = self._fallback(
                     request, f"数据不足以支持可靠分析：{exc}。"
@@ -5016,95 +6467,244 @@ class DataAnalysisOrchestrator:
                     },
                 )
             )
-            if self.analysis_synthesizer is not None:
-                await emit_progress(
-                    "ANSWER_SYNTHESIS", "RUNNING", "正在将已验证的分析事实整理成回答。"
+            insight_output = analysis_output
+        elif request.primary_intent in {
+            PrimaryIntent.METRIC_QUERY,
+            PrimaryIntent.DETAIL_QUERY,
+        }:
+            with track_operation(
+                "ANALYSIS",
+                "analysis.deterministic",
+                attributes={"intent": request.primary_intent.value},
+            ) as timing:
+                insight_output = build_query_result_insight(
+                    request,
+                    query_result.dataset.columns,
+                    query_result.dataset.rows,
+                    total_row_count=total_row_count,
+                    total_row_count_confirmed=total_row_count_confirmed,
+                    truncated=query_result.dataset.truncated,
                 )
-                try:
-                    synthesized_answer, synthesis = (
-                        await self.analysis_synthesizer.synthesize(
-                            request, analysis_output, evidence
-                        )
+                timing.mark_first_result()
+            if insight_output is not None:
+                evidence.append(
+                    EvidenceItem(
+                        evidence_id=f"analysis:{request.request_id}",
+                        kind="ANALYSIS_RESULT",
+                        source_ref=f"deterministic:{insight_output.method}",
+                        payload={
+                            "method": insight_output.method,
+                            "facts": insight_output.facts,
+                            "warnings": insight_output.warnings,
+                        },
                     )
-                    evidence.append(
-                        EvidenceItem(
-                            evidence_id=f"analysis-synthesis:{request.request_id}",
-                            kind="ANSWER_SYNTHESIS",
-                            source_ref=(
-                                f"qwen:{self.settings.analysis_synthesis_model_name}"
-                            ),
-                            payload={
-                                "model": self.settings.analysis_synthesis_model_name,
-                                "claim_count": len(synthesis.claims),
-                                "claims": [
-                                    claim.model_dump(mode="json")
-                                    for claim in synthesis.claims
-                                ],
-                            },
-                        )
-                    )
-                except (
-                    httpx.HTTPError,
-                    KeyError,
-                    RuntimeError,
-                    ValueError,
-                    SynthesisValidationError,
-                ) as exc:
-                    logger.warning(
-                        "analysis synthesis unavailable or rejected; using "
-                        "deterministic answer: %s",
-                        exc,
-                    )
-                    analysis_evidence = next(
-                        item for item in evidence if item.kind == "ANALYSIS_RESULT"
-                    )
-                    warnings = analysis_evidence.payload.setdefault(
-                        "presentation_warnings", []
-                    )
-                    warning = (
-                        "Qwen分析总结未通过可用性或证据校验，"
-                        "已返回确定性分析结果"
-                    )
-                    if warning not in warnings:
-                        warnings.append(warning)
-                await emit_progress(
-                    "ANSWER_SYNTHESIS",
-                    "COMPLETED" if synthesized_answer is not None else "DEGRADED",
-                    (
-                        "分析结论整理完成。"
-                        if synthesized_answer is not None
-                        else "模型总结不可用，已使用确定性分析结论。"
-                    ),
                 )
 
-        reliability = self._reliability(request, evidence, query_result.dataset.quality_status)
+        if insight_output is not None and self.analysis_synthesizer is not None:
+            await emit_progress(
+                "ANSWER_SYNTHESIS", "RUNNING", "正在结合本次问题与查询数据生成分析解读。"
+            )
+            # Only the model input receives this bounded task-local preview;
+            # do not add raw rows to persisted analysis evidence or cross-task context.
+            synthesis_input = replace(insight_output, facts={
+                **insight_output.facts,
+                "query_data": {
+                    "columns": query_result.dataset.columns,
+                    "rows": query_result.dataset.rows[:20],
+                    "returned_row_count": len(query_result.dataset.rows),
+                    "total_row_count": total_row_count,
+                    "total_row_count_confirmed": total_row_count_confirmed,
+                    "sample_only": (
+                        query_result.dataset.truncated
+                        or len(query_result.dataset.rows) > 20
+                        or not total_row_count_confirmed
+                        or total_row_count > len(query_result.dataset.rows)
+                    ),
+                },
+            })
+            try:
+                with track_operation(
+                    "ANALYSIS",
+                    "analysis.synthesis",
+                    attributes={
+                        "model": self.settings.analysis_synthesis_model_name
+                    },
+                ) as timing:
+                    synthesized_answer, synthesis = (
+                        await self.analysis_synthesizer.synthesize(
+                            request, synthesis_input, evidence,
+                            agent_prompt=await self._agent_prompt_text(chat),
+                        )
+                    )
+                    timing.mark_first_result()
+                evidence.append(
+                    EvidenceItem(
+                        evidence_id=f"analysis-synthesis:{request.request_id}",
+                        kind="ANSWER_SYNTHESIS",
+                        source_ref=(
+                            f"qwen:{self.settings.analysis_synthesis_model_name}"
+                        ),
+                        payload={
+                            "model": self.settings.analysis_synthesis_model_name,
+                            "content_validation": "NOT_PERFORMED",
+                            "claim_count": len(synthesis.claims),
+                            "claims": [
+                                claim.model_dump(mode="json")
+                                for claim in synthesis.claims
+                            ],
+                        },
+                    )
+                )
+            except (
+                httpx.HTTPError,
+                KeyError,
+                RuntimeError,
+                ValueError,
+                SynthesisValidationError,
+            ) as exc:
+                logger.warning(
+                    "analysis synthesis unavailable; using "
+                    "deterministic answer: request_id=%s error_type=%s detail=%s",
+                    request.request_id, type(exc).__name__, exc,
+                )
+                analysis_evidence = next(
+                    item
+                    for item in evidence
+                    if item.kind == "ANALYSIS_RESULT"
+                    and item.evidence_id == f"analysis:{request.request_id}"
+                )
+                warnings = analysis_evidence.payload.setdefault(
+                    "presentation_warnings", []
+                )
+                warning = (
+                    "Qwen分析服务暂不可用或未返回可展示文本，"
+                    "已返回确定性分析结果"
+                )
+                if warning not in warnings:
+                    warnings.append(warning)
+            await emit_progress(
+                "ANSWER_SYNTHESIS",
+                "COMPLETED" if synthesized_answer is not None else "DEGRADED",
+                (
+                    "通俗的数据解读已生成。"
+                    if synthesized_answer is not None
+                    else "模型总结不可用，已使用确定性数据摘要。"
+                ),
+            )
+
+        with track_operation(
+            "VALIDATION",
+            "validation.result_reliability",
+        ) as timing:
+            reliability = self._reliability(
+                request, evidence, query_result.dataset.quality_status
+            )
+            timing.mark_first_result()
         await emit_progress(
             "RELIABILITY_CHECK",
             "COMPLETED" if reliability.level != "FAIL" else "FAILED",
-            (
-                "### ◉ 结果研判与应答\n"
-                f"校验结论：{reliability.level}（{reliability.score:.2f}）。\n"
-                f"数据质量：{query_result.dataset.quality_status}；证据数量：{len(evidence)}；"
-                f"告警数量：{len(reliability.warnings)}。\n"
-                + ("结果通过可靠性门禁。" if reliability.level != "FAIL" else "结果未通过可靠性门禁，不输出未经验证的数值。")
+            render_reliability_validation(
+                reliability,
+                evidence,
+                query_result.dataset.quality_status,
             ),
             reliability_level=reliability.level,
             reliability_score=round(float(reliability.score), 4),
         )
+        with track_operation(
+            "ANALYSIS",
+            "chart.specification",
+        ) as timing:
+            chart_specs = (
+                analysis_output.facts.get("chart_specs", [])
+                if analysis_output is not None
+                else []
+            )
+            timing.set_attribute("chart_count", len(chart_specs))
+            timing.mark_first_result()
+        visualization_executions: list[ExtensionExecution] = []
+        mcp_chart_urls: list[str] = []
+        if chart_specs and reliability.level != "FAIL" and chat.mcp:
+            try:
+                with track_operation(
+                    "EXTENSION",
+                    "mcp.chart_render",
+                    attributes={"chart_count": len(chart_specs)},
+                ) as timing:
+                    attempted_visualizations = (
+                        await self.extension_dispatcher.execute_visualizations(
+                            chat=chat,
+                            chart_specs=chart_specs,
+                        )
+                    )
+                    timing.mark_first_result()
+            except Exception as exc:
+                logger.warning(
+                    "configured visualization MCP unavailable: %s",
+                    type(exc).__name__,
+                )
+            else:
+                for execution in attempted_visualizations:
+                    url = self.extension_dispatcher.visualization_url(execution)
+                    if url is None:
+                        logger.warning(
+                            "visualization MCP did not return a usable image: %s",
+                            execution.name,
+                        )
+                        continue
+                    visualization_executions.append(execution)
+                    mcp_chart_urls.append(url)
+        chart_images = []
+        if reliability.level != "FAIL" and not mcp_chart_urls:
+            with track_operation(
+                "EXTENSION",
+                "chart.inline_render",
+                attributes={"chart_count": len(chart_specs)},
+            ) as timing:
+                chart_images = self._render_inline_charts(chart_specs=chart_specs)
+                timing.mark_first_result()
+        chart_display = ""
+        if mcp_chart_urls:
+            remote_images = []
+            for index, url in enumerate(mcp_chart_urls):
+                spec = chart_specs[min(index, len(chart_specs) - 1)]
+                title = self._markdown_image_alt(
+                    str(spec.get("title") or "数据图表")
+                )
+                remote_images.append(f"![{title}]({url})")
+            chart_display = "\n\n#### 图表\n\n" + "\n\n".join(remote_images)
+        elif chart_images:
+            chart_display = "\n\n#### 图表\n\n" + "\n\n".join(chart_images)
+        insight_text = (
+            synthesized_answer
+            or (
+                (
+                    "本次模型分析暂不可用，以下为查询数据摘要：\n\n" + insight_output.answer
+                    if self.analysis_synthesizer is not None
+                    else insight_output.answer
+                )
+                if insight_output is not None
+                else "本次查询没有足够的数据生成补充解读。"
+            )
+        )
+        if (
+            insight_output is not None
+            and insight_output.warnings
+        ):
+            insight_text += "\n需要注意的是，" + "；".join(
+                warning.rstrip("。") for warning in insight_output.warnings
+            ) + "。"
         await emit_progress(
             "INSIGHT_ANALYSIS",
             "COMPLETED" if reliability.level != "FAIL" else "SKIPPED",
             (
-                "### ◉ 结果研判与应答\n"
-                f"分析意图：{self._intent_label(request.primary_intent)}。"
-                + (
-                    "已完成确定性计算、结构化解释和答案优先级筛选。\n"
-                    f"核心判断：{analysis_output.facts.get('structured_analysis_result', {}).get('headline', analysis_output.answer)}\n"
-                    if analysis_output is not None
-                    else "当前意图采用结构化查询结果展示，不额外生成推断性洞察。\n"
-                )
-                + "说明：展示的是可审计的方法和事实摘要，不包含模型内部隐藏推理。"
+                f"分析意图：{self._intent_label(request.primary_intent)}。\n\n"
+                + insight_text
+                + "\n\n以上分析基于本次问题与查询数据，推断性解释不代表已核实的业务原因。"
             ),
+            message_limit=8192,
+            chart_image_count=0,
+            chart_source="NONE",
         )
         if reliability.level == "FAIL":
             response = self._fallback(
@@ -5152,13 +6752,9 @@ class DataAnalysisOrchestrator:
             "entity_period_decline_ranking",
         }
         answer = (
-            (
-                analysis_output.answer
-                if (
-                    analysis_output.method in structured_table_methods
-                )
-                else (synthesized_answer or analysis_output.answer)
-            )
+            # Insight prose belongs to the progress node; the answer plan
+            # supplies final conclusions without repeating that explanation.
+            analysis_output.answer
             if analysis_output is not None
             else (
                 (
@@ -5177,9 +6773,9 @@ class DataAnalysisOrchestrator:
                         result_truncated=True,
                     )
                     + (
-                        "\n完整结果请使用回答末尾的附件链接下载。"
+                        "\n\n说明：完整结果请使用回答末尾的附件链接下载。"
                         if query_result.result_file_url
-                        else "\n本次未收到完整结果文件；请缩小查询范围或继续分页查询。"
+                        else "\n\n说明：本次未收到完整结果文件；请缩小查询范围或继续分页查询。"
                     )
                 )
                 if query_result.dataset.truncated
@@ -5192,8 +6788,24 @@ class DataAnalysisOrchestrator:
                 )
             )
         )
+        if (
+            analysis_output is not None
+            and request.dimensions
+            and analysis_output.method not in structured_table_methods
+        ):
+            # Analysis prose must not replace the requested grouped values.
+            # Render the validated dataset, preserving every returned dimension.
+            answer += "\n\n" + self._analyze(
+                request,
+                query_result.dataset.columns,
+                query_result.dataset.rows,
+                knowledge_context,
+                result_truncated=query_result.dataset.truncated,
+            )
         if analysis_output is not None and analysis_output.warnings:
-            answer += "\n注意事项：" + "；".join(analysis_output.warnings) + "。"
+            answer += "\n\n注意事项：" + "；".join(analysis_output.warnings) + "。"
+        if list_cleanup_note:
+            answer += "\n\n" + list_cleanup_note
         unavailable_fields = [
             value.split("=", 1)[1]
             for value in request.assumptions
@@ -5201,18 +6813,15 @@ class DataAnalysisOrchestrator:
         ]
         if unavailable_fields:
             answer += (
-                "\n字段说明：当前语义模型未配置“"
+                "\n\n字段说明：当前语义模型未配置“"
                 + "、".join(dict.fromkeys(unavailable_fields))
                 + "”，已返回其余可执行指标；未使用其他字段代替该口径。"
             )
         activity_definition_note = self._activity_definition_note(request)
         if activity_definition_note:
-            answer += f"\n{activity_definition_note}"
-        source_watermark_note = self._source_watermark_note(
-            request, query_result.dataset
-        )
-        if source_watermark_note:
-            answer += f"\n{source_watermark_note}"
+            answer += f"\n\n{activity_definition_note}"
+        if chart_display and chart_display not in answer:
+            answer += chart_display
         incomplete_result = bool(
             query_result.dataset.truncated and not query_result.result_file_url
         )
@@ -5242,16 +6851,15 @@ class DataAnalysisOrchestrator:
             reliability=reliability,
             dataset_id=dataset_id,
             result_file_url=query_result.result_file_url,
-            chart_specs=(
-                analysis_output.facts.get("chart_specs", [])
-                if analysis_output is not None
-                else []
-            ),
+            chart_specs=chart_specs,
         )
         if external_search_mode == "ENRICH":
-            response.extension_executions = enrichment_executions
+            response.extension_executions = [
+                *visualization_executions,
+                *enrichment_executions,
+            ]
         else:
-            response.extension_executions = await self.extension_dispatcher.execute(
+            optional_executions = await self.extension_dispatcher.execute(
                 chat=chat,
                 intent=request.primary_intent.value,
                 builtin_skill=skill_for_intent(request.primary_intent),
@@ -5282,6 +6890,10 @@ class DataAnalysisOrchestrator:
                     "summary": True,
                 },
             )
+            response.extension_executions = [
+                *visualization_executions,
+                *optional_executions,
+            ]
             external_supplement, external_records = self._external_search_material(
                 response.extension_executions,
             )
@@ -5385,6 +6997,8 @@ class DataAnalysisOrchestrator:
                 if raw is None:
                     return fallback
                 reference = restore_reference(raw)
+                if reference.scope.authorized_semantic_scope_fingerprint != chat.authorized_semantic_scope.fingerprint():
+                    return fallback
                 # Final chat tables are bounded. Large datasets retain the
                 # child's preview and downloadable dataset reference instead of
                 # being fully materialized merely for presentation.
@@ -5505,7 +7119,14 @@ class DataAnalysisOrchestrator:
                     f"查询条件：规格型号 = `{identifier.group(0)}`；"
                     "“商品名称”列为该规格型号对应的规范商品名称。"
                 )
-        lines.extend(["", cls._markdown_result_table(display_columns, rows)])
+        lines.extend([
+            "",
+            cls._markdown_result_table(
+                display_columns,
+                rows,
+                question=root_question,
+            ),
+        ])
         return "\n".join(lines)
 
     @staticmethod
@@ -5575,6 +7196,7 @@ class DataAnalysisOrchestrator:
             identity.user_id,
             chat.application_id,
             chat.conversation_id,
+            chat.authorized_semantic_scope.fingerprint(),
         )
         try:
             result = await asyncio.to_thread(
@@ -5650,6 +7272,7 @@ class DataAnalysisOrchestrator:
                     identity.user_id,
                     request.application_id,
                     request.conversation_id,
+                    request.authorized_semantic_scope.fingerprint() if request.authorized_semantic_scope else '',
                 ),
                 file_format=file_format,
                 title="数据分析报告",
@@ -5680,6 +7303,49 @@ class DataAnalysisOrchestrator:
         )
         response.answer += f"\n已生成{file_format.upper()}文件，可通过返回的 files[0].download_url 下载。"
 
+    def _render_inline_charts(
+        self,
+        *,
+        chart_specs: list[dict[str, Any]],
+    ) -> list[str]:
+        """Embed validated chart specs as inert SVG for existing web clients.
+
+        Native clients may continue to consume ``AgentResponse.chart_specs``.
+        Inline SVG avoids making browser rendering depend on a cross-origin,
+        expiring object-store URL. Rendering is presentation-only and failure
+        never changes the query or analysis result.
+        """
+
+        if not chart_specs:
+            return []
+        images: list[str] = []
+        for chart_spec in chart_specs[:3]:
+            try:
+                payload = render_chart_svg(chart_spec)
+                if not payload:
+                    continue
+                svg = payload.decode("utf-8")
+                svg = svg.replace(
+                    "<svg ",
+                    '<svg style="max-width:100%;height:auto;display:block" ',
+                    1,
+                )
+                images.append(svg)
+            except Exception as exc:
+                logger.warning("inline chart rendering failed: %s", exc)
+        return images
+
+    @staticmethod
+    def _markdown_image_alt(value: str) -> str:
+        """Keep a chart title valid inside Markdown image alternative text."""
+
+        return (
+            re.sub(r"[\r\n]+", " ", value).strip()
+            .replace("\\", "\\\\")
+            .replace("[", "\\[")
+            .replace("]", "\\]")
+        ) or "数据图表"
+
     async def _knowledge_document_answer(
         self, request: CanonicalAnalysisRequest, identity: TrustedIdentity
     ) -> AgentResponse:
@@ -5698,7 +7364,7 @@ class DataAnalysisOrchestrator:
                 request, empty_dataset, identity
             )
         except AdapterError as exc:
-            return self._fallback(request, self._dependency_message(exc))
+            return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
         if not context.documents:
             return self._fallback(
                 request,
@@ -5826,29 +7492,17 @@ class DataAnalysisOrchestrator:
         selected: dict[str, Any],
         references: list[dict[str, Any]],
         target_count: int,
+        *,
+        for_global_operation: bool = False,
     ) -> dict[str, Any] | None:
-        """Find the nearest stored ancestor large enough for an expanded slice."""
-
-        by_id = {
-            str(item.get("dataset_id")): item
-            for item in references
-            if item.get("dataset_id")
-        }
-        queue = list(selected.get("parent_dataset_ids") or [])
-        visited: set[str] = set()
-        while queue:
-            dataset_id = str(queue.pop(0))
-            if dataset_id in visited:
-                continue
-            visited.add(dataset_id)
-            candidate = by_id.get(dataset_id)
-            if candidate is None:
-                continue
-            row_count = candidate.get("row_count")
-            if isinstance(row_count, int) and row_count >= target_count:
-                return candidate
-            queue.extend(candidate.get("parent_dataset_ids") or [])
-        return None
+        """Recover a presentation slice without undoing materialized semantics."""
+        ancestors = presentation_ancestors(selected, references, allow_rank_slice=for_global_operation)
+        if for_global_operation:
+            return next((dict(item) for item in ancestors if dataset_source_complete(item, item['row_count'])), None)
+        # A complete six-row source can satisfy "show ten" with all six rows.
+        # Do not silently stay on its two-row view just because ten is unavailable.
+        return next((dict(item) for item in ancestors if item['row_count'] >= target_count),
+                    dict(ancestors[-1]) if ancestors else None)
 
     async def _try_dataset_followup(
         self, request: CanonicalAnalysisRequest
@@ -5925,6 +7579,10 @@ class DataAnalysisOrchestrator:
                         "指定的数据集不存在、已过期或不属于当前会话，请重新选择。"
                     )
                 return None, None
+            if not self._dataset_reference_matches_scope(selected, request):
+                if request.source_dataset_id:
+                    raise ExplicitDatasetUnavailableError('DATASET_SCOPE_MISMATCH: 指定数据集不属于本轮授权范围。')
+                return None, None
             source_reference = restore_reference(selected)
             scope = scope_for_request(request)
             loaded = await asyncio.to_thread(
@@ -5932,6 +7590,7 @@ class DataAnalysisOrchestrator:
                 source_reference,
                 current_scope=scope,
             )
+            source_complete = dataset_source_complete(loaded.reference, len(loaded.rows))
             operation_question = (
                 request.original_question.rsplit("补充：", 1)[-1].strip()
                 if "补充：" in request.original_question
@@ -5942,29 +7601,50 @@ class DataAnalysisOrchestrator:
                 loaded.reference.columns,
                 loaded.rows,
                 ordering_proof=self._dataset_ordering_proof(loaded.reference),
+                source_complete=source_complete,
             )
             requested_limit = self._operation_limit(operation)
+            global_operation = None
+            if not source_complete and operation is None:
+                proposed = plan_dataset_followup(
+                    operation_question, loaded.reference.columns, loaded.rows,
+                    ordering_proof=self._dataset_ordering_proof(loaded.reference),
+                )
+                if dataset_operation_family(proposed) == 'GLOBAL_RANKING':
+                    global_operation = proposed
             if (
-                requested_limit is not None
-                and requested_limit > loaded.reference.row_count
+                (global_operation is not None or (
+                    requested_limit is not None and requested_limit > loaded.reference.row_count
+                ))
                 and loaded.reference.parent_dataset_ids
+                and 'EXPLICIT_SOURCE_DATASET_SELECTION' not in request.assumptions
             ):
                 expanded = self._expandable_dataset_reference(
-                    selected,
-                    references,
-                    requested_limit,
+                    loaded.reference.to_dict(),
+                    [item for item in references if self._dataset_reference_matches_scope(item, request)],
+                    requested_limit or 0,
+                    for_global_operation=global_operation is not None,
                 )
                 if expanded is not None:
                     source_reference = restore_reference(expanded)
-                    loaded = await asyncio.to_thread(
-                        self.dataset_store.load_dataset,
-                        source_reference,
-                        current_scope=scope,
-                    )
+                    try:
+                        loaded = await asyncio.to_thread(
+                            self.dataset_store.load_dataset,
+                            source_reference,
+                            current_scope=scope,
+                        )
+                    except Exception:
+                        # Automatic recovery is optional; an expired/unreadable
+                        # ancestor cannot turn a partial view into global evidence.
+                        request.source_dataset_id = None
+                        request.execution_mode = 'QUERY_DATABASE'
+                        return None, None
+                    source_complete = dataset_source_complete(loaded.reference, len(loaded.rows))
                     operation = plan_dataset_followup(
                         operation_question,
                         loaded.reference.columns,
                         loaded.rows,
+                        source_complete=source_complete,
                         ordering_proof=self._dataset_ordering_proof(
                             loaded.reference
                         ),
@@ -5973,6 +7653,12 @@ class DataAnalysisOrchestrator:
                         "TOP_N_EXPANDED_FROM_BASE_RESULT"
                     )
             if operation is None:
+                if not source_complete:
+                    if 'EXPLICIT_SOURCE_DATASET_SELECTION' in request.assumptions:
+                        raise ExplicitDatasetUnavailableError('当前数据集不完整，无法据此计算全局排名或汇总。需要完整数据集。')
+                    request.source_dataset_id = None
+                    request.execution_mode = 'QUERY_DATABASE'
+                    return None, None
                 self._bind_result_entity_reference(
                     request,
                     operation_question,
@@ -6361,6 +8047,8 @@ class DataAnalysisOrchestrator:
         selections even when each intermediate result contains only one row.
         """
 
+        if chat._completed_question_execution:
+            return
         compact = re.sub(r"\s+", "", chat.question)
         if not re.search(
             r"这(?:两|2)个省份?.{0,12}(?:加起来|合计|总共|一共)", compact
@@ -6378,6 +8066,8 @@ class DataAnalysisOrchestrator:
         )
         selections: list[tuple[str, str]] = []
         for frame in frames:
+            if not self._pending_scope_matches(frame, chat):
+                continue
             frame_regions = [
                 item for item in frame.filters
                 if isinstance(item, dict)
@@ -6437,10 +8127,13 @@ class DataAnalysisOrchestrator:
         never cross semantic-model or explicit business-domain scope. Legacy
         database references without provenance deliberately fail closed.
         """
+        bound_scope = request.authorized_semantic_scope
+        if bound_scope is not None and reference.get('scope', {}).get('authorized_semantic_scope_fingerprint') != bound_scope.fingerprint():
+            return False
         source_type = str(reference.get("source_type") or "")
         model_id = reference.get("semantic_model_id")
-        if source_type == "UPLOADED_SPREADSHEET":
-            return True
+        if source_type == "UPLOADED_SPREADSHEET" and bound_scope is None:
+            return False
         if model_id is None or request.semantic_model_id is None:
             return False
         try:
@@ -6465,9 +8158,7 @@ class DataAnalysisOrchestrator:
             )
         except (TypeError, ValueError):
             return False
-        if request.business_domain_ids:
-            return reference_domains == sorted(request.business_domain_ids)
-        return True
+        return reference_domains == sorted(request.business_domain_ids)
 
     async def _persist_query_dataset(
         self, request: CanonicalAnalysisRequest, query_result: DataQueryResult
@@ -6499,6 +8190,7 @@ class DataAnalysisOrchestrator:
             }, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest()
             provenance = {
                 "type": "query_provenance",
+                "source_truncated": query_result.dataset.truncated,
                 "query_fingerprint": query_fingerprint,
                 "semantic_model_version": request.semantic_model_version,
                 "ranked": ranked,
@@ -6521,7 +8213,10 @@ class DataAnalysisOrchestrator:
                     metric.metric_id or metric.canonical_name or metric.input
                     for metric in request.metrics
                 ],
-                transformation_log=(provenance,),
+                transformation_log=(provenance, *(
+                    item for item in query_result.execution_transforms
+                    if item.get("type") == "NAME_LIST_CLEANUP"
+                )),
                 ttl_seconds=self.settings.dataset_ttl_seconds,
             )
             await self.sessions.put_dataset_reference(
@@ -6566,10 +8261,216 @@ class DataAnalysisOrchestrator:
             return None
 
     async def _classify(
-        self, question: str, identity: TrustedIdentity, conversation_id: str
+        self,
+        question: str,
+        identity: TrustedIdentity,
+        conversation_id: str,
+        *,
+        pre_resolved: bool = False,
+        agent_prompt: str = "",
+        planner_extraction: PlannerExtraction | None = None,
     ) -> CanonicalAnalysisRequest:
-        classified = self.classifier.classify(question, identity, conversation_id)
-        return await classified if inspect.isawaitable(classified) else classified
+        # 规划阶段已给出意图或参数时，分类只保留规则基线并套用规划提取，
+        # 不再重复调用结构化分类模型。
+        use_extraction = planner_extraction is not None and (
+            planner_extraction.intent is not None
+            or planner_extraction.parameters
+            or planner_extraction.structured is not None
+        )
+        with track_operation(
+            "V1_ORCHESTRATION",
+            "v1.intent_recognition",
+        ) as timing:
+            classify = self.classifier.classify
+            signature = inspect.signature(classify).parameters
+            supports_pre_resolved = "pre_resolved" in signature
+            supports_agent_prompt = "agent_prompt" in signature
+            supports_skip_model = "skip_model" in signature
+            classified = classify(
+                question,
+                identity,
+                conversation_id,
+                **({"pre_resolved": True} if pre_resolved and supports_pre_resolved else {}),
+                **(
+                    {"agent_prompt": agent_prompt}
+                    if agent_prompt and supports_agent_prompt
+                    else {}
+                ),
+                **(
+                    {"skip_model": True}
+                    if use_extraction and supports_skip_model
+                    else {}
+                ),
+            )
+            result = (
+                await classified if inspect.isawaitable(classified) else classified
+            )
+            if use_extraction:
+                result._planner_extraction = planner_extraction
+                if planner_extraction.intent is not None:
+                    result.primary_intent = planner_extraction.intent
+                    result.intent_source = "TASK_PLANNER"
+            self._apply_platform_metric_vocabulary(result, agent_prompt)
+            timing.mark_first_result()
+            timing.set_attribute("intent_source", result.intent_source)
+            return result
+
+    @staticmethod
+    def _platform_metric_aliases(agent_prompt: str) -> dict[str, str]:
+        """Read business metric aliases from the platform's 核心指标 table.
+
+        This deliberately returns business names only.  Metric IDs and
+        physical fields remain owned by semantic retrieval in ASL.
+        """
+
+        aliases: dict[str, str] = {}
+        in_core_metrics = False
+        for raw_line in (agent_prompt or "").splitlines():
+            line = raw_line.strip()
+            if line.startswith("#"):
+                # Platform-generated long prompts currently title this
+                # section as ``### 4. 指标`` while hand-written prompts often
+                # use ``## 三、核心指标``.  Match the semantic heading after
+                # removing either numbering style; requiring the literal
+                # words ``核心指标`` made the published table invisible.
+                heading = re.sub(r"^#+\s*", "", line)
+                heading = re.sub(
+                    r"^(?:(?:\d+)|(?:[一二三四五六七八九十]+))[.、．]?\s*",
+                    "",
+                    heading,
+                ).strip()
+                in_core_metrics = heading in {"指标", "核心指标"}
+                continue
+            if not in_core_metrics or not line.startswith("|"):
+                continue
+            cells = [cell.strip() for cell in line.strip("|").split("|")]
+            if len(cells) < 2:
+                continue
+            canonical, synonym_text = cells[0], cells[1]
+            if (
+                not canonical
+                or canonical in {"指标", "---"}
+                or set(canonical) <= {"-", ":"}
+            ):
+                continue
+            for value in [
+                canonical,
+                *re.split(r"[、，,；;/]+", synonym_text),
+            ]:
+                normalized = re.sub(r"\s+", "", value).strip()
+                if normalized:
+                    aliases.setdefault(normalized, canonical)
+        return aliases
+
+    @classmethod
+    def _apply_platform_metric_vocabulary(
+        cls,
+        request: CanonicalAnalysisRequest,
+        agent_prompt: str,
+    ) -> None:
+        """Apply configured business aliases before ASL vector binding.
+
+        The platform prompt may define, for example, 销售额 as the business
+        synonym of 含税销售总额.  Preserve that explicit convention as a
+        canonical business surface, while leaving the metric ID unresolved so
+        ASL still performs vector retrieval against the published catalog.
+        """
+
+        aliases = cls._platform_metric_aliases(agent_prompt)
+        # Row-level comparisons are not aggregate metric aliases. The planner
+        # and ASL will bind the amount attribute; do not rewrite 单笔销售额 as
+        # 单笔含税销售总额 before they see the completed question.
+        if (request.primary_intent == PrimaryIntent.DETAIL_QUERY
+                and re.search(r"单笔|逐笔|每笔|每条|逐条",
+                              request.rewritten_question or request.original_question)):
+            return
+        if not aliases or not request.metrics:
+            return
+        rewritten_metrics: list[MetricRef] = []
+        applied: list[tuple[str, str]] = []
+        for metric in request.metrics:
+            if metric.metric_id:
+                rewritten_metrics.append(metric)
+                continue
+            original = re.sub(r"\s+", "", metric.canonical_name or metric.input)
+            lookup = original
+            trend_match = re.fullmatch(r"(.+?)(?:趋势|走势|变化)", lookup)
+            if trend_match:
+                lookup = trend_match.group(1)
+            # Plain “销售趋势” is the ordinary-language ellipsis of the
+            # configured 销售额 default; explicit 销售量/订单数 wording keeps
+            # its own configured alias instead.
+            if lookup == "销售" and "销售额" in aliases:
+                lookup = "销售额"
+            canonical = aliases.get(lookup)
+            if not canonical:
+                rewritten_metrics.append(metric)
+                continue
+            rewritten_metrics.append(metric.model_copy(update={
+                "input": canonical,
+                "canonical_name": canonical,
+            }))
+            if canonical != original:
+                applied.append((original, canonical))
+        request.metrics = rewritten_metrics
+        if not applied:
+            return
+        for original, canonical in applied:
+            marker = f"AGENT_PROMPT_METRIC_ALIAS={original}->{canonical}"
+            if marker not in request.assumptions:
+                request.assumptions.append(marker)
+        completed = request.rewritten_question or request.original_question
+        for original, canonical in sorted(applied, key=lambda item: -len(item[0])):
+            if original and original in completed:
+                suffix = next(
+                    (
+                        value
+                        for value in ("趋势", "走势", "变化")
+                        if original.endswith(value)
+                    ),
+                    "",
+                )
+                completed = completed.replace(original, canonical + suffix)
+        sales_canonical = next(
+            (
+                canonical
+                for original, canonical in applied
+                if original in {"销售", "销售额", "销售趋势"}
+            ),
+            None,
+        )
+        if sales_canonical:
+            completed = re.sub(
+                r"销售(?=趋势|走势|变化)",
+                sales_canonical,
+                completed,
+            )
+        request.rewritten_question = completed
+
+    async def _agent_prompt_text(self, chat: ChatRequest | None) -> str:
+        """Platform-configured user prompt for this request, conflict-filtered.
+
+        A transport-provided prompt wins; otherwise the latest platform
+        version row is read live (New_Agent contract) so prompt edits apply
+        to the next request without redeploying this service.
+        """
+        if chat is None:
+            return ""
+        if chat.prompt is not None:
+            return chat.prompt.render()
+        store = getattr(self, "agent_prompt_store", None)
+        if store is None:
+            return ""
+        try:
+            latest = await store.resolve(
+                chat.application_id,
+                semantic_model_id=chat.semantic_model_id,
+            )
+        except Exception:
+            return ""
+        if not latest:
+            return ""
+        return AgentPromptConfig(**latest).render()
 
     def _classify_with_rules(
         self, question: str, identity: TrustedIdentity, conversation_id: str
@@ -6598,10 +8499,16 @@ class DataAnalysisOrchestrator:
             or not pending.semantic_ambiguities
         ):
             return None
-        ambiguity = pending.semantic_ambiguities[0]
-        if not ambiguity.candidates:
+        ambiguity = next((item for item in pending.semantic_ambiguities if item.blocking), None)
+        if ambiguity is None or not ambiguity.candidates:
             return None
         compact = re.sub(r"\s+", "", answer).strip("，,。.!！?？;；：:")
+        # Pending prompts tell users they may reply with the full candidate
+        # name wrapped in quote marks (``就按「…」这个来吧``).  Match the
+        # quoted span itself, never the surrounding discourse.
+        quoted_choice = extract_quoted_choice_candidate(answer)
+        if quoted_choice is not None:
+            compact = re.sub(r"\s+", "", quoted_choice).strip("，,。.!！?？;；：:")
         chinese_numbers = {
             "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
             "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
@@ -6625,23 +8532,16 @@ class DataAnalysisOrchestrator:
                     if index < len(ambiguity.candidate_details)
                     else {}
                 )
-                aliases = {
-                    str(candidate).strip(),
-                    *(
-                        str(detail.get(key) or "").strip()
-                        for key in (
-                            "label", "canonical_name", "canonical_code",
-                            "attribute_name", "entity_name", "value",
-                        )
-                    ),
-                }
-                aliases.discard("")
                 normalized_aliases = {
                     re.sub(r"\s+", "", value).strip("，,。.!！?？;；：:")
-                    for value in aliases
+                    for value in cls._candidate_aliases(candidate, detail)
                 }
                 if compact in normalized_aliases:
                     matched_indexes.append(index)
+            if not matched_indexes:
+                # 严格别名没命中再做近似匹配：用户凭记忆复述候选名常差一两个
+                # 通用字（如“含税销售金额”对“含税销售总额”），唯一高分才接。
+                matched_indexes = cls._fuzzy_candidate_match(compact, ambiguity)
             if len(set(matched_indexes)) != 1:
                 return None
             selected_index = matched_indexes[0]
@@ -6655,8 +8555,15 @@ class DataAnalysisOrchestrator:
         canonical_name = str(
             detail.get("canonical_name") or detail.get("attribute_name") or ""
         ).strip()
-        canonical_value = str(detail.get("value") or "").strip()
-        if ambiguity.type == "metric":
+        canonical_value = str(
+            detail.get("value")
+            or detail.get("canonical_value")
+            or detail.get("attribute_value")
+            or ""
+        ).strip()
+        if ambiguity.ambiguity_id == 'LEGACY_BARE_NAME_OPERATION' and ambiguity.phrase:
+            confirmation = ('列出' if detail.get('operation') == 'PROJECTION' else '按') + ambiguity.phrase
+        elif ambiguity.type == "metric":
             confirmation = "指标是" + (canonical_name or label)
         elif ambiguity.type == "dimension":
             confirmation = "维度是" + (canonical_name or label)
@@ -6674,6 +8581,178 @@ class DataAnalysisOrchestrator:
             "confirmation": confirmation,
         }
 
+    @staticmethod
+    def _candidate_aliases(candidate: Any, detail: dict[str, Any]) -> set[str]:
+        """候选的全部可匹配名称，含展示组合串拆出的独立片段。
+
+        候选文本常是“编码（中文名）”的展示格式，只拿整串去比对时，用户
+        单答中文名或单答编码都对不上，拆开后各自独立参与匹配。
+        """
+        aliases = {
+            str(candidate).strip(),
+            *(
+                str(detail.get(key) or "").strip()
+                for key in (
+                    "label", "canonical_name", "canonical_code",
+                    "attribute_name", "attribute_code", "entity_name",
+                    "value", "canonical_value", "attribute_value",
+                )
+            ),
+        }
+        parts: set[str] = set()
+        for alias in aliases:
+            if not alias:
+                continue
+            parts.add(alias)
+            for inner in re.findall(r"[（(]([^（）()]+)[）)]", alias):
+                inner = inner.strip()
+                if inner:
+                    parts.add(inner)
+            outer = re.sub(r"[（(][^（）()]*[）)]", "", alias).strip()
+            if outer:
+                parts.add(outer)
+        parts.discard("")
+        return parts
+
+    @classmethod
+    def _fuzzy_candidate_match(
+        cls,
+        compact: str,
+        ambiguity: SemanticAmbiguity,
+    ) -> list[int]:
+        """严格别名不中时的近似匹配，只接受唯一高分候选。
+
+        两条规则任一命中即给分：去掉通用计量后缀后完全相同；或与候选的
+        中文别名相似度不低于 0.8。多个候选都过线且分差不足 0.1 时视为
+        仍有歧义，不接，交给澄清流程继续问。
+        """
+        generic_suffixes = (
+            "总额", "金额", "价值", "费用", "总值",
+            "净值", "总量", "数量", "净额", "余额",
+        )
+
+        def strip_generic(value: str) -> str:
+            for suffix in generic_suffixes:
+                if value.endswith(suffix) and len(value) > len(suffix):
+                    return value[: -len(suffix)]
+            return value
+
+        def normalize(value: str) -> str:
+            return re.sub(r"\s+", "", value).strip("，,。.!！?？;；：:")
+
+        compact_core = strip_generic(compact)
+        scores: list[tuple[float, int]] = []
+        for index, candidate in enumerate(ambiguity.candidates):
+            detail = (
+                ambiguity.candidate_details[index]
+                if index < len(ambiguity.candidate_details)
+                else {}
+            )
+            aliases = cls._candidate_aliases(candidate, detail)
+            best = 0.0
+            for alias in aliases:
+                norm = normalize(alias)
+                if not norm:
+                    continue
+                if compact_core and strip_generic(norm) == compact_core:
+                    best = 1.0
+                    break
+                # 相似度只对中文名计算，英文编码形近的太多，不按相似度接
+                if re.search(r"[一-鿿]", norm) and re.search(r"[一-鿿]", compact):
+                    best = max(
+                        best,
+                        difflib.SequenceMatcher(None, compact, norm).ratio(),
+                    )
+            if best >= 0.8:
+                scores.append((best, index))
+        if not scores:
+            return []
+        scores.sort(key=lambda item: (-item[0], item[1]))
+        if len(scores) > 1 and scores[0][0] - scores[1][0] < 0.1:
+            return []
+        return [scores[0][1]]
+
+    @staticmethod
+    def _semantic_choice_member_index(
+        members: list[set[str]], phrase: str | None,
+    ) -> int | None:
+        """Locate the affected member from catalog evidence, never list order.
+
+        Legacy ambiguities without a phrase are safe only for an empty or
+        singleton slot. A supplied phrase must identify exactly one member.
+        """
+        if not members:
+            return 0
+        surface = (phrase or "").strip()
+        if not surface:
+            return 0 if len(members) == 1 else None
+        matches = [index for index, aliases in enumerate(members) if surface in aliases]
+        return matches[0] if len(matches) == 1 else None
+
+    @staticmethod
+    def _semantic_choice_is_temporal(choice: dict[str, Any]) -> bool:
+        ambiguity: SemanticAmbiguity = choice["ambiguity"]
+        detail = choice.get("detail") or {}
+        selected = str(
+            detail.get("value")
+            or detail.get("canonical_value")
+            or detail.get("attribute_value")
+            or detail.get("canonical_name")
+            or detail.get("attribute_name")
+            or choice.get("label")
+            or ""
+        ).strip()
+        affected = {
+            str(slot).strip().lower() for slot in ambiguity.affected_slots
+        }
+        return bool(
+            affected and affected <= {"time_range", "time_context"}
+        ) or bool(
+            re.search(r"时间|时段|期间|正在销售|在售", ambiguity.question or "")
+            and re.search(
+                r"不限时间|全部历史|所有历史|历史所有|最近\s*\d+\s*天|"
+                r"本月|本年|今年|\d{4}年至今|自定义时间",
+                selected,
+            )
+        )
+
+    @staticmethod
+    def _completed_question_with_choice(
+        pending: CanonicalAnalysisRequest, choice: dict[str, Any]
+    ) -> str:
+        ambiguity: SemanticAmbiguity = choice["ambiguity"]
+        detail = choice.get("detail") or {}
+        completed = pending.rewritten_question or pending.original_question
+        selected = str(
+            detail.get("canonical_value")
+            or detail.get("value")
+            or detail.get("canonical_name")
+            or choice.get("label")
+            or ""
+        ).strip()
+        phrase = str(ambiguity.phrase or "").strip()
+        missing_values: list[str] = []
+        for item in pending.filters:
+            raw = item.get("value") if isinstance(item, dict) else None
+            values = raw if isinstance(raw, list) else [raw]
+            for value in values:
+                text = str(value or "").strip()
+                if text and text not in completed and text not in missing_values:
+                    missing_values.append(text)
+        if missing_values:
+            completed = completed.rstrip("。.!！") + "，范围：" + "、".join(missing_values) + "。"
+        missing_outputs = [
+            str(value).strip() for value in pending.fields
+            if str(value).strip() and str(value).strip() not in completed
+        ]
+        if missing_outputs:
+            completed = completed.rstrip("。.!！") + "，返回：" + "、".join(missing_outputs) + "。"
+        if phrase and selected and phrase in completed:
+            return completed.replace(phrase, selected, 1)
+        if selected and selected not in completed:
+            return completed.rstrip("。.!！") + f"，已确认{selected}。"
+        return completed
+
     @classmethod
     def _apply_semantic_clarification_choice(
         cls,
@@ -6685,6 +8764,29 @@ class DataAnalysisOrchestrator:
 
         ambiguity: SemanticAmbiguity = choice["ambiguity"]
         detail = choice["detail"]
+
+        def unresolved_choice() -> CanonicalAnalysisRequest:
+            unresolved = pending.model_copy(deep=True)
+            unresolved.assumptions = list(dict.fromkeys([
+                *unresolved.assumptions,
+                "SEMANTIC_CHOICE_TARGET_UNRESOLVED",
+            ]))
+            return unresolved
+
+        member_index = None
+        if ambiguity.type in {"metric", "dimension"}:
+            members = (
+                [{value.strip() for value in (item.input, item.canonical_name, item.metric_id) if value}
+                 for item in pending.metrics]
+                if ambiguity.type == "metric"
+                else [{item.strip()} for item in pending.dimensions]
+            )
+            member_index = cls._semantic_choice_member_index(members, ambiguity.phrase)
+            if member_index is None:
+                # The selected candidate does not establish which old member
+                # it replaces. Keep Pending intact; the caller stops before
+                # planning instead of executing a guessed task or repeating it.
+                return unresolved_choice()
         # A semantic-choice turn changes only the ambiguous slot. Everything
         # else comes from the already admitted pending request.
         target.metrics = [item.model_copy(deep=True) for item in pending.metrics]
@@ -6711,29 +8813,98 @@ class DataAnalysisOrchestrator:
             detail.get("canonical_code") or detail.get("attribute_code")
             or detail.get("semantic_id") or ""
         ).strip()
-        canonical_value = str(detail.get("value") or ambiguity.phrase or "").strip()
-        if ambiguity.type == "metric":
+        canonical_value = str(
+            detail.get("value")
+            or detail.get("canonical_value")
+            or detail.get("attribute_value")
+            or ambiguity.phrase
+            or ""
+        ).strip()
+        selected_period = canonical_value or canonical_name or str(choice["label"])
+        temporal_choice = cls._semantic_choice_is_temporal(choice)
+        applied = False
+        if ambiguity.ambiguity_id == 'LEGACY_BARE_NAME_OPERATION' and ambiguity.phrase:
+            if detail.get('operation') == 'PROJECTION':
+                target.primary_intent = PrimaryIntent.DETAIL_QUERY
+                target.fields = [ambiguity.phrase]
+                target.entity = ambiguity.phrase.removesuffix('名称')
+                target.dimensions = []
+                applied = True
+            elif detail.get('operation') == 'GROUPING':
+                target.primary_intent = PrimaryIntent.METRIC_QUERY
+                target.dimensions = [ambiguity.phrase.removesuffix('名称')]
+                target.fields = []
+                applied = True
+        elif ambiguity.type == "metric":
             metric_name = canonical_name or choice["label"]
             metric_id = str(detail.get("metric_id") or "").strip() or None
+            label_metric = re.fullmatch(
+                r"\s*(.+?)\s*[\uFF08(]([A-Za-z_][A-Za-z0-9_.:-]*)[\uFF09)]\s*",
+                str(choice["label"]),
+            )
+            if label_metric:
+                metric_name = label_metric.group(1).strip()
+                metric_id = metric_id or label_metric.group(2).strip()
+            binding_model_id = (
+                target.semantic_model_id
+                or pending.semantic_model_id
+                or ambiguity.semantic_model_id
+            )
+            if metric_id and ":" not in metric_id and binding_model_id:
+                metric_id = f"{binding_model_id}:{metric_id}"
             if metric_id is None and canonical_code:
                 metric_id = (
                     canonical_code
-                    if ":" in canonical_code or ambiguity.semantic_model_id is None
-                    else f"{ambiguity.semantic_model_id}:{canonical_code}"
+                    if ":" in canonical_code or binding_model_id is None
+                    else f"{binding_model_id}:{canonical_code}"
                 )
-            target.metrics = [MetricRef(
+            selected_metric = MetricRef(
                 input=metric_name,
                 canonical_name=metric_name,
                 metric_id=metric_id,
                 version=str(detail.get("version") or "current"),
                 unit=(str(detail.get("unit")) if detail.get("unit") else None),
-            )]
-        elif ambiguity.type == "dimension" and canonical_name:
-            target.dimensions = [canonical_name]
+            )
+            target.metrics[member_index:member_index + 1] = [selected_metric]
+            applied = True
+        elif ambiguity.type == "dimension":
+            target.dimensions[member_index:member_index + 1] = [canonical_name or choice["label"]]
+            applied = True
         elif ambiguity.type in {"subject"} and canonical_name:
             target.entity = canonical_name
+            applied = True
+        elif temporal_choice:
+            # A visible period choice is a deterministic temporal value, not a
+            # catalog field binding.  Some upstreams label this ambiguity as
+            # ``context`` instead of ``time_anchor``; the affected slot is the
+            # stable contract. Applying it must not require a semantic field
+            # ID. The ASL planner chooses the authorized date field later.
+            period = selected_period
+            parsed_range = RuleBasedIntentClassifier._time_range(period)
+            all_time = bool(re.search(
+                r"全部(?:时间|历史)|全量历史|所有历史|历史全部|不限时间",
+                period,
+            ))
+            if parsed_range is not None or all_time:
+                target.assumptions = [
+                    value for value in target.assumptions
+                    if not value.startswith((
+                        "ACTIVE_TIME_DEFAULT=",
+                        "DEFAULT_TIME_RANGE=",
+                        "TIME_SCOPE=",
+                    ))
+                ]
+                target.time_range = parsed_range
+                target.assumptions.append(
+                    "TIME_SCOPE=ALL_TIME"
+                    if all_time
+                    else "TIME_SCOPE=USER_CONFIRMED_OPTION"
+                )
+                applied = True
         elif canonical_name and canonical_code and canonical_value:
-            phrase = str(ambiguity.phrase or "").strip()
+            phrase = str(
+                detail.get("input_value") or ambiguity.phrase or ""
+            ).strip()
             matched_indexes: list[int] = []
             for index, item in enumerate(target.filters):
                 raw_values = item.get("value")
@@ -6742,12 +8913,32 @@ class DataAnalysisOrchestrator:
                     str(value or "").strip() in {phrase, canonical_value}
                     for value in values
                 ):
-                    item["field"] = canonical_name
-                    if not isinstance(raw_values, list):
-                        item["value"] = canonical_value
                     matched_indexes.append(index)
+            operation = str(detail.get("operation") or "").strip().upper()
+            if len(matched_indexes) > 1:
+                return unresolved_choice()
+            if not matched_indexes and operation == "UPSERT_FILTER" and phrase:
+                operator = str(detail.get("operator") or "EQ").strip().upper()
+                target.filters.append({
+                    "field": canonical_name,
+                    "operator": "EQ" if operator in {"=", "EQ"} else operator,
+                    "value": canonical_value,
+                })
+                matched_indexes.append(len(target.filters) - 1)
             if len(matched_indexes) == 1:
                 filter_index = matched_indexes[0]
+                selected_filter = target.filters[filter_index]
+                raw_values = selected_filter.get("value")
+                selected_filter["field"] = canonical_name
+                if isinstance(raw_values, list):
+                    selected_filter["value"] = [
+                        canonical_value
+                        if str(value or "").strip() in {phrase, canonical_value}
+                        else value
+                        for value in raw_values
+                    ]
+                else:
+                    selected_filter["value"] = canonical_value
                 target.semantic_filter_bindings = [
                     item for item in target.semantic_filter_bindings
                     if item.filter_index != filter_index
@@ -6772,17 +8963,74 @@ class DataAnalysisOrchestrator:
                 target.assumptions.append(
                     "SEMANTIC_AMBIGUITY_CONFIRMED_ATTRIBUTE=" + canonical_code
                 )
+                applied = True
+
+        if not applied and ambiguity.type in {
+            "subject", "entity_role", "entity_value", "filter", "filter_slot",
+        }:
+            # A user-selected visible business meaning is authoritative even
+            # when the candidate does not yet expose a catalog field ID. Keep
+            # the exact choice in the completed question and let the scoped ASL
+            # planner perform final field binding from that wording.
+            target.assumptions.append(
+                "SEMANTIC_AMBIGUITY_CONFIRMED_SURFACE_ONLY"
+            )
+            applied = True
+
+        if not applied:
+            # A visible option is not a successful clarification until its
+            # structured catalog identity has changed the affected slot.  Keep
+            # Pending intact when an older upstream returns labels only.
+            return unresolved_choice()
+
+        def resolved_by_same_choice(item: SemanticAmbiguity) -> bool:
+            if item is ambiguity or (
+                item.ambiguity_id == ambiguity.ambiguity_id
+                and item.ambiguity_id is not None
+                and item.type == ambiguity.type
+                and item.phrase == ambiguity.phrase
+            ):
+                return True
+            affected = {
+                str(slot).strip().lower() for slot in item.affected_slots
+            }
+            item_type = str(item.type or "").strip().lower()
+            same_kind = (
+                ambiguity.type == "metric"
+                and (item_type in {"metric", "metric_selection", "indicator", "指标"}
+                     or bool(affected & {"metric", "metrics"}))
+            ) or (
+                ambiguity.type == "dimension"
+                and (item_type in {"dimension", "dimension_selection", "维度"}
+                     or bool(affected & {"dimension", "dimensions"}))
+            )
+            if not same_kind:
+                return False
+            other_index = cls._semantic_choice_member_index(members, item.phrase)
+            if other_index is not None:
+                # Slot type alone is not identity: choosing sales cannot also
+                # answer the pending order-count (or another grouping) question.
+                return other_index == member_index
+            # Older catalogs sometimes repeat one question with an abbreviated
+            # phrase. Preserve that deduplication only with identical catalog
+            # candidates, never just identical visible option labels.
+            keys = cls._semantic_choice_candidate_keys(item)
+            return bool(keys) and keys == cls._semantic_choice_candidate_keys(ambiguity)
 
         remaining = [
             item.model_copy(deep=True)
             for item in pending.semantic_ambiguities
-            if item.ambiguity_id != ambiguity.ambiguity_id
-            or item.ambiguity_id is None and item is not ambiguity
+            if not resolved_by_same_choice(item)
         ]
         target.semantic_ambiguities = remaining
         target.ambiguities = [item.question for item in remaining]
+        resolved_slots = {"semantic_ambiguity"}
+        if ambiguity.type == "metric":
+            resolved_slots.add("metric")
+        elif ambiguity.type == "dimension":
+            resolved_slots.add("dimension")
         target.missing_slots = [
-            slot for slot in pending.missing_slots if slot != "semantic_ambiguity"
+            slot for slot in pending.missing_slots if slot not in resolved_slots
         ]
         if remaining:
             target.missing_slots.append("semantic_ambiguity")
@@ -6791,10 +9039,95 @@ class DataAnalysisOrchestrator:
             *target.assumptions,
             "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER",
         ]))
+        if temporal_choice:
+            target.assumptions = [
+                value for value in target.assumptions
+                if not value.startswith((
+                    "ACTIVE_TIME_DEFAULT=",
+                    "DEFAULT_TIME_RANGE=",
+                ))
+            ]
+        target.original_question = pending.original_question
         target.rewritten_question = render_execution_question(
-            target, confirmation=choice["confirmation"]
+            target,
+            confirmation=str(choice.get("confirmation") or "").strip() or None,
         )
         return target
+
+    @staticmethod
+    def _semantic_choice_candidate_keys(
+        item: SemanticAmbiguity,
+    ) -> frozenset[tuple[str, str]]:
+        keys = set()
+        for detail in item.candidate_details:
+            code = str(detail.get("metric_id") or detail.get("canonical_code")
+                       or detail.get("semantic_id") or "").strip()
+            if not code:
+                return frozenset()
+            if ":" not in code and item.semantic_model_id:
+                code = f"{item.semantic_model_id}:{code}"
+            keys.add((code, str(detail.get("version") or item.semantic_model_version or "")))
+        return frozenset(keys)
+
+    @classmethod
+    def _suppress_confirmed_slot_ambiguities(
+        cls,
+        request: CanonicalAnalysisRequest,
+    ) -> None:
+        """Do not reopen a catalog slot that the user just confirmed.
+
+        The rewrite model is allowed to propose ambiguities, but its output can
+        arrive after a Pending candidate has already been applied.  A metric
+        with a catalog id is stronger evidence than a fresh wording-level
+        ambiguity and must survive the remainder of the same turn.
+        """
+        confirmed_slots: set[str] = set()
+        metric_choice_confirmed = (
+            "SEMANTIC_AMBIGUITY_CONFIRMED_BY_USER" in request.assumptions
+            or any(metric.metric_id for metric in request.metrics)
+        )
+        if request.metrics and metric_choice_confirmed:
+            confirmed_slots.add("metric")
+        if not confirmed_slots:
+            return
+
+        metric_types = {"metric", "metric_selection", "indicator"}
+
+        def affects_confirmed_slot(item: SemanticAmbiguity) -> bool:
+            affected = {str(slot).strip().lower() for slot in item.affected_slots}
+            ambiguity_type = str(item.type or "").strip().lower()
+            if not (ambiguity_type in metric_types or affected & {"metric", "metrics"}):
+                return False
+            members = [{value.strip() for value in (m.input, m.canonical_name, m.metric_id) if value}
+                       for m in request.metrics]
+            index = cls._semantic_choice_member_index(members, item.phrase)
+            metrics = request.metrics[index:index + 1] if index is not None else request.metrics
+            keys = cls._semantic_choice_candidate_keys(item)
+            if keys:
+                return any(
+                    metric.metric_id == code
+                    and (not version or not metric.version or metric.version == version)
+                    for metric in metrics for code, version in keys
+                )
+            return index is not None and bool(request.metrics[index].metric_id)
+
+        request.semantic_ambiguities = [
+            item for item in request.semantic_ambiguities
+            if not affects_confirmed_slot(item)
+        ]
+        request.ambiguities = [
+            item.question for item in request.semantic_ambiguities
+        ]
+        request.missing_slots = [
+            slot for slot in request.missing_slots
+            if not (slot == "metric" and all(m.metric_id for m in request.metrics)
+                    and not request.semantic_ambiguities)
+        ]
+        if not request.semantic_ambiguities:
+            request.missing_slots = [
+                slot for slot in request.missing_slots
+                if slot != "semantic_ambiguity"
+            ]
 
     @staticmethod
     def _is_deterministic_pending_reply(
@@ -6903,8 +9236,24 @@ class DataAnalysisOrchestrator:
         response.semantic_model_id = request.semantic_model_id
         response.database_id = request.database_id
         response.requested_business_domain_ids = list(request.business_domain_ids)
-        response.business_domain_selection_mode = request.business_domain_selection_mode
+        response.business_domain_selection_mode = 'EXPLICIT' if request.business_domain_ids else 'AUTO'
         response.answer = self._sanitize_user_visible_answer(response.answer)
+        # Disclose advisory binding choices even when answer generation omits
+        # them. This is a warning, never another execution gate or SSE node.
+        binding_warnings = list(dict.fromkeys(
+            str(message)
+            for item in response.evidence if item.kind == "ASL_BINDING_NOTICE"
+            for message in item.payload.get("warnings", []) if message
+        ))
+        for message in binding_warnings:
+            if message not in response.reliability.warnings:
+                response.reliability.warnings.append(message)
+        if binding_warnings:
+            if response.reliability.level == "HIGH":
+                response.reliability.level = "LIMITED"
+            missing_notices = [text for text in binding_warnings if text not in response.answer]
+            if missing_notices:
+                response.answer += "\n\n查询条件提示：\n" + "\n".join(missing_notices)
         self._attach_query_result_file(response)
         self._append_download_links(response)
         # A fresh terminal request has no pending state to clear. If this request
@@ -7760,7 +10109,49 @@ class DataAnalysisOrchestrator:
                 return prior_user, turn.content
         return None
 
-    async def _request_clarification(self, request: CanonicalAnalysisRequest, rounds: int) -> AgentResponse:
+    async def _ensure_clarification_trace(self, response: AgentResponse, chat: ChatRequest) -> None:
+        """Cover ordinary, composite, compatibility and cached public responses."""
+        if response.status == 'NEEDS_CLARIFICATION' or response.clarification_questions:
+            if not response.clarification_decision_traces:
+                seed = CanonicalAnalysisRequest(conversation_id=chat.conversation_id, tenant_id='trace-only', user_id='trace-only', original_question=chat.question, primary_intent=response.intent)
+                for slot in response.missing_slots or (['task_answer_mapping'] if len(response.awaiting_task_ids) > 1 else ['unknown']):
+                    _, trace = decide_clarification(seed, slot.rsplit(':', 1)[-1], source_stage='SESSION_STATE', asked_keys=set())
+                    if slot == 'task_answer_mapping':
+                        trace.candidate_ids = list(response.awaiting_task_ids)
+                        trace.evidence_codes.append('MULTIPLE_PENDING_TASKS')
+                    response.clarification_decision_traces.append(trace)
+            if not any(t.decision == 'ASK' for t in response.clarification_decision_traces):
+                response.status = 'SAFE_FALLBACK'
+                response.clarification_questions = []
+                response.clarification_items = []
+                response.answer = '当前请求暂时无法继续，系统尚未取得足够的语义或执行依据。'
+        for trace in response.clarification_decision_traces:
+            trace.conversation_id = chat.conversation_id
+            trace.message_id = chat.message_id
+
+    async def _request_clarification(
+        self,
+        request: CanonicalAnalysisRequest,
+        rounds: int,
+        *,
+        source_stage: str = 'INTENT_ASL_CONTRACT',
+        semantic_extractions: tuple[dict[str, Any], ...]
+        | list[dict[str, Any]] = (),
+    ) -> AgentResponse:
+        previous = await self.sessions.get_pending(request.tenant_id, request.user_id, request.application_id, request.conversation_id)
+        asked_keys = set(previous.asked_clarification_keys) if previous is not None and request.pending_state_version else set()
+        if previous is not None and asked_keys:
+            asked_keys = restore_clarification_keys(previous.request, asked_keys)
+        decisions = [decide_clarification(request, slot, source_stage=source_stage, asked_keys=asked_keys) for slot in request.missing_slots]
+        traces = [trace for _, trace in decisions]
+        allowed_slots = {trace.blocking_slot for trace in traces if trace.decision == 'ASK'}
+        if not allowed_slots:
+            response = self._fallback(request, '该问题已在当前待确认任务中提出，原选项继续保留。' if any(t.already_asked for t in traces) else '当前语义目录或执行服务尚未提供足够依据，系统无法安全继续处理。')
+            response.clarification_decision_traces = traces
+            return response
+        # Keep unresolved slots in state, but never ask the same pending
+        # question again or expose a system/catalog failure as user ambiguity.
+        display_request = request.model_copy(update={'missing_slots': [s for s in request.missing_slots if s in allowed_slots]})
         if rounds > self.settings.max_clarification_rounds:
             logger.warning(
                 "clarification limit exceeded: request_id=%s intent=%s missing_slots=%s rounds=%s",
@@ -7777,7 +10168,7 @@ class DataAnalysisOrchestrator:
                 expected_version=request.pending_state_version,
             )
             return self._fallback(request, "关键信息多轮补充后仍不完整，请重新描述分析目标。")
-        all_questions = self._clarification_questions(request)
+        all_questions = self._clarification_questions(display_request)
         question_limit = (
             1
             if any(
@@ -7787,7 +10178,7 @@ class DataAnalysisOrchestrator:
             else 5
         )
         questions = all_questions[:question_limit]
-        clarification_items = self._clarification_items(request)[:question_limit]
+        clarification_items = self._clarification_items(display_request)[:question_limit]
         visible_questions = [
             self._visible_clarification_prompt(
                 question,
@@ -7797,10 +10188,21 @@ class DataAnalysisOrchestrator:
             for index, question in enumerate(questions)
         ]
         remaining_questions = all_questions[question_limit:]
+        visible_slots = {item['slot'] for item in clarification_items}
+        for trace in traces:
+            if trace.decision == 'ASK' and trace.blocking_slot not in visible_slots:
+                trace.decision = 'SUPPRESS'
+                trace.evidence_codes.append('DEFERRED_BY_QUESTION_LIMIT')
         try:
             await self.sessions.put_pending(
                 PendingState(
+                    asked_clarification_keys=list(dict.fromkeys([*asked_keys, *(key for key, trace in decisions if trace.decision == 'ASK')])),
                     request=request,
+                    semantic_extractions=[
+                        copy.deepcopy(item)
+                        for item in semantic_extractions
+                        if isinstance(item, dict)
+                    ],
                     clarification_rounds=rounds,
                     state_version=rounds,
                     remaining_questions=remaining_questions,
@@ -7827,10 +10229,15 @@ class DataAnalysisOrchestrator:
                 action="请提供历史起止范围或窗口，例如：基于过去12个月。",
             ))
         prefix = f"我已理解：{understood_text}。" if understood_text else ""
+        if source_stage == "OAGNET_ASL_GENERATION" and "semantic_ambiguity" in request.missing_slots:
+            # Upstream hypotheses can differ from the ASL that produced this
+            # clarification. Do not present their metric/entity as validated.
+            prefix = f"当前问题：{request.rewritten_question or request.original_question}。"
         response = AgentResponse(
             request_id=request.request_id,
             conversation_id=request.conversation_id,
             status="NEEDS_CLARIFICATION",
+            clarification_decision_traces=traces,
             intent=request.primary_intent,
             intent_source=request.intent_source,
             intent_confidence=request.intent_confidence,
@@ -7894,13 +10301,22 @@ class DataAnalysisOrchestrator:
         *,
         file_status: str = "NOT_PROVIDED",
         file_based: bool = False,
+        business_domain_labels: tuple[str, ...] | list[str] = (),
+        semantic_extractions: tuple[dict[str, Any], ...] | list[dict[str, Any]] = (),
+        question_chain: tuple[str, ...] | list[str] = (),
+        include_resolved_context: bool = True,
     ) -> str:
         view = build_intent_recognition_display_v2(
             request,
             file_status=file_status,
             file_based=file_based,
+            business_domain_labels=business_domain_labels,
+            semantic_extractions=semantic_extractions,
+            question_chain=question_chain,
         )
-        return render_intent_recognition_display_v2(view)
+        return render_intent_recognition_display_v2(
+            view, include_resolved_context=include_resolved_context
+        )
 
     @staticmethod
     def _file_inspection_think_summary(inspection: dict[str, Any]) -> str:
@@ -8150,13 +10566,29 @@ class DataAnalysisOrchestrator:
         return steps
 
     async def _metadata_answer(self, request: CanonicalAnalysisRequest, identity: TrustedIdentity, semantic_model_id: int | None) -> AgentResponse:
+        if request.primary_intent == PrimaryIntent.DATA_LINEAGE and not request.metrics:
+            # Legacy's downstream protocol supports metric lineage only. Do not
+            # disguise this external contract gap as missing user information.
+            return self._fallback(request, "已识别要追溯的对象，但当前血缘服务尚不支持该类对象。需要由血缘服务补齐支持后查询。")
         try:
-            resolved = await self.adapters.semantic.resolve_metrics(request, semantic_model_id)
+            with track_operation(
+                "V1_ORCHESTRATION",
+                "v1.semantic_binding",
+                attributes={"metadata_query": True},
+            ) as timing:
+                resolved = await self.adapters.semantic.resolve_metrics(
+                    request, semantic_model_id
+                )
+                timing.mark_first_result()
             if len(resolved) != 1:
                 return self._fallback(request, "没有找到唯一、已发布的指标定义。")
-            item = await (self.adapters.semantic.definition(resolved[0]) if request.primary_intent == PrimaryIntent.METRIC_DEFINITION else self.adapters.semantic.lineage(resolved[0], identity))
+            scoped_metadata = getattr(self.adapters.semantic, 'scoped_metadata', None)
+            if callable(scoped_metadata):
+                item = await scoped_metadata(request, resolved[0], identity)
+            else:
+                item = await (self.adapters.semantic.definition(resolved[0]) if request.primary_intent == PrimaryIntent.METRIC_DEFINITION else self.adapters.semantic.lineage(resolved[0], identity))
         except AdapterError as exc:
-            return self._fallback(request, self._dependency_message(exc))
+            return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
         if request.primary_intent == PrimaryIntent.DATA_LINEAGE:
             business_lineage = [
                 str(value).strip() for value in (item.payload.get("business_lineage") or [])
@@ -8302,6 +10734,21 @@ class DataAnalysisOrchestrator:
 
         evidence: list[EvidenceItem] = []
         for transform in query_result.execution_transforms:
+            if transform.get("type") == "NAME_LIST_CLEANUP":
+                evidence.append(EvidenceItem(
+                    evidence_id=f"list-cleanup:{query_result.dataset.snapshot_id}",
+                    kind="RESULT_CLEANUP", source_ref="deterministic:name-list-cleanup",
+                    payload=transform,
+                ))
+                continue
+            if transform.get("type") == "ASL_BINDING_NOTICES":
+                evidence.append(EvidenceItem(
+                    evidence_id=f"asl-binding:{query_result.dataset.snapshot_id}",
+                    kind="ASL_BINDING_NOTICE",
+                    source_ref="Oagnet:surface-mention-recall",
+                    payload=transform,
+                ))
+                continue
             if (
                 transform.get("type")
                 != "RELATIONSHIP_COUNT_TO_DISTINCT_PROJECTION"
@@ -8363,31 +10810,27 @@ class DataAnalysisOrchestrator:
         Re-querying a document knowledge base would add latency without improving
         metric correctness and would incorrectly couple numeric answers to app KBs.
         """
-        asl_metrics = query_result.asl.get("metrics") or []
-        if not isinstance(asl_metrics, list):
-            return []
-        resolved = {
-            str(item.get("name")).split(":", 1)[-1]: item
-            for item in asl_metrics
-            if isinstance(item, dict) and item.get("name")
-        }
+        from app.presentation.execution_trace import executed_asl_metrics
+
         evidence: list[EvidenceItem] = []
-        for metric in request.metrics:
-            metric_code = metric.metric_id.split(":", 1)[-1] if metric.metric_id else None
-            if metric_code is None or metric_code not in resolved:
-                continue
-            item = resolved[metric_code]
+        for item in executed_asl_metrics(query_result.asl):
+            metric_code = item["name"].split(":", 1)[-1]
+            # Retain a real upstream ID when available, never manufacture one
+            # for display. The actual ASL still determines which metrics exist.
+            existing = next((metric for metric in request.metrics
+                             if metric.metric_id and metric.metric_id.split(":", 1)[-1] == metric_code), None)
+            metric_id = existing.metric_id if existing else item["name"]
             evidence.append(
                 EvidenceItem(
                     evidence_id=(
                         f"semantic:{semantic_model_id}:{business_domain_id}:"
-                        f"{metric.metric_id}"
+                        f"{metric_id}"
                     ),
                     kind="SEMANTIC_METRIC_RESOLUTION",
                     source_ref="oagnet-asl",
                     payload={
-                        "metric_id": metric.metric_id,
-                        "canonical_name": metric.canonical_name or item.get("alias"),
+                        "metric_id": metric_id,
+                        "canonical_name": item["alias"] or (existing.canonical_name if existing else None) or item["name"],
                         "semantic_model_id": semantic_model_id,
                         "business_domain_id": business_domain_id,
                         "verified": True,
@@ -8494,154 +10937,6 @@ class DataAnalysisOrchestrator:
         for row in dataset.rows:
             for field in restored:
                 row[field] = constants[field]
-
-    @classmethod
-    def _enforce_name_projection_integrity(
-        cls,
-        request: CanonicalAnalysisRequest,
-        query_result: DataQueryResult,
-    ) -> DataQueryResult:
-        """Remove invalid master-name members from complete list results.
-
-        The canonical/ASL constraint is the primary guard.  This deterministic
-        result gate protects against stale relationship rows, legacy translators
-        and dirty placeholder strings that still reach a complete result.  A
-        truncated result cannot be repaired locally because unseen/file rows
-        may contain the same defect, so it is marked failed instead of silently
-        claiming a complete clean list.
-        """
-
-        if request.primary_intent != PrimaryIntent.DETAIL_QUERY:
-            return query_result
-        required_fields = list(dict.fromkeys(
-            value.split("=", 1)[1].strip()
-            for value in request.assumptions
-            if value.startswith("REQUIRED_NAME_NON_NULL=")
-            and value.split("=", 1)[1].strip()
-        ))
-        if not required_fields or not query_result.dataset.rows:
-            return query_result
-
-        aliases = {
-            "医院名称": {"医院", "hospital", "hospitalname", "medicalinstitutionname"},
-            "经销商名称": {"经销商", "dealer", "dealername", "distributorname"},
-            "供应商名称": {"供应商", "supplier", "suppliername", "vendorname"},
-            "厂家名称": {"厂家", "厂商", "manufacturer", "manufacturername", "makername"},
-            "制造商名称": {"制造商", "manufacturer", "manufacturername", "makername"},
-            "商品名称": {"商品", "产品", "product", "productname", "goodsname", "itemname"},
-            "客户名称": {"客户", "customer", "customername", "clientname"},
-            "门店名称": {"门店", "store", "storename", "shopname"},
-            "科室名称": {"科室", "适用科室", "department", "departmentname", "deptname"},
-            "品牌名称": {"品牌", "brand", "brandname"},
-            "母品牌": {"母品牌名称", "parentbrand", "parentbrandname"},
-        }
-
-        def normalize(value: Any) -> str:
-            return re.sub(
-                r"[^0-9a-z\u4e00-\u9fff]", "", str(value or "").casefold()
-            )
-
-        resolved_columns: list[str] = []
-        for field in required_fields:
-            tokens = {
-                normalize(field),
-                *(normalize(value) for value in aliases.get(field, set())),
-            }
-            matches = [
-                column for column in query_result.dataset.columns
-                if normalize(column) in tokens
-            ]
-            if len(matches) == 1:
-                resolved_columns.append(matches[0])
-        if len(resolved_columns) != len(required_fields):
-            return query_result
-
-        invalid_markers = {
-            "", "-", "--", "—", "–", "－", "null", "none", "nil", "n/a",
-            "na", "未填写", "未知", "无",
-        }
-
-        def valid_row(row: dict[str, Any]) -> bool:
-            for column in resolved_columns:
-                value = row.get(column)
-                if value is None or str(value).strip().casefold() in invalid_markers:
-                    return False
-            return True
-
-        clean_rows = [row for row in query_result.dataset.rows if valid_row(row)]
-        removed_count = len(query_result.dataset.rows) - len(clean_rows)
-        if removed_count == 0:
-            return query_result
-
-        dataset_payload = query_result.dataset.model_dump()
-        dataset_payload["rows"] = clean_rows
-        dataset_payload["row_count"] = len(clean_rows)
-        if query_result.dataset.truncated:
-            dataset_payload["quality_status"] = "FAIL"
-        else:
-            dataset_payload["total_row_count"] = len(clean_rows)
-        cleaned_dataset = Dataset.model_validate(dataset_payload)
-        transform = {
-            "type": "DROP_INVALID_NAME_PROJECTION_ROWS",
-            "fields": required_fields,
-            "removed_row_count": removed_count,
-            "verified_complete_result": not query_result.dataset.truncated,
-        }
-        assumption = f"INVALID_NAME_ROWS_REMOVED={removed_count}"
-        if assumption not in request.assumptions:
-            request.assumptions.append(assumption)
-        return query_result.model_copy(update={
-            "dataset": cleaned_dataset,
-            "execution_transforms": [
-                *query_result.execution_transforms,
-                transform,
-            ],
-            "result_file_url": (
-                None if query_result.dataset.truncated
-                else query_result.result_file_url
-            ),
-        })
-
-    @staticmethod
-    def _relationship_projection_rows(
-        request: CanonicalAnalysisRequest,
-        columns: list[str],
-        rows: list[dict[str, Any]],
-    ) -> list[dict[str, Any]] | None:
-        """Deduplicate only a set-shaped relationship projection for display.
-
-        A physical relationship table can legitimately contain several source
-        rows that project to the same user-facing pair (for example, two source
-        objects related to the same target).  The underlying dataset remains
-        untouched.  Transaction/event detail is deliberately excluded because
-        identical projected facts can still be separate valid observations.
-        """
-
-        master_name_columns = {
-            "产品名称", "商品名称", "经销商名称", "供应商名称",
-            "医院名称", "客户名称", "门店名称", "品牌名称",
-        }
-        unambiguous_single_master_projection = (
-            len(columns) == 1 and columns[0] in master_name_columns
-        )
-        if len(rows) < 2 or not (
-            unambiguous_single_master_projection
-            or requires_distinct_relationship_projection(request)
-        ):
-            return None
-
-        unique_rows: list[dict[str, Any]] = []
-        seen: set[Any] = set()
-        for row in rows:
-            projection_key = tuple(
-                (column, DataAnalysisOrchestrator._projection_value_key(row.get(column)))
-                for column in columns
-            )
-            if projection_key in seen:
-                continue
-            seen.add(projection_key)
-            unique_rows.append(row)
-        return unique_rows if len(unique_rows) < len(rows) else None
 
     @staticmethod
     def _relationship_count_projection_request(
@@ -8833,28 +11128,9 @@ class DataAnalysisOrchestrator:
             # looking answer.  Truly larger results arrive as truncated/file
             # responses and are handled by the explicit preview branch.
             display_limit = 1000
-            unique_rows = (
-                None
-                if result_truncated
-                else DataAnalysisOrchestrator._relationship_projection_rows(
-                    request, columns, rows
-                )
-            )
-            if unique_rows is not None:
-                answer = (
-                    f"查询返回 {len(rows)} 条原始关系记录；"
-                    f"按当前投影字段完全相同的组合去重展示后，共 {len(unique_rows)} 个唯一组合。\n\n"
-                    f"{DataAnalysisOrchestrator._markdown_result_table(columns, unique_rows[:display_limit])}\n\n"
-                )
-                if len(unique_rows) > display_limit:
-                    answer += (
-                        f"> 当前展示前 {display_limit} 个唯一组合，完整结果请使用附件下载。\n\n"
-                    )
-                answer += f"> 原始数据集及证据行数仍为 {len(rows)}。"
-                return answer
             answer = (
                 f"共查询到 {len(rows)} 条明细。\n\n"
-                f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit])}"
+                f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit], question=request.rewritten_question or request.original_question)}"
             )
             if len(rows) > display_limit:
                 answer += (
@@ -8862,7 +11138,11 @@ class DataAnalysisOrchestrator:
                 )
             return answer
         if len(rows) == 1:
-            return DataAnalysisOrchestrator._markdown_result_table(columns, rows)
+            return DataAnalysisOrchestrator._markdown_result_table(
+                columns,
+                rows,
+                question=request.rewritten_question or request.original_question,
+            )
         label = {
             PrimaryIntent.TREND_ANALYSIS: "趋势分析数据",
             PrimaryIntent.COMPARISON_ANALYSIS: "对比分析数据",
@@ -8875,7 +11155,7 @@ class DataAnalysisOrchestrator:
         display_limit = 200
         answer = (
             f"{label}，共 {len(rows)} 行。\n\n"
-            f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit])}"
+            f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit], question=request.rewritten_question or request.original_question)}"
         )
         if len(rows) > display_limit:
             answer += (
@@ -8918,21 +11198,126 @@ class DataAnalysisOrchestrator:
         return text.replace("|", "\\|").replace("\r", " ").replace("\n", "<br>")
 
     @staticmethod
-    def _markdown_result_table(columns: list[str], rows: list[dict[str, Any]]) -> str:
-        visible_columns = list(dict.fromkeys([
+    def _presentation_column_identity(column: str) -> tuple[str, str]:
+        """Return a comparable business base and presentation role.
+
+        SQL projections sometimes contain both an internal key and its readable
+        label (for example ``城市=340100`` and ``城市名称=合肥市``).  The key is
+        still useful in the dataset and audit evidence, but showing both makes
+        an ordinary business table look like an identifier report.
+        """
+        tail = str(column).rsplit(".", 1)[-1].casefold().strip()
+        compact = re.sub(r"[\s._-]+", "", tail)
+        for suffix in ("名称", "姓名", "name", "label"):
+            if compact.endswith(suffix) and len(compact) > len(suffix):
+                return compact[:-len(suffix)], "label"
+        for suffix in ("编码", "编号", "代码", "code", "id"):
+            if compact.endswith(suffix) and len(compact) > len(suffix):
+                return compact[:-len(suffix)], "identifier"
+        return compact, "value"
+
+    @staticmethod
+    def _column_values_look_like_identifiers(
+        column: str,
+        rows: list[dict[str, Any]],
+    ) -> bool:
+        values = [row.get(column) for row in rows if row.get(column) is not None][:50]
+        if not values:
+            return False
+        for value in values:
+            if isinstance(value, bool):
+                return False
+            if isinstance(value, int):
+                continue
+            if isinstance(value, float):
+                if value.is_integer():
+                    continue
+                return False
+            text = str(value).strip()
+            if not text or len(text) > 64 or not re.fullmatch(
+                r"[0-9A-Za-z][0-9A-Za-z._/-]*", text
+            ):
+                return False
+        return True
+
+    @classmethod
+    def _presentation_columns(
+        cls,
+        columns: list[str],
+        rows: list[dict[str, Any]],
+        *,
+        question: str = "",
+    ) -> list[str]:
+        available = list(dict.fromkeys([
             *columns,
             *(key for row in rows for key in row if key not in columns),
         ]))
+        label_bases = {
+            base
+            for column in available
+            for base, role in [cls._presentation_column_identity(column)]
+            if role == "label"
+        }
+        compact_question = re.sub(r"\s+", "", question or "").casefold()
+        visible: list[str] = []
+        for column in available:
+            base, role = cls._presentation_column_identity(column)
+            paired_with_label = bool(base and base in label_bases)
+            explicit_identifier_request = any(
+                marker in compact_question
+                for marker in (
+                    f"{base}编码", f"{base}编号", f"{base}代码",
+                    f"{base}code", f"{base}id",
+                )
+            )
+            # Do not make distinct same-named entities look like duplicate rows
+            # by hiding the only column that distinguishes them.
+            label_columns = [
+                item for item in available
+                if cls._presentation_column_identity(item) == (base, "label")
+            ]
+            label_identities: dict[str, set[str]] = {}
+            if paired_with_label and role in {"identifier", "value"}:
+                for row in rows:
+                    label = json.dumps([row.get(item) for item in label_columns], default=str)
+                    label_identities.setdefault(label, set()).add(
+                        json.dumps(row.get(column), default=str)
+                    )
+            distinguishes_same_name = any(len(values) > 1 for values in label_identities.values())
+            hide_identifier = (
+                paired_with_label
+                and role in {"identifier", "value"}
+                and not explicit_identifier_request
+                and not distinguishes_same_name
+                and cls._column_values_look_like_identifiers(column, rows)
+            )
+            if not hide_identifier:
+                visible.append(column)
+        return visible
+
+    @classmethod
+    def _markdown_result_table(
+        cls,
+        columns: list[str],
+        rows: list[dict[str, Any]],
+        *,
+        question: str = "",
+    ) -> str:
+        visible_columns = cls._presentation_columns(
+            columns,
+            rows,
+            question=question,
+        )
         if not visible_columns:
             return "未返回可展示字段。"
-        headers = [DataAnalysisOrchestrator._display_column_name(item) for item in visible_columns]
+        headers = [cls._display_column_name(item) for item in visible_columns]
         lines = [
             "| " + " | ".join(headers) + " |",
             "| " + " | ".join("---" for _ in headers) + " |",
         ]
         lines.extend(
             "| " + " | ".join(
-                DataAnalysisOrchestrator._markdown_cell(row.get(column))
+                cls._markdown_cell(row.get(column))
                 for column in visible_columns
             ) + " |"
             for row in rows
@@ -8950,7 +11335,7 @@ class DataAnalysisOrchestrator:
             content = (result.answer or "未返回结果。").strip()
             status = "" if result.status == "COMPLETED" else f"（{result.status}）"
             sections.append(
-                f"### {index}. {result.question}{status}\n\n{content}"
+                f"### ◉ 任务{index}：{result.question}{status}\n\n{content}"
             )
         return "\n\n".join(sections)
 
@@ -8995,10 +11380,12 @@ class DataAnalysisOrchestrator:
             if not question:
                 continue
             raw_candidates = value.get("candidates")
-            supplied_details = [
-                dict(item) for item in value.get("candidate_details") or []
-                if isinstance(item, dict)
-            ][:10]
+            raw_details = value.get("candidate_details") or []
+            if not isinstance(raw_details, list) or any(not isinstance(item, dict) for item in raw_details):
+                return []
+            if isinstance(raw_candidates, list) and len(raw_details) > len(raw_candidates):
+                return []
+            supplied_details = [dict(item) for item in raw_details[:10]]
             candidates: list[str] = []
             candidate_details: list[dict[str, Any]] = []
             if isinstance(raw_candidates, list):
@@ -9069,14 +11456,43 @@ class DataAnalysisOrchestrator:
                     ),
                 ))
             except ValueError:
-                continue
+                # Partial acceptance could discard a still-blocking choice.
+                # The existing semantic clarification gate treats an invalid
+                # candidate batch as a system failure, without asking the user.
+                return []
         return result
 
     @classmethod
     def _clarification_questions(
         cls, request: CanonicalAnalysisRequest
     ) -> list[str]:
-        prompts = {"turn_relation": "请确认这句话是在补充上一轮，还是一个独立新问题？", "metric": "要查询或分析哪个指标？", "time_range": "要分析哪个时间范围？", "entity": "要查询哪类业务明细？", "fields": "明细中需要哪些字段？", "comparison_type": "希望同比、环比、目标值还是对象间比较？", "comparison_objects": "请提供要对比的具体经销商或供应商名称，并用顿号或逗号分隔。", "dimension": "希望按哪个维度分析？", "product": "要计算哪个具体商品的科室匹配度？", "semantic_ambiguity": "请确认存在歧义的业务口径。"}
+        prompts = {
+            "turn_relation": "请确认这句话是在补充上一轮，还是一个独立新问题？",
+            "metric": (
+                "缺少要计算的业务指标。请说明具体指标，"
+                "例如：含税销售总额、销售数量、订单笔数或已合作医院数。"
+            ),
+            "time_range": (
+                "缺少查询时间范围。请提供起止日期或相对时间，"
+                "例如：2026年5月1日至5月10日、最近一年或本月。"
+            ),
+            "entity": (
+                "缺少要返回的业务对象。请说明希望返回哪类记录，"
+                "例如：经销商名单、医院名单、产品明细或科室明细。"
+            ),
+            "fields": (
+                "缺少明细返回字段。请说明结果中需要哪些字段，"
+                "例如：经销商名称和联系方式、医院名称和等级，或产品名称和适用科室。"
+            ),
+            "comparison_type": "请说明比较方式，例如同比、环比、目标值比较或对象间比较。",
+            "comparison_objects": "请提供要对比的具体经销商或供应商名称，并用顿号或逗号分隔。",
+            "dimension": (
+                "缺少分组维度。请说明希望按什么维度汇总，"
+                "例如：按月份、城市、医院、经销商或产品分组。"
+            ),
+            "product": "缺少具体产品。请提供产品名称、规格或型号，例如：TDC-3。",
+            "semantic_ambiguity": "请确认存在歧义的业务口径。",
+        }
         normalized_question = re.sub(r"\s+", "", request.original_question or "")
         if "推荐" in normalized_question or "画像" in normalized_question:
             prompts["metric"] = (
@@ -9092,14 +11508,34 @@ class DataAnalysisOrchestrator:
                 prompt = "需要用哪段历史数据建模？请提供历史起止范围或窗口，例如：基于过去12个月。"
                 if prompt not in questions:
                     questions.append(prompt)
-            elif slot == "semantic_ambiguity" and request.ambiguities:
-                questions.extend(
-                    text
-                    for value in request.ambiguities
-                    if (
-                        text := cls._sanitize_clarification_text(value)
-                    ) not in questions
-                )
+            elif slot == "semantic_ambiguity" and (request.semantic_ambiguities or request.ambiguities):
+                if request.semantic_ambiguities:
+                    for ambiguity in request.semantic_ambiguities:
+                        if not ambiguity.blocking:
+                            continue
+                        text = cls._sanitize_clarification_text(ambiguity.question)
+                        phrase = cls._sanitize_clarification_text(ambiguity.phrase or "")
+                        vague_markers = (
+                            "它", "该名称", "这个名称", "当前名称",
+                            "哪个业务字段", "存在歧义的业务口径",
+                            "请重新说明", "具体是什么", "具体指什么",
+                        )
+                        if (
+                            phrase
+                            and phrase not in text
+                            and any(marker in text for marker in vague_markers)
+                        ):
+                            text = f"关于“{phrase}”：{text}"
+                        if text and text not in questions:
+                            questions.append(text)
+                else:
+                    questions.extend(
+                        text
+                        for value in request.ambiguities
+                        if (
+                            text := cls._sanitize_clarification_text(value)
+                        ) not in questions
+                    )
             else:
                 prompt = prompts.get(slot, f"请补充 {slot}。")
                 if prompt not in questions:
@@ -9143,7 +11579,7 @@ class DataAnalysisOrchestrator:
                     "option_details": ambiguity.candidate_details,
                     "multi_select": False,
                     "allow_free_text": True,
-                } for ambiguity in request.semantic_ambiguities)
+                } for ambiguity in request.semantic_ambiguities if ambiguity.blocking)
                 continue
             single_slot_request = request.model_copy(update={"missing_slots": [slot]})
             slot_questions = cls._clarification_questions(single_slot_request)
@@ -9843,6 +12279,7 @@ class DataAnalysisOrchestrator:
                 try:
                     answer = await self.chat_responder.respond(
                         request.original_question,
+                        agent_prompt=await self._agent_prompt_text(chat),
                         history=(
                             [
                                 {"role": item.role, "content": item.content}
@@ -9899,25 +12336,6 @@ class DataAnalysisOrchestrator:
             "source_watermark_field": dataset.source_watermark_field,
             "requested_time_coverage": coverage,
         }
-
-    @classmethod
-    def _source_watermark_note(
-        cls, request: CanonicalAnalysisRequest, dataset: Dataset
-    ) -> str:
-        payload = cls._source_watermark_payload(request, dataset)
-        if not payload:
-            return ""
-        note = (
-            f"数据水位：当前业务数据截至 {payload['source_data_as_of']}"
-            "（按销售记录时间统计）。"
-            "查询快照时间仅表示本次读取时间，不代表业务数据更新时间。"
-        )
-        coverage = payload["requested_time_coverage"]
-        if coverage == "OUTSIDE_SOURCE_WATERMARK":
-            note += "所请求的时间段完全晚于该水位，空结果不能解释为业务没有发生。"
-        elif coverage == "PARTIAL_AFTER_SOURCE_WATERMARK":
-            note += "所请求范围延伸至该水位之后，水位后的日期未被当前数据覆盖。"
-        return note
 
     @staticmethod
     def _reliability(request: CanonicalAnalysisRequest, evidence: list[EvidenceItem], quality_status: str) -> ReliabilityReport:
@@ -10012,7 +12430,7 @@ class DataAnalysisOrchestrator:
                     "上游未提供可验证的业务数据水位，本次无法确认请求时间范围的数据覆盖完整性。"
                 )
         for item in evidence:
-            if item.kind == "ANALYSIS_RESULT":
+            if item.kind in {"ANALYSIS_RESULT", "ASL_BINDING_NOTICE"}:
                 warnings.extend(
                     str(value) for value in item.payload.get("warnings", []) if value
                 )
@@ -10023,11 +12441,28 @@ class DataAnalysisOrchestrator:
 
     @staticmethod
     def _dependency_message(exc: AdapterError) -> str:
+        detailed = render_dependency_error(exc)
+        if detailed is not None:
+            return detailed
         known = {
+            'EXPLICIT_DOMAIN_NOT_SUPPORTED': '当前查询服务尚不能严格限定本次授权业务域，本次未执行查询。需由服务维护方完善范围过滤。',
+            'EXPLICIT_MULTI_DOMAIN_NOT_SUPPORTED': '当前查询服务尚不能严格限定本次授权的业务域集合，本次未执行查询。需由服务维护方完善范围过滤。',
+            'EXPLICIT_DOMAIN_METADATA_NOT_SUPPORTED': '当前元数据服务尚不支持本次授权业务域范围，本次未执行元数据查询。',
+            'SEMANTIC_SCOPE_UNCONFIRMED': '查询服务暂时无法确认本次查询的数据范围，系统已停止查询或拒绝使用结果。请联系系统维护人员处理。',
             "SEMANTIC_CONTEXT_MISSING": "缺少 semantic_model_id，暂时无法确定使用哪套语义模型。business_domain_id 可不传，由语义模型自动选择业务域。",
             "ASL_GENERATION_FAILED": "自然语言转 ASL 服务暂时不可用。",
+            "INTENT_ASL_CONTRACT_INCOMPLETE": (
+                "当前问题在生成语义查询条件时，没有完整保留用户明确要求的查询对象或筛选条件。"
+                "系统已停止执行以避免查错数据，请检查意图识别结果或语义模型配置。"
+            ),
             "ASL_ANALYSIS_SHAPE_INVALID": "语义查询没有返回分析所需的分组维度，本次未执行可能产生误导的单值分析。",
             "SQL_TRANSLATION_FAILED": "ASL 转 SQL 服务未能生成可执行查询。",
+            "SEMANTIC_VALIDATION_FAILED": (
+                "本次语义查询未通过语义校验：查询条件无法在已发布的语义模型中"
+                "唯一确定查询主体或其实体关系路径，为避免返回错误数据，本次未执行查询。"
+                "请在完整问题中写明查询对象后重试；若反复出现，需系统维护人员检查"
+                "该模型的实体、关系路径与主体绑定配置。"
+            ),
             "SQL_EXECUTION_FAILED": "SQL 查询执行失败，本次不返回数据。",
             "SQL_TRANSLATION_ENDPOINT_UNAVAILABLE": "SQL服务尚未部署独立翻译接口，请先发布或重启新版SQL Translator。",
             "SQL_EXECUTION_ENDPOINT_UNAVAILABLE": "SQL服务尚未部署独立执行接口，请先发布或重启新版SQL Translator。",
@@ -10044,6 +12479,11 @@ class DataAnalysisOrchestrator:
                 "请检查语义模型中的字段角色和实体关系配置。"
             ),
             "ASL_REQUIRED_FILTER_MISSING": "语义查询未保留当前问题要求的筛选条件，本次未执行可能扩大范围的查询。",
+            "ASL_SORT_ALIAS_UNRESOLVED": (
+                "语义查询为排序指标生成的展示别名为空，无法生成可执行的排序列，"
+                "本次未执行查询。请换用指标的完整业务名称重试；"
+                "系统维护人员需检查该指标的别名与排序字段配置。"
+            ),
             "ASL_REQUIRED_DIMENSION_MISSING": "语义查询未保留当前问题要求的分组维度，本次未执行不完整查询。",
             "ASL_DETAIL_FIELDS_INCOMPLETE": "语义查询未返回用户明确要求的全部明细字段。",
             "ASL_DETAIL_PROJECTION_MISSING": "当前语义模型无法唯一确定所请求明细字段的投影。",
@@ -10060,15 +12500,35 @@ class DataAnalysisOrchestrator:
         if diagnostic_code in known:
             return known[diagnostic_code]
         if exc.status_code in {401, 403}:
-            return "上游数据服务拒绝了当前可信身份，本次不返回数据。"
+            return (
+                f"上游数据服务拒绝了当前可信身份（错误码：{diagnostic_code}，"
+                f"HTTP {exc.status_code}），本次不返回数据。"
+                "用户无需修改查询内容；系统维护人员需检查服务身份、授权头和应用绑定。"
+            )
         if exc.status_code == 404:
-            return "上游数据服务没有找到请求的业务资源。"
+            return (
+                f"上游数据服务没有找到本次调用的资源或接口（错误码：{diagnostic_code}，HTTP 404）。"
+                "用户无需改写业务问题；系统维护人员需检查服务版本、接口路径和语义资源是否已发布。"
+            )
         if exc.status_code == 409:
-            return "上游数据状态发生冲突，请刷新后重试。"
+            return (
+                f"上游数据状态发生冲突（错误码：{diagnostic_code}，HTTP 409）。"
+                "请刷新当前会话后重试；若仍出现，系统维护人员需检查目录版本或会话状态冲突。"
+            )
         if exc.status_code == 422:
-            return "上游数据服务无法按当前条件完成查询，请调整条件后重试。"
+            return (
+                f"上游服务拒绝了当前查询合同（错误码：{diagnostic_code}，HTTP 422），"
+                "但响应没有提供可安全展示的具体字段或取值。"
+                "用户无需盲目改写问题；系统维护人员需根据该错误码补全结构化 details，"
+                "再明确判断应由用户补充条件还是由语义层修复配置。"
+            )
         safe_code = diagnostic_code
-        return f"上游数据服务暂时不可用（{safe_code}），请稍后重试。"
+        status = f"，HTTP {exc.status_code}" if exc.status_code is not None else ""
+        return (
+            f"上游调用失败（错误码：{safe_code}{status}），当前响应未提供更具体的可公开诊断信息。"
+            "用户无需重复输入同一问题；若错误可重试，请稍后重试，"
+            "否则由系统维护人员检查对应调用阶段并补充结构化错误详情。"
+        )
 
     @staticmethod
     def _analysis_contract_requirements(
@@ -10110,5 +12570,5 @@ class DataAnalysisOrchestrator:
         return requirements[:20]
 
     @staticmethod
-    def _fallback(request: CanonicalAnalysisRequest, reason: str) -> AgentResponse:
-        return AgentResponse(request_id=request.request_id, conversation_id=request.conversation_id, status="SAFE_FALLBACK", intent=request.primary_intent, intent_source=request.intent_source, intent_confidence=request.intent_confidence, answer=reason, reliability=ReliabilityReport(level="FAIL", score=0, gates={"safe_termination": True}, warnings=[reason]))
+    def _fallback(request: CanonicalAnalysisRequest, reason: str, *, error_code: str | None = None) -> AgentResponse:
+        return AgentResponse(request_id=request.request_id, conversation_id=request.conversation_id, status="SAFE_FALLBACK", error_code=error_code, intent=request.primary_intent, intent_source=request.intent_source, intent_confidence=request.intent_confidence, answer=reason, reliability=ReliabilityReport(level="FAIL", score=0, gates={"safe_termination": True}, warnings=[reason]))

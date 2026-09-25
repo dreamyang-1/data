@@ -13,10 +13,12 @@ from app.adapters.http import (
 from app.config import Settings
 from datetime import date, datetime, timezone
 from app.domain.models import AnalysisOperator, CanonicalAnalysisRequest, Dataset, DependencyConstraint, MetricRef, PrimaryIntent, SemanticFilterBinding, TimeRange, TrustedIdentity
+from app.domain.semantic_scope import AuthorizedSemanticScope
 from app.services.knowledge_retrieval import RedisKnowledgeSearchCache
 from app.services.relationship_projection import (
     requires_distinct_relationship_projection,
 )
+from app.services.progress import progress_scope
 
 IDENTITY = TrustedIdentity(tenant_id="t1", user_id="u1")
 
@@ -38,6 +40,67 @@ class ContractClient:
     async def openapi_has_paths(self, base_url, required_paths):
         self.calls.append((base_url, required_paths))
         return next(self.results)
+
+
+def test_structured_asl_reference_contains_completed_extraction_without_binding_authority():
+    request = CanonicalAnalysisRequest(
+        conversation_id="structured-asl-reference",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询上海经销商的含税销售额",
+        rewritten_question="查询上海市经销商的含税销售总额",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        entity="经销商",
+        metrics=[MetricRef(
+            input="销售额",
+            canonical_name="含税销售总额",
+            metric_id="81:sales_total_including_tax",
+        )],
+        dimensions=["经销商"],
+        fields=["经销商名称"],
+        filters=[{"field": "城市", "operator": "EQ", "value": "上海"}],
+        operators=[AnalysisOperator.AGGREGATE],
+        time_range=TimeRange(
+            start=date(2026, 1, 1), end_exclusive=date(2027, 1, 1)
+        ),
+    )
+
+    reference = HttpDataRetrievalAdapter._structured_asl_reference(request)
+
+    assert reference["entity"] == "经销商"
+    assert reference["metrics"][0]["metric_id"] == "81:sales_total_including_tax"
+    assert reference["filters"] == [
+        {"field": "城市", "operator": "EQ", "value": "上海"}
+    ]
+    assert reference["time_range"] == {"start": "2026-01-01", "end": "2026-12-31"}
+    assert "confirmed" not in reference
+
+
+def test_v2_scalar_shape_contract_is_bounded_to_consistent_canonical_requests():
+    request = CanonicalAnalysisRequest(
+        conversation_id="v2-scalar-shape",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="查询订单笔数和销售总数量",
+        primary_intent=PrimaryIntent.METRIC_QUERY,
+        operators=[AnalysisOperator.AGGREGATE],
+        metrics=[MetricRef(input="订单笔数", metric_id="81:order_count")],
+        assumptions=["V2_QUERY_SHAPE=SCALAR_AGGREGATE"],
+    )
+
+    rendered = HttpDataRetrievalAdapter._apply_v2_scalar_shape_contract(
+        request.original_question, request
+    )
+    assert "ASL dimensions 必须为空" in rendered
+    assert HttpDataRetrievalAdapter._apply_v2_scalar_shape_contract(
+        request.original_question,
+        request.model_copy(update={"assumptions": []}),
+    ) == request.original_question
+    with pytest.raises(AdapterError, match="V2 scalar marker conflicts"):
+        HttpDataRetrievalAdapter._apply_v2_scalar_shape_contract(
+            request.original_question,
+            request.model_copy(update={"dimensions": ["省份"]}),
+        )
 
 
 def test_filter_recall_anchors_full_hospital_name_to_published_name_role():
@@ -140,6 +203,53 @@ async def test_deterministic_semantic_5xx_is_not_retried_by_http_client(monkeypa
     assert calls == 1
     assert caught.value.upstream_code == "ASL_ENTITY_MENTION_UNRESOLVED"
     assert caught.value.retryable is False
+
+
+@pytest.mark.asyncio
+async def test_http_client_preserves_bounded_upstream_contract_details(monkeypatch):
+    class FakeAsyncClient:
+        def __init__(self, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        async def request(self, method, path, **kwargs):
+            return httpx.Response(
+                502,
+                json={
+                    "success": False,
+                    "detail": {
+                        "code": "ASL_ENTITY_MENTION_UNRESOLVED",
+                        "message": "sanitized",
+                        "field": "filters",
+                        "details": {
+                            "mention": "费森尤斯",
+                            "candidate_field_count": 12,
+                            "token": "must-not-cross-boundary",
+                        },
+                    },
+                },
+                request=httpx.Request(method, "http://semantic.test" + path),
+            )
+
+    monkeypatch.setattr("app.adapters.http.httpx.AsyncClient", FakeAsyncClient)
+    client = PlatformHttpClient(Settings(http_max_retries=3))
+
+    with pytest.raises(AdapterError) as caught:
+        await client.post(
+            "http://semantic.test", "/agent/query", {"query": "test"}, retryable=True
+        )
+
+    assert caught.value.details == {
+        "path": "/agent/query",
+        "mention": "费森尤斯",
+        "candidate_field_count": 12,
+        "field": "filters",
+    }
 
 
 @pytest.mark.asyncio
@@ -579,6 +689,20 @@ def test_semantic_entity_mention_rejects_missing_source_binding_proof():
     assert exc.value.code == "ASL_ENTITY_MENTION_UNRESOLVED"
 
 
+def test_typed_filter_value_is_not_sent_again_as_untyped_mention():
+    req = request().model_copy(update={
+        "filters": [
+            {"field": "商品品牌", "operator": "EQ", "value": "万益特"},
+            {"field": "商品名称", "operator": "EQ", "value": "血液净化管路"},
+        ],
+        "semantic_entity_mentions": ["万益特", "血液净化管路", "尚未分类的型号"],
+    })
+
+    assert HttpDataRetrievalAdapter._untyped_semantic_mentions(req) == [
+        "尚未分类的型号"
+    ]
+
+
 @pytest.mark.asyncio
 async def test_contextual_entity_mention_is_preserved_for_current_semantic_recall():
     req = CanonicalAnalysisRequest(
@@ -609,30 +733,6 @@ async def test_contextual_entity_mention_is_preserved_for_current_semantic_recal
     assert all(
         label in retrieval_query
         for label in ("品牌", "母厂牌", "生产厂家", "商品品类")
-    )
-
-
-def test_required_non_null_name_filter_accepts_current_semantic_field():
-    required = CanonicalAnalysisRequest(
-        conversation_id="non-null-filter",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="查询医院名单",
-        primary_intent=PrimaryIntent.DETAIL_QUERY,
-        entity="医院",
-        fields=["医院名称"],
-        assumptions=["REQUIRED_NAME_NON_NULL=医院名称"],
-    )
-
-    HttpDataRetrievalAdapter._validate_request_filters(
-        {
-            "filters": [{
-                "field": "hospital.hospital_name",
-                "operator": "IS NOT NULL",
-                "value": None,
-            }]
-        },
-        required,
     )
 
 
@@ -678,57 +778,6 @@ def test_vector_bound_filter_requires_the_same_semantic_attribute():
         )
 
     assert exc.value.code == "ASL_REQUIRED_FILTER_MISSING"
-
-def test_required_non_null_name_filter_cannot_be_dropped():
-    required = CanonicalAnalysisRequest(
-        conversation_id="missing-non-null-filter",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="查询医院名单",
-        primary_intent=PrimaryIntent.DETAIL_QUERY,
-        entity="医院",
-        fields=["医院名称"],
-        assumptions=["REQUIRED_NAME_NON_NULL=医院名称"],
-    )
-
-    with pytest.raises(AdapterError) as exc:
-        HttpDataRetrievalAdapter._validate_request_filters(
-            {"filters": []}, required
-        )
-
-    assert exc.value.code == "ASL_REQUIRED_NAME_NON_NULL_MISSING"
-
-
-def test_required_non_null_name_filter_is_bound_to_projected_semantic_field():
-    required = CanonicalAnalysisRequest(
-        conversation_id="bind-non-null-filter",
-        tenant_id="t1",
-        user_id="u1",
-        original_question="查询医院名单",
-        primary_intent=PrimaryIntent.DETAIL_QUERY,
-        entity="医院",
-        fields=["医院名称"],
-        assumptions=["REQUIRED_NAME_NON_NULL=医院名称"],
-    )
-    asl = {
-        "dimensions": [{
-            "name": "hospital.hospital_name",
-            "alias": "医院名称",
-        }],
-        "filters": [],
-    }
-
-    HttpDataRetrievalAdapter._ensure_required_name_non_null_filters(
-        asl, required
-    )
-
-    assert asl["filters"] == [{
-        "field": "hospital.hospital_name",
-        "operator": "!=",
-        "value": "",
-    }]
-    HttpDataRetrievalAdapter._validate_request_filters(asl, required)
-
 
 def dependency_constraint(values=None):
     values = values or ["超声科", "麻醉科"]
@@ -795,7 +844,19 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
     }
     client = StubClient([
         {"success": True, "result": json.dumps(asl, ensure_ascii=False)},
-        {"success": True, "sql": "SELECT dealer_name FROM dealer_result WHERE dept_name IN (?, ?)"},
+        {
+            "success": True,
+            "sql": "SELECT dealer_name FROM dealer_result WHERE dept_name IN (?, ?)",
+            "effective_filter_summary": {
+                "asl_filters": asl["filters"],
+                "metric_global_filters": [{
+                    "metric": "fault_count",
+                    "filter_type": "include",
+                    "condition": "repair_order.work_type = 'A'",
+                    "source": "METRIC_DEFINITION",
+                }],
+            },
+        },
         {
             "success": True,
             "sql": "SELECT dealer_name FROM dealer_result WHERE dept_name IN (?, ?)",
@@ -805,9 +866,19 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
         },
     ])
 
-    result = await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
-        constrained, IDENTITY, semantic_model_id=81, business_domain_id=205
-    )
+    progress: list[tuple[str, int]] = []
+    progress_messages: list[tuple[str, str]] = []
+
+    async def capture_progress(event):
+        progress.append((event["stage"], len(client.calls)))
+        progress_messages.append((event["stage"], event["message"]))
+
+    with progress_scope(capture_progress):
+        result = await HttpDataRetrievalAdapter(
+            Settings(adapter_mode="http"), client
+        ).query(
+            constrained, IDENTITY, semantic_model_id=81, business_domain_id=205
+        )
 
     assert result.dataset.row_count == 1
     assert [call[1] for call in client.calls] == ["/agent/query", "/api/translate", "/api/execute"]
@@ -815,6 +886,46 @@ async def test_dependency_constraint_allows_exact_in_filter_and_executes_sql():
     assert "Internal DAG semantic retrieval requirement" in client.calls[0][2]["retrieval_query"]
     translated_asl = json.loads(client.calls[1][2]["asl"])
     assert translated_asl["projection_mode"] == "DISTINCT"
+    assert next(item for item in progress if item[0] == "ASL_GENERATION") == (
+        "ASL_GENERATION",
+        1,
+    )
+    assert next(item for item in progress if item[0] == "SQL_EXECUTION") == (
+        "SQL_EXECUTION",
+        2,
+    )
+    assert any(
+        stage == "ASL_GENERATION"
+        and message.startswith("工具：智能语义查询器（ASL 结构化提取）。")
+        for stage, message in progress_messages
+    )
+    assert any(
+        stage == "SEMANTIC_QUERY_PLANNING"
+        and message.startswith("调用工具：SQL 翻译服务。")
+        for stage, message in progress_messages
+    )
+    translation_message = next(
+        message
+        for stage, message in progress_messages
+        if stage == "SEMANTIC_QUERY_PLANNING"
+    )
+    assert "ASL筛选条件=" in translation_message
+    assert "指标固定口径（SQL自动合并）=" in translation_message
+    assert "repair_order.work_type = 'A'" in translation_message
+    assert any(
+        stage == "SQL_EXECUTION"
+        and message.startswith("调用工具：SQL 执行服务。")
+        for stage, message in progress_messages
+    )
+    completed_sql_message = next(
+        message
+        for stage, message in reversed(progress_messages)
+        if stage == "SQL_EXECUTION"
+    )
+    assert "输出字段：" in completed_sql_message
+    assert "返回行数：" in completed_sql_message
+    assert "数据预览：" not in completed_sql_message
+    assert "正在校验结果集契约和数据源范围。" not in completed_sql_message
 
 
 def test_dependency_constraint_field_family_keeps_join_key_kind() -> None:
@@ -1279,7 +1390,7 @@ async def test_relation_detail_sends_relationship_aware_projection_contract():
 
 @pytest.mark.asyncio
 async def test_acknowledged_contract_uses_canonical_projection_validation():
-    """A logical dimension code must not fail a second static synonym gate."""
+    """Physical display fields confirmed by Oagnet pass without a synonym gate."""
 
     class EchoContractClient:
         def __init__(self):
@@ -1295,11 +1406,8 @@ async def test_acknowledged_contract_uses_canonical_projection_validation():
                         "subject": {"entity": "product"},
                         "metrics": [],
                         "dimensions": [
-                            {"name": "product", "attr": None},
-                            {
-                                "name": "applicable_department",
-                                "attr": "2093646189935833090",
-                            },
+                            {"name": "product.product_name", "attr": None},
+                            {"name": "department.dept_name", "attr": None},
                         ],
                         "filters": [{
                             "field": "product.specification",
@@ -1335,11 +1443,17 @@ async def test_acknowledged_contract_uses_canonical_projection_validation():
         semantic_entity_mentions=["TDC-3"],
     )
 
+    client = EchoContractClient()
     dataset = await HttpDataRetrievalAdapter(
-        Settings(adapter_mode="http"), EchoContractClient()
+        Settings(adapter_mode="http"), client
     ).query(detail, IDENTITY, semantic_model_id=81, business_domain_id=205)
 
     assert dataset.dataset.row_count == 1
+    translated_asl = json.loads(client.calls[1][2]["asl"])
+    assert [item["name"] for item in translated_asl["dimensions"]] == [
+        "product.product_name",
+        "department.dept_name",
+    ]
 
 
 def test_transaction_detail_remains_row_shaped() -> None:
@@ -2786,6 +2900,25 @@ async def test_missing_business_domain_uses_semantic_model_wide_asl_routing():
     assert client.calls[0][2]["business_domain_ids"] == []
 
 
+def test_model_wide_request_uses_unique_catalog_resolved_domain_for_asl():
+    req = request().model_copy(update={
+        "semantic_model_id": 81,
+        "business_domain_ids": [],
+        "resolved_business_domain_ids": [205],
+        "authorized_semantic_scope": AuthorizedSemanticScope(
+            semantic_model_id=81,
+            scope_mode="MODEL_WIDE",
+        ),
+    })
+
+    execution_scope = HttpDataRetrievalAdapter._materialize_oagent_execution_scope(
+        req, None
+    )
+
+    assert execution_scope["business_domain_id"] == 205
+    assert execution_scope["business_domain_ids"] == [205]
+
+
 @pytest.mark.asyncio
 async def test_detail_execution_constraints_do_not_pollute_semantic_retrieval():
     asl = {
@@ -3016,12 +3149,45 @@ async def test_asl_ambiguity_stops_before_sql_execution():
     assert exc.value.code == "ASL_AMBIGUOUS"
     assert len(client.calls) == 1
 
+
 @pytest.mark.asyncio
-async def test_row_count_mismatch_is_rejected():
+async def test_confirmed_metric_ignores_repeated_asl_metric_ambiguity():
+    bound = request().model_copy(update={
+        "metrics": [MetricRef(
+            input="sales_total_including_tax",
+            canonical_name="sales_total_including_tax",
+            metric_id="8:sales_total_including_tax",
+        )],
+    })
+    client = StubClient([
+        {"success": True, "result": json.dumps({
+            "version": "2.0",
+            "metrics": [{"name": "sales_total_including_tax"}],
+            "dimensions": [],
+            "filters": [],
+            "ambiguity": [{
+                "type": "metric",
+                "affected_slots": ["metric"],
+                "question": "choose metric again",
+            }],
+        })},
+        {"success": True, "sql": "SELECT 1"},
+        {"success": True, "sql": "SELECT 1", "data": [{"x": 1}], "columns": ["x"]},
+    ])
+
+    result = await HttpDataRetrievalAdapter(
+        Settings(adapter_mode="http"), client
+    ).query(bound, IDENTITY, semantic_model_id=8, business_domain_id=13)
+
+    assert result.dataset.rows == [{"x": 1}]
+    assert len(client.calls) == 3
+
+@pytest.mark.asyncio
+async def test_row_count_mismatch_returns_database_rows():
     client = StubClient([{"success": True, "result": json.dumps({"metrics": [], "ambiguity": []})}, {"success": True, "sql": "SELECT 1"}, {"sql": "SELECT 1", "success": True, "data": [{"x": 1}], "columns": ["x"], "row_count": 2}])
-    with pytest.raises(AdapterError) as exc:
-        await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(request(), IDENTITY, semantic_model_id=8, business_domain_id=13)
-    assert exc.value.code == "SQL_RESPONSE_INVALID"
+    result = await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(request(), IDENTITY, semantic_model_id=8, business_domain_id=13)
+    assert result.dataset.rows == [{"x": 1}]
+    assert result.dataset.row_count == 1
 
 @pytest.mark.asyncio
 async def test_analysis_knowledge_parses_real_document_contract_without_sending_rows():
@@ -3068,7 +3234,7 @@ def test_dataset_fingerprint_is_stable_across_request_retries():
     assert first.snapshot_id == second.snapshot_id
 
 
-def test_relationship_projection_normalizes_and_deduplicates_visible_rows():
+def test_dataset_preserves_relationship_rows_exactly_as_returned_by_sql_service():
     payload = {
         "success": True,
         "data": [
@@ -3082,16 +3248,16 @@ def test_relationship_projection_normalizes_and_deduplicates_visible_rows():
 
     dataset = HttpDataRetrievalAdapter._dataset(
         payload,
-        request_id="relationship-dedupe",
-        distinct_projection=True,
+        request_id="relationship-raw-rows",
     )
 
     assert dataset.rows == [
         {"商品名称": "超声血管导引穿刺套件", "适用科室": "麻醉科"},
+        {"商品名称": "超声血管导引穿刺套件 ", "适用科室": " 麻醉科"},
         {"商品名称": "超声血管导引穿刺套件", "适用科室": "肾内科"},
     ]
-    assert dataset.row_count == 2
-    assert dataset.total_row_count == 2
+    assert dataset.row_count == 3
+    assert dataset.total_row_count == 3
 
 
 class _ConcurrentRedis:
@@ -3224,7 +3390,7 @@ def test_dataset_rejects_invalid_source_watermark_response(
     assert exc.value.code == "SQL_RESPONSE_INVALID"
 
 
-def test_dataset_rejects_source_watermark_without_pass_snapshot_contract():
+def test_dataset_accepts_source_watermark_without_quality_gate():
     payload = {
         "success": True,
         "data": [{"销售额": 10}],
@@ -3233,9 +3399,9 @@ def test_dataset_rejects_source_watermark_without_pass_snapshot_contract():
         "source_data_as_of": "2025-12-30",
         "source_watermark_field": "sales_order.created_date",
     }
-    with pytest.raises(AdapterError) as exc:
-        HttpDataRetrievalAdapter._dataset(payload, request_id="request-a")
-    assert exc.value.code == "SQL_RESPONSE_INVALID"
+    dataset = HttpDataRetrievalAdapter._dataset(payload, request_id="request-a")
+    assert dataset.rows == [{"销售额": 10}]
+    assert dataset.source_watermark_field == "sales_order.created_date"
 
 
 def test_dataset_rejects_malformed_upstream_snapshot_time():
@@ -3269,7 +3435,7 @@ def test_dataset_preserves_upstream_truncation_signal():
     assert dataset.truncated is True
 
 
-def test_dataset_rejects_inconsistent_truncation_contract():
+def test_dataset_normalizes_inconsistent_truncation_contract():
     payload = {
         "success": True,
         "data": [{"销售额": 10}],
@@ -3278,9 +3444,9 @@ def test_dataset_rejects_inconsistent_truncation_contract():
         "total_count": 5000,
         "truncated": False,
     }
-    with pytest.raises(AdapterError) as exc:
-        HttpDataRetrievalAdapter._dataset(payload, request_id="request-c")
-    assert exc.value.code == "SQL_RESPONSE_INVALID"
+    dataset = HttpDataRetrievalAdapter._dataset(payload, request_id="request-c")
+    assert dataset.rows == [{"销售额": 10}]
+    assert dataset.truncated is True
 def test_model81_trend_repair_keeps_sort_on_physical_time_dimension() -> None:
     request = CanonicalAnalysisRequest(
         conversation_id="product-monthly-sales",

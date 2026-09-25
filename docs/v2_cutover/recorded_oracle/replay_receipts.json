@@ -1,0 +1,1016 @@
+[
+  {
+    "case_id": "S81-001",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "83f11d0c6e65f6c1ddd917603627e0b7acbcbc6b5e024a85718abdcc40122813",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "SCALAR_AGGREGATE",
+      "metrics": [
+        "sales_total_including_tax",
+        "sales_total_quantity"
+      ],
+      "dimensions": [],
+      "turn": "NEW_TASK"
+    }
+  },
+  {
+    "case_id": "S81-001",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "dbf70646a6acf993ee2dcdd5c96d39bacf6002fa12f301c6c45319d8b7315098",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "SCALAR_AGGREGATE",
+      "metrics": [
+        "order_count",
+        "sales_total_including_tax",
+        "sales_total_quantity"
+      ],
+      "dimensions": [],
+      "turn": "ADD"
+    }
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "881585a79b51c4d1e07db53021803a0860aef91ba503891d67c19696b52cf6fd",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "SCALAR_AGGREGATE",
+      "metrics": [
+        "sales_total_including_tax",
+        "sales_total_quantity"
+      ],
+      "dimensions": [],
+      "turn": "NEW_TASK"
+    }
+  },
+  {
+    "case_id": "S81-002",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "de3577574a0c7846fbddb2ec8ac1437525260a9fbc114cac178fa69e0a88a68b",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "SCALAR_AGGREGATE",
+      "metrics": [
+        "order_count"
+      ],
+      "dimensions": [],
+      "turn": "RETURN_TO_TOPIC"
+    }
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "b6f104a2e58635f41f5cae82959856b17bc7884c726e116dddb64fed012abac8",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "SCALAR_AGGREGATE",
+      "metrics": [
+        "order_count",
+        "sales_total_including_tax"
+      ],
+      "dimensions": [],
+      "turn": "NEW_TASK"
+    }
+  },
+  {
+    "case_id": "S81-003",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "99d647b4480e9af8c897fae6033f63fe51462f012561ec2314af37a87c5eb7b7",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "SCALAR_AGGREGATE",
+      "metrics": [
+        "sales_total_including_tax"
+      ],
+      "dimensions": [],
+      "turn": "MODIFY"
+    }
+  },
+  {
+    "case_id": "S81-004",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "5596229738a0381228ee9a765b33c090359cbb6af814ec5330ae3f736ee92b42",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 1,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true
+  },
+  {
+    "case_id": "S81-005",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "c15237ebd8eaabdcfbea8a0b65420a6b41ea5deacd4f7438b382a03498c14301",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 1,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true
+  },
+  {
+    "case_id": "S81-006",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "3a11318dacc0669baa3d3f5747a12adfb4733972b5bb1957840a1748c50e573b",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 1,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true
+  },
+  {
+    "case_id": "S81-007",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "f1bc81340393a51d40d7460d6d3c54302f243d32ec6955224ac19df143f7aa5c",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true
+  },
+  {
+    "case_id": "S81-008",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "ad339adc15bdfaf301572e5a22555d8d4f7f9e55e629bc913d3cc74554f6ce74",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_REQUEST_NOT_APPLIED",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true
+  },
+  {
+    "case_id": "S81-009",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "fb9a2b24159ee9e3944eef336095c050a485df254c9225da16a1b5b13a15cbd6",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 1,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true
+  },
+  {
+    "case_id": "S81-010",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "a683a3051d21bb05f11bfdb47f2cd05fa8c16e03563ad1554dc8939e8c1ea91d",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 1,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "ed799a537aa212af5b24c9b8eb1a46753d0fd55f4da7f44d6087a760ec1c3ede",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "GROUPED_AGGREGATE",
+      "metrics": [
+        "sales_total_including_tax"
+      ],
+      "dimensions": [
+        "hospital"
+      ],
+      "turn": "NEW_TASK"
+    }
+  },
+  {
+    "case_id": "S81-011",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "bcbf769c5767e464bbde14b23117cd70bd19fc24471038a08d170b719fa43f75",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "GROUPED_AGGREGATE",
+      "metrics": [
+        "sales_total_including_tax"
+      ],
+      "dimensions": [
+        "city",
+        "hospital"
+      ],
+      "turn": "ADD"
+    }
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "8cde8de8cc4bd0744adf2f3f697eb72e706f9419f9e7d2b24e2275fcdfd90f94",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "GROUPED_AGGREGATE",
+      "metrics": [
+        "sales_total_including_tax"
+      ],
+      "dimensions": [
+        "hospital"
+      ],
+      "turn": "NEW_TASK"
+    }
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "d5a161d79824886406c61e165333219846882ee9849da974f562ba9672a36bf3",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SLOT_OPERATION_CONFLICT",
+      "first_rejecting_boundary": "TASK_PATCH"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "613d5c4720e6410f0f640a91ecb6e531f7d3477520ad0c49c9c71af242135b77",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "GROUPED_AGGREGATE",
+      "metrics": [
+        "sales_total_including_tax"
+      ],
+      "dimensions": [
+        "city",
+        "salesperson"
+      ],
+      "turn": "NEW_TASK"
+    }
+  },
+  {
+    "case_id": "S81-013",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "985c1329bd7a33189f36d3f1b7ecce91e889710ec761f3e61567d5481eebfe29",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "GROUPED_AGGREGATE",
+      "metrics": [
+        "sales_total_including_tax"
+      ],
+      "dimensions": [
+        "city"
+      ],
+      "turn": "MODIFY"
+    }
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "555124263d7033efd935a74999404c505626f3862dfe6bc1cbd1c8fb6d01276f",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "ValidationError",
+      "reason": "CONTRACT_OR_HARNESS_FAILURE",
+      "schema_diagnostics": [
+        {
+          "type": "value_error",
+          "location": []
+        }
+      ],
+      "first_rejecting_boundary": "TASK_PATCH"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true
+  },
+  {
+    "case_id": "S81-015",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "3ce6f544a330d5386b9479422b1d1a57938a6d41b06019a7d75fa663e9c80fc5",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SOURCE_VALUE_NOT_FOUND",
+      "first_rejecting_boundary": "SOURCE_VALUE_RESOLUTION"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 1,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 0,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "9f90f5ae5fc2a281758a1b137ee96f94b9e56d3e03d523aaa78b00c9323f52a6",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "SCALAR_AGGREGATE",
+      "metrics": [
+        "sales_total_including_tax"
+      ],
+      "dimensions": [],
+      "turn": "NEW_TASK"
+    }
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 1,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "c3c7d6c78feb198dd40fdf7224811b39ffcecbb530fa1f26dbbabf4bbe8df639",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true,
+    "observed": {
+      "payload_type": "SCALAR_AGGREGATE",
+      "metrics": [
+        "sales_total_cost"
+      ],
+      "dimensions": [],
+      "turn": "NEW_TASK"
+    }
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 2,
+    "mode": "RECORDED_MODEL_PIPELINE",
+    "source_capture_hash": "4074dc1daa3e4e12930a0260bd1165b33afc1bb97d3bae44bed63dd6d37b5985",
+    "oracle_outputs_hash": null,
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": false
+      }
+    ],
+    "failure": {
+      "type": "ValidationError",
+      "reason": "CONTRACT_OR_HARNESS_FAILURE",
+      "schema_diagnostics": [
+        {
+          "type": "too_short",
+          "location": [
+            "group_by"
+          ]
+        }
+      ],
+      "first_rejecting_boundary": "SEMANTIC_IR"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "BASELINE",
+    "captured_result_reproduced_exactly": true
+  },
+  {
+    "case_id": "S81-012",
+    "turn_index": 1,
+    "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+    "source_capture_hash": "d5a161d79824886406c61e165333219846882ee9849da974f562ba9672a36bf3",
+    "oracle_outputs_hash": "643704299f65197f774b5f740725fe73615cdba6e8394068022731e6827fc793",
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": true
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": false,
+        "output_changed": true
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "REPLACEMENT_PARSE",
+    "observed": {
+      "payload_type": "GROUPED_AGGREGATE",
+      "metrics": [
+        "sales_total_including_tax"
+      ],
+      "dimensions": [
+        "dealer"
+      ],
+      "turn": "REPLACE"
+    }
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 0,
+    "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+    "source_capture_hash": "555124263d7033efd935a74999404c505626f3862dfe6bc1cbd1c8fb6d01276f",
+    "oracle_outputs_hash": "16804e64058a2e0c3c1e2eec85abf1cf34a58f7330d552d58827a8d5d7717aed",
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": true
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SLOT_ROLE_CONFLICT",
+      "first_rejecting_boundary": "BINDING_ROLE"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "IANA_TIMEZONE"
+  },
+  {
+    "case_id": "S81-014",
+    "turn_index": 0,
+    "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+    "source_capture_hash": "555124263d7033efd935a74999404c505626f3862dfe6bc1cbd1c8fb6d01276f",
+    "oracle_outputs_hash": "3f7744cad6efaa66bffa519a71584d89da06cb15511d8922aa4740e15c913897",
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": false
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": true,
+        "output_changed": true
+      }
+    ],
+    "failure": {
+      "type": "RecognitionFailure",
+      "reason": "V2_SLOT_ROLE_CONFLICT",
+      "first_rejecting_boundary": "BINDING_ROLE"
+    },
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "RANGE_WITHOUT_GROUPING"
+  },
+  {
+    "case_id": "S81-017",
+    "turn_index": 2,
+    "mode": "RECORDED_OUTPUT_ORACLE_INTERVENTION",
+    "source_capture_hash": "4074dc1daa3e4e12930a0260bd1165b33afc1bb97d3bae44bed63dd6d37b5985",
+    "oracle_outputs_hash": "fc577b0030c9b191b607c713ac184a9653a3529ddf50b654bffd6b7d55379e32",
+    "model_stages": [
+      {
+        "stage": "v2_current_turn",
+        "context_matches_recording": true,
+        "output_changed": true
+      },
+      {
+        "stage": "v2_semantic_edits",
+        "context_matches_recording": false,
+        "output_changed": true
+      }
+    ],
+    "failure": null,
+    "real_model_calls": 0,
+    "source_SQL_executions": 0,
+    "production_writes": 0,
+    "state_restore_policy": "REPRODUCE_ISOLATED_PUBLICATION_IDENTITY; ORIGINAL_SCOPE_AND_DIGEST_CHECKS",
+    "source_observations_replayed": 0,
+    "model_accuracy_established": false,
+    "production_cutover_pass": false,
+    "intervention": "SCALAR_SHAPE",
+    "observed": {
+      "payload_type": "SCALAR_AGGREGATE",
+      "metrics": [
+        "order_count",
+        "sales_total_including_tax"
+      ],
+      "dimensions": [],
+      "turn": "RETURN_TO_TOPIC"
+    }
+  }
+]

@@ -1,0 +1,1860 @@
+{
+  "baseline_commit": "6cc55e217574a68d7faa66e6d4c4de4c101341c9",
+  "case_count": 13,
+  "cases": [
+    {
+      "case_id": "G81-001",
+      "corpus": "PUBLIC_DEV",
+      "original_corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "列出产品线名单",
+      "planned_current_utterance": "列出产品线名单",
+      "planned_history": [],
+      "expected_operation": "INITIALIZE_SUBJECT_WITH_GOVERNED_DISPLAY",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "ADD",
+      "operand_surface": "产品线",
+      "operand_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "CANONICAL_SUBJECT_ONLY_NOT_EXPLICIT_PROJECTION",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "TARGET_SLOT_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "subject",
+          "operation": "SET"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "ENTITY",
+          "semantic_role": "SUBJECT_ENTITY",
+          "canonical_id": "sm81_bd205:entity:product_line",
+          "canonical_code": "product_line",
+          "display_name": "产品线",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m-0"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m-0"
+          ],
+          "canonical_value": {
+            "catalog_type": "ENTITY",
+            "semantic_role": "SUBJECT_ENTITY",
+            "canonical_id": "sm81_bd205:entity:product_line",
+            "canonical_code": "product_line",
+            "display_name": "产品线",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m-0"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse explicit_slot_mentions/operation_markers",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-ENTITY-PROJECTION",
+      "downstream_effects": [
+        {
+          "stage": "QUERY_SHAPE",
+          "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+          "evidence_kind": "SINGLE_PARSE_ARTIFACT_ORACLE",
+          "catalog_defect_proven": false
+        }
+      ],
+      "evidence": {
+        "capture_hash": "dd49aea9b0fdcc614208c075d0c753a9ef69114de9ad4abbe0eb6bd10d042e82",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "aea673f3faf9ff364e9147e5806c2e972c8143459d9b7a204ec695a6ad925586",
+        "candidate_artifact_hash": "72334fd8bb168542590d394d27fe290df8c773c5ed1016325b8e7c042bbb5b25",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "G81-003",
+      "corpus": "PUBLIC_DEV",
+      "original_corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "列出城市名单",
+      "planned_current_utterance": "列出城市名单",
+      "planned_history": [],
+      "expected_operation": "INITIALIZE_SUBJECT_WITH_GOVERNED_DISPLAY",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "ADD",
+      "operand_surface": "城市",
+      "operand_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "CANONICAL_SUBJECT_ONLY_NOT_EXPLICIT_PROJECTION",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "TARGET_SLOT_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "subject",
+          "operation": "SET"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "ENTITY",
+          "semantic_role": "SUBJECT_ENTITY",
+          "canonical_id": "sm81_bd205:entity:city",
+          "canonical_code": "city",
+          "display_name": "市",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m-turn-0-0"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m-turn-0-0"
+          ],
+          "canonical_value": {
+            "catalog_type": "ENTITY",
+            "semantic_role": "SUBJECT_ENTITY",
+            "canonical_id": "sm81_bd205:entity:city",
+            "canonical_code": "city",
+            "display_name": "市",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m-turn-0-0"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse explicit_slot_mentions/operation_markers",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-ENTITY-PROJECTION",
+      "downstream_effects": [],
+      "evidence": {
+        "capture_hash": "828c671c3d0e8af08cd2d5480fecb31cc183f7c96ce2ce4b9ae2819da619d258",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "9eaa442bc75d72e86cf4509321bd4e4908e4701d824ad73515fb241a7d24e51e",
+        "candidate_artifact_hash": "d37e76bc387df42c7687528cfe30fbf40aa49ee0d4e2ae5d2f98a518014c151b",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "G81-008",
+      "corpus": "PUBLIC_DEV",
+      "original_corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "列出生产厂家名单",
+      "planned_current_utterance": "列出生产厂家名单",
+      "planned_history": [],
+      "expected_operation": "INITIALIZE_SUBJECT_WITH_GOVERNED_DISPLAY",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "ADD",
+      "operand_surface": "生产厂家",
+      "operand_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "CANONICAL_SUBJECT_ONLY_NOT_EXPLICIT_PROJECTION",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "TARGET_SLOT_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "subject",
+          "operation": "SET"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "ENTITY",
+          "semantic_role": "SUBJECT_ENTITY",
+          "canonical_id": "sm81_bd205:entity:main_data_domain_ent_manufacturer",
+          "canonical_code": "main_data_domain_ent_manufacturer",
+          "display_name": "生产厂家",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m-turn-0-1"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m-turn-0-1"
+          ],
+          "canonical_value": {
+            "catalog_type": "ENTITY",
+            "semantic_role": "SUBJECT_ENTITY",
+            "canonical_id": "sm81_bd205:entity:main_data_domain_ent_manufacturer",
+            "canonical_code": "main_data_domain_ent_manufacturer",
+            "display_name": "生产厂家",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m-turn-0-1"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse explicit_slot_mentions/operation_markers",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-ENTITY-PROJECTION",
+      "downstream_effects": [
+        {
+          "stage": "QUERY_SHAPE",
+          "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+          "evidence_kind": "SINGLE_PARSE_ARTIFACT_ORACLE",
+          "catalog_defect_proven": false
+        }
+      ],
+      "evidence": {
+        "capture_hash": "1c59c902b6fddcabd2b12e043b639c3b64b9ecbddde6c0c8ee20f282defbfd9c",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "64523f22c3b644bd69aa6fe69acb72127376e25bd1887911bacc2611b3a1347f",
+        "candidate_artifact_hash": "86c73858185d64f6d86e30041031b5895c6d234983da5b6c68859fe49677daa7",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "G81-009",
+      "corpus": "PUBLIC_DEV",
+      "original_corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "列出销售项目名单",
+      "planned_current_utterance": "列出销售项目名单",
+      "planned_history": [],
+      "expected_operation": "INITIALIZE_SUBJECT_WITH_GOVERNED_DISPLAY",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "SET",
+      "operand_surface": "名单",
+      "operand_role": [
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "NO_VALID_PROJECTION_OPERAND",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "OPERAND_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "subject",
+          "operation": "SET"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "ENTITY",
+          "semantic_role": "SUBJECT_ENTITY",
+          "canonical_id": "sm81_bd205:entity:project",
+          "canonical_code": "project",
+          "display_name": "销售项目",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m-0"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m-0"
+          ],
+          "canonical_value": {
+            "catalog_type": "ENTITY",
+            "semantic_role": "SUBJECT_ENTITY",
+            "canonical_id": "sm81_bd205:entity:project",
+            "canonical_code": "project",
+            "display_name": "销售项目",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m-0"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse mentions.candidate_roles + linked projection declaration",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-PRESENTATION-CUE",
+      "downstream_effects": [
+        {
+          "stage": "QUERY_SHAPE",
+          "reason": "V2_QUERY_SHAPE_CONFLICT",
+          "evidence_kind": "SINGLE_PARSE_ARTIFACT_ORACLE",
+          "catalog_defect_proven": false
+        }
+      ],
+      "evidence": {
+        "capture_hash": "ef4f1c917a4d9a9ee70ff46c406d7abbfee26d087eec6f4a05b404889fdbe734",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "6d40460dda169ec5d144885d144729ddc2f55fdb97717d8a7256a133d111d6fa",
+        "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "G81-010",
+      "corpus": "PUBLIC_DEV",
+      "original_corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "列出销售公司名单",
+      "planned_current_utterance": "列出销售公司名单",
+      "planned_history": [],
+      "expected_operation": "INITIALIZE_SUBJECT_WITH_GOVERNED_DISPLAY",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "SET",
+      "operand_surface": "名单",
+      "operand_role": [
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "NO_VALID_PROJECTION_OPERAND",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "OPERAND_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "subject",
+          "operation": "SET"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "ENTITY",
+          "semantic_role": "SUBJECT_ENTITY",
+          "canonical_id": "sm81_bd205:entity:sales_company",
+          "canonical_code": "sales_company",
+          "display_name": "销售公司",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m-0"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m-0"
+          ],
+          "canonical_value": {
+            "catalog_type": "ENTITY",
+            "semantic_role": "SUBJECT_ENTITY",
+            "canonical_id": "sm81_bd205:entity:sales_company",
+            "canonical_code": "sales_company",
+            "display_name": "销售公司",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m-0"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse mentions.candidate_roles + linked projection declaration",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-PRESENTATION-CUE",
+      "downstream_effects": [
+        {
+          "stage": "QUERY_SHAPE",
+          "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+          "evidence_kind": "SINGLE_PARSE_ARTIFACT_ORACLE",
+          "catalog_defect_proven": false
+        }
+      ],
+      "evidence": {
+        "capture_hash": "8fa3be77c408b2fc053f337a65b5edde93532ab5f976de84e9730668abb02aab",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "d0dac90c3ca917c4b476492ea4f98931cb1db2881cf03df9c8a562d2788efddb",
+        "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "G81-012",
+      "corpus": "PUBLIC_DEV",
+      "original_corpus": "PUBLIC_DEV",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "列出省份名单",
+      "planned_current_utterance": "列出省份名单",
+      "planned_history": [],
+      "expected_operation": "INITIALIZE_SUBJECT_WITH_GOVERNED_DISPLAY",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "ADD",
+      "operand_surface": "省份",
+      "operand_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "CANONICAL_SUBJECT_ONLY_NOT_EXPLICIT_PROJECTION",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "TARGET_SLOT_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "subject",
+          "operation": "SET"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "ENTITY",
+          "semantic_role": "SUBJECT_ENTITY",
+          "canonical_id": "sm81_bd205:entity:province",
+          "canonical_code": "province",
+          "display_name": "省份",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m-province"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m-province"
+          ],
+          "canonical_value": {
+            "catalog_type": "ENTITY",
+            "semantic_role": "SUBJECT_ENTITY",
+            "canonical_id": "sm81_bd205:entity:province",
+            "canonical_code": "province",
+            "display_name": "省份",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m-province"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse explicit_slot_mentions/operation_markers",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-ENTITY-PROJECTION",
+      "downstream_effects": [
+        {
+          "stage": "QUERY_SHAPE",
+          "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+          "evidence_kind": "SINGLE_PARSE_ARTIFACT_ORACLE",
+          "catalog_defect_proven": false
+        }
+      ],
+      "evidence": {
+        "capture_hash": "eb5a5b394d7ea97339ec4b327fba2cfb813af3f895e119d774f67e4720fb552a",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "a6b8c5395b1a2ef8031bc0fdeea37c41e1b59a8e5d844700b68a0f74e48c5603",
+        "candidate_artifact_hash": "53be61e83cb432d517de2c980893d638a0fad632685e1b43889db58778703708",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "G81-058",
+      "corpus": "PUBLIC_DEV",
+      "original_corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "列出销售项目名单",
+      "planned_current_utterance": "结果中只返回项目名称",
+      "planned_history": [
+        "列出销售项目名单"
+      ],
+      "expected_operation": "INITIALIZE_SUBJECT_WITH_GOVERNED_DISPLAY",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "SET",
+      "operand_surface": "名单",
+      "operand_role": [
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "NO_VALID_PROJECTION_OPERAND",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "OPERAND_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "subject",
+          "operation": "SET"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "ENTITY",
+          "semantic_role": "SUBJECT_ENTITY",
+          "canonical_id": "sm81_bd205:entity:project",
+          "canonical_code": "project",
+          "display_name": "销售项目",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m0"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m0"
+          ],
+          "canonical_value": {
+            "catalog_type": "ENTITY",
+            "semantic_role": "SUBJECT_ENTITY",
+            "canonical_id": "sm81_bd205:entity:project",
+            "canonical_code": "project",
+            "display_name": "销售项目",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m0"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse mentions.candidate_roles + linked projection declaration",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-PRESENTATION-CUE",
+      "downstream_effects": [
+        {
+          "stage": "LATER_CURRENT_TURN",
+          "reason": "NOT_EXECUTED_AFTER_HISTORY_FAILURE",
+          "turn_index": 1
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "reason": "V2_QUERY_SHAPE_CONFLICT",
+          "evidence_kind": "SINGLE_PARSE_ARTIFACT_ORACLE",
+          "catalog_defect_proven": false
+        }
+      ],
+      "evidence": {
+        "capture_hash": "cf5d3ace4ecce6bbc7004c9aa2e1a9cd99e8d861dd00a6e5602565d344ab101d",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "b778720eac54d26479c8ed80feb1ff532832e71057d88b40319a9f4ce413f232",
+        "candidate_artifact_hash": "e51cad48fa897a569b63fbcefbeb374bb06725779133cf467c590a6d640ccc98",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "G81-059",
+      "corpus": "PUBLIC_DEV",
+      "original_corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "列出销售项目名单",
+      "planned_current_utterance": "结果中只返回项目编码",
+      "planned_history": [
+        "列出销售项目名单"
+      ],
+      "expected_operation": "INITIALIZE_SUBJECT_WITH_GOVERNED_DISPLAY",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "SET",
+      "operand_surface": "名单",
+      "operand_role": [
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "NO_VALID_PROJECTION_OPERAND",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "OPERAND_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "subject",
+          "operation": "SET"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "ENTITY",
+          "semantic_role": "SUBJECT_ENTITY",
+          "canonical_id": "sm81_bd205:entity:project",
+          "canonical_code": "project",
+          "display_name": "销售项目",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m0"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m0"
+          ],
+          "canonical_value": {
+            "catalog_type": "ENTITY",
+            "semantic_role": "SUBJECT_ENTITY",
+            "canonical_id": "sm81_bd205:entity:project",
+            "canonical_code": "project",
+            "display_name": "销售项目",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m0"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse mentions.candidate_roles + linked projection declaration",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-PRESENTATION-CUE",
+      "downstream_effects": [
+        {
+          "stage": "LATER_CURRENT_TURN",
+          "reason": "NOT_EXECUTED_AFTER_HISTORY_FAILURE",
+          "turn_index": 1
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "reason": "V2_QUERY_SHAPE_CONFLICT",
+          "evidence_kind": "SINGLE_PARSE_ARTIFACT_ORACLE",
+          "catalog_defect_proven": false
+        }
+      ],
+      "evidence": {
+        "capture_hash": "a4a71d2e6fa3f2a4f6a4aafa89d3630df8f4ebfd3354fcb7888e3e11aaade83c",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "b778720eac54d26479c8ed80feb1ff532832e71057d88b40319a9f4ce413f232",
+        "candidate_artifact_hash": "e51cad48fa897a569b63fbcefbeb374bb06725779133cf467c590a6d640ccc98",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "G81-060",
+      "corpus": "PUBLIC_DEV",
+      "original_corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "列出销售公司名单",
+      "planned_current_utterance": "结果中只返回国药公司名称",
+      "planned_history": [
+        "列出销售公司名单"
+      ],
+      "expected_operation": "INITIALIZE_SUBJECT_WITH_GOVERNED_DISPLAY",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "SET",
+      "operand_surface": "名单",
+      "operand_role": [
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "NO_VALID_PROJECTION_OPERAND",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "OPERAND_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "subject",
+          "operation": "SET"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "ENTITY",
+          "semantic_role": "SUBJECT_ENTITY",
+          "canonical_id": "sm81_bd205:entity:sales_company",
+          "canonical_code": "sales_company",
+          "display_name": "销售公司",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m-0"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m-0"
+          ],
+          "canonical_value": {
+            "catalog_type": "ENTITY",
+            "semantic_role": "SUBJECT_ENTITY",
+            "canonical_id": "sm81_bd205:entity:sales_company",
+            "canonical_code": "sales_company",
+            "display_name": "销售公司",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m-0"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse mentions.candidate_roles + linked projection declaration",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-PRESENTATION-CUE",
+      "downstream_effects": [
+        {
+          "stage": "LATER_CURRENT_TURN",
+          "reason": "NOT_EXECUTED_AFTER_HISTORY_FAILURE",
+          "turn_index": 1
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+          "evidence_kind": "SINGLE_PARSE_ARTIFACT_ORACLE",
+          "catalog_defect_proven": false
+        }
+      ],
+      "evidence": {
+        "capture_hash": "55a2023d6ef28a22685e7ef328eabd5e21fe67dc860cf7cbd2fac8e089589e88",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "d0dac90c3ca917c4b476492ea4f98931cb1db2881cf03df9c8a562d2788efddb",
+        "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "G81-061",
+      "corpus": "PUBLIC_DEV",
+      "original_corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "列出销售公司名单",
+      "planned_current_utterance": "结果中只返回国药公司编码",
+      "planned_history": [
+        "列出销售公司名单"
+      ],
+      "expected_operation": "INITIALIZE_SUBJECT_WITH_GOVERNED_DISPLAY",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "SET",
+      "operand_surface": "名单",
+      "operand_role": [
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "NO_VALID_PROJECTION_OPERAND",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "OPERAND_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "subject",
+          "operation": "SET"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "ENTITY",
+          "semantic_role": "SUBJECT_ENTITY",
+          "canonical_id": "sm81_bd205:entity:sales_company",
+          "canonical_code": "sales_company",
+          "display_name": "销售公司",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m-0"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m-0"
+          ],
+          "canonical_value": {
+            "catalog_type": "ENTITY",
+            "semantic_role": "SUBJECT_ENTITY",
+            "canonical_id": "sm81_bd205:entity:sales_company",
+            "canonical_code": "sales_company",
+            "display_name": "销售公司",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m-0"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse mentions.candidate_roles + linked projection declaration",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-PRESENTATION-CUE",
+      "downstream_effects": [
+        {
+          "stage": "LATER_CURRENT_TURN",
+          "reason": "NOT_EXECUTED_AFTER_HISTORY_FAILURE",
+          "turn_index": 1
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "reason": "CATALOG_RELATIONSHIP_REQUIRED",
+          "evidence_kind": "SINGLE_PARSE_ARTIFACT_ORACLE",
+          "catalog_defect_proven": false
+        }
+      ],
+      "evidence": {
+        "capture_hash": "70a5b8a69c569b68ffaa382506cbd0d80142d76373a53a7a9729b20ab578f522",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "d0dac90c3ca917c4b476492ea4f98931cb1db2881cf03df9c8a562d2788efddb",
+        "candidate_artifact_hash": "2644022dcc7548a208f3aebde50e7164f668f9fc5f92002c0960faeeb2f62948",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "G81-066",
+      "corpus": "PUBLIC_DEV",
+      "original_corpus": "PUBLIC_DEV",
+      "entry_group": "CONTEXT_DEPENDENT_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "列出市名单",
+      "planned_current_utterance": "结果中只返回城市名称",
+      "planned_history": [
+        "列出市名单"
+      ],
+      "expected_operation": "INITIALIZE_SUBJECT_WITH_GOVERNED_DISPLAY",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "SET",
+      "operand_surface": "市名单",
+      "operand_role": [
+        "SUBJECT_ENTITY",
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "NO_VALID_PROJECTION_OPERAND",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "OPERAND_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "subject",
+          "operation": "SET"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "ENTITY",
+          "semantic_role": "SUBJECT_ENTITY",
+          "canonical_id": "sm81_bd205:entity:city",
+          "canonical_code": "city",
+          "display_name": "市",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m-city-list"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "subject",
+          "operation": "SET",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m-city-list"
+          ],
+          "canonical_value": {
+            "catalog_type": "ENTITY",
+            "semantic_role": "SUBJECT_ENTITY",
+            "canonical_id": "sm81_bd205:entity:city",
+            "canonical_code": "city",
+            "display_name": "市",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m-city-list"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "MENTION_BOUNDARY",
+      "first_divergence_boundary": "CurrentTurnSemanticParse mentions surface/role boundary",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-MERGED-BOUNDARY",
+      "downstream_effects": [
+        {
+          "stage": "LATER_CURRENT_TURN",
+          "reason": "NOT_EXECUTED_AFTER_HISTORY_FAILURE",
+          "turn_index": 1
+        },
+        {
+          "stage": "QUERY_SHAPE",
+          "reason": "V2_QUERY_SHAPE_CONFLICT",
+          "evidence_kind": "SINGLE_PARSE_ARTIFACT_ORACLE",
+          "catalog_defect_proven": false
+        }
+      ],
+      "evidence": {
+        "capture_hash": "6577d44b328c2cfc42fa80e8f592f15eb37ee82c87f2a4d4c5b7b88f1f251c21",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "1c98d444a388436ee970c4426ce888b535dc59e963aa0fdb0ac3975924ec6749",
+        "candidate_artifact_hash": "1f0d8642202ce89ab53929b6d23a327591953f087b438aef3106a74691009b05",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "PV81-010",
+      "corpus": "DEV_PROMOTED_FROM_PRIVATE",
+      "original_corpus": "PRIVATE_VALIDATION",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "请给出销售总成本的汇总值。",
+      "planned_current_utterance": "请给出销售总成本的汇总值。",
+      "planned_history": [],
+      "expected_operation": "INITIALIZE_METRIC",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "ADD",
+      "operand_surface": "汇总值",
+      "operand_role": [
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "NO_VALID_PROJECTION_OPERAND",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "OPERAND_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "metrics",
+          "operation": "ADD"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "sm81_bd205:metric:sales_total_cost",
+          "canonical_code": "sales_total_cost",
+          "display_name": "销售总成本",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m-turn0-0"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "metrics",
+          "operation": "ADD",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m-turn0-0"
+          ],
+          "canonical_value": {
+            "catalog_type": "METRIC",
+            "semantic_role": "MEASURE",
+            "canonical_id": "sm81_bd205:metric:sales_total_cost",
+            "canonical_code": "sales_total_cost",
+            "display_name": "销售总成本",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m-turn0-0"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse mentions.candidate_roles + linked projection declaration",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-PRESENTATION-CUE",
+      "downstream_effects": [],
+      "evidence": {
+        "capture_hash": "676d0dcccee0f338c0274420d0a13027cbba14b4d14d513fd3c08e6d97c6fc7a",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "1a98bafd179dbae70e63be300270a0cbd62da92508db149a0949445543096a7a",
+        "candidate_artifact_hash": "3fcf430efe5fe08442547fc748f8e18cdb56d026207826c7ff51c0ebe6679f85",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    },
+    {
+      "case_id": "PV81-016",
+      "corpus": "DEV_PROMOTED_FROM_PRIVATE",
+      "original_corpus": "PRIVATE_VALIDATION",
+      "entry_group": "TRUE_SINGLE_TURN",
+      "failed_turn_index": 0,
+      "explicit_surface": "请给出合作时长的汇总值。",
+      "planned_current_utterance": "请给出合作时长的汇总值。",
+      "planned_history": [],
+      "expected_operation": "INITIALIZE_METRIC",
+      "expected_projection_operation": "NOT_USER_REQUESTED",
+      "recognized_operation": "ADD",
+      "operand_surface": "汇总值",
+      "operand_role": [
+        "PROJECTION_FIELD"
+      ],
+      "operand_status": "NO_VALID_PROJECTION_OPERAND",
+      "operand_candidate": null,
+      "canonical_operand": null,
+      "target_slot_family": "projection_spec",
+      "operation_vs_operand": "OPERAND_UNRESOLVED",
+      "operation_intent_is_current_user_mutation": false,
+      "turn_relation": "NEW_TASK",
+      "target_task": "task:turn-0",
+      "edit_operation": [
+        {
+          "slot": "metrics",
+          "operation": "ADD"
+        }
+      ],
+      "canonical_bindings_created": [
+        {
+          "catalog_type": "METRIC",
+          "semantic_role": "MEASURE",
+          "canonical_id": "sm81_bd205:metric:dealer_cooperation_months",
+          "canonical_code": "dealer_cooperation_months",
+          "display_name": "合作时长",
+          "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+          "semantic_model_id": "81",
+          "business_domain_ids": [
+            "205"
+          ],
+          "source_mention_ids": [
+            "turn-0:m-0"
+          ],
+          "resolution_source": "PINNED_CATALOG"
+        }
+      ],
+      "validated_operations_before_reject": [
+        {
+          "slot": "metrics",
+          "operation": "ADD",
+          "source": "CURRENT_EXPLICIT",
+          "evidence": [
+            "m-0"
+          ],
+          "canonical_value": {
+            "catalog_type": "METRIC",
+            "semantic_role": "MEASURE",
+            "canonical_id": "sm81_bd205:metric:dealer_cooperation_months",
+            "canonical_code": "dealer_cooperation_months",
+            "display_name": "合作时长",
+            "catalog_version": "3f9589b95d376ebdf9683425dcf6c646f2394b278718b033527bd5e08b64fe21",
+            "semantic_model_id": "81",
+            "business_domain_ids": [
+              "205"
+            ],
+            "source_mention_ids": [
+              "turn-0:m-0"
+            ],
+            "resolution_source": "PINNED_CATALOG"
+          }
+        }
+      ],
+      "task_patch_operation": null,
+      "reducer_before": {
+        "subject": null,
+        "metrics": [],
+        "dimensions": [],
+        "projection_spec": {
+          "mode": "EXPLICIT",
+          "items": [],
+          "default_display_policy_id": null
+        },
+        "filter_expression": null,
+        "time_spec": null,
+        "ranking_spec": null,
+        "comparison_spec": null,
+        "relationship_spec": null,
+        "source_dataset_ref": null,
+        "delivery_spec": {
+          "modes": [
+            "TABLE"
+          ],
+          "export_format": null,
+          "report_template_id": null,
+          "chart_preferences": null
+        },
+        "analysis_goals": [],
+        "policy_decisions": []
+      },
+      "reducer_delta": "NOT_REACHED",
+      "reducer_after": null,
+      "final_state": null,
+      "IR_operation_effect": "NOT_REACHED",
+      "first_rejecting_boundary": "RawTurnPlanner._patch: markers - used_markers",
+      "first_divergence_stage": "SEMANTIC_ROLE",
+      "first_divergence_boundary": "CurrentTurnSemanticParse mentions.candidate_roles + linked projection declaration",
+      "reason_code": "V2_EXPLICIT_OPERATION_DROPPED",
+      "fail_closed": true,
+      "accepted": false,
+      "risk": "SAFE_REJECT",
+      "task_patch_published": false,
+      "state_version_before": 0,
+      "state_version_after": 0,
+      "task_version_before": 0,
+      "task_version_after": 0,
+      "input_state_unchanged": true,
+      "subcluster_id": "OP-R1-PRESENTATION-CUE",
+      "downstream_effects": [],
+      "evidence": {
+        "capture_hash": "843b89eae1c68af7fae8c6a075b43dda024c2a38a6c88b72af33472c0afff1b1",
+        "oracle_variant": "DECLARED_SLOT_PROPOSITION",
+        "unchanged_draft_hash": "da1bc5d575c0ac7ef13af668db372be61e39eadc1569f353365d75ed58fdea55",
+        "candidate_artifact_hash": "1fd1e9e2308c1e1e85625d0e8be561e4c93859bec6a4cfea79f9b43b6c3f1510",
+        "instrumentation_parity": "PASS",
+        "reason_guard_does_not_define_causal_owner": true
+      },
+      "causal_result": "CAUSAL_EVIDENCE_CONFIRMED_FOR_OVERDECLARED_PROJECTION_BARRIER; NO_GENERIC_OPERATION_DEFECT_PROVEN",
+      "production_fix": null,
+      "before_status": "FAIL",
+      "after_status": "FAIL",
+      "semantic_score_rewritten": false
+    }
+  ],
+  "denominator": "13 original cluster cases; every recorded rejection is turn 0; five intended later turns were never executed",
+  "first_divergence_is_causal_analysis": "Scoring/replay evaluator remains frozen; old rejection-stage taxonomy is retained as historical evidence"
+}

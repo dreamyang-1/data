@@ -1,0 +1,88 @@
+{
+  "V2": "SHADOW_ONLY",
+  "production_v2_routing_changed": false,
+  "prompt_changed": false,
+  "cross_service_patches": false,
+  "protected_files": [
+    {
+      "path": "app/api.py",
+      "baseline_sha256": "8ccb5a754e2e826e333cfb6db420d7f61877cbcaa7fb7f4a19889c54716f03be",
+      "workspace_sha256": "8ccb5a754e2e826e333cfb6db420d7f61877cbcaa7fb7f4a19889c54716f03be"
+    },
+    {
+      "path": "app/intent/structured.py",
+      "baseline_sha256": "a8797333f90da5b46c2de6222e5cbe74bd1ad3ee7de151a2a6ad04438c9d24bf",
+      "workspace_sha256": "a8797333f90da5b46c2de6222e5cbe74bd1ad3ee7de151a2a6ad04438c9d24bf"
+    },
+    {
+      "path": "app/semantic_v2/__init__.py",
+      "baseline_sha256": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93",
+      "workspace_sha256": "7b0c3f8fbf23a6b0840cbf63fd070e069adc37323f818781918d534adaff9a93"
+    },
+    {
+      "path": "app/semantic_v2/clarification.py",
+      "baseline_sha256": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb",
+      "workspace_sha256": "2adfda179c7cbb602c4ebee207590b61ab4d519ba1cd8ed5be3191f8fe267fbb"
+    },
+    {
+      "path": "app/semantic_v2/enums.py",
+      "baseline_sha256": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159",
+      "workspace_sha256": "87c585cda400b97dd9f90b0fe507feee84c656da1bbb306e8b33793923da8159"
+    },
+    {
+      "path": "app/semantic_v2/legacy_adapter.py",
+      "baseline_sha256": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f",
+      "workspace_sha256": "17d764cd137ed213123af079e5a8a76d496d2dfd0d6a6ab903877e468b854d2f"
+    },
+    {
+      "path": "app/semantic_v2/migration.py",
+      "baseline_sha256": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6",
+      "workspace_sha256": "fabd91557b7eb230050b583aea4f0309a6c0090f197f0584dc59ba5333f917b6"
+    },
+    {
+      "path": "app/semantic_v2/models.py",
+      "baseline_sha256": "983bd8c5c39ffae765ab4f6dbe736dcf83b946cd1b2e2169023a85a2e983a7b1",
+      "workspace_sha256": "983bd8c5c39ffae765ab4f6dbe736dcf83b946cd1b2e2169023a85a2e983a7b1"
+    },
+    {
+      "path": "app/semantic_v2/pipeline.py",
+      "baseline_sha256": "a37732615f58c12f2730c516a4eb1968ac05f49d12780c9ed37c94cac7f85eea",
+      "workspace_sha256": "a37732615f58c12f2730c516a4eb1968ac05f49d12780c9ed37c94cac7f85eea"
+    },
+    {
+      "path": "app/semantic_v2/registries.py",
+      "baseline_sha256": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7",
+      "workspace_sha256": "272dffd9c352df83fc38de350912b1a2cc08ae110d2a102482dfd4c4060ff4a7"
+    },
+    {
+      "path": "app/semantic_v2/result_contract.py",
+      "baseline_sha256": "3adafe39a060161d10442c060e77b8269418afd4d233a445fcc84839c133a6e0",
+      "workspace_sha256": "3adafe39a060161d10442c060e77b8269418afd4d233a445fcc84839c133a6e0"
+    },
+    {
+      "path": "app/semantic_v2/schema.py",
+      "baseline_sha256": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad",
+      "workspace_sha256": "1ce4de8b3025821d891d2bf72a50493e7f6869cca1d6b9ddae584152a578faad"
+    },
+    {
+      "path": "app/semantic_v2/slot_reducer.py",
+      "baseline_sha256": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf",
+      "workspace_sha256": "a4aa3570d24161a758c182039c6a6f63c6f845441d06aaba6fae796253ce2daf"
+    },
+    {
+      "path": "app/semantic_v2/state_machine.py",
+      "baseline_sha256": "6fa7412eed16252188b48fca774856438d3c52aeb2f96e4dfadcf043527feab6",
+      "workspace_sha256": "6fa7412eed16252188b48fca774856438d3c52aeb2f96e4dfadcf043527feab6"
+    },
+    {
+      "path": "app/semantic_v2/trace_models.py",
+      "baseline_sha256": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5",
+      "workspace_sha256": "08063802c7a0203308f6b2eb0d5b0f37651d2caf8a8bd19b94506afdd5c5c0c5"
+    },
+    {
+      "path": "app/semantic_v2/validators.py",
+      "baseline_sha256": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15",
+      "workspace_sha256": "78d1e727ed74521c9c3545635489ce0903d1e74c9f74cd2b8106735d34bedb15"
+    }
+  ]
+}

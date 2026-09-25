@@ -1,0 +1,14 @@
+{
+  "baseline_commit": "5aaf64a235ca1766ee5c72bb24997aba924c10e0",
+  "code_commit": "b2478b5125f2b7d8ce463b0b42b389f1b3462367",
+  "phase": "PRE_EVIDENCE_COMMIT_VERIFICATION",
+  "tracked_existing_files": 1415,
+  "unexpected_tracked_drift": 0,
+  "method": "SHA-256 of LF-normalized bytes for existing tracked files; new evidence copied byte-for-byte and verified.",
+  "existing_tracked_files_manifest_hash": "67f8aec0e6debd6a0b5fc640b3889c43c8290da50941bcda778922aba8fb3e71",
+  "new_evidence_files": 33,
+  "expected_final_tracked_files": 1448,
+  "env_unchanged": true,
+  "original_oagnet_HEAD_and_index_preserved": true,
+  "final_commit_check": "Check all tracked files against git cat-file --batch blobs, workspace mapping, Git clean status and remote head after committing."
+}

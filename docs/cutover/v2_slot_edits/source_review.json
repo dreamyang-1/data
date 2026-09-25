@@ -1,0 +1,72 @@
+{
+  "baseline_commit": "fc7c5fc2fe63c9dd4284a88d6c268a10b6b72c52",
+  "reviewer": "Self-review; no sub-agent",
+  "source_files": [
+    {
+      "path": "app/semantic_v2/models.py",
+      "sha256": "178c088481e82a01833446abd491da05098889bef181adac69d3eee73c8f287f"
+    },
+    {
+      "path": "app/semantic_v2/pipeline.py",
+      "sha256": "6b6525f58e19cd1a31bfa7182831e912179a1985ea2ddc6968d33b980bf573d3"
+    },
+    {
+      "path": "app/semantic_v2/recognition.py",
+      "sha256": "f2197034ebd7f1f1e814cb5794633827622465c775448995c358a36ba03610c9"
+    },
+    {
+      "path": "app/semantic_v2/structured_edits.py",
+      "sha256": "ddc081268bba2e8c719a1536ca8a2d1318cb5b955bf9067c74cd187f343abd1f"
+    },
+    {
+      "path": "tests/test_v2_structured_edits.py",
+      "sha256": "13fb3967c3f18ff6efe65987ee3361b7895bb71b01eeae9a8afefb7ae7c3ea4d"
+    },
+    {
+      "path": "specs/semantic_v2/semantic_task_draft_v3.schema.json",
+      "sha256": "94b062c4c9ac9fb60a98eb731df7c7a3e4e77e76b3ac32a0f494d3d88808cd20"
+    },
+    {
+      "path": "specs/semantic_v2/current_recognition_value_v2.schema.json",
+      "sha256": "42cf5b7b278f1164c81f46cba7e910345cce0130ad51a9be301ced85ba238eba"
+    },
+    {
+      "path": "specs/semantic_v2/authorized_logical_plan_v0_2_2.schema.json",
+      "sha256": "485373dfed0ae6fc5fc4168f46447c8f75918ca451c2b0f2633fcb7f96508b0e"
+    },
+    {
+      "path": "specs/semantic_v2/structured_edit_trace_v1.schema.json",
+      "sha256": "745e7a17006ab5c4c442b5975ee88eea44cd1ddf0867cd0dd89e12e6c6ef619e"
+    }
+  ],
+  "first_divergence": [
+    "STRUCTURED_INTENT",
+    "SLOT_MERGE",
+    "INTENT_ASL_CONTRACT"
+  ],
+  "confidence": "PROVEN source representation/guard defects; actual model semantic accuracy remains NOT_EVALUATED",
+  "verified": [
+    "Current scope and task version are validated before offered history handles",
+    "Exact tree position handles prevent stale/cross-task edits; overlapping edits reject before mutation",
+    "Simultaneous path edits preserve unrelated predicates and Boolean placement; new conditions AND the whole tree",
+    "Positive EQ/IN membership ADD retains, REPLACE replaces, REMOVE checks exact typed membership",
+    "Empty filters lower to existing CLEAR barrier; partial clears persist as absence in current materialized state",
+    "Partial time edits preserve unspecified components; explicit null range preserves anchor/grain without default dates",
+    "Legacy 0.2.1 final plan validation rejects unbounded time; frozen schema files unchanged",
+    "Raw scalar payload cannot discard non-NONE time grouping",
+    "Existing reducer invalidates datasets after semantic change; no result/SQL execution added",
+    "Structured trace records requested operation separately from atomic reducer operation, using hashes and mention IDs"
+  ],
+  "retained_gates": [
+    "Actual model interpretation of mentioned values and selected handles needs catalog-gated evaluation",
+    "Range/anchor changes with comparison dependencies fail closed pending typed comparison editing",
+    "No inference of a temporal anchor/default when a new task has no TimeSpec",
+    "Positive EQ/IN member editing only; negative/range membership arithmetic is unsupported",
+    "Catalog defaults/relationships, remaining analytics and arbitrary typed clarification decisions remain incomplete",
+    "Actual catalog publication, deployed trust, Gold, model benchmark and shadow are still open"
+  ],
+  "user_io_unchanged": true,
+  "v1_behavior_unchanged": true,
+  "oagnet_source_unchanged": true,
+  "sql_source_unchanged": true
+}

@@ -1,0 +1,181 @@
+{
+  "baseline_commit": "df09b52ea4ab76254f5005619aefa8e4cb87ac5f",
+  "capture": {
+    "observed_at": "2026-09-08T16:43:31.584451+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "catalog_version": "b3106dea38f62738f5f2551e4667ceee6a0d3ba96f5e88ddd90e7ef746b88506",
+    "source_identity_hash": "88863043a8190d222028c7597133f73fce6afdd84f830836da2532e05cedb5e1",
+    "status": "ACTUAL_METADATA_ONLY_CAPTURE_LOCAL_SOURCE_BINDING_CHECK",
+    "governed_value_fields": 89,
+    "distinct_source_routes": 1,
+    "declared_vectorization_counts": {
+      "None": 11,
+      "0": 52,
+      "1": 26
+    },
+    "attribute_mapping_outcomes": {
+      "VERIFIED_SOURCE_MAPPING": 89
+    },
+    "records_generated": 290,
+    "private_snapshot_committed": false,
+    "business_source_reads": 0,
+    "real_model_calls": 0,
+    "embedding_calls": 0,
+    "production_external_writes": 0,
+    "native_publication": false,
+    "live_entity_values_verified": false,
+    "configured_route_is_not_server_identity": true
+  },
+  "milvus": {
+    "stage": "milvus",
+    "observed_at": "2026-09-08T16:43:29.338696+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "production_writes": 0,
+    "model_calls": 0,
+    "status": "INSPECTED_READ_ONLY",
+    "collections": {
+      "semantic": {
+        "exists": true,
+        "schema_hash": "432887adea447532bba6256c2883920fad70c15b706579e199cdeb21e88b0d69",
+        "field_names": [
+          "record_id",
+          "embedding",
+          "text",
+          "type",
+          "semantic_model_id",
+          "business_domain_id",
+          "data_source_id",
+          "scope_key",
+          "entity_code",
+          "entity_name",
+          "parent",
+          "attr_code",
+          "attr_name",
+          "source_table",
+          "source_id",
+          "snapshot_version",
+          "content_hash",
+          "metadata",
+          "source_field",
+          "canonical_value"
+        ],
+        "scoped_records": 142,
+        "by_type": {
+          "attribute": 93,
+          "entity": 14,
+          "metric": 11,
+          "relation": 24
+        },
+        "release_stamped_records": 0
+      },
+      "physical": {
+        "exists": true,
+        "schema_hash": "a20cb4f3796c89d61e4bbf811a2c3269df6901f5b24c162b39b484fb51caf093",
+        "field_names": [
+          "record_id",
+          "embedding",
+          "text",
+          "type",
+          "semantic_model_id",
+          "business_domain_id",
+          "data_source_id",
+          "scope_key",
+          "entity_code",
+          "entity_name",
+          "parent",
+          "attr_code",
+          "attr_name",
+          "source_table",
+          "source_id",
+          "snapshot_version",
+          "content_hash",
+          "metadata",
+          "source_field",
+          "canonical_value"
+        ],
+        "scoped_records": 0,
+        "by_type": {},
+        "release_stamped_records": 0
+      },
+      "semantic_catalog": {
+        "exists": false
+      },
+      "physical_catalog": {
+        "exists": false
+      }
+    },
+    "target_identity_hash": "763d0302d6278371ea2cf3c5372103cf8d823ea40411d9d27f191a511a010ef5"
+  },
+  "registry": {
+    "stage": "registry",
+    "observed_at": "2026-09-08T16:43:29.459532+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "production_writes": 0,
+    "model_calls": 0,
+    "status": "INSPECTED_READ_ONLY",
+    "marker_present": false,
+    "marker_hash": null,
+    "target_identity_hash": "763d0302d6278371ea2cf3c5372103cf8d823ea40411d9d27f191a511a010ef5"
+  },
+  "operational_configuration": {
+    "observed_at": "2026-09-08T16:45:04.718491+00:00",
+    "scope": {
+      "semantic_model_id": 81,
+      "business_domain_ids": [
+        205
+      ],
+      "scope_mode": "EXPLICIT_DOMAINS"
+    },
+    "embedding_contract": "0ed46eed21febebf0dd778a619add0f75c3e376e1eef9056f7867925bf205ed5",
+    "embedding_dimension": 1024,
+    "redis_target_hash": "6deaf2abed2af78a1eb0c9e8fc12e3c670d19d9cd3a98638e4ce783f86a21959",
+    "production_writes": 0,
+    "embedding_calls": 0,
+    "real_model_calls": 0,
+    "persistence": {
+      "aof_enabled": 0,
+      "aof_last_write_status": "ok",
+      "rdb_last_bgsave_status": "ok",
+      "loading": 0
+    },
+    "configuration": {
+      "appendonly": "no",
+      "appendfsync": "everysec",
+      "save": "",
+      "maxmemory-policy": "noeviction"
+    },
+    "status": "OPERATIONAL_METADATA_READ_ONLY",
+    "durability_restart_drill_performed": false
+  },
+  "catalog_native_publication_verified": false,
+  "registry_durability_verified": false,
+  "proven": "AOF disabled and automatic RDB schedule empty. No automatic persistence is configured through either mechanism.",
+  "unknown": [
+    "Manual snapshots or host backups",
+    "Redis deployment/volume topology and maintenance owner",
+    "Durable restart/failover recovery"
+  ],
+  "private_snapshots_committed": false,
+  "real_model_calls": 0,
+  "embedding_calls": 0,
+  "business_source_reads": 0,
+  "production_writes": 0
+}

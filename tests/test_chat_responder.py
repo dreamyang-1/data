@@ -16,7 +16,7 @@ IDENTITY = TrustedIdentity(tenant_id="t1", user_id="u1")
 
 
 class GentleFakeResponder:
-    async def respond(self, question: str, history=None) -> str:
+    async def respond(self, question: str, history=None, agent_prompt: str = "") -> str:
         assert question == "我想吃西瓜"
         assert history == []
         return "听起来很清爽呀，适量吃一点就好，也别忘了正常吃饭。"
@@ -59,7 +59,7 @@ async def test_chat_mode_switch_does_not_resurrect_previous_data_task():
     )
     conversation_id = "data-then-food-chat"
     first = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="27", conversation_id=conversation_id,
             message_id="m1", question="查询空心纤维血液透析器产品合作的经销商名单。",
         ),
@@ -72,7 +72,7 @@ async def test_chat_mode_switch_does_not_resurrect_previous_data_task():
         start=2,
     ):
         response = await agent.handle(
-            ChatRequest(
+            ChatRequest(semantic_model_id=81,
                 application_id="27", conversation_id=conversation_id,
                 message_id=f"m{index}", question=question,
             ),
@@ -103,7 +103,7 @@ async def test_chat_intent_uses_controlled_gentle_responder():
     )
 
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="27",
             conversation_id="gentle-chat",
             message_id="m1",
@@ -139,6 +139,7 @@ async def test_qwen_chat_request_is_bounded_and_thinking_disabled():
 
     answer = await responder.respond(
         "我想吃西瓜",
+        agent_prompt="用简短自然的中文回答",
         history=[
             {"role": "user", "content": "你好"},
             {"role": "assistant", "content": "你好呀"},
@@ -148,6 +149,7 @@ async def test_qwen_chat_request_is_bounded_and_thinking_disabled():
     assert captured["enable_thinking"] is False
     assert captured["max_tokens"] == 240
     assert captured["temperature"] == 0.5
+    assert "用简短自然的中文回答" in captured["messages"][0]["content"]
     assert len(captured["messages"][0]["content"]) < 1000
     assert [item["role"] for item in captured["messages"]] == [
         "system", "user", "assistant", "user",

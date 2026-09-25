@@ -1,0 +1,219 @@
+[
+  {
+    "root_cause_id": "RC-BOUNDARY-OBJECT",
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "case_ids": [
+      "G81-002",
+      "G81-004",
+      "G81-005",
+      "G81-006",
+      "G81-013",
+      "G81-094"
+    ],
+    "case_count": 6,
+    "severity": "P1",
+    "kind": "SEMANTIC",
+    "cutover_blocker": true,
+    "reason": "Current semantic spans absorb list/record/relation cue text into the entity object; exact catalog surface is no longer a separate mention.",
+    "confidence": "PROVEN",
+    "expected_primary_cases_unblocked": 6,
+    "whole_case_passes_promised": 0,
+    "risk": "Observed component failure or safe rejection; no production SQL executed",
+    "observed_silent_wrong_query": false
+  },
+  {
+    "root_cause_id": "RC-BOUNDARY-METRIC",
+    "first_divergence_stage": "MENTION_BOUNDARY",
+    "case_ids": [
+      "G81-029",
+      "G81-030",
+      "G81-033",
+      "G81-034"
+    ],
+    "case_count": 4,
+    "severity": "P0",
+    "kind": "SEMANTIC",
+    "cutover_blocker": true,
+    "reason": "One exact governed compound metric is split into entity/filter/measure pieces. Current recovery deliberately requires contiguous compatible pieces; these captures do not satisfy it.",
+    "confidence": "PROVEN",
+    "expected_primary_cases_unblocked": 4,
+    "whole_case_passes_promised": 0,
+    "risk": "Potential silent metric/formula substitution if downstream choices are accepted. Current parser-only results do not prove an executed wrong query.",
+    "observed_silent_wrong_query": false
+  },
+  {
+    "root_cause_id": "RC-SHAPE-LIST",
+    "first_divergence_stage": "QUERY_SHAPE",
+    "case_ids": [
+      "G81-001",
+      "G81-003",
+      "G81-007",
+      "G81-008",
+      "G81-009",
+      "G81-010",
+      "G81-011",
+      "G81-012",
+      "G81-014"
+    ],
+    "case_count": 9,
+    "severity": "P1",
+    "kind": "SEMANTIC",
+    "cutover_blocker": true,
+    "reason": "Plain entity name/list requests predict RELATION_LIST without a stated relationship instead of DETAIL_ROWS. Span-failed list cases are counted only under their earlier boundary cause.",
+    "confidence": "PROVEN",
+    "expected_primary_cases_unblocked": 9,
+    "whole_case_passes_promised": 0,
+    "risk": "Observed component failure or safe rejection; no production SQL executed",
+    "observed_silent_wrong_query": false
+  },
+  {
+    "root_cause_id": "RC-SHAPE-LINEAGE",
+    "first_divergence_stage": "QUERY_SHAPE",
+    "case_ids": [
+      "G81-093"
+    ],
+    "case_count": 1,
+    "severity": "P1",
+    "kind": "SEMANTIC",
+    "cutover_blocker": true,
+    "reason": "The explicit field-source/table question predicts METADATA_LOOKUP instead of LINEAGE_GRAPH; target mention is present.",
+    "confidence": "PROVEN",
+    "expected_primary_cases_unblocked": 1,
+    "whole_case_passes_promised": 0,
+    "risk": "Observed component failure or safe rejection; no production SQL executed",
+    "observed_silent_wrong_query": false
+  },
+  {
+    "root_cause_id": "RC-OP-ATOMIC",
+    "first_divergence_stage": "TASK_OPERATION",
+    "case_ids": [
+      "G81-080",
+      "S81-012"
+    ],
+    "case_count": 2,
+    "severity": "P0",
+    "kind": "SEMANTIC",
+    "cutover_blocker": true,
+    "reason": "Atomic CLEAR/REPLACE intent is represented as REMOVE or REMOVE+ADD. S81-012 has a correct REPLACE draft conflicting with earlier parse markers; the native guard rejects.",
+    "confidence": "PROVEN",
+    "expected_primary_cases_unblocked": 2,
+    "whole_case_passes_promised": 0,
+    "risk": "Potential lost clear barrier or wrong collection mutation; current S81-012 is safely rejected, G81-080 is parser-only.",
+    "observed_silent_wrong_query": false
+  },
+  {
+    "root_cause_id": "RC-EDIT-COVERAGE",
+    "first_divergence_stage": "TASK_OPERATION",
+    "case_ids": [
+      "S81-006",
+      "S81-007",
+      "S81-008"
+    ],
+    "case_count": 3,
+    "severity": "P1",
+    "kind": "SEMANTIC",
+    "cutover_blocker": true,
+    "reason": "The draft declares source-value requests but emits no filter effect using them, despite current filter evidence. The request-use coverage guard rejects before source lookup.",
+    "confidence": "PROVEN",
+    "expected_primary_cases_unblocked": 3,
+    "whole_case_passes_promised": 0,
+    "risk": "Observed component failure or safe rejection; no production SQL executed",
+    "observed_silent_wrong_query": false
+  },
+  {
+    "root_cause_id": "RC-REFERENCE-AS-EDIT",
+    "first_divergence_stage": "TASK_OPERATION",
+    "case_ids": [
+      "S81-017"
+    ],
+    "case_count": 1,
+    "severity": "P0",
+    "kind": "SEMANTIC",
+    "cutover_blocker": true,
+    "reason": "The historical task-identifying metric mention emits REPLACE instead of only identifying the historical task. The later incorrect GROUPED_AGGREGATE is a downstream rejection.",
+    "confidence": "HIGH_CONFIDENCE",
+    "expected_primary_cases_unblocked": 1,
+    "whole_case_passes_promised": 0,
+    "risk": "This recorded target has only the same metric, making REPLACE idempotent. Silent deletion on a multi-metric target is a risk, not an observed production result; needs a labeled contrast.",
+    "observed_silent_wrong_query": false
+  },
+  {
+    "root_cause_id": "RC-VALUE-CANDIDATES",
+    "first_divergence_stage": "ENTITY_VALUE_GROUNDING",
+    "case_ids": [
+      "S81-004",
+      "S81-005",
+      "S81-009",
+      "S81-010",
+      "S81-015"
+    ],
+    "case_count": 5,
+    "severity": "P1",
+    "kind": "SEMANTIC",
+    "cutover_blocker": true,
+    "reason": "Selected city-name field has no exact abbreviation match and exceeds bounded enumeration. No accepted scoped approximate-value candidate path is available. Choosing province is not declared business truth for these cases.",
+    "confidence": "PROVEN",
+    "expected_primary_cases_unblocked": 5,
+    "whole_case_passes_promised": 0,
+    "risk": "Observed component failure or safe rejection; no production SQL executed",
+    "observed_silent_wrong_query": false
+  },
+  {
+    "root_cause_id": "RC-EVAL-TURN-PROXY",
+    "first_divergence_stage": "EVALUATOR_GAP",
+    "case_ids": [
+      "G81-071",
+      "G81-073",
+      "G81-082",
+      "G81-084",
+      "G81-090"
+    ],
+    "case_count": 5,
+    "severity": "P2",
+    "kind": "EVALUATION",
+    "cutover_blocker": true,
+    "reason": "A context-free parser signal projection is scored as final turn resolution. normalize omits the native REMOVE/CLEAR dependency rule and never executes TurnResolver/current state. Full raw parses are not retained in this100-case result; production first divergence is unproven.",
+    "confidence": "PROVEN",
+    "expected_primary_cases_unblocked": 5,
+    "whole_case_passes_promised": 0,
+    "risk": "Observed component failure or safe rejection; no production SQL executed",
+    "observed_silent_wrong_query": false
+  },
+  {
+    "root_cause_id": "RC-EVAL-DATASET-PROXY",
+    "first_divergence_stage": "EVALUATOR_GAP",
+    "case_ids": [
+      "G81-091"
+    ],
+    "case_count": 1,
+    "severity": "P2",
+    "kind": "EVALUATION",
+    "cutover_blocker": true,
+    "reason": "Current utterance parser returns no query shape for display-limit continuation; the Gold expects a dataset route requiring existing dataset/state that this parser runner does not execute.",
+    "confidence": "PROVEN",
+    "expected_primary_cases_unblocked": 1,
+    "whole_case_passes_promised": 0,
+    "risk": "Observed component failure or safe rejection; no production SQL executed",
+    "observed_silent_wrong_query": false
+  },
+  {
+    "root_cause_id": "RC-FIXTURE-STATE-ENTRY",
+    "first_divergence_stage": "FIXTURE_GAP",
+    "case_ids": [
+      "S81-016",
+      "S81-018",
+      "S81-019",
+      "S81-020"
+    ],
+    "case_count": 4,
+    "severity": "P2",
+    "kind": "EVALUATION",
+    "cutover_blocker": true,
+    "reason": "One explicit runner branch skips any initial_pending or dataset case. No scoped initial-state fixture is installed at the same production semantic entry. Pending and Dataset are two fixture variants of this shared entry gap.",
+    "confidence": "PROVEN",
+    "expected_primary_cases_unblocked": 4,
+    "whole_case_passes_promised": 0,
+    "risk": "Observed component failure or safe rejection; no production SQL executed",
+    "observed_silent_wrong_query": false
+  }
+]

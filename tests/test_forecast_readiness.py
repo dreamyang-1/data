@@ -50,7 +50,13 @@ def test_question_preflight_requests_target_and_history_when_both_missing() -> N
     request = RuleBasedIntentClassifier().classify(
         "预测销售额", IDENTITY, "conversation"
     )
+    # No automatic training year: the forecast needs both requested inputs.
+    assert request.primary_intent == PrimaryIntent.FORECAST_ANALYSIS
     assert request.missing_slots == ["forecast_horizon", "forecast_history_range"]
+    assert request.forecast_horizon_periods is None
+    assert request.forecast_history_provided is False
+    assert request.time_range is None
+    assert "DEFAULT_TIME_RANGE=LATEST_ONE_YEAR" not in request.assumptions
 
 
 def test_question_preflight_accepts_explicit_history_and_target() -> None:
@@ -135,7 +141,7 @@ async def test_orchestrator_returns_structured_requirements_instead_of_predictio
         sessions=InMemorySessionStore(),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app",
             conversation_id="forecast-readiness",
             message_id="message-1",
@@ -161,7 +167,7 @@ async def test_orchestrator_returns_user_input_requirements_before_query() -> No
         sessions=InMemorySessionStore(),
     )
     response = await agent.handle(
-        ChatRequest(
+        ChatRequest(semantic_model_id=81,
             application_id="app",
             conversation_id="forecast-question-readiness",
             message_id="message-1",

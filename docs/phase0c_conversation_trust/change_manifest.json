@@ -1,0 +1,118 @@
+{
+  "baseline_commit": "5acfa99140f5dfede8f7c10ab3e0fd09db9c59f3",
+  "feature_branch": "phase0c-conversation-trust-20260908-01",
+  "files": [
+    {
+      "repository_path": "AGENTS.md",
+      "source_sha256": "ff137ee1587a89991b329a4762a5b7543482d2c3efc94bb329507dd9959e3a91",
+      "published_sha256": "ff137ee1587a89991b329a4762a5b7543482d2c3efc94bb329507dd9959e3a91",
+      "baseline_sha256": "6daa11256f66622dc849ac54088291643fdf1b1de9cf34e09668ce9ac268a7db"
+    },
+    {
+      "repository_path": "README.md",
+      "source_sha256": "736fc799a7414c9cdaee3f9bfd99ddf1ad5d46e9cbc6848b48486c7e2d4dbece",
+      "published_sha256": "736fc799a7414c9cdaee3f9bfd99ddf1ad5d46e9cbc6848b48486c7e2d4dbece",
+      "baseline_sha256": "ad52eabacf1aff84d83f243b9b540c23cb6a7f47b4eabe2f11a81f0aad8c96ff"
+    },
+    {
+      "repository_path": "app/api.py",
+      "source_sha256": "b35b46618875a4d7c4ad7eeb9daf492c1711c357c3c282463748d1c1358c5a5f",
+      "published_sha256": "b35b46618875a4d7c4ad7eeb9daf492c1711c357c3c282463748d1c1358c5a5f",
+      "baseline_sha256": "4008ef19e05650fb57e11626833c2bb215a5884104993875b2361f6ae095b111"
+    },
+    {
+      "repository_path": "app/security.py",
+      "source_sha256": "e9ebb2e4525e8d7bfac8ddd12b9924a0a3d5a34e843c71a73143ea06fba4b6b9",
+      "published_sha256": "e9ebb2e4525e8d7bfac8ddd12b9924a0a3d5a34e843c71a73143ea06fba4b6b9",
+      "baseline_sha256": "f5f3e615d2f54527a5131a3dde6059704efdd7a27d862cbe0b638995ff32ccbc"
+    },
+    {
+      "repository_path": "app/domain/state_identity.py",
+      "source_sha256": "19b3f873d2bf36a17157df9574fc3128907b4450b7db5762f16ab48c1a084120",
+      "published_sha256": "19b3f873d2bf36a17157df9574fc3128907b4450b7db5762f16ab48c1a084120",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "app/services/orchestrator.py",
+      "source_sha256": "e7016a46b82733feaa88a24355e102ca79a19c63e045d611c412354ee0dbfac2",
+      "published_sha256": "e7016a46b82733feaa88a24355e102ca79a19c63e045d611c412354ee0dbfac2",
+      "baseline_sha256": "0f4a538caf4777c7cc5be1b0dfe1ecbb27d37a0e42b3131ecef2db92bb3953a3"
+    },
+    {
+      "repository_path": "app/stores/long_memory.py",
+      "source_sha256": "e124b837cf7380d47203b9767a3227668ff2e4df400dd591113b37b351e69fc6",
+      "published_sha256": "e124b837cf7380d47203b9767a3227668ff2e4df400dd591113b37b351e69fc6",
+      "baseline_sha256": "133c6bb9ee311f51fbc90560d37d2d0e39c107689007a25227d5bc1082b50600"
+    },
+    {
+      "repository_path": "tests/test_api.py",
+      "source_sha256": "7b2c36e1eac22cd2841c099edb460092c169b938d89c1a285d44479fa6d26ef0",
+      "published_sha256": "7b2c36e1eac22cd2841c099edb460092c169b938d89c1a285d44479fa6d26ef0",
+      "baseline_sha256": "299cc6b1f9e1e73bd11d3d6e102ecbda87dc07ba40d55781eb80a6b5b968a27b"
+    },
+    {
+      "repository_path": "tests/test_phase0c_scope_contract.py",
+      "source_sha256": "1337980402d61c92d64ccd42143063f5a1d0fbfd251e49698f34258380f1c0e8",
+      "published_sha256": "1337980402d61c92d64ccd42143063f5a1d0fbfd251e49698f34258380f1c0e8",
+      "baseline_sha256": "1a8d675a7228b02c0104fa92586008c6ed1e2ec6ccb50932744e3946b053af78"
+    },
+    {
+      "repository_path": "tests/test_conversation_trust_contract.py",
+      "source_sha256": "cbd5e6ee5d32ebed61348e4018f8f3adc16e4d6b7f52e1fa1a6fc59ad8bbd203",
+      "published_sha256": "cbd5e6ee5d32ebed61348e4018f8f3adc16e4d6b7f52e1fa1a6fc59ad8bbd203",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c/trust_semantic_scope_contract.md",
+      "source_sha256": "0bfbc4bd965806437724ccef1b12f245f3c97b1e92b473c6170b9e5adee49479",
+      "published_sha256": "0bfbc4bd965806437724ccef1b12f245f3c97b1e92b473c6170b9e5adee49479",
+      "baseline_sha256": "f18a57ed2df42acca21f6288d7e68c7840e06b60decc909cf210fba1675ad999"
+    },
+    {
+      "repository_path": "docs/phase0c_conversation_trust/audit_inventory.json",
+      "source_sha256": "0824ca026ba4c77ab4dc680bfd14a0919f99328fcae8db259575dc66ab1b1400",
+      "published_sha256": "0824ca026ba4c77ab4dc680bfd14a0919f99328fcae8db259575dc66ab1b1400",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_conversation_trust/closure_report.md",
+      "source_sha256": "a62d2c71a235818f96b67d7a5c9f815f86f829725bd37ea7dcc96d782603ddee",
+      "published_sha256": "a62d2c71a235818f96b67d7a5c9f815f86f829725bd37ea7dcc96d782603ddee",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_conversation_trust/final_DataAnalysis_Agent.json",
+      "source_sha256": "035e05aec38f918d708b6e050e0bdd8287e031d80d33bb71836fc72a2b1e36a3",
+      "published_sha256": "035e05aec38f918d708b6e050e0bdd8287e031d80d33bb71836fc72a2b1e36a3",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_conversation_trust/final_Oagnet.json",
+      "source_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "published_sha256": "083d3886ea1c383a9e39f6775aa3bf6528576acd9eefe6769c8d76f9bb74db2a",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_conversation_trust/final_SQL_Translator.json",
+      "source_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "published_sha256": "73efc555476ef5b0f35bb9ded56fe40ccf5e5e0d1f8803c842c41cdaa63eae52",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_conversation_trust/rollback_manifest.json",
+      "source_sha256": "67118a229405d781dede6d3220e203392d251bcf71d9246a61caf2a7128403c0",
+      "published_sha256": "67118a229405d781dede6d3220e203392d251bcf71d9246a61caf2a7128403c0",
+      "baseline_sha256": null
+    },
+    {
+      "repository_path": "docs/phase0c_conversation_trust/test_delta.json",
+      "source_sha256": "47ebcb775064f70de6044e62b9b8fe04cb90dfc0b0613b081567e972063dba4d",
+      "published_sha256": "47ebcb775064f70de6044e62b9b8fe04cb90dfc0b0613b081567e972063dba4d",
+      "baseline_sha256": null
+    }
+  ],
+  "secret_scan_findings": 0,
+  "publication_policy": "Explicit files only; no credentials, environments, logs, private diagnostic text, runtime data or snapshots",
+  "original_oagnet_index_preserved": true,
+  "manifest_self_hash": "Committed Git blob; no circular hash"
+}

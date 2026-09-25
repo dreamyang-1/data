@@ -1,0 +1,69 @@
+{
+  "status": "PROMPT_COMPARISON_CONFOUNDED",
+  "early_commit": "ab3c7fe5613699872b5c5d5e048fff3b590708ee",
+  "early_prompt_hashes": {
+    "PROMPT_VERSION": "f352e49af96ee047233b1439f1f7eebf18f7302ca7863807db175ea90aec64c3",
+    "PARSE_PROMPT": "ff29f7c1ddffb368a48999dce8536231216f9f7bd1805f02b56c513668c8d1de",
+    "DRAFT_PROMPT": "3889e596b5067949b4797332aa84e260881743028a4c3c2c5f5841761d94f5b8"
+  },
+  "current_prompt_hashes": {
+    "PROMPT_VERSION": "95758481be3416e3eb81e4d67d9808ad312f0b6c3b67fd4c9c961d83343f649c",
+    "PARSE_PROMPT": "621522c249ef4ab58a08eba2e0a8140a40f9afcf21f0bff85cea05e3baa62412",
+    "DRAFT_PROMPT": "446b110d7b3411d585858c8e6919dafc7739c5152b5d3934127908e91ff1122d"
+  },
+  "original_output_schema_compatible_for_full_corpora": false,
+  "early_draft_fields": [
+    "edits",
+    "payload_type",
+    "historical_task_handle",
+    "dataset_handle",
+    "dataset_operation",
+    "unresolved_mention_ids"
+  ],
+  "current_draft_fields": [
+    "edits",
+    "filter_edits",
+    "temporal_edits",
+    "relationship_edits",
+    "comparison_edits",
+    "source_value_requests",
+    "payload_type",
+    "historical_task_handle",
+    "dataset_handle",
+    "dataset_operation",
+    "unresolved_mention_ids",
+    "ambiguities"
+  ],
+  "added_fields": [
+    "ambiguities",
+    "comparison_edits",
+    "filter_edits",
+    "relationship_edits",
+    "source_value_requests",
+    "temporal_edits"
+  ],
+  "contract_conflicts": [
+    {
+      "old": "Whole filter/time slot edits",
+      "current": "Partial updates require filter_edits/temporal_edits; existing whole TimeSpec replacement rejected",
+      "evidence": "app/semantic_v2/recognition.py:_patch, V2_TEMPORAL_COMPONENT_EDIT_REQUIRED"
+    },
+    {
+      "old": "No relationship/source-value request protocol",
+      "current": "Governed relationship edits and source_value_requests/value_field_request_id",
+      "evidence": "SemanticTaskDraft and value_schema; frozen corpus includes these capabilities"
+    }
+  ],
+  "shared_scalar_metric_subset": "STRUCTURAL_SUBSET_EXISTS; does not establish full Public/Private experiment comparability",
+  "model_experiment_run": false,
+  "model_calls": 0,
+  "prompt_changes": 0,
+  "PROMPT_OVERFIT_EVIDENCE": "NOT_ESTABLISHED",
+  "OVERFIT_RISK": true,
+  "conclusion": "Do not compare historical-prompt full-corpus accuracy across the changed output protocol, or retrofit current case rules into it.",
+  "current_schema_hashes": {
+    "current_turn": "fe6dcfb346f5f2e260a216e3849a1556ded61a3d93a44835bf4fe984bc1985ff",
+    "semantic_draft_template": "306d5c5f8a9191a0923b100ef6d5ef4e0ff4fe1d98668e521dbe5b3b9fa86421",
+    "value_choice_template": "ae2cb6191e0bbf34e5fa39e11fc976414cf10c52df1d07a47bd820474aca0bf7"
+  }
+}

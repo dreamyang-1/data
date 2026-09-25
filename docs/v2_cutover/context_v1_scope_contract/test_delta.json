@@ -1,0 +1,55 @@
+{
+  "status": "PASS",
+  "contract_cases": {
+    "omitted_domains": "MODEL_WIDE_RESOLVED_TO_205",
+    "explicit_205": "EXPLICIT_DOMAINS_PASS",
+    "foreign_domain": "FAIL_CLOSED",
+    "org_admin_department": "IGNORED_FOR_SCOPE_MODEL_WIDE"
+  },
+  "targeted": {
+    "passed": 112,
+    "failed": 0,
+    "collection_errors": 0
+  },
+  "critical": {
+    "passed": 161,
+    "failed": 0,
+    "collection_errors": 0,
+    "baseline_suite": 160,
+    "new_v1_contract_tests": 1
+  },
+  "affected_comparison": {
+    "git_baseline": {
+      "passed": 635,
+      "existing_failed": 2
+    },
+    "development": {
+      "passed": 641,
+      "existing_failed": 2
+    },
+    "old_pass_to_new_fail": 0
+  },
+  "full_offline_comparison": {
+    "git_baseline": {
+      "passed": 3629,
+      "existing_failed": 92,
+      "collection_errors": 0
+    },
+    "development": {
+      "passed": 3633,
+      "failed": 94,
+      "collection_errors": 0
+    },
+    "unrelated_preexisting_development_failures": [
+      "tests/test_api.py::test_stream_emits_new_agent_compatible_data_only_envelopes",
+      "tests/test_api.py::test_all_seven_thinking_stages_have_normalized_unnumbered_headings"
+    ],
+    "old_pass_to_new_fail_excluding_preexisting_workspace_drift": 0
+  },
+  "external_calls": {
+    "model": 0,
+    "sql": 0,
+    "production_writes": 0,
+    "service_restarts": 0
+  }
+}

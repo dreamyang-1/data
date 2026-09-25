@@ -1,0 +1,254 @@
+{
+  "baseline_commit": "5aaf64a235ca1766ee5c72bb24997aba924c10e0",
+  "code_commit": "b2478b5125f2b7d8ce463b0b42b389f1b3462367",
+  "files": [
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/calibration_manifest.json",
+      "action": "ADD",
+      "sha256_raw": "04c167f1784cd9f55115534bb759225abbb91e99b0ca14583c9acbf2a767e0e3",
+      "sha256_lf_normalized": "f98ee7a1ff8c7e82fc0414cc47232188a257074259636aadf4d9aa46c2d7eaa5",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/capability_blockers.json",
+      "action": "ADD",
+      "sha256_raw": "57a2854d8ecfd4e1704921efdf81521fef57460f43a1ac158f776379bd32a00e",
+      "sha256_lf_normalized": "3b90d721e980dea726a47a86dd707ff4f42a0ee58ca50312fed0137ae5d696c6",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/catalog_dependency_difficulty.json",
+      "action": "ADD",
+      "sha256_raw": "9db70403555a4ae072e626908c4b4a24e7686d28ffe65dc3e6fd4323c432068b",
+      "sha256_lf_normalized": "bc4487502f77d449604aa825cf02366f03d7529f248554ca02ed0f63effa89a1",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/certified_full_plan_gold.json",
+      "action": "ADD",
+      "sha256_raw": "22e2ca335a76dc0b748426e38f6d51a4d649b8be48a88dc13bb1591570d7f961",
+      "sha256_lf_normalized": "6432f4d2ce2c4b334d47c3c3ab3d819cebd25b2e2ffd13646ab22831e9e30afc",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/closure_report.md",
+      "action": "ADD",
+      "sha256_raw": "dea3bab7741d27c6762f0b425458090cd9d179d8eb08004f8354691f78070e5c",
+      "sha256_lf_normalized": "dea3bab7741d27c6762f0b425458090cd9d179d8eb08004f8354691f78070e5c",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/critical_safety_coverage_matrix.json",
+      "action": "ADD",
+      "sha256_raw": "6bfb0bd79a4ad37ecba500c94ad1a0742eab52713384e2482e994875a2f489e3",
+      "sha256_lf_normalized": "6820d677f6f84747193f4d2800677a9f9ec49273b498891b1587f062acb5cbc5",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/distribution_shift.json",
+      "action": "ADD",
+      "sha256_raw": "1513f1c022bb53a4719e0da6b860cc8323e86f96e8038817a16271e5ff4f8f86",
+      "sha256_lf_normalized": "e408eccfbbfcd485f3ddcc04837cb58adeeab528cbe19419ea93596568f8c804",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/divergence_shift.json",
+      "action": "ADD",
+      "sha256_raw": "9fe695845b9e7bdc35d54f50d39d24dc75f80342e68b959571c3132eb1f281a7",
+      "sha256_lf_normalized": "d478b119392b89a16bc1711a76f85a8aeda9ad019a711bdc4ac967e6f13b6bc7",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/evidence_gap_review.json",
+      "action": "ADD",
+      "sha256_raw": "17d6e1ac8de7cf51247ae6325f319b4b5078bff02fd94bfc07e45c4040e20070",
+      "sha256_lf_normalized": "abf9c52c93b8f4c3fa515e96b043b52aedf0cbb75505e63cc43560687fc5b6b9",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/full_plan_coverage_matrix.json",
+      "action": "ADD",
+      "sha256_raw": "35117754b67eb495e40b917ea7032e4104ae97a21ca6a837830445649b4d956b",
+      "sha256_lf_normalized": "bdf046325f3902280ad6c2dbf0f18af46182d61b52f36dcd94d10293a15954f3",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/full_plan_evaluation.json",
+      "action": "ADD",
+      "sha256_raw": "ad9ab1f59ef2713091e0624b5f8290c8faca43948ee3f3d53964d295f56c1c97",
+      "sha256_lf_normalized": "ce9c72590b97e571ac7a6f9e9d6ab98a3afdbc25bfcbf47db71568eba7578cf3",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/full_plan_gold_manifest.json",
+      "action": "ADD",
+      "sha256_raw": "316aaa757ce4eecf1b5311e759f961c0de248f2c5abbeea04c1cdefe37911383",
+      "sha256_lf_normalized": "7e9a0e8e14c60c6e86a5892e6f734ad53969f82453e447329931070721e62c54",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/gate_matrix.json",
+      "action": "ADD",
+      "sha256_raw": "c1fcf5195923fd0008c77c04a4594670099c8552253b7b0df3c6a51c51576894",
+      "sha256_lf_normalized": "2003cdfbf024c3bb0038c7fb3076f38aaea51cbf581b9adb84afa817e6543dd1",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/new_gold_capture_manifest.json",
+      "action": "ADD",
+      "sha256_raw": "d3a74a2e89e621e5bf2a883e5f2f73ef6c0337f9938dcf549e05752a20c8f4f5",
+      "sha256_lf_normalized": "c03955d58d06e75ca9c5acd9f4504e68c09da24349c4ad232ff77a03c550a389",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/new_gold_dry_plan_receipts.json",
+      "action": "ADD",
+      "sha256_raw": "26b81fa8b8f8d88452867f9b2ab1d4bbc218c46baaf1cb2cba7e4b09d7435ac6",
+      "sha256_lf_normalized": "420015d3046e96ce109bd8facfb90ba039c6b5605d3eca38c8c5b9e7ad84d08e",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/new_gold_evaluation.json",
+      "action": "ADD",
+      "sha256_raw": "b4ddb35c2585c8424dcb732ec56bcd8972822169fa8d574f674a3d09f9793bf5",
+      "sha256_lf_normalized": "7c2bbb7cc37c73add95df6454e7cb739944b05ffa4e5d5fac17f8b58b34dfd6b",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/new_gold_replay_receipts.json",
+      "action": "ADD",
+      "sha256_raw": "6834c4c0c078483436b30a8d577579ef51fae900a211c365da13b7c9104fca00",
+      "sha256_lf_normalized": "5e3250d174b3751a2cd5e9b914621a8ef36a82726008a0b25d94ffd1aab8fe75",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/post_calibration_root_clusters.json",
+      "action": "ADD",
+      "sha256_raw": "65278460a0ff79ea9e7ee192d3aa7a8c3a635c065539032b7d7cea5c4e1a0aa6",
+      "sha256_lf_normalized": "3447691e874627be57f8807a9e0061d55af94f965c6534022e1e60a79f061cea",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/private_validation_difficulty_profile.json",
+      "action": "ADD",
+      "sha256_raw": "d0224eae415e7091843f8f144382cb9e57b8d57bee71e55d97809bb478519fbb",
+      "sha256_lf_normalized": "1fe10130ffcdc2ba714b958010959547451bd5327ee21b147856ac76f99a41ef",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/prompt_generalization_audit.json",
+      "action": "ADD",
+      "sha256_raw": "f81f36613b10bd856b7463615b8d9cea4bb197bf0495ee3cea7a6dfb22076cbe",
+      "sha256_lf_normalized": "2ad799161a8ba1bef37ac1671205a9cc79c06313a8e10827d4926b5c41d0deed",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/provider_stability.json",
+      "action": "ADD",
+      "sha256_raw": "3b27c2a076b2f95a872a7eeaa15fdfd8c5ae5453694e823b7f313e822b708ff1",
+      "sha256_lf_normalized": "456c8fb44c6c352e2756405bdea013f17705c7bf55dada6f553dc08d5b78bcd8",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/public_dev_difficulty_profile.json",
+      "action": "ADD",
+      "sha256_raw": "e957db204093e8c6f07c9ffa06cbe99b9e0d0b3febc1cdf2e8253360b23a7b86",
+      "sha256_lf_normalized": "f8f49bafe844e41d677c9541478da84527cda30d68159be31512c9d666a8e08a",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/split_access_receipt.json",
+      "action": "ADD",
+      "sha256_raw": "9346abbc119fa57317b2f0fc737a19681109b98e8e15d796fd38dd399705f9da",
+      "sha256_lf_normalized": "cfb17c1260afaa888d19ac3d3ee56571f9e9b883095481a61d11f875c515abdc",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/test_delta.json",
+      "action": "ADD",
+      "sha256_raw": "ab39baf28dd113a832372f5f31cac23c0b2de9d8f1cc431f52d8b6283a05e179",
+      "sha256_lf_normalized": "86b69ea0aea843dc7a636aaeff20e720795b206f848553dac36779b1025d8eeb",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/transition_difficulty_profile.json",
+      "action": "ADD",
+      "sha256_raw": "a70d8cb0c78babb148ce57c3060fb563a84713fed3cdfb35d07c2d3642951c70",
+      "sha256_lf_normalized": "879745762c427f33112f584dfd43a93068d8f076614378b240b328c08a4c45ba",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/v1_native_probe_receipts.json",
+      "action": "ADD",
+      "sha256_raw": "6b744230b04883e3b0c0a18df65f1fded2f9c7a66ff96021eff2216abb1f557a",
+      "sha256_lf_normalized": "cd2708f06be65d8f1cbaf853ef6d65e784cba88c2e3673fea0a6c4b3620bdabb",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/v1_v2_comparison.json",
+      "action": "ADD",
+      "sha256_raw": "180c8cc1a3dc9246871b785674a7246b7223e1d883363bde7c9b53718806f140",
+      "sha256_lf_normalized": "2acc8ab5e2e5096a842bc5aeb4d528dae9c41c58b91bd52b67bd365bdfebdf4b",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "docs/v2_cutover/pre_semantic_calibration/verify_calibration.py",
+      "action": "ADD",
+      "sha256_raw": "256818419d58843cc044805d15d2a6b8210ca6c53cdecf0831b54316811c4a44",
+      "sha256_lf_normalized": "256818419d58843cc044805d15d2a6b8210ca6c53cdecf0831b54316811c4a44",
+      "classification": "PUBLIC_CALIBRATION_EVIDENCE"
+    },
+    {
+      "path": "tests/test_cutover_calibration.py",
+      "action": "ADD",
+      "sha256_raw": "170e9a14a75e3dedd049bef75688b3fc1bb2ce3145ac4b6725fdfa6b044f238e",
+      "sha256_lf_normalized": "170e9a14a75e3dedd049bef75688b3fc1bb2ce3145ac4b6725fdfa6b044f238e",
+      "classification": "EVALUATION_CODE_OR_TEST"
+    },
+    {
+      "path": "tools/cutover/calibration_audit.py",
+      "action": "ADD",
+      "sha256_raw": "a683073bc55507f0d09f8475607f80d724354dd1bbe057d3e7ec67da7f0f2e00",
+      "sha256_lf_normalized": "a683073bc55507f0d09f8475607f80d724354dd1bbe057d3e7ec67da7f0f2e00",
+      "classification": "EVALUATION_CODE_OR_TEST"
+    },
+    {
+      "path": "tools/cutover/calibration_gold.py",
+      "action": "ADD",
+      "sha256_raw": "9222a15c85d62af23b6aa9ea0812caac358e8505eb21c68e63c171601815a892",
+      "sha256_lf_normalized": "9222a15c85d62af23b6aa9ea0812caac358e8505eb21c68e63c171601815a892",
+      "classification": "EVALUATION_CODE_OR_TEST"
+    },
+    {
+      "path": "tools/cutover/calibration_profile.py",
+      "action": "ADD",
+      "sha256_raw": "763d4f77ae230208c6dc1ef611f01e928253c66f9478371612b8a69a76a3e263",
+      "sha256_lf_normalized": "763d4f77ae230208c6dc1ef611f01e928253c66f9478371612b8a69a76a3e263",
+      "classification": "EVALUATION_CODE_OR_TEST"
+    },
+    {
+      "path": "tools/cutover/calibration_v1.py",
+      "action": "ADD",
+      "sha256_raw": "abf5ee15e4240c5aad04c17124fd0e9748b19b0d3f90c92b0676cefaf5126d20",
+      "sha256_lf_normalized": "abf5ee15e4240c5aad04c17124fd0e9748b19b0d3f90c92b0676cefaf5126d20",
+      "classification": "EVALUATION_CODE_OR_TEST"
+    },
+    {
+      "path": "tools/cutover/calibration_v1_probe.py",
+      "action": "ADD",
+      "sha256_raw": "f68c08b8d9b5bf6f87417916bdc065b436e2248adbcca4a2fbcd28ffb8ca0a66",
+      "sha256_lf_normalized": "f68c08b8d9b5bf6f87417916bdc065b436e2248adbcca4a2fbcd28ffb8ca0a66",
+      "classification": "EVALUATION_CODE_OR_TEST"
+    }
+  ],
+  "release_envelope_paths": [
+    "docs/v2_cutover/pre_semantic_calibration/change_manifest.json",
+    "docs/v2_cutover/pre_semantic_calibration/git_commit_manifest.json",
+    "docs/v2_cutover/pre_semantic_calibration/rollback_manifest.json",
+    "docs/v2_cutover/pre_semantic_calibration/validation_receipt.json",
+    "docs/v2_cutover/pre_semantic_calibration/workspace_git_hash_verification.json"
+  ],
+  "recursive_hash_policy": "Release envelopes are excluded from their own file hash list. Git commits bind all exact bytes.",
+  "production_source_changes": 0,
+  "private_capture_or_credentials_copied": false
+}

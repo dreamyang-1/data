@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "2e5b5a6fb82d896eacc859af99a1b5eece067f11",
+  "feature_branch": "cutover-v2-temporal-comparisons-20260908-01",
+  "rollback": "Reviewed revert of source/evidence commits, explicit development resync and affected/critical tests. Reject incompatible scoped comparison artifacts; never synthesize a missing relative-period rule from old dates.",
+  "native_publication_performed": false,
+  "production_traffic_rollback_proven": false,
+  "auto_merge": false
+}

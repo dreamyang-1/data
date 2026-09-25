@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "d798dc6f7a9342f3090ed418439d2fa0672a6c54",
+  "feature_branch": "cutover-v2-pending-20260908-01",
+  "rollback": "Reviewed revert of Pending source commit, explicit manifest resync and affected V2/critical checks",
+  "live_operations_performed": false,
+  "production_traffic_rollback_proven": false,
+  "auto_merge": false
+}

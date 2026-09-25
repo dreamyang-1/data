@@ -1,0 +1,126 @@
+{
+  "baseline": "116ffe06d12812f849ba60eaa644df17cbc89f8a",
+  "branch": "semantic-filter-round5-4-20260910t063432z",
+  "files": [
+    {
+      "path": "app/semantic_v2/filter_generation_schema.py",
+      "action": "ADD",
+      "sha256": "3a48a1dcc4641315c460526a6c39ec32179f29375060cf04039a0d734689466e",
+      "previous_sha256": null
+    },
+    {
+      "path": "app/semantic_v2/recognition.py",
+      "action": "MODIFY",
+      "sha256": "313a87427cbd554cc279c32ef5ac847608187dbf29dcb15207e2ef991bc4aa6e",
+      "previous_sha256": "d92164bd9b1b4961433c95a643018583c3e0d765917a384e4a8d991964a3c4bc"
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_4/CURRENT_FILTER_OPERATION_PATH.md",
+      "action": "ADD",
+      "sha256": "fee373993e701fdf91707301d7db8d068673edb69ebfdf5b667413386db79403",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_4/catalog_healthy_fixture.json",
+      "action": "ADD",
+      "sha256": "b235c230f63043daccb15b0fda653fe28589daa8ed791c0759084058428ae1b1",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_4/closure_report.md",
+      "action": "ADD",
+      "sha256": "e8ed578f5f032c85decd6a4c65d81521edc6a43b90ec5ef01958c96eecd9b4f8",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_4/filter_root_evidence.json",
+      "action": "ADD",
+      "sha256": "726352b1be52034e726911acb3e9f654edddbbe08da91d35a461adceaaf10122",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_4/live_coverage.json",
+      "action": "ADD",
+      "sha256": "eab74b846e666a208df7c331514d11aea39221e928403724ec08a70c0b962867",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_4/performance_receipt.json",
+      "action": "ADD",
+      "sha256": "2b49d262838e89943630fcd171a3ab4ed2a99670d6d0225d42b2f96fdb2443f2",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_4/round5_4_manifest.json",
+      "action": "ADD",
+      "sha256": "fa35236eb93380b0dd307fe010d06a549c92f0a21f93fb190a0f19d14d35a457",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_4/test_delta.json",
+      "action": "ADD",
+      "sha256": "08fd975e8e1eef79dac485dacc0c0bfffa6a298bec29db36e74d09cec80907f6",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_4/validation_receipt.json",
+      "action": "ADD",
+      "sha256": "f5a78a1b7acffc7cc00cbd347ecef7414f773ba9b9c578f48539b31a19598b5d",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/v2_cutover/semantic_round5_4/verify_round5_4.py",
+      "action": "ADD",
+      "sha256": "bdda957a6f059d2098cc976da1c83424589af5d27ba7fb88f657510a6858e9a9",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/test_round54_plan_checks.py",
+      "action": "ADD",
+      "sha256": "30dabecec07d64129b73c139895e264c9f013f74a14ca895e33e8f9a4e2f8dc8",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/test_round54_preflight.py",
+      "action": "ADD",
+      "sha256": "ea33353e5c770429ed6f95941fefd4501ab66d80fbaadf542708d8c2bbbf0bb0",
+      "previous_sha256": null
+    },
+    {
+      "path": "tests/test_v2_filter_generation_contract.py",
+      "action": "ADD",
+      "sha256": "c8cf96a862fc60e11088f1eba737f516364171aa40b74b80cd5a33d5dfad2a8b",
+      "previous_sha256": null
+    },
+    {
+      "path": "tools/cutover/round54_healthy_fixture.py",
+      "action": "ADD",
+      "sha256": "1631e903678c94a8bda113d6b2f88ceb031ecc5b9d32fa3c66acc475c7c45e98",
+      "previous_sha256": null
+    },
+    {
+      "path": "tools/cutover/round54_live_slice.py",
+      "action": "ADD",
+      "sha256": "19625bf7e9bf194601c0aa0dae756470190065c220ec24cfdaca688934ffbf56",
+      "previous_sha256": null
+    },
+    {
+      "path": "tools/cutover/round54_plan_checks.py",
+      "action": "ADD",
+      "sha256": "3fc8ce0cb7c4ef33175e49537259b92cc9d3680b40720728eecb498a6de1dd25",
+      "previous_sha256": null
+    }
+  ],
+  "commit_sealed_manifest_files": [
+    "docs/v2_cutover/semantic_round5_4/change_manifest.json",
+    "docs/v2_cutover/semantic_round5_4/git_commit_manifest.json",
+    "docs/v2_cutover/semantic_round5_4/rollback_manifest.json",
+    "docs/v2_cutover/semantic_round5_4/workspace_git_hash_verification.json"
+  ],
+  "production_files": [
+    "app/semantic_v2/recognition.py",
+    "app/semantic_v2/filter_generation_schema.py"
+  ],
+  "hash_mode": "SHA256 normalized CRLF to LF",
+  "secrets_env_private_included": false
+}

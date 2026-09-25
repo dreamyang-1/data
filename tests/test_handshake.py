@@ -138,7 +138,7 @@ def _make_request(intent: PrimaryIntent) -> CanonicalAnalysisRequest:
 
 
 def _make_state(intent: PrimaryIntent) -> dict:
-    chat = ChatRequest(
+    chat = ChatRequest(semantic_model_id=81,
         conversation_id="c1",
         message_id="m1",
         question="问个问题",

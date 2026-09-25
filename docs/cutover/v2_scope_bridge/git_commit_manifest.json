@@ -1,0 +1,15 @@
+{
+  "baseline_commit": "aa6252f367b7da35774ccbabb17c85545975bd20",
+  "feature_branch": "cutover-v2-scope-bridge-20260908-02",
+  "base_branch": "cutover-catalog-identity-20260908-01",
+  "implementation_commits": {
+    "Oagnet": "6268d18731f20b20100b4b3682f8ab631042e73d",
+    "DataAnalysis_Agent": "468d44dd43528e7cd3af124c34379a6070a58b87"
+  },
+  "final_evidence_commit": "Commit containing this manifest",
+  "draft_pr": true,
+  "auto_merge": false,
+  "live_reads_performed": false,
+  "production_writes": 0,
+  "index_publications": 0
+}

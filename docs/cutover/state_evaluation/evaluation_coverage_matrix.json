@@ -1,0 +1,87 @@
+[
+  {
+    "metric": "DialogueAct Accuracy",
+    "status": "PARTIAL",
+    "evidence_limit": "Current turn-relation axes collapse follow-up/modification/correction; no complete dialogue-act labels."
+  },
+  {
+    "metric": "TargetTask Accuracy",
+    "status": "PARTIAL",
+    "evidence_limit": "20-transition corpus labels prior/new/history handles; actual V1 historical selector not executed."
+  },
+  {
+    "metric": "WrongInheritance Rate",
+    "status": "NOT_EVALUATED",
+    "evidence_limit": "17 state transitions require observations; partial state mismatches are not silently converted to a full-pipeline safety rate."
+  },
+  {
+    "metric": "PendingHijack Rate",
+    "status": "PARTIAL",
+    "evidence_limit": "One actual admission guard observation; no full orchestrator/model pending corpus acceptance."
+  },
+  {
+    "metric": "ADD / REPLACE / REMOVE / CLEAR Accuracy",
+    "status": "PARTIAL",
+    "evidence_limit": "Affected-slot operation labels and state contrasts; exact per-operation denominators in operation_scores.json; no full TaskPatch score."
+  },
+  {
+    "metric": "TaskPatch Accuracy",
+    "status": "NOT_EVALUATED",
+    "evidence_limit": "Full patches, barriers and all unrelated slots are not exhaustively labeled."
+  },
+  {
+    "metric": "Mention F1",
+    "status": "NOT_EVALUATED",
+    "evidence_limit": "Existing 100-case corpus has selected critical mentions; exhaustive precision labels remain missing."
+  },
+  {
+    "metric": "SemanticRole Accuracy",
+    "status": "PARTIAL",
+    "evidence_limit": "PR39 component role recall/purity measured; not full canonical grounded roles."
+  },
+  {
+    "metric": "CanonicalBinding Accuracy",
+    "status": "NOT_EVALUATED",
+    "evidence_limit": "One canonical metric set labeled; V1 rules do not perform grounding. V2 adapter integration controls are synthetic, not the frozen 81/205 benchmark."
+  },
+  {
+    "metric": "UnnecessaryClarification Rate",
+    "status": "NOT_EVALUATED",
+    "evidence_limit": "No accepted full trace-labeled corpus; a missing metric slot is not a public question."
+  },
+  {
+    "metric": "RequiredClarification Recall",
+    "status": "NOT_EVALUATED",
+    "evidence_limit": "V2 ASK/ANSWER adapter controls pass; required decision labels on real full-pipeline cases remain open."
+  },
+  {
+    "metric": "WrongAutoAccept Rate",
+    "status": "NOT_EVALUATED",
+    "evidence_limit": "Missing safety observations never imply zero."
+  },
+  {
+    "metric": "RepeatedClarification Rate",
+    "status": "NOT_EVALUATED",
+    "evidence_limit": "Trace extractor retains already_asked but no accepted repeated-question corpus."
+  },
+  {
+    "metric": "DatasetRoute / LIMIT_vs_RANK Accuracy",
+    "status": "PARTIAL",
+    "evidence_limit": "Three actual local follow-up service observations distinguish display limit, truncated global rank reject/replan and complete local rank."
+  },
+  {
+    "metric": "ScopeExpansion Count",
+    "status": "NOT_EVALUATED",
+    "evidence_limit": "No scope-expansion runtime observations in this benchmark; prior scope regression evidence remains separate."
+  },
+  {
+    "metric": "CrossScopeReuse Count",
+    "status": "NOT_EVALUATED",
+    "evidence_limit": "No cross-scope pending/dataset runtime observations in this benchmark."
+  },
+  {
+    "metric": "SemanticPlanMatch",
+    "status": "NOT_EVALUATED",
+    "evidence_limit": "Full semantic plan ground truth and paired V1/V2 observations remain incomplete."
+  }
+]

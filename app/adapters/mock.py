@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from app.adapters.base import AdapterBundle
 from app.adapters.semantic_query import CompositeSemanticQueryTool
 from app.domain.models import CanonicalAnalysisRequest, DataQueryResult, Dataset, EvidenceItem, KnowledgeContext, KnowledgeDocument, MetricRef, TrustedIdentity
+from app.presentation import SEMANTIC_QUERY_TOOL_NAME, render_asl_extraction_json
+from app.services.progress import emit_progress
 
 METRICS = {
     "销售额": ("metric.sales_amount", "v1", "元"), "订单量": ("metric.order_count", "v1", "单"),
@@ -53,7 +55,27 @@ class MockDataRetrievalAdapter:
             }
             for m in request.metrics
         ]
-        return DataQueryResult(asl={"version": "2.0", "intent": "query", "metrics": asl_metrics, "ambiguity": []}, sql="SELECT mock_read_only_result", dataset=dataset, data_source_id="mock")
+        asl = {
+            "version": "2.0",
+            "intent": "query",
+            "metrics": asl_metrics,
+            "ambiguity": [],
+        }
+        await emit_progress(
+            "ASL_GENERATION",
+            "COMPLETED",
+            f"工具：{SEMANTIC_QUERY_TOOL_NAME}。\n"
+            + render_asl_extraction_json(asl),
+            message_limit=65536,
+            display_model="OagentASL",
+            display_version=str(asl.get("version") or "UNKNOWN"),
+        )
+        return DataQueryResult(
+            asl=asl,
+            sql="SELECT mock_read_only_result",
+            dataset=dataset,
+            data_source_id="mock",
+        )
 
 class MockKnowledgeAdapter:
     async def health(self) -> bool: return True

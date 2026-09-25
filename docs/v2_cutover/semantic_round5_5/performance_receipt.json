@@ -1,0 +1,43 @@
+{
+  "model_calls": 17,
+  "provider_smoke_calls": 1,
+  "semantic_model_calls": 16,
+  "new_runtime_requests": 8,
+  "calls_per_request": {
+    "mean": 2,
+    "p95": 2,
+    "n": 8
+  },
+  "tokens_all_including_smoke": {
+    "input": 197252,
+    "output": 6517
+  },
+  "recognition_stage_seconds": {
+    "mean": 7.352562500003842,
+    "p95": 14.311999999918044,
+    "n": 16
+  },
+  "request_seconds": {
+    "mean": 15.007875000039348,
+    "p95": 22.515000000130385,
+    "n": 8
+  },
+  "model_pipeline_seconds": {
+    "mean": 14.705125000007683,
+    "p95": 22.24999999976717,
+    "n": 8
+  },
+  "ground_production_latency": "NOT_MEASURED_FROZEN_SOURCE_OBSERVATIONS",
+  "http_200": 17,
+  "http_401_403": 0,
+  "provider_timeouts": 0,
+  "provider_schema_failures": 0,
+  "runtime_typed_contract_rejects": 1,
+  "generation_contract_violations_safe_rejected": 1,
+  "historical_prefix_cost_excluded": true,
+  "model": "qwen3.7-max",
+  "thinking": false,
+  "temperature": 0,
+  "retry": 0,
+  "statistical_boundary": "Related public development branches; not model benchmark or production SLA"
+}

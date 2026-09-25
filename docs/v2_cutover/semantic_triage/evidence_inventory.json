@@ -1,0 +1,490 @@
+{
+  "audited_commit": "0e408509126aae0a3a324aff02aef848fd0d3c56",
+  "case_counts": {
+    "FAIL": 37,
+    "PASS": 79,
+    "NOT_RUN": 4,
+    "BLOCKED": 0
+  },
+  "single_parser": {
+    "FAIL": 27,
+    "PASS": 73
+  },
+  "transition": {
+    "PASS": 6,
+    "FAIL": 10,
+    "NOT_RUN": 4
+  },
+  "parser_gold_records_with_history": 42,
+  "executable_for_current_listed_axes": 116,
+  "not_run_by_fixture": 4,
+  "blocked_by_external_dependency_in_this_gold": 0,
+  "fully_labeled_end_to_end_semantic_gold": 0,
+  "full_accuracy": "NOT_EVALUATED",
+  "replay_sources": [
+    {
+      "path": "docs/cutover/parser_repairs/recorded_replay.json",
+      "sha256": "e14db9941928a7e0455a9d0476d6bb8dc1550bb7c56bf72cf5597ff26c453ff6",
+      "receipt_rows": 10,
+      "modes": {
+        "PARSER_REPRESENTATION_CONTROL": 10
+      },
+      "case_ids": [
+        "G81-020",
+        "G81-040",
+        "G81-056",
+        "G81-072",
+        "G81-074",
+        "G81-076",
+        "G81-083",
+        "G81-093",
+        "G81-099",
+        "G81-100"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": false
+    },
+    {
+      "path": "docs/v2_cutover/compound_mentions/targeted_observation_evidence.json",
+      "sha256": "e2b258bfdb56a44830e75900aae15bbfeb10b2c61071a0c6cd20d32ddb914ab4",
+      "receipt_rows": 3,
+      "modes": {
+        "RECORDED_MODEL_PIPELINE": 3
+      },
+      "case_ids": [
+        "S81-014"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": false
+    },
+    {
+      "path": "docs/v2_cutover/governed_time/recorded_time_receipts.json",
+      "sha256": "aacbe35799b579a1ab3bf34b043b829ca93dfb96ce58328bb7c5be50b78e9492",
+      "receipt_rows": 2,
+      "modes": {
+        "RECORDED_MODEL_PIPELINE": 1,
+        "RECORDED_OUTPUT_ORACLE_INTERVENTION": 1
+      },
+      "case_ids": [
+        "S81-014"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": false
+    },
+    {
+      "path": "docs/v2_cutover/recorded_oracle/replay_receipts.json",
+      "sha256": "99882f49c74ad7dd522a323df4b9bf597e95a4e2319182a271a02984dc9fcafa",
+      "receipt_rows": 28,
+      "modes": {
+        "RECORDED_MODEL_PIPELINE": 24,
+        "RECORDED_OUTPUT_ORACLE_INTERVENTION": 4
+      },
+      "case_ids": [
+        "S81-001",
+        "S81-002",
+        "S81-003",
+        "S81-004",
+        "S81-005",
+        "S81-006",
+        "S81-007",
+        "S81-008",
+        "S81-009",
+        "S81-010",
+        "S81-011",
+        "S81-012",
+        "S81-013",
+        "S81-014",
+        "S81-015",
+        "S81-017"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": false
+    },
+    {
+      "path": "docs/v2_cutover/temporal_authority/replay_receipts.json",
+      "sha256": "21e84760618b5aaa8f6c6e1c132a3b0ce76ce51dbb85d1f11079e24f82bb56b3",
+      "receipt_rows": 25,
+      "modes": {
+        "RECORDED_MODEL_PIPELINE": 25
+      },
+      "case_ids": [
+        "S81-001",
+        "S81-002",
+        "S81-003",
+        "S81-004",
+        "S81-005",
+        "S81-006",
+        "S81-007",
+        "S81-008",
+        "S81-009",
+        "S81-010",
+        "S81-011",
+        "S81-012",
+        "S81-013",
+        "S81-014",
+        "S81-015",
+        "S81-017"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": false
+    },
+    {
+      "path": "docs/v2_cutover/value_probe/replay_receipts.json",
+      "sha256": "8c2bdcbc336ba9bebd11215434a4e8d87064e47a00a7bb3773aa2f232caf3f1e",
+      "receipt_rows": 26,
+      "modes": {
+        "RECORDED_MODEL_PIPELINE": 26
+      },
+      "case_ids": [
+        "S81-001",
+        "S81-002",
+        "S81-003",
+        "S81-004",
+        "S81-005",
+        "S81-006",
+        "S81-007",
+        "S81-008",
+        "S81-009",
+        "S81-010",
+        "S81-011",
+        "S81-012",
+        "S81-013",
+        "S81-014",
+        "S81-015",
+        "S81-017"
+      ],
+      "counted_as_new_gold": false,
+      "current_head_reexecuted": true
+    }
+  ],
+  "total_receipt_rows": 94,
+  "distinct_source_capture_hashes": 77,
+  "latest_exact_replays": 26,
+  "old_replay_policy": "Older successes/failures stay historical and are not claimed re-executed on currentHEAD. Latest26 cover the current16 executed transition cases; no history success is fabricated.",
+  "candidate_offers": [
+    {
+      "case_id": "S81-001",
+      "turn_index": 0,
+      "candidate_count": 22,
+      "type_counts": {
+        "METRIC": 22
+      },
+      "candidate_context_hash": "9f131ef0983a1d55d2c402f5365774de407970f3ee8ea906527fc5d2c5e683f5",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-001",
+      "turn_index": 1,
+      "candidate_count": 11,
+      "type_counts": {
+        "METRIC": 11
+      },
+      "candidate_context_hash": "1570b67388dc8e95ce78436db22c85281c600439a63c7790efb1d931fb6d7f5a",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-002",
+      "turn_index": 0,
+      "candidate_count": 22,
+      "type_counts": {
+        "METRIC": 22
+      },
+      "candidate_context_hash": "33c10b0aa5b2b5382b0719fe1cfbfce5d2acfc4e798badd77fa3bcef6eadc1fe",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-002",
+      "turn_index": 1,
+      "candidate_count": 22,
+      "type_counts": {
+        "METRIC": 22
+      },
+      "candidate_context_hash": "c1769c7e69cbeea7d5c14b3dc61ff73435c3592fdff2b72e874747cd3f9f4239",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-003",
+      "turn_index": 0,
+      "candidate_count": 22,
+      "type_counts": {
+        "METRIC": 22
+      },
+      "candidate_context_hash": "9f131ef0983a1d55d2c402f5365774de407970f3ee8ea906527fc5d2c5e683f5",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-003",
+      "turn_index": 1,
+      "candidate_count": 11,
+      "type_counts": {
+        "METRIC": 11
+      },
+      "candidate_context_hash": "1570b67388dc8e95ce78436db22c85281c600439a63c7790efb1d931fb6d7f5a",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-004",
+      "turn_index": 0,
+      "candidate_count": 79,
+      "type_counts": {
+        "ENTITY_VALUE": 15,
+        "ENTITY": 14,
+        "PHYSICAL_TABLE": 14,
+        "ATTRIBUTE": 25,
+        "METRIC": 11
+      },
+      "candidate_context_hash": "3edecd32d65fb3fe30a0340c8da2092f61d400d00886212993d3f998bef7f68d",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-005",
+      "turn_index": 0,
+      "candidate_count": 79,
+      "type_counts": {
+        "ENTITY_VALUE": 15,
+        "ENTITY": 14,
+        "PHYSICAL_TABLE": 14,
+        "ATTRIBUTE": 25,
+        "METRIC": 11
+      },
+      "candidate_context_hash": "3edecd32d65fb3fe30a0340c8da2092f61d400d00886212993d3f998bef7f68d",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-006",
+      "turn_index": 0,
+      "candidate_count": 79,
+      "type_counts": {
+        "ENTITY_VALUE": 15,
+        "ENTITY": 14,
+        "PHYSICAL_TABLE": 14,
+        "ATTRIBUTE": 25,
+        "METRIC": 11
+      },
+      "candidate_context_hash": "3edecd32d65fb3fe30a0340c8da2092f61d400d00886212993d3f998bef7f68d",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-007",
+      "turn_index": 0,
+      "candidate_count": 91,
+      "type_counts": {
+        "ENTITY_VALUE": 30,
+        "ATTRIBUTE": 50,
+        "METRIC": 11
+      },
+      "candidate_context_hash": "5d1bede8107ab626190e9812ef429e0c63f91f5bd656221fb6c03976c37247bf",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-008",
+      "turn_index": 0,
+      "candidate_count": 91,
+      "type_counts": {
+        "ENTITY_VALUE": 30,
+        "ATTRIBUTE": 50,
+        "METRIC": 11
+      },
+      "candidate_context_hash": "5d1bede8107ab626190e9812ef429e0c63f91f5bd656221fb6c03976c37247bf",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-009",
+      "turn_index": 0,
+      "candidate_count": 79,
+      "type_counts": {
+        "ENTITY_VALUE": 15,
+        "ENTITY": 14,
+        "PHYSICAL_TABLE": 14,
+        "ATTRIBUTE": 25,
+        "METRIC": 11
+      },
+      "candidate_context_hash": "3edecd32d65fb3fe30a0340c8da2092f61d400d00886212993d3f998bef7f68d",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-010",
+      "turn_index": 0,
+      "candidate_count": 79,
+      "type_counts": {
+        "ENTITY_VALUE": 15,
+        "ENTITY": 14,
+        "PHYSICAL_TABLE": 14,
+        "ATTRIBUTE": 25,
+        "METRIC": 11
+      },
+      "candidate_context_hash": "3edecd32d65fb3fe30a0340c8da2092f61d400d00886212993d3f998bef7f68d",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-011",
+      "turn_index": 0,
+      "candidate_count": 24,
+      "type_counts": {
+        "DIMENSION": 13,
+        "METRIC": 11
+      },
+      "candidate_context_hash": "447f2c96c60edd1f3c56772b95fa0886fc3720d27a72e30ac54da6d4ab572991",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-011",
+      "turn_index": 1,
+      "candidate_count": 13,
+      "type_counts": {
+        "DIMENSION": 13
+      },
+      "candidate_context_hash": "6860d1ffc8b07074cc25a916800780aa41fdd04fc582637df2f20e56f629f5ad",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-012",
+      "turn_index": 0,
+      "candidate_count": 24,
+      "type_counts": {
+        "DIMENSION": 13,
+        "METRIC": 11
+      },
+      "candidate_context_hash": "674d6760714f5363bdecfa1ffcf4bb38b092c0a362d2afb4b3dbe6fbf7147424",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-012",
+      "turn_index": 1,
+      "candidate_count": 26,
+      "type_counts": {
+        "DIMENSION": 26
+      },
+      "candidate_context_hash": "aeb8c450e3712924f3e0e8f9defdfa530107558391e875fce465b144daa0e851",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-013",
+      "turn_index": 0,
+      "candidate_count": 37,
+      "type_counts": {
+        "DIMENSION": 26,
+        "METRIC": 11
+      },
+      "candidate_context_hash": "00e8dbce8a5bde41a41ebffccb18efb2022977a684f38ab1c3e43fe9658dc6a3",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-013",
+      "turn_index": 1,
+      "candidate_count": 13,
+      "type_counts": {
+        "DIMENSION": 13
+      },
+      "candidate_context_hash": "b26a836bcf5e96caa20896feaf3f684d970a4426e6a11eda6bb69390cd26bf1a",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 0,
+      "candidate_count": 11,
+      "type_counts": {
+        "METRIC": 11
+      },
+      "candidate_context_hash": "90ec1ddf8f1badd5bdd86ed646c010817e913a88f47da9b28c78cfe29eae9483",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 1,
+      "candidate_count": 0,
+      "type_counts": {},
+      "candidate_context_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-014",
+      "turn_index": 2,
+      "candidate_count": 11,
+      "type_counts": {
+        "METRIC": 11
+      },
+      "candidate_context_hash": "ae1b212a3da925c2927e2716f8b1f9abd8ac4d807fba7c76fc631c44433cb71a",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-015",
+      "turn_index": 0,
+      "candidate_count": 79,
+      "type_counts": {
+        "ENTITY_VALUE": 15,
+        "ENTITY": 14,
+        "PHYSICAL_TABLE": 14,
+        "ATTRIBUTE": 25,
+        "METRIC": 11
+      },
+      "candidate_context_hash": "3edecd32d65fb3fe30a0340c8da2092f61d400d00886212993d3f998bef7f68d",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-017",
+      "turn_index": 0,
+      "candidate_count": 11,
+      "type_counts": {
+        "METRIC": 11
+      },
+      "candidate_context_hash": "8b318f2a18d77c50866cb44a25eb96268c6594c5d559f512e87b64b50a9b4e31",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-017",
+      "turn_index": 1,
+      "candidate_count": 11,
+      "type_counts": {
+        "METRIC": 11
+      },
+      "candidate_context_hash": "1570b67388dc8e95ce78436db22c85281c600439a63c7790efb1d931fb6d7f5a",
+      "ranking_scores_present": false
+    },
+    {
+      "case_id": "S81-017",
+      "turn_index": 2,
+      "candidate_count": 22,
+      "type_counts": {
+        "METRIC": 22
+      },
+      "candidate_context_hash": "2588d5dbd4fb3070633dd6596b9e8e134f28c61fcee6c6d499998241008c8480",
+      "ranking_scores_present": false
+    }
+  ],
+  "ranked_candidate_retrieval": "NOT_EVALUATED: all compatible pinned rows are enumerated; static2D evaluation vectors are not semantic retrieval quality",
+  "source_choice_calls_in_latest_twenty_case_run": 0,
+  "oracle_evidence": "../oracle_evaluation_report.json",
+  "oracle_full_suite_complete": false,
+  "oracle_and_candidate_sources": [
+    {
+      "path": "docs/v2_cutover/oracle_evaluation_report.json",
+      "sha256": "eea61ef9c13561bb4b70953379f4422ebcd759f382932aba0e70994ac156e0c4"
+    },
+    {
+      "path": "docs/v2_cutover/replacement_oracle/recorded_candidate_evidence.json",
+      "sha256": "8a86eedd77fd5af5e9f1345b12171a3b7aafc163c04827f88d0a83db95c84732"
+    },
+    {
+      "path": "docs/v2_cutover/recorded_oracle/temporal_candidate_evidence.json",
+      "sha256": "5686243ec0d1a290ec9998523ee77d3772053d0ef9c1e75298cdb47dd4a87197"
+    },
+    {
+      "path": "docs/v2_cutover/value_probe/probe_component_receipt.json",
+      "sha256": "5847e15007538f0f3a3b00b7b2dc61732175aca34469d8bcce9420995c4c8e2e"
+    }
+  ],
+  "current_parser_prompt_and_schema_match_captured100": true,
+  "value_probe_component": {
+    "cases": 3,
+    "actual_model_calls": 3,
+    "field_selection": "ORACLE",
+    "binding_and_finish_passed": 3,
+    "full_plan_accuracy": false
+  },
+  "checkpoint_real_model_calls": 0,
+  "checkpoint_source_SQL": 0,
+  "production_writes": 0,
+  "V1_routing_changed": false,
+  "file_hash_policy": "SHA-256 after CRLF-to-LF normalization; frozen input/canonical JSON hashes unchanged"
+}
