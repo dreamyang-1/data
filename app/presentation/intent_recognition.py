@@ -991,6 +991,8 @@ def render_asl_extraction_json(asl: dict[str, object]) -> str:
             "不表示分组汇总；ASL 中仍由 dimensions 承载。"
         )
 
+    related_notes = [str(item.get('scope_note')) for item in asl.get('related_filters', [])
+                     if isinstance(item, dict) and item.get('scope_note')]
     return (
         "结构化提取（ASL）：\n"
         "```json\n"
@@ -998,6 +1000,8 @@ def render_asl_extraction_json(asl: dict[str, object]) -> str:
         "```\n"
         "\n`dimensions / display_fields`\n\n"
         f"说明：{dimension_usage}\n\n"
+        + ''.join(f"关联筛选口径：{note}\n\n" for note in related_notes)
+        +
         "说明：`filters` 仅记录本次查询显式提出的筛选；"
         "指标定义自带的固定口径由 SQL 翻译服务合并，"
         "并在下一步单独展示。"

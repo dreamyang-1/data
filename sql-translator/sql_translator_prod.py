@@ -3423,6 +3423,11 @@ class SQLTranslatorProd:
                 time_conditions.append(tc)
 
         filter_clause = self._build_filter_clause(filters, all_global_filters, main_table)
+        if ast.get('related_filters'):
+            from related_scope_sql import compile_related_filters
+            related_conditions = compile_related_filters(self, ast, model_id)
+            if related_conditions:
+                filter_clause += (' AND ' if filter_clause else 'WHERE ') + ' AND '.join(related_conditions)
         if not is_detail_projection:
             identity_conditions = self._group_identity_non_null_conditions(
                 dimensions,

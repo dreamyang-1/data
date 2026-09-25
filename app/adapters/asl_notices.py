@@ -4,6 +4,11 @@
 def binding_notices(repairs):
     result = []
     for item in repairs or []:
+        if isinstance(item, dict) and item.get('type') == 'SHARED_ATTRIBUTE_SCOPE':
+            message = str(item.get('scope_note') or '')
+            if message and message not in result:
+                result.append(message)
+            continue
         if (isinstance(item, dict) and item.get("source") == "VECTOR_DISPLAY_PROJECTION"
                 and item.get("type") == "OMIT_UNAVAILABLE_DISPLAY_FIELD"):
             field = str(item.get("field") or "")
@@ -49,7 +54,7 @@ def attach_binding_notices(result, repairs):
         result.execution_transforms.append({
             "type": "ASL_BINDING_NOTICES", "warnings": messages,
             "repairs": [item for item in repairs if isinstance(item, dict)
-                        and item.get("type") in {"SURFACE_MATCH_NOTICE", "DROP_UNMATCHED_SURFACE_MENTION", "PRESERVE_SET_FILTER", "OMIT_UNAVAILABLE_DISPLAY_FIELD"}],
+                        and item.get("type") in {"SURFACE_MATCH_NOTICE", "DROP_UNMATCHED_SURFACE_MENTION", "PRESERVE_SET_FILTER", "OMIT_UNAVAILABLE_DISPLAY_FIELD", "SHARED_ATTRIBUTE_SCOPE"}],
         })
     return result
 

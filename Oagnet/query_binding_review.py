@@ -5,6 +5,7 @@ The selected dictionary's actual rows supply the FK values. Query shape remains
 owned by the existing grain review; this pass cannot change metrics or grouping.
 """
 import calendar
+import copy
 from datetime import date, timedelta
 import json
 import re
@@ -118,7 +119,9 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
                     semantic_model_id, domain_scope, *, today=None, explicit_time=False):
     ast = json.loads(content)
     options = binding_options(ast, knowledge)
-    if not options and not ast.get("time_context"):
+    from related_scope import shared_scope_options, apply_shared_scope
+    related_options = shared_scope_options(ast, knowledge) if ast.get('metrics') else []
+    if not options and not ast.get("time_context") and not related_options:
         return content, []
     selected = {m.get("name") for m in ast.get("metrics") or []}
     metrics = [_metadata(m) for m in knowledge.get("metrics", []) if _metadata(m).get("metric_code") in selected]
@@ -129,6 +132,7 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
     policies = [*metrics, *(e for e in entities if e.get("entity_code") == subject)]
     context = {"completed_question": question, "structured_extraction": extraction,
                "draft_asl": ast, "filter_options": options, "selected_policies": policies,
+               "shared_scope_options": related_options,
                "current_date": (today or date.today()).isoformat()}
     try:
         response = model.invoke([
@@ -145,6 +149,12 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
                 "具体月份数只能来自实际问题，上例12不是默认值。最新产品规则取消系统默认时间范围；"
                 "用户和已确认上下文未指定时间就none，即使旧目录说明还有默认12个月也不使用。"
                 "不能把时间锚点、统计周期、示例或指标名称当默认筛选。已有明确范围无须修改用keep。"
+                "另外结合完整问题区分：查目标商品既有销售，还是找与目标商品适用科室等属性相关的潜在渠道。"
+                "不能见到科室等单词就选关联口径；仅查询目标商品使用科室、目标商品销售额、已销售目标商品的经销商时保持direct。"
+                "若目标商品只是用于确定关联属性范围，而要统计该医院内同属性相关对象的销售，"
+                "选shared_scope_options的一项，追加related_scope={mode:shared_attribute,option_index:序号,evidence:原问题逐字关系要求}；"
+                "否则related_scope={mode:direct}。这会把该选项中的目标条件移入独立目标集合，而非删除条件；"
+                "外层统计同属性相关商品的销售额。不能把商品适用科室推断成订单实际成交科室。"
                 "不得输出思维链、SQL、新字段、编码值或追问。"
             )}, {"role": "user", "content": json.dumps(context, ensure_ascii=False, default=str)},
         ])
@@ -154,6 +164,10 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
     except Exception:
         return content, []  # Transport failure does not become a new hard gate.
     repairs = []
+    scope_probe = copy.deepcopy(ast)
+    scope_repairs = apply_shared_scope(scope_probe, related_options, decision.get('related_scope'), question)
+    target_indices = (set(related_options[decision['related_scope']['option_index']]['target_filter_indices'])
+                      if scope_repairs else set())
     by_index = {o["filter_index"]: o for o in options}
     seen = set()
     bindings = decision.get("bindings")
@@ -161,6 +175,8 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
         if not isinstance(binding, dict):
             continue
         index, choice_index = binding.get("filter_index"), binding.get("choice_index")
+        if type(index) is int and index in target_indices:
+            continue  # Target conditions are already scoped; do not rebind onto the bridge.
         if (type(index) is not int or index in seen or index not in by_index or type(choice_index) is not int
                 or not 0 <= choice_index < len(by_index[index]["choices"]) or not binding.get("reason")):
             continue
@@ -208,4 +224,6 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
                                     "time_context": value, "source": source, "evidence": quote})
             except (KeyError, ValueError, TypeError, OverflowError):
                 pass
+    if scope_repairs:
+        repairs.extend(apply_shared_scope(ast, related_options, decision.get('related_scope'), question))
     return (json.dumps(ast, ensure_ascii=False), repairs) if repairs else (content, [])

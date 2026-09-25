@@ -5362,7 +5362,10 @@ def _validate_asl_output(
         "=", "!=", ">", ">=", "<", "<=", "IN", "NOT IN", "LIKE", "BETWEEN"
     }
     _, attributes_by_entity = _scoped_entity_attributes(knowledge)
-    for item in ast["filters"]:
+    checked_filters = list(ast['filters'])
+    for related in ast.get('related_filters') or []:
+        checked_filters.extend(related.get('target_filters') or [])
+    for item in checked_filters:
         if not isinstance(item, dict):
             raise ValueError("ASL filter must be an object")
         if not _PHYSICAL_FIELD.fullmatch(str(item.get("field") or "")):
@@ -9040,6 +9043,9 @@ def _validate_vector_grounded_asl(content: str, knowledge: dict) -> None:
     """Require every executable ASL field to exist in the vector recall scope."""
     ast = json.loads(content)
     vector_fields = set(knowledge.get("_vector_authorized_fields") or [])
+    from related_scope import related_fields
+    if any(field not in vector_fields for field in related_fields(ast)):
+        raise ValueError('ASL related filter field was not validated by vector semantic scope')
     vector_metrics = _known_codes(knowledge, "metrics", "metric_code")
     vector_dimensions = _known_codes(knowledge, "dimensions", "dim_code")
     vector_subjects = _known_subject_codes(knowledge, {
@@ -9113,6 +9119,8 @@ def _verify_missing_asl_fields_in_vector_store(
     """
     ast = json.loads(content)
     requested: set[str] = set()
+    from related_scope import related_fields
+    requested.update(related_fields(ast))
     for item in ast.get("dimensions") or []:
         if isinstance(item, dict) and "." in str(item.get("name") or ""):
             requested.add(str(item["name"]))

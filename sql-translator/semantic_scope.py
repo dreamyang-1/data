@@ -377,6 +377,13 @@ class ScopedTranslator(SQLTranslatorProd):
         for item in list(ast.get('filters', [])) + list(ast.get('having', [])):
             if isinstance(item, dict):
                 field_sources(item.get('field'))
+        for related in ast.get('related_filters') or []:
+            for key in ('outer_entity', 'target_entity', 'bridge_entity'):
+                entity_source(related.get(key))
+            for key in ('outer_field', 'target_field', 'bridge_key', 'shared_field'):
+                field_sources(related.get(key))
+            for predicate in related.get('target_filters') or []:
+                field_sources(predicate.get('field'))
         time_context = ast.get('time_context') or {}
         if isinstance(time_context, dict):
             field_sources(time_context.get('anchor'))
