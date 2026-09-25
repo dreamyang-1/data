@@ -50,6 +50,14 @@ def test_missing_vector_field_or_relation_does_not_invent_path():
     assert shared_scope_options(ast,k)==[]
 
 
+def test_target_brand_on_recalled_reverse_relation_without_neighbor_entity():
+    ast,k=fixture()
+    ast['filters'].append({'field':'maker.brand','operator':'=','value':'B'})
+    k['_vector_authorized_fields'].append('maker.brand')
+    k['relations']=[Doc(metadata={'join_key':{'source_field':'maker.id','target_field':'product.maker_id'}})]
+    assert shared_scope_options(ast,k)[0]['target_filter_indices']==[1,2,3]
+
+
 def test_context_review_selects_scope_without_keyword_rules():
     ast,k=fixture()
     model=Doc(invoke=lambda messages:Doc(content=json.dumps({'related_scope':{

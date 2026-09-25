@@ -1,5 +1,6 @@
 """Finite, catalog-grounded shared-attribute scopes; no business word triggers."""
 from query_binding_review import _metadata, _object, _field
+import re
 
 
 def related_fields(ast):
@@ -23,12 +24,15 @@ def shared_scope_options(ast, knowledge):
                 fields[code].add(f)
                 owners[f] = code
                 labels[f] = a.get('attr_name') or a.get('name') or f
-        for r in _object(e.get('relations')) or []:
-            join = _object(r.get('join_key'))
-            if isinstance(join, dict):
-                a, b = _field(join.get('source_field')), _field(join.get('target_field'))
-                if a in allowed and b in allowed:
-                    edges.add(tuple(sorted((a, b))))
+    relations = [_metadata(r) for r in knowledge.get('relations', [])]
+    for e in entities:
+        relations.extend(_object(e.get('relations')) or [])
+    for r in relations:
+        join = _object(r.get('join_key'))
+        if isinstance(join, dict):
+            a, b = _field(join.get('source_field')), _field(join.get('target_field'))
+            if all(isinstance(f, str) and re.fullmatch(r'[A-Za-z_]\w*\.[A-Za-z_]\w*', f, re.ASCII) for f in (a,b)):
+                edges.add(tuple(sorted((a, b))))
     subject = (ast.get('subject') or {}).get('entity')
     predicates = ast.get('filters') or []
     result = []
@@ -57,6 +61,15 @@ def shared_scope_options(ast, knowledge):
                                 target_fields.update(fields.get(owners.get(b), set()))
                             if owners.get(b) == target_entity and owners.get(a) not in (subject, bridge_entity):
                                 target_fields.update(fields.get(owners.get(a), set()))
+                            # A recalled relation can prove a target modifier's
+                            # table even when top-k omitted that neighbor entity.
+                            # Only already vector-authorized predicate fields move;
+                            # SQL rechecks the full edge against its scoped catalog.
+                            for root, neighbor in ((a,b),(b,a)):
+                                if (root.split('.')[0] == target.split('.')[0]
+                                        and neighbor.split('.')[0] not in {outer.split('.')[0],bridge_key.split('.')[0]}):
+                                    target_fields.update(p['field'] for p in predicates
+                                        if p.get('field') in allowed and p['field'].split('.')[0] == neighbor.split('.')[0])
                         indices = [i for i, p in enumerate(predicates)
                                    if p.get('field') in target_fields or p.get('field') == outer]
                         if not indices:

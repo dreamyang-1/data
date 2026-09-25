@@ -41,3 +41,16 @@ def test_scope_and_identifiers_remain_enforced(change):
 def test_plain_queries_unchanged():
     t,ast=fixture(); ast.pop('related_filters')
     assert compile_related_filters(t,ast,'106')==[]
+
+
+def test_reverse_only_publication_from_shared_entity_is_supported():
+    t,ast=fixture()
+    old=t._get_entity
+    def entity(name,model):
+        row=deepcopy(old(name,model))
+        if row:
+            row['relations']=[r for r in row['relations'] if 'tag.id' not in r['join_key']]
+        return row
+    t._get_entity=entity
+    t.catalog.entity_relationship_metadata=lambda model:{'tag':{'relations':[{'join_key':'tag.id = bridge.tag_id'}]}}
+    assert 'EXISTS' in compile_related_filters(t,ast,'106')[0]

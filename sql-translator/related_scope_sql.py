@@ -33,7 +33,10 @@ def compile_related_filters(translator, ast, model_id):
         if bridge.split('.')[0] != shared.split('.')[0] or bridge == shared:
             raise ValueError('shared field must be a different column of the bridge')
         edges = set()
-        for entity in entities.values():
+        catalog = getattr(translator, 'catalog', None)
+        graph_loader = getattr(catalog, 'entity_relationship_metadata', None)
+        graph = graph_loader(model_id) if callable(graph_loader) else {}
+        for entity in [*entities.values(), *graph.values()]:
             for relation in entity.get('relations') or []:
                 match = re.fullmatch(r'\s*([A-Za-z_]\w*\.[A-Za-z_]\w*)\s*=\s*([A-Za-z_]\w*\.[A-Za-z_]\w*)\s*', str(relation.get('join_key') or ''), re.ASCII)
                 if match:
