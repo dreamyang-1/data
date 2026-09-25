@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import sqlite3
 import pytest
 from related_scope_sql import compile_related_filters
+from sql_translator_prod import SQLTranslatorProd
 
 
 def fixture():
@@ -22,6 +23,9 @@ def fixture():
 
 def test_exists_counts_each_sale_once_even_with_duplicate_multiple_tags():
     t,ast=fixture(); condition=compile_related_filters(t,ast,'106')[0]
+    sql='SELECT SUM(sales.amount) FROM sales WHERE '+condition
+    assert SQLTranslatorProd.validate_read_only_sql(sql)==sql
+    assert SQLTranslatorProd._sql_involved_tables(sql)=={'sales','bridge','product'}
     c=sqlite3.connect(':memory:')
     c.executescript('CREATE TABLE sales(product_id TEXT, amount INT); CREATE TABLE product(id TEXT,brand TEXT); CREATE TABLE bridge(product_id TEXT,tag_id TEXT);')
     c.executemany('INSERT INTO product VALUES(?,?)',[('target','Target'),('candidate','Other'),('unrelated','Other')])
@@ -54,3 +58,14 @@ def test_reverse_only_publication_from_shared_entity_is_supported():
     t._get_entity=entity
     t.catalog.entity_relationship_metadata=lambda model:{'tag':{'relations':[{'join_key':'tag.id = bridge.tag_id'}]}}
     assert 'EXISTS' in compile_related_filters(t,ast,'106')[0]
+
+
+@pytest.mark.parametrize('change',[
+    lambda s:s.replace('SELECT product.id FROM product', 'SELECT product.id FROM product UNION SELECT id FROM secret'),
+    lambda s:s+' AND (SELECT secret FROM hidden)=1',
+    lambda s:s.replace('_target_0.tag_id = _related_0.tag_id', '_target_0.tag_id = _related_0.product_id'),
+    lambda s:s.replace("product.brand = 'Target'", "product.brand = (SELECT secret FROM hidden)"),
+])
+def test_compiled_envelope_does_not_allow_arbitrary_subqueries(change):
+    t,ast=fixture(); sql='SELECT SUM(sales.amount) FROM sales WHERE '+compile_related_filters(t,ast,'106')[0]
+    with pytest.raises(ValueError): SQLTranslatorProd.validate_read_only_sql(change(sql))

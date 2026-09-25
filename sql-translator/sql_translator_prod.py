@@ -3661,11 +3661,13 @@ class SQLTranslatorProd:
         )
         if prohibited.search(statements[0]):
             raise ValueError("SQL contains a prohibited operation")
+        from related_scope_sql import is_compiled_shared_scope_sql
         if (
             re.search(r'\(\s*SELECT\b', statements[0], re.I)
             and not SQLTranslatorProd._is_shared_region_hospital_denominator_subquery(
                 statements[0]
             )
+            and not is_compiled_shared_scope_sql(statements[0])
         ):
             raise ValueError("不允许执行子查询")
         return sql.strip()

@@ -2,6 +2,45 @@
 import re
 
 
+def is_compiled_shared_scope_sql(sql):
+    """Recognize only the compiler's correlated semi-join envelope.
+
+    Input is already comment/literal-scrubbed by the read-only guard. All other
+    subqueries remain forbidden; scoped execution still re-translates the ASL
+    and checks every referenced physical table against the current grant.
+    """
+    identifier = r'[A-Za-z_]\w*'
+    prefix = re.compile(
+        rf'EXISTS\s*\(SELECT\s+1\s+FROM\s+(?P<table>{identifier})\s+_related_(?P<n>[0-3])\s+'
+        rf'WHERE\s+_related_(?P=n)\.(?P<key>{identifier})\s*=\s*{identifier}\.{identifier}\s+'
+        rf'AND\s+EXISTS\s*\(SELECT\s+1\s+FROM\s+(?P=table)\s+_target_(?P=n)\s+'
+        rf'WHERE\s+_target_(?P=n)\.(?P<shared>{identifier})\s*=\s*_related_(?P=n)\.(?P=shared)\s+'
+        rf'AND\s+_target_(?P=n)\.(?P=key)\s+IN\s*\(', re.I | re.ASCII)
+    remaining = sql
+    count = 0
+    while (match := prefix.search(remaining)) is not None:
+        depth, end = 1, match.end()
+        start = end
+        while end < len(remaining) and depth:
+            depth += (remaining[end] == '(') - (remaining[end] == ')')
+            end += 1
+        if depth:
+            return False
+        target = remaining[start:end-1].strip()
+        target_match = re.match(rf'SELECT\s+({identifier})\.{identifier}\s+FROM\s+\1\b', target, re.I | re.ASCII)
+        if (not target_match or re.search(r'\b(?:SELECT|UNION|WITH)\b', target[target_match.end():], re.I)
+                or not re.search(r'\bWHERE\b', target, re.I)):
+            return False
+        suffix = re.match(r'\s*\)\s*\)', remaining[end:])
+        if not suffix:
+            return False
+        remaining = remaining[:match.start()] + '1=1' + remaining[end+suffix.end():]
+        count += 1
+        if count > 4:
+            return False
+    return count > 0 and not re.search(r'\(\s*SELECT\b', remaining, re.I)
+
+
 def compile_related_filters(translator, ast, model_id):
     items = ast.get('related_filters') or []
     if not isinstance(items, list) or len(items) > 4:
