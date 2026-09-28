@@ -6539,6 +6539,10 @@ class DataAnalysisOrchestrator:
             # do not add raw rows to persisted analysis evidence or cross-task context.
             synthesis_input = replace(insight_output, facts={
                 **insight_output.facts,
+                "executed_query": {
+                    "asl": copy.deepcopy(query_result.asl),
+                    "sql": query_result.sql,
+                },
                 "query_data": {
                     "columns": query_result.dataset.columns,
                     "rows": query_result.dataset.rows[:20],

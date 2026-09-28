@@ -487,6 +487,9 @@ class SynthesisStub:
         assert query_data["columns"] and query_data["rows"]
         assert len(query_data["rows"]) <= 20
         assert "sample_only" in query_data
+        executed = analysis.facts["executed_query"]
+        assert isinstance(executed["asl"], dict)
+        assert isinstance(executed["sql"], str) and executed["sql"]
         return (
             "模型整理后的证据化总结",
             SynthesisOutput(
@@ -918,6 +921,7 @@ async def test_qwen_synthesis_is_used_only_after_analysis_evidence_exists() -> N
     assert kinds.index("ANALYSIS_RESULT") < kinds.index("ANSWER_SYNTHESIS")
     assert next(e for e in response.evidence if e.kind == "ANSWER_SYNTHESIS").payload["content_validation"] == "NOT_PERFORMED"
     assert all("query_data" not in e.payload.get("facts", {}) for e in response.evidence)
+    assert all("executed_query" not in e.payload.get("facts", {}) for e in response.evidence)
     synthesis_step = next(
         step for step in response.analysis_process if step.stage == "MODEL_SYNTHESIS"
     )

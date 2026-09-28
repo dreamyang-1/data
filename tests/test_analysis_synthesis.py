@@ -173,3 +173,53 @@ async def test_permission_http_failure_is_not_retried_or_hidden():
         await QwenAnalysisSynthesizer(settings(), httpx.MockTransport(handler)).synthesize(
             request(), analysis(), evidence())
     assert calls == [1]
+
+
+@pytest.mark.asyncio
+async def test_dsl_is_live_user_reference_and_preserves_actual_query(monkeypatch, tmp_path):
+    from app.analysis import synthesis
+    path = tmp_path / "semantic.md"
+    description = "指标：医院总数；单位：家；绑定维度：省份、城市。医院所在城市不同于经销商所在城市。"
+    path.write_text(description, encoding="utf-8-sig")
+    monkeypatch.setattr(synthesis, "_SEMANTIC_DESCRIPTION_PATH", path)
+    actual = {"asl": {"metrics": [{"name": "hospital_count"}], "dimensions": [], "time_context": None},
+              "sql": "SELECT COUNT(*) FROM hospital"}
+    source = analysis()
+    source.facts["executed_query"] = actual
+    calls = []
+    model = QwenAnalysisSynthesizer(settings(), transport_for("按实际范围解释医院总数。", calls))
+    await model.synthesize(request(), source, evidence())
+    body = json.loads(calls[0]["messages"][1]["content"])
+    assert body["semantic_reference"] == {"source": "语义描述文件.md", "available": True, "content": description}
+    assert body["facts"]["executed_query"] == actual
+    assert "semantic_reference" not in source.facts
+    system = calls[0]["messages"][0]["content"]
+    assert description not in system  # Business text must not become system instructions.
+    assert "不表示本次已经按这些维度分组" in system
+    assert "不自动证明业务口径正确" in system
+    assert "如实说明差异" in system
+    path.write_text("更新后的业务说明", encoding="utf-8")
+    await model.synthesize(request(), source, evidence())
+    assert json.loads(calls[1]["messages"][1]["content"])["semantic_reference"]["content"] == "更新后的业务说明"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("contents", [None, b"", b"\xff\xfe\x00"])
+async def test_missing_empty_or_unreadable_dsl_does_not_block_analysis(monkeypatch, tmp_path, contents):
+    from app.analysis import synthesis
+    path = tmp_path / "semantic.md"
+    if contents is not None:
+        path.write_bytes(contents)
+    monkeypatch.setattr(synthesis, "_SEMANTIC_DESCRIPTION_PATH", path)
+    calls = []
+    text, _ = await QwenAnalysisSynthesizer(settings(), transport_for("已有数据仍可分析。", calls)).synthesize(
+        request(), analysis(), evidence())
+    assert text == "已有数据仍可分析。"
+    reference = json.loads(calls[0]["messages"][1]["content"])["semantic_reference"]
+    assert reference["available"] is False and reference["content"] == ""
+
+
+def test_insight_and_planning_use_the_same_semantic_document():
+    from app.analysis.synthesis import _SEMANTIC_DESCRIPTION_PATH
+    from app.planning.task_dag import _USER_SEMANTIC_DESCRIPTION_PATH
+    assert _SEMANTIC_DESCRIPTION_PATH == _USER_SEMANTIC_DESCRIPTION_PATH
