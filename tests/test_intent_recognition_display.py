@@ -536,7 +536,7 @@ def test_validated_asl_is_rendered_as_direct_json_without_field_reformatting():
     rendered = render_asl_extraction_json(asl)
     json_text = rendered.split("```json\n", 1)[1].rsplit("\n```", 1)[0]
 
-    assert rendered.startswith("结构化提取（ASL）：\n```json\n")
+    assert rendered.startswith("结构化解析与校验（ASL）：\n```json\n")
     expected = deepcopy(asl)
     expected["dimensions / display_fields"] = expected.pop("dimensions")
     assert json.loads(json_text) == expected

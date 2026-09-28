@@ -254,7 +254,7 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
     assert all("#### ◉ " + title in document for title in titles), document
     positions = [document.index("#### ◉ " + title) for title in titles]
     assert positions == sorted(positions)
-    assert document.index("结构化提取（ASL）") < document.index("#### ◉ 调度执行")
+    assert document.index("结构化解析与校验（ASL）") < document.index("#### ◉ 调度执行")
     assert next(i for i, e in enumerate(events) if e.get("step") == "output") > retrieval_completed_index
     insight_content = thinking_content(
         events, "INSIGHT_ANALYSIS", status="COMPLETED"

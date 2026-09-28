@@ -1048,7 +1048,7 @@ def render_asl_extraction_json(asl: dict[str, object], repairs: object = None) -
     related_notes = [str(item.get('scope_note')) for item in asl.get('related_filters', [])
                      if isinstance(item, dict) and item.get('scope_note')]
     return (
-        "结构化提取（ASL）：\n"
+        "结构化解析与校验（ASL）：\n"
         "```json\n"
         f"{json.dumps(display_asl, ensure_ascii=False, indent=2)}\n"
         "```\n"
