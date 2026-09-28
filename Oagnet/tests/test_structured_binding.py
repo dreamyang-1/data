@@ -5,6 +5,17 @@ import pytest
 from structured_binding import bind
 
 
+@pytest.mark.parametrize('value,expected', [
+    ({'field':'分类','value':['透析器']}, '透析器'),
+    ({'name':'销售额'}, '销售额'), ('医院', '医院'),
+])
+def test_clarification_phrase_is_a_business_literal_not_json(value, expected):
+    from structured_binding import issue
+    result = issue('过滤条件[1]', value, '请选择', ['标准候选'])
+    assert result['phrase'] == expected
+    assert json.dumps(value, ensure_ascii=False) in result['question']
+
+
 def test_retrieval_preserves_each_filter_role_and_literal():
     from structured_binding import filter_value_queries
     e = {'过滤条件': [

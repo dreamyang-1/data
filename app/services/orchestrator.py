@@ -1066,7 +1066,7 @@ class DataAnalysisOrchestrator:
                     # 任务意图和结构化参数（闲聊已在上方独立分支拦截）。
                     # surface 直通兜底决策不带任务边界（复合问题也只是单个
                     # 兜底任务），跳过拆分器会导致多问题不再拆分，不能省。
-                    if confirmed_pending_choice is None and not semantic_decision_ready:
+                    if (confirmed_pending_choice is None or self.settings.surface_asl_execution_enabled) and not semantic_decision_ready:
                         try:
                             # 核心指令里的业务语义规范段随请求传给拆分模型，
                             # 参数角色按规范分类对齐（指标/实体/维度）。
@@ -1270,11 +1270,32 @@ class DataAnalysisOrchestrator:
                         "拆分判断完成。" + planning_detail,
                         task_count=len(plan.tasks) if plan is not None else 1,
                     )
-                response = (
-                    await self._handle_task_plan(chat, identity, plan)
-                    if plan is not None
-                    else await self._handle(chat, identity)
-                )
+                if (confirmed_pending_choice is not None and plan is None
+                        and self.settings.surface_asl_execution_enabled
+                        and chat._planner_extraction is not None
+                        and chat._planner_extraction.structured is not None):
+                    # Confirmed names must re-enter the same structured handoff
+                    # as new queries. The legacy Pending executor skipped the
+                    # planner and relied on ASL re-extracting the old question.
+                    resumed = await self._classify(
+                        planning_question, identity, chat.conversation_id,
+                        pre_resolved=True, planner_extraction=chat._planner_extraction,
+                    )
+                    resumed.original_question = planning_pending.request.original_question
+                    resumed.rewritten_question = planning_question
+                    resumed.pending_state_version = planning_pending.state_version
+                    resumed.analysis_thread_id = planning_pending.request.analysis_thread_id
+                    resumed.turn_relation = TurnRelation.CLARIFICATION_RESPONSE
+                    resumed.context_mode = ContextMode.CLARIFICATION_RESUME
+                    response = await self._handle_surface_query(chat, identity, request=resumed)
+                    if response is None:
+                        response = await self._handle(chat, identity)
+                else:
+                    response = (
+                        await self._handle_task_plan(chat, identity, plan)
+                        if plan is not None
+                        else await self._handle(chat, identity)
+                    )
             await self._ensure_clarification_trace(response, chat)
             # Echo the effective routing contract on every outcome, including
             # clarification and safe-fallback responses which are not terminalized
@@ -8731,6 +8752,20 @@ class DataAnalysisOrchestrator:
             or ""
         ).strip()
         phrase = str(ambiguity.phrase or "").strip()
+        # Older structured-ASL Pending records serialized the whole slot into
+        # phrase. Recover its business literal, not JSON, for the confirmation.
+        try:
+            slot = json.loads(phrase)
+        except (ValueError, TypeError):
+            slot = None
+        if isinstance(slot, dict):
+            values = slot.get("value")
+            literal = (values[0] if isinstance(values, list) and len(values) == 1
+                       else values if isinstance(values, str) else slot.get("name"))
+            if isinstance(literal, str):
+                phrase = literal
+        elif isinstance(slot, str):
+            phrase = slot
         missing_values: list[str] = []
         for item in pending.filters:
             raw = item.get("value") if isinstance(item, dict) else None

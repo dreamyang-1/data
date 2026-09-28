@@ -43,12 +43,20 @@ def retrieval_terms(extraction):
 
 def issue(slot, value, reason, candidates=()):
     label = json.dumps(value, ensure_ascii=False)
+    phrase = value
+    if isinstance(value, dict):
+        values = value.get('value')
+        phrase = (values[0] if isinstance(values, list) and len(values) == 1
+                  else values if isinstance(values, str)
+                  else value.get('name') or value.get('field'))
+    if not isinstance(phrase, str):
+        phrase = label
     prefix = slot.split('[', 1)[0]
     kind = {'指标':'metric','维度':'dimension','展示字段':'dimension','过滤条件':'filter_slot',
             '过滤条件归属':'entity_role','时间粒度':'time_anchor','实体':'subject',
             '输出要求':'schema_relation','排序':'operation_intent','限制':'operation_intent',
             '指标/展示字段':'operation_intent'}.get(prefix,'context')
-    return {'type': kind, 'field': slot, 'phrase': label,
+    return {'type': kind, 'field': slot, 'phrase': phrase,
             'affected_slots': [kind], 'question': f'结构化参数【{slot}】{label}：{reason}。请补充或确认该项；已明确的其他条件无需重复提供。',
             'candidates': list(candidates), 'source': 'STRUCTURED_EXTRACTION'}
 
