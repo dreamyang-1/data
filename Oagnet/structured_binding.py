@@ -8,6 +8,22 @@ SECTIONS = {'指标': 'metrics', '维度': 'dimensions', '展示字段': 'displa
 OPERATORS = {'=', '!=', '>', '>=', '<', '<=', 'IN', 'NOT IN', 'LIKE', 'BETWEEN'}
 
 
+def filter_value_queries(extraction):
+    """One bounded value recall per declared field/value, not the whole request."""
+    queries = []
+    for item in extraction.get('过滤条件') or []:
+        if not isinstance(item, dict) or not item.get('field'):
+            continue
+        values = item.get('value', [])
+        for value in values if isinstance(values, list) else [values]:
+            if isinstance(value, str) and value.strip():
+                query = ' '.join(str(item[k]).strip() for k in ('entity', 'field')
+                                 if item.get(k)) + ' ' + value
+                if query not in queries:
+                    queries.append(query)
+    return queries
+
+
 def retrieval_terms(extraction):
     """Recall each declared business parameter, not words inferred from prose."""
     terms = []
@@ -20,7 +36,8 @@ def retrieval_terms(extraction):
             elif isinstance(item, dict):
                 for key in ('entity', 'name', 'field'): add(item.get(key))
                 values = item.get('value', [])
-                for value in values if isinstance(values, list) else [values]: add(value)
+                for value in values if isinstance(values, list) else [values]:
+                    add(value)
     return terms
 
 
@@ -128,7 +145,18 @@ def bind(extraction, knowledge, model, *, today=None):
             ast['ambiguity'].append(issue(key, extraction.get(key), '缺少参数数组，空数组也应显式提供'))
     if ast['ambiguity']: return ast, repairs
     catalog = catalog_candidates(knowledge)
-    context = {'structured_extraction': extraction, 'catalog': catalog, 'current_date': (today or date.today()).isoformat()}
+    # Do not repeat full entity attributes/relations alongside the same fields.
+    # Keep binding labels visible instead of burying value candidates in schema
+    # serialization; relationship ownership is resolved in its dedicated step.
+    def select(meta, keys):
+        return {key: meta[key] for key in keys if meta.get(key) is not None}
+    prompt_catalog = dict(catalog)
+    prompt_catalog['entities'] = {key: select(meta, ('entity_name', 'entity_alias', 'description'))
+                                 for key, meta in catalog['entities'].items()}
+    prompt_catalog['fields'] = {key: select(meta, ('attr_name', 'attr_code', 'description', 'owner', 'data_type'))
+                               for key, meta in catalog['fields'].items()}
+    context = {'catalog': prompt_catalog, 'current_date': (today or date.today()).isoformat(),
+               'structured_extraction': extraction}
     prompt = '''你只做结构化参数到授权目录的绑定，不做自然语言问题提取。structured_extraction 是唯一业务要求。
 实体数组表示涉及的表，不是筛选值；指标/维度/展示字段/过滤/排序/时间/限制的角色及数量不得更改。
 目录只用于标准化，不允许从目录说明补指标、条件、默认时间或分组。空数组表示没有该要求。
@@ -136,6 +164,7 @@ def bind(extraction, knowledge, model, *, today=None):
 每个参数逐项绑定。返回 JSON: {subject:目录实体编码, metrics:[{index:0,key:目录指标编码}], dimensions:[{index:0,key:维度编码或物理字段}], display_fields:[{index:0,key:物理字段}], filters:[{index:0,key:物理字段,value_ids:[目录values序号]}], sort:[{index:0,key:目录指标编码或物理字段}], time:{mode:keep|range|rolling|calendar,anchor:目录时间字段,amount:整数,unit:day|week|month|year,start:日期,end:日期,type:时间类型,value:年份}, relationship_required:false}。
 每个输入 index 恰好返回一项，无法匹配的项改为 {index:0,error:具体原因,candidates:[标准候选名称]}。
 过滤值是数值阈值、日期、编码/型号时不需要 value_ids，原值原样保留。字符串可用 values 中同字段的标准值替换，逐输入值提供一个序号；不能凭空创造值、截断型号或扩大集合。
+名称、品牌、分类等中文等值条件必须联合绑定字段和标准值：先找能表达该业务值的catalog.values条目，再使用该条目的field与id，不能仅凭字段标题相似就把原词填到无对应标准值的字段。多级分类尤其要按标准值所在层级绑定；同一“商品品类”可映射产品类别或一级/二级分类，取决于值的目录证据。找不到对应标准值则返回该参数error，不伪装成已验证。
 只绑定已声明的时间范围，缺少时间锚点则 time={error:具体原因}；未声明时间范围时 time=null。不增加默认范围。
 没有指标时 dimensions/display_fields 表示明细列；有指标时 dimensions 才是分组，展示字段不能变成额外分组。
 subject 只根据已选指标的实体绑定或结构化实体选择。无法判断时 subject=null 并给 subject_error。
@@ -210,6 +239,12 @@ subject 只根据已选指标的实体绑定或结构化实体选择。无法判
                     if any(re.search(r'[0-9A-Za-z]',v) and v!=str(b) for v,b in zip(vals,bound_vals)):
                         ast['ambiguity'].append(issue(f'{source}[{index+1}]',original,'编码、型号或数字字符串不得被替换成其他值'));continue
                     vals=bound_vals
+                elif operator in {'=','!=','IN','NOT IN'} and any(
+                    isinstance(v,str) and re.search(r'[\u4e00-\u9fff]',v) for v in vals
+                ) and not all(any(c['field']==key and c['value']==v for c in catalog['values']) for v in vals):
+                    ast['ambiguity'].append(issue(f'{source}[{index+1}]',original,
+                        f'字段 {key} 已匹配，但条件值尚未匹配到该字段的向量标准值，请核对字段层级及值目录'))
+                    continue
                 if len(vals)>1 and operator in {'=','!='}: operator='IN' if operator=='=' else 'NOT IN'
                 if (operator=='BETWEEN' and len(vals)!=2) or (len(vals)>1 and operator not in {'IN','NOT IN','BETWEEN'}):
                     ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '该运算符与多个条件值不兼容'));continue

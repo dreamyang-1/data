@@ -9026,7 +9026,7 @@ def main(
         store = globals()["store"]
     # Original wording remains an API/audit field only. There is deliberately
     # no natural-language fallback when the planner handoff is absent.
-    from structured_binding import bind, issue, retrieval_terms
+    from structured_binding import bind, issue, retrieval_terms, filter_value_queries
     from query_binding_review import review_bindings
     from mysql_tool import resolve_scoped_dictionary_keys
     if not isinstance(structured_extraction, dict):
@@ -9044,6 +9044,7 @@ def main(
         )
         # No legacy prompt construction, question extraction or inferred mentions.
         builder.surface_mentions = retrieval_terms(structured_extraction)
+        builder.value_queries = filter_value_queries(structured_extraction)
         knowledge = builder.retrieve(structured_text)
         knowledge["_contextual_metric_selection"] = True
         knowledge["_vector_authorized_fields"] = sorted(_known_physical_fields(knowledge))

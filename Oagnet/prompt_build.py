@@ -904,6 +904,8 @@ class PromptBuilder:
         vec = self.embed_fn(user_query)
         mention_vectors = [self.embed_fn(text) for text in self.surface_mentions
                            if text and text != user_query]
+        value_vectors = [self.embed_fn(text) for text in
+                         dict.fromkeys(getattr(self, 'value_queries', [])) if text]
         # Recall a small candidate pool, then deterministically put exact business
         # names/synonyms first. Pure vector top-3 previously omitted the canonical
         # “销售额” metric even when that exact synonym appeared in a cross-domain
@@ -929,6 +931,14 @@ class PromptBuilder:
                     *exact_entity_value_mentions,
                     *candidates,
                 ])
+                # Structured field/value pairs each receive the same bounded
+                # pool as a standalone request. Otherwise product-name hits
+                # crowd out classification values in long multi-slot queries.
+                for value_vec in value_vectors:
+                    extra = self.store.search(value_vec, top_k=search_k,
+                                              where=self._build_where(type_name))
+                    self._validate_record_scope(extra)
+                    candidates = self._dedupe_results([*candidates, *extra])
             mention_hits = []
             for mention_vec in mention_vectors:
                 mention_k = (

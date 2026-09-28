@@ -5,6 +5,40 @@ import pytest
 from structured_binding import bind
 
 
+def test_retrieval_preserves_each_filter_role_and_literal():
+    from structured_binding import filter_value_queries
+    e = {'过滤条件': [
+        {'field': '商品品类', 'value': ['血液透析器']},
+        {'entity': '医院', 'field': '名称', 'value': ['华山医院']},
+        {'field': '金额', 'value': [1000]},
+    ], '输出要求': '不应从这里重新提取关键词'}
+    terms = filter_value_queries(e)
+    assert '商品品类 血液透析器' in terms
+    assert '医院 名称 华山医院' in terms
+    assert len(terms) == len(set(terms))
+    assert not any('不应' in term or '1000' in term for term in terms)
+
+
+def test_each_structured_filter_recalls_its_own_scoped_value_pool():
+    from prompt_build import PromptBuilder
+    from vector_store import SearchResult
+    calls = []
+    hit = SearchResult(id='category-value', score=0.8, text='standard category',
+        metadata={'type': 'entity_attribute_value', 'semantic_model_id': 81,
+                  'business_domain_id': 205, 'attr_value': '标准分类'})
+    class Store:
+        def search(self, vector, *, top_k, where):
+            calls.append((vector, top_k, where))
+            return [hit] if vector == [2] and top_k == 40 else []
+    builder = PromptBuilder(Store(), lambda text: [2] if text == '分类 值' else [1],
+                            semantic_model_id=81, business_domain_ids=[205])
+    builder.value_queries = ['分类 值', '分类 值']
+    result = builder.retrieve('long structured request')
+    assert hit in result['_ambiguity_candidates']['entity_attribute_value']
+    assert [(k, w) for v, k, w in calls if v == [2]] == [
+        (40, builder._build_where('entity_attribute_value'))]
+
+
 def fixture():
     extraction={'意图':'统计查询','实体':['医院'],'指标':[{'name':'医院总数'}],
                 '维度':[],'展示字段':[],'过滤条件':[{'field':'省份','op':'=','value':['上海']}],
@@ -153,3 +187,17 @@ def test_missing_output_requests_business_choice_not_system_repair():
     ast,_=run(e,k,p)
     assert ast['ambiguity'][0]['type']=='operation_intent'
     assert '指标/展示字段' in ast['ambiguity'][0]['question']
+
+
+def test_category_field_and_value_must_bind_as_a_pair():
+    e,k,p=fixture()
+    e['过滤条件']=[{'field':'分类','op':'=','value':['透析器']}]
+    p['filters']=[{'index':0,'key':'hospital.province'}]
+    k['entity_attribute_values']=[Obj(metadata={'source_field':'hospital.name','attr_value':'01透析器具'})]
+    ast,_=run(e,k,p)
+    assert ast['ambiguity'] and not ast['filters']
+    assert '条件值' in ast['ambiguity'][0]['question']
+    p['filters']=[{'index':0,'key':'hospital.name','value_ids':[0]}]
+    ast,_=run(e,k,p)
+    assert not ast['ambiguity']
+    assert ast['filters']==[{'field':'hospital.name','operator':'=','value':'01透析器具'}]
