@@ -800,8 +800,8 @@ def load_entity_attribute_vector_source(
 ) -> list[dict]:
     """读取指定语义模型/业务域的实体属性值向量源。
 
-    同时校验业务域确实属于语义模型，避免仅凭两个独立 ID 造成跨作用域
-    混用。该函数只读取已生效、未删除的行。
+    兼容旧调用名，但不再从未携带向量化开关的暂存表直接读取全部值。
+    与同步、重建接口共用已发布属性配置和向量化策略。
     """
     if not isinstance(semantic_model_id, int) or isinstance(semantic_model_id, bool) or semantic_model_id <= 0:
         raise ValueError("semantic_model_id 必须为正整数")
@@ -822,19 +822,9 @@ def load_entity_attribute_vector_source(
     if not scope:
         raise ValueError("业务域不属于指定语义模型，或作用域已删除")
 
-    return list(_query(
-        """
-        SELECT id, semantic_model_id, business_domain_id,
-               entity_name, entity_alias, entity_description,
-               attr_name, attr_code, attr_description, attr_value,
-               create_time, update_time
-        FROM semantic_model_entity_att
-        WHERE semantic_model_id=%s AND business_domain_id=%s
-          AND COALESCE(is_deleted,0)=0
-        ORDER BY id
-        """,
-        (semantic_model_id, business_domain_id),
-    ))
+    return load_complete_entity_attribute_vector_source(
+        semantic_model_id, business_domain_id
+    )
 
 
 _UNICODE_DASH_TRANSLATION = str.maketrans({
@@ -867,16 +857,26 @@ def _normalized_catalog_sql_expression(expression: str) -> str:
     return result
 
 
+def _vectorization_enabled(value: object) -> bool:
+    """Database switch: only 1 enables value indexing; never use truthiness."""
+    if isinstance(value, str):
+        return value.strip() == "1"
+    return type(value) in (bool, int) and value == 1
+
+
 def entity_value_vectorization_decision(row: dict) -> tuple[bool, str]:
     """Return the governed vectorization decision and an auditable reason.
 
     ``is_main_attribute`` controls default presentation and is deliberately not
     a search-index switch.  A published attribute enters the semantic value
-    index only when vectorization is explicitly enabled (or a future
-    ``search_mode`` requests VECTOR/HYBRID).  Identifier-like fields are denied
+    index only when vectorization is explicitly enabled. ``search_mode`` may
+    further restrict this switch, but must never override a disabled flag.
+    Identifier-like fields are denied
     even if misconfigured, because similarity search is not an authoritative
     way to resolve business keys.
     """
+    if not _vectorization_enabled(row.get("vectorization")):
+        return False, "VECTORIZATION_DISABLED"
     code = str(row.get("attr_code") or "").strip().casefold()
     name = str(row.get("attr_name") or "").strip()
     data_type = str(row.get("data_type") or "").casefold()
@@ -909,9 +909,7 @@ def entity_value_vectorization_decision(row: dict) -> tuple[bool, str]:
         if search_mode in {"vector", "hybrid"}:
             return True, f"SEARCH_MODE_{search_mode.upper()}"
         return False, f"SEARCH_MODE_{search_mode.upper()}"
-    if bool(row.get("vectorization")):
-        return True, "EXPLICIT_VECTORIZATION"
-    return False, "VECTORIZATION_DISABLED"
+    return True, "EXPLICIT_VECTORIZATION"
 
 
 def _should_vectorize_entity_value(row: dict) -> bool:
@@ -986,7 +984,7 @@ def load_entity_attribute_vector_policy_audit(
             "attr_name": str(definition.get("attr_name") or ""),
             "mapping_table": str(definition.get("mapping_table") or ""),
             "mapping_column": str(definition.get("mapping_column") or ""),
-            "vectorization": bool(definition.get("vectorization")),
+            "vectorization": _vectorization_enabled(definition.get("vectorization")),
             "is_main_attribute": bool(definition.get("is_main_attribute")),
             "reason": reason,
         }
