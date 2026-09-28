@@ -175,6 +175,7 @@ def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=No
 每个参数逐项绑定。返回 JSON: {subject:目录实体编码, metrics:[{index:0,key:目录指标编码}], dimensions:[{index:0,key:维度编码或物理字段}], display_fields:[{index:0,key:物理字段}], filters:[{index:0,key:物理字段,value_ids:[目录values序号]}], sort:[{index:0,key:目录指标编码或物理字段}], time:{mode:keep|range|rolling|calendar,anchor:目录时间字段,amount:整数,unit:day|week|month|year,start:日期,end:日期,type:时间类型,value:年份}, relationship_required:false}。
 每个输入 index 恰好返回一项，无法匹配的项改为 {index:0,error:具体原因,candidates:[标准候选名称]}。
 过滤值是数值阈值、日期、编码/型号时不需要 value_ids，原值原样保留。字符串可用 values 中同字段的标准值替换，逐输入值提供一个序号；不能凭空创造值、截断型号或扩大集合。
+按结构化条件的字段含义选择名称字段或编号字段，不按值中有无数字/字母猜测：商品名称对应目录名称字段，商品编号对应目录编号字段。名称匹配后保留标准名称，不能为了表连接而改绑编码字段；编号按原值精确筛选，保留前导零，不用相似名称替换。
 名称、品牌、分类等中文等值条件必须联合绑定字段和标准值：先找能表达该业务值的catalog.values条目，再使用该条目的field与id，不能仅凭字段标题相似就把原词填到无对应标准值的字段。多级分类尤其要按标准值所在层级绑定；同一“商品品类”可映射产品类别或一级/二级分类，取决于值的目录证据。找不到对应标准值则返回该参数error，不伪装成已验证。
 只绑定已声明的时间范围，缺少时间锚点则 time={error:具体原因}；未声明时间范围时 time=null。不增加默认范围。
 没有指标时 dimensions/display_fields 表示明细列；有指标时 dimensions 才是分组，展示字段不能变成额外分组。

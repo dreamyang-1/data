@@ -1,7 +1,8 @@
 """Bind structured predicate ownership/relationships without changing query shape.
 
 The model selects a published relationship, not SQL or a made-up region code.
-The selected dictionary's actual rows supply the FK values. Query shape remains
+Ordinary predicates retain their bound fields and standard values. Only explicit
+business-owner disambiguation may use dictionary rows to supply FK values. Query shape remains
 owned exclusively by planner parameters; original wording is never model input.
 """
 import calendar
@@ -43,10 +44,16 @@ def binding_options(ast, knowledge):
     relations = [_metadata(item) for item in knowledge.get("relations", [])]
     for entity in entities:
         relations.extend(_object(entity.get("relations")) or [])
+    relationship_fields = set()
+    for relation in relations:
+        join = _object(relation.get('join_key'))
+        if isinstance(join, dict):
+            relationship_fields.update(_field(join.get(side)) for side in ('source_field', 'target_field'))
     result = []
     for index, predicate in enumerate(ast.get("filters") or []):
         field = predicate.get("field", "")
-        if field not in owners or predicate.get("operator") not in {"=", "!=", "IN", "NOT IN"}:
+        if (field not in owners or field in relationship_fields
+                or predicate.get("operator") not in {"=", "!=", "IN", "NOT IN"}):
             continue
         table = field.partition(".")[0]
         choices = []
@@ -146,8 +153,14 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
                 '仅将structured_extraction已声明的筛选归属和关联要求映射到授权目录。没有原问题，不得重新提取要求。'
                 '不改主体、指标、分组、展示、排序、时间和限制。实体是表，不是条件值。'
                 '根据过滤条件的字段/实体归属、已选指标语义与输出要求选择filter_options；无法判断返回error说明缺少哪个归属。'
-                '先确定关联目标集合，再对不属于目标集合的filter_options项目逐项给bindings决定；已明确是字典全局筛选可用keep:true和reason。'
-                '返回JSON：{"bindings":[{"filter_index":0,"choice_index":0,"reason":"结构化参数中的明确依据"}],'
+                '先确定关联目标集合，再对不属于目标集合的filter_options项目逐项给bindings决定。'
+                '默认保留已绑定字段和标准值，返回keep:true和reason。用户给名称就用标准名称条件，给编号就保留编号条件；'
+                '不能仅因名称字段所在表存在关联键，就将商品名称、医院名称、品牌等改成订单外键或枚举编号集合。'
+                '关系中的编号只用于表连接，不是把名称条件改成编号条件的理由；同名多编号应由名称条件匹配全部记录。'
+                '只有共享字典的业务归属必须区分（例如同一个地区字典区分医院所在地和经销商所在地），'
+                '且保留当前字典字段会丢失该归属时，才返回bind_owner:true、choice_index及具体归属依据。'
+                '普通商品名称/编号筛选不属于这种归属改写。不要给keep:true的同时设置bind_owner:true。'
+                '返回JSON：{"bindings":[{"filter_index":0,"keep":true,"reason":"保留已绑定的名称条件"}],'
                 '"related_scope":{"mode":"direct"}}。若输出要求明确是共享属性关联而不是目标商品既有销售，'
                 'related_scope改为{"mode":"shared_attribute","option_index":0,"evidence":"结构化输出要求中的逐字关系描述"}。'
                 '只能选shared_scope_options中的路径；必须使用条目显式option_index/choice_index，不要自己数数组位置。'
@@ -187,6 +200,12 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
                 or not 0 <= choice_index < len(by_index[index]["choices"]) or not binding.get("reason")):
             continue
         choice = by_index[index]["choices"][choice_index]
+        # Selecting a JOIN edge alone does not authorize changing a user's
+        # name predicate into an enumerated ID set. FK resolution is reserved
+        # for an explicitly requested business-owner disambiguation.
+        if binding.get('bind_owner') is not True:
+            seen.add(index)
+            continue
         old = ast["filters"][index]
         values = old["value"] if isinstance(old["value"], list) else [old["value"]]
         keys = []

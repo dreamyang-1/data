@@ -57,7 +57,7 @@ def run(decision, *, ast=None, knowledge=None, query='各经销商在上海地�
 
 @pytest.mark.parametrize('owner,index', [('hospital',0), ('dealer',1)])
 def test_context_selects_owner_without_changing_dealer_grouping(owner,index):
-    result, repairs, calls = run({'bindings':[{'filter_index':0,'choice_index':index,'reason':'上下文明确的所在地'}],
+    result, repairs, calls = run({'bindings':[{'filter_index':0,'choice_index':index,'bind_owner':True,'reason':'上下文明确的所在地'}],
                                  'time':{'mode':'none'}})
     assert result['filters'] == [{'field':owner+'.province_id','operator':'=','value':'310000'}]
     assert result['dimensions'] == draft()['dimensions']
@@ -72,8 +72,8 @@ def test_two_different_location_filters_are_resolved_independently():
     ast = draft()
     ast['filters'].append(dict(ast['filters'][0],value='北京市'))
     result, _, _ = run({'bindings':[
-        {'filter_index':0,'choice_index':0,'reason':'上海医院'},
-        {'filter_index':1,'choice_index':1,'reason':'北京经销商'}]}, ast=ast,
+        {'filter_index':0,'choice_index':0,'bind_owner':True,'reason':'上海医院'},
+        {'filter_index':1,'choice_index':1,'bind_owner':True,'reason':'北京经销商'}]}, ast=ast,
         resolver=lambda m,d,c,f,v:['310000' if v=='上海市' else '110000'])
     assert [(f['field'],f['value']) for f in result['filters']] == [('hospital.province_id','310000'),('dealer.province_id','110000')]
 
@@ -82,7 +82,7 @@ def test_two_different_location_filters_are_resolved_independently():
 def test_duplicate_dictionary_keys_preserve_label_set_semantics(operator,expected):
     ast = draft()
     ast['filters'][0]['operator'] = operator
-    result, _, _ = run({'bindings':[{'filter_index':0,'choice_index':0,'reason':'医院所在地'}]},
+    result, _, _ = run({'bindings':[{'filter_index':0,'choice_index':0,'bind_owner':True,'reason':'医院所在地'}]},
         ast=ast, resolver=lambda *a:['001','002'])
     assert result['filters'][0]['operator'] == expected
     assert result['filters'][0]['value'] == ['001','002']
@@ -90,7 +90,7 @@ def test_duplicate_dictionary_keys_preserve_label_set_semantics(operator,expecte
 
 @pytest.mark.parametrize('keys', [[], None])
 def test_unavailable_dictionary_does_not_fabricate_or_drop_filter(keys):
-    result, repairs, _ = run({'bindings':[{'filter_index':0,'choice_index':0,'reason':'医院所在地'}]},
+    result, repairs, _ = run({'bindings':[{'filter_index':0,'choice_index':0,'bind_owner':True,'reason':'医院所在地'}]},
                              resolver=lambda *a:keys)
     assert result['filters'] == draft()['filters']
     assert result['ambiguity'] and '上海市' in result['ambiguity'][0]['question']
