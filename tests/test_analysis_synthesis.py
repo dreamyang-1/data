@@ -223,3 +223,38 @@ def test_insight_and_planning_use_the_same_semantic_document():
     from app.analysis.synthesis import _SEMANTIC_DESCRIPTION_PATH
     from app.planning.task_dag import _USER_SEMANTIC_DESCRIPTION_PATH
     assert _SEMANTIC_DESCRIPTION_PATH == _USER_SEMANTIC_DESCRIPTION_PATH
+
+
+@pytest.mark.asyncio
+async def test_nl_context_driven_style_is_used_without_importing_its_tool_workflow():
+    calls = []
+    await QwenAnalysisSynthesizer(settings(), transport_for("按问题自然展开分析。", calls)).synthesize(
+        request(), analysis(), evidence())
+    body = calls[0]
+    prompt = body["messages"][0]["content"]
+    # Reuse the real step5 guidance, not the README's outdated report template.
+    assert "基于上下文中的事实和数据回答，不要编造信息" in prompt
+    assert "如果有工具执行结果，优先基于结果回答" in prompt
+    assert "用户需求的核心目标、约束条件和关键变量" in prompt
+    assert "不固定套用章节" in prompt and "保留有数据支持的发现和表述" in prompt
+    assert "不发起追问、不重新规划或调用工具" in prompt
+    assert "禁止在末尾追加" in prompt
+    assert "趋势关注全期方向" not in prompt  # Retired fixed intent recipe.
+    assert "可用工具" not in prompt and "<<CLARIFICATION>>" not in prompt
+    assert "tools" not in body
+    assert "semantic_reference" in json.loads(body["messages"][1]["content"])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("paragraphs", [
+    ["### 范围与观察\n本次只有一个汇总值，无法判断同比变化。", "它描述的是本次查询范围，并非增长判断。"],
+    ["先看差异：华东贡献-80，华南贡献30。", "华南抵消了部分下降，净变化为-50；这不能证明下降的业务原因。"],
+    ["当前仅提供20条预览，完整结果有781条。", "可以介绍预览记录，但不能据此计算全量集中度。"],
+])
+async def test_nl_style_report_preserves_model_paragraphs_and_headings(paragraphs):
+    calls = []
+    text, output = await QwenAnalysisSynthesizer(settings(), transport_for(
+        {"claims": [{"statement": p} for p in paragraphs]}, calls)).synthesize(request(), analysis(), evidence())
+    assert text == "\n\n".join(paragraphs)
+    assert [claim.statement for claim in output.claims] == paragraphs
+    assert len(calls) == 1  # No new narrative review, rewrite or ordering pass.
