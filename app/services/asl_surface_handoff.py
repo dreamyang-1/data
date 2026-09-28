@@ -5,7 +5,7 @@ ASL 入口输入，不做业务分词、角色映射、指标/维度匹配，不
 时间，不读取目录，不调用大模型。
 
 合同边界（见 E:/YouoAgent/_agent_coordination/SURFACE_PARALLEL_CONTRACT.md）：
-- 原文是 ASL 主输入，必须逐字保留（中文、空格、标点、前后空白均不改写）。
+- structured_extraction 是唯一业务输入；原文只为接口兼容和审计保留，不参与 ASL 提取。
 - surface_evidence 中的每项仅允许 ``text`` 与可选 ``role_hint``；
   ``field_id``、``confirmed``、``scope`` 等任何多余键一律拒绝。
 - 角色提示只是假设，不能变成已确认约束；不输出任何"已确认"标记。

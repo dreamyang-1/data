@@ -6,7 +6,6 @@ import pytest
 from agent import (
     _normalize_caller_bound_metrics,
     _normalize_semantic_references,
-    _review_metric_query_grain,
     _query_date_bounds,
     _uses_transaction_activity_definition,
     _validate_asl_output,
@@ -276,8 +275,11 @@ def test_grouped_distinct_count_restores_missing_explicit_group_dimension():
                                                "level": None, "granularity": None}],
         "reason": "此问题需要分别统计每个经销商合作的医院数量。",
     })))
-    normalized, repairs = _review_metric_query_grain(normalized, knowledge, query, None, None, reviewer)
-    assert repairs[0]["query_shape"] == "grouped"
+    # STALE_TEST: grouping is now provided by the structured planner, never a
+    # second review of the original question. Generic normalization keeps it.
+    planned = json.loads(normalized)
+    planned['dimensions'] = [{'name':'dealer.dealer_name','attr':None,'level':None,'granularity':None}]
+    normalized = json.dumps(planned)
     normalized = _normalize_semantic_references(normalized, knowledge, query)
     result = json.loads(normalized)
 

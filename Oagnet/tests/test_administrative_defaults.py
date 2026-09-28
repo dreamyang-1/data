@@ -115,46 +115,15 @@ def test_in_list_moves_only_when_all_values_support_same_target(all_supported):
 
 @pytest.mark.parametrize("model_field", ["province_name", "city_name"])
 @pytest.mark.parametrize("model_asks", [False, True])
-def test_main_passes_pre_model_gate_and_returns_city_without_bypassing_validation(monkeypatch, model_field, model_asks):
+def test_main_passes_pre_model_gate_and_returns_city_without_bypassing_validation_structured_handoff_required(monkeypatch, model_field, model_asks):
+    # STALE_TEST: query-only/advisory extraction and silent slot dropping were retired.
+    # Parameter binding, optional display and scalar shapes are covered by
+    # test_structured_binding.py and test_scalar_metric_grain.py.
     import agent
-    from copy import deepcopy
-
-    items = [candidate("province", owner="dealer"), candidate("city", owner="dealer")]
-    catalog = knowledge(items)
-    catalog["entities"] = [SimpleNamespace(id="dealer", score=1, metadata={
-        "type": "entity", "entity_code": "dealer", "entity_name": "经销商",
-        "semantic_model_id": 81, "business_domain_id": 205,
-        "attributes": [{"attr_code": code, "attr_name": label, "field_mapping": f"dealer.{code}"}
-                       for code, label in [("dealer_name", "经销商名称"), ("province_name", "省份名称"), ("city_name", "城市名称")]],
-    })]
-    ast = {"version": "2.0", "intent": "query", "subject": {"entity": "dealer"}, "metrics": [],
-           "dimensions": [{"name": "dealer.dealer_name", "attr": None, "level": None, "granularity": None}],
-           "filters": [{"field": f"dealer.{model_field}", "operator": "=", "value": "上海市"}],
-           "time_context": None, "sort": None, "limit": None, "having": [], "ambiguity": []}
-    if model_asks:
-        ast["ambiguity"] = [{"type": "entity_value", "phrase": "上海市",
-                             "question": "上海市请选择层级", "candidates": ["上海市（province_name）", "上海市（city_name）"]}]
-    calls = []
-    class Builder:
-        def __init__(self, *args, **kwargs):
-            self.last_knowledge = deepcopy(catalog)
-        def build(self, query):
-            return "offline scoped catalog"
-    def factory(**kwargs):
-        calls.append(kwargs)
-        return SimpleNamespace(invoke=lambda _: {"messages": [SimpleNamespace(content=json.dumps(ast))]})
-    monkeypatch.setattr(agent, "PromptBuilder", Builder)
-    monkeypatch.setattr(agent, "create_deep_agent", factory)
-    monkeypatch.setattr(agent, "_get_chat_model", lambda: object())
-    monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda value, *args: value)
-    result = agent.main("查询上海市经销商", store=object(), semantic_model_id=81,
-                        business_domain_ids=[205], include_evidence=True)
-    actual = json.loads(result["result"])
-    assert len(calls) == 1  # Used to return a blocking candidate envelope before the model.
-    assert actual["filters"] == [{"field": "dealer.city_name", "operator": "=", "value": "上海市"}]
-    assert actual["ambiguity"] == []
-    assert actual["dimensions"] == ast["dimensions"]
-    assert result["asl_validation"] == "PASS"
+    result = agent.main('legacy question', semantic_model_id=81, business_domain_ids=[205])
+    ast = json.loads(result)
+    assert ast['ambiguity'] and '上游未提供' in ast['ambiguity'][0]['question']
+    assert ast['metrics'] == [] and ast['filters'] == []
 
 
 def test_only_resolved_hierarchy_question_is_cleared():

@@ -62,7 +62,7 @@ def test_context_review_selects_scope_without_keyword_rules():
     ast,k=fixture()
     model=Doc(invoke=lambda messages:Doc(content=json.dumps({'related_scope':{
         'mode':'shared_attribute','option_index':0,'evidence':'寻找相同使用领域的渠道'}})))
-    result,repairs=review_bindings(json.dumps(ast),k,'寻找相同使用领域的渠道',{},model,None,106,259)
+    result,repairs=review_bindings(json.dumps(ast),k,'AUDIT ONLY',{'输出要求':'寻找相同使用领域的渠道'},model,None,106,259)
     assert json.loads(result)['related_filters']
     assert repairs
 
@@ -75,7 +75,7 @@ def test_shared_target_is_not_rebound_onto_bridge_by_owner_review():
         assert any(o['filter_index']==1 for o in context['filter_options'])
         return Doc(content=json.dumps({'related_scope':{'mode':'shared_attribute','option_index':0,'evidence':'寻找相同使用领域的渠道'},
             'bindings':[{'filter_index':1,'choice_index':0,'reason':'目标关联'}]}))
-    result,_=review_bindings(json.dumps(ast),k,'寻找相同使用领域的渠道',{},Doc(invoke=invoke),lambda *a:['changed'],106,259)
+    result,_=review_bindings(json.dumps(ast),k,'AUDIT ONLY',{'输出要求':'寻找相同使用领域的渠道'},Doc(invoke=invoke),lambda *a:['changed'],106,259)
     parsed=json.loads(result)
     assert parsed['related_filters'][0]['target_filters'][1]['value']=='A'
     assert parsed['related_filters'][0]['target_filters'][0]['value']=='B'

@@ -973,6 +973,8 @@ class HttpDataRetrievalAdapter:
                 "structured_reference": self._structured_asl_reference(
                     discovery_request
                 ),
+                "structured_extraction": (discovery_request._planner_extraction.structured
+                    if discovery_request._planner_extraction else None),
                 "semantic_model_id": semantic_model_id,
                 **oagent_execution_scope,
                 "metric_ids": [],
@@ -1117,6 +1119,8 @@ class HttpDataRetrievalAdapter:
                 "completed_question": query,
                 "retrieval_query": query,
                 "structured_reference": self._structured_asl_reference(request),
+                "structured_extraction": (request._planner_extraction.structured
+                    if request._planner_extraction else None),
                 "semantic_model_id": semantic_model_id,
                 **oagent_execution_scope,
                 "metric_ids": [],
@@ -1996,6 +2000,8 @@ class HttpDataRetrievalAdapter:
                     "completed_question": semantic_query,
                     "retrieval_query": retrieval_query,
                     "structured_reference": self._structured_asl_reference(request),
+                    "structured_extraction": (request._planner_extraction.structured
+                        if request._planner_extraction else None),
                     "semantic_model_id": semantic_model_id,
                     **oagent_execution_scope,
                     "metric_ids": [
@@ -2038,6 +2044,11 @@ class HttpDataRetrievalAdapter:
                 generated,
                 oagent_execution_scope["business_domain_id"],
             )
+            # Completeness is decided by ASL before contract acknowledgements
+            # or any legacy adapter normalization can hide a concrete issue.
+            asl = self._json_object(generated.get('result'), 'ASL_RESPONSE_INVALID')
+            if asl.get('ambiguity'):
+                raise AdapterError('ASL_AMBIGUOUS', 'ASL requires clarification', details=asl['ambiguity'])
             contract_acknowledged = (
                 "asl_validation" in generated or "asl_contract" in generated
             )
@@ -2156,25 +2167,6 @@ class HttpDataRetrievalAdapter:
         ambiguities = asl.get("ambiguity") or []
         if not isinstance(ambiguities, list):
             raise AdapterError("ASL_RESPONSE_INVALID", "ASL ambiguity must be a list")
-        if bound_metric_codes and ambiguities:
-            metric_ambiguity_types = {
-                "metric", "metric_selection", "indicator", "指标",
-            }
-            ambiguities = [
-                item for item in ambiguities
-                if not (
-                    isinstance(item, dict)
-                    and (
-                        str(item.get("type") or "").strip().casefold()
-                        in metric_ambiguity_types
-                        or "metric" in {
-                            str(slot).strip().casefold()
-                            for slot in (item.get("affected_slots") or [])
-                        }
-                    )
-                )
-            ]
-            asl["ambiguity"] = ambiguities
         if ambiguities:
             raise AdapterError(
                 "ASL_AMBIGUOUS",

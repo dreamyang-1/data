@@ -45,6 +45,8 @@ def run(decision, *, ast=None, knowledge=None, query='各经销商在上海地�
     calls = []
     def invoke(messages):
         calls.append(json.loads(messages[1]['content']))
+        assert 'completed_question' not in calls[-1]
+        decision.setdefault('bindings', [{'filter_index':0,'keep':True,'reason':'explicit global dictionary'}])
         return SimpleNamespace(content=json.dumps(decision))
     original = json.dumps(ast or draft())
     result, repairs = review_bindings(original, knowledge, query, {'维度':['经销商']},
@@ -61,8 +63,8 @@ def test_context_selects_owner_without_changing_dealer_grouping(owner,index):
     assert result['dimensions'] == draft()['dimensions']
     assert result['metrics'] == draft()['metrics']
     assert result['subject'] == draft()['subject']
-    assert result['time_context'] is None
-    assert len(repairs) == 2
+    assert result['time_context'] == draft()['time_context']
+    assert len(repairs) == 1
     assert calls[0]['structured_extraction'] == {'维度':['经销商']}
 
 
@@ -90,7 +92,8 @@ def test_duplicate_dictionary_keys_preserve_label_set_semantics(operator,expecte
 def test_unavailable_dictionary_does_not_fabricate_or_drop_filter(keys):
     result, repairs, _ = run({'bindings':[{'filter_index':0,'choice_index':0,'reason':'医院所在地'}]},
                              resolver=lambda *a:keys)
-    assert result == draft()
+    assert result['filters'] == draft()['filters']
+    assert result['ambiguity'] and '上海市' in result['ambiguity'][0]['question']
     assert repairs == []
 
 
@@ -103,14 +106,13 @@ def test_missing_relation_or_field_cannot_authorize_owner():
     assert binding_options(draft(),knowledge) == []
 
 
-def test_explicit_rolling_period_uses_real_month_arithmetic_not_calendar_year():
+def test_owner_review_cannot_reinterpret_time_from_original_question():
     knowledge = catalog()
     knowledge['metrics'][0].metadata['time_caliber']['special_rule'] = '未指定时最近12个月'
     result, _, _ = run({'time':{'mode':'rolling','source':'question','evidence':'最近12个月',
         'amount':12,'unit':'month','anchor':'sales_order.created_date'}},knowledge=knowledge,
         query='最近12个月各经销商在上海地区的已合作医院数')
-    assert result['time_context'] == {'type':'range','start':'2025-09-24','end':'2026-09-24',
-                                     'unit':'day','anchor':'sales_order.created_date'}
+    assert result['time_context'] == draft()['time_context']
 
 
 @pytest.mark.parametrize('mode', ['none','rolling'])
@@ -144,10 +146,11 @@ def test_unselected_metric_cannot_supply_default_rule():
     assert len(calls[0]['selected_policies']) == 2  # selected metric and subject
 
 
-def test_review_failure_is_nonblocking():
+def test_owner_resolution_failure_requests_clarification():
     def fail(*a): raise TimeoutError('offline')
     original = json.dumps(draft())
-    assert review_bindings(original,catalog(),'问题',None,SimpleNamespace(invoke=fail),None,81,205) == (original,[])
+    result,repairs = review_bindings(original,catalog(),'问题',None,SimpleNamespace(invoke=fail),None,81,205)
+    assert json.loads(result)['ambiguity'] and repairs == []
 
 
 def test_live_dictionary_lookup_is_parameterized_and_preserves_leading_zeros(monkeypatch):

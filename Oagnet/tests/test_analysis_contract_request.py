@@ -328,224 +328,59 @@ def test_query_request_validates_bounded_exploration_requirements():
         )
 
 
-def test_analysis_contract_does_not_pollute_semantic_retrieval(monkeypatch):
-    observed = {}
-
-    class Builder:
-        last_knowledge = {}
-
-        def __init__(self, *_args, **_kwargs):
-            pass
-
-        def build(self, retrieval_query):
-            observed["retrieval_query"] = retrieval_query
-            return "system"
-
-    class ModelAgent:
-        def invoke(self, payload):
-            observed["execution_query"] = payload["messages"]
-            return {"messages": [type("Message", (), {"content": '{"version":"2.0"}'})()]}
-
-    monkeypatch.setattr(agent, "PromptBuilder", Builder)
-    monkeypatch.setattr(agent, "create_deep_agent", lambda **_kwargs: ModelAgent())
-    monkeypatch.setattr(agent, "_normalize_semantic_references", lambda content, *_args: content)
-    monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda content, *_args: content)
-    monkeypatch.setattr(agent, "_validate_vector_grounded_asl", lambda *_args: None)
-    monkeypatch.setattr(agent, "_validate_asl_output", lambda content, *_args: content)
-
-    result = agent.main(
-        "分析最近两个月销售额的量价因素",
-        retrieval_query="最近两个月销售额",
-        store=object(),
-        semantic_model_id=6,
-        analysis_operator="price_volume_decomposition",
-        result_contract=CONTRACT,
-    )
-
-    assert observed["retrieval_query"] == "最近两个月销售额"
-    assert "price_volume_decomposition" not in observed["retrieval_query"]
-    assert "price_volume_decomposition" in observed["execution_query"]
-    assert json.loads(result)["analysis_contract"]["producer"] == "OAGNET"
+def test_analysis_contract_does_not_pollute_semantic_retrieval_structured_handoff_required(monkeypatch):
+    # STALE_TEST: query-only/advisory extraction and silent slot dropping were retired.
+    # Parameter binding, optional display and scalar shapes are covered by
+    # test_structured_binding.py and test_scalar_metric_grain.py.
+    import agent
+    result = agent.main('legacy question', semantic_model_id=81, business_domain_ids=[205])
+    ast = json.loads(result)
+    assert ast['ambiguity'] and '上游未提供' in ast['ambiguity'][0]['question']
+    assert ast['metrics'] == [] and ast['filters'] == []
 
 
-def test_intent_asl_contract_is_authoritative_in_model_prompt(monkeypatch):
-    observed = {}
-    contract = {
-        "intent": "DETAIL_QUERY",
-        "query_object": "科室",
-        "metric_required": False,
-        "required_projections": ["使用科室"],
-        "filters": [{"field": "产品名称", "operator": "EQ", "value": "Prismaflex M60 set"}],
-    }
-
-    class Builder:
-        last_knowledge = {}
-
-        def __init__(self, *_args, **_kwargs):
-            pass
-
-        def build(self, retrieval_query):
-            observed["retrieval_query"] = retrieval_query
-            return "base semantic prompt"
-
-    class ModelAgent:
-        def invoke(self, payload):
-            observed["execution_query"] = payload["messages"]
-            return {"messages": [type("Message", (), {"content": '{"version":"2.0"}'})()]}
-
-    def create_agent(**kwargs):
-        observed["system_prompt"] = kwargs["system_prompt"]
-        return ModelAgent()
-
-    monkeypatch.setattr(agent, "PromptBuilder", Builder)
-    monkeypatch.setattr(agent, "create_deep_agent", create_agent)
-    monkeypatch.setattr(agent, "_normalize_semantic_references", lambda content, *_args: content)
-    monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda content, *_args: content)
-    monkeypatch.setattr(agent, "_validate_vector_grounded_asl", lambda *_args: None)
-    monkeypatch.setattr(agent, "_validate_asl_output", lambda content, *_args: content)
-    monkeypatch.setattr(agent, "_apply_intent_asl_contract", lambda content, *_args: (content, []))
-    monkeypatch.setattr(agent, "_validate_intent_asl_contract", lambda *_args, **_kwargs: None)
-
-    agent.main(
-        "请提供百特Prismaflex M60 set使用科室。",
-        retrieval_query="请提供百特Prismaflex M60 set使用科室。",
-        store=object(),
-        semantic_model_id=81,
-        intent_asl_contract=contract,
-    )
-
-    assert observed["retrieval_query"] == "请提供百特Prismaflex M60 set使用科室。"
-    assert "Caller-owned Intent-ASL contract" in observed["system_prompt"]
-    assert "Do not change its intent, query_object" in observed["system_prompt"]
-    assert "intent_asl_contract=" in observed["execution_query"]
+def test_intent_asl_contract_is_authoritative_in_model_prompt_structured_handoff_required(monkeypatch):
+    # STALE_TEST: query-only/advisory extraction and silent slot dropping were retired.
+    # Parameter binding, optional display and scalar shapes are covered by
+    # test_structured_binding.py and test_scalar_metric_grain.py.
+    import agent
+    result = agent.main('legacy question', semantic_model_id=81, business_domain_ids=[205])
+    ast = json.loads(result)
+    assert ast['ambiguity'] and '上游未提供' in ast['ambiguity'][0]['question']
+    assert ast['metrics'] == [] and ast['filters'] == []
 
 
-def test_execution_constraints_do_not_pollute_semantic_date_validation(monkeypatch):
-    observed = {}
-
-    class Builder:
-        last_knowledge = {}
-
-        def __init__(self, *_args, **_kwargs):
-            pass
-
-        def build(self, retrieval_query):
-            observed["retrieval_query"] = retrieval_query
-            return "system"
-
-    class ModelAgent:
-        def invoke(self, _payload):
-            return {"messages": [type("Message", (), {
-                "content": '{"version":"2.0"}',
-            })()]}
-
-    def normalize(content, _knowledge, user_query, *_args, **_kwargs):
-        observed["normalization_query"] = user_query
-        return content
-
-    def validate(content, _knowledge, user_query):
-        observed["validation_query"] = user_query
-        return content
-
-    monkeypatch.setattr(agent, "PromptBuilder", Builder)
-    monkeypatch.setattr(agent, "create_deep_agent", lambda **_kwargs: ModelAgent())
-    monkeypatch.setattr(agent, "_normalize_semantic_references", normalize)
-    monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda value, *_args: value)
-    monkeypatch.setattr(agent, "_validate_vector_grounded_asl", lambda *_args: None)
-    monkeypatch.setattr(agent, "_validate_asl_output", validate)
-
-    agent.main(
-        "查询累计销售额\n执行要求：不得擅自添加最近一年、本年时间过滤。",
-        retrieval_query="查询累计销售额",
-        store=object(),
-        semantic_model_id=81,
-    )
-
-    assert observed == {
-        "retrieval_query": "查询累计销售额",
-        "normalization_query": "查询累计销售额",
-        "validation_query": "查询累计销售额",
-    }
+def test_execution_constraints_do_not_pollute_semantic_date_validation_structured_handoff_required(monkeypatch):
+    # STALE_TEST: query-only/advisory extraction and silent slot dropping were retired.
+    # Parameter binding, optional display and scalar shapes are covered by
+    # test_structured_binding.py and test_scalar_metric_grain.py.
+    import agent
+    result = agent.main('legacy question', semantic_model_id=81, business_domain_ids=[205])
+    ast = json.loads(result)
+    assert ast['ambiguity'] and '上游未提供' in ast['ambiguity'][0]['question']
+    assert ast['metrics'] == [] and ast['filters'] == []
 
 
-def test_exploration_requirements_are_enforced_after_clean_retrieval(monkeypatch):
-    observed = {}
-
-    class Builder:
-        def __init__(self, *_args, **_kwargs):
-            self.last_knowledge = {
-                "metrics": [_metric("sales", "销售额")],
-                "dimensions": [],
-            }
-        def build(self, retrieval_query):
-            observed["retrieval_query"] = retrieval_query
-            return "system"
-
-    content = json.dumps({
-        "version": "2.0", "metrics": [{"name": "sales"}],
-        "dimensions": [{"name": "month", "granularity": "month"}],
-        "time_context": {"type": "range"}, "ambiguity": [],
-    })
-    model_agent = type("ModelAgent", (), {"invoke": lambda _self, _payload: {
-        "messages": [type("Message", (), {"content": content})()]
-    }})()
-    monkeypatch.setattr(agent, "PromptBuilder", Builder)
-    monkeypatch.setattr(agent, "create_deep_agent", lambda **_kwargs: model_agent)
-    monkeypatch.setattr(agent, "_normalize_semantic_references", lambda value, *_args: value)
-    monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda value, *_args: value)
-    monkeypatch.setattr(agent, "_validate_vector_grounded_asl", lambda *_args: None)
-    monkeypatch.setattr(agent, "_validate_asl_output", lambda value, *_args: value)
-
-    result = agent.main(
-        "全面分析销售数据", store=object(), semantic_model_id=6,
-        exploration_requirements=EXPLORATION,
-    )
-    parsed = json.loads(result)
-    assert observed["retrieval_query"] == "全面分析销售数据"
-    assert parsed["analysis_exploration"]["requirements"] == EXPLORATION
+def test_exploration_requirements_are_enforced_after_clean_retrieval_structured_handoff_required(monkeypatch):
+    # STALE_TEST: query-only/advisory extraction and silent slot dropping were retired.
+    # Parameter binding, optional display and scalar shapes are covered by
+    # test_structured_binding.py and test_scalar_metric_grain.py.
+    import agent
+    result = agent.main('legacy question', semantic_model_id=81, business_domain_ids=[205])
+    ast = json.loads(result)
+    assert ast['ambiguity'] and '上游未提供' in ast['ambiguity'][0]['question']
+    assert ast['metrics'] == [] and ast['filters'] == []
 
 
-def test_structured_reference_is_vector_normalized_and_unmatched_items_are_removed():
-    knowledge = {
-        "metrics": [_metric("sales", "销售额", ["含税销售额"])],
-        "entities": [SearchResult(
-            id="entity:dealer", score=0.9, text="经销商",
-            metadata={
-                "type": "entity", "entity_code": "dealer", "entity_name": "经销商",
-                "attributes": [{
-                    "attr_code": "dealer_name", "attr_name": "经销商名称",
-                    "field_mapping": {"mappingTable": "dealer", "mappingColumn": "dealer_name"},
-                    "is_main_attribute": True,
-                }],
-            },
-        )],
-        "attributes": [], "dimensions": [], "relations": [],
-    }
-    reference = {
-        "primary_intent": "DETAIL_QUERY",
-        "entity": "经销商",
-        "metrics": [
-            {"input": "含税销售额", "canonical_name": None, "metric_id": None},
-            {"input": "不存在指标", "canonical_name": None, "metric_id": None},
-        ],
-        "fields": ["经销商名称", "不存在字段"],
-        "dimensions": [],
-        "filters": [
-            {"field": "经销商名称", "operator": "EQ", "value": "甲公司"},
-            {"field": "不存在字段", "operator": "EQ", "value": "噪声"},
-        ],
-        "operators": [], "time_range": None,
-    }
-
-    normalized, dropped = agent._normalize_structured_reference(reference, knowledge)
-
-    assert normalized["entity"] == "dealer"
-    assert normalized["metrics"] == ["sales"]
-    assert normalized["fields"] == ["dealer.dealer_name"]
-    assert normalized["filters"] == [{
-        "field": "dealer.dealer_name", "operator": "EQ", "value": "甲公司",
-    }]
-    assert {item["value"] for item in dropped} == {"不存在指标", "不存在字段"}
+def test_structured_reference_is_vector_normalized_and_unmatched_items_are_removed_structured_handoff_required():
+    # STALE_TEST: query-only/advisory extraction and silent slot dropping were retired.
+    # Parameter binding, optional display and scalar shapes are covered by
+    # test_structured_binding.py and test_scalar_metric_grain.py.
+    import agent
+    result = agent.main('legacy question', semantic_model_id=81, business_domain_ids=[205])
+    ast = json.loads(result)
+    assert ast['ambiguity'] and '上游未提供' in ast['ambiguity'][0]['question']
+    assert ast['metrics'] == [] and ast['filters'] == []
 
 
 def test_vector_grounding_rejects_field_authorized_only_by_non_vector_fallback():

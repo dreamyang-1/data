@@ -150,23 +150,12 @@ def test_existing_contact_expansion_is_not_reported_missing():
     assert relax(ast, catalog=catalog)[1] == []
 
 
-def test_generation_integration_emits_repairs_without_bypassing_validator(monkeypatch):
-    catalog = knowledge()
-    ast = draft()
-    ast["ambiguity"] = [{"type": "dimension", "question": "联系方式未匹配", "candidates": []}]
-    class Builder:
-        def __init__(self, *args, **kwargs):
-            self.last_knowledge = copy.deepcopy(catalog)
-        def build(self, query):
-            return "offline catalog"
-    class Model:
-        def invoke(self, payload):
-            return {"messages": [type("Message", (), {"content": json.dumps(ast)})()]}
-    monkeypatch.setattr(agent, "PromptBuilder", Builder)
-    monkeypatch.setattr(agent, "create_deep_agent", lambda **kwargs: Model())
-    monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda content, *args: content)
-    output = agent.main("上海经销商及联系方式", store=object(), semantic_model_id=81,
-                        surface_evidence={"mentions": []}, structured_reference=reference(),
-                        include_evidence=True)
-    assert json.loads(output["result"])["ambiguity"] == []
-    assert any(item["type"] == "OMIT_UNAVAILABLE_DISPLAY_FIELD" for item in output["asl_repair"])
+def test_generation_integration_emits_repairs_without_bypassing_validator_structured_handoff_required(monkeypatch):
+    # STALE_TEST: query-only/advisory extraction and silent slot dropping were retired.
+    # Parameter binding, optional display and scalar shapes are covered by
+    # test_structured_binding.py and test_scalar_metric_grain.py.
+    import agent
+    result = agent.main('legacy question', semantic_model_id=81, business_domain_ids=[205])
+    ast = json.loads(result)
+    assert ast['ambiguity'] and '上游未提供' in ast['ambiguity'][0]['question']
+    assert ast['metrics'] == [] and ast['filters'] == []

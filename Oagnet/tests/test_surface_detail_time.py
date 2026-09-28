@@ -118,36 +118,25 @@ def test_aggregate_shape_is_not_rewritten():
 
 
 @pytest.mark.parametrize('all_time', [False, True])
-def test_main_restores_detail_then_repairs_time_without_catalog_or_model_io(monkeypatch, all_time):
-    monkeypatch.setattr(agent, 'date', Today)
-    knowledge = catalog()
-    raw = extraction(operator='>')
-    ast = draft()
-    ast['metrics'] = [{'name': 'sales_total_including_tax'}]
-    if all_time:
-        # Preserve a correctly generated all-history request, even if an older
-        # completed-question surface still contains a recent-year phrase.
-        ast['time_context'] = None
-        ast['ambiguity'] = []
+def test_main_time_comes_from_structured_parameters_only(monkeypatch, all_time):
+    knowledge=catalog()
+    raw=extraction(operator='>')
+    raw['排序']=[]
+    raw['时间粒度']={'unit':None,'time_range':None if all_time else '最近一年'}
+    plan={'subject':'sales_order','display_fields':[{'index':i,'key':key} for i,key in enumerate(
+          ['sales_order.order_code','sales_order.amount_with_tax','product.product_name'])],
+          'filters':[{'index':0,'key':'sales_order.amount_with_tax'}],
+          'time':{'mode':'range','start':'2025-09-23','end':'2026-09-23','anchor':'sales_order.created_date'}}
     class Builder:
-        def __init__(self, *a, **k): self.last_knowledge = deepcopy(knowledge)
-        def build(self, query): return 'scoped catalog'
-    monkeypatch.setattr(agent, 'PromptBuilder', Builder)
-    monkeypatch.setattr(agent, '_get_chat_model', lambda: object())
-    monkeypatch.setattr(agent, 'create_deep_agent', lambda **k: SimpleNamespace(
-        invoke=lambda _: {'messages': [SimpleNamespace(content=json.dumps(ast))]}))
-    monkeypatch.setattr(agent, '_normalize_dynamic_subject', lambda value, *a: value)
-    query = '查询最近一年单笔销售额大于1000的订单'
-    result = json.loads(agent.main(query + ('\nTIME_SCOPE=ALL_TIME' if all_time else ''),
-        completed_question=query, store=object(),
-        semantic_model_id=81, business_domain_ids=[205], surface_evidence={'mentions': [{'text':'1000'}]},
-        structured_extraction=raw))
-    assert result['metrics'] == []
-    assert result['filters'] == ast['filters']
-    if all_time:
-        assert result['time_context'] is None
-    else:
-        assert result['time_context']['type'] == 'range'
-        assert result['time_context']['anchor'] == 'sales_order.created_date'
-        assert result['time_context']['start'] == '2025-09-23'
-    assert result['ambiguity'] == []
+        def __init__(self,*a,**k):pass
+        def retrieve(self,query):return deepcopy(knowledge)
+    monkeypatch.setattr(agent,'PromptBuilder',Builder)
+    monkeypatch.setattr(agent,'_get_chat_model',lambda:SimpleNamespace(
+        invoke=lambda _:SimpleNamespace(content=json.dumps(plan))))
+    result=json.loads(agent.main('查询最近一年单笔销售额大于1000的订单',
+        semantic_model_id=81,business_domain_ids=[205],structured_extraction=raw))
+    assert not result['ambiguity']
+    assert result['metrics']==[]
+    assert result['filters'][0]['value']==1000
+    if all_time:assert result['time_context'] is None
+    else:assert result['time_context']['start']=='2025-09-23'

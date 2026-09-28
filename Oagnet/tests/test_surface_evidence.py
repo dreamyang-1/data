@@ -59,15 +59,16 @@ def test_api_passes_completed_question_and_structured_reference_as_advisory_inpu
     assert planner.call_args.kwargs["structured_reference"] == reference
 
 
-def test_generation_recalls_exact_question_without_advisory_json():
+def test_generation_recalls_exact_question_without_advisory_json_structured_handoff_required():
+    # STALE_TEST: query-only/advisory extraction and silent slot dropping were retired.
+    # Parameter binding, optional display and scalar shapes are covered by
+    # test_structured_binding.py and test_scalar_metric_grain.py.
     import agent
-    question = "上海市的销售额"
-    with patch.object(agent, "PromptBuilder") as builder:
-        builder.return_value.build.side_effect = RuntimeError("stop after recall")
-        with pytest.raises(RuntimeError, match="stop after recall"):
-            agent.main(question, store=object(), semantic_model_id=81,
-                       surface_evidence={"mentions": [{"text": "上海市"}]})
-    builder.return_value.build.assert_called_once_with(question)
+    import json
+    result = agent.main('legacy question', semantic_model_id=81, business_domain_ids=[205])
+    ast = json.loads(result)
+    assert ast['ambiguity'] and '上游未提供' in ast['ambiguity'][0]['question']
+    assert ast['metrics'] == [] and ast['filters'] == []
 
 
 def test_mention_recall_keeps_primary_question_and_identical_scope():

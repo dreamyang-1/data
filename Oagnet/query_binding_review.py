@@ -1,8 +1,8 @@
-"""Contextual predicate ownership and time review, without changing public ASL.
+"""Bind structured predicate ownership/relationships without changing query shape.
 
 The model selects a published relationship, not SQL or a made-up region code.
 The selected dictionary's actual rows supply the FK values. Query shape remains
-owned by the existing grain review; this pass cannot change metrics or grouping.
+owned exclusively by planner parameters; original wording is never model input.
 """
 import calendar
 import copy
@@ -116,12 +116,13 @@ def _time_value(decision, today):
 
 
 def review_bindings(content, knowledge, question, extraction, model, resolve_keys,
-                    semantic_model_id, domain_scope, *, today=None, explicit_time=False):
+                    semantic_model_id, domain_scope, *, today=None, explicit_time=False,
+                    structured_only=False):
     ast = json.loads(content)
     options = binding_options(ast, knowledge)
     from related_scope import shared_scope_options, apply_shared_scope
     related_options = shared_scope_options(ast, knowledge) if ast.get('metrics') else []
-    if not options and not ast.get("time_context") and not related_options:
+    if not options and not related_options:
         return content, []
     selected = {m.get("name") for m in ast.get("metrics") or []}
     metrics = [_metadata(m) for m in knowledge.get("metrics", []) if _metadata(m).get("metric_code") in selected]
@@ -134,35 +135,32 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
                "draft_asl": ast, "filter_options": options, "selected_policies": policies,
                "shared_scope_options": related_options,
                "current_date": (today or date.today()).isoformat()}
+    context.pop('completed_question')
+    question = json.dumps(extraction, ensure_ascii=False, separators=(',', ':'))
     try:
-        response = model.invoke([
-            {"role": "system", "content": (
-                "复核筛选归属及时间，不改主体、指标、分组、排序或结果列。根据完整问题和所选指标的业务定义理解修饰关系，"
-                "不要根据词表、分组实体或最短JOIN路径猜筛选归属。按经销商分组与筛选医院所在地是独立要求；"
-                "反之明确查询上海的经销商时保留经销商所在地。共享字典名称没有表达归属，优先从filter_options选择"
-                "符合上下文的真实owner；不要把筛选改成分组。允许分别选择两个已给出的条件，不得复制一个条件擅自增加约束。"
-                "返回JSON：{\"bindings\":[{\"filter_index\":0,\"choice_index\":0,\"reason\":\"简短业务依据\"}],"
-                "\"time\":{\"mode\":\"keep|none|rolling|calendar|range\",\"source\":\"question|catalog\","
-                "\"evidence\":\"来源中逐字存在的时间要求或规则\",\"anchor\":\"目录日期字段\","
-                "\"amount\":12,\"unit\":\"month\",\"type\":\"this_year\",\"start\":\"YYYY-MM-DD\",\"end\":\"YYYY-MM-DD\"}}。"
-                "只填所选mode需要的字段；绑定不需修改时不填该项。rolling表示向前滚动的期间，不等于calendar自然年/月；"
-                "具体月份数只能来自实际问题，上例12不是默认值。最新产品规则取消系统默认时间范围；"
-                "用户和已确认上下文未指定时间就none，即使旧目录说明还有默认12个月也不使用。"
-                "不能把时间锚点、统计周期、示例或指标名称当默认筛选。已有明确范围无须修改用keep。"
-                "另外结合完整问题区分：查目标商品既有销售，还是找与目标商品适用科室等属性相关的潜在渠道。"
-                "不能见到科室等单词就选关联口径；仅查询目标商品使用科室、目标商品销售额、已销售目标商品的经销商时保持direct。"
-                "若目标商品只是用于确定关联属性范围，而要统计该医院内同属性相关对象的销售，"
-                "选shared_scope_options的一项，追加related_scope={mode:shared_attribute,option_index:序号,evidence:原问题逐字关系要求}；"
-                "否则related_scope={mode:direct}。这会把该选项中的目标条件移入独立目标集合，而非删除条件；"
-                "外层统计同属性相关商品的销售额。不能把商品适用科室推断成订单实际成交科室。"
-                "不得输出思维链、SQL、新字段、编码值或追问。"
-            )}, {"role": "user", "content": json.dumps(context, ensure_ascii=False, default=str)},
-        ])
+        messages = [
+            {'role': 'system', 'content': (
+                '仅将structured_extraction已声明的筛选归属和关联要求映射到授权目录。没有原问题，不得重新提取要求。'
+                '不改主体、指标、分组、展示、排序、时间和限制。实体是表，不是条件值。'
+                '根据过滤条件的字段/实体归属、已选指标语义与输出要求选择filter_options；无法判断返回error说明缺少哪个归属。'
+                '每个filter_options项目必须有一个bindings决定；已明确是字典全局筛选可用keep:true和reason。'
+                '返回JSON：{"bindings":[{"filter_index":0,"choice_index":0,"reason":"结构化参数中的明确依据"}],'
+                '"related_scope":{"mode":"direct"}}。若输出要求明确是共享属性关联而不是目标商品既有销售，'
+                'related_scope改为{"mode":"shared_attribute","option_index":0,"evidence":"结构化输出要求中的逐字关系描述"}。'
+                '只能选shared_scope_options中的路径；不能见到科室就选关联模式。'
+                '目标对象条件移入目标集合，其他条件保留；适用科室不代表实际成交科室。不得补任何条件。'
+            )},
+            {'role': 'user', 'content': json.dumps(context, ensure_ascii=False, default=str)},
+        ]
+        response = model.invoke(messages)
         decision = json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", response.content.strip()))
         if not isinstance(decision, dict):
-            return content, []
+            raise ValueError('invalid binding response')
     except Exception:
-        return content, []  # Transport failure does not become a new hard gate.
+        from structured_binding import issue
+        ast.setdefault('ambiguity', []).append(issue('筛选归属/关联范围', extraction,
+            '目录绑定服务未返回可用结果，请稍后重试；当前不能确认关联范围'))
+        return json.dumps(ast, ensure_ascii=False), []
     repairs = []
     scope_probe = copy.deepcopy(ast)
     scope_repairs = apply_shared_scope(scope_probe, related_options, decision.get('related_scope'), question)
@@ -175,12 +173,14 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
         if not isinstance(binding, dict):
             continue
         index, choice_index = binding.get("filter_index"), binding.get("choice_index")
+        if type(index) is int and index in by_index and binding.get('keep') is True and binding.get('reason'):
+            seen.add(index)
+            continue
         if type(index) is int and index in target_indices:
             continue  # Target conditions are already scoped; do not rebind onto the bridge.
         if (type(index) is not int or index in seen or index not in by_index or type(choice_index) is not int
                 or not 0 <= choice_index < len(by_index[index]["choices"]) or not binding.get("reason")):
             continue
-        seen.add(index)
         choice = by_index[index]["choices"][choice_index]
         old = ast["filters"][index]
         values = old["value"] if isinstance(old["value"], list) else [old["value"]]
@@ -195,6 +195,7 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
             continue  # Never manufacture a region code from its name.
         if not keys:
             continue
+        seen.add(index)
         operator = old["operator"]
         if len(keys) > 1 or operator in {"IN", "NOT IN"}:
             operator = "NOT IN" if operator in {"!=", "NOT IN"} else "IN"
@@ -205,25 +206,15 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
         repairs.append({"type": "RESOLVE_FILTER_BUSINESS_OWNER", "previous_filter": old,
                         "resolved_filter": ast["filters"][index], "reason": str(binding["reason"])[:300],
                         "source": "SCOPED_RELATION_AND_DICTIONARY"})
-    temporal = decision.get("time")
-    if isinstance(temporal, dict) and temporal.get("mode") != "keep":
-        quote = temporal.get("evidence")
-        source = temporal.get("source")
-        source_text = question if source == "question" else json.dumps(policies, ensure_ascii=False, default=str) if source == "catalog" else ""
-        no_time = temporal.get("mode") == "none"
-        if ((no_time and not explicit_time) or (not no_time and source == "question" and isinstance(quote, str)
-                                               and quote.strip() and quote in source_text)):
-            try:
-                value = _time_value(temporal, today or date.today())
-                if value and value["anchor"] not in set(knowledge.get("_vector_authorized_fields") or []):
-                    raise ValueError("unregistered time anchor")
-                if value != ast.get("time_context"):
-                    previous = ast.get("time_context")
-                    ast["time_context"] = value
-                    repairs.append({"type": "RESOLVE_CONTEXTUAL_TIME_POLICY", "previous_time": previous,
-                                    "time_context": value, "source": source, "evidence": quote})
-            except (KeyError, ValueError, TypeError, OverflowError):
-                pass
+    from structured_binding import issue
+    for option in options:
+        index = option['filter_index']
+        if index in target_indices:
+            continue
+        if index not in seen:
+            ast.setdefault('ambiguity', []).append(issue('过滤条件归属', option['predicate'],
+                '无法确认该筛选作用于哪个业务实体或无法解析对应标准值',
+                [c['owner'] for c in option['choices']]))
     if scope_repairs:
         repairs.extend(apply_shared_scope(ast, related_options, decision.get('related_scope'), question))
-    return (json.dumps(ast, ensure_ascii=False), repairs) if repairs else (content, [])
+    return json.dumps(ast, ensure_ascii=False), repairs

@@ -86,20 +86,21 @@ def test_main_canonicalizes_model_alias_before_return_and_evidence(monkeypatch, 
     class Builder:
         def __init__(self, *args, **kwargs):
             self.last_knowledge = deepcopy(catalog())
-        def build(self, query):
-            return "offline scoped catalog"
+        def retrieve(self, query):
+            return self.last_knowledge
     observed = []
     def evidence(content, *args):
         observed.append(json.loads(content))
         return {"selected_metrics": []}
     monkeypatch.setattr(agent, "PromptBuilder", Builder)
-    monkeypatch.setattr(agent, "_get_chat_model", lambda: object())
-    monkeypatch.setattr(agent, "create_deep_agent", lambda **kwargs: SimpleNamespace(
-        invoke=lambda _: {"messages": [SimpleNamespace(content=json.dumps(draft()))]}))
+    monkeypatch.setattr(agent, "_get_chat_model", lambda: SimpleNamespace(invoke=lambda _: SimpleNamespace(content=json.dumps({
+        'subject':'hospital','metrics':[{'index':0,'key':CODE}]}))))
     monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda content, *args: content)
     monkeypatch.setattr(agent, "_build_semantic_evidence", evidence)
     result = agent.main("查询医院总数", store=object(), semantic_model_id=81,
-                        business_domain_ids=[205], include_evidence=include_evidence)
+                        business_domain_ids=[205], include_evidence=include_evidence,
+                        structured_extraction={'实体':['医院'],'指标':[{'name':'医院总数'}],
+                            '维度':[],'展示字段':[],'过滤条件':[],'排序':[]})
     ast = json.loads(result["result"] if include_evidence else result)
     assert ast["metrics"][0]["name"] == CODE
     assert ast["metrics"][0]["alias"] == NAME

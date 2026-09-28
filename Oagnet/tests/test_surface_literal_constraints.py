@@ -239,28 +239,22 @@ def test_api_does_not_discard_planner_extraction(monkeypatch):
 def test_main_uses_planner_payload_preserves_shape_and_validates(monkeypatch):
     knowledge = catalog()
     raw = extraction()
-    observed = {}
+    raw['排序'] = []
     class Builder:
-        def __init__(self, *a, **k):
-            self.last_knowledge = deepcopy(knowledge)
-        def build(self, query):
-            return "scoped catalog"
-    draft = json.loads(_detail_ast())
-    draft["metrics"] = [{"name": "sales_total_including_tax"}]
-    draft["filters"] = [{"field": "product_dept_relation.id", "operator": "=", "value": "1000"}]
-    def model(**kwargs):
-        observed.update(kwargs)
-        return SimpleNamespace(invoke=lambda _: {"messages": [SimpleNamespace(content=json.dumps(draft))]})
-    monkeypatch.setattr(agent, "PromptBuilder", Builder)
-    monkeypatch.setattr(agent, "_get_chat_model", lambda: object())
-    monkeypatch.setattr(agent, "create_deep_agent", model)
-    monkeypatch.setattr(agent, "_normalize_dynamic_subject", lambda value, *a: value)
-    result = agent.main("查询单笔销售额为1000的订单", store=object(), semantic_model_id=81,
-        business_domain_ids=[205], surface_evidence={"mentions": [{"text": "1000"}]},
-        structured_extraction=raw,
-        structured_reference={"primary_intent": "METRIC_QUERY", "metrics": [{"input": "销售额"}]})
-    ast = json.loads(result)
-    assert ast["metrics"] == []
-    assert ast["filters"] == [{"field": "sales_order.amount_with_tax", "operator": "=", "value": 1000}]
-    assert "Planner extraction" in observed["system_prompt"]
-    assert '"op":"="' in observed["system_prompt"]
+        def __init__(self,*a,**k): pass
+        def retrieve(self,query): return deepcopy(knowledge)
+    plan = {'subject':'sales_order',
+            'display_fields':[{'index':i,'key':key} for i,key in enumerate(
+                ['sales_order.order_code','sales_order.amount_with_tax','product.product_name'])],
+            'filters':[{'index':0,'key':'sales_order.amount_with_tax'}]}
+    monkeypatch.setattr(agent,'PromptBuilder',Builder)
+    monkeypatch.setattr(agent,'_get_chat_model',lambda:SimpleNamespace(
+        invoke=lambda _:SimpleNamespace(content=json.dumps(plan))))
+    result = agent.main('不要重新提取这段原文',semantic_model_id=81,business_domain_ids=[205],
+                        structured_extraction=raw,
+                        structured_reference={'primary_intent':'METRIC_QUERY','metrics':[{'input':'销售额'}]})
+    ast=json.loads(result)
+    assert not ast['ambiguity']
+    assert ast['metrics']==[]
+    assert ast['filters']==[{'field':'sales_order.amount_with_tax','operator':'=','value':1000}]
+    assert len(ast['dimensions'])==3

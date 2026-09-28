@@ -1,12 +1,6 @@
-"""ASL planning from business wording without caller-invented bindings.
-
-This internal client only plans. Execution entry points must separately provide
-user-confirmed constraints before replacing the legacy query route.
-"""
+"""Bind planner parameters through Oagnet; preserve every clarification."""
 from copy import deepcopy
-from datetime import timedelta
 import json
-import re
 
 from app.adapters.base import AdapterError
 from app.services.asl_surface_handoff import build_surface_asl_input
@@ -42,7 +36,7 @@ async def generate_surface_asl(
         business_domain_ids=execution_domains,
     )
     with track_operation('UPSTREAM', 'upstream.oagnet.asl_generation',
-                         attributes={'input_mode': 'SURFACE_ADVISORY'}) as timing:
+                         attributes={'input_mode': 'STRUCTURED_BINDING'}) as timing:
         generated = await client.post(
             settings.asl_generator_base_url, settings.asl_generator_path, payload,
             identity=identity, application_id=application_id,
@@ -69,61 +63,8 @@ async def generate_surface_asl(
     ambiguities = asl.get("ambiguity", [])
     if not isinstance(ambiguities, list):
         raise AdapterError("ASL_RESPONSE_INVALID", "ASL ambiguity must be a list")
-    if confirmed_metrics and ambiguities:
-        remaining = [
-            item for item in ambiguities
-            if not (
-                isinstance(item, dict)
-                and str(item.get("type") or "").casefold() in {
-                    "metric", "metric_selection", "indicator", "指标",
-                }
-            )
-        ]
-        if len(remaining) != len(ambiguities):
-            asl["metrics"] = [
-                {
-                    "name": str(metric.metric_id or metric.canonical_name or metric.input).split(":")[-1],
-                    "alias": metric.canonical_name or metric.input,
-                }
-                for metric in confirmed_metrics
-            ]
-            asl["ambiguity"] = remaining
-            ambiguities = remaining
-    if time_range is not None and ambiguities:
-        remaining = [
-            item for item in ambiguities
-            if not (
-                isinstance(item, dict)
-                and (
-                    str(item.get("type") or "") in {"time", "time_anchor"}
-                    or re.search(
-                        r"时间|日期|time|date",
-                        str(item.get("question") or ""),
-                        re.IGNORECASE,
-                    )
-                )
-            )
-        ]
-        anchors = {
-            str(item.get("time_anchor") or "").strip()
-            for item in generated["semantic_evidence"].get("selected_metrics", [])
-            if isinstance(item, dict) and item.get("time_anchor")
-        }
-        if not remaining and len(anchors) == 1:
-            # The completed question remains the ASL model's primary input.
-            # A governed business default such as "正在销售=最近一年" is an
-            # execution boundary already resolved by the caller; bind only
-            # its dates to the selected metric's published time anchor.
-            asl["time_context"] = {
-                "type": "range",
-                "start": time_range.start.isoformat(),
-                "end": (time_range.end_exclusive - timedelta(days=1)).isoformat(),
-                "value": None,
-                "unit": "day",
-                "anchor": next(iter(anchors)),
-            }
-            asl["ambiguity"] = []
-            ambiguities = []
+    # The ASL boundary owns completeness. Do not erase metric/time issues or
+    # fabricate a successful plan from caller defaults after it requested input.
     if ambiguities:
         raise AdapterError("ASL_AMBIGUOUS", "ASL requires clarification", details=ambiguities)
     return {"asl": deepcopy(asl), "semantic_evidence": deepcopy(generated["semantic_evidence"]),
