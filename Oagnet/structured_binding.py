@@ -58,7 +58,10 @@ def issue(slot, value, reason, candidates=()):
             '指标/展示字段':'operation_intent'}.get(prefix,'context')
     return {'type': kind, 'field': slot, 'phrase': phrase,
             'affected_slots': [kind], 'question': f'结构化参数【{slot}】{label}：{reason}。请补充或确认该项；已明确的其他条件无需重复提供。',
-            'candidates': list(candidates), 'source': 'STRUCTURED_EXTRACTION'}
+            'candidates': list(candidates),
+            'candidate_details': [dict(canonical_name=name, structured_slot=slot, source_parameter=value)
+                                  for name in candidates],
+            'source': 'STRUCTURED_EXTRACTION'}
 
 
 def catalog_candidates(knowledge):
@@ -211,7 +214,17 @@ subject 只根据已选指标的实体绑定或结构化实体选择。无法判
                     repairs.append({'type': 'OMIT_UNAVAILABLE_DISPLAY_FIELD', 'source': 'VECTOR_DISPLAY_PROJECTION',
                                     'field': original.get('field') if isinstance(original, dict) else original,
                                     'entity': original.get('entity', '') if isinstance(original, dict) else ''})
-                else: ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, reason, choice.get('candidates') or []))
+                else:
+                    problem = issue(f'{source}[{index+1}]', original, reason, choice.get('candidates') or [])
+                    if target == 'filters':
+                        for detail in problem['candidate_details']:
+                            label = detail['canonical_name']
+                            if any(str(v['value']) == label for v in catalog['values']):
+                                detail['binding_kind'] = 'value'
+                            elif label in catalog['fields'] or any(
+                                    f.get('attr_name') == label for f in catalog['fields'].values()):
+                                detail['binding_kind'] = 'field'
+                    ast['ambiguity'].append(problem)
                 continue
             if target == 'metrics':
                 ast['metrics'].append({'name': key, 'alias': allowed[key].get('metric_name') or key, 'time_anchor': None})

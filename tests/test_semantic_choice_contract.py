@@ -261,7 +261,8 @@ def chat(question, message="message-1"):
 @pytest.mark.asyncio
 @pytest.mark.parametrize('answer', ['1', '01透析器具'])
 @pytest.mark.parametrize('legacy_phrase', [False, True])
-async def test_confirmed_filter_replans_full_task_and_passes_structured_handoff(answer, legacy_phrase):
+@pytest.mark.parametrize('persisted', [False, True])
+async def test_confirmed_filter_replans_full_task_and_passes_structured_handoff(answer, legacy_phrase, persisted):
     from app.domain.models import PlannerExtraction, DataQueryResult, Dataset
     from datetime import datetime, timezone
     class StructuredRetrieval(CapturingSuccessfulRetrieval):
@@ -290,15 +291,28 @@ async def test_confirmed_filter_replans_full_task_and_passes_structured_handoff(
                                    if legacy_phrase else '血液透析器'),
         question='确认品类', candidates=['01透析器具'], affected_slots=['filter_slot'],
     )]
-    await agent.sessions.put_pending(PendingState(request=request), expected_version=0)
     planned=[]
     structured={'意图':'排名分析','实体':['经销商'],'指标':[{'name':'销售额'}],
                 '维度':['经销商'],'展示字段':[],
                 '过滤条件':[{'field':'品类','op':'=','value':['01透析器具']}],
                 '排序':[{'field':'销售额','order':'desc'}],
                 '时间粒度':{'unit':None,'time_range':None},'限制':10,'输出要求':'相关经销商'}
+    state=PendingState(request=request)
+    if persisted:
+        original_extraction=json.loads(json.dumps(structured))
+        original_extraction['过滤条件'][0]['value']=['血液透析器']
+        request.semantic_ambiguities[0].candidate_details=[{
+            'canonical_name':'01透析器具','structured_slot':'过滤条件[1]',
+            'binding_kind':'value',
+            'source_parameter':original_extraction['过滤条件'][0]}]
+        state.planner_extraction=PlannerExtraction(intent=PrimaryIntent.METRIC_QUERY,
+                                                  structured=original_extraction)
+        # Redis roundtrip must retain the handoff; private request attrs do not.
+        state=PendingState.model_validate_json(state.model_dump_json())
+    await agent.sessions.put_pending(state, expected_version=0)
     class Planner:
         async def plan(self, question):
+            assert not persisted, 'confirmed structured slots must not be re-extracted'
             planned.append(question)
             return SimpleNamespace(plan=None, single_extraction=PlannerExtraction(
                 intent=PrimaryIntent.METRIC_QUERY, structured=structured))
@@ -307,10 +321,10 @@ async def test_confirmed_filter_replans_full_task_and_passes_structured_handoff(
     with progress_scope(events.append):
         response=await agent.handle(chat(answer, 'confirmed-structured'), IDENTITY)
     assert response.status=='COMPLETED', (response.answer, planned, retrieval.requests)
-    assert len(planned)==1 and original.replace('血液透析器','01透析器具') in planned[0]
+    assert len(planned)==(0 if persisted else 1)
     executed=retrieval.requests[-1]
     assert executed.original_question==original
-    assert executed.rewritten_question==planned[0]
+    assert original.replace('血液透析器','01透析器具') in executed.rewritten_question
     assert executed._planner_extraction.structured==structured
     assert executed.analysis_thread_id=='confirmed-original-thread'
     assert executed.turn_relation.value=='CLARIFICATION_RESPONSE'
@@ -319,6 +333,42 @@ async def test_confirmed_filter_replans_full_task_and_passes_structured_handoff(
     assert planning>=0
     assert await agent.sessions.get_pending(IDENTITY.tenant_id, IDENTITY.user_id,
                                             'choice-app','choice-conversation') is None
+
+
+@pytest.mark.asyncio
+async def test_surface_resume_can_persist_a_second_clarification_without_cas_conflict():
+    class Again(CapturingSuccessfulRetrieval):
+        async def query_surface(self, request, identity, **kwargs):
+            raise AdapterError('ASL_AMBIGUOUS','需要确认下一项',details=[{
+                'type':'filter_slot','field':'过滤条件[2]','phrase':'新条件',
+                'question':'请确认新条件','candidates':['标准条件'],
+                'source':'STRUCTURED_EXTRACTION'}])
+    agent=service(Again())
+    request=pending()
+    request.rewritten_question=request.original_question
+    await agent.sessions.put_pending(PendingState(request=request), expected_version=0)
+    request.pending_state_version=1
+    response=await agent._handle_surface_query(chat('标准选项'),IDENTITY,
+                                              request=request,clarification_rounds=2)
+    assert response.status=='NEEDS_CLARIFICATION'
+    state=await agent.sessions.get_pending(IDENTITY.tenant_id,IDENTITY.user_id,
+                                          'choice-app','choice-conversation')
+    assert state.state_version==2 and state.clarification_rounds==2
+
+
+def test_confirming_filter_field_does_not_replace_its_numeric_literal():
+    from app.domain.models import PlannerExtraction
+    original={'field':'金额','op':'>','value':[1000]}
+    state=PendingState(request=pending(),planner_extraction=PlannerExtraction(
+        structured={'过滤条件':[original],'指标':[],'输出要求':'默认表格'}))
+    choice={'label':'含税金额','ambiguity':SemanticAmbiguity(type='filter_slot',question='选金额字段'),
+            'detail':{'canonical_name':'含税金额','structured_slot':'过滤条件[1]',
+                      'source_parameter':original,'binding_kind':'field'}}
+    result=DataAnalysisOrchestrator._confirmed_structured_extraction(state,choice)
+    assert result.structured['过滤条件']==[{'field':'含税金额','op':'>','value':[1000]}]
+    assert state.planner_extraction.structured['过滤条件']==[original]
+    choice['detail'].pop('binding_kind')
+    assert DataAnalysisOrchestrator._confirmed_structured_extraction(state,choice) is None
 
 
 @pytest.mark.asyncio

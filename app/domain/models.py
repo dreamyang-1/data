@@ -1595,6 +1595,7 @@ class AgentResponse(StrictModel):
 
 
 class PendingState(StrictModel):
+    planner_extraction: PlannerExtraction | None = None
     asked_clarification_keys: list[str] = Field(default_factory=list)
     request: CanonicalAnalysisRequest
     semantic_extractions: list[dict[str, Any]] = Field(default_factory=list)

@@ -956,6 +956,7 @@ class DataAnalysisOrchestrator:
             chat._rules_classification_cache = (chat.question, raw_request)
             planning_question = chat.question
             confirmed_pending_choice = None
+            confirmed_extraction = None
             if not (
                 chat._is_regeneration_execution
                 or chat._completed_question_execution
@@ -977,6 +978,11 @@ class DataAnalysisOrchestrator:
                         planning_question = self._completed_question_with_choice(
                             planning_pending.request, confirmed_pending_choice
                         )
+                        confirmed_extraction = self._confirmed_structured_extraction(
+                            planning_pending, confirmed_pending_choice
+                        )
+                        if confirmed_extraction is not None:
+                            chat._planner_extraction = confirmed_extraction
             independent_chat = (
                 raw_request.primary_intent == PrimaryIntent.CHAT
                 and confirmed_pending_choice is None
@@ -1066,7 +1072,9 @@ class DataAnalysisOrchestrator:
                     # 任务意图和结构化参数（闲聊已在上方独立分支拦截）。
                     # surface 直通兜底决策不带任务边界（复合问题也只是单个
                     # 兜底任务），跳过拆分器会导致多问题不再拆分，不能省。
-                    if (confirmed_pending_choice is None or self.settings.surface_asl_execution_enabled) and not semantic_decision_ready:
+                    if (confirmed_extraction is None
+                            and (confirmed_pending_choice is None or self.settings.surface_asl_execution_enabled)
+                            and not semantic_decision_ready):
                         try:
                             # 核心指令里的业务语义规范段随请求传给拆分模型，
                             # 参数角色按规范分类对齐（指标/实体/维度）。
@@ -1287,7 +1295,10 @@ class DataAnalysisOrchestrator:
                     resumed.analysis_thread_id = planning_pending.request.analysis_thread_id
                     resumed.turn_relation = TurnRelation.CLARIFICATION_RESPONSE
                     resumed.context_mode = ContextMode.CLARIFICATION_RESUME
-                    response = await self._handle_surface_query(chat, identity, request=resumed)
+                    response = await self._handle_surface_query(
+                        chat, identity, request=resumed,
+                        clarification_rounds=planning_pending.clarification_rounds + 1,
+                    )
                     if response is None:
                         response = await self._handle(chat, identity)
                 else:
@@ -3411,7 +3422,7 @@ class DataAnalysisOrchestrator:
             )
         )
 
-    async def _handle_surface_query(self, chat, identity, *, request=None):
+    async def _handle_surface_query(self, chat, identity, *, request=None, clarification_rounds=1):
         """Execute a completed ordinary query with ASL-owned catalog binding."""
         if not callable(getattr(self.adapters.query, "query_surface", None)):
             return None
@@ -3520,7 +3531,7 @@ class DataAnalysisOrchestrator:
                 request.ambiguities = self._ambiguity_texts(exc)
                 request.missing_slots = ["semantic_ambiguity"]
                 return await self._request_clarification(
-                    request, 1, source_stage=self._asl_clarification_stage(exc),
+                    request, clarification_rounds, source_stage=self._asl_clarification_stage(exc),
                     semantic_extractions=chat._semantic_extraction_items,
                 )
             return await self._finish_terminal(request, self._fallback(
@@ -8738,6 +8749,57 @@ class DataAnalysisOrchestrator:
         )
 
     @staticmethod
+    def _confirmed_structured_extraction(pending, choice):
+        """Replace one acknowledged slot in the persisted planner result."""
+        extraction = pending.planner_extraction
+        detail = choice.get('detail') or {}
+        match = re.fullmatch(r'(指标|维度|展示字段|过滤条件)\[(\d+)\]',
+                             str(detail.get('structured_slot') or ''))
+        if extraction is None or not isinstance(extraction.structured, dict) or not match:
+            return None
+        section, number = match.groups()
+        index = int(number) - 1
+        rows = extraction.structured.get(section)
+        if not isinstance(rows, list) or not 0 <= index < len(rows):
+            return None
+        original = rows[index]
+        if original != detail.get('source_parameter'):
+            return None
+        selected = str(detail.get('canonical_name') or choice.get('label') or '').strip()
+        if not selected:
+            return None
+        replacement = copy.deepcopy(original)
+        if section == '过滤条件':
+            if not isinstance(original, dict):
+                return None
+            values = original.get('value')
+            if detail.get('binding_kind') == 'field':
+                replacement['field'] = selected
+            elif detail.get('binding_kind') != 'value':
+                return None
+            elif isinstance(values, list) and len(values) == 1:
+                replacement['value'] = [selected]
+            elif isinstance(values, str):
+                replacement['value'] = selected
+            else:
+                return None
+        elif isinstance(original, str):
+            replacement = selected
+        elif isinstance(original, dict):
+            key = 'name' if section == '指标' else 'field' if 'field' in original else 'name'
+            replacement[key] = selected
+        else:
+            return None
+        result = extraction.model_copy(deep=True)
+        result.structured[section][index] = replacement
+        result.parameters = []  # Do not forward stale advisory text.
+        phrase = choice['ambiguity'].phrase
+        requirement = result.structured.get('输出要求')
+        if phrase and isinstance(requirement, str):
+            result.structured['输出要求'] = requirement.replace(phrase, selected)
+        return result
+
+    @staticmethod
     def _completed_question_with_choice(
         pending: CanonicalAnalysisRequest, choice: dict[str, Any]
     ) -> str:
@@ -10233,6 +10295,7 @@ class DataAnalysisOrchestrator:
         try:
             await self.sessions.put_pending(
                 PendingState(
+                    planner_extraction=request._planner_extraction,
                     asked_clarification_keys=list(dict.fromkeys([*asked_keys, *(key for key, trace in decisions if trace.decision == 'ASK')])),
                     request=request,
                     semantic_extractions=[
