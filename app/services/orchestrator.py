@@ -3518,6 +3518,7 @@ class DataAnalysisOrchestrator:
         try:
             # 规划产出的结构化提取JSON原样透传给语义查询器，消费方式由下游负责；
             # mentions 保留作兼容，语义查询器未适配前行为不变。
+            await emit_progress("ASL_GENERATION", "RUNNING", "正在解析并校验结构化参数，生成标准 ASL。")
             result = await self.adapters.query.query_surface(
                 request, identity, mentions=mentions,
                 structured_extraction=(
@@ -5715,11 +5716,9 @@ class DataAnalysisOrchestrator:
 
         if query_result is None:
             await emit_progress(
-                "DATA_RETRIEVAL",
+                "ASL_GENERATION",
                 "RUNNING",
-                "### ◉ 规划与执行\n"
-                f"执行链路：{QUERY_EXECUTION_CHAIN}。\n"
-                "正在按以上链路执行查询规划与数据读取。",
+                "正在解析并校验结构化参数，生成标准 ASL。",
             )
             try:
                 relationship_count_request = self._relationship_count_projection_request(request)
@@ -5753,7 +5752,7 @@ class DataAnalysisOrchestrator:
                         optional_time_ambiguities,
                     ):
                         await emit_progress(
-                            "DATA_RETRIEVAL",
+                            "ASL_GENERATION",
                             "RUNNING",
                             "时间范围已有受控默认值，正在按该口径重新规划一次。",
                             error_code=first_error.code,
@@ -5788,7 +5787,7 @@ class DataAnalysisOrchestrator:
                         )
                     elif retry_code in SEMANTIC_QUERY_RETRY_CODES:
                         await emit_progress(
-                            "DATA_RETRIEVAL",
+                            "ASL_GENERATION",
                             "RUNNING",
                             "首次语义规划未稳定对齐，正在基于当前已发布语义层重新召回并规划一次。",
                             error_code=retry_code,
@@ -10359,6 +10358,9 @@ class DataAnalysisOrchestrator:
         )
         response.analysis_plan = self.analysis_planner.build(request)
         response.analysis_process = self._build_analysis_process(request, response)
+        if source_stage in {"OAGNET_ASL_GENERATION", "STRUCTURED_ASL_BINDING"}:
+            await emit_progress("ASL_GENERATION", "NEEDS_INPUT", response.answer,
+                                message_limit=65536)
         return response
 
     @staticmethod

@@ -971,7 +971,7 @@ async def chat_stream(
                 composite_mode
                 and bool(event.get("is_child_task"))
                 and _thinking_section(stage) in {
-                    "execution", "validation", "insight",
+                    "parsing", "execution", "validation", "insight",
                 }
             ):
                 # Child tasks execute concurrently. Publish execution events as
@@ -1018,7 +1018,7 @@ async def chat_stream(
                 # Completeness is expressed inside the document-defined intent
                 # and planning blocks; do not render an extra unlabeled line.
                 return ordered
-            if _thinking_section(stage) == "execution" and deferred_planning:
+            if _thinking_section(stage) in {"parsing", "execution"} and deferred_planning:
                 # Public analytic sections have a fixed order. Some execution
                 # adapters emit ASL/SQL milestones before DATA_RETRIEVAL; release
                 # the completed planning block before the first such milestone
@@ -1298,7 +1298,8 @@ def _progress_waiting_message(stage: str) -> str:
         "intent": "正在识别问题中的指标、维度与筛选条件",
         "file": "正在读取并解析文件内容",
         "planning": "正在生成任务拆分与调用计划",
-        "execution": "正在生成查询规划或读取数据",
+        "parsing": "正在解析并校验 ASL 参数",
+        "execution": "正在翻译 SQL 或读取数据",
         "validation": "正在校验查询结果和数据质量",
         "insight": "正在生成分析洞察和图表",
         "clarification_execution": "正在处理补充信息",
@@ -1449,7 +1450,7 @@ def _thinking_section(stage: str) -> str | None:
         "TASK_PLANNING": "planning",
         "DATA_RETRIEVAL": "execution",
         "SEMANTIC_QUERY_PLANNING": "execution",
-        "ASL_GENERATION": "execution",
+        "ASL_GENERATION": "parsing",
         "SQL_TRANSLATION": "execution",
         "SQL_EXECUTION": "execution",
         "KNOWLEDGE_RETRIEVAL": "execution",
@@ -1479,6 +1480,10 @@ class _CompositeChildProgressOrderer:
         self.execution_pending: dict[int, list[dict[str, Any]]] = {}
         self.execution_finished_indices: set[int] = set()
         self.next_execution_index = 0
+        self.parsing_completed: set[str] = set()
+        self.parsing_stopped: set[str] = set()
+        self.parsing_barrier_open = False
+        self.deferred_execution: list[dict[str, Any]] = []
 
     @staticmethod
     def _task_key(event: dict[str, Any]) -> str:
@@ -1534,6 +1539,34 @@ class _CompositeChildProgressOrderer:
         return released
 
     def push(self, event: dict[str, Any]) -> list[dict[str, Any]]:
+        """Keep all child ASL output above SQL without delaying actual tools."""
+        self._observe_task_count(event)
+        section = _thinking_section(str(event.get("stage") or "").upper())
+        task_key = self._task_key(event)
+        visible: list[dict[str, Any]] = []
+        if section == "parsing":
+            visible.extend(self._label([event]))
+            if str(event.get("status") or "").upper() in {"NEEDS_INPUT", "FAILED"}:
+                self.parsing_stopped.add(task_key)
+            if str(event.get("status") or "").upper() in self._TERMINAL_STATUSES | {"NEEDS_INPUT"}:
+                self.parsing_completed.add(task_key)
+        else:
+            if section == "execution":
+                # Tasks with no ASL (files, skipped tasks) also cross the
+                # parsing barrier; don't invent a successful ASL for them.
+                self.parsing_completed.add(task_key)
+            if not self.parsing_barrier_open:
+                self.deferred_execution.append(event)
+            else:
+                return self._push_after_parsing(event)
+        if not self.parsing_barrier_open and self._all_tasks_completed(self.parsing_completed):
+            self.parsing_barrier_open = True
+            for pending in self.deferred_execution:
+                visible.extend(self._push_after_parsing(pending))
+            self.deferred_execution.clear()
+        return visible
+
+    def _push_after_parsing(self, event: dict[str, Any]) -> list[dict[str, Any]]:
         current = dict(event)
         self._observe_task_count(current)
         stage = str(current.get("stage") or "").upper()
@@ -1550,7 +1583,7 @@ class _CompositeChildProgressOrderer:
             duplicate_terminal = (
                 terminal and task_key in self.execution_completed
             )
-            if not duplicate_terminal:
+            if not duplicate_terminal and not (terminal and task_key in self.parsing_stopped):
                 self.execution_pending.setdefault(task_index, []).append(current)
             if (
                 stage == "DATA_RETRIEVAL"
@@ -1594,6 +1627,10 @@ class _CompositeChildProgressOrderer:
         return [current]
 
     def flush(self) -> list[dict[str, Any]]:
+        released = []
+        for event in self.deferred_execution:
+            released.extend(self._push_after_parsing(event))
+        self.deferred_execution.clear()
         pending = [
             *(event for index in sorted(self.execution_pending) for event in self.execution_pending[index]),
             *self.deferred_validation, *self.deferred_insight,
@@ -1601,7 +1638,7 @@ class _CompositeChildProgressOrderer:
         self.execution_pending.clear()
         self.deferred_validation.clear()
         self.deferred_insight.clear()
-        return self._label(pending)
+        return [*released, *self._label(pending)]
 
 
 def _ordered_composite_child_progress_events(
@@ -1611,7 +1648,7 @@ def _ordered_composite_child_progress_events(
 ) -> list[dict[str, Any]]:
     """Keep concurrent child milestones inside their public UI sections."""
 
-    section_order = {"execution": 0, "validation": 1, "insight": 2}
+    section_order = {"parsing": -1, "execution": 0, "validation": 1, "insight": 2}
 
     def sort_key(indexed: tuple[int, dict[str, Any]]) -> tuple[int, int, int]:
         sequence, event = indexed
@@ -1634,7 +1671,7 @@ def _ordered_composite_child_progress_events(
             task_index = 0
         task_key = (section or "", task_index)
         if (
-            section in {"execution", "validation", "insight"}
+            section in {"parsing", "execution", "validation", "insight"}
             and task_key not in labelled_tasks
         ):
             labelled_tasks.add(task_key)
@@ -1685,6 +1722,7 @@ def _thinking_title(section: str, scenario: str = "ANALYTIC") -> str:
         "intent": "#### ◉ 意图识别",
         "file": "#### ◉ 文件感知与解析",
         "planning": "#### ◉ 任务拆分与规划",
+        "parsing": "#### ◉ 解析校验",
         "execution": "#### ◉ 调度执行",
         "validation": "#### ◉ 结果校验",
         "insight": "#### ◉ 数据洞察分析",

@@ -204,6 +204,7 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
         event for event in events
         if event.get("type") == "message_chunk"
         and event.get("meta", {}).get("stage") == "ASL_GENERATION"
+        and event.get("meta", {}).get("status") == "COMPLETED"
     )
     asl_message = asl_event["meta"]["message"]
     assert f"工具：{SEMANTIC_QUERY_TOOL_NAME}。" in asl_message
@@ -221,11 +222,12 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
     planning_content = thinking_content(
         events, "TASK_PLANNING", status="COMPLETED"
     )
-    execution_running_content = thinking_content(
-        events, "DATA_RETRIEVAL", status="RUNNING"
+    parsing_running_content = thinking_content(
+        events, "ASL_GENERATION", status="RUNNING"
     )
     assert "规划调用：" not in planning_content
-    assert f"执行链路：{QUERY_EXECUTION_CHAIN}" in execution_running_content
+    assert "解析校验" in parsing_running_content
+    assert "正在解析并校验结构化参数" in parsing_running_content
     assert "语义解析" not in QUERY_EXECUTION_CHAIN
     assert QUERY_EXECUTION_CHAIN == (
         f"{SEMANTIC_QUERY_TOOL_NAME} → {SQL_TRANSLATION_TOOL_NAME} → "
@@ -246,6 +248,14 @@ def test_stream_replaces_local_structure_with_exact_asl_json():
         and event.get("meta", {}).get("status") == "COMPLETED"
     )
     assert asl_index < retrieval_completed_index
+    document = "".join(event.get("content", "") for event in events
+                       if event.get("type") == "message_chunk")
+    titles = ["意图识别", "任务拆分与规划", "解析校验", "调度执行", "结果校验", "数据洞察分析"]
+    assert all("#### ◉ " + title in document for title in titles), document
+    positions = [document.index("#### ◉ " + title) for title in titles]
+    assert positions == sorted(positions)
+    assert document.index("结构化提取（ASL）") < document.index("#### ◉ 调度执行")
+    assert next(i for i, e in enumerate(events) if e.get("step") == "output") > retrieval_completed_index
     insight_content = thinking_content(
         events, "INSIGHT_ANALYSIS", status="COMPLETED"
     )
@@ -275,8 +285,9 @@ def test_composite_progress_streams_each_stage_at_its_real_barrier():
             "task_count": 2,
         }
 
-    # Execution is visible immediately; task-1 validation/insight wait only
-    # for the truthful cross-task stage barriers, not for the whole DAG.
+    # SQL output waits for every child's parsing phase, not for the whole DAG.
+    orderer.push(event("ASL_GENERATION", "COMPLETED", 0))
+    orderer.push(event("ASL_GENERATION", "COMPLETED", 1))
     first_execution = orderer.push(event("DATA_RETRIEVAL", "RUNNING", 0))
     assert [item["stage"] for item in first_execution] == ["DATA_RETRIEVAL"]
     orderer.push(event("DATA_RETRIEVAL", "COMPLETED", 0))
@@ -1910,11 +1921,12 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert "任务2：查询 TDC-3 产品的次要适用科室" in insight_by_task["task-2"]
 
 
-def test_all_six_analytic_thinking_stages_have_normalized_headings():
+def test_all_seven_analytic_thinking_stages_have_normalized_headings():
     expected = {
         "INTENT_RECOGNITION": "#### ◉ 意图识别",
         "FILE_INSPECTION": "#### ◉ 文件感知与解析",
         "TASK_PLANNING": "#### ◉ 任务拆分与规划",
+        "ASL_GENERATION": "#### ◉ 解析校验",
         "DATA_RETRIEVAL": "#### ◉ 调度执行",
         "RELIABILITY_CHECK": "#### ◉ 结果校验",
         "INSIGHT_ANALYSIS": "#### ◉ 数据洞察分析",
