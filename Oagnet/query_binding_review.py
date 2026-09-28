@@ -131,11 +131,14 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
     # recalled metric cannot supply a default period.
     subject = (ast.get("subject") or {}).get("entity")
     policies = [*metrics, *(e for e in entities if e.get("entity_code") == subject)]
-    context = {"completed_question": question, "structured_extraction": extraction,
-               "draft_asl": ast, "filter_options": options, "selected_policies": policies,
-               "shared_scope_options": related_options,
+    context = {"structured_extraction": extraction,
+               "draft_asl": ast, "filter_options": [dict(option, choices=[
+                   dict(choice, choice_index=i) for i, choice in enumerate(option['choices'])
+               ]) for option in options], "selected_policies": policies,
+               "shared_scope_options": [dict(option, option_index=i, target_filters=[
+                   ast['filters'][j] for j in option['target_filter_indices']
+               ]) for i, option in enumerate(related_options)],
                "current_date": (today or date.today()).isoformat()}
-    context.pop('completed_question')
     question = json.dumps(extraction, ensure_ascii=False, separators=(',', ':'))
     try:
         messages = [
@@ -143,11 +146,13 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
                 '仅将structured_extraction已声明的筛选归属和关联要求映射到授权目录。没有原问题，不得重新提取要求。'
                 '不改主体、指标、分组、展示、排序、时间和限制。实体是表，不是条件值。'
                 '根据过滤条件的字段/实体归属、已选指标语义与输出要求选择filter_options；无法判断返回error说明缺少哪个归属。'
-                '每个filter_options项目必须有一个bindings决定；已明确是字典全局筛选可用keep:true和reason。'
+                '先确定关联目标集合，再对不属于目标集合的filter_options项目逐项给bindings决定；已明确是字典全局筛选可用keep:true和reason。'
                 '返回JSON：{"bindings":[{"filter_index":0,"choice_index":0,"reason":"结构化参数中的明确依据"}],'
                 '"related_scope":{"mode":"direct"}}。若输出要求明确是共享属性关联而不是目标商品既有销售，'
                 'related_scope改为{"mode":"shared_attribute","option_index":0,"evidence":"结构化输出要求中的逐字关系描述"}。'
-                '只能选shared_scope_options中的路径；不能见到科室就选关联模式。'
+                '只能选shared_scope_options中的路径；必须使用条目显式option_index/choice_index，不要自己数数组位置。'
+                '选择前核对target_entity和target_filters是否是输出要求中的目标对象，而不是外层场所或排名对象；'
+                '例如目标是商品的共同属性时不能选择医院的共同属性路径。不能见到科室就选关联模式。'
                 '目标对象条件移入目标集合，其他条件保留；适用科室不代表实际成交科室。不得补任何条件。'
             )},
             {'role': 'user', 'content': json.dumps(context, ensure_ascii=False, default=str)},

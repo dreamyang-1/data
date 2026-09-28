@@ -27,6 +27,8 @@
 Oagnet：agent.py、structured_binding.py（新增）、query_binding_review.py。
 
 DataAnalysis：app/adapters/surface_asl.py、app/adapters/http.py、app/services/asl_surface_handoff.py。
+端到端补修：app/services/orchestrator.py、app/services/clarification_policy.py、
+app/planning/task_dag.py、app/planning/structured_extraction_prompt.txt。
 
 测试：Oagnet 的 structured_binding、scalar_metric_grain、query_binding_review、related_scope、
 analysis_contract_request、administrative_defaults、metric_canonical_alias、partial_display_fields、
@@ -50,6 +52,16 @@ temporal_metric_invariants；DataAnalysis 的 surface_asl_client、http_adapters
 
 ## 发布状态
 
-尚待提交后执行逐文件远程漂移检查、备份、重启和端到端回放。
+首版 c87e734 已逐文件部署并重启，配置哈希未改变；远程 Oagnet 122 项、DataAnalysis 270 项通过。
+真实总数查询完成，空维度、空时间、单行结果及节点顺序通过；缺少结构化交接时明确报错。
+
+复杂关系查询暴露三项衔接问题（PROVEN）：
+- 目录逻辑分组与其身份名称列被当成两个不同分组。按 SQL Translator 已有身份/唯一名称投影规则识别等价，不新增分组；无关展示列仍明确提示。
+- 旧追问门禁只接受至少两个候选，把明确缺项变成泛化 fallback。授权 ASL 返回的结构化缺项现允许开放式追问；服务问题保留具体说明且不执行 SQL，不虚构候选。
+- 规划端英文任务意图和结构化中文意图不一致；输出要求的格式定义也与关系保留规则冲突。以结构化意图为准，并让输出要求保留不能由参数数组表达的关系片段；不恢复 ASL 原文重提取。
+
+关联候选给模型提供显式编号及目标谓词，避免数组位置误选；修正后隔离试跑成功保留目标商品共同科室、医院限定、Top 10，分组名称重复展示不再误阻断。
+补修离线 Oagnet 全量 1029 通过；DataAnalysis 关键链路 216 通过、规划/追问恢复 92 通过。
+DataAnalysis 最终全量 4330 通过、11 项相同的 MCP 旧失败，无新增失败和收集错误；最后的追问阶段文案补充单独 5 项通过。
 部署不上传环境文件或凭据；保留 Draft PR，不自动合并。
 已知无关阻塞：11 项旧 MCP 测试；本次不宣称 V2 全量替换就绪。

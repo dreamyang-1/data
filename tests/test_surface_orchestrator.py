@@ -127,3 +127,24 @@ async def test_surface_ambiguity_uses_existing_pending_clarification_state():
     pending = await orchestrator.sessions.get_pending("t", "u", "app", "surface-pending")
     assert pending is not None
     assert pending.request.rewritten_question == chat.question
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('kind,expected', [('filter_slot','NEEDS_CLARIFICATION'),('context','SAFE_FALLBACK')])
+async def test_structured_binding_issue_without_candidates_is_explained(kind,expected):
+    orchestrator=service();orchestrator.settings.surface_asl_execution_enabled=True
+    question='结构化参数【过滤条件[1]】金额=1000：未能确定金额字段，请确认含税或不含税金额。'
+    async def query_surface(request,identity,**kwargs):
+        raise AdapterError('ASL_AMBIGUOUS','incomplete',details=[{
+            'type':kind,'phrase':'金额=1000','question':question,'candidates':[],
+            'affected_slots':[kind],'source':'STRUCTURED_EXTRACTION'}])
+    orchestrator.adapters.query.retrieval.query_surface=query_surface
+    chat=ChatRequest(question='查订单金额等于1000的记录',conversation_id='structured-'+kind,
+        semantic_model_id=81,message_id='m1',application_id='app')
+    chat._completed_question_execution=True
+    result=await orchestrator._handle(chat,TrustedIdentity(tenant_id='t',user_id='u'))
+    assert result.status==expected
+    assert '金额=1000' in result.answer and '未能确定金额字段' in result.answer
+    assert 'ASL参数绑定阶段' in result.answer and '尚未生成或执行SQL' in result.answer
+    if kind=='filter_slot':
+        assert result.clarification_decision_traces[0].expected_answer_type=='FREE_TEXT'

@@ -107,6 +107,14 @@ def decide_clarification(request: CanonicalAnalysisRequest, slot: str, *, source
     key, candidates = semantic_question_identity(request, slot) if semantic else (clarification_key(slot, []), [])
     already = key in asked_keys
     is_user = len(options) >= 2 if semantic else slot in USER_SLOTS
+    structured_slot = (
+        source_stage == 'STRUCTURED_ASL_BINDING' and slot == 'semantic_ambiguity'
+        and ambiguities and ambiguities[0].type not in {'context', 'data_source', 'unknown'}
+    )
+    if structured_slot:
+        # The scoped ASL binder may request a missing/unclear parameter without
+        # inventing two catalog candidates. Preserve this open-text question.
+        is_user = True
     reason = ('USER_REFERENCE_AMBIGUITY' if slot=='turn_relation' else 'USER_SEMANTIC_AMBIGUITY') if semantic else 'MISSING_USER_SLOT'
     if slot == 'task_answer_mapping':
         reason = 'USER_REFERENCE_AMBIGUITY'
@@ -130,10 +138,12 @@ def decide_clarification(request: CanonicalAnalysisRequest, slot: str, *, source
         slot == 'semantic_ambiguity'
         and semantic_ambiguity_has_safe_time_default(request, ambiguities)
     )
+    if structured_slot:
+        safe_default = False
     allowed = is_user and not system_repair and not already and not safe_default
     trace = ClarificationDecisionTrace(
         conversation_id=request.conversation_id, source_stage=source_stage, reason_type=reason,
-        blocking_slot=slot, expected_answer_type='CANDIDATE_OPTION' if semantic else USER_SLOTS.get(slot,'NONE'),
+        blocking_slot=slot, expected_answer_type='FREE_TEXT' if structured_slot and not options else 'CANDIDATE_OPTION' if semantic else USER_SLOTS.get(slot,'NONE'),
         candidate_ids=candidates, already_asked=already, base_task_reference=request.analysis_thread_id or str(request.request_id),
         pending_reference=str(request.pending_state_version) if request.pending_state_version else None,
         evidence_codes=[reason, 'LEGACY_CLARIFICATION_GATE_V1'], is_user_ambiguity=is_user,

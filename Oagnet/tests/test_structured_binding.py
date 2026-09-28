@@ -130,3 +130,26 @@ def test_bad_model_keys_are_clarified_not_server_errors(bad):
     e,k,p=fixture();p['subject']=bad;p['metrics'][0]['key']=bad
     ast,_=run(e,k,p)
     assert ast['ambiguity']
+
+
+@pytest.mark.parametrize('display,valid', [('hospital.name',True),('hospital.amount',False)])
+def test_logical_group_identity_label_does_not_create_an_extra_group(display,valid):
+    e,k,p=fixture();e['维度']=['医院'];e['展示字段']=[{'entity':'医院','field':display}]
+    attrs=k['entities'][0].metadata['attributes']
+    attrs[1]['attr_code']='hospital_name'
+    attrs.append({'attr_code':'hospital_code','field_mapping':'hospital.code'})
+    k['_vector_authorized_fields'].append('hospital.code')
+    k['dimensions']=[Obj(metadata={'dim_code':'hospital','bind_entities':[
+        {'mappingTable':'hospital','mappingColumn':'code'}]})]
+    p['dimensions']=[{'index':0,'key':'hospital'}]
+    p['display_fields']=[{'index':0,'key':display}]
+    ast,_=run(e,k,p)
+    assert (not ast['ambiguity']) == valid
+    assert [d['name'] for d in ast['dimensions']]==['hospital']
+
+
+def test_missing_output_requests_business_choice_not_system_repair():
+    e,k,p=fixture();e['指标']=[];p['metrics']=[]
+    ast,_=run(e,k,p)
+    assert ast['ambiguity'][0]['type']=='operation_intent'
+    assert '指标/展示字段' in ast['ambiguity'][0]['question']

@@ -3499,7 +3499,7 @@ class DataAnalysisOrchestrator:
                 request.ambiguities = self._ambiguity_texts(exc)
                 request.missing_slots = ["semantic_ambiguity"]
                 return await self._request_clarification(
-                    request, 1, source_stage="OAGNET_ASL_GENERATION",
+                    request, 1, source_stage=self._asl_clarification_stage(exc),
                     semantic_extractions=chat._semantic_extraction_items,
                 )
             return await self._finish_terminal(request, self._fallback(
@@ -5800,7 +5800,7 @@ class DataAnalysisOrchestrator:
                     return await self._request_clarification(
                         request,
                         rounds,
-                        source_stage='SQL_TRANSLATOR' if exc.code == 'SQL_TRANSLATION_AMBIGUOUS' else 'OAGNET_ASL_GENERATION',
+                        source_stage=self._asl_clarification_stage(exc),
                         semantic_extractions=chat._semantic_extraction_items,
                     )
                 if exc.code == "ANALYSIS_RESULT_CONTRACT_INVALID":
@@ -10147,6 +10147,8 @@ class DataAnalysisOrchestrator:
         allowed_slots = {trace.blocking_slot for trace in traces if trace.decision == 'ASK'}
         if not allowed_slots:
             response = self._fallback(request, '该问题已在当前待确认任务中提出，原选项继续保留。' if any(t.already_asked for t in traces) else '当前语义目录或执行服务尚未提供足够依据，系统无法安全继续处理。')
+            if source_stage == 'STRUCTURED_ASL_BINDING' and not any(t.already_asked for t in traces):
+                response.answer = '本次停在ASL参数绑定阶段，尚未生成或执行SQL。\n' + '\n'.join(request.ambiguities)
             response.clarification_decision_traces = traces
             return response
         # Keep unresolved slots in state, but never ask the same pending
@@ -10229,10 +10231,12 @@ class DataAnalysisOrchestrator:
                 action="请提供历史起止范围或窗口，例如：基于过去12个月。",
             ))
         prefix = f"我已理解：{understood_text}。" if understood_text else ""
-        if source_stage == "OAGNET_ASL_GENERATION" and "semantic_ambiguity" in request.missing_slots:
+        if source_stage in {"OAGNET_ASL_GENERATION", "STRUCTURED_ASL_BINDING"} and "semantic_ambiguity" in request.missing_slots:
             # Upstream hypotheses can differ from the ASL that produced this
             # clarification. Do not present their metric/entity as validated.
             prefix = f"当前问题：{request.rewritten_question or request.original_question}。"
+            if source_stage == "STRUCTURED_ASL_BINDING":
+                prefix += "本次停在ASL参数绑定阶段，尚未生成或执行SQL。"
         response = AgentResponse(
             request_id=request.request_id,
             conversation_id=request.conversation_id,
@@ -11361,6 +11365,17 @@ class DataAnalysisOrchestrator:
         return list(dict.fromkeys(
             cls._sanitize_clarification_text(value) for value in raw
         ))
+
+    @staticmethod
+    def _asl_clarification_stage(exc: AdapterError) -> str:
+        if exc.code == 'SQL_TRANSLATION_AMBIGUOUS':
+            return 'SQL_TRANSLATOR'
+        if isinstance(exc.details, list) and exc.details and all(
+            isinstance(item, dict) and item.get('source') == 'STRUCTURED_EXTRACTION'
+            for item in exc.details
+        ):
+            return 'STRUCTURED_ASL_BINDING'
+        return 'OAGNET_ASL_GENERATION'
 
     @staticmethod
     def _semantic_ambiguities(exc: AdapterError) -> list[SemanticAmbiguity]:

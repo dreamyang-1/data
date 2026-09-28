@@ -29,7 +29,8 @@ def issue(slot, value, reason, candidates=()):
     prefix = slot.split('[', 1)[0]
     kind = {'指标':'metric','维度':'dimension','展示字段':'dimension','过滤条件':'filter_slot',
             '过滤条件归属':'entity_role','时间粒度':'time_anchor','实体':'subject',
-            '输出要求':'schema_relation','排序':'operation_intent','限制':'operation_intent'}.get(prefix,'context')
+            '输出要求':'schema_relation','排序':'operation_intent','限制':'operation_intent',
+            '指标/展示字段':'operation_intent'}.get(prefix,'context')
     return {'type': kind, 'field': slot, 'phrase': label,
             'affected_slots': [kind], 'question': f'结构化参数【{slot}】{label}：{reason}。请补充或确认该项；已明确的其他条件无需重复提供。',
             'candidates': list(candidates), 'source': 'STRUCTURED_EXTRACTION'}
@@ -75,6 +76,43 @@ def catalog_candidates(knowledge):
             if record not in values: values.append(record)
     values = [dict(record, id=index) for index, record in enumerate(values)]
     return dict(entities=entities, metrics=metrics, fields=fields, dimensions=dimensions, values=values)
+
+
+def _group_exposes_field(group, field, catalog):
+    """Recognize the identity/label pair already projected by SQL Translator."""
+    code = group['name']
+    if code == field:
+        return True
+    definition = catalog['dimensions'].get(code)
+    entity = catalog['entities'].get(code)
+    if not definition or not entity or group.get('granularity') or definition.get('enum_list'):
+        return False
+    mappings = _object(definition.get('bind_entities')) or []
+    if not isinstance(mappings, list):
+        return False
+    fields = set()
+    direct = _field(definition.get('field_mapping'))
+    if direct:
+        fields.add(direct)
+    for mapping in mappings:
+        if not isinstance(mapping, dict):
+            continue
+        if group.get('attr') and mapping.get('attr') != group['attr']:
+            continue
+        table, column = mapping.get('mappingTable'), mapping.get('mappingColumn')
+        if table and column:
+            fields.add(f'{table}.{column}')
+    if field in fields:
+        return True
+    attrs = _object(entity.get('attributes')) or []
+    flag = lambda value: str(value).lower() in {'true', '1', 'yes'}
+    identities = {a.get('field_mapping') for a in attrs if a.get('field_mapping') in fields
+                  and (flag(a.get('is_primary_key')) or a.get('attr_code') in {code+'_id', code+'_code'})}
+    labels = {a.get('field_mapping') for a in attrs
+              if (flag(a.get('is_main_attribute')) or a.get('attr_code') == code+'_name')
+              and any(str(a.get('field_mapping', '')).split('.')[0] == identity.split('.')[0]
+                      for identity in identities)}
+    return len(labels) == 1 and field in labels
 
 
 def bind(extraction, knowledge, model, *, today=None):
@@ -142,7 +180,7 @@ subject 只根据已选指标的实体绑定或结构化实体选择。无法判
                 ast['metrics'].append({'name': key, 'alias': allowed[key].get('metric_name') or key, 'time_anchor': None})
             elif target in {'dimensions', 'display_fields'}:
                 if target == 'display_fields' and extraction['指标']:
-                    if key not in {d['name'] for d in ast['dimensions']}:
+                    if not any(_group_exposes_field(d, key, catalog) for d in ast['dimensions']):
                         ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '聚合查询的展示列没有声明为分组维度，请上游明确展示口径'))
                 elif key not in {d['name'] for d in ast['dimensions']}:
                     units = {'时':'hour','小时':'hour','日':'day','天':'day','周':'week','月':'month','季度':'quarter','季':'quarter','年':'year'}

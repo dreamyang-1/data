@@ -763,10 +763,10 @@ class MultiQuestionPlanner:
             structured = self._sanitize_extraction(
                 result.single_task_extraction, intent=single_intent
             )
-            if single_intent is None and structured is not None:
-                # 模型只给了中文意图时，按映射兜底成系统意图枚举。
+            if structured is not None and single_intent in {None, *_CHINESE_INTENT_TO_PRIMARY.values()}:
+                # The displayed extraction is the single execution contract.
                 single_intent = _CHINESE_INTENT_TO_PRIMARY.get(
-                    str(structured.get(_EXTRACTION_INTENT_KEY) or "").strip()
+                    str(structured.get(_EXTRACTION_INTENT_KEY) or "").strip(), single_intent
                 )
             return PlannerOutcome(
                 plan=None,
@@ -785,9 +785,9 @@ class MultiQuestionPlanner:
         for index, item in enumerate(result.tasks):
             intent = self._sanitize_intent(item.primary_intent)
             structured = self._sanitize_extraction(item.extraction, intent=intent)
-            if intent is None and structured is not None:
+            if structured is not None and intent in {None, *_CHINESE_INTENT_TO_PRIMARY.values()}:
                 intent = _CHINESE_INTENT_TO_PRIMARY.get(
-                    str(structured.get(_EXTRACTION_INTENT_KEY) or "").strip()
+                    str(structured.get(_EXTRACTION_INTENT_KEY) or "").strip(), intent
                 )
             tasks.append(AtomicTask(
                 task_id=f"task-{index + 1}",

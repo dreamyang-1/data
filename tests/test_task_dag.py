@@ -1816,7 +1816,7 @@ async def test_model_plan_injects_semantic_context_into_system_prompt() -> None:
         return httpx.Response(200, json={
             "choices": [{"message": {
                 "content": '{"task_structure":"SINGLE_TASK","tasks":[],'
-                          '"single_task_intent":"METRIC_QUERY",'
+                          '"single_task_intent":"DETAIL_QUERY",'
                           '"single_task_extraction":{"意图":"统计查询",'
                           '"业务域":["医药销售域"],"实体":["交易订单"],'
                           '"指标":[{"name":"含税销售总额"}],"维度":["时间"],'

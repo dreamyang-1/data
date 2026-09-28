@@ -73,6 +73,9 @@ def test_shared_target_is_not_rebound_onto_bridge_by_owner_review():
     def invoke(messages):
         context=json.loads(messages[1]['content'])
         assert any(o['filter_index']==1 for o in context['filter_options'])
+        assert context['shared_scope_options'][0]['option_index']==0
+        assert context['shared_scope_options'][0]['target_filters']==ast['filters'][1:]
+        assert all(c['choice_index']==i for o in context['filter_options'] for i,c in enumerate(o['choices']))
         return Doc(content=json.dumps({'related_scope':{'mode':'shared_attribute','option_index':0,'evidence':'寻找相同使用领域的渠道'},
             'bindings':[{'filter_index':1,'choice_index':0,'reason':'目标关联'}]}))
     result,_=review_bindings(json.dumps(ast),k,'AUDIT ONLY',{'输出要求':'寻找相同使用领域的渠道'},Doc(invoke=invoke),lambda *a:['changed'],106,259)
