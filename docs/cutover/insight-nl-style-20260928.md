@@ -25,3 +25,13 @@
 Critical 多轮/作用域/单域/Pending 229 passed。首次直接运行缺少跨服务测试导入路径，17 项 setup error；补齐测试进程的 SQL 项目路径并隔离开发 .env 后全部通过，没有为修测试修改生产代码。
 Review：仅提示词变化，无额外数据写入或授权变化；不将 DSL 或历史资料提升为执行事实，不修改现有 SQL，不迁移旧图表/追问/默认时间行为。
 V2 Readiness、Catalog/Evaluation/Shadow 状态不变；本次为 V1 洞察表达适配，不宣称 V2 可切流。
+
+全量结果：4351 passed / 12 failed，420.51 秒，收集错误 0。此前已记录基线为 4348 passed / 11 failed；本次增加 4 项通过，另一个原通过用例在全量中失败：test_analysis_budget_preserves_completed_optional_results_as_partial_success。该用例使用 0.03 秒预算且未调用本次提示词；整个 runtime 模块单独复跑 7 passed（0.34 秒）。调度时序抖动为 HIGH_CONFIDENCE 推断，不把复跑成功写成首次全量全绿。
+其余 11 项仍是 test_mcp_analysis_runner.py 的既有 Settings 属性及 orchestrator 方法接口不一致；未修改或跳过。
+
+## 提交与发布状态
+
+功能提交 7a15603，已推送授权功能分支。明确清单的本地开发文件与版本仓 SHA-256 一致，未纳入配置、凭据或业务数据。
+远程只读预检查确认 synthesis.py 与已知版本 4c2a6e0 一致，无该文件的并行修改冲突。
+依项目“测试失败停止发布”约定：全量尚有上述失败，本次未部署、未重启，49 仍使用修改前提示词。发布调用在输入认证信息之前取消，没有远程文件写入。解除发布阻塞后只需定向发布 synthesis.py；不覆盖其他服务或同事文件。
+本轮没有进行新提示词的真实模型效果验收；不能用 Mock 测试宣称已复刻老板认可的分析效果。
