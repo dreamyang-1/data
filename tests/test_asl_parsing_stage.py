@@ -5,7 +5,7 @@ from uuid import uuid4
 from app.api import _CompositeChildProgressOrderer, _thinking_section, _thinking_title
 from app.domain.models import AgentResponse, PrimaryIntent
 from app.services.progress import emit_progress
-from tests.test_api import TestClient, build_test_app
+from test_api import TestClient, build_test_app
 
 
 def child(stage, status, index, **extra):
