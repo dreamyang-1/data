@@ -56,9 +56,21 @@ cover this response. All suites above passed again. A real-model, in-memory prob
 then passed leading-zero product code, alphanumeric product name and explicit
 hospital-region ownership cases (no business database mutation).
 
-Final redeployment and post-restart smoke pending. Only the two Oagnet runtime
-files above are in this release's deployment manifest. The previous, separate ASL
-display-label commit is not implicitly included.
+Final code release: `3dfd8c3` (including `abbf343`). Drift-guarded exact-file
+redeployment completed, remote **150 tests passed**, Oagnet restarted at
+2026-09-28 16:24:18 CST (PID 296262); HTTP health UP, vector health true and
+configuration hashes unchanged. Backup release ID:
+`recent-3dfd8c3-20260928-162413`. Other services were not restarted or overwritten.
+
+Post-restart full dealer-list smoke completed successfully in about 46 seconds:
+actual SQL filters on the canonical product name, uses product-code JOINs, returns
+nonempty results, has no invented time range/clarification and preserves required
+stage ordering. No name→code enumeration or display-only substitution was used.
+Post-restart real-model synthetic probes for leading-zero code, alphanumeric name
+and hospital-location ownership all passed without module injection.
+
+Only the two Oagnet runtime files above are in this release's deployment manifest.
+The previous, separate ASL display-label commit is not implicitly included.
 
 This does not introduce fuzzy SQL LIKE matching or change the database collation.
 Names are exact equality/set predicates after catalog matching. The model still
