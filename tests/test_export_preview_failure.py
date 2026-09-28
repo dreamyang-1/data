@@ -43,14 +43,17 @@ async def test_adapter_preserves_total_preview_and_sanitizes_export_error(legacy
 
 
 @pytest.mark.asyncio
-async def test_unexplained_oversized_payload_still_keeps_existing_guard():
+async def test_unexplained_oversized_payload_returns_bounded_preview():
     response = await service(row_count=1523).handle(ChatRequest(
         application_id="app", conversation_id="no-export-contract", message_id="m1",
         question="查询最近一年销售过费森尤斯产品的经销商名单",
         semantic_model_id=1, business_domain_id=1,
     ), TrustedIdentity(tenant_id="tenant", user_id="user"))
-    assert response.status == "SAFE_FALLBACK"
-    assert "最大行数" in response.answer
+    assert response.status == "PARTIAL_SUCCESS"
+    assert "20 条预览" in response.answer
+    assert "1523" in response.answer
+    assert "最大行数" not in response.answer
+    assert response.dataset_id is None
 
 
 @pytest.mark.asyncio

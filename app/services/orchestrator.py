@@ -161,7 +161,16 @@ def _sort_only_followup_direction(text: str) -> str | None:
     return "ASC" if _ASCENDING_SORT_PATTERN.search(compact) else "DESC"
 
 
-def _requires_deterministic_analysis(request: CanonicalAnalysisRequest) -> bool:
+def _requires_deterministic_analysis(
+    request: CanonicalAnalysisRequest, *, executed_asl: dict | None = None,
+) -> bool:
+    # A detail LIMIT (including a follow-up "show the first 10") is not a
+    # metric ranking, even if an older parser left TOP_N in the operator list.
+    # Use the actual executed query shape; legacy profile rankings may be
+    # classified as DETAIL while still selecting aggregate metrics in ASL.
+    if (request.primary_intent == PrimaryIntent.DETAIL_QUERY
+            and executed_asl is not None and not executed_asl.get("metrics")):
+        return False
     return (
         request.primary_intent in ANALYSIS_INTENTS
         or AnalysisOperator.TOP_N in request.operators
@@ -6073,18 +6082,24 @@ class DataAnalysisOrchestrator:
             total_row_count > self.settings.data_query_max_rows
             and not query_result.result_file_url
         ):
-            response = self._fallback(
-                request, "查询结果超过智能体允许处理的最大行数，请缩小时间范围或增加过滤条件。"
-            )
-            response.result_file_url = query_result.result_file_url
-            return await self._finish_terminal(request, response)
-        if query_result.dataset.truncated and request.primary_intent in ANALYSIS_INTENTS:
-            response = self._fallback(
-                request,
-                "查询结果已被截断，无法基于不完整数据生成可靠分析结论；可下载完整结果或缩小范围后重试。",
-            )
-            response.result_file_url = query_result.result_file_url
-            return await self._finish_terminal(request, response)
+            # Cap work on oversized results, not delivery of already returned
+            # data. Never persist this preview as a complete reusable dataset.
+            query_result = query_result.model_copy(update={"dataset": query_result.dataset.model_copy(update={
+                "rows": query_result.dataset.rows[:20],
+                "row_count": min(20, len(query_result.dataset.rows)),
+                "total_row_count": total_row_count,
+                "truncated": True,
+            })})
+            dataset_id = None
+        analysis_warning = "；".join(
+            str(warning) for transform in query_result.execution_transforms
+            if transform.get("type") == "ANALYSIS_RESULT_CONTRACT_WARNING"
+            for warning in transform.get("warnings", [])
+        ) or (
+            "当前返回的是截断预览，以下仅描述已返回数据，不据此计算全量排名、趋势或预测。"
+            if query_result.dataset.truncated and _requires_deterministic_analysis(request, executed_asl=query_result.asl)
+            else None
+        )
         if (
             dataset_id is None
             and query_result.result_file_url
@@ -6233,7 +6248,7 @@ class DataAnalysisOrchestrator:
             response.dataset_id = dataset_id
             response.result_file_url = query_result.result_file_url
             return await self._finish_terminal(request, response)
-        if query_result.dataset.row_count < minimum_rows:
+        if query_result.dataset.row_count < minimum_rows and not analysis_warning:
             # The deterministic analysis method may require more observations,
             # but every returned database row is still valid query evidence.
             # Do not turn "insufficient for a trend/outlier conclusion" into
@@ -6316,6 +6331,10 @@ class DataAnalysisOrchestrator:
                 reliability_level=reliability.level,
                 reliability_score=reliability.score,
             )
+            await emit_progress(
+                "INSIGHT_ANALYSIS", "COMPLETED",
+                "已保留本次查询数据。" + insufficiency,
+            )
             response = AgentResponse(
                 request_id=request.request_id,
                 conversation_id=request.conversation_id,
@@ -6380,7 +6399,7 @@ class DataAnalysisOrchestrator:
         # An empty request scope means the application is not bound to a
         # knowledge base. Never broaden it with process-wide defaults here.
         knowledge_scope = list(request.knowledge_base_names)
-        if _requires_deterministic_analysis(request) and knowledge_scope:
+        if _requires_deterministic_analysis(request, executed_asl=query_result.asl) and knowledge_scope:
             await emit_progress(
                 "KNOWLEDGE_RETRIEVAL", "RUNNING", "正在检索与分析相关的业务文档证据。"
             )
@@ -6414,7 +6433,7 @@ class DataAnalysisOrchestrator:
         analysis_output = None
         insight_output = None
         synthesized_answer: str | None = None
-        if _requires_deterministic_analysis(request):
+        if _requires_deterministic_analysis(request, executed_asl=query_result.asl) and not analysis_warning:
             await emit_progress(
                 "DETERMINISTIC_ANALYSIS", "RUNNING", "正在使用确定性算法计算分析结果。"
             )
@@ -6443,66 +6462,49 @@ class DataAnalysisOrchestrator:
                     )
                     timing.mark_first_result()
             except AnalysisError as exc:
-                fallback = self._fallback(
-                    request, f"数据不足以支持可靠分析：{exc}。"
+                # Failure to calculate an optional analysis is not failure of
+                # the already completed query. Keep every returned row/link,
+                # disclose the limitation and continue the normal output path.
+                analysis_warning = f"查询已成功；本次未计算扩展分析：{exc}。已保留查询结果，不需要重复提供已有条件。"
+                analysis_output = None
+            if analysis_output is not None:
+                structured_analysis = self.insight_interpreter.interpret(
+                    request, analysis_output
                 )
-                fallback.evidence = evidence
-                fallback.dataset_id = dataset_id
-                fallback.requirements = list(exc.requirements)
-                fallback.missing_slots = [item.code for item in exc.requirements]
-                fallback.extension_executions = enrichment_executions
-                self._attach_external_enrichment(
-                    fallback,
-                    request_id=str(request.request_id),
-                    supplement=external_supplement,
-                    records=external_records,
+                answer_plan = self.answer_planner.plan(structured_analysis)
+                governed_facts = dict(analysis_output.facts)
+                governed_facts["structured_analysis_result"] = (
+                    structured_analysis.model_dump(mode="json")
                 )
-                if exc.requirements:
-                    fallback.answer += "\n需要补充或处理：" + "；".join(
-                        f"{item.description} 建议：{item.action}"
-                        for item in exc.requirements
+                governed_facts["answer_plan"] = answer_plan.model_dump(mode="json")
+                analysis_output = replace(
+                    analysis_output,
+                    answer=answer_plan.render(),
+                    facts=governed_facts,
+                )
+                evidence.append(
+                    EvidenceItem(
+                        evidence_id=f"analysis:{request.request_id}",
+                        kind="ANALYSIS_RESULT",
+                        source_ref=f"deterministic:{analysis_output.method}",
+                        payload={
+                            "method": analysis_output.method,
+                            "facts": analysis_output.facts,
+                            "warnings": analysis_output.warnings,
+                        },
                     )
-                return await self._finish_terminal(
-                    request,
-                    fallback,
                 )
-            structured_analysis = self.insight_interpreter.interpret(
-                request, analysis_output
-            )
-            answer_plan = self.answer_planner.plan(structured_analysis)
-            governed_facts = dict(analysis_output.facts)
-            governed_facts["structured_analysis_result"] = (
-                structured_analysis.model_dump(mode="json")
-            )
-            governed_facts["answer_plan"] = answer_plan.model_dump(mode="json")
-            analysis_output = replace(
-                analysis_output,
-                answer=answer_plan.render(),
-                facts=governed_facts,
-            )
+                insight_output = analysis_output
             await emit_progress(
                 "DETERMINISTIC_ANALYSIS",
-                "COMPLETED",
-                "确定性计算、业务解释和答案规划已完成，等待结果可靠性校验。",
-                method=analysis_output.method,
+                "DEGRADED" if analysis_warning else "COMPLETED",
+                analysis_warning or "确定性计算、业务解释和答案规划已完成，等待结果可靠性校验。",
+                method=analysis_output.method if analysis_output else "query_result_summary",
             )
-            evidence.append(
-                EvidenceItem(
-                    evidence_id=f"analysis:{request.request_id}",
-                    kind="ANALYSIS_RESULT",
-                    source_ref=f"deterministic:{analysis_output.method}",
-                    payload={
-                        "method": analysis_output.method,
-                        "facts": analysis_output.facts,
-                        "warnings": analysis_output.warnings,
-                    },
-                )
-            )
-            insight_output = analysis_output
-        elif request.primary_intent in {
+        if insight_output is None and (analysis_warning or request.primary_intent in {
             PrimaryIntent.METRIC_QUERY,
             PrimaryIntent.DETAIL_QUERY,
-        }:
+        }):
             with track_operation(
                 "ANALYSIS",
                 "analysis.deterministic",
@@ -6518,6 +6520,8 @@ class DataAnalysisOrchestrator:
                 )
                 timing.mark_first_result()
             if insight_output is not None:
+                if analysis_warning:
+                    insight_output = replace(insight_output, warnings=[*insight_output.warnings, analysis_warning])
                 evidence.append(
                     EvidenceItem(
                         evidence_id=f"analysis:{request.request_id}",
@@ -6741,15 +6745,6 @@ class DataAnalysisOrchestrator:
             chart_image_count=0,
             chart_source="NONE",
         )
-        if reliability.level == "FAIL":
-            response = self._fallback(
-                    request, "结果未通过数据、指标与证据一致性校验，本次不返回数值。"
-                )
-            response.dataset_id = dataset_id
-            return await self._finish_terminal(
-                request,
-                response,
-            )
         if external_search_mode == "ENRICH":
             await emit_progress(
                 "EXTERNAL_SEARCH",
@@ -6839,6 +6834,8 @@ class DataAnalysisOrchestrator:
             )
         if analysis_output is not None and analysis_output.warnings:
             answer += "\n\n注意事项：" + "；".join(analysis_output.warnings) + "。"
+        if analysis_warning:
+            answer += "\n\n分析说明：" + analysis_warning
         if list_cleanup_note:
             answer += "\n\n" + list_cleanup_note
         unavailable_fields = [
@@ -6877,7 +6874,7 @@ class DataAnalysisOrchestrator:
         response = AgentResponse(
             request_id=request.request_id,
             conversation_id=request.conversation_id,
-            status="PARTIAL_SUCCESS" if incomplete_result else "COMPLETED",
+            status="PARTIAL_SUCCESS" if incomplete_result or analysis_warning else "COMPLETED",
             intent=request.primary_intent,
             intent_source=request.intent_source,
             intent_confidence=request.intent_confidence,
@@ -12556,7 +12553,15 @@ class DataAnalysisOrchestrator:
         if "LONG_TERM_MEMORY_UNAVAILABLE" in request.assumptions:
             warnings.append("长期偏好服务暂时不可用，本次仅依据当前问题和短期会话回答。")
         warnings = list(dict.fromkeys(warnings))
-        return ReliabilityReport(level="HIGH" if score == 1 and not warnings else "LIMITED" if score >= 2 / 3 else "FAIL", score=score, gates=gates, warnings=warnings)
+        if gates["query_succeeded"]:
+            if not gates["metric_bound"] or not gates["semantic_metric_verified"]:
+                warnings.append("查询已返回数据，但指标绑定或口径证据不完整；保留原结果供参考，口径需由数据部门复核。")
+            if gates.get("analysis_succeeded") is False:
+                warnings.append("扩展分析未完成，已保留数据库返回结果。")
+            level = "HIGH" if score == 1 and not warnings else "LIMITED"
+        else:
+            level = "FAIL"
+        return ReliabilityReport(level=level, score=score, gates=gates, warnings=list(dict.fromkeys(warnings)))
 
     @staticmethod
     def _dependency_message(exc: AdapterError) -> str:

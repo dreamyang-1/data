@@ -1609,6 +1609,7 @@ class HttpDataRetrievalAdapter:
                 "日期过滤、时间分组或为此连接交易事实表。"
             )
         analysis_contract = contract_for_request(request)
+        analysis_notices = []
         exploration_requirements = (
             ExplorationQueryRequirements()
             if request.primary_intent == PrimaryIntent.REPORT_GENERATION
@@ -2090,10 +2091,10 @@ class HttpDataRetrievalAdapter:
                     or contract_envelope.get("result_contract")
                     != analysis_contract.model_dump(mode="json")
                 ):
-                    raise AdapterError(
-                        "ASL_ANALYSIS_CONTRACT_UNCONFIRMED",
-                        "Oagnet did not confirm the requested analysis contract",
-                    )
+                    analysis_notices.append({
+                        "type": "ANALYSIS_RESULT_CONTRACT_WARNING",
+                        "warnings": ["解析结果未确认扩展分析的数据条件；继续执行已绑定的查询，仅展示实际返回的数据。"],
+                    })
             if exploration_requirements is not None:
                 exploration_envelope = asl.get("analysis_exploration")
                 if (
@@ -2102,10 +2103,10 @@ class HttpDataRetrievalAdapter:
                     or exploration_envelope.get("requirements")
                     != exploration_requirements.model_dump(mode="json")
                 ):
-                    raise AdapterError(
-                        "ASL_EXPLORATION_REQUIREMENTS_UNCONFIRMED",
-                        "Oagnet did not confirm the requested exploration requirements",
-                    )
+                    analysis_notices.append({
+                        "type": "ANALYSIS_RESULT_CONTRACT_WARNING",
+                        "warnings": ["解析结果未确认扩展报告的数据条件；继续执行已绑定的查询，并说明分析范围。"],
+                    })
         self._remove_unrequested_metric_window_time(asl, request)
         self._repair_model81_trend_time(asl, request, semantic_model_id)
         self._bind_canonical_time_range(
@@ -2293,7 +2294,7 @@ class HttpDataRetrievalAdapter:
             display_version=str(asl.get("version") or "UNKNOWN"),
         )
 
-        if asl_cache_key is not None:
+        if asl_cache_key is not None and not analysis_notices:
             if len(self._asl_plan_cache) >= self.settings.asl_plan_cache_max_items:
                 oldest_key = min(
                     self._asl_plan_cache,
@@ -2313,6 +2314,7 @@ class HttpDataRetrievalAdapter:
             metric_definitions=metric_definitions,
             metric_definition_fingerprints=metric_definition_fingerprints,
         )
+        result.execution_transforms.extend(analysis_notices)
         return attach_binding_notices(result, asl_repairs)
 
     async def query_surface(
@@ -2603,32 +2605,23 @@ class HttpDataRetrievalAdapter:
                 retryable=bool(raw.get("retryable")),
                 upstream_code=str(raw.get("error_code") or raw.get("code") or "") or None,
             )
+        analysis_notices = []
         if analysis_contract is not None:
             contract_proof = raw.get("analysis_contract")
-            if not isinstance(contract_proof, dict):
-                raise AdapterError(
-                    "SQL_ANALYSIS_CONTRACT_UNCONFIRMED",
-                    "SQL execution did not return analysis contract proof",
-                )
-            if (
-                contract_proof.get("producer") != "SQL_TRANSLATOR"
-                or contract_proof.get("operator") != analysis_contract.operator
-            ):
-                raise AdapterError(
-                    "SQL_ANALYSIS_CONTRACT_UNCONFIRMED",
-                    "SQL execution returned mismatched analysis contract proof",
-                )
-            if contract_proof.get("contract_satisfied") is not True:
-                raise AdapterError(
-                    "ANALYSIS_RESULT_CONTRACT_INVALID",
-                    "SQL execution result does not satisfy analysis contract",
-                    details={
+            if (not isinstance(contract_proof, dict)
+                    or contract_proof.get("producer") != "SQL_TRANSLATOR"
+                    or contract_proof.get("operator") != analysis_contract.operator
+                    or contract_proof.get("contract_satisfied") is not True):
+                analysis_notices.append({
+                    "type": "ANALYSIS_RESULT_CONTRACT_WARNING",
+                    "warnings": ["查询已成功，但上游未确认扩展分析所需的数据条件；保留查询结果，不据此强行生成该分析结论。"],
+                    "details": {
                         "contract": analysis_contract.model_dump(mode="json"),
-                        "violations": contract_proof.get("violations") or {},
+                        "violations": (contract_proof or {}).get("violations", {}) if isinstance(contract_proof, dict) else {},
                         "returned_columns": raw.get("columns") or [],
                         "returned_row_count": raw.get("row_count"),
                     },
-                )
+                })
         await emit_progress(
             "SQL_EXECUTION",
             "COMPLETED",
@@ -2670,16 +2663,16 @@ class HttpDataRetrievalAdapter:
                 analysis_contract, dataset.columns, dataset.rows
             )
             if not violation.valid:
-                raise AdapterError(
-                    "ANALYSIS_RESULT_CONTRACT_INVALID",
-                    "query result does not satisfy the selected analysis operator contract",
-                    details={
+                analysis_notices.append({
+                    "type": "ANALYSIS_RESULT_CONTRACT_WARNING",
+                    "warnings": ["查询结果已返回，但部分字段或行数不满足扩展分析要求；保留数据展示，不强行计算该分析。"],
+                    "details": {
                         "contract": analysis_contract.model_dump(mode="json"),
                         "violations": violation.as_dict(),
                         "returned_columns": dataset.columns,
                         "returned_row_count": dataset.row_count,
                     },
-                )
+                })
         return DataQueryResult(
             asl=asl,
             sql=sql,
@@ -2687,6 +2680,7 @@ class HttpDataRetrievalAdapter:
             data_source_id=actual_data_source_id,
             result_file_url=result_file_url,
             result_export_error=export_error,
+            execution_transforms=analysis_notices,
         )
 
     async def _current_metric_definitions(

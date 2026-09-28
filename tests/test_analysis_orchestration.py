@@ -304,6 +304,103 @@ async def test_relationship_projection_never_uses_missing_metric_discovery():
     assert request.missing_slots == ["metric"]
 
 
+@pytest.mark.parametrize("text", ["展示前10条", "查询经销商名单，仅返回前10条", "订单明细按金额降序显示前10条"])
+def test_detail_row_limit_is_not_metric_ranking(text):
+    operators = RuleBasedIntentClassifier._operators(PrimaryIntent.DETAIL_QUERY, text)
+    assert AnalysisOperator.TOP_N not in operators
+    assert AnalysisOperator.BOTTOM_N not in operators
+    assert RuleBasedIntentClassifier._ranking_limit(text) == 10
+    assert AnalysisOperator.TOP_N in RuleBasedIntentClassifier._operators(
+        PrimaryIntent.METRIC_QUERY, "各经销商销售额排名前10名"
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("quality", ["PASS", "FAIL"])
+async def test_detail_limit_with_stale_ranking_operator_keeps_rows_and_stage_order(quality):
+    request = CanonicalAnalysisRequest(
+        conversation_id="detail-limit-result", tenant_id="t1", user_id="u1",
+        original_question="查询某商品合作经销商名单，展示前10条",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="dealer", fields=["dealer.dealer_name"], metrics=[],
+        operators=[AnalysisOperator.TOP_N], ranking_limit=10,
+        filters=[{"field": "product.product_name", "operator": "=", "value": "某商品"}],
+    )
+    assert not _requires_deterministic_analysis(request, executed_asl={"metrics": []})
+    rows = [{"经销商名称": f"测试经销商{i}"} for i in range(8)]
+    result = DataQueryResult(
+        asl={"subject": {"entity": "dealer"}, "metrics": [],
+             "dimensions": [{"name": "dealer.dealer_name"}],
+             "filters": request.filters, "limit": 10},
+        sql="SELECT dealer_name FROM approved_view LIMIT 10",
+        dataset=Dataset(columns=["经销商名称"], rows=rows, row_count=8,
+                        snapshot_id="detail-limit", data_as_of=datetime.now(timezone.utc),
+                        quality_status=quality),
+    )
+    events = []
+    with progress_scope(events.append):
+        response = await service(analysis_engine=FailingAnalysisEngine())._complete_query_result(
+            ChatRequest(application_id="app", conversation_id=request.conversation_id,
+                        message_id="m2", question="展示前10条", semantic_model_id=1,
+                        business_domain_id=1),
+            TrustedIdentity(tenant_id="t1", user_id="u1"), request, result,
+        )
+    assert response.status in {"COMPLETED", "PARTIAL_SUCCESS"}
+    assert all(row["经销商名称"] in response.answer for row in rows)
+    assert not response.requirements and not response.missing_slots
+    assert "排名指标" not in response.answer
+    stages = [event["stage"] for event in events]
+    assert stages.index("DATA_RETRIEVAL") < stages.index("RELIABILITY_CHECK") < stages.index("INSIGHT_ANALYSIS")
+    assert request.filters == result.asl["filters"]
+    if quality == "FAIL":
+        assert response.reliability.level == "LIMITED"
+        assert any("质量" in warning for warning in response.reliability.warnings)
+
+
+@pytest.mark.asyncio
+async def test_oversized_result_without_attachment_returns_bounded_preview():
+    orchestrator = service()
+    orchestrator.settings.data_query_max_rows = 50
+    request = CanonicalAnalysisRequest(
+        conversation_id="oversized-preview", tenant_id="t1", user_id="u1",
+        original_question="查询明细", primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="order", fields=["订单号", "金额"],
+    )
+    result = DataQueryResult(
+        asl={"metrics": [], "dimensions": [{"name": "order.code"}, {"name": "order.amount"}]},
+        sql="SELECT code, amount FROM approved_view",
+        dataset=Dataset(columns=["订单号", "金额"],
+                        rows=[{"订单号": f"ORDER-{i}", "金额": i} for i in range(60)],
+                        row_count=60, snapshot_id="large", data_as_of=datetime.now(timezone.utc)),
+    )
+    response = await orchestrator._complete_query_result(
+        ChatRequest(application_id="app", conversation_id=request.conversation_id,
+                    message_id="m1", question=request.original_question, semantic_model_id=1),
+        TrustedIdentity(tenant_id="t1", user_id="u1"), request, result,
+    )
+    assert response.status == "PARTIAL_SUCCESS"
+    assert "ORDER-19" in response.answer and "ORDER-20" not in response.answer
+    assert "60" in response.answer and "预览" in response.answer
+    assert response.dataset_id is None
+    assert not response.requirements
+
+
+def test_missing_metric_proof_is_a_warning_after_query_not_a_query_failure():
+    request = CanonicalAnalysisRequest(
+        conversation_id="metric-proof", tenant_id="t1", user_id="u1",
+        original_question="查询销售额", primary_intent=PrimaryIntent.METRIC_QUERY,
+        metrics=[MetricRef(input="销售额")],
+    )
+    report = DataAnalysisOrchestrator._reliability(request, [EvidenceItem(
+        evidence_id="query:test", kind="QUERY_RESULT", source_ref="data:test",
+        payload={"row_count": 1},
+    )], "PASS")
+    assert report.level == "LIMITED"
+    assert report.gates["metric_bound"] is False
+    assert any("口径证据不完整" in warning for warning in report.warnings)
+    assert DataAnalysisOrchestrator._reliability(request, [], "PASS").level == "FAIL"
+
+
 def test_optional_presentation_failure_does_not_lower_data_reliability() -> None:
     analysis_request = CanonicalAnalysisRequest(
         conversation_id="presentation-degraded",
@@ -603,7 +700,7 @@ async def test_empty_application_kb_binding_never_falls_back_to_global_default()
 
 
 @pytest.mark.asyncio
-async def test_truncated_analysis_fails_closed_before_calculation() -> None:
+async def test_truncated_analysis_returns_preview_without_full_data_calculation() -> None:
     response = await service(truncated=True).handle(
         ChatRequest(
             application_id="app",
@@ -615,9 +712,12 @@ async def test_truncated_analysis_fails_closed_before_calculation() -> None:
         ),
         TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
-    assert response.status == "SAFE_FALLBACK"
+    assert response.status == "PARTIAL_SUCCESS"
     assert "截断" in response.answer
-    assert not response.evidence
+    assert response.evidence
+    assert '2026-01' in response.answer and '100' in response.answer
+    assert response.reliability.level == 'LIMITED'
+    assert response.chart_specs == []
 
 
 @pytest.mark.asyncio
@@ -1165,13 +1265,16 @@ async def test_analysis_failure_preserves_query_and_metric_evidence() -> None:
         ),
         TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
-    assert response.status == "SAFE_FALLBACK"
-    assert {item.kind for item in response.evidence} == {
+    assert response.status == "PARTIAL_SUCCESS"
+    assert {item.kind for item in response.evidence} >= {
         "QUERY_RESULT",
         "SEMANTIC_METRIC_RESOLUTION",
     }
-    assert response.analysis_process[-1].stage == "SAFE_TERMINATION"
-    assert response.analysis_process[-1].status == "FAILED"
+    assert '2026-01' in response.answer and '125' in response.answer
+    assert '测试中的数据形状不支持分析' in response.answer
+    assert response.reliability.level == 'LIMITED'
+    assert not response.requirements and not response.missing_slots
+    assert all(step.stage != 'SAFE_TERMINATION' for step in response.analysis_process)
 
 
 @pytest.mark.asyncio

@@ -133,7 +133,7 @@ def test_dataset_preflight_rejects_unvalidated_multi_step_model() -> None:
 
 
 @pytest.mark.asyncio
-async def test_orchestrator_returns_structured_requirements_instead_of_prediction() -> None:
+async def test_insufficient_forecast_history_returns_observations_not_prediction() -> None:
     agent = DataAnalysisOrchestrator(
         settings=Settings(env="test", adapter_mode="mock", intent_model_enabled=False),
         classifier=RuleBasedIntentClassifier(),
@@ -149,13 +149,13 @@ async def test_orchestrator_returns_structured_requirements_instead_of_predictio
         ),
         IDENTITY,
     )
-    assert response.status == "SAFE_FALLBACK"
-    assert response.missing_slots == ["forecast_minimum_history"]
-    assert [item.code for item in response.requirements] == [
-        "forecast_minimum_history"
-    ]
-    assert "至少" in response.requirements[0].action
-    assert "需要补充或处理" in response.answer
+    assert response.status == "PARTIAL_SUCCESS"
+    assert response.missing_slots == []
+    assert response.requirements == []
+    assert "至少" in response.answer
+    assert "未计算扩展分析" in response.answer
+    assert any(item.kind == "QUERY_RESULT" for item in response.evidence)
+    assert not any(item.payload.get("method") == "linear_forecast" for item in response.evidence)
 
 
 @pytest.mark.asyncio

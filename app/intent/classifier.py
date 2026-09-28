@@ -5248,7 +5248,8 @@ class RuleBasedIntentClassifier:
             PrimaryIntent.METRIC_DEFINITION: [AnalysisOperator.EXPLAIN],
         }
         result = list(mapping.get(intent, []))
-        if RuleBasedIntentClassifier._ranking_limit(text) is not None:
+        if (intent != PrimaryIntent.DETAIL_QUERY
+                and RuleBasedIntentClassifier._ranking_limit(text) is not None):
             compact = re.sub(r"\s+", "", text)
             result.append(AnalysisOperator.TOP_N)
             if re.search(r"(?:后\s*(?:\d|[一二三四五六七八九十])|最少(?:的)?)", compact):
