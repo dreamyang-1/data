@@ -2287,7 +2287,7 @@ class HttpDataRetrievalAdapter:
             "ASL_GENERATION",
             "COMPLETED",
             f"工具：{SEMANTIC_QUERY_TOOL_NAME}。\n"
-            + render_asl_extraction_json(asl) + render_binding_notices(asl_repairs),
+            + render_asl_extraction_json(asl, asl_repairs) + render_binding_notices(asl_repairs),
             message_limit=65536,
             display_model="OagentASL",
             display_version=str(asl.get("version") or "UNKNOWN"),
@@ -2360,7 +2360,7 @@ class HttpDataRetrievalAdapter:
                                 if isinstance(item, dict) and item.get("name")]
         execution.business_domain_ids = list(scope.business_domain_ids)
         await emit_progress("ASL_GENERATION", "COMPLETED",
-                            render_asl_extraction_json(asl) + render_binding_notices(plan.get("asl_repair")), message_limit=65536,
+                            render_asl_extraction_json(asl, plan.get("asl_repair")) + render_binding_notices(plan.get("asl_repair")), message_limit=65536,
                             display_model="OagentASL", display_version=str(asl.get("version") or "UNKNOWN"))
         execution_domains = (
             list(scope.business_domain_ids)

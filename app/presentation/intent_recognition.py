@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any
@@ -974,11 +975,58 @@ def render_resolved_intent_context_v2(
     ])
 
 
-def render_asl_extraction_json(asl: dict[str, object]) -> str:
-    """Render the exact validated ASL object without a display-side rewrite."""
+def _asl_standard_name_view(asl: dict, repairs: object) -> tuple[dict, list[str]]:
+    """Restore catalog labels only from this execution's exact binding trace.
+
+    Never look up names or feed this presentation copy back into execution.
+    Conflicting, stale or unavailable traces leave the actual predicate visible.
+    """
+    display = deepcopy(asl)
+    mappings = []
+    for index, predicate in enumerate(display.get("filters") or []):
+        if not isinstance(predicate, dict):
+            continue
+        candidates = []
+        for repair in repairs if isinstance(repairs, list) else []:
+            if not isinstance(repair, dict) or repair.get("type") != "RESOLVE_FILTER_BUSINESS_OWNER":
+                continue
+            previous = repair.get("previous_filter")
+            if (repair.get("source") != "SCOPED_RELATION_AND_DICTIONARY"
+                    or repair.get("resolved_filter") != predicate
+                    or not isinstance(previous, dict)
+                    or not isinstance(previous.get("field"), str)
+                    or not previous["field"]
+                    or previous.get("operator") not in ("=", "!=", "IN", "NOT IN")
+                    or "value" not in previous):
+                continue
+            labels = previous["value"] if isinstance(previous["value"], list) else [previous["value"]]
+            if not labels or not all(isinstance(label, str) and label.strip() for label in labels):
+                continue
+            if previous not in candidates:
+                candidates.append(previous)
+        if len(candidates) != 1 or candidates[0] == predicate:
+            continue
+        previous = candidates[0]
+        display["filters"][index] = deepcopy(previous)
+        mapping = f"`{previous['field']}` → `{predicate['field']}`"
+        if mapping not in mappings:
+            mappings.append(mapping)
+    return display, mappings
+
+
+def render_asl_extraction_json(asl: dict[str, object], repairs: object = None) -> str:
+    """Render canonical labels when a corresponding execution binding is known."""
+
+    display_asl, mappings = _asl_standard_name_view(asl, repairs)
+    binding_note = (
+        "说明：以上为 ASL 标准名称展示视图，筛选名称来自本次目录匹配结果；"
+        "实际 SQL 保留已绑定的编码条件，查询范围不变。执行字段映射："
+        + "；".join(mappings) + "。\n\n"
+        if mappings else ""
+    )
 
     # Match the translator's projection/grouping distinction, only in prose.
-    # Keep the executable JSON and its dimensions key intact.
+    # Keep the actual ASL and its dimensions key intact.
     if not asl.get("dimensions"):
         dimension_usage = "本次未使用分组维度或展示字段。"
     elif asl.get("metrics"):
@@ -996,8 +1044,9 @@ def render_asl_extraction_json(asl: dict[str, object]) -> str:
     return (
         "结构化提取（ASL）：\n"
         "```json\n"
-        f"{json.dumps(asl, ensure_ascii=False, indent=2)}\n"
+        f"{json.dumps(display_asl, ensure_ascii=False, indent=2)}\n"
         "```\n"
+        + ("\n" + binding_note if binding_note else "") +
         "\n`dimensions / display_fields`\n\n"
         f"说明：{dimension_usage}\n\n"
         + ''.join(f"关联筛选口径：{note}\n\n" for note in related_notes)
