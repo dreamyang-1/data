@@ -29,3 +29,14 @@ DataAnalysis 兼容专项 148 passed：API、解析节点、surface、追问/Pen
 
 真实目录隔离测试：常规请求生成经销商名称明细且无歧义；另在测试进程中模拟模型漏填 subject，使用同一真实召回目录成功得到 sales_order 主体、无歧义。后者是注入式回归，不冒充原生产调用复现。
 Review：旧目录关系绑定为纯元数据计算，无原问题重提取、数据写入或授权扩大。V2 readiness 未改变。
+
+## 49 发布与真实链路验收
+
+- 功能提交：6fad596；功能分支已推送，Draft PR #85 保持 open/draft，未合并。
+- 发布版本：recent-6fad596-20260928-134534。先核对远程两文件为已知版本，再备份并定向发布；备份位于 /root/.codex-deploy-backups/recent-6fad596-20260928-134534。
+- 远程发布前专项 139 passed。仅重启 oagnet-data-agent.service：2026-09-28 13:45:39 CST，PID 3839514；HTTP 200/UP，vector health 正常，配置哈希未变。
+- DataAnalysis / SQL Translator 未改动、未重启，PID 分别保持 3768849 / 470112；没有覆盖同事的远程改动。
+- 使用新会话经 8808 /agent_chat/stream 运行用户原问题，作用域 106/[259]，55.5 秒 COMPLETED；不再追问实体，七个主要阶段按既有顺序展示。
+- 最终 ASL subject=dealer，返回 dealer.dealer_name；metrics=[]、time_context=null、ambiguity=[]。商品标准值映射为 6 个已召回商品编码，SQL 通过销售订单关联经销商。
+- SQL 执行返回 92 行，后续结果整理总行数为 22；全链路完成并输出结果。这里区分原始 SQL 行数与结果整理行数，不将二者混称。
+- 此次自然模型已返回有效主体；漏填主体后的关系图恢复另由上文真实目录注入式测试和离线回归验证，不能把两种证据混为同一次线上触发。
