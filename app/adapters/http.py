@@ -2498,7 +2498,10 @@ class HttpDataRetrievalAdapter:
             "查询对象": (asl.get("subject") or {}).get("entity")
             if isinstance(asl.get("subject"), dict)
             else asl.get("subject"),
-            "分组维度": asl.get("dimensions") or [],
+            "dimensions / display_fields": asl.get("dimensions") or [],
+            "字段用途": (
+                "dimensions" if asl.get("metrics") else "display_fields"
+            ) if asl.get("dimensions") else None,
             "排序": asl.get("sort"),
             "结果上限": asl.get("limit"),
         }

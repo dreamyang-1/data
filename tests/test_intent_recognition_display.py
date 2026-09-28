@@ -537,7 +537,10 @@ def test_validated_asl_is_rendered_as_direct_json_without_field_reformatting():
     json_text = rendered.split("```json\n", 1)[1].rsplit("\n```", 1)[0]
 
     assert rendered.startswith("结构化提取（ASL）：\n```json\n")
-    assert json.loads(json_text) == asl
+    expected = deepcopy(asl)
+    expected["dimensions / display_fields"] = expected.pop("dimensions")
+    assert json.loads(json_text) == expected
+    assert "dimensions" in asl and "dimensions / display_fields" not in asl
     assert "`filters` 仅记录本次查询显式提出的筛选" in rendered
     assert "指标定义自带的固定口径由 SQL 翻译服务合并" in rendered
     assert "指标：" not in rendered
@@ -566,9 +569,12 @@ def test_asl_dimension_usage_label_is_display_only(metrics, dimensions, usage):
     json_text = rendered.split("```json\n", 1)[1].split("\n```", 1)[0]
     explanation = rendered.split("\n```", 1)[1]
 
-    assert json.loads(json_text) == before
+    expected = deepcopy(before)
+    expected["dimensions / display_fields"] = expected.pop("dimensions")
+    assert json.loads(json_text) == expected
     assert asl == before
     assert "`dimensions / display_fields`" in explanation
+    assert "对应实际接口字段 `dimensions`" in explanation
     assert usage in explanation
     if dimensions and not metrics:
         assert "不表示分组汇总" in explanation

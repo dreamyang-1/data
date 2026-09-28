@@ -69,7 +69,9 @@ def test_missing_or_nonmatching_mapping_keeps_actual_codes_without_guessing(prob
     else:
         repair["previous_filter"] = {"value": "没有字段身份"}
     text = render_asl_extraction_json(ast, repairs)
-    assert displayed(text) == ast
+    expected = deepcopy(ast)
+    expected["dimensions / display_fields"] = expected.pop("dimensions")
+    assert displayed(text) == expected
     assert "标准名称展示视图" not in text
 
 
@@ -131,5 +133,12 @@ async def test_both_adapter_paths_show_names_but_send_original_codes_to_sql(surf
     assert displayed(parsing["message"])["filters"] == [repair["previous_filter"]]
     translated = json.loads(client.calls[1][2]["asl"])
     assert translated["filters"] == ast["filters"] == result.asl["filters"]
+    assert displayed(parsing["message"])["dimensions / display_fields"] == ast["dimensions"]
+    assert translated["dimensions"] == result.asl["dimensions"] == ast["dimensions"]
+    assert "dimensions / display_fields" not in translated
+    trace = next(e["message"] for e in events if e["stage"] == "SEMANTIC_QUERY_PLANNING")
+    assert '"dimensions / display_fields":' in trace
+    assert '"字段用途":"display_fields"' in trace
+    assert '"分组维度":' not in trace
     assert next(i for i, e in enumerate(events) if e == parsing) < next(
         i for i, e in enumerate(events) if e["stage"] == "SEMANTIC_QUERY_PLANNING")

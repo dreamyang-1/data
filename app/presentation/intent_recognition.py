@@ -1018,6 +1018,12 @@ def render_asl_extraction_json(asl: dict[str, object], repairs: object = None) -
     """Render canonical labels when a corresponding execution binding is known."""
 
     display_asl, mappings = _asl_standard_name_view(asl, repairs)
+    # This JSON is a presentation projection, never the SQL/API payload.
+    # Keep field order and values while making the overloaded slot explicit.
+    display_asl = {
+        "dimensions / display_fields" if key == "dimensions" else key: value
+        for key, value in display_asl.items()
+    }
     binding_note = (
         "说明：以上为 ASL 标准名称展示视图，筛选名称来自本次目录匹配结果；"
         "实际 SQL 保留已绑定的编码条件，查询范围不变。执行字段映射："
@@ -1025,8 +1031,8 @@ def render_asl_extraction_json(asl: dict[str, object], repairs: object = None) -
         if mappings else ""
     )
 
-    # Match the translator's projection/grouping distinction, only in prose.
-    # Keep the actual ASL and its dimensions key intact.
+    # Match the translator's projection/grouping distinction in presentation.
+    # The actual ASL and its dimensions key remain intact.
     if not asl.get("dimensions"):
         dimension_usage = "本次未使用分组维度或展示字段。"
     elif asl.get("metrics"):
@@ -1048,6 +1054,8 @@ def render_asl_extraction_json(asl: dict[str, object], repairs: object = None) -
         "```\n"
         + ("\n" + binding_note if binding_note else "") +
         "\n`dimensions / display_fields`\n\n"
+        "说明：以上 JSON 为页面展示视图，`dimensions / display_fields` "
+        "对应实际接口字段 `dimensions`，不改变传给 SQL 服务的 ASL。\n\n"
         f"说明：{dimension_usage}\n\n"
         + ''.join(f"关联筛选口径：{note}\n\n" for note in related_notes)
         +

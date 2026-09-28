@@ -31,10 +31,11 @@ def request(stale=False):
     [{"name": "count_a", "alias": "数量A"}, {"name": "count_b"}], [],
 ])
 @pytest.mark.parametrize("stale", [False, True])
+@pytest.mark.parametrize("dimensions", [[], [{"name": "hospital.hospital_name"}], [{"name": "city"}]])
 @pytest.mark.asyncio
-async def test_surface_progress_uses_final_metrics_without_mutating_execution(monkeypatch, metrics, stale):
+async def test_surface_progress_uses_final_metrics_without_mutating_execution(monkeypatch, metrics, stale, dimensions):
     asl = {"version": "2.0", "subject": {"entity": "hospital"},
-           "metrics": metrics, "dimensions": [], "filters": [], "ambiguity": []}
+           "metrics": metrics, "dimensions": dimensions, "filters": [], "ambiguity": []}
     async def generate(*args, **kwargs):
         return {"asl": copy.deepcopy(asl)}
     monkeypatch.setattr("app.adapters.surface_asl.generate_surface_asl", generate)
@@ -57,6 +58,11 @@ async def test_surface_progress_uses_final_metrics_without_mutating_execution(mo
     assert "旧指标" not in message and "stale_metric" not in message
     assert "指标ID" not in message
     assert "已选指标（来自最终ASL）=" in message
+    shape = json.loads(message.split("查询结构=", 1)[1].split("，ASL筛选条件=", 1)[0])
+    assert shape["dimensions / display_fields"] == dimensions
+    assert "分组维度" not in shape
+    assert shape["字段用途"] == (("dimensions" if metrics else "display_fields") if dimensions else None)
+    assert "dimensions / display_fields" not in result.asl
     for metric in metrics:
         assert metric["name"] in message
         if metric.get("alias"):
