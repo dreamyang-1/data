@@ -24,3 +24,11 @@ PROVEN：`render_asl_extraction_json` 仅在 JSON 之外补充 `dimensions / dis
 - 部署必须保留 intent_recognition.py 已审查的同事三类对话标签与补全问题展示改动；不得整文件回退。部署脚本已准备相对本轮前基线的非重叠补丁。
 
 这是 V1 页面表达修复；V2/Catalog/Evaluation/Shadow 状态不变。
+
+## 后续发布
+
+2026-09-28用户明确要求全部待发布内容上线，本项0cf0537已与c10acb2合并发布。
+远程同事的标签、补全问题和任务规划差量均保留；相关服务器测试545项通过，
+数据智能体17:19:12 CST完成重启并READY。两轮真实名单/限条数追问均COMPLETED，
+解析校验、调度执行、结果校验与洞察节点顺序正常。
+详见同目录query-result-warning-policy-20260928.md的最新发布记录。
