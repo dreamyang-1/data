@@ -27,4 +27,6 @@
 - Oagnet 全量：1087 passed；已有基线 1045 passed，新增 42，无新增失败或收集错误。
 - DataAnalysis Critical：229 passed。未修改 DataAnalysis 功能代码或 SQL Translator。
 - 人工检查：实体/属性配置仍限定原 semantic model/domain；关闭发生在业务源读取之前；保留字段定义和接口响应结构；仅同步清单文件，不包括环境配置、业务结果、日志或凭据。
-- 发布结果待远程差异检查、备份、回归及服务健康检查后记录。
+- 已发布代码提交 `91a423c`。远程 mysql_tool.py 与已知版本一致，无未识别同事改动；只部署该文件并备份，未上传配置。
+- 2026-09-28 14:45:55 CST 重启 Oagnet，PID 4100080；远程专项 70 passed（1 条测试依赖弃用告警），服务 UP、向量健康正常、配置哈希未变化。DataAnalysis 与 SQL Translator 未重启。
+- 发布批次 `recent-91a423c-20260928-144550`；本次仅用模拟源和模拟索引验证同步路由，未触发生产索引重建。后端下一次使用新 event_id 同步时应用开关。
