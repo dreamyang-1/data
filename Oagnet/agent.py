@@ -9049,7 +9049,8 @@ def main(
         knowledge["_contextual_metric_selection"] = True
         knowledge["_vector_authorized_fields"] = sorted(_known_physical_fields(knowledge))
         model = _get_chat_model()
-        ast, repairs = bind(structured_extraction, knowledge, model)
+        ast, repairs = bind(structured_extraction, knowledge, model,
+                            detail_subject_resolver=_detail_projection_subject_candidate)
         if not ast.get("ambiguity"):
             relationship_required = any(r.get("relationship_required") for r in repairs)
             # Owner/time/relationship resolution sees only the same structured

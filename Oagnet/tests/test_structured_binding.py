@@ -71,6 +71,100 @@ def run(extraction,knowledge,plan):
     return bind(extraction,knowledge,Obj(invoke=lambda messages:Obj(content=json.dumps(plan))))
 
 
+def dealer_list_fixture():
+    e, _, _ = fixture()
+    e.update(实体=['商品', '经销商'], 指标=[],
+             展示字段=[{'entity': '经销商', 'field': '经销商名称'}],
+             过滤条件=[{'field': '商品名称', 'op': '=', 'value': ['空心纤维血液透析器']}])
+    k = {'entities': [Obj(metadata={'entity_code': code, 'attributes': [
+             {'attr_code': column, 'field_mapping': f'{code}.{column}'}]})
+             for code, column in [('product', 'product_name'), ('dealer', 'dealer_name'), ('sales_order', 'order_id')]],
+         'relations': [Obj(metadata={'join_key': {'source_field': a, 'target_field': b}})
+                       for a, b in [('sales_order.product_code', 'product.product_code'),
+                                    ('sales_order.dealer_code', 'dealer.dealer_code')]],
+         'entity_attribute_values': [Obj(metadata={'source_field': 'product.product_name', 'attr_value': '空心纤维血液透析器'})],
+         '_vector_authorized_fields': ['product.product_name', 'dealer.dealer_name', 'sales_order.order_id']}
+    p = {'display_fields': [{'index': 0, 'key': 'dealer.dealer_name'}],
+         'filters': [{'index': 0, 'key': 'product.product_name', 'value_ids': [0]}]}
+    return e, k, p
+
+
+@pytest.mark.parametrize('subject', [None, '', 'unknown_entity'])
+def test_multiple_declared_entities_bind_unique_catalog_hub_without_question(subject):
+    from agent import _detail_projection_subject_candidate
+    e, k, p = dealer_list_fixture()
+    p['subject'] = subject
+    ast, repairs = bind(e, k, Obj(invoke=lambda _: Obj(content=json.dumps(p))),
+                        detail_subject_resolver=_detail_projection_subject_candidate)
+    assert not ast['ambiguity']
+    assert ast['subject'] == {'entity': 'sales_order'}
+    assert ast['dimensions'][0]['name'] == 'dealer.dealer_name'
+    assert ast['filters'] == [{'field': 'product.product_name', 'operator': '=', 'value': '空心纤维血液透析器'}]
+    assert ast['metrics'] == [] and ast['time_context'] is None
+    assert any(r['source'] == 'SCOPED_RELATION_GRAPH' for r in repairs)
+
+
+@pytest.mark.parametrize('subject', ['product', {'entity': 'dealer'}])
+def test_existing_valid_subject_or_asl_object_shape_is_preserved(subject):
+    e, k, p = dealer_list_fixture()
+    p['subject'] = subject
+    ast, _ = bind(e, k, Obj(invoke=lambda _: Obj(content=json.dumps(p))),
+                  detail_subject_resolver=lambda *_: pytest.fail('must preserve valid subject'))
+    assert not ast['ambiguity']
+    assert ast['subject']['entity'] == (subject if isinstance(subject, str) else subject['entity'])
+
+
+def test_missing_catalog_path_is_not_presented_as_missing_user_entity_meaning():
+    from agent import _detail_projection_subject_candidate
+    e, k, p = dealer_list_fixture()
+    k['relations'] = []
+    ast, _ = bind(e, k, Obj(invoke=lambda _: Obj(content=json.dumps(p))),
+                  detail_subject_resolver=_detail_projection_subject_candidate)
+    assert not ast['subject'] and len(ast['ambiguity']) == 1
+    assert '实体物理映射与关联关系' in ast['ambiguity'][0]['question']
+    assert '不需要重复解释' in ast['ambiguity'][0]['question']
+
+
+def test_subject_resolver_cannot_add_out_of_scope_entity():
+    e, k, p = dealer_list_fixture()
+    ast, _ = bind(e, k, Obj(invoke=lambda _: Obj(content=json.dumps(p))),
+                  detail_subject_resolver=lambda *_: 'other_model_sales')
+    assert not ast['subject'] and ast['ambiguity']
+
+
+def test_unbound_filter_is_not_hidden_by_subject_recovery():
+    e, k, p = dealer_list_fixture()
+    p['filters'] = []
+    ast, _ = bind(e, k, Obj(invoke=lambda _: Obj(content=json.dumps(p))),
+                  detail_subject_resolver=lambda *_: pytest.fail('cannot recover incomplete bindings'))
+    assert ast['ambiguity'][0]['field'] == '过滤条件[1]'
+
+
+def test_metric_query_does_not_use_detail_subject_fallback():
+    e, k, p = fixture()
+    p.pop('subject')
+    ast, _ = bind(e, k, Obj(invoke=lambda _: Obj(content=json.dumps(p))),
+                  detail_subject_resolver=lambda *_: pytest.fail('not a detail query'))
+    assert ast['ambiguity'] and not ast['subject']
+
+
+def test_main_reconnects_existing_subject_binding_without_reextracting(monkeypatch):
+    import agent
+    e, k, p = dealer_list_fixture()
+    class Builder:
+        def __init__(self, *args, **kwargs): pass
+        def retrieve(self, text): return deepcopy(k)
+    monkeypatch.setattr(agent, 'PromptBuilder', Builder)
+    monkeypatch.setattr(agent, '_get_chat_model', lambda: Obj(invoke=lambda _: Obj(content=json.dumps(p))))
+    monkeypatch.setattr(agent, '_validate_vector_grounded_asl', lambda *args: None)
+    monkeypatch.setattr(agent, '_validate_asl_output', lambda content, *args: content)
+    monkeypatch.setattr(agent, '_validate_intent_asl_contract', lambda *args: None)
+    result = json.loads(agent.main('MUST NOT REEXTRACT', semantic_model_id=81,
+                                   business_domain_ids=[205], structured_extraction=e))
+    assert result['subject'] == {'entity': 'sales_order'}
+    assert not result['ambiguity']
+
+
 def test_scalar_shape_and_standard_alias_not_reinterpreted():
     e,k,p=fixture();ast,_=run(e,k,p)
     assert not ast['ambiguity']

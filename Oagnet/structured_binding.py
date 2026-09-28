@@ -143,7 +143,7 @@ def _group_exposes_field(group, field, catalog):
     return len(labels) == 1 and field in labels
 
 
-def bind(extraction, knowledge, model, *, today=None):
+def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=None):
     """Model chooses bindings; deterministic assembly owns shape/operators/literals."""
     ast = dict(version='2.0', intent='query', subject={}, metrics=[], dimensions=[], filters=[],
                time_context=None, sort=None, limit=None, having=[], ambiguity=[])
@@ -178,7 +178,8 @@ def bind(extraction, knowledge, model, *, today=None):
 名称、品牌、分类等中文等值条件必须联合绑定字段和标准值：先找能表达该业务值的catalog.values条目，再使用该条目的field与id，不能仅凭字段标题相似就把原词填到无对应标准值的字段。多级分类尤其要按标准值所在层级绑定；同一“商品品类”可映射产品类别或一级/二级分类，取决于值的目录证据。找不到对应标准值则返回该参数error，不伪装成已验证。
 只绑定已声明的时间范围，缺少时间锚点则 time={error:具体原因}；未声明时间范围时 time=null。不增加默认范围。
 没有指标时 dimensions/display_fields 表示明细列；有指标时 dimensions 才是分组，展示字段不能变成额外分组。
-subject 只根据已选指标的实体绑定或结构化实体选择。无法判断时 subject=null 并给 subject_error。
+实体数组列出本次涉及的业务对象，不是要求用户从中选一个；同时出现多个实体不构成歧义。展示字段的 entity/field 表示要返回的对象，过滤条件表示限定哪些记录。
+subject 是执行查询的主表：指标查询依据已选指标的实体绑定；明细查询结合已绑定展示字段、过滤字段及目录关系选择主体，允许使用授权目录中连接这些对象的关联实体，不要求主体必须出现在结构化实体数组中。不能据此增加指标、分组或筛选条件。无法判断时 subject=null 并给 subject_error。
 输出要求含明确的共享属性关联范围（如以目标商品适用科室寻找相关渠道），relationship_required=true；不能只看到实体中有科室就判定。不生成 SQL 或其他业务要求。'''
     prompt += ('value_ids必须使用catalog.values条目的显式id，不要自己数数组位置。'
                '维度绑定可带attr（目录中该维度已有的属性ID）和granularity；只有时间维度才能设置granularity，'
@@ -191,8 +192,10 @@ subject 只根据已选指标的实体绑定或结构化实体选择。无法判
         ast['ambiguity'] = [issue('目录绑定', extraction, '绑定服务未返回可用结果，请稍后重试；不是用户参数缺失')]
         return ast, repairs
     subject = plan.get('subject')
+    # Accept the ordinary ASL object shape as well as the compact binding key.
+    if isinstance(subject, dict): subject = subject.get('entity')
+    if isinstance(subject, str): subject = subject.strip()
     if isinstance(subject,str) and subject in catalog['entities']: ast['subject'] = {'entity': subject}
-    else: ast['ambiguity'].append(issue('实体', extraction.get('实体'), plan.get('subject_error') or '无法确定可执行的目录实体'))
     for source, target in SECTIONS.items():
         rows = plan.get(target) or []
         if not isinstance(rows, list): rows = []
@@ -295,6 +298,26 @@ subject 只根据已选指标的实体绑定或结构化实体选择。无法判
             ast['ambiguity'].append(issue('时间粒度',temporal,decision.get('error') or str(exc)))
     if not ast['metrics'] and not ast['dimensions'] and not ast['ambiguity']:
         ast['ambiguity'].append(issue('指标/展示字段', [], '未声明要计算的指标或返回的字段，不能自行补医院名称或计数'))
+    if not ast['subject'] and not ast['ambiguity']:
+        candidate = None
+        if not extraction['指标'] and ast['dimensions'] and detail_subject_resolver is not None:
+            # Reuse the existing scoped relation-graph binding, not raw question
+            # extraction or a hardcoded business table. Only a unique hub wins.
+            candidate = detail_subject_resolver(ast, knowledge)
+        if isinstance(candidate, str) and candidate in catalog['entities']:
+            ast['subject'] = {'entity': candidate}
+            repairs.append({'type': 'STRUCTURED_SUBJECT_BOUND', 'source': 'SCOPED_RELATION_GRAPH',
+                            'entity': candidate})
+        else:
+            problem = issue('实体', extraction.get('实体'),
+                            plan.get('subject_error') or '未能确定连接已绑定字段的查询主体')
+            problem['question'] = (
+                '查询主体绑定未完成：已识别涉及实体 ' + json.dumps(extraction.get('实体'), ensure_ascii=False)
+                + '，已绑定返回字段 ' + json.dumps([d['name'] for d in ast['dimensions']], ensure_ascii=False)
+                + '；模型未给出可执行主体，当前目录也未能唯一确定连接这些字段和筛选条件的主体。'
+                '请核对实体物理映射与关联关系；不需要重复解释已明确的实体或重新输入原问题。'
+            )
+            ast['ambiguity'].append(problem)
     repairs.append({'type':'STRUCTURED_BINDING_ONLY','source':'STRUCTURED_EXTRACTION',
                     'relationship_required':plan.get('relationship_required') is True})
     return ast, repairs
