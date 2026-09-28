@@ -78,6 +78,22 @@ def test_two_different_location_filters_are_resolved_independently():
     assert [(f['field'],f['value']) for f in result['filters']] == [('hospital.province_id','310000'),('dealer.province_id','110000')]
 
 
+def test_explicit_owner_decision_takes_precedence_over_generic_keep_flag():
+    # Observed real-model response: correct owner + both flags. Keep must not
+    # silently discard the more specific validated owner selection.
+    result, repairs, _ = run({'bindings': [{'filter_index': 0, 'choice_index': 0,
+        'keep': True, 'bind_owner': True, 'reason': '明确限定医院所在地，不限定经销商所在地'}]})
+    assert result['filters'] == [{'field': 'hospital.province_id', 'operator': '=', 'value': '310000'}]
+    assert repairs and not result['ambiguity']
+
+
+def test_invalid_explicit_owner_cannot_fall_back_to_generic_keep_flag():
+    result, repairs, _ = run({'bindings': [{'filter_index': 0, 'choice_index': 99,
+        'keep': True, 'bind_owner': True, 'reason': '医院所在地'}]})
+    assert result['filters'] == draft()['filters']
+    assert result['ambiguity'] and not repairs
+
+
 @pytest.mark.parametrize('operator,expected', [('=','IN'),('!=','NOT IN'),('IN','IN'),('NOT IN','NOT IN')])
 def test_duplicate_dictionary_keys_preserve_label_set_semantics(operator,expected):
     ast = draft()

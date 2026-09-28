@@ -191,7 +191,8 @@ def review_bindings(content, knowledge, question, extraction, model, resolve_key
         if not isinstance(binding, dict):
             continue
         index, choice_index = binding.get("filter_index"), binding.get("choice_index")
-        if type(index) is int and index in by_index and binding.get('keep') is True and binding.get('reason'):
+        if (type(index) is int and index in by_index and binding.get('keep') is True
+                and binding.get('bind_owner') is not True and binding.get('reason')):
             seen.add(index)
             continue
         if type(index) is int and index in target_indices:

@@ -28,8 +28,8 @@ are unchanged. No business database, semantic configuration or vector index writ
 
 ## Verification
 
-- Oagnet targeted binding/ownership/shared-scope suites: **87 passed**.
-- Oagnet full: baseline **1087 passed** → **1104 passed**; 17 new tests,
+- Oagnet targeted binding/ownership/shared-scope suites: **89 passed**.
+- Oagnet full: baseline **1087 passed** → **1106 passed**; 19 new tests,
   no old-pass → new-fail, no collection errors.
 - SQL name execution / role JOIN / shared-scope suites: **24 passed**,
   including 8 new tests. In-memory database confirms 12 same-name products are all
@@ -42,9 +42,23 @@ are unchanged. No business database, semantic configuration or vector index writ
 
 ## Release and limits
 
-Pending remote drift check, deployment, restart and live read-only smoke. Only the
-two Oagnet runtime files above are in this release's deployment manifest. The
-previous, separate ASL display-label commit is not implicitly included.
+Initial `abbf343` deployment passed 148 remote tests and the full live dealer-list
+query: actual SQL used the product name predicate, retained key JOINs and returned
+data with the required stage ordering. An additional synthetic-catalog/real-model
+probe exposed a specific regression: the model selected the correct hospital
+owner but returned both `keep: true` and `bind_owner: true`; the generic keep branch
+discarded that owner. The two-file deployment was rolled back immediately and the
+service returned UP. No config or unrelated service file was changed.
+
+Follow-up fix gives a valid explicit owner decision precedence over generic keep;
+an invalid owner selection cannot silently fall back to keep. Two regression tests
+cover this response. All suites above passed again. A real-model, in-memory probe
+then passed leading-zero product code, alphanumeric product name and explicit
+hospital-region ownership cases (no business database mutation).
+
+Final redeployment and post-restart smoke pending. Only the two Oagnet runtime
+files above are in this release's deployment manifest. The previous, separate ASL
+display-label commit is not implicitly included.
 
 This does not introduce fuzzy SQL LIKE matching or change the database collation.
 Names are exact equality/set predicates after catalog matching. The model still
