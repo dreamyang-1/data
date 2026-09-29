@@ -110,7 +110,9 @@ def catalog_candidates(knowledge):
                        and meta.get('attr_code') == attr.get('attr_code')]
             if len(matches) == 1: field = matches[0]
         value = meta.get('attr_value', meta.get('canonical_value'))
-        add_value(field, value, meta.get('attr_name') or meta.get('label'))
+        # attr_name is the field label, not the display value.  Only an
+        # explicitly published value label may be used for enum matching.
+        add_value(field, value, meta.get('label'))
 
     # Include enumerations published on physical fields or scoped dimensions.
     # They are valid vector-grounded filter values even when no separate
