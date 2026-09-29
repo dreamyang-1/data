@@ -7,6 +7,20 @@ from app.analysis.interpretation import AnswerPlan
 from app.domain.models import AgentResponse, TaskExecutionResult, TaskPlan
 
 
+def result_table_title(material: dict[str, Any], titles: Any) -> str:
+    """Use root-question deliverable wording, never generate titles from cells.
+
+    Missing optional presentation metadata must not block a usable answer.
+    A calculation's last-step question is not a complete deliverable title.
+    """
+    title = titles.get(material["task_id"]) if isinstance(titles, dict) else None
+    if isinstance(title, str) and title.strip():
+        return " ".join(title.split()).strip("#*`")
+    if material.get("facts", {}).get("computation"):
+        return "综合计算结果"
+    return str(material.get("question") or "查询结果")
+
+
 def collect_root_materials(
     plan: TaskPlan, results: list[TaskExecutionResult],
     responses: dict[str, Any], deferred: dict[str, dict[str, Any]],
@@ -77,7 +91,7 @@ def render_root_report(
         presentation = item.get("presentation") or {}
         table = str(presentation.get("table") or "").strip()
         if table:
-            tables.append((f"**{item['question']}**\n\n" if len(selected) > 1 else "") + table)
+            tables.append((f"**{result_table_title(item, final.get('result_titles'))}**\n\n" if len(selected) > 1 else "") + table)
         elif item.get("summary"):
             # Non-tabular/empty query results are still meaningful, unlike a
             # dropped result or an invented zero. No task-number wrapper.

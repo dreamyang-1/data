@@ -5,7 +5,7 @@ import pytest
 
 from app.analysis.synthesis import QwenAnalysisSynthesizer
 from app.domain.models import AtomicTask, TaskPlan, TaskExecutionResult
-from app.presentation.root_report import collect_root_materials, render_root_report
+from app.presentation.root_report import collect_root_materials, render_root_report, result_table_title
 from test_analysis_synthesis import settings, transport_for
 
 
@@ -72,7 +72,8 @@ async def test_one_call_returns_root_insight_and_separate_final_plan_with_full_c
                    {"task_id": "b", "depends_on": ["a"], "expected_output": "覆盖率"}]}}
     output = {"claims": [{"statement": "围绕整体目标的分析依据。"}],
               "final_answer": {"overview": "简短回答", "findings": ["关键发现"],
-                               "tips": ["预览限制"], "result_task_ids": ["coverage"]}}
+                               "tips": ["预览限制"], "result_task_ids": ["coverage"],
+                               "result_titles": {"coverage": "上海各经销商覆盖率"}}}
     text, parsed = await QwenAnalysisSynthesizer(settings(), transport_for(output, calls)).synthesize_combined(
         context["completed_question"], materials(), planning_context=context)
     assert len(calls) == 1 and text == "围绕整体目标的分析依据。"
@@ -185,3 +186,38 @@ async def test_computed_result_exposes_its_exact_artifact_for_final_export():
         AtomicTask(task_id="final", question="计算覆盖率", depends_on=["source","denominator"]), {})
     assert result.dataset_id == "derived"
     assert "50.00%" in chat._dag_deferred_insight["presentation"]["table"]
+
+
+@pytest.mark.parametrize("title", ["上海各经销商的已合作医院数及区域医院覆盖率", "上海各经销商的区域医院覆盖率"])
+def test_same_merged_data_can_answer_different_user_goals_without_header_generated_titles(title):
+    items = materials()[1:]
+    items[1]["question"] = "计算区域医院覆盖率"
+    items[1]["presentation"] = {
+        "table": "| 经销商 | 已合作医院数 | 区域医院覆盖率 |\n| --- | --- | --- |\n| 甲 | 5 | 50% |",
+    }
+    answer, _ = render_root_report(title, items, {"result_titles": {"coverage": title}})
+    assert f"**{title}**" in answer
+    assert "**计算区域医院覆盖率**" not in answer
+    assert items[1]["presentation"]["table"] in answer
+
+
+@pytest.mark.parametrize("titles", [None, [], {"coverage": 1}, {"coverage": " "}, {"unknown": "不相关标题"}])
+def test_bad_title_metadata_does_not_block_or_reuse_incomplete_calculation_question(titles):
+    item = materials()[2]
+    item["facts"] = {"computation": {"row_count": 1}}
+    assert result_table_title(item, titles) == "综合计算结果"
+    answer, _ = render_root_report("整体问题", [materials()[1], item], {"result_titles": titles})
+    assert "50%" in answer
+
+
+def test_independent_task_titles_keep_original_scope_when_model_metadata_missing():
+    item = materials()[1]
+    item["question"] = "上海地区医院总数"
+    assert result_table_title(item, None) == "上海地区医院总数"
+
+
+def test_optional_title_parsing_does_not_discard_insight():
+    parsed = QwenAnalysisSynthesizer._parse_report(json.dumps({"claims": ["可用分析"],
+        "final_answer": {"result_titles": {"a": "完整标题\n测试", "b": 1}}}), set())
+    assert parsed.final_answer["result_titles"] == {"a": "完整标题 测试"}
+    assert parsed.claims[0].statement == "可用分析"

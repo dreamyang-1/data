@@ -81,8 +81,9 @@ COMBINED_ADDENDUM = """本次调用面向一个完整用户目标，而不是分
 - executed_query 与 query_data 的边界规则对每个子任务分别适用：只分析已提供的预览，sample_only 或行数受限时如实说明范围。
 - 同一次调用另返回 final_answer 对象：overview（直接回答用户问题的简短总结）、findings（简短关键发现字符串数组）、tips（限制和必要建议字符串数组）、result_task_ids（最终需要展示的实际结果对应 task_id 数组）。详细洞察和最终摘要各司其职，不复制整份 claims。
 - result_task_ids 根据用户明确要的结果选择，不按任务序号、最后一个任务或依赖末端机械选择。查询覆盖率时优先展示已计算的覆盖率结果，分子分母作为计算依据；若用户明确同时要求已合作医院数和医院总数，两项都必须展示。失败导致最终结果缺失时保留能够回答问题的部分数据并说明未完成部分。
+- final_answer 同时返回 result_titles 对象（键为选中的 task_id，值为该结果的业务标题）。标题从 completed_question 中用户明确要求返回的内容组织，保留对象、范围及指标关系，不从表头拼接，不直接照搬最后一个子任务的问题。数据只用于核对该结果是否能承载这些需求，不能把未请求的辅助列写成新增用户需求。若同一结果已包含用户要求的多个指标，可以合并展示，但标题必须同时概括这些要求；不要为了补标题而重复展示相同数据。例如用户同时要各经销商已合作医院数、区域医院总数及覆盖率：合并经销商结果的标题应为“各经销商的已合作医院数及区域医院覆盖率”，区域医院总数单独命名；如果用户只问覆盖率，即使表中附带分子列，标题仍围绕覆盖率。不同地区、时期或对象的结果应在标题中保留区别，未获得的数据只能说明缺失，不能靠标题假装完成。
 - final_answer 不写表格、图表、附件链接，不重新编写数据单元格；程序会按选中的 task_id 使用原始结果展示。不能虚构 task_id、计算结果或把规划当成已执行事实。
-- 输出必须同时包含 claims 和 final_answer，示例结构：{"claims":[{"statement":"整体分析正文"}],"final_answer":{"overview":"回答补全后的问题","findings":[],"tips":[],"result_task_ids":["最终交付结果的任务ID"]}}。分子、分母等中间取数只作为依据，用户只问计算后的指标时，不选中这些中间表；只有用户明确同时索要中间指标时才另选。不得将不同经销商的去重医院数相加，声称是合并后的去重医院覆盖数。
+- 输出必须同时包含 claims 和 final_answer，示例结构：{"claims":[{"statement":"整体分析正文"}],"final_answer":{"overview":"回答补全后的问题","findings":[],"tips":[],"result_task_ids":["最终交付结果的任务ID"],"result_titles":{"最终交付结果的任务ID":"概括用户在这份结果中要求返回的内容"}}}。分子、分母等中间取数只作为依据，用户只问计算后的指标时，不选中这些中间表；只有用户明确同时索要中间指标时才另选。不得将不同经销商的去重医院数相加，声称是合并后的去重医院覆盖数。
 """
 
 # Adapt the context-driven method from NL_Agent/node/step3_Planner_and_execute.py
@@ -261,6 +262,11 @@ class QwenAnalysisSynthesizer:
             for key in ("findings", "tips", "result_task_ids"):
                 if isinstance(final.get(key), list):
                     clean_final[key] = [v.strip() for v in final[key] if isinstance(v, str) and v.strip()]
+            if isinstance(final.get("result_titles"), dict):
+                clean_final["result_titles"] = {
+                    key: " ".join(value.split()) for key, value in final["result_titles"].items()
+                    if isinstance(key, str) and isinstance(value, str) and value.strip()
+                }
         return SynthesisOutput(claims=claims, final_answer=clean_final)
 
     @classmethod
