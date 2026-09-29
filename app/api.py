@@ -807,6 +807,7 @@ async def chat_stream(
         presentation_scenario = "ANALYTIC"
         titled_think_sections: set[str] = set()
         composite_mode = False
+        off_topic_flag = False
         composite_child_orderer = _CompositeChildProgressOrderer()
         latest_progress_stage = "INTENT_RECOGNITION"
         settings = request.app.state.container.settings
@@ -871,8 +872,11 @@ async def chat_stream(
             nonlocal intent_completed, file_inspection_completed
             nonlocal question_completion_displayed
             nonlocal planning_released, presentation_scenario, composite_mode
-            nonlocal latest_progress_stage
+            nonlocal latest_progress_stage, off_topic_flag
             stage = str(event.get("stage") or "").upper()
+            if bool(event.get("off_topic")):
+                # 语义识别判成业务无关的问题，规划节点对这轮不再点亮
+                off_topic_flag = True
             if bool(event.get("is_child_task")):
                 try:
                     composite_mode = composite_mode or int(
@@ -910,6 +914,9 @@ async def chat_stream(
                 # but must not reopen the intent node or its heartbeat.
                 question_completion_displayed = True
                 intent_completed = True
+                if off_topic_flag:
+                    # 业务无关的问题由聊天模型直接回答，不亮任务规划节点
+                    return [dict(event, status="COMPLETED")]
                 return [
                     dict(event, status="COMPLETED"),
                     {
@@ -934,6 +941,10 @@ async def chat_stream(
                     # Preserve the deployed early planning-running display;
                     # only the completed plan waits for readiness.
                     latest_progress_stage = "TASK_PLANNING"
+                    # 这条RUNNING已实时展示，不能留在延迟区；否则复合意图
+                    # 完结或执行边界重放延迟事件时，同一行会出现两遍。
+                    if event in deferred_planning:
+                        deferred_planning.remove(event)
                     return [event]
                 return []
             if (

@@ -386,6 +386,39 @@ def test_composite_display_groups_typed_parameters_under_each_completed_question
     assert "参数规范化：已识别" not in rendered
 
 
+def test_composite_render_keeps_completed_question_single_line():
+    completed = (
+        "查询上海地区各经销商已合作的医院数，并查询上海地区的区域全部医院总数"
+    )
+    plan = TaskPlan(planner="STRUCTURED_MODEL", tasks=[
+        AtomicTask(task_id="task-1", question="查询上海地区各经销商已合作的医院数"),
+        AtomicTask(
+            task_id="task-2",
+            question="查询上海地区的区域全部医院总数",
+            depends_on=["task-1"],
+        ),
+    ])
+
+    view = build_composite_intent_recognition_display_v2(
+        completed,
+        plan,
+        completed_question=completed,
+    )
+    rendered = render_composite_intent_recognition_display_v2(view)
+
+    # 补全后的问题固定是完整一句，拆分列表归任务拆分与规划节点展示
+    assert f"补全后的问题：{completed}" in rendered
+    assert "1. " not in rendered
+    assert "用户原始问题：" in rendered
+
+    # 上下文补全阶段已经发过原始问题与补全问题时，不再重复
+    repeated = render_composite_intent_recognition_display_v2(
+        view, include_resolved_context=False
+    )
+    assert "补全后的问题：" not in repeated
+    assert "用户原始问题：" not in repeated
+
+
 def test_transaction_partner_list_displays_natural_completed_question():
     request = RuleBasedIntentClassifier().classify(
         "查询最近一年销售过空心纤维血液透析器产品的经销商名单",

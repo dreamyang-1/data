@@ -665,14 +665,16 @@ class DataAnalysisOrchestrator:
 
     async def triage_v1_pending_reply(
         self, chat: ChatRequest, identity: TrustedIdentity
-    ) -> tuple[str, str | None] | None:
+    ) -> tuple[str, str | None, str | None] | None:
         """挂起待确认项时对自由文本输入的分诊。
 
         选项序号、候选名这类精确输入由 is_v1_pending_clarification_answer
         覆盖；这里处理匹配不上的自由文本，用识别模型判一次：
-        - ('ANSWER', merged)：仍在原话题内，merged 是原问题合并用户输入后
-          的完整问题，调用方作废旧挂起后按它重新执行；
-        - ('NEW_TASK', None)：用户抛开原话题，调用方作废旧挂起走正常新问流程。
+        - ('ANSWER', merged, reason)：仍在原话题内，merged 是原问题合并用户
+          输入后的完整问题，reason 是给前端意图节点看的判定思考句，调用方
+          作废旧挂起后按 merged 重新执行；
+        - ('NEW_TASK', None, None)：用户抛开原话题，调用方作废旧挂起走正常
+          新问流程。
 
         无挂起返回 None。模型不可用时按新话题兜底，避免旧挂起把后续
         每轮都拖进澄清延续、回答永远对不上待确认项。
@@ -690,7 +692,7 @@ class DataAnalysisOrchestrator:
             return None
         settings = self.settings
         if not (settings.intent_model_enabled and settings.intent_model_api_key):
-            return ("NEW_TASK", None)
+            return ("NEW_TASK", None, None)
         pending_request = pending.request
         original = (
             pending_request.original_question or pending_request.question or ""
@@ -733,8 +735,10 @@ class DataAnalysisOrchestrator:
             '- 用户仍在原话题内（直接给值、换一种说法、只补了部分条件、'
             "表达仍模糊但没换话题）："
             '{"relation": "ANSWER", "merged_question": "原问题与用户输入合并成的'
-            '一句完整自包含的业务问题"}\n'
+            '一句完整自包含的业务问题", "reason": "一句话第一人称说明判断依据"}\n'
             '- 用户抛开原话题提出无关新问题：{"relation": "NEW_TASK"}\n'
+            "reason 面向用户展示：先提用户此前问的是什么，再说这轮输入怎么衔接"
+            "（补上了哪个条件/换了个说法），控制在80字内，不要写执行步骤。\n"
             "merged_question 只合并原问题和用户输入里出现过的指标、维度、"
             "筛选和时间，不发明两边都没有的条件。\n"
             "用户输入与某个候选名称近似（同义、错字、增减“总额/金额”等"
@@ -777,15 +781,16 @@ class DataAnalysisOrchestrator:
             if relation == "ANSWER":
                 merged = str(data.get("merged_question") or "").strip()
                 if merged:
-                    return ("ANSWER", merged)
-            return ("NEW_TASK", None)
+                    reason = str(data.get("reason") or "").strip()
+                    return ("ANSWER", merged, reason)
+            return ("NEW_TASK", None, None)
         except Exception:
             logger.warning(
                 "v1 pending triage failed; treating as new task: message_id=%s",
                 chat.message_id,
                 exc_info=True,
             )
-            return ("NEW_TASK", None)
+            return ("NEW_TASK", None, None)
 
     async def discard_v1_pending(
         self, chat: ChatRequest, identity: TrustedIdentity
@@ -1055,12 +1060,9 @@ class DataAnalysisOrchestrator:
                 )
             else:
                 plan = None
-                if self.settings.multi_question_enabled and self.task_planner is not None:
-                    await emit_progress(
-                        "TASK_PLANNING",
-                        "RUNNING",
-                        "### ◉ 规划与执行\n正在判断是否需要拆分多个分析任务。",
-                    )
+                # 语义识别已判成业务无关的问题，拆分器不再调度，直接落 _handle 走聊天回复
+                off_topic_direct = bool(getattr(chat, "_v2_off_topic", False))
+                if self.settings.multi_question_enabled and self.task_planner is not None and not off_topic_direct:
                     semantic_decision = chat._semantic_decision
                     semantic_decision_ready = bool(
                         chat._completed_question_execution
@@ -1118,6 +1120,13 @@ class DataAnalysisOrchestrator:
                                 chat._planner_extraction = outcome.single_extraction
                         except TaskPlanningError as exc:
                             logger.warning("multi-question plan rejected: %s", exc)
+                    # 拆分模型判成闲聊/超范围的单任务不亮规划节点，
+                    # 拆分结束后直接走受控聊天回复
+                    nondata_direct = (
+                        plan is None
+                        and chat._planner_extraction is not None
+                        and chat._planner_extraction.intent in NO_DATA_INTENTS
+                    )
                     if plan is not None:
                         task_requests = []
                         for task in plan.tasks:
@@ -1164,6 +1173,7 @@ class DataAnalysisOrchestrator:
                             build_composite_intent_recognition_display_v2(
                                 chat.question,
                                 plan,
+                                completed_question=planning_question,
                                 task_intents=task_intents,
                                 task_requests=task_requests,
                                 business_domains=(
@@ -1247,7 +1257,19 @@ class DataAnalysisOrchestrator:
                         ).rstrip()
 
                     if plan is not None:
-                        planning_detail = "已拆分为以下任务：\n" + "\n\n".join(
+                        # 依赖关系参考New_Agent的拆解展示：结构说明一句话在
+                        # 前，依赖行随后，纯并行时没有依赖行但有并行说明。
+                        task_order = {
+                            task.task_id: index
+                            for index, task in enumerate(plan.tasks, 1)
+                        }
+                        dependency_pairs = [
+                            f"任务{index}依赖任务{task_order[dep_id]}"
+                            for index, task in enumerate(plan.tasks, 1)
+                            for dep_id in task.depends_on
+                            if dep_id in task_order
+                        ]
+                        task_section = "\n\n".join(
                             _planning_task_block(
                                 index,
                                 task.question,
@@ -1257,6 +1279,28 @@ class DataAnalysisOrchestrator:
                             )
                             for index, task in enumerate(plan.tasks, 1)
                         )
+                        summary = (plan.analyze_summary or "").strip()
+                        if not summary:
+                            # 模型没给结构说明时按依赖关系合成一句，
+                            # 保证并行场景用户也能看出执行方式。
+                            if dependency_pairs:
+                                summary = (
+                                    f"用户问题拆分为{len(plan.tasks)}项子任务，"
+                                    + "、".join(dependency_pairs)
+                                    + "，需按依赖顺序执行。"
+                                )
+                            else:
+                                summary = (
+                                    f"用户问题拆分为{len(plan.tasks)}项子任务，"
+                                    + "各任务相互独立，可并行执行。"
+                                )
+                        if summary[-1] not in "。！？?!":
+                            summary += "。"
+                        sections = ["分析内容：" + summary]
+                        if dependency_pairs:
+                            sections.append("依赖关系：" + "、".join(dependency_pairs))
+                        sections.append(task_section)
+                        planning_detail = "\n\n".join(sections)
                     else:
                         single_extraction = chat._planner_extraction
                         planning_detail = (
@@ -1281,12 +1325,13 @@ class DataAnalysisOrchestrator:
                                 ),
                             )
                         )
-                    await emit_progress(
-                        "TASK_PLANNING",
-                        "COMPLETED",
-                        "拆分判断完成。" + planning_detail,
-                        task_count=len(plan.tasks) if plan is not None else 1,
-                    )
+                    if not nondata_direct:
+                        await emit_progress(
+                            "TASK_PLANNING",
+                            "COMPLETED",
+                            "拆分判断完成。" + planning_detail,
+                            task_count=len(plan.tasks) if plan is not None else 1,
+                        )
                 if (confirmed_pending_choice is not None and plan is None
                         and self.settings.surface_asl_execution_enabled
                         and chat._planner_extraction is not None
@@ -2105,6 +2150,320 @@ class DataAnalysisOrchestrator:
             })
         return response.model_copy(update={"evidence": evidence, "reliability": reliability})
 
+    async def _latest_task_dataset_reference(
+        self,
+        identity: TrustedIdentity,
+        chat: ChatRequest,
+        conversation_id: str,
+        *,
+        exclude_source_type: str | None = None,
+    ) -> dict[str, Any] | None:
+        """取任务会话里最近落盘的结果集引用；子任务响应不一定携带dataset_id。"""
+        raw_items = await self.sessions.get_recent_dataset_references(
+            identity.tenant_id, identity.user_id, chat.application_id,
+            conversation_id, limit=self.settings.dataset_recent_limit,
+        )
+        for item in raw_items:
+            if exclude_source_type and item.get("source_type") == exclude_source_type:
+                continue
+            return item
+        return None
+
+    async def _import_dependency_result_file(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        conversation_id: str,
+        result_file_url: str,
+    ) -> dict[str, Any] | None:
+        """把依赖任务的SQL导出XLSX导入数据集存储，供纯计算任务取全量数据。"""
+        if self.file_importer is None:
+            return None
+        try:
+            parsed = urlparse(result_file_url)
+            path_parts = [unquote(item) for item in parsed.path.split("/") if item]
+            if len(path_parts) < 2 or path_parts[0] != self.file_importer.bucket:
+                logger.warning("dependency result file is outside the configured bucket")
+                return None
+            object_name = "/".join(path_parts[1:])
+            scope = DatasetScope(
+                tenant_id=identity.tenant_id,
+                user_id=identity.user_id,
+                application_id=chat.application_id,
+                conversation_id=conversation_id,
+                authorized_semantic_scope_fingerprint=(
+                    chat.authorized_semantic_scope.fingerprint()
+                ),
+            )
+            reference, _ = await self.file_importer.import_object(
+                object_name=object_name,
+                scope=scope,
+                source_type="DATABASE_QUERY_EXPORT",
+                semantic_model_id=chat.semantic_model_id,
+                business_domain_ids=chat.business_domain_ids,
+            )
+            await self.sessions.put_dataset_reference(
+                reference.to_dict(), recent_limit=self.settings.dataset_recent_limit
+            )
+            logger.info(
+                "dependency result file imported: %s rows=%s",
+                reference.dataset_id, reference.row_count,
+            )
+            return reference.to_dict()
+        except Exception as exc:
+            logger.warning("failed to import dependency result file: %s", exc)
+            return None
+
+    async def _respond_pure_computation(
+        self,
+        chat: ChatRequest,
+        identity: TrustedIdentity,
+        task: AtomicTask,
+        conversation_by_task: dict[str, str],
+        responses: dict[str, Any] | None = None,
+    ) -> AgentResponse:
+        """复合指标拆出的计算任务：不查库，对前序任务结果集做确定性计算后回复。"""
+        await emit_progress(
+            "ASL_GENERATION",
+            "COMPLETED",
+            "该任务基于前序任务的查询结果计算，不再调用数据库。",
+        )
+        fallback = await self._pure_computation_chat_fallback(chat)
+        if self.dataset_store is None:
+            return fallback
+        references = []
+        for dependency_id in task.depends_on:
+            dependency_conversation = conversation_by_task.get(
+                dependency_id, chat.conversation_id
+            )
+            raw = await self._latest_task_dataset_reference(
+                identity, chat, dependency_conversation,
+            )
+            if raw is None:
+                # 结果被截断的任务不落盘，全量数据在SQL导出的XLSX里，导入后重试
+                dependency_response = (responses or {}).get(dependency_id)
+                result_file_url = getattr(dependency_response, "result_file_url", None)
+                if result_file_url:
+                    raw = await self._import_dependency_result_file(
+                        chat, identity, dependency_conversation, result_file_url
+                    )
+            if raw is None:
+                logger.warning(
+                    "pure computation fallback: %s dataset reference not found",
+                    dependency_id,
+                )
+                return fallback
+            source = restore_reference(raw)
+            try:
+                loaded = await asyncio.to_thread(
+                    self.dataset_store.load_dataset,
+                    source,
+                    current_scope=source.scope,
+                )
+            except Exception as exc:
+                logger.warning("pure computation source load failed: %s", exc)
+                return fallback
+            references.append((source, loaded.rows))
+        single_rows = [item for item in references if item[0].row_count == 1]
+        multi_rows = [item for item in references if item[0].row_count > 1]
+        if len(single_rows) != 1 or not multi_rows:
+            logger.warning(
+                "pure computation fallback: unexpected dataset shape %s",
+                [(item[0].row_count, item[0].columns) for item in references],
+            )
+            return fallback
+        denominator_reference, denominator_rows = single_rows[0]
+        denominator = next(
+            (
+                float(value) for value in denominator_rows[0].values()
+                if isinstance(value, (int, float))
+                or (isinstance(value, str) and value.replace(".", "", 1).isdigit())
+            ),
+            0.0,
+        )
+        if denominator <= 0:
+            logger.warning("pure computation fallback: denominator %s", denominator)
+            return fallback
+        numerator_reference, numerator_rows = max(multi_rows, key=lambda item: item[0].row_count)
+        # 导出文件里可能带 _sheet_name 这类内部列，计算与落盘前剔除
+        data_columns = [
+            column for column in numerator_reference.columns if column != "_sheet_name"
+        ]
+        metric_column = next(
+            (
+                column for column in reversed(data_columns)
+                if all(
+                    isinstance(row.get(column), (int, float))
+                    or (isinstance(row.get(column), str) and row.get(column).replace(".", "", 1).isdigit())
+                    for row in numerator_rows
+                    if row.get(column) is not None
+                )
+                and any(row.get(column) is not None for row in numerator_rows)
+            ),
+            None,
+        )
+        if metric_column is None:
+            logger.warning(
+                "pure computation fallback: no numeric column in %s",
+                numerator_reference.columns,
+            )
+            return fallback
+        coverage_name = next(
+            (
+                word for word in ("区域医院覆盖率", "覆盖率", "占比", "比例")
+                if word in task.question
+            ),
+            "覆盖率",
+        )
+        computed: list[tuple[dict[str, Any], float]] = []
+        for row in numerator_rows:
+            raw_value = row.get(metric_column) or 0
+            try:
+                ratio = float(raw_value) / denominator
+            except (TypeError, ValueError):
+                ratio = 0.0
+            computed.append((row, ratio))
+        computed.sort(key=lambda item: item[1], reverse=True)
+        coverage_rows = [
+            {
+                **{key: value for key, value in row.items() if key in data_columns},
+                coverage_name: f"{ratio * 100:.2f}%",
+            }
+            for row, ratio in computed
+        ]
+        scope = DatasetScope(
+            tenant_id=identity.tenant_id,
+            user_id=identity.user_id,
+            application_id=chat.application_id,
+            conversation_id=chat.conversation_id,
+            authorized_semantic_scope_fingerprint=chat.authorized_semantic_scope.fingerprint(),
+        )
+        try:
+            reference = await asyncio.to_thread(
+                self.dataset_store.save_dataset,
+                scope=scope,
+                columns=(*data_columns, coverage_name),
+                rows=coverage_rows,
+                snapshot_id="",
+                data_as_of=datetime.fromisoformat(numerator_reference.data_as_of),
+                source_type="DERIVED_COMPUTATION",
+                source_ref=f"{numerator_reference.dataset_id}/{denominator_reference.dataset_id}",
+                semantic_model_id=chat.semantic_model_id,
+                parent_dataset_ids=[numerator_reference.dataset_id, denominator_reference.dataset_id],
+                transformation_log=({
+                    "type": "derive",
+                    "operation": f"{metric_column} / {denominator:g}",
+                    "source_truncated": False,
+                },),
+                ttl_seconds=self.settings.dataset_ttl_seconds,
+            )
+            await self.sessions.put_dataset_reference(
+                reference.to_dict(), recent_limit=self.settings.dataset_recent_limit
+            )
+        except Exception as exc:
+            logger.warning("pure computation dataset persist failed: %s", exc)
+            return fallback
+        zero_count = sum(1 for _, ratio in computed if ratio <= 0)
+        # 合并回复里不单独成节，只以一行结论呈现；问题里的流程性措辞去掉
+        subject = task.question
+        for phrase in ("根据上述任务的查询结果计算", "，不再查询数据库", "不再查询数据库"):
+            subject = subject.replace(phrase, "")
+        subject = subject.strip(" ：:，。")
+        top_parts = "、".join(
+            f"{row.get(data_columns[0])} {ratio * 100:.2f}%"
+            for row, ratio in computed[:3]
+        )
+        answer = (
+            f"**{subject}**：共 {reference.row_count} 行，最高为{top_parts}，"
+            + (f"其中 {zero_count} 行为 0.00%，" if zero_count else "")
+            + "全量明细见回复末尾附件。"
+        )
+        # 计算结论随任务输入一起交给整体汇总，避免整体分析仍停留在预览口径
+        chat._dag_deferred_insight = {
+            "question": subject,
+            "intent": "统计分析",
+            "summary": answer.replace("**", ""),
+            "warnings": [],
+            "facts": QwenAnalysisSynthesizer._bounded({
+                "computation": {
+                    "operation": f"{metric_column} / {denominator:g}",
+                    "denominator": denominator,
+                    "row_count": reference.row_count,
+                    "zero_count": zero_count,
+                    "top": [
+                        {
+                            **{column: row.get(column) for column in data_columns},
+                            coverage_name: f"{ratio * 100:.2f}%",
+                        }
+                        for row, ratio in computed[:10]
+                    ],
+                },
+            }),
+        }
+        return AgentResponse(
+            request_id=uuid4(),
+            conversation_id=chat.conversation_id,
+            status="COMPLETED",
+            intent=PrimaryIntent.CHAT,
+            intent_source="TASK_DAG_COMPUTATION",
+            answer=answer,
+            dataset_id=reference.dataset_id,
+            reliability=ReliabilityReport(
+                level="HIGH",
+                score=1.0,
+                gates={
+                    "no_data_claim": True,
+                    "deterministic_computation": True,
+                    "denominator_positive": True,
+                },
+            ),
+            evidence=[EvidenceItem(
+                evidence_id="derived-computation",
+                kind="ANALYSIS_RESULT",
+                source_ref=reference.dataset_id,
+                payload={
+                    "operation": f"{metric_column} / {denominator:g}",
+                    "row_count": reference.row_count,
+                    "preview": coverage_rows[:20],
+                },
+            )],
+        )
+
+    async def _pure_computation_chat_fallback(self, chat: ChatRequest) -> AgentResponse:
+        """前序结果集不可用时，退回受控聊天模型基于问答文本直接回复。"""
+        answer = "暂时无法基于前序任务的查询结果完成计算，请稍后重试。"
+        if self.chat_responder is not None:
+            try:
+                answer = await self.chat_responder.respond(
+                    chat.question,
+                    agent_prompt=await self._agent_prompt_text(chat),
+                    history=(
+                        [
+                            {"role": item.role, "content": item.content}
+                            for item in chat.history
+                        ]
+                        or None
+                    ),
+                )
+            except Exception as exc:
+                logger.warning("controlled chat model unavailable: %s", exc)
+        return AgentResponse(
+            request_id=uuid4(),
+            conversation_id=chat.conversation_id,
+            status="COMPLETED",
+            intent=PrimaryIntent.CHAT,
+            intent_source="TASK_PLANNER",
+            answer=answer,
+            reliability=ReliabilityReport(
+                level="HIGH",
+                score=1,
+                gates={
+                    "no_data_claim": True,
+                    "controlled_chat_model": True,
+                },
+            ),
+        )
+
     async def _handle_task_plan(
         self,
         chat: ChatRequest,
@@ -2121,6 +2480,8 @@ class DataAnalysisOrchestrator:
         execution_plan, aliases = self.task_planner.deduplicate(plan)
         layers = self.task_planner.execution_layers(execution_plan)
         responses: dict[str, AgentResponse | Exception] = {}
+        # 多任务拆分时各子任务暂存的洞察模型输入，父级在全部任务完成后合并成一次整体分析。
+        deferred_insights: dict[str, dict[str, Any]] = {}
         conversation_by_task: dict[str, str] = {}
         root_message_id = root_message_id or chat.message_id
         task_answers = task_answers or {}
@@ -2171,6 +2532,13 @@ class DataAnalysisOrchestrator:
                         "conversations": conversation_by_task,
                     },
                 )
+
+        # 纯计算任务的全部依赖任务 id：这些任务的结果集必须落盘
+        pure_computation_dependency_ids = {
+            dependency_id for task in execution_plan.tasks
+            if task.depends_on and "不再查询数据库" in task.question
+            for dependency_id in task.depends_on
+        }
 
         async def run(task: AtomicTask) -> tuple[str, AgentResponse | Exception]:
             restored = responses.get(task.task_id)
@@ -2308,6 +2676,19 @@ class DataAnalysisOrchestrator:
                     parameters=list(task.parameters),
                     structured=task.extraction,
                 )
+            if task.depends_on and "不再查询数据库" in task.question:
+                # 复合指标拆出的纯计算任务：不进查询链路，基于前序任务结果回复
+                child._dag_pure_computation = True
+            if task.task_id in pure_computation_dependency_ids:
+                # 纯计算任务的依赖任务：单值结果也要落盘，供计算任务取分母
+                child._dag_keep_result_dataset = True
+            if (
+                len(execution_plan.tasks) >= 2
+                and self.analysis_synthesizer is not None
+                and not getattr(child, "_dag_pure_computation", False)
+            ):
+                # 多任务拆分：子任务不做单独的洞察解读，由父级在全部任务完成后合并汇总
+                child._dag_defer_insight = True
             try:
                 with task_progress_scope(
                     parent_message_id=root_message_id,
@@ -2317,7 +2698,12 @@ class DataAnalysisOrchestrator:
                     task_question=task.question,
                     is_child_task=True,
                 ):
-                    if len(task.depends_on) >= 2 and self._is_join_task(task.question):
+                    if getattr(child, "_dag_pure_computation", False):
+                        # 纯计算任务不进查询链路，基于前序任务结果集确定性计算
+                        value = await self._respond_pure_computation(
+                            child, identity, task, conversation_by_task, responses
+                        )
+                    elif len(task.depends_on) >= 2 and self._is_join_task(task.question):
                         value = await self._execute_cross_branch_join(
                             task, chat, identity, responses, conversation_by_task
                         )
@@ -2338,6 +2724,8 @@ class DataAnalysisOrchestrator:
                                 value = self._attach_dependency_constraint_evidence(
                                     value, dependency_constraints
                                 )
+                if child._dag_deferred_insight is not None and isinstance(value, AgentResponse):
+                    deferred_insights[task.task_id] = child._dag_deferred_insight
                 responses[task.task_id] = value
                 await save_checkpoint()
                 return task.task_id, value
@@ -2628,7 +3016,48 @@ class DataAnalysisOrchestrator:
                     "多任务追问状态已被另一条消息更新，请基于最新响应继续。",
                 )
 
-        combined_answer = await self._composite_task_answer(
+        merged_insight: str | None = None
+        if (
+            len(execution_plan.tasks) >= 2
+            and not clarification_questions
+            and deferred_insights
+            and self.analysis_synthesizer is not None
+        ):
+            insight_items = [
+                {"task_id": task.task_id, **deferred_insights[task.task_id]}
+                for task in execution_plan.tasks
+                if task.task_id in deferred_insights
+            ]
+            if len(insight_items) >= 2:
+                await emit_progress(
+                    "INSIGHT_ANALYSIS", "RUNNING",
+                    f"已收到 {len(insight_items)} 个任务的数据，正在合并生成整体分析。",
+                )
+                try:
+                    merged_insight, _ = await self.analysis_synthesizer.synthesize_combined(
+                        chat.question, insight_items,
+                        agent_prompt=await self._agent_prompt_text(chat),
+                    )
+                except (
+                    httpx.HTTPError, KeyError, RuntimeError, ValueError,
+                    SynthesisValidationError, AttributeError,
+                ) as exc:
+                    # 测试替身可能只实现单任务 synthesize，属性缺失时同样退回各任务结果
+                    logger.warning(
+                        "combined insight synthesis unavailable; keeping "
+                        "per-task results: error_type=%s detail=%s",
+                        type(exc).__name__, exc,
+                    )
+                await emit_progress(
+                    "INSIGHT_ANALYSIS",
+                    "COMPLETED" if merged_insight else "DEGRADED",
+                    merged_insight or "整体分析生成失败，已保留各任务的查询结果。",
+                    message_limit=8192,
+                    chart_image_count=0,
+                    chart_source="NONE",
+                )
+
+        combined_answer, merged_links = await self._composite_task_answer(
             chat=chat,
             identity=identity,
             plan=plan,
@@ -2650,6 +3079,9 @@ class DataAnalysisOrchestrator:
                 f"{completed_count - fully_completed_count} 项为部分结果。\n\n"
                 + combined_answer
             )
+        if merged_insight:
+            # 整体分析放在最前，后面保留各任务的结果摘要、表格和附件链接
+            combined_answer = f"{merged_insight}\n\n{combined_answer}"
         final_response = AgentResponse(
             clarification_decision_traces=[trace.model_copy(deep=True) for value in responses.values() if isinstance(value, AgentResponse) for trace in value.clarification_decision_traces],
             request_id=uuid4(),
@@ -2712,6 +3144,24 @@ class DataAnalysisOrchestrator:
                 plan=plan,
                 responses=responses,
                 conversation_by_task=conversation_by_task,
+            )
+        elif (
+            shared_clarification is None
+            and merged_links is not None
+            and not awaiting_task_ids
+            and len(plan.tasks) >= 2
+        ):
+            # 合并单回复的场景：各任务结果导出成一个多章节附件，
+            # 导出失败时补回正文里摘出的各任务下载链接
+            await self._attach_composite_report(
+                final_response,
+                chat=chat,
+                identity=identity,
+                plan=plan,
+                responses=responses,
+                conversation_by_task=conversation_by_task,
+                markdown_link=True,
+                fallback_links=merged_links,
             )
         if not awaiting_task_ids:
             await self._persist_dag_root_context(
@@ -3679,6 +4129,29 @@ class DataAnalysisOrchestrator:
                     },
                 )
         independent_chat = raw_rule_request.primary_intent == PrimaryIntent.CHAT
+        # 语义识别判成业务无关的问题时直接回复，拆分与意图分类模型都不再调度
+        off_topic_direct = bool(getattr(chat, "_v2_off_topic", False))
+        if off_topic_direct:
+            raw_rule_request = raw_rule_request.model_copy(
+                update={"primary_intent": PrimaryIntent.OUT_OF_SCOPE},
+            )
+            independent_chat = True
+        # 复合指标拆出的计算任务不查库，基于前序任务结果直接回复
+        if bool(getattr(chat, "_dag_pure_computation", False)):
+            raw_rule_request = raw_rule_request.model_copy(
+                update={"primary_intent": PrimaryIntent.CHAT},
+            )
+            independent_chat = True
+        # 拆分模型判成闲聊/超范围且意图节点已由语义识别展示过时，走直接回复，
+        # 中间的规范化、意图补全等过程性进度对这种轮次没有意义，不再发送
+        nondata_direct = (
+            off_topic_direct
+            or (
+                bool(getattr(chat, "_intent_context_progress_emitted", False))
+                and getattr(chat, "_planner_extraction", None) is not None
+                and chat._planner_extraction.intent in NO_DATA_INTENTS
+            )
+        )
         standalone_complete_business = bool(
             pending is None
             and raw_rule_request.conversation_control == ConversationControl.NEW_REQUEST
@@ -3916,19 +4389,25 @@ class DataAnalysisOrchestrator:
                 "use_longterm_memory": chat.use_longterm_memory,
             },
         )
-        await emit_progress(
-            "CONTEXT_RESTORE",
-            "COMPLETED",
-            "会话上下文恢复完成。" if previous_for_rewrite is not None else "当前为新会话任务。",
-        )
+        if not nondata_direct:
+            await emit_progress(
+                "CONTEXT_RESTORE",
+                "COMPLETED",
+                "会话上下文恢复完成。" if previous_for_rewrite is not None else "当前为新会话任务。",
+            )
         rewrite = None
         classification_question = chat.question
-        await emit_progress(
-            "QUESTION_REWRITE", "RUNNING", "正在结合上下文和实体别名规范化问题。"
-        )
-        if self.question_rewriter is not None and semantic_decision_request is None and (
-            chat._completed_question_execution
-            or (not independent_chat and not deterministic_business_fast_path)
+        if not nondata_direct:
+            await emit_progress(
+                "QUESTION_REWRITE", "RUNNING", "正在结合上下文和实体别名规范化问题。"
+            )
+        if (
+            self.question_rewriter is not None
+            and not nondata_direct
+            and semantic_decision_request is None and (
+                chat._completed_question_execution
+                or (not independent_chat and not deterministic_business_fast_path)
+            )
         ):
             with track_operation(
                 "V1_ORCHESTRATION",
@@ -3952,20 +4431,24 @@ class DataAnalysisOrchestrator:
                 timing.mark_first_result()
                 timing.set_attribute("degraded", bool(rewrite.degraded))
             classification_question = rewrite.rewritten_question
-        await emit_progress(
-            "QUESTION_REWRITE",
-            "DEGRADED" if rewrite is not None and rewrite.degraded else "COMPLETED",
-            (
-                "实体规范化服务不可用，已安全保留原问题。"
-                if rewrite is not None and rewrite.degraded
-                else "问题规范化完成。"
-            ),
-        )
-        await emit_progress(
-            "INTENT_RECOGNITION",
-            "RUNNING",
-            "正在判断本轮问题与会话上下文的关系，并补全问题。",
-        )
+        if not nondata_direct:
+            await emit_progress(
+                "QUESTION_REWRITE",
+                "DEGRADED" if rewrite is not None and rewrite.degraded else "COMPLETED",
+                (
+                    "实体规范化服务不可用，已安全保留原问题。"
+                    if rewrite is not None and rewrite.degraded
+                    else "问题规范化完成。"
+                ),
+            )
+            # V2 轮次的同文案进行中提示由语义识别节点统一发送，这里再发
+            # 会重复出现在意图和规划两个节点里；纯 V1 流程仍靠它点亮意图节点
+            if not getattr(chat, "_intent_context_progress_emitted", False):
+                await emit_progress(
+                    "INTENT_RECOGNITION",
+                    "RUNNING",
+                    "正在判断本轮问题与会话上下文的关系，并补全问题。",
+                )
         model_entity_mentions: list[str] = []
         filter_semantic_ambiguities: list[SemanticAmbiguity] = []
         if pending:
@@ -5407,13 +5890,14 @@ class DataAnalysisOrchestrator:
         # slots separately so raw LLM/rule candidates can never be presented as
         # if they were current vector-catalog facts. This is display-only and
         # intentionally cannot mutate the executable request.
-        if self.question_rewriter is not None:
+        if self.question_rewriter is not None and not nondata_direct:
             await self.question_rewriter.ground_display_slots(request)
 
-        await emit_progress(
-            "INTENT_RECOGNITION",
-            "COMPLETED",
-            self._intent_think_summary(
+        if not nondata_direct:
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "COMPLETED",
+                self._intent_think_summary(
                 request,
                 file_status=str(chat._file_inspection.get("status") or "NOT_PROVIDED"),
                 file_based=bool(chat._file_inspection.get("file_based")),
@@ -5439,17 +5923,18 @@ class DataAnalysisOrchestrator:
             file_based=bool(chat._file_inspection.get("file_based")),
         )
         file_inspection = dict(chat._file_inspection)
-        await emit_progress(
-            "FILE_INSPECTION",
-            "COMPLETED",
-            self._file_inspection_think_summary(file_inspection),
-            file_status=str(file_inspection.get("status") or "NOT_PROVIDED"),
-            file_based=bool(file_inspection.get("file_based")),
-            file_count=int(file_inspection.get("file_count") or bool(chat.temp_file_paths)),
-            row_count=file_inspection.get("row_count"),
-            column_count=file_inspection.get("column_count"),
-            sheet_count=file_inspection.get("sheet_count"),
-        )
+        if not nondata_direct:
+            await emit_progress(
+                "FILE_INSPECTION",
+                "COMPLETED",
+                self._file_inspection_think_summary(file_inspection),
+                file_status=str(file_inspection.get("status") or "NOT_PROVIDED"),
+                file_based=bool(file_inspection.get("file_based")),
+                file_count=int(file_inspection.get("file_count") or bool(chat.temp_file_paths)),
+                row_count=file_inspection.get("row_count"),
+                column_count=file_inspection.get("column_count"),
+                sheet_count=file_inspection.get("sheet_count"),
+            )
 
         if (chat.use_longterm_memory and self.memories is not None
                 and has_stable_user_principal(identity.tenant_id, identity.user_id)):
@@ -5647,8 +6132,14 @@ class DataAnalysisOrchestrator:
                 )
             )
         ):
-            response = await self._knowledge_document_answer(request, identity)
-            return await self._finish_terminal(request, response)
+            response = await self._knowledge_document_answer(
+                request, identity,
+                # 闲聊直答轮次知识库没检到内容时不再回固定话术，
+                # 落到后面的受控聊天回复
+                empty_result_falls_to_chat=nondata_direct,
+            )
+            if response is not None or not nondata_direct:
+                return await self._finish_terminal(request, response)
 
         external_search_mode = self._external_search_mode(request.original_question)
         if query_result is None and external_search_mode == "PURE":
@@ -5703,9 +6194,10 @@ class DataAnalysisOrchestrator:
                 semantic_extractions=chat._semantic_extraction_items,
             )
 
-        await emit_progress(
-            "COMPLETENESS_CHECK", "COMPLETED", "执行所需的关键信息已满足。"
-        )
+        if not nondata_direct:
+            await emit_progress(
+                "COMPLETENESS_CHECK", "COMPLETED", "执行所需的关键信息已满足。"
+            )
 
         # Persist the understood task before external execution. This is the
         # short-term working memory used by follow-ups even when ASL/SQL or the
@@ -6117,6 +6609,7 @@ class DataAnalysisOrchestrator:
                 request.primary_intent == PrimaryIntent.METRIC_QUERY
                 and query_result.dataset.row_count == 1
                 and not request.dimensions
+                and not getattr(chat, "_dag_keep_result_dataset", False)
             )
         ):
             dataset_id = await self._persist_query_dataset(request, query_result)
@@ -6535,7 +7028,37 @@ class DataAnalysisOrchestrator:
                     )
                 )
 
-        if insight_output is not None and self.analysis_synthesizer is not None:
+        if insight_output is not None and self.analysis_synthesizer is not None and chat._dag_defer_insight:
+            # 多任务拆分：子任务不出单独的解读，模型输入暂存到请求上，
+            # 等全部任务跑完由父级调 synthesize_combined 做一次整体汇总。
+            synthesis_input = replace(insight_output, facts={
+                **insight_output.facts,
+                "executed_query": {
+                    "asl": copy.deepcopy(query_result.asl),
+                    "sql": query_result.sql,
+                },
+                "query_data": {
+                    "columns": query_result.dataset.columns,
+                    "rows": query_result.dataset.rows[:20],
+                    "returned_row_count": len(query_result.dataset.rows),
+                    "total_row_count": total_row_count,
+                    "total_row_count_confirmed": total_row_count_confirmed,
+                    "sample_only": (
+                        query_result.dataset.truncated
+                        or len(query_result.dataset.rows) > 20
+                        or not total_row_count_confirmed
+                        or total_row_count > len(query_result.dataset.rows)
+                    ),
+                },
+            })
+            chat._dag_deferred_insight = {
+                "question": request.rewritten_question or request.original_question,
+                "intent": self._intent_label(request.primary_intent),
+                "summary": insight_output.answer,
+                "warnings": list(insight_output.warnings),
+                "facts": QwenAnalysisSynthesizer._bounded(synthesis_input.facts),
+            }
+        elif insight_output is not None and self.analysis_synthesizer is not None:
             await emit_progress(
                 "ANSWER_SYNTHESIS", "RUNNING", "正在结合本次问题与查询数据生成分析解读。"
             )
@@ -6733,18 +7256,19 @@ class DataAnalysisOrchestrator:
             insight_text += "\n需要注意的是，" + "；".join(
                 warning.rstrip("。") for warning in insight_output.warnings
             ) + "。"
-        await emit_progress(
-            "INSIGHT_ANALYSIS",
-            "COMPLETED" if reliability.level != "FAIL" else "SKIPPED",
-            (
-                f"分析意图：{self._intent_label(request.primary_intent)}。\n\n"
-                + insight_text
-                + "\n\n以上分析基于本次问题与查询数据，推断性解释不代表已核实的业务原因。"
-            ),
-            message_limit=8192,
-            chart_image_count=0,
-            chart_source="NONE",
-        )
+        if not chat._dag_defer_insight:
+            await emit_progress(
+                "INSIGHT_ANALYSIS",
+                "COMPLETED" if reliability.level != "FAIL" else "SKIPPED",
+                (
+                    f"分析意图：{self._intent_label(request.primary_intent)}。\n\n"
+                    + insight_text
+                    + "\n\n以上分析基于本次问题与查询数据，推断性解释不代表已核实的业务原因。"
+                ),
+                message_limit=8192,
+                chart_image_count=0,
+                chart_source="NONE",
+            )
         if external_search_mode == "ENRICH":
             await emit_progress(
                 "EXTERNAL_SEARCH",
@@ -6988,73 +7512,146 @@ class DataAnalysisOrchestrator:
         plan: TaskPlan,
         task_results: list[TaskExecutionResult],
         conversation_by_task: dict[str, str],
-    ) -> str:
-        """Assemble DAG results from verified datasets, never nested Markdown.
+    ) -> tuple[str, list[str] | None]:
+        """Assemble DAG results into a single reply, never nested Markdown.
 
         Homogeneous, bounded datasets are rendered as one table with a branch
-        column. Heterogeneous, unavailable, large, partial, or failed results
-        remain independent sections. This keeps formatting deterministic while
-        preserving every branch's original status and explanation.
+        column. When datasets cannot be merged (heterogeneous shapes, large
+        results, references unavailable), completed branches still merge into
+        one reply with the child answers under bold question lead-ins. Failed,
+        partial, or empty results remain independent sections. Returns the
+        answer plus the per-task attachment links removed from a merged body;
+        ``None`` links mean sections were kept and no combined file applies.
         """
 
         fallback = self._task_result_summary_table(task_results)
         if (
-            self.dataset_store is None
-            or not task_results
+            not task_results
             or any(result.status != "COMPLETED" for result in task_results)
-            or any(not result.dataset_id for result in task_results)
         ):
-            return fallback
+            return fallback, None
 
-        datasets: dict[str, tuple[list[str], list[dict[str, Any]]]] = {}
-        try:
-            for task, result in zip(plan.tasks, task_results, strict=True):
-                child_conversation = conversation_by_task.get(task.task_id)
-                if not child_conversation or not result.dataset_id:
-                    return fallback
-                raw_items = await self.sessions.get_recent_dataset_references(
-                    identity.tenant_id,
-                    identity.user_id,
-                    chat.application_id,
-                    child_conversation,
-                    limit=self.settings.dataset_recent_limit,
-                )
-                raw = next(
-                    (
-                        item for item in raw_items
-                        if item.get("dataset_id") == result.dataset_id
-                    ),
-                    None,
-                )
-                if raw is None:
-                    return fallback
-                reference = restore_reference(raw)
-                if reference.scope.authorized_semantic_scope_fingerprint != chat.authorized_semantic_scope.fingerprint():
-                    return fallback
-                # Final chat tables are bounded. Large datasets retain the
-                # child's preview and downloadable dataset reference instead of
-                # being fully materialized merely for presentation.
-                if reference.row_count > 200:
-                    return fallback
-                loaded = await asyncio.to_thread(
-                    self.dataset_store.load_dataset,
-                    reference,
-                    current_scope=reference.scope,
-                )
-                datasets[task.task_id] = (
-                    list(loaded.reference.columns),
-                    [dict(row) for row in loaded.rows],
-                )
-        except Exception as exc:
-            logger.warning("composite result presentation fallback: %s", exc)
-            return fallback
+        datasets: dict[str, tuple[list[str], list[dict[str, Any]]]] | None = {}
+        if self.dataset_store is not None and all(
+            result.dataset_id for result in task_results
+        ):
+            try:
+                for task, result in zip(plan.tasks, task_results, strict=True):
+                    child_conversation = conversation_by_task.get(task.task_id)
+                    if not child_conversation or not result.dataset_id:
+                        datasets = None
+                        break
+                    raw_items = await self.sessions.get_recent_dataset_references(
+                        identity.tenant_id,
+                        identity.user_id,
+                        chat.application_id,
+                        child_conversation,
+                        limit=self.settings.dataset_recent_limit,
+                    )
+                    raw = next(
+                        (
+                            item for item in raw_items
+                            if item.get("dataset_id") == result.dataset_id
+                        ),
+                        None,
+                    )
+                    if raw is None:
+                        datasets = None
+                        break
+                    reference = restore_reference(raw)
+                    if reference.scope.authorized_semantic_scope_fingerprint != chat.authorized_semantic_scope.fingerprint():
+                        datasets = None
+                        break
+                    # Final chat tables are bounded. Large datasets keep the
+                    # child's preview in the merged reply instead of being
+                    # fully materialized merely for presentation.
+                    if reference.row_count > 200:
+                        datasets = None
+                        break
+                    loaded = await asyncio.to_thread(
+                        self.dataset_store.load_dataset,
+                        reference,
+                        current_scope=reference.scope,
+                    )
+                    datasets[task.task_id] = (
+                        list(loaded.reference.columns),
+                        [dict(row) for row in loaded.rows],
+                    )
+            except Exception as exc:
+                logger.warning("composite result presentation fallback: %s", exc)
+                datasets = None
+        if datasets:
+            homogeneous = self._render_homogeneous_task_datasets(
+                chat.question,
+                plan,
+                task_results,
+                datasets,
+            )
+            if homogeneous:
+                return homogeneous, []
 
-        return self._render_homogeneous_task_datasets(
-            chat.question,
-            plan,
-            task_results,
-            datasets,
-        ) or fallback
+        merged, links = self._render_merged_task_answers(task_results)
+        if merged is not None:
+            return merged, links
+        return fallback, None
+
+    @classmethod
+    def _render_merged_task_answers(
+        cls,
+        results: list[TaskExecutionResult],
+    ) -> tuple[str | None, list[str] | None]:
+        """全部子任务完成时的单回复模板合并。
+
+        单值结果（整个子回答就是一张一列一行的表）转成「问题：值」一行，
+        其余保留子回答正文并以加粗问题作小标题；各任务的附件行摘出返回，
+        由调用方在合成附件导出成功后统一补一条下载链接，导出失败时再补回。
+        """
+        blocks: list[str] = []
+        links: list[str] = []
+        for result in results:
+            content = (result.answer or "").strip()
+            if not content:
+                return None, None
+            if "不再查询数据库" in result.question:
+                # 复合指标的计算任务不单独成节，回答本身就是一行结论
+                blocks.append(content)
+                continue
+            content, content_links = cls._split_child_attachment_lines(content)
+            links.extend(content_links)
+            single_value = cls._single_value_table_text(content)
+            if single_value is not None:
+                blocks.append(f"**{result.question}**：{single_value}")
+            else:
+                blocks.append(f"**{result.question}**\n\n{content}")
+        if len(blocks) < 2:
+            return None, None
+        return "\n\n".join(blocks), links
+
+    @staticmethod
+    def _split_child_attachment_lines(content: str) -> tuple[str, list[str]]:
+        """摘出子回答末尾的「附件：」行，返回正文与摘出的链接片段。"""
+        lines = content.split("\n")
+        kept: list[str] = []
+        links: list[str] = []
+        for line in lines:
+            if line.strip().startswith("附件："):
+                links.append(line.strip().removeprefix("附件：").strip())
+            else:
+                kept.append(line)
+        return "\n".join(kept).strip(), links
+
+    _SINGLE_VALUE_TABLE_RE = re.compile(
+        r"^\|([^|]+)\|\s*\n\|[-\s:|]+\|\s*\n\|\s*([^|]+?)\s*\|\s*$"
+    )
+
+    @classmethod
+    def _single_value_table_text(cls, content: str) -> str | None:
+        """整个内容恰好是一张一列一行的表时返回该值，否则返回 None。"""
+        match = cls._SINGLE_VALUE_TABLE_RE.fullmatch(content.strip())
+        if match is None:
+            return None
+        value = match.group(2).strip()
+        return value or None
 
     @staticmethod
     def _task_facet_label(question: str) -> tuple[str, str]:
@@ -7179,24 +7776,33 @@ class DataAnalysisOrchestrator:
         plan: TaskPlan,
         responses: dict[str, AgentResponse | Exception],
         conversation_by_task: dict[str, str],
+        markdown_link: bool = False,
+        fallback_links: list[str] | None = None,
     ) -> None:
-        """Export every complete report dataset as a separate auditable section."""
+        """Export every complete report dataset as a separate auditable section.
+
+        ``markdown_link`` 供合并单回复的非 COMBINED_REPORT 场景使用：成功时按
+        单任务口径在回答末尾补一条「附件：」Markdown 链接；失败时把合并正文
+        里摘出的各任务附件链接补回去，保证下载入口不丢。
+        """
         if self.report_exporter is None:
-            response.answer += "\n未生成下载文件：当前环境尚未启用MinIO报表存储。"
+            if markdown_link and fallback_links:
+                response.answer += "\n\n附件：" + "；".join(fallback_links)
+            else:
+                response.answer += "\n未生成下载文件：当前环境尚未启用MinIO报表存储。"
             return
         export_many = getattr(self.report_exporter, "export_many", None)
         if not callable(export_many):
-            response.answer += "\n未生成下载文件：当前报表组件不支持复合数据集导出。"
+            if markdown_link and fallback_links:
+                response.answer += "\n\n附件：" + "；".join(fallback_links)
+            else:
+                response.answer += "\n未生成下载文件：当前报表组件不支持复合数据集导出。"
             return
         sections: list[tuple[str, Any]] = []
         seen_dataset_ids: set[str] = set()
         for task in plan.tasks:
             value = responses.get(task.task_id)
-            if (
-                not isinstance(value, AgentResponse)
-                or not value.dataset_id
-                or value.dataset_id in seen_dataset_ids
-            ):
+            if not isinstance(value, AgentResponse):
                 continue
             raw_items = await self.sessions.get_recent_dataset_references(
                 identity.tenant_id,
@@ -7208,19 +7814,33 @@ class DataAnalysisOrchestrator:
             raw = next(
                 (
                     item for item in raw_items
-                    if item.get("dataset_id") == value.dataset_id
+                    if value.dataset_id and item.get("dataset_id") == value.dataset_id
                 ),
                 None,
             )
             if raw is None:
+                # 子任务响应不一定携带dataset_id，退回该任务会话最近的结果集；
+                # 派生计算结果集由计算任务自己通过dataset_id命中，这里不重复收录。
+                raw = await self._latest_task_dataset_reference(
+                    identity, chat,
+                    conversation_by_task.get(task.task_id, chat.conversation_id),
+                    exclude_source_type="DERIVED_COMPUTATION",
+                )
+            if raw is None:
                 continue
-            sections.append((task.question, restore_reference(raw)))
-            seen_dataset_ids.add(value.dataset_id)
+            reference = restore_reference(raw)
+            if reference.dataset_id in seen_dataset_ids:
+                continue
+            sections.append((task.question, reference))
+            seen_dataset_ids.add(reference.dataset_id)
         if len(sections) < 2:
-            response.answer += (
-                "\n未生成综合下载文件：至少需要两个已完整落盘的独立结果集；"
-                "未完成章节及仅有上游下载文件的章节已在正文中单独标明。"
-            )
+            if markdown_link and fallback_links:
+                response.answer += "\n\n附件：" + "；".join(fallback_links)
+            else:
+                response.answer += (
+                    "\n未生成综合下载文件：至少需要两个已完整落盘的独立结果集；"
+                    "未完成章节及仅有上游下载文件的章节已在正文中单独标明。"
+                )
             return
         file_format = self._requested_report_format(chat.question)
         root_scope = DatasetScope(
@@ -7248,7 +7868,10 @@ class DataAnalysisOrchestrator:
                 raise
         except Exception as exc:
             logger.warning("composite report generation failed: %s", exc)
-            response.answer += "\n分析正文已生成，但综合下载文件生成失败，请稍后重试。"
+            if markdown_link and fallback_links:
+                response.answer += "\n\n附件：" + "；".join(fallback_links)
+            else:
+                response.answer += "\n分析正文已生成，但综合下载文件生成失败，请稍后重试。"
             return
         exported_dataset_ids = [reference.dataset_id for _, reference in sections]
         response.files.append(GeneratedFile(
@@ -7261,10 +7884,13 @@ class DataAnalysisOrchestrator:
             byte_size=result["byte_size"],
             expires_at=result["object_expires_at"],
         ))
-        response.answer += (
-            f"\n已生成包含 {len(sections)} 个独立数据章节的{file_format.upper()}文件，"
-            "可通过 files[0].download_url 下载。"
-        )
+        if markdown_link:
+            self._append_download_links(response)
+        else:
+            response.answer += (
+                f"\n已生成包含 {len(sections)} 个独立数据章节的{file_format.upper()}文件，"
+                "可通过 files[0].download_url 下载。"
+            )
 
     async def _attach_requested_report(
         self,
@@ -7379,8 +8005,9 @@ class DataAnalysisOrchestrator:
         ) or "数据图表"
 
     async def _knowledge_document_answer(
-        self, request: CanonicalAnalysisRequest, identity: TrustedIdentity
-    ) -> AgentResponse:
+        self, request: CanonicalAnalysisRequest, identity: TrustedIdentity,
+        empty_result_falls_to_chat: bool = False,
+    ) -> AgentResponse | None:
         """Answer document questions only from retrieved, scoped KB evidence."""
         empty_dataset = Dataset(
             columns=[],
@@ -7398,6 +8025,8 @@ class DataAnalysisOrchestrator:
         except AdapterError as exc:
             return self._fallback(request, self._dependency_message(exc), error_code=exc.code)
         if not context.documents:
+            if empty_result_falls_to_chat:
+                return None
             return self._fallback(
                 request,
                 "当前绑定的知识库中没有检索到能够回答该问题的内容。请确认文件已完成解析和向量入库，或换一种问法。",
@@ -10388,15 +11017,16 @@ class DataAnalysisOrchestrator:
     def _turn_relation_label(relation: TurnRelation | None) -> str:
         if relation is None:
             return "未判定"
+        # 对外只呈现三类：新问题、问题追问、澄清问题；细类按追问口径归并。
         return {
-            TurnRelation.STANDALONE_NEW_TOPIC: "独立新问题",
-            TurnRelation.CURRENT_TOPIC_FOLLOWUP: "当前主题追问",
-            TurnRelation.CURRENT_TOPIC_MODIFICATION: "当前主题条件修改",
-            TurnRelation.CURRENT_TOPIC_DRILLDOWN: "当前主题下钻",
-            TurnRelation.HISTORICAL_TOPIC_RETURN: "返回历史主题",
-            TurnRelation.CLARIFICATION_RESPONSE: "澄清回复",
-            TurnRelation.CORRECTION: "纠正上一请求",
-            TurnRelation.AMBIGUOUS_RELATION: "轮次关系待确认",
+            TurnRelation.STANDALONE_NEW_TOPIC: "新问题",
+            TurnRelation.CURRENT_TOPIC_FOLLOWUP: "问题追问",
+            TurnRelation.CURRENT_TOPIC_MODIFICATION: "问题追问",
+            TurnRelation.CURRENT_TOPIC_DRILLDOWN: "问题追问",
+            TurnRelation.HISTORICAL_TOPIC_RETURN: "问题追问",
+            TurnRelation.CLARIFICATION_RESPONSE: "澄清问题",
+            TurnRelation.CORRECTION: "问题追问",
+            TurnRelation.AMBIGUOUS_RELATION: "澄清问题",
         }.get(relation, relation.value)
 
     @classmethod
@@ -12389,8 +13019,13 @@ class DataAnalysisOrchestrator:
             PrimaryIntent.OUT_OF_SCOPE: "该请求超出只读数据分析范围。",
         }
         model_used = False
-        if request.primary_intent == PrimaryIntent.CHAT:
-            answer = "当然可以呀。你想聊点什么？"
+        # 闲聊和超范围的问题都交给受控聊天模型直接回复，固定话术只做兜底
+        if request.primary_intent in {PrimaryIntent.CHAT, PrimaryIntent.OUT_OF_SCOPE}:
+            answer = (
+                "当然可以呀。你想聊点什么？"
+                if request.primary_intent == PrimaryIntent.CHAT
+                else "该请求超出只读数据分析范围。"
+            )
             if self.chat_responder is not None:
                 try:
                     answer = await self.chat_responder.respond(

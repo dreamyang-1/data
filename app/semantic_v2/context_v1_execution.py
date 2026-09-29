@@ -119,6 +119,21 @@ class ResolvedContextTurn:
     source_question: str | None = None
 
 
+async def _emit_v1_triage_reason(reason: str | None) -> None:
+    """分诊模型给的判定思考句发到意图识别节点，说明这轮回复接的是哪个挂起问题。"""
+    text = str(reason or '').strip()
+    if not text:
+        return
+    if text[-1] not in '。！？?!；;':
+        text += '。'
+    await emit_progress(
+        'INTENT_RECOGNITION',
+        'RUNNING',
+        '判定思考：' + text,
+        progress_phase='V1_PENDING_TRIAGE_REASON',
+    )
+
+
 def _standalone_execution_display(
     question: str, display: CompletedQuestionDisplay
 ) -> CompletedQuestionDisplay:
@@ -485,7 +500,7 @@ class V2ContextV1ExecutionBridge:
         ] | None = None,
         v1_pending_triage: Callable[
             [ChatRequest, TrustedIdentity],
-            Awaitable[tuple[str, str | None] | None],
+            Awaitable[tuple[str, str | None, str | None] | None],
         ] | None = None,
         v1_pending_discard: Callable[
             [ChatRequest, TrustedIdentity], Awaitable[None]
@@ -1156,16 +1171,18 @@ class V2ContextV1ExecutionBridge:
                 # 独立新问题，待确认项永远对不上。
                 triage = await self.v1_pending_triage(chat, identity)
                 if triage is not None:
-                    verdict, merged = triage
+                    verdict, merged, triage_reason = triage
                     if verdict == "ANSWER" and merged:
                         if self.v1_pending_discard is not None:
                             await self.v1_pending_discard(chat, identity)
                         await emit_progress(
                             "INTENT_RECOGNITION",
                             "RUNNING",
-                            "对话状态识别：澄清回复。",
+                            "对话状态识别：澄清问题。",
                             progress_phase="V1_PENDING_TRIAGE",
                         )
+                        # 分诊模型给的判定思考句：说明这轮回复接的是哪个挂起问题
+                        await _emit_v1_triage_reason(triage_reason)
                         pending_merged_question = merged
                     elif self.v1_pending_discard is not None:
                         await self.v1_pending_discard(chat, identity)
@@ -1256,7 +1273,7 @@ class V2ContextV1ExecutionBridge:
             await emit_progress(
                 "INTENT_RECOGNITION",
                 "RUNNING",
-                "正在理解当前问题，并核对本轮与会话上下文的关系。",
+                "正在判断本轮问题与会话上下文的关系，并补全问题。",
                 progress_phase="V2_CONTEXT_START",
             )
             if (
@@ -1271,7 +1288,7 @@ class V2ContextV1ExecutionBridge:
                 await emit_progress(
                     "INTENT_RECOGNITION",
                     "RUNNING",
-                    "对话状态识别：独立新问题。",
+                    "对话状态识别：新问题。",
                     progress_phase="V2_CONVERSATION_STATE_READY",
                     resolution_source="DETERMINISTIC_EMPTY_CONTEXT",
                 )
@@ -1460,7 +1477,20 @@ class V2ContextV1ExecutionBridge:
                 )
             step = _completed_question_step(resolved)
             intent_context_progress_emitted = step is not None
-            if step is not None:
+            # 语义识别判成业务无关的问题时，意图节点只保留判定思考句，
+            # 不再展示用户原始问题与补全后的问题；off_topic 标记随事件
+            # 带给 SSE 层，规划节点对这类轮次不再点亮
+            off_topic_parse = resolved.standalone_parse or resolved.semantic_parse
+            if off_topic_parse is not None and off_topic_parse.off_topic:
+                await emit_progress(
+                    "INTENT_RECOGNITION",
+                    "RUNNING",
+                    "判定思考：用户问题为「" + chat.question.strip() + "」，"
+                    "和业务数据分析场景无关，我直接回答这个问题。",
+                    progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+                    off_topic=True,
+                )
+            elif step is not None:
                 await emit_progress(
                     "INTENT_RECOGNITION",
                     "RUNNING",
@@ -1489,6 +1519,9 @@ class V2ContextV1ExecutionBridge:
                 update={"question": resolved.completed_question, "history": []},
             )
             execution_chat._completed_question_execution = True
+            if off_topic_parse is not None and off_topic_parse.off_topic:
+                # 执行层据此跳过拆分器与意图分类模型，直接受控聊天回复
+                execution_chat._v2_off_topic = True
             execution_chat._context_verified_filter_bindings = (
                 _verified_context_filter_bindings(resolved)
             )
@@ -1676,7 +1709,7 @@ def build_context_v1_execution_handler(
     ] | None = None,
     v1_pending_triage: Callable[
         [ChatRequest, TrustedIdentity],
-        Awaitable[tuple[str, str | None] | None],
+        Awaitable[tuple[str, str | None, str | None] | None],
     ] | None = None,
     v1_pending_discard: Callable[
         [ChatRequest, TrustedIdentity], Awaitable[None]

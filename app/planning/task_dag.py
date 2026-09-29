@@ -130,6 +130,15 @@ def _clean_extraction_text(value: Any) -> str:
     return text[:_EXTRACTION_TEXT_MAX]
 
 
+def _strip_json_fences(text: str) -> str:
+    """剥离模型输出外层的 markdown 代码围栏。"""
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        stripped = re.sub(r"^```[a-zA-Z]*\s*", "", stripped)
+        stripped = re.sub(r"\s*```$", "", stripped)
+    return stripped
+
+
 def _clean_extraction_item(value: Any) -> Any:
     """列表元素只保留字符串和对象两种形态，超长截断。"""
     if isinstance(value, str):
@@ -333,6 +342,14 @@ class _ModelPlan(BaseModel):
         default=None,
         description="仅SINGLE_TASK时填写；" + _EXTRACTION_SCHEMA_DESCRIPTION,
     )
+    analyze_summary: str | None = Field(
+        default=None,
+        max_length=200,
+        description="仅多任务时必填；一句话向用户说明任务结构和执行顺序，"
+        "点明哪些任务相互独立可并行、哪些任务依赖前序结果，任务用“任务N”指代，"
+        "例如：“拆分为三项子任务，任务1、任务2相互独立可并行处理，"
+        "任务3依赖前两项任务的名单结果。”",
+    )
 
 
 _PLANNING_CONTRACT_ADDENDUM = """
@@ -355,6 +372,10 @@ Additional output contract:
 6. Every task should provide primary_intent chosen from the intent enum given
    in the system prompt. For SINGLE_TASK, fill single_task_intent and
    single_task_extraction instead (same rules as task extraction).
+7. For a multi-task plan, analyze_summary must be one short user-facing
+   sentence describing the task structure: which tasks are independent and
+   may run in parallel, and which tasks consume earlier results, referring
+   to tasks as 任务N. Only describe task relations, never internal steps.
 Do not output private reasoning or chain-of-thought.
 """
 
@@ -380,6 +401,7 @@ _SYSTEM_PROMPT = """你是数据智能体的业务任务理解与拆分器。只
 6. 两个完整查询即使只用句号、逗号或口语连接，也要按真实目标拆分，不能依赖“另外、同时、以及”等固定连接词。
 7. 排名后再查询入选对象的关系或明细，后一步消费前一步名单，属于DEPENDENT_TASKS。例如“找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院”。普通的“查询并分析”不自动建立依赖。
 8. “对比今年和去年销售额”是一个比较目标，可作为SINGLE_TASK；“分别查询今年和去年销售额，并比较同比变化”明确要求两份查询结果和后续比较，应拆为两个并行查询加一个依赖二者的比较任务。
+9. 业务语义规范中指标层级为“复合口径指标”的指标（依赖多个原子指标计算，如区域医院覆盖率依赖已合作医院数和区域全部医院总数），不能作为一个查询任务直接执行，应拆为DEPENDENT_TASKS：每个依赖指标各一个并行查询任务（分母类指标按其口径只带区域条件、不带经销商等分组条件），最后增加一个依赖全部前序任务的计算任务；计算任务的问题写明“根据上述任务的查询结果计算×××，不再查询数据库”，primary_intent输出COMPARISON_ANALYSIS，extraction输出null。
 
 子任务生成规则：
 1. 每个子任务必须是自然、完整、可独立理解和执行的业务问题。补全原句中对该任务生效的产品、地区、指标、时间、筛选、排序及排除条件，不保留只有“另一个、上述条件”等内容的空泛指代。依赖任务应写成“根据上一步返回的某对象名单/范围……”并同时写明业务对象和后续动作。
@@ -399,7 +421,7 @@ _SYSTEM_PROMPT = """你是数据智能体的业务任务理解与拆分器。只
 - “查询空心纤维血液透析器合作的经销商和医院名单。” → PARALLEL_TASKS，因为返回对象和关系结果不同。
 - “找出销售额下降最大的五个产品，并列出这些产品涉及的经销商和医院。” → DEPENDENT_TASKS，第二个任务依赖第一个任务。
 - “分别查询今年和去年上海市销售额，并比较同比变化。” → DEPENDENT_TASKS，前两个任务无依赖，比较任务同时依赖前两个任务。
-- “统计上海市各经销商的区域医院覆盖率和销售额。” → SINGLE_TASK。
+- “统计上海市各经销商的区域医院覆盖率。” → DEPENDENT_TASKS：任务0“查询上海市各经销商的已合作医院数”，任务1“查询上海市的区域全部医院总数”，任务2“根据上述任务的查询结果计算各经销商的区域医院覆盖率，不再查询数据库”（depends_on=[0,1]）。
 - “分析费森尤斯产品在上海市和江苏省最近一年的销售趋势。” → SINGLE_TASK。
 """
 
@@ -727,8 +749,9 @@ class MultiQuestionPlanner:
                 {"role": "user", "content": extraction_user_prompt(question)},
             ],
             "temperature": 0,
+            # json_object 与 enable_thinking=false 同开时模型会丢过滤条件的
+            # 取值，因此只关思考；输出格式由 Schema 约束。
             "enable_thinking": False,
-            "response_format": {"type": "json_object"},
         }
         headers = {
             "Authorization": (
@@ -755,7 +778,7 @@ class MultiQuestionPlanner:
         content = payload["choices"][0]["message"].get("content")
         if not content:
             raise ValueError("task planner returned empty content")
-        result = _ModelPlan.model_validate(json.loads(content))
+        result = _ModelPlan.model_validate(json.loads(_strip_json_fences(content)))
         if result.task_structure == "SINGLE_TASK":
             if result.tasks:
                 raise ValueError("single-task decision must not contain tasks")
@@ -808,6 +831,8 @@ class MultiQuestionPlanner:
                 planner="STRUCTURED_MODEL",
                 split_reason_code=(result.split_reason_code or "UNSPECIFIED"),
                 shared_conditions=list(dict.fromkeys(result.shared_conditions)),
+                # 模型没给结构说明时不硬造，展示层会按依赖关系合成兜底句
+                analyze_summary=(result.analyze_summary or "").strip()[:200] or None,
             )
         )
 

@@ -783,6 +783,8 @@ class ChatRequest(StrictModel):
     )
     # 任务规划产出的提取结果，由编排器在进程内透传到本轮分类请求。
     _planner_extraction: PlannerExtraction | None = PrivateAttr(default=None)
+    # 语义识别判成业务无关的问题时置位，编排器据此跳过拆分与分类模型直接聊天回复。
+    _v2_off_topic: bool = PrivateAttr(default=False)
     # 桥接段精确挂起匹配时读到的挂起快照，供紧随其后的自由文本分诊复用，
     # 省一次 Redis 往返；两次读取之间没有任何写操作，结果一致。
     _v1_pending_snapshot: Any = PrivateAttr(default=None)
@@ -791,6 +793,12 @@ class ChatRequest(StrictModel):
     _rules_classification_cache: tuple[str, Any] | None = PrivateAttr(
         default=None
     )
+    # 多任务拆分时由编排器置位：子任务不出单独的洞察解读，模型输入收进
+    # _dag_deferred_insight，等全部任务跑完由父级做一次整体汇总。
+    _dag_defer_insight: bool = PrivateAttr(default=False)
+    _dag_deferred_insight: dict[str, Any] | None = PrivateAttr(default=None)
+    # 复合指标拆出的纯计算任务的依赖任务：单值结果也要落盘，供计算任务取分母
+    _dag_keep_result_dataset: bool = PrivateAttr(default=False)
     conversation_id: str = Field(min_length=1, max_length=128)
     message_id: str = Field(min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=4000)
@@ -1328,6 +1336,8 @@ class TaskPlan(StrictModel):
     final_deliverable: Literal["COMBINED_REPORT"] | None = None
     split_reason_code: str | None = Field(default=None, max_length=80)
     shared_conditions: list[str] = Field(default_factory=list, max_length=20)
+    # 拆分模型对任务结构的一句话说明，规划节点展示执行顺序用；缺省时展示层按依赖自行合成。
+    analyze_summary: str | None = Field(default=None, max_length=200)
 
 
 class TaskExecutionResult(StrictModel):

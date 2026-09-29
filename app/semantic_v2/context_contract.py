@@ -20,6 +20,17 @@ class ContextProposal(StrictModel):
     state_version: int = Field(strict=True, ge=0)
     task_version: int | None = Field(strict=True, ge=1)
     pending_id: Identifier | None
+    relation_reason: str | None = Field(default=None, max_length=300, description=(
+        '判定思考：用一句第一人称短句说明关系判定的原因，让用户看懂为什么这样处理。'
+        '关系不是 NEW_TASK 时必填：先提到上一轮的问题或挂起的澄清，再说这轮怎么衔接'
+        '（接着追问/改哪个条件/用哪个回答继续）。关系是 NEW_TASK 但有需要向用户确认的'
+        '模糊点时也要写明想确认什么；完全独立明确的新问题输出 null。'
+        '只描述判定依据，不要输出执行步骤或口径细节。'))
+    off_topic: bool = Field(default=False, description=(
+        '用户问题与本系统的业务数据分析完全无关（天气、闲聊、常识问答、'
+        '与已绑定业务域无关的生活类求助）时输出 true，此时 relation 必须是 '
+        'NEW_TASK，系统会跳过任务规划直接回答。与业务数据、已绑定业务域或'
+        '历史任务沾边的问题一律输出 false。'))
 
     @model_validator(mode='after')
     def consistent_proposal(self):

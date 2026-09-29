@@ -70,6 +70,14 @@ SYSTEM_PROMPT = """你是负责“数据洞察分析”节点的资深数据分�
 - 输出 JSON claims，每条 statement 是一段分析，certainty 可用 VERIFIED_FACT（观察）、SUPPORTED_HYPOTHESIS（推断）、LIMITATION（局限）。evidence_ids 可以省略，不要求逐条引用。若引用，只用输入中存在的 ID。
 """
 
+# 多任务拆分下的整体汇总模式：单任务模式里的 completed_question、evidence
+# 等输入字段不出现，改为按子任务给出各自的问题、执行口径和数据预览。
+COMBINED_ADDENDUM = """本次调用是多任务拆分的整体汇总：tasks 列表中每一项是一个子任务的独立问题、意图、实际执行与结果预览，没有 completed_question 和 evidence 字段，所有事实都在 tasks 里。
+- 每个子任务的口径相互独立，计算和比较只在各自 facts 范围内进行；不同子任务的结果不能直接相加或合并出总体数字，跨任务比较时说明各自口径与覆盖范围的差异。
+- 围绕本轮原始问题，把各子任务的发现组织成一份连贯的整体分析：先逐项交代关键数据和解读，再说明它们合起来能回答什么、还有哪些回答不了；不要逐字复述子任务的确定性摘要文本。
+- executed_query 与 query_data 的边界规则对每个子任务分别适用：只分析已提供的预览，sample_only 或行数受限时如实说明范围。
+"""
+
 # Adapt the context-driven method from NL_Agent/node/step3_Planner_and_execute.py
 # and step5_output.py. Do not import their query, clarification or tool workflows.
 SENIOR_ANALYSIS_EXPERT_PROMPT = """
@@ -124,10 +132,39 @@ class QwenAnalysisSynthesizer:
             "\n智能体用户设定（平台配置，仅用于表达风格，分析事实仍以本轮问题和数据为准）：\n" + agent_prompt.strip()
             if agent_prompt.strip() else ""
         )
+        system = SYSTEM_PROMPT + SENIOR_ANALYSIS_EXPERT_PROMPT + agent_section
+        return await self._generate(
+            system, prompt_input, name="analysis-synthesis", source_ids=set(sources),
+        )
+
+    async def synthesize_combined(
+        self, question: str, tasks: list[dict[str, Any]], *, agent_prompt: str = "",
+    ) -> tuple[str, SynthesisOutput]:
+        """多任务拆分的整体汇总：一次调用合并分析全部子任务的查询结果。"""
+        if not self.settings.intent_model_api_key:
+            raise RuntimeError("analysis synthesis API key is not configured")
+        prompt_input = {
+            "untrusted_user_question": question,
+            "tasks": tasks,
+            "semantic_reference": _semantic_reference(),
+        }
+        agent_section = (
+            "\n智能体用户设定（平台配置，仅用于表达风格，分析事实仍以本轮问题和数据为准）：\n" + agent_prompt.strip()
+            if agent_prompt.strip() else ""
+        )
+        system = SYSTEM_PROMPT + COMBINED_ADDENDUM + SENIOR_ANALYSIS_EXPERT_PROMPT + agent_section
+        return await self._generate(
+            system, prompt_input, name="analysis-synthesis-combined", source_ids=set(),
+        )
+
+    async def _generate(
+        self, system_prompt: str, prompt_input: dict[str, Any], *,
+        name: str, source_ids: set[str],
+    ) -> tuple[str, SynthesisOutput]:
         body = {
             "model": self.settings.analysis_synthesis_model_name,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT + SENIOR_ANALYSIS_EXPERT_PROMPT + agent_section},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": json.dumps(prompt_input, ensure_ascii=False, default=str)},
             ],
             "temperature": 0, "enable_thinking": False,
@@ -135,7 +172,7 @@ class QwenAnalysisSynthesizer:
         }
         headers = {"Authorization": f"Bearer {self.settings.intent_model_api_key.get_secret_value()}",
                    "Content-Type": "application/json"}
-        with trace_generation(name="analysis-synthesis", model=body["model"], messages=body["messages"]) as generation:
+        with trace_generation(name=name, model=body["model"], messages=body["messages"]) as generation:
             async with httpx.AsyncClient(
                 base_url=self.settings.intent_model_base_url.rstrip("/"),
                 timeout=self.settings.analysis_synthesis_timeout_seconds, transport=self._transport,
@@ -162,7 +199,7 @@ class QwenAnalysisSynthesizer:
             raise SynthesisValidationError("analysis synthesis returned unusable choices")
         message = choices[0].get("message") if choices else None
         content = message.get("content") if isinstance(message, dict) else None
-        output = self._parse_report(content, set(sources))
+        output = self._parse_report(content, source_ids)
         return self._render(output), output
 
     @staticmethod

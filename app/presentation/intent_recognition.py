@@ -41,15 +41,17 @@ _INTENT_LABELS = {
     PrimaryIntent.OUT_OF_SCOPE: "非数据任务",
 }
 
+# 对话状态对外只呈现三类：新问题、问题追问、澄清问题。
+# 内部细类（条件修改/下钻/纠错/回历史）按追问口径归并展示。
 _TURN_RELATION_LABELS = {
-    TurnRelation.STANDALONE_NEW_TOPIC: "独立新问题",
-    TurnRelation.CURRENT_TOPIC_FOLLOWUP: "当前主题追问",
-    TurnRelation.CURRENT_TOPIC_MODIFICATION: "当前主题条件修改",
-    TurnRelation.CURRENT_TOPIC_DRILLDOWN: "当前主题下钻",
-    TurnRelation.HISTORICAL_TOPIC_RETURN: "返回历史主题",
-    TurnRelation.CLARIFICATION_RESPONSE: "澄清回复",
-    TurnRelation.CORRECTION: "纠正上一请求",
-    TurnRelation.AMBIGUOUS_RELATION: "轮次关系待确认",
+    TurnRelation.STANDALONE_NEW_TOPIC: "新问题",
+    TurnRelation.CURRENT_TOPIC_FOLLOWUP: "问题追问",
+    TurnRelation.CURRENT_TOPIC_MODIFICATION: "问题追问",
+    TurnRelation.CURRENT_TOPIC_DRILLDOWN: "问题追问",
+    TurnRelation.HISTORICAL_TOPIC_RETURN: "问题追问",
+    TurnRelation.CLARIFICATION_RESPONSE: "澄清问题",
+    TurnRelation.CORRECTION: "问题追问",
+    TurnRelation.AMBIGUOUS_RELATION: "澄清问题",
 }
 
 _INTENT_BASES = {
@@ -1072,6 +1074,7 @@ def build_composite_intent_recognition_display_v2(
     original_question: str,
     plan: TaskPlan,
     *,
+    completed_question: str | None = None,
     task_intents: list[PrimaryIntent] | None = None,
     task_requests: list[CanonicalAnalysisRequest] | None = None,
     business_domains: tuple[str, ...] | list[str] = (),
@@ -1081,6 +1084,8 @@ def build_composite_intent_recognition_display_v2(
 
     Task questions come from the already validated plan.  They are displayed
     as planning facts only and are never fed back into ASL or SQL execution.
+    The completed question stays the single full sentence resolved before
+    splitting; the task list itself belongs to the planning node.
     """
 
     intents = task_intents or []
@@ -1108,7 +1113,7 @@ def build_composite_intent_recognition_display_v2(
         )
         for index, task in enumerate(plan.tasks)
     ]
-    completed = "；".join(
+    completed = completed_question or "；".join(
         f"{index}. {task.question}" for index, task in enumerate(tasks, 1)
     )
     return CompositeIntentRecognitionDisplayV2(
@@ -1128,14 +1133,14 @@ def render_composite_intent_recognition_display_v2(
     *,
     include_resolved_context: bool = True,
 ) -> str:
-    """Render one deterministic parent trace for every DAG child."""
+    """Render one deterministic parent trace for every DAG child.
+
+    与单任务口径保持一致：补全后的问题只放完整问句，拆分结果由任务
+    拆分与规划节点展示。上下文补全已经发过时不再重复，只保留节点标题。
+    """
 
     lines = ["### ◉ 意图识别", ""]
     if include_resolved_context:
         lines.append(f"用户原始问题：{view.original_question}")
-    lines.extend(["补全后的问题：", ""])
-    for index, task in enumerate(view.tasks, 1):
-        lines.append(f"{index}. {task.question}")
-        if index < len(view.tasks):
-            lines.append("")
+        lines.append(f"补全后的问题：{view.completed_question}")
     return "\n".join(lines)

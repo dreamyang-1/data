@@ -501,6 +501,37 @@ async def test_structured_model_plan_preserves_business_split_metadata() -> None
 
 
 @pytest.mark.asyncio
+async def test_structured_model_analyze_summary_is_preserved() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        system_prompt = body["messages"][0]["content"]
+        assert "analyze_summary" in system_prompt
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": """
+            {"task_structure":"DEPENDENT_TASKS",
+             "analyze_summary":"拆分为两项子任务，任务2依赖任务1的科室名单。",
+             "tasks":[
+               {"question":"查询TDC-3产品的适用科室","depends_on":[]},
+               {"question":"从适用科室中筛选合作医院","depends_on":[0]}
+             ]}
+            """}}]
+        })
+
+    settings = Settings(
+        _env_file=None,
+        env="test",
+        intent_model_api_key=SecretStr("test-key"),
+        multi_question_model_enabled=True,
+    )
+    planner = MultiQuestionPlanner(settings, transport=httpx.MockTransport(handler))
+
+    plan = await _run_plan(planner, "先查询TDC-3产品的适用科室，再从这些科室中筛选合作医院")
+
+    assert plan is not None
+    assert plan.analyze_summary == "拆分为两项子任务，任务2依赖任务1的科室名单。"
+
+
+@pytest.mark.asyncio
 async def test_structured_model_dependency_decision_is_preserved() -> None:
     async def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={
@@ -954,6 +985,70 @@ def test_composite_markdown_fallback_uses_sections_not_nested_tables() -> None:
     assert "\\|" not in answer
     assert "<br>" not in answer
     assert "| 商品 | 适用科室 |" in answer
+
+
+def test_merged_composite_answers_render_single_reply_and_extract_links() -> None:
+    results = [
+        TaskExecutionResult(
+            task_id="task-1",
+            question="查询上海地区各经销商的已合作医院数",
+            status="COMPLETED",
+            intent=PrimaryIntent.METRIC_QUERY,
+            answer=(
+                "| 经销商名称 | 已合作医院数 |\n| --- | --- |\n"
+                "| 国药集团上海公司 | 49 |\n\n"
+                "附件：[下载完整查询结果（XLSX）](http://files/ds-1.xlsx)"
+            ),
+            dataset_id="ds-1",
+        ),
+        TaskExecutionResult(
+            task_id="task-2",
+            question="查询上海地区的区域全部医院总数",
+            status="COMPLETED",
+            intent=PrimaryIntent.METRIC_QUERY,
+            answer=(
+                "| 区域全部医院总数 |\n| --- |\n| 121 |\n\n"
+                "附件：[下载完整查询结果（XLSX）](http://files/ds-2.xlsx)"
+            ),
+            dataset_id="ds-2",
+        ),
+    ]
+
+    answer, links = DataAnalysisOrchestrator._render_merged_task_answers(results)
+
+    assert answer is not None and links is not None
+    # 单值结果转成「问题：值」一行，明细表保留在加粗问题小标题下
+    assert "**查询上海地区的区域全部医院总数**：121" in answer
+    assert "**查询上海地区各经销商的已合作医院数**" in answer
+    assert "| 经销商名称 | 已合作医院数 |" in answer
+    # 不再按任务分节，附件行全部摘出由调用方统一处理
+    assert "### ◉ 任务" not in answer
+    assert "附件：" not in answer
+    assert links == [
+        "[下载完整查询结果（XLSX）](http://files/ds-1.xlsx)",
+        "[下载完整查询结果（XLSX）](http://files/ds-2.xlsx)",
+    ]
+
+
+def test_merged_composite_answers_fall_back_when_child_answer_missing() -> None:
+    results = [
+        TaskExecutionResult(
+            task_id="task-1",
+            question="查询主要适用科室",
+            status="COMPLETED",
+            intent=PrimaryIntent.DETAIL_QUERY,
+            answer="| 商品 | 适用科室 |\n| --- | --- |\n| A | 急诊科 |",
+        ),
+        TaskExecutionResult(
+            task_id="task-2",
+            question="查询次要适用科室",
+            status="COMPLETED",
+            intent=PrimaryIntent.DETAIL_QUERY,
+            answer="",
+        ),
+    ]
+
+    assert DataAnalysisOrchestrator._render_merged_task_answers(results) == (None, None)
 
 
 def test_homogeneous_composite_datasets_merge_with_facet_column() -> None:
@@ -1982,3 +2077,115 @@ def test_extract_semantic_spec_section_returns_empty_without_marker() -> None:
     assert extract_semantic_spec_section("> 定位：业务分析伙伴") == ""
     assert extract_semantic_spec_section("") == ""
     assert extract_semantic_spec_section(None) == ""
+
+
+@pytest.mark.asyncio
+async def test_multi_task_insight_is_combined_once_at_root() -> None:
+    """多任务拆分后各子任务不出单独解读，父级合并成一次整体分析。"""
+    from app.services.progress import progress_scope
+
+    class CombinedSynthesizer:
+        def __init__(self) -> None:
+            self.combined_questions: list[str] = []
+            self.combined_tasks: list[list[dict]] = []
+
+        async def synthesize(self, *args, **kwargs):
+            raise AssertionError("多任务拆分不应再调用单任务解读")
+
+        async def synthesize_combined(self, question, tasks, *, agent_prompt=""):
+            self.combined_questions.append(question)
+            self.combined_tasks.append(list(tasks))
+            return "两个任务的整体分析结论。", None
+
+    settings = Settings(
+        env="test",
+        adapter_mode="mock",
+        intent_model_enabled=False,
+        multi_question_model_enabled=False,
+    )
+    synthesizer = CombinedSynthesizer()
+    service = DataAnalysisOrchestrator(
+        settings=settings,
+        classifier=RuleBasedIntentClassifier(),
+        adapters=build_mock_adapters(),
+        sessions=InMemorySessionStore(7200, 7200),
+        task_planner=MultiQuestionPlanner(settings),
+        analysis_synthesizer=synthesizer,
+    )
+    identity = TrustedIdentity(tenant_id="t", user_id="u")
+    events = []
+    with progress_scope(events.append):
+        response = await service.handle(ChatRequest(
+            conversation_id="dag-combined-insight",
+            message_id="m1",
+            question="查询 TDC-3 产品的主要适用科室、次要适用科室",
+            application_id="app",
+            semantic_model_id=81,
+        ), identity)
+
+    assert response.status in {"COMPLETED", "PARTIAL_SUCCESS"}
+    assert synthesizer.combined_questions == [
+        "查询 TDC-3 产品的主要适用科室、次要适用科室"
+    ]
+    assert [len(tasks) for tasks in synthesizer.combined_tasks] == [2]
+    assert response.answer.startswith("两个任务的整体分析结论。")
+    child_insights = [
+        event for event in events
+        if event["stage"] == "INSIGHT_ANALYSIS" and event.get("is_child_task")
+    ]
+    assert child_insights == []
+    root_completed = [
+        event for event in events
+        if event["stage"] == "INSIGHT_ANALYSIS"
+        and event["status"] == "COMPLETED"
+        and not event.get("is_child_task")
+    ]
+    assert len(root_completed) == 1
+    assert "整体分析结论" in root_completed[0]["message"]
+
+
+@pytest.mark.asyncio
+async def test_combined_insight_failure_keeps_per_task_results() -> None:
+    """整体分析模型不可用时退回各任务结果，不阻塞回复。"""
+    from app.services.progress import progress_scope
+
+    class BrokenCombinedSynthesizer:
+        async def synthesize(self, *args, **kwargs):
+            raise AssertionError("多任务拆分不应再调用单任务解读")
+
+        async def synthesize_combined(self, question, tasks, *, agent_prompt=""):
+            raise RuntimeError("model unavailable")
+
+    settings = Settings(
+        env="test",
+        adapter_mode="mock",
+        intent_model_enabled=False,
+        multi_question_model_enabled=False,
+    )
+    service = DataAnalysisOrchestrator(
+        settings=settings,
+        classifier=RuleBasedIntentClassifier(),
+        adapters=build_mock_adapters(),
+        sessions=InMemorySessionStore(7200, 7200),
+        task_planner=MultiQuestionPlanner(settings),
+        analysis_synthesizer=BrokenCombinedSynthesizer(),
+    )
+    identity = TrustedIdentity(tenant_id="t", user_id="u")
+    events = []
+    with progress_scope(events.append):
+        response = await service.handle(ChatRequest(
+            conversation_id="dag-combined-insight-fallback",
+            message_id="m1",
+            question="查询 TDC-3 产品的主要适用科室、次要适用科室",
+            application_id="app",
+            semantic_model_id=81,
+        ), identity)
+
+    assert response.status in {"COMPLETED", "PARTIAL_SUCCESS"}
+    assert "整体分析结论" not in response.answer
+    degraded = [
+        event for event in events
+        if event["stage"] == "INSIGHT_ANALYSIS" and event["status"] == "DEGRADED"
+    ]
+    assert len(degraded) == 1
+    assert "已保留各任务的查询结果" in degraded[0]["message"]

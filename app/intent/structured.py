@@ -111,7 +111,7 @@ Extract business wording at semantic phrase granularity. Keep these elements sep
 23. current_entity_values 只提取当前用户问题（“已确认的上一轮上下文”之前）明确出现的具体业务实体值，例如产品名、品牌名、厂家名、经销商名、医院名或地区名；不得填写“产品、经销商、医院”等对象类别，不得复制只存在于上一轮上下文中的值，也不得包含“那、呢、换成”等语气或操作词。例如“那费森尤斯呢”必须提取为 ["费森尤斯"]。
 24. 当前问题出现新的实体值时，completed_question 必须用新值替换上一轮同一筛选槽，不得同时保留冲突旧值，也不得把新实体值臆造成查询对象或指标。
 25. turn_relation 必须先根据“已确认的上一轮上下文”之前的当前用户原话判断，再把上下文作为候选先行项；完整且可独立执行的问题默认 STANDALONE_NEW_TOPIC，不得因为业务域相似或上一轮刚发生就判为追问。
-26. 只有当前问题依赖省略、指代或明确修改上一任务时才使用 CURRENT_TOPIC_FOLLOWUP / CURRENT_TOPIC_MODIFICATION / CURRENT_TOPIC_DRILLDOWN；用户正在回答一个明确待补充项时才使用 CLARIFICATION_RESPONSE；存在多个合理先行项时使用 AMBIGUOUS_RELATION。
+26. 对话关系只判三类：完整独立的问题用 STANDALONE_NEW_TOPIC；依赖省略、指代、条件修改、下钻或纠正上一任务的问题统一用 CURRENT_TOPIC_FOLLOWUP；用户正在回答一个明确待补充项时用 CLARIFICATION_RESPONSE。无法在三类间明确判断时使用 AMBIGUOUS_RELATION，系统按澄清处理。
 27. slot_operations 表示当前轮相对已确认上下文的槽位操作。当前明确值替换同槽旧值时用 REPLACE；“再加、同时、以及”才用 ADD；省略且唯一可恢复才用 INHERIT；不得为当前原话及确认上下文都没有的值生成操作。evidence_span 必须逐字来自当前用户原话。
 28. 查询对象和筛选实体值必须分开。例如“某产品的经销商有哪些”的查询对象是经销商，产品名是筛选；“那费森尤斯呢”只能提出替换相容筛选槽，不能把费森尤斯改成查询对象。
 29. “某公司/Inc./GmbH/Company/SA等法定主体的产品销售额”中，查询对象是产品，完整法定主体名称（包括中英文、空格、逗号和点号）是厂家筛选实体；不得把它拆成多个实体、改成商品名称、要求用户提供厂家编码或按产品额外分组。

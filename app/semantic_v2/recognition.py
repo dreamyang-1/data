@@ -321,20 +321,48 @@ _EXTRACTION_ROLE_LABELS = {
 }
 
 
+# 对话状态对外只呈现三类：新问题、问题追问、澄清问题。
+# V2 内部的条件修改/下钻/回历史等操作词统一按追问口径展示。
 _CONTEXT_RELATION_LABELS = {
-    'NEW_TASK': '独立新问题',
-    'FOLLOW_UP': '当前主题追问',
-    'MODIFY': '当前主题条件修改',
-    'ADD': '当前主题条件补充',
-    'REPLACE': '当前主题条件替换',
-    'REMOVE': '当前主题条件删除',
-    'CLEAR': '当前主题条件清除',
-    'CORRECT': '纠正上一请求',
-    'CONTINUE': '当前主题追问',
-    'DRILL_DOWN': '当前主题下钻',
-    'RETURN_TO_TOPIC': '返回历史主题',
-    'ANSWER_CLARIFICATION': '澄清回复',
+    'NEW_TASK': '新问题',
+    'FOLLOW_UP': '问题追问',
+    'MODIFY': '问题追问',
+    'ADD': '问题追问',
+    'REPLACE': '问题追问',
+    'REMOVE': '问题追问',
+    'CLEAR': '问题追问',
+    'CORRECT': '问题追问',
+    'CONTINUE': '问题追问',
+    'DRILL_DOWN': '问题追问',
+    'RETURN_TO_TOPIC': '问题追问',
+    'ANSWER_CLARIFICATION': '澄清问题',
 }
+
+
+def _relation_reason_text(reason):
+    """规整模型给的判定思考句：去首尾空白，结尾补句号。"""
+    text = str(reason or '').strip()
+    if not text:
+        return ''
+    if text[-1] not in '。！？?!；;':
+        text += '。'
+    return text
+
+
+async def _emit_relation_reason(reason, *, fallback=None):
+    """把判定思考句发到意图识别节点，让用户看出这轮是澄清还是追问。
+
+    模型没给思考句时用 fallback 兜底；两者都没有就什么都不发。
+    """
+    text = _relation_reason_text(reason) or _relation_reason_text(fallback)
+    if not text:
+        return
+    await emit_progress(
+        'INTENT_RECOGNITION',
+        'RUNNING',
+        '判定思考：' + text,
+        progress_phase='V2_RELATION_REASON',
+    )
 
 
 def current_turn_extraction_items(
@@ -723,7 +751,7 @@ class RawTurnPlanner:
             await emit_progress(
                 'INTENT_RECOGNITION',
                 'RUNNING',
-                '对话状态识别：独立新问题。',
+                '对话状态识别：新问题。',
                 progress_phase='V2_CONVERSATION_STATE_READY',
                 resolution_source='DETERMINISTIC_EMPTY_CONTEXT',
             )
@@ -779,8 +807,11 @@ class RawTurnPlanner:
         # Validate even injected transports: omission is not an old-rule fallback.
         recognized = parse_model.model_validate(recognized.model_dump(mode='json'))
         parsed = CurrentTurnSemanticParse.model_validate(recognized.model_dump(exclude={'context_proposal', 'completed_question'}))
+        # off_topic 在 proposal 上由模型输出，随解析带给执行层
+        parsed.off_topic = recognized.context_proposal.off_topic
         # 第三步：硬校验模型的关系判定。说追问必须命中真实存在的老任务；
         # 说澄清回复必须能对应到挂起问题的某个选项；对不上就拒绝
+        relation_reason_emitted = False
         try:
             context_trace = accept_proposal(session, recognized.context_proposal, discovered,
                 state=state, question=request.question)
@@ -788,7 +819,16 @@ class RawTurnPlanner:
             # Keep the already generated current-turn semantic evidence
             # available so bridge validation does not make a second model call.
             exc.current_turn_parse = parsed
+            # 这轮定不出可执行的关系，多半要向用户澄清，把判定思考句发出去
+            await _emit_relation_reason(
+                recognized.context_proposal.relation_reason,
+                fallback='这轮的问题我还没法唯一确定怎么处理，先跟用户确认清楚再执行。',
+            )
             raise
+        if context_trace.get('FINAL_RELATION') != 'NEW_TASK':
+            # 追问/澄清回复轮：先发思考句，让用户看出这轮和上一轮的关系
+            await _emit_relation_reason(recognized.context_proposal.relation_reason)
+            relation_reason_emitted = True
         parsed, reference_repairs = repair_pure_historical_reference(parsed,
             context_trace=context_trace, task_context=discovered.model_context)
         if reference_repairs:
@@ -847,7 +887,7 @@ class RawTurnPlanner:
                 '对话状态识别：'
                 + _CONTEXT_RELATION_LABELS.get(
                     final_context_relation,
-                    '轮次关系待确认',
+                    '澄清问题',
                 )
                 + '。',
                 progress_phase='V2_CURRENT_TURN_PARSED',
@@ -980,6 +1020,13 @@ class RawTurnPlanner:
             raise RecognitionFailure('V2_QUERY_SHAPE_CONFLICT')
         # 分流②的挂起分支：有歧义没问清，先存一个挂起问题反问用户——"澄清问题"就是这么来的
         if blockers:
+            if not relation_reason_emitted:
+                # 新问题但口径没定下来也要反问，这时补一条判定思考句
+                await _emit_relation_reason(
+                    recognized.context_proposal.relation_reason,
+                    fallback=('用户的问题是「' + request.question + '」，'
+                              '里面还有没定下来的口径，我先跟他确认清楚再执行。'),
+                )
             return self._create_pending(session,current,target,skeleton,patch,reduced,blockers,pending_operations,kind,parse,now)
         patch, reduced = complete_catalog_defaults(session, kind, prior, patch,
             target.clear_barriers if target else [])

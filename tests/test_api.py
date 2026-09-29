@@ -1808,10 +1808,11 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     assert "共享业务标识" not in intent_content
     assert "结构化拆分" not in intent_content
     assert "参数规范化：已识别" not in intent_content
-    # The completed question belongs here; the task list belongs to planning.
-    # Accept the deployed single-sentence display without requiring duplicate
-    # task bullets in intent recognition. Both tasks are asserted below.
+    # 保留本地补全问题断言，同时合入远程禁止重复拆分列表的断言。
     assert "补全后的问题：" in intent_content
+    # 拆分列表只属于任务拆分与规划节点，意图节点只保留完整补全问题
+    assert "1. 查询 TDC-3 产品的主要适用科室" not in intent_content
+    assert "2. 查询 TDC-3 产品的次要适用科室" not in intent_content
     assert not intent["meta"].get("is_child_task")
     planning_content = "".join(
         event["content"] for event in events
@@ -1820,13 +1821,19 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     )
     assert "任务1：查询 TDC-3 产品的主要适用科室" in planning_content
     assert "任务2：查询 TDC-3 产品的次要适用科室" in planning_content
-    assert "拆分判断完成。已拆分为以下任务：" in planning_content
+    assert "拆分判断完成。分析内容：" in planning_content
     assert "规划调用：" not in planning_content
+    # 两个子任务相互独立，不出现依赖关系行，但要有并行说明
+    assert "依赖关系：" not in planning_content
+    assert "各任务相互独立，可并行执行。" in planning_content
     completed = next(event for event in events if event["type"] == "complete")
     assert completed["execution_shape"] == "COMPOSITE"
     assert len(completed["task_results"]) == 2
-    assert "### ◉ 任务1：查询 TDC-3 产品的主要适用科室" in completed["answer"]
-    assert "### ◉ 任务2：查询 TDC-3 产品的次要适用科室" in completed["answer"]
+    # 多任务回复合成一条：不再按「任务N」分节，各任务结果在同一回复里
+    assert "### ◉ 任务1：" not in completed["answer"]
+    assert "### ◉ 任务2：" not in completed["answer"]
+    assert "查询 TDC-3 产品的主要适用科室" in completed["answer"]
+    assert "查询 TDC-3 产品的次要适用科室" in completed["answer"]
     assert "| 查询目标 | 结果内容 |" not in completed["answer"]
     assert "\\|" not in completed["answer"]
     assert "<br>" not in completed["answer"]
@@ -1919,6 +1926,95 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
     }
     assert "任务1：查询 TDC-3 产品的主要适用科室" in insight_by_task["task-1"]
     assert "任务2：查询 TDC-3 产品的次要适用科室" in insight_by_task["task-2"]
+
+
+def test_planning_running_milestone_is_not_replayed_after_composite_intent():
+    app = build_test_app(
+        env="test",
+        runtime_mode="V1",
+        session_store_mode="memory",
+        long_term_memory_mode="disabled",
+    )
+
+    class CompositePlanningWorkflow:
+        async def ainvoke(self, state):
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "RUNNING",
+                "用户原始问题：查询各经销商在上海地区的已合作医院数，"
+                "并查询上海地区的区域全部医院总数\n"
+                "补全后的问题：查询各经销商在上海地区的已合作医院数，"
+                "并查询上海地区的区域全部医院总数",
+                progress_phase="V2_RESOLVED_INTENT_CONTEXT_READY",
+            )
+            await emit_progress(
+                "TASK_PLANNING",
+                "RUNNING",
+                "### ◉ 规划与执行\n正在判断是否需要拆分多个分析任务。",
+            )
+            await emit_progress(
+                "INTENT_RECOGNITION",
+                "COMPLETED",
+                "### ◉ 意图识别\n\n用户原始问题："
+                "查询各经销商在上海地区的已合作医院数，"
+                "并查询上海地区的区域全部医院总数\n"
+                "补全后的问题：查询各经销商在上海地区的已合作医院数，"
+                "并查询上海地区的区域全部医院总数",
+                display_model="CompositeIntentRecognitionDisplayV2",
+                display_version="V2",
+                presentation_scenario="ANALYTIC",
+                is_composite=True,
+                task_count=2,
+            )
+            await emit_progress(
+                "TASK_PLANNING",
+                "COMPLETED",
+                "拆分判断完成。分析内容：用户问题拆分为2项子任务，"
+                "各任务相互独立，可并行执行。\n\n"
+                "任务1：查询上海地区各经销商的已合作医院数\n\n"
+                "任务2：查询上海地区的区域全部医院总数",
+                task_count=2,
+            )
+            chat = state["chat"]
+            return {"response": AgentResponse(
+                request_id=uuid4(),
+                conversation_id=chat.conversation_id,
+                status="COMPLETED",
+                intent=PrimaryIntent.METRIC_QUERY,
+                answer="处理完成。",
+            )}
+
+    with TestClient(app) as client:
+        object.__setattr__(app.state.container, "workflow", CompositePlanningWorkflow())
+        response = client.post(
+            "/agent_chat/stream",
+            json={
+                "semantic_model_id": 81,
+                "application_id": "app1",
+                "conversation_id": "planning-running-no-replay",
+                "message_id": "m1",
+                "question": "查询各经销商在上海地区的已合作医院数，"
+                            "并查询上海地区的区域全部医院总数",
+            },
+        )
+
+    assert response.status_code == 200
+    events = [
+        json.loads(block.removeprefix("data: "))
+        for block in response.text.strip().split("\n\n")
+    ]
+    thinking = "".join(
+        event.get("content", "")
+        for event in events
+        if event.get("type") == "message_chunk"
+        and event.get("step") in {"step1", "execute_plan"}
+        and "已用时" not in event.get("content", "")
+    )
+    # 规划RUNNING已实时展示，复合意图完结重放延迟事件时不能再出一遍
+    assert thinking.count("正在判断是否需要拆分多个分析任务。") == 1
+    assert thinking.count("拆分判断完成。分析内容：") == 1
+    # 拆分结论必须晚于意图识别的补全问题
+    assert thinking.index("补全后的问题：") < thinking.index("拆分判断完成")
 
 
 def test_all_seven_analytic_thinking_stages_have_normalized_headings():
