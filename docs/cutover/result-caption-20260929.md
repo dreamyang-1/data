@@ -54,6 +54,20 @@ location-filter or semantic-model change.
   Live-model synthetic checks passed for both count+coverage (one result and
   both goals in its title) and coverage-only (no invented extra title goal).
 
+## Final deployment acceptance
+
+- Runtime commit: `b73e56a`. Guarded deployment backed up the changed file and
+  preserved configuration hashes. Remote suite: 379 passed, one existing
+  framework deprecation warning.
+- DataAnalysis restarted 2026-09-29 15:07:32 CST and reported READY. SQL/Oagnet
+  remained healthy and were not restarted; vector health passed.
+- Original combined question replay completed in 81.1 seconds: two tables
+  retained (regional total and merged dealer count/coverage), correct seven-stage
+  ordering, one root insight, final artifact/link present. All checks passed.
+- Captions: `上海市区域医院总数` and
+  `上海市各经销商的已合作医院数及区域医院覆盖率`.
+- No query, metric formula, semantic data, configuration, or routing change.
+
 ## Review
 
 Explicit change manifest: `app/presentation/root_report.py`,
