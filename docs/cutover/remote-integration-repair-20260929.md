@@ -59,12 +59,13 @@ logs or backups are included. Oagnet and SQL Translator code are unchanged.
   Eight existing JUnit `record_property` compatibility warnings are non-failures.
   Delta: 31 old-fail to new-pass, 0 old-pass to new-fail, 4 new passing cases.
   Includes critical, scope, pending-choice and stage-order regression suites.
-- Deployment results will be recorded after completion.
+- Final merged version full regression: **4435 passed, 0 failed**, no collection
+  errors (405.46s); same eight reporting warnings.
 
 Review: the second snapshot's unrelated old test assertions were not imported;
 doing so would restore the removed default time range and regress current tests.
-Only the identified new runtime changes were merged. A second full regression is
-required for this final merged version before deployment.
+Only the identified new runtime changes were merged. The second full regression
+passed for the final merged version before deployment.
 
 ## Release boundaries
 
@@ -74,3 +75,27 @@ restart only the affected DataAnalysis service, then check readiness and peer-se
 health. The new test is staged for remote validation, not installed as a runtime file.
 No semantic database writes, vector rebuilds, V2 cutover or PR merge are authorized
 by this task.
+
+## Deployment evidence
+
+- Runtime commit: `dc0fe23` (includes repair commit `8c83015`), pushed to the
+  existing feature branch; no PR merge.
+- First publication attempt stopped on concurrent remote edits before writes.
+- Next attempt exposed a missing fixture in the temporary validation package,
+  not a business-code test failure. All replaced files were restored before any
+  service restart. The package was corrected to include its recorded JSON fixture.
+- Successful release: `sync-repair-dc0fe23-20260929-113211`.
+- Remote offline regression: **650 passed**, one dependency deprecation warning.
+- DataAnalysis restarted at **2026-09-29 11:33:17 CST**, new PID **26361**,
+  active and READY (HTTP 200).
+- SQL Translator health OK, Oagnet UP, vector health successful. These peer
+  services were not restarted. Configuration hashes remained unchanged.
+- Replaced files have a server-side rollback backup and final SHA-256 verification.
+  The orchestrator and task planner already matched the imported snapshot and
+  were not overwritten during publication.
+- Post-restart read-only dealer-list query: COMPLETED in 51.0s. All seven main
+  stages appeared in order; SQL completed, the result table was delivered, and
+  ordinary SQL routing was not taken over by MCP. No raw business rows recorded.
+- Current task has no remaining test/deployment blocker. Broader V2 replacement
+  readiness remains outside this release; catalog/evaluation/shadow gaps and the
+  existing cutover authorization boundary are not changed or claimed resolved.
