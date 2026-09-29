@@ -54,7 +54,24 @@ Baseline: `3ef67fb`, 4435 passed, no failures or collection errors.
 - Full regression: **4439 passed, 0 failed**, no collection errors (284.89s).
   Four new passing cases; no old-pass to new-fail. Eight unchanged JUnit reporting
   warnings. No tests skipped to obtain this result.
-- Deployment verification is recorded below when complete.
+- Remote offline regression: **362 passed**, one existing dependency deprecation
+  warning. Runtime commit `2b3db12` pushed to the existing feature branch.
+
+## Deployment
+
+- Release `answer-layout-2b3db12-20260929-114618`: all four changed source/test
+  files passed snapshot/hash guards and were backed up before atomic replacement.
+- DataAnalysis restarted at **2026-09-29 11:46:43 CST**, PID **78938**, active and
+  READY (HTTP 200). SQL Translator, Oagnet and vector health checks also passed;
+  those services were not restarted. Configuration hashes are unchanged.
+- Initial Git push had a TLS handshake transport failure; ordinary retry succeeded
+  without weakening certificate validation or changing configuration.
+- Post-restart live smoke used the screenshot's trend question. COMPLETED in
+  57.0s: seven-stage order retained, SQL completed, exactly one set of three
+  headings, table inside overview, chart inside findings, no old inline labels
+  and no chart in the insight node. Checks passed; no raw business rows recorded.
+- No remaining blocker for this presentation task. Repository and development
+  manifest hashes match. Broader V2 readiness is not assessed by this release.
 
 Current scope is a final-answer presentation change, not V2 replacement. No
 semantic-catalog edits, index rebuilds, permission changes, cutover or PR merge.
