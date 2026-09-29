@@ -63,6 +63,7 @@ async def test_data_insight_uses_completed_question_data_and_platform_style_with
     prompt = calls[0]["messages"][0]["content"]
     data = json.loads(calls[0]["messages"][1]["content"])
     assert data["completed_question"] == "分析上海销售额的变化"
+    assert data["planning_context"]["completed_question"] == data["completed_question"]
     assert data["facts"]["query_data"]["rows"][0]["贡献"] == -80
     assert data["warnings"] == analysis().warnings
     assert "knowledge:k1" not in data["evidence"]

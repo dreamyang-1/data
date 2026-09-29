@@ -1926,8 +1926,12 @@ def test_composite_stream_keeps_root_question_and_suppresses_child_intents():
         )
         for task_id in ("task-1", "task-2")
     }
-    assert "任务1：查询 TDC-3 产品的主要适用科室" in insight_by_task["task-1"]
-    assert "任务2：查询 TDC-3 产品的次要适用科室" in insight_by_task["task-2"]
+    assert insight_by_task == {"task-1": "", "task-2": ""}
+    root_insights = [event for event in events if event.get("type") == "message_chunk"
+                     and event.get("meta", {}).get("stage") == "INSIGHT_ANALYSIS"
+                     and event.get("meta", {}).get("status") in {"COMPLETED", "DEGRADED"}
+                     and not event.get("meta", {}).get("task_id")]
+    assert root_insights
 
 
 def test_planning_running_milestone_is_not_replayed_after_composite_intent():

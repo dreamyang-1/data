@@ -1559,6 +1559,9 @@ async def test_single_dag_clarification_resumes_on_root_conversation_without_rep
     assert first.status == "NEEDS_CLARIFICATION"
     assert first.dag_resume_token
     assert first.awaiting_task_ids == ["task-1"]
+    saved = await sessions.get_dag_pending("t", "u", "app", "root-resume")
+    assert saved["analysis_root_context"]["completed_question"] == "查询销售额；另外查询库存"
+    assert len(saved["analysis_root_context"]["planning"]["tasks"]) == 2
     calls_before_resume = list(calls)
 
     second = await service.handle(ChatRequest(
@@ -2092,10 +2095,16 @@ async def test_multi_task_insight_is_combined_once_at_root() -> None:
         async def synthesize(self, *args, **kwargs):
             raise AssertionError("多任务拆分不应再调用单任务解读")
 
-        async def synthesize_combined(self, question, tasks, *, agent_prompt=""):
+        async def synthesize_combined(self, question, tasks, *, agent_prompt="", planning_context=None):
             self.combined_questions.append(question)
             self.combined_tasks.append(list(tasks))
-            return "两个任务的整体分析结论。", None
+            assert planning_context["completed_question"] == question
+            assert len(planning_context["planning"]["tasks"]) == 2
+            from app.analysis.synthesis import SynthesisOutput, SynthesisClaim
+            return "两个任务的整体分析结论。", SynthesisOutput(
+                claims=[SynthesisClaim(statement="两个任务的整体分析结论。")],
+                final_answer={"overview": "针对用户目标的简短回答。", "result_task_ids": ["task-1", "task-2"]},
+            )
 
     settings = Settings(
         env="test",
@@ -2128,7 +2137,9 @@ async def test_multi_task_insight_is_combined_once_at_root() -> None:
         "查询 TDC-3 产品的主要适用科室、次要适用科室"
     ]
     assert [len(tasks) for tasks in synthesizer.combined_tasks] == [2]
-    assert response.answer.startswith("两个任务的整体分析结论。")
+    assert response.answer.startswith("### 1、概况总结")
+    assert "两个任务的整体分析结论。" not in response.answer
+    assert "针对用户目标的简短回答。" in response.answer
     child_insights = [
         event for event in events
         if event["stage"] == "INSIGHT_ANALYSIS" and event.get("is_child_task")
@@ -2153,7 +2164,7 @@ async def test_combined_insight_failure_keeps_per_task_results() -> None:
         async def synthesize(self, *args, **kwargs):
             raise AssertionError("多任务拆分不应再调用单任务解读")
 
-        async def synthesize_combined(self, question, tasks, *, agent_prompt=""):
+        async def synthesize_combined(self, question, tasks, *, agent_prompt="", planning_context=None):
             raise RuntimeError("model unavailable")
 
     settings = Settings(
@@ -2188,4 +2199,4 @@ async def test_combined_insight_failure_keeps_per_task_results() -> None:
         if event["stage"] == "INSIGHT_ANALYSIS" and event["status"] == "DEGRADED"
     ]
     assert len(degraded) == 1
-    assert "已保留各任务的查询结果" in degraded[0]["message"]
+    assert "已保留本次可用查询结果" in degraded[0]["message"]

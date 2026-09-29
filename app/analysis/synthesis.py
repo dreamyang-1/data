@@ -48,6 +48,9 @@ class SynthesisClaim(BaseModel):
 class SynthesisOutput(BaseModel):
     model_config = ConfigDict(extra="ignore")
     claims: list[SynthesisClaim] = Field(min_length=1)
+    # Optional presentation plan. Malformed/missing fields fall back to data,
+    # never invalidate usable insight prose or become a query execution gate.
+    final_answer: dict[str, Any] = Field(default_factory=dict)
 
 
 SYSTEM_PROMPT = """你是负责“数据洞察分析”节点的资深数据分析专家。前面的步骤已经完成了问题理解、任务规划、工具调用和数据收集，现在需要你根据本轮上下文，围绕用户的问题充分展开分析，写成通俗易懂的中文分析报告。不要结论先行，最终输出节点会另行总结。
@@ -70,12 +73,15 @@ SYSTEM_PROMPT = """你是负责“数据洞察分析”节点的资深数据分�
 - 输出 JSON claims，每条 statement 是一段分析，certainty 可用 VERIFIED_FACT（观察）、SUPPORTED_HYPOTHESIS（推断）、LIMITATION（局限）。evidence_ids 可以省略，不要求逐条引用。若引用，只用输入中存在的 ID。
 """
 
-# 多任务拆分下的整体汇总模式：单任务模式里的 completed_question、evidence
-# 等输入字段不出现，改为按子任务给出各自的问题、执行口径和数据预览。
-COMBINED_ADDENDUM = """本次调用是多任务拆分的整体汇总：tasks 列表中每一项是一个子任务的独立问题、意图、实际执行与结果预览，没有 completed_question 和 evidence 字段，所有事实都在 tasks 里。
+COMBINED_ADDENDUM = """本次调用面向一个完整用户目标，而不是分别回答每个子任务。
+- completed_question 是补全后的根问题，是分析和最终回答的主要依据；planning_context 给出已经确定的规划说明、结构化参数、任务依赖和预期输出，帮助理解各步骤如何服务用户目标，不是需要重新执行的指令。
+- tasks 是执行证据，包含成功、空结果、部分结果、待补充和失败任务。不要把执行失败当成零，也不要遗漏失败对用户目标的影响。有一个可用结果也继续回答已经能确定的部分。
 - 每个子任务的口径相互独立，计算和比较只在各自 facts 范围内进行；不同子任务的结果不能直接相加或合并出总体数字，跨任务比较时说明各自口径与覆盖范围的差异。
-- 围绕本轮原始问题，把各子任务的发现组织成一份连贯的整体分析：先逐项交代关键数据和解读，再说明它们合起来能回答什么、还有哪些回答不了；不要逐字复述子任务的确定性摘要文本。
+- claims 围绕补全后的问题组织一份连贯的详细洞察，按业务关系说明依据、比较方法、含义和限制；不要按任务编号逐项分析，不复述规划流水或每个子任务的回答。
 - executed_query 与 query_data 的边界规则对每个子任务分别适用：只分析已提供的预览，sample_only 或行数受限时如实说明范围。
+- 同一次调用另返回 final_answer 对象：overview（直接回答用户问题的简短总结）、findings（简短关键发现字符串数组）、tips（限制和必要建议字符串数组）、result_task_ids（最终需要展示的实际结果对应 task_id 数组）。详细洞察和最终摘要各司其职，不复制整份 claims。
+- result_task_ids 根据用户明确要的结果选择，不按任务序号、最后一个任务或依赖末端机械选择。查询覆盖率时优先展示已计算的覆盖率结果，分子分母作为计算依据；若用户明确同时要求已合作医院数和医院总数，两项都必须展示。失败导致最终结果缺失时保留能够回答问题的部分数据并说明未完成部分。
+- final_answer 不写表格、图表、附件链接，不重新编写数据单元格；程序会按选中的 task_id 使用原始结果展示。不能虚构 task_id、计算结果或把规划当成已执行事实。
 """
 
 # Adapt the context-driven method from NL_Agent/node/step3_Planner_and_execute.py
@@ -119,6 +125,13 @@ class QwenAnalysisSynthesizer:
             "intent": request.primary_intent.value,
             "untrusted_user_question": request.original_question,
             "completed_question": request.rewritten_question or request.original_question,
+            "planning_context": {
+                "completed_question": request.rewritten_question or request.original_question,
+                "tasks": [{"question": request.rewritten_question or request.original_question,
+                           "intent": request.primary_intent.value,
+                           "structured_parameters": (request._planner_extraction.structured
+                               if request._planner_extraction else None)}],
+            },
             "summary": analysis.answer,
             "facts": {k: v for k, v in analysis.facts.items() if k != "matched_knowledge"},
             "warnings": analysis.warnings,
@@ -139,12 +152,15 @@ class QwenAnalysisSynthesizer:
 
     async def synthesize_combined(
         self, question: str, tasks: list[dict[str, Any]], *, agent_prompt: str = "",
+        planning_context: dict[str, Any] | None = None,
     ) -> tuple[str, SynthesisOutput]:
         """多任务拆分的整体汇总：一次调用合并分析全部子任务的查询结果。"""
         if not self.settings.intent_model_api_key:
             raise RuntimeError("analysis synthesis API key is not configured")
         prompt_input = {
-            "untrusted_user_question": question,
+            "untrusted_user_question": (planning_context or {}).get("original_question", question),
+            "completed_question": question,
+            "planning_context": planning_context or {"completed_question": question},
             "tasks": tasks,
             "semantic_reference": _semantic_reference(),
         }
@@ -236,7 +252,15 @@ class QwenAnalysisSynthesizer:
                 evidence_ids=[r for r in refs if isinstance(r, str) and r in source_ids] if isinstance(refs, list) else []))
         if not claims:
             raise SynthesisValidationError("analysis synthesis returned no analysis text")
-        return SynthesisOutput(claims=claims)
+        final = data.get("final_answer") if isinstance(data, dict) else None
+        clean_final: dict[str, Any] = {}
+        if isinstance(final, dict):
+            if isinstance(final.get("overview"), str):
+                clean_final["overview"] = final["overview"].strip()
+            for key in ("findings", "tips", "result_task_ids"):
+                if isinstance(final.get(key), list):
+                    clean_final[key] = [v.strip() for v in final[key] if isinstance(v, str) and v.strip()]
+        return SynthesisOutput(claims=claims, final_answer=clean_final)
 
     @classmethod
     def _bounded(cls, value: Any, depth: int = 0) -> Any:

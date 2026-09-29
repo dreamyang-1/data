@@ -797,6 +797,8 @@ class ChatRequest(StrictModel):
     # _dag_deferred_insight，等全部任务跑完由父级做一次整体汇总。
     _dag_defer_insight: bool = PrivateAttr(default=False)
     _dag_deferred_insight: dict[str, Any] | None = PrivateAttr(default=None)
+    # Internal root goal, never accepted as an external request field.
+    _analysis_root_context: dict[str, Any] = PrivateAttr(default_factory=dict)
     # 复合指标拆出的纯计算任务的依赖任务：单值结果也要落盘，供计算任务取分母
     _dag_keep_result_dataset: bool = PrivateAttr(default=False)
     conversation_id: str = Field(min_length=1, max_length=128)

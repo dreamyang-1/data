@@ -102,6 +102,7 @@ from app.presentation import (
     render_intent_recognition_display_v2,
     render_reliability_validation,
 )
+from app.presentation.root_report import collect_root_materials, render_root_report
 from app.skills import DynamicSkillLoader, skill_for_intent
 from minio_followup_store import (
     DatasetScope,
@@ -1357,6 +1358,10 @@ class DataAnalysisOrchestrator:
                     if response is None:
                         response = await self._handle(chat, identity)
                 else:
+                    chat._analysis_root_context = {
+                        "original_question": chat.question,
+                        "completed_question": planning_question,
+                    }
                     response = (
                         await self._handle_task_plan(chat, identity, plan)
                         if plan is not None
@@ -2383,6 +2388,11 @@ class DataAnalysisOrchestrator:
             "intent": "统计分析",
             "summary": answer.replace("**", ""),
             "warnings": [],
+            "presentation": {
+                "table": self._markdown_result_table(list(coverage_rows[0]) if coverage_rows else [], coverage_rows[:20]),
+                "chart": "",
+                "notes": ([f"计算结果共 {reference.row_count} 行，当前展示前20行。"] if reference.row_count > 20 else []),
+            },
             "facts": QwenAnalysisSynthesizer._bounded({
                 "computation": {
                     "operation": f"{metric_column} / {denominator:g}",
@@ -2482,6 +2492,13 @@ class DataAnalysisOrchestrator:
         responses: dict[str, AgentResponse | Exception] = {}
         # 多任务拆分时各子任务暂存的洞察模型输入，父级在全部任务完成后合并成一次整体分析。
         deferred_insights: dict[str, dict[str, Any]] = {}
+        root_context = copy.deepcopy(
+            (dag_pending or {}).get("analysis_root_context") or chat._analysis_root_context
+            or {"original_question": chat.question, "completed_question": (
+                "；".join(task.question for task in plan.tasks) if dag_pending else chat.question
+            )}
+        )
+        root_context["planning"] = plan.model_dump(mode="json")
         conversation_by_task: dict[str, str] = {}
         root_message_id = root_message_id or chat.message_id
         task_answers = task_answers or {}
@@ -2500,6 +2517,9 @@ class DataAnalysisOrchestrator:
         )
         if (checkpoint and checkpoint.get("plan_fingerprint") == plan_fingerprint
                 and checkpoint.get('authorized_scope') == chat.authorized_semantic_scope.fingerprint()):
+            deferred_insights.update(checkpoint.get("deferred_insights") or {})
+            if not dag_pending and checkpoint.get("analysis_root_context"):
+                root_context = copy.deepcopy(checkpoint["analysis_root_context"])
             for task_id, raw in checkpoint.get("completed", {}).items():
                 try:
                     responses[task_id] = AgentResponse.model_validate(raw)
@@ -2512,6 +2532,7 @@ class DataAnalysisOrchestrator:
         # conversation so the existing PendingState can merge that answer.
         for answered_task_id in task_answers:
             responses.pop(answered_task_id, None)
+            deferred_insights.pop(answered_task_id, None)
         checkpoint_lock = asyncio.Lock()
 
         async def save_checkpoint() -> None:
@@ -2530,6 +2551,8 @@ class DataAnalysisOrchestrator:
                         'authorized_scope': chat.authorized_semantic_scope.fingerprint(),
                         "completed": completed,
                         "conversations": conversation_by_task,
+                        "analysis_root_context": root_context,
+                        "deferred_insights": deferred_insights,
                     },
                 )
 
@@ -2683,9 +2706,7 @@ class DataAnalysisOrchestrator:
                 # 纯计算任务的依赖任务：单值结果也要落盘，供计算任务取分母
                 child._dag_keep_result_dataset = True
             if (
-                len(execution_plan.tasks) >= 2
-                and self.analysis_synthesizer is not None
-                and not getattr(child, "_dag_pure_computation", False)
+                not getattr(child, "_dag_pure_computation", False)
             ):
                 # 多任务拆分：子任务不做单独的洞察解读，由父级在全部任务完成后合并汇总
                 child._dag_defer_insight = True
@@ -2726,6 +2747,8 @@ class DataAnalysisOrchestrator:
                                 )
                 if child._dag_deferred_insight is not None and isinstance(value, AgentResponse):
                     deferred_insights[task.task_id] = child._dag_deferred_insight
+                    if task.task_id in task_answers and value.status in {"COMPLETED", "PARTIAL_SUCCESS"}:
+                        root_context.setdefault("resolved_task_questions", {})[task.task_id] = child._dag_deferred_insight.get("question", task.question)
                 responses[task.task_id] = value
                 await save_checkpoint()
                 return task.task_id, value
@@ -3003,6 +3026,7 @@ class DataAnalysisOrchestrator:
                 "awaiting_task_ids": awaiting_task_ids,
                 "clarification_questions": clarification_questions,
                 "shared_clarification": shared_clarification,
+                "analysis_root_context": root_context,
             }
             try:
                 await self.sessions.put_dag_pending(
@@ -3016,54 +3040,46 @@ class DataAnalysisOrchestrator:
                     "多任务追问状态已被另一条消息更新，请基于最新响应继续。",
                 )
 
+        for alias, original in aliases.items():
+            if original in deferred_insights:
+                deferred_insights[alias] = deferred_insights[original]
+        materials = collect_root_materials(plan, task_results, responses, deferred_insights)
+        resolved_answers = dict(root_context.get("resolved_task_questions") or {})
+        for item in materials:
+            if item["task_id"] in task_answers and item["status"] in {"COMPLETED", "PARTIAL_SUCCESS"}:
+                resolved_answers[item["task_id"]] = item["question"]
+        root_context["resolved_task_questions"] = resolved_answers
+        completed_question = str(root_context["completed_question"])
+        if resolved_answers:
+            completed_question += "\n补充确认后的任务范围：" + "；".join(resolved_answers.values())
+        root_context["effective_completed_question"] = completed_question
         merged_insight: str | None = None
-        if (
-            len(execution_plan.tasks) >= 2
-            and not clarification_questions
-            and deferred_insights
-            and self.analysis_synthesizer is not None
-        ):
-            insight_items = [
-                {"task_id": task.task_id, **deferred_insights[task.task_id]}
-                for task in execution_plan.tasks
-                if task.task_id in deferred_insights
-            ]
-            if len(insight_items) >= 2:
-                await emit_progress(
-                    "INSIGHT_ANALYSIS", "RUNNING",
-                    f"已收到 {len(insight_items)} 个任务的数据，正在合并生成整体分析。",
-                )
+        final_plan: dict[str, Any] = {}
+        if completed_count:
+            await emit_progress("INSIGHT_ANALYSIS", "RUNNING", "正在围绕补全后的问题，综合查询与计算结果生成整体分析。")
+            if self.analysis_synthesizer is not None:
                 try:
-                    merged_insight, _ = await self.analysis_synthesizer.synthesize_combined(
-                        chat.question, insight_items,
+                    merged_insight, synthesis = await self.analysis_synthesizer.synthesize_combined(
+                        completed_question,
+                        [{k: v for k, v in item.items() if k != "presentation"} for item in materials],
+                        planning_context=root_context,
                         agent_prompt=await self._agent_prompt_text(chat),
                     )
-                except (
-                    httpx.HTTPError, KeyError, RuntimeError, ValueError,
-                    SynthesisValidationError, AttributeError,
-                ) as exc:
-                    # 测试替身可能只实现单任务 synthesize，属性缺失时同样退回各任务结果
-                    logger.warning(
-                        "combined insight synthesis unavailable; keeping "
-                        "per-task results: error_type=%s detail=%s",
-                        type(exc).__name__, exc,
-                    )
-                await emit_progress(
-                    "INSIGHT_ANALYSIS",
-                    "COMPLETED" if merged_insight else "DEGRADED",
-                    merged_insight or "整体分析生成失败，已保留各任务的查询结果。",
-                    message_limit=8192,
-                    chart_image_count=0,
-                    chart_source="NONE",
-                )
-
-        combined_answer, merged_links = await self._composite_task_answer(
-            chat=chat,
-            identity=identity,
-            plan=plan,
-            task_results=task_results,
-            conversation_by_task=conversation_by_task,
-        )
+                    final_plan = getattr(synthesis, "final_answer", {}) or {}
+                except (httpx.HTTPError, KeyError, RuntimeError, ValueError, SynthesisValidationError, AttributeError) as exc:
+                    logger.warning("root insight unavailable; preserving results: %s", type(exc).__name__)
+            await emit_progress(
+                "INSIGHT_ANALYSIS", "COMPLETED" if merged_insight else "DEGRADED",
+                merged_insight or "整体分析暂不可用，已保留本次可用查询结果；未完成部分将在最终回答中说明。",
+                message_limit=8192, chart_image_count=0, chart_source="NONE",
+            )
+        combined_answer, selected_task_ids = render_root_report(completed_question, materials, final_plan)
+        # Keep real links available, but never repeat child answer bodies.
+        merged_links = list(dict.fromkeys(
+            link for result in task_results
+            for link in self._split_child_attachment_lines(result.answer)[1]
+        ))
+        chart_specs = [spec for result in task_results if result.task_id in selected_task_ids for spec in result.chart_specs]
         if shared_clarification is not None:
             combined_answer = (
                 "## 综合分析报告\n"
@@ -3071,17 +3087,6 @@ class DataAnalysisOrchestrator:
                 "它们共同等待同一个时间范围，尚未执行查询。\n\n"
                 + clarification_questions[0]
             )
-        elif plan.final_deliverable == "COMBINED_REPORT":
-            combined_answer = (
-                "## 综合分析报告\n"
-                f"已按 {len(plan.tasks)} 个独立分析维度执行并逐项保留数据证据；"
-                f"完整完成 {fully_completed_count} 项，另有 "
-                f"{completed_count - fully_completed_count} 项为部分结果。\n\n"
-                + combined_answer
-            )
-        if merged_insight:
-            # 整体分析放在最前，后面保留各任务的结果摘要、表格和附件链接
-            combined_answer = f"{merged_insight}\n\n{combined_answer}"
         final_response = AgentResponse(
             clarification_decision_traces=[trace.model_copy(deep=True) for value in responses.values() if isinstance(value, AgentResponse) for trace in value.clarification_decision_traces],
             request_id=uuid4(),
@@ -3144,6 +3149,8 @@ class DataAnalysisOrchestrator:
                 plan=plan,
                 responses=responses,
                 conversation_by_task=conversation_by_task,
+                markdown_link=True,
+                fallback_links=merged_links,
             )
         elif (
             shared_clarification is None
@@ -3163,6 +3170,8 @@ class DataAnalysisOrchestrator:
                 markdown_link=True,
                 fallback_links=merged_links,
             )
+        elif merged_links:
+            final_response.answer += "\n\n附件：" + "；".join(merged_links)
         if not awaiting_task_ids:
             await self._persist_dag_root_context(
                 chat=chat,
@@ -7029,7 +7038,7 @@ class DataAnalysisOrchestrator:
                     )
                 )
 
-        if insight_output is not None and self.analysis_synthesizer is not None and chat._dag_defer_insight:
+        if insight_output is not None and chat._dag_defer_insight:
             # 多任务拆分：子任务不出单独的解读，模型输入暂存到请求上，
             # 等全部任务跑完由父级调 synthesize_combined 做一次整体汇总。
             synthesis_input = replace(insight_output, facts={
@@ -7057,7 +7066,13 @@ class DataAnalysisOrchestrator:
                 "intent": self._intent_label(request.primary_intent),
                 "summary": insight_output.answer,
                 "warnings": list(insight_output.warnings),
-                "facts": QwenAnalysisSynthesizer._bounded(synthesis_input.facts),
+                "facts": {
+                    **QwenAnalysisSynthesizer._bounded(synthesis_input.facts),
+                    # Preserve executed bindings and real cell values; recursive
+                    # depth clipping must not replace them with placeholders.
+                    "executed_query": synthesis_input.facts["executed_query"],
+                    "query_data": synthesis_input.facts["query_data"],
+                },
             }
         elif insight_output is not None and self.analysis_synthesizer is not None:
             await emit_progress(
@@ -7420,6 +7435,23 @@ class DataAnalysisOrchestrator:
             result_file_url=query_result.result_file_url,
             chart_specs=chart_specs,
         )
+        if chat._dag_defer_insight:
+            material = chat._dag_deferred_insight or {
+                "question": request.rewritten_question or request.original_question,
+                "summary": "查询结果已返回。", "facts": {}, "warnings": [],
+            }
+            material["structured_parameters"] = (
+                request._planner_extraction.structured if request._planner_extraction else None
+            )
+            material["presentation"] = {
+                "table": (answer_plan.headline if analysis_output is not None
+                    and analysis_output.method in structured_table_methods and answer_plan is not None
+                    else self._analyze(request, query_result.dataset.columns, query_result.dataset.rows,
+                        knowledge_context, result_truncated=query_result.dataset.truncated)),
+                "chart": chart_display,
+                "notes": final_notes,
+            }
+            chat._dag_deferred_insight = material
         if external_search_mode == "ENRICH":
             response.extension_executions = [
                 *visualization_executions,
@@ -7515,96 +7547,6 @@ class DataAnalysisOrchestrator:
         await self.sessions.put_last_request(request)
         return await self._finish_terminal(request, response)
 
-    async def _composite_task_answer(
-        self,
-        *,
-        chat: ChatRequest,
-        identity: TrustedIdentity,
-        plan: TaskPlan,
-        task_results: list[TaskExecutionResult],
-        conversation_by_task: dict[str, str],
-    ) -> tuple[str, list[str] | None]:
-        """Assemble DAG results into a single reply, never nested Markdown.
-
-        Homogeneous, bounded datasets are rendered as one table with a branch
-        column. When datasets cannot be merged (heterogeneous shapes, large
-        results, references unavailable), completed branches still merge into
-        one reply with the child answers under bold question lead-ins. Failed,
-        partial, or empty results remain independent sections. Returns the
-        answer plus the per-task attachment links removed from a merged body;
-        ``None`` links mean sections were kept and no combined file applies.
-        """
-
-        fallback = self._task_result_summary_table(task_results)
-        if (
-            not task_results
-            or any(result.status != "COMPLETED" for result in task_results)
-        ):
-            return fallback, None
-
-        datasets: dict[str, tuple[list[str], list[dict[str, Any]]]] | None = {}
-        if self.dataset_store is not None and all(
-            result.dataset_id for result in task_results
-        ):
-            try:
-                for task, result in zip(plan.tasks, task_results, strict=True):
-                    child_conversation = conversation_by_task.get(task.task_id)
-                    if not child_conversation or not result.dataset_id:
-                        datasets = None
-                        break
-                    raw_items = await self.sessions.get_recent_dataset_references(
-                        identity.tenant_id,
-                        identity.user_id,
-                        chat.application_id,
-                        child_conversation,
-                        limit=self.settings.dataset_recent_limit,
-                    )
-                    raw = next(
-                        (
-                            item for item in raw_items
-                            if item.get("dataset_id") == result.dataset_id
-                        ),
-                        None,
-                    )
-                    if raw is None:
-                        datasets = None
-                        break
-                    reference = restore_reference(raw)
-                    if reference.scope.authorized_semantic_scope_fingerprint != chat.authorized_semantic_scope.fingerprint():
-                        datasets = None
-                        break
-                    # Final chat tables are bounded. Large datasets keep the
-                    # child's preview in the merged reply instead of being
-                    # fully materialized merely for presentation.
-                    if reference.row_count > 200:
-                        datasets = None
-                        break
-                    loaded = await asyncio.to_thread(
-                        self.dataset_store.load_dataset,
-                        reference,
-                        current_scope=reference.scope,
-                    )
-                    datasets[task.task_id] = (
-                        list(loaded.reference.columns),
-                        [dict(row) for row in loaded.rows],
-                    )
-            except Exception as exc:
-                logger.warning("composite result presentation fallback: %s", exc)
-                datasets = None
-        if datasets:
-            homogeneous = self._render_homogeneous_task_datasets(
-                chat.question,
-                plan,
-                task_results,
-                datasets,
-            )
-            if homogeneous:
-                return homogeneous, []
-
-        merged, links = self._render_merged_task_answers(task_results)
-        if merged is not None:
-            return merged, links
-        return fallback, None
 
     @classmethod
     def _render_merged_task_answers(
