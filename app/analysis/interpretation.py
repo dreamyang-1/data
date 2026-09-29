@@ -65,6 +65,26 @@ class AnswerPlan(BaseModel):
             sections.append("分析边界：" + "；".join(self.limitations) + "。")
         return "\n".join(sections)
 
+    def render_report(
+        self, *, question: str, table: str = "", chart: str = "",
+        notes: list[str] | None = None,
+    ) -> str:
+        """Arrange the final answer only; keep insight/evidence rendering intact.
+
+        Tables and charts are already rendered from the executed result. Do not
+        regenerate numbers, sum non-additive metrics or rewrite model analysis.
+        """
+        overview = [f"本次分析：{' '.join(question.split())}", self.headline, table]
+        findings = list(dict.fromkeys([*self.key_facts, *self.interpretations]))
+        tips = list(dict.fromkeys([*self.priorities, *self.limitations, *(notes or [])]))
+        sections = [
+            "### 1、概况总结\n\n" + "\n\n".join(item.strip() for item in overview if item.strip()),
+            "### 2、关键发现\n\n" + "\n\n".join(findings or ["本次结果见上表，暂无额外可确认的关键发现。"])
+            + ("\n\n" + chart.strip() if chart.strip() else ""),
+            "### 3、业务提示\n\n" + "\n\n".join(tips or ["以上仅反映本次查询范围内的结果，不据此推断业务原因。"]),
+        ]
+        return "\n\n".join(sections)
+
 
 class InsightInterpretationLayer:
     """Convert deterministic statistics into evidence-grounded business meaning."""

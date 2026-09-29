@@ -6924,6 +6924,7 @@ class DataAnalysisOrchestrator:
             )
 
         analysis_output = None
+        answer_plan = None
         insight_output = None
         synthesized_answer: str | None = None
         if _requires_deterministic_analysis(request, executed_asl=query_result.asl) and not analysis_warning:
@@ -7342,42 +7343,52 @@ class DataAnalysisOrchestrator:
                 )
             )
         )
+        result_table = ""
         if (
             analysis_output is not None
-            and request.dimensions
             and analysis_output.method not in structured_table_methods
         ):
             # Analysis prose must not replace the requested grouped values.
             # Render the validated dataset, preserving every returned dimension.
-            answer += "\n\n" + self._analyze(
+            result_table = self._analyze(
                 request,
                 query_result.dataset.columns,
                 query_result.dataset.rows,
                 knowledge_context,
                 result_truncated=query_result.dataset.truncated,
             )
+            answer += "\n\n" + result_table
+        final_notes: list[str] = []
         if analysis_output is not None and analysis_output.warnings:
-            answer += "\n\n注意事项：" + "；".join(analysis_output.warnings) + "。"
+            final_notes.extend(analysis_output.warnings)
         if analysis_warning:
-            answer += "\n\n分析说明：" + analysis_warning
+            final_notes.append("分析说明：" + analysis_warning)
         if list_cleanup_note:
-            answer += "\n\n" + name_list_result_summary(query_result)
+            final_notes.append(name_list_result_summary(query_result))
         unavailable_fields = [
             value.split("=", 1)[1]
             for value in request.assumptions
             if value.startswith("UNAVAILABLE_REQUESTED_FIELD=") and "=" in value
         ]
         if unavailable_fields:
-            answer += (
-                "\n\n字段说明：当前语义模型未配置“"
+            final_notes.append(
+                "字段说明：当前语义模型未配置“"
                 + "、".join(dict.fromkeys(unavailable_fields))
                 + "”，已返回其余可执行指标；未使用其他字段代替该口径。"
             )
         activity_definition_note = self._activity_definition_note(request)
         if activity_definition_note:
-            answer += f"\n\n{activity_definition_note}"
-        if chart_display and chart_display not in answer:
-            answer += chart_display
+            final_notes.append(activity_definition_note)
+        if answer_plan is not None:
+            answer = answer_plan.render_report(
+                question=request.rewritten_question or request.original_question,
+                table=result_table, chart=chart_display, notes=final_notes,
+            )
+        else:
+            if final_notes:
+                answer += "\n\n" + "\n\n".join(final_notes)
+            if chart_display and chart_display not in answer:
+                answer += chart_display
         incomplete_result = bool(
             query_result.dataset.truncated and not query_result.result_file_url
         )

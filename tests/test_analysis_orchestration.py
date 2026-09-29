@@ -1065,6 +1065,14 @@ async def test_trend_chart_is_only_embedded_in_final_answer() -> None:
     assert '<svg style="max-width:100%;height:auto;display:block"' in response.answer
     assert "<title id=\"chart-title\">销售额趋势</title>" in response.answer
     assert "http://minio" not in insight["message"]
+    overview, findings, tips = (
+        response.answer.index(title)
+        for title in ("### 1、概况总结", "### 2、关键发现", "### 3、业务提示")
+    )
+    assert overview < response.answer.index("| 月份 |") < findings
+    assert findings < response.answer.index("<svg") < tips
+    assert response.answer.count("### 1、概况总结") == 1
+    assert "### 1、概况总结" not in insight["message"]
 
 
 @pytest.mark.asyncio
@@ -1291,5 +1299,5 @@ async def test_analysis_warnings_are_visible_in_answer() -> None:
         TrustedIdentity(tenant_id="tenant", user_id="user"),
     )
     assert response.status == "COMPLETED"
-    assert "注意事项" in response.answer
+    assert "### 3、业务提示" in response.answer
     assert "这是必须向用户披露的限制" in response.answer
