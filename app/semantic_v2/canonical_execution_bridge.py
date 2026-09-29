@@ -41,13 +41,12 @@ from .result_contract import completed_allowed, prove_result_contract
 _RELATION = {
     "NEW_TASK": (TurnRelation.STANDALONE_NEW_TOPIC, ContextMode.NONE,
                  ConversationControl.NEW_REQUEST),
-    # 条件修改、下钻、纠错、回历史在对外口径上都归并为问题追问；
-    # 上下文模式与控制类型保持原值，槽位继承与编辑行为不受影响。
-    "MODIFY": (TurnRelation.CURRENT_TOPIC_FOLLOWUP, ContextMode.CURRENT_THREAD,
+    # 内部关系保留执行语义；对外三类名称仅由展示层归并。
+    "MODIFY": (TurnRelation.CURRENT_TOPIC_MODIFICATION, ContextMode.CURRENT_THREAD,
                ConversationControl.CORRECTION),
     "FOLLOW_UP": (TurnRelation.CURRENT_TOPIC_FOLLOWUP, ContextMode.CURRENT_THREAD,
                   ConversationControl.FOLLOW_UP),
-    "RETURN_TO_TOPIC": (TurnRelation.CURRENT_TOPIC_FOLLOWUP, ContextMode.HISTORICAL_THREAD,
+    "RETURN_TO_TOPIC": (TurnRelation.HISTORICAL_TOPIC_RETURN, ContextMode.HISTORICAL_THREAD,
                         ConversationControl.FOLLOW_UP),
     "ANSWER_CLARIFICATION": (TurnRelation.CLARIFICATION_RESPONSE,
                              ContextMode.CLARIFICATION_RESUME,
@@ -55,15 +54,15 @@ _RELATION = {
     # ContextProposal represents relationship and task operation together. The
     # legacy request exposes them separately. V2 has already applied the exact
     # operation before this current-task boundary is serialized.
-    "ADD": (TurnRelation.CURRENT_TOPIC_FOLLOWUP, ContextMode.CURRENT_THREAD,
+    "ADD": (TurnRelation.CURRENT_TOPIC_MODIFICATION, ContextMode.CURRENT_THREAD,
             ConversationControl.CORRECTION),
-    "REPLACE": (TurnRelation.CURRENT_TOPIC_FOLLOWUP, ContextMode.CURRENT_THREAD,
+    "REPLACE": (TurnRelation.CURRENT_TOPIC_MODIFICATION, ContextMode.CURRENT_THREAD,
                 ConversationControl.CORRECTION),
-    "REMOVE": (TurnRelation.CURRENT_TOPIC_FOLLOWUP, ContextMode.CURRENT_THREAD,
+    "REMOVE": (TurnRelation.CURRENT_TOPIC_MODIFICATION, ContextMode.CURRENT_THREAD,
                ConversationControl.CORRECTION),
-    "CLEAR": (TurnRelation.CURRENT_TOPIC_FOLLOWUP, ContextMode.CURRENT_THREAD,
+    "CLEAR": (TurnRelation.CURRENT_TOPIC_MODIFICATION, ContextMode.CURRENT_THREAD,
               ConversationControl.CORRECTION),
-    "CORRECT": (TurnRelation.CURRENT_TOPIC_FOLLOWUP, ContextMode.CURRENT_THREAD,
+    "CORRECT": (TurnRelation.CURRENT_TOPIC_MODIFICATION, ContextMode.CURRENT_THREAD,
                 ConversationControl.CORRECTION),
     "CONTINUE": (TurnRelation.CURRENT_TOPIC_FOLLOWUP, ContextMode.CURRENT_THREAD,
                  ConversationControl.FOLLOW_UP),

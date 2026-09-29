@@ -84,6 +84,8 @@ def test_final_v2_plan_maps_to_original_canonical_request_without_legacy_merge(p
 @pytest.mark.parametrize(
     ("v2_relation", "legacy_relation"),
     [
+        ("MODIFY", "CURRENT_TOPIC_MODIFICATION"),
+        ("RETURN_TO_TOPIC", "HISTORICAL_TOPIC_RETURN"),
         ("ADD", "CURRENT_TOPIC_MODIFICATION"),
         ("REPLACE", "CURRENT_TOPIC_MODIFICATION"),
         ("REMOVE", "CURRENT_TOPIC_MODIFICATION"),
@@ -107,6 +109,13 @@ def test_v2_edit_and_followup_relations_map_without_reclassifying(
 
     assert canonical.turn_relation.value == legacy_relation
     assert canonical.rewritten_question == display.completed_question
+    # The three public labels must not erase the internal operation/history.
+    from app.services.orchestrator import DataAnalysisOrchestrator
+    assert DataAnalysisOrchestrator._turn_relation_label(canonical.turn_relation) == "问题追问"
+    if v2_relation == "RETURN_TO_TOPIC":
+        assert canonical.context_mode.value == "HISTORICAL_THREAD"
+    elif v2_relation in {"MODIFY", "ADD", "REPLACE", "REMOVE", "CLEAR", "CORRECT"}:
+        assert canonical.conversation_control.value == "CORRECTION"
 
 
 def test_original_query_result_is_rebound_to_v2_result_contract(provider):

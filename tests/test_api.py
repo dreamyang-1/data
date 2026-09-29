@@ -120,7 +120,9 @@ def test_planning_layout_is_shared_by_single_composite_and_clarification(
     elif task_count == 1:
         assert "拆分判断完成。当前问题无需拆分，按单任务执行。" in decision
     else:
-        assert "拆分判断完成。已拆分为以下任务：" in decision
+        # STALE_TEST: deployed planner now describes task dependencies here.
+        assert "拆分判断完成。分析内容：" in decision
+        assert "各任务相互独立，可并行执行。" in decision
     for index in range(1, task_count + 1):
         block = content.split(f"任务{index}：", 1)[1].split(f"任务{index + 1}：", 1)[0]
         if domains:

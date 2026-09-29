@@ -367,7 +367,9 @@ def test_composite_display_groups_typed_parameters_under_each_completed_question
         )
     )
 
-    assert "补全后的问题：\n\n1. 查询空心纤维血液透析器产品合作的经销商名单" in rendered
+    # STALE_TEST: completion stays on one line; task blocks belong to planning.
+    assert "补全后的问题：1. 查询空心纤维血液透析器产品合作的经销商名单" in rendered
+    assert "补全后的问题：\n\n" not in rendered
     view = build_composite_intent_recognition_display_v2(
         "查询产品的合作机构", plan,
         task_intents=[PrimaryIntent.DETAIL_QUERY, PrimaryIntent.DETAIL_QUERY],

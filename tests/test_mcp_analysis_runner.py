@@ -30,6 +30,7 @@ from app.services.mcp_analysis_runner import (
     _tool_result_text,
     pick_primary_artifact,
 )
+from app.services.mcp_file_analysis import McpFileAnalysisOutcome
 from app.skills.dynamic import DynamicSkillLoader, LoadedSkill
 from app.stores import InMemorySessionStore
 
@@ -44,11 +45,11 @@ def mcp_settings(**overrides) -> Settings:
         env="test",
         adapter_mode="mock",
         intent_model_enabled=False,
-        mcp_analysis_enabled=True,
-        mcp_analysis_model_base_url=LLM_URL,
-        mcp_analysis_model_api_key="test-key",
-        mcp_analysis_total_budget_seconds=60,
-        mcp_analysis_max_turns=5,
+        mcp_file_analysis_enabled=True,
+        intent_model_base_url=LLM_URL,
+        intent_model_api_key="test-key",
+        mcp_file_analysis_total_budget_seconds=60,
+        mcp_file_analysis_max_turns=5,
     )
     defaults.update(overrides)
     return Settings(**defaults)
@@ -226,6 +227,7 @@ async def test_runner_drives_multi_turn_tool_loop():
 
     # 系统提示注入文件清单与 file_path 契约；tools 转为 OpenAI function 格式
     first = llm_seen[0]
+    assert first["model"] == mcp_settings().intent_model_name
     assert "uploads/a.xlsx" in first["messages"][0]["content"]
     assert "file_path" in first["messages"][0]["content"]
     assert first["tools"][0]["function"]["name"] == "analysis_profile"
@@ -274,7 +276,7 @@ async def test_turn_limit_forces_final_summary():
     ]
     llm_seen: list = []
     runner = McpAnalysisRunner(
-        mcp_settings(mcp_analysis_max_turns=2),
+        mcp_settings(mcp_file_analysis_max_turns=2),
         transport=combined_transport(llm_script=script, llm_seen=llm_seen),
     )
     outcome = await runner.run(chat_request())
@@ -333,29 +335,29 @@ def analysis_request() -> CanonicalAnalysisRequest:
     )
 
 
-def test_dispatch_gate_requires_enabled_and_streamable_mcp():
+def test_dispatch_gate_requires_enabled_uploaded_file_and_configured_mcp():
     agent = make_orchestrator(mcp_settings())
-    assert agent._should_dispatch_mcp_analysis(chat_request()) is True
-    # temp_file_paths 已降为可选上下文：无上传文件但有 streamable_http MCP 仍触发
-    assert agent._should_dispatch_mcp_analysis(chat_request(temp_file_paths=[])) is True
-    # connect_type 默认 sse（DataAnalysis_Agent 调度器只认 streamable_http）
-    assert agent._should_dispatch_mcp_analysis(
+    assert agent._should_dispatch_mcp_file_analysis(chat_request()) is True
+    # Current production contract: no uploaded file must preserve semantic SQL.
+    assert agent._should_dispatch_mcp_file_analysis(chat_request(temp_file_paths=[])) is False
+    # Both transports are supported by the current extension dispatcher.
+    assert agent._should_dispatch_mcp_file_analysis(
         chat_request(mcp=[McpConfig(mcp_server_url=MCP_URL)])
-    ) is False
+    ) is True
     # 未携带 MCP 配置
-    assert agent._should_dispatch_mcp_analysis(chat_request(mcp=[])) is False
+    assert agent._should_dispatch_mcp_file_analysis(chat_request(mcp=[])) is False
     # 灰度开关关闭
-    closed = make_orchestrator(mcp_settings(mcp_analysis_enabled=False))
-    assert closed._should_dispatch_mcp_analysis(chat_request()) is False
-    assert closed.mcp_analysis_runner is None
+    closed = make_orchestrator(mcp_settings(mcp_file_analysis_enabled=False))
+    assert closed._should_dispatch_mcp_file_analysis(chat_request()) is False
+    assert closed.mcp_file_analysis_runner is None
 
 
 class StubRunner:
-    def __init__(self, outcome: McpAnalysisOutcome | None = None, error: Exception | None = None):
+    def __init__(self, outcome: McpFileAnalysisOutcome | None = None, error: Exception | None = None):
         self._outcome = outcome
         self._error = error
 
-    async def run(self, chat: ChatRequest) -> McpAnalysisOutcome:
+    async def run(self, chat: ChatRequest) -> McpFileAnalysisOutcome:
         if self._error is not None:
             raise self._error
         assert self._outcome is not None
@@ -366,7 +368,8 @@ class StubRunner:
 async def test_run_mcp_analysis_assembles_response():
     agent = make_orchestrator(mcp_settings())
     report_url = "http://minio.test/analysis-content/out/report.html"
-    agent.mcp_analysis_runner = StubRunner(outcome=McpAnalysisOutcome(
+    agent.mcp_file_analysis_runner = StubRunner(outcome=McpFileAnalysisOutcome(
+        applicable=True,
         answer=f"分析完成，报告：{report_url}",
         executions=[
             ExtensionExecution(
@@ -383,8 +386,8 @@ async def test_run_mcp_analysis_assembles_response():
         turns_used=4,
         warnings=["MCP 分析时间预算用尽，回答基于已获得的工具结果"],
     ))
-    response = await agent._run_mcp_analysis(
-        chat_request(), TrustedIdentity(tenant_id="t", user_id="u"), analysis_request()
+    response = await agent._run_mcp_file_analysis(
+        chat_request(), analysis_request()
     )
 
     assert response.status == "COMPLETED"
@@ -396,9 +399,10 @@ async def test_run_mcp_analysis_assembles_response():
     ]
     assert response.analysis_process[0].stage == "DETERMINISTIC_ANALYSIS"
     assert response.analysis_process[0].status == "COMPLETED"
-    assert response.analysis_process[1].status == "FAILED"
+    assert response.extension_executions[1].status == "FAILED"
+    assert len(response.analysis_process) == 1
     assert response.reliability is not None
-    assert response.reliability.level == "HIGH"
+    assert response.reliability.level == "LIMITED"
     assert response.reliability.warnings
 
 
@@ -412,40 +416,40 @@ async def test_run_mcp_analysis_truncates_long_execution_lists():
         )
         for _ in range(15)
     ]
-    agent.mcp_analysis_runner = StubRunner(outcome=McpAnalysisOutcome(
+    agent.mcp_file_analysis_runner = StubRunner(outcome=McpFileAnalysisOutcome(
+        applicable=True,
         answer="完成", executions=executions, turns_used=15,
     ))
-    response = await agent._run_mcp_analysis(
-        chat_request(), TrustedIdentity(tenant_id="t", user_id="u"), analysis_request()
+    response = await agent._run_mcp_file_analysis(
+        chat_request(), analysis_request()
     )
     # AgentResponse 契约：extension_executions ≤ 10、analysis_process ≤ 20
     assert len(response.extension_executions) == 10
-    assert len(response.analysis_process) == 15
-    assert any("仅保留前 10 条明细" in w for w in response.reliability.warnings)
+    assert len(response.analysis_process) == 1
+    assert "15次工具调用成功" in response.analysis_process[0].summary
+    assert any("仅保留前10条明细" in w for w in response.reliability.warnings)
 
 
 @pytest.mark.asyncio
 async def test_run_mcp_analysis_falls_back_on_runner_error():
     agent = make_orchestrator(mcp_settings())
-    agent.mcp_analysis_runner = StubRunner(error=RuntimeError("boom"))
-    response = await agent._run_mcp_analysis(
-        chat_request(), TrustedIdentity(tenant_id="t", user_id="u"), analysis_request()
+    agent.mcp_file_analysis_runner = StubRunner(error=RuntimeError("boom"))
+    response = await agent._run_mcp_file_analysis(
+        chat_request(), analysis_request()
     )
-    assert response.status == "SAFE_FALLBACK"
-    assert "RuntimeError" in response.answer
+    assert response is None  # let the existing analysis path continue
 
 
 @pytest.mark.asyncio
 async def test_run_mcp_analysis_falls_back_when_nothing_usable():
     agent = make_orchestrator(mcp_settings())
-    agent.mcp_analysis_runner = StubRunner(outcome=McpAnalysisOutcome(
+    agent.mcp_file_analysis_runner = StubRunner(outcome=McpFileAnalysisOutcome(
         answer="", executions=[], warnings=["MCP 服务未发现任何可用工具"],
     ))
-    response = await agent._run_mcp_analysis(
-        chat_request(), TrustedIdentity(tenant_id="t", user_id="u"), analysis_request()
+    response = await agent._run_mcp_file_analysis(
+        chat_request(), analysis_request()
     )
-    assert response.status == "SAFE_FALLBACK"
-    assert "未发现任何可用工具" in response.answer
+    assert response is None
 
 
 def test_url_extraction_stops_at_literal_escapes_and_cjk_punctuation():

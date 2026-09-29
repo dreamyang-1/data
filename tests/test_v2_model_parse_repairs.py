@@ -195,11 +195,13 @@ RECORDED=json.loads((Path(__file__).parent/'fixtures/v2_model_parse_repairs.json
 @pytest.mark.parametrize('row',RECORDED,ids=[r['case_id'] for r in RECORDED])
 def test_actual_recorded_failure_replay_without_model_calls(row):
     parsed=CurrentTurnSemanticParse.model_validate(row['parsed'])
+    before=parsed.model_dump(mode='json')
+    assert parsed.off_topic is False  # legacy payloads acquire the safe default
     with pytest.raises(ValueError):
         CurrentTurnParser.parse(text=row['text'],turn_id=row['case_id'],text_ref=row['case_id'],parsed=parsed)
     result,trace=repair_model_parse(parsed,text=row['text'],turn_id=row['case_id'])
     CurrentTurnParser.parse(text=row['text'],turn_id=row['case_id'],text_ref=row['case_id'],parsed=result)
-    assert trace and parsed.model_dump(mode='json')==row['parsed']
+    assert trace and parsed.model_dump(mode='json')==before
     assert result.operation_markers==parsed.operation_markers
     assert result.query_shape_prediction==parsed.query_shape_prediction
 

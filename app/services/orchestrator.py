@@ -2374,9 +2374,7 @@ class DataAnalysisOrchestrator:
             for row, ratio in computed[:3]
         )
         answer = (
-            f"**{subject}**：共 {reference.row_count} 行，最高为{top_parts}，"
-            + (f"其中 {zero_count} 行为 0.00%，" if zero_count else "")
-            + "全量明细见回复末尾附件。"
+            f"**{subject}**：共 {reference.row_count} 行，最高为{top_parts}。"
         )
         # 计算结论随任务输入一起交给整体汇总，避免整体分析仍停留在预览口径
         chat._dag_deferred_insight = {
@@ -2407,7 +2405,8 @@ class DataAnalysisOrchestrator:
             intent=PrimaryIntent.CHAT,
             intent_source="TASK_DAG_COMPUTATION",
             answer=answer,
-            dataset_id=reference.dataset_id,
+            # 结果集只留在任务会话里供追问复用；响应不带dataset_id，
+            # 合并附件按原口径走各任务自己的导出链接
             reliability=ReliabilityReport(
                 level="HIGH",
                 score=1.0,
@@ -7802,7 +7801,11 @@ class DataAnalysisOrchestrator:
         seen_dataset_ids: set[str] = set()
         for task in plan.tasks:
             value = responses.get(task.task_id)
-            if not isinstance(value, AgentResponse):
+            if (
+                not isinstance(value, AgentResponse)
+                or not value.dataset_id
+                or value.dataset_id in seen_dataset_ids
+            ):
                 continue
             raw_items = await self.sessions.get_recent_dataset_references(
                 identity.tenant_id,
@@ -7814,25 +7817,14 @@ class DataAnalysisOrchestrator:
             raw = next(
                 (
                     item for item in raw_items
-                    if value.dataset_id and item.get("dataset_id") == value.dataset_id
+                    if item.get("dataset_id") == value.dataset_id
                 ),
                 None,
             )
             if raw is None:
-                # 子任务响应不一定携带dataset_id，退回该任务会话最近的结果集；
-                # 派生计算结果集由计算任务自己通过dataset_id命中，这里不重复收录。
-                raw = await self._latest_task_dataset_reference(
-                    identity, chat,
-                    conversation_by_task.get(task.task_id, chat.conversation_id),
-                    exclude_source_type="DERIVED_COMPUTATION",
-                )
-            if raw is None:
                 continue
-            reference = restore_reference(raw)
-            if reference.dataset_id in seen_dataset_ids:
-                continue
-            sections.append((task.question, reference))
-            seen_dataset_ids.add(reference.dataset_id)
+            sections.append((task.question, restore_reference(raw)))
+            seen_dataset_ids.add(value.dataset_id)
         if len(sections) < 2:
             if markdown_link and fallback_links:
                 response.answer += "\n\n附件：" + "；".join(fallback_links)

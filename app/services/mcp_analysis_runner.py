@@ -11,9 +11,9 @@ langchain 生态（pyproject 依赖仅 httpx + langgraph）。
   inputSchema 转 OpenAI function，由模型自主决定调用顺序与参数。
 因此新增 MCP 或工具只需在平台侧配置 SKILL 绑定并随请求下发，无需改本文件。
 
-与 extension_dispatcher 的分工：extension_dispatcher 保留"主回答之后的一次性
-补充"语义（ENRICH / WEB_SEARCH），不改动；本通道是主执行——请求携带
-streamable_http MCP 配置时接管回答。
+本模块保留独立调用能力，但不是当前编排器的自动接管入口。
+正式请求入口使用 mcp_file_analysis，并要求显式上传文件；本次配置兼容修复
+不会把普通语义/SQL查询重新接入通用MCP循环。
 
 为什么不能复用 extension_dispatcher：其 OptionalToolSelector.has_satisfiable_inputs
 要求工具 required 参数全部存在于固定扩展 payload（question/columns/rows 等），
@@ -120,8 +120,7 @@ class McpSessionClient:
 
     与 extension_dispatcher._call_streamable_mcp 的差异：那边每次调用都新建连接
     并重新 initialize；这里整个分析会话复用一个连接与 Mcp-Session-Id，工具调用
-    超时按 mcp_analysis_tool_timeout_seconds（默认 180s，对齐 New_Agent 已验证值，
-    远大于 extension_dispatcher 的 30s）。
+    超时由调用方传入，使用现有 mcp_file_analysis_* 配置，不再读取已移除的配置名。
     """
 
     def __init__(
@@ -254,8 +253,8 @@ class McpAnalysisRunner:
                 client = McpSessionClient(
                     server.mcp_server_url,
                     server.headers,
-                    tool_timeout=self.settings.mcp_analysis_tool_timeout_seconds,
-                    discovery_timeout=self.settings.mcp_analysis_discovery_timeout_seconds,
+                    tool_timeout=self.settings.mcp_file_analysis_tool_timeout_seconds,
+                    discovery_timeout=self.settings.mcp_file_analysis_discovery_timeout_seconds,
                     transport=self.transport,
                 )
                 try:
@@ -330,8 +329,8 @@ class McpAnalysisRunner:
         answer = ""
         turns = 0
         budget_exhausted = False
-        deadline = time.monotonic() + self.settings.mcp_analysis_total_budget_seconds
-        while turns < self.settings.mcp_analysis_max_turns:
+        deadline = time.monotonic() + self.settings.mcp_file_analysis_total_budget_seconds
+        while turns < self.settings.mcp_file_analysis_max_turns:
             turns += 1
             if time.monotonic() >= deadline:
                 budget_exhausted = True
@@ -498,16 +497,13 @@ class McpAnalysisRunner:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None,
     ) -> dict[str, Any]:
-        api_key = (
-            self.settings.mcp_analysis_model_api_key
-            or self.settings.intent_model_api_key
-        )
+        api_key = self.settings.intent_model_api_key
         if api_key is None:
             raise RuntimeError(
-                "未配置 MCP 分析模型 API Key（mcp_analysis_model_api_key / intent_model_api_key）"
+                "未配置 MCP 分析模型 API Key（intent_model_api_key）"
             )
         body: dict[str, Any] = {
-            "model": self.settings.mcp_analysis_model_name,
+            "model": self.settings.intent_model_name,
             "messages": messages,
             "temperature": 0,
         }
@@ -525,8 +521,8 @@ class McpAnalysisRunner:
             tools=body.get("tools"),
         ) as gen:
             async with httpx.AsyncClient(
-                base_url=self.settings.mcp_analysis_model_base_url.rstrip("/"),
-                timeout=self.settings.mcp_analysis_model_timeout_seconds,
+                base_url=self.settings.intent_model_base_url.rstrip("/"),
+                timeout=self.settings.mcp_file_analysis_model_timeout_seconds,
                 transport=self.transport,
             ) as client:
                 for attempt in range(3):

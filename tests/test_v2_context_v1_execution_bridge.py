@@ -376,9 +376,9 @@ async def test_bridge_streams_context_progress_before_resolution(provider):
     assert events[0]["stage"] == "INTENT_RECOGNITION"
     assert events[0]["status"] == "RUNNING"
     assert events[0]["progress_phase"] == "V2_CONTEXT_START"
-    assert "正在理解当前问题" in events[0]["message"]
+    assert "正在判断本轮问题与会话上下文的关系，并补全问题" in events[0]["message"]
     assert events[1]["progress_phase"] == "V2_CONVERSATION_STATE_READY"
-    assert events[1]["message"] == "对话状态识别：独立新问题。"
+    assert events[1]["message"] == "对话状态识别：新问题。"
     assert events[1]["resolution_source"] == "DETERMINISTIC_EMPTY_CONTEXT"
     assert events[2]["progress_phase"] == "V2_SEMANTIC_CATALOG_READY"
     assert events[2]["message"] == (

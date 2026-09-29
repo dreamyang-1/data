@@ -189,7 +189,7 @@ async def test_raw_input_reaches_model_catalog_and_plan(catalog):
         'V2_CONVERSATION_STATE_READY',
         'V2_SEMANTIC_CANDIDATES_READY',
     ]
-    assert progress[0]['message'] == '对话状态识别：独立新问题。'
+    assert progress[0]['message'] == '对话状态识别：新问题。'
     assert progress[0]['resolution_source'] == 'DETERMINISTIC_EMPTY_CONTEXT'
     assert '正在匹配指标、维度、筛选条件和时间' not in progress[0]['message']
     assert '语义提取字段：' not in progress[0]['message']
