@@ -10,6 +10,10 @@ Baseline commit: `eff07e3`. Baseline: 4400 passed, 31 failed, no collection erro
   its exact snapshot: derived computation summaries do not promise an attachment;
   composite exports use explicit response dataset IDs rather than guessing the
   latest dataset. Preserve original task links when a combined export is unavailable.
+- A second preflight detected further remote planning presentation edits before
+  any deployment write. Preserve those exact edits too: computation intent label,
+  non-repeated dependency prose and one-based displayed task numbering. Internal
+  dependency indexes remain zero-based. Related recheck: 150 tests passed.
 - PROVEN: the standalone MCP runner referenced removed settings. Reuse existing
   file-analysis budgets and intent-model settings; do not revive automatic MCP
   takeover of ordinary SQL requests. The official file-analysis route still
@@ -27,6 +31,7 @@ Baseline commit: `eff07e3`. Baseline: 4400 passed, 31 failed, no collection erro
 Runtime:
 
 - `app/services/orchestrator.py` — exact remote attachment snapshot.
+- `app/planning/task_dag.py` — exact subsequent remote task-numbering prompt change.
 - `app/services/mcp_analysis_runner.py` — current settings compatibility only.
 - `app/semantic_v2/canonical_execution_bridge.py` — lossless internal relations.
 
@@ -55,6 +60,11 @@ logs or backups are included. Oagnet and SQL Translator code are unchanged.
   Delta: 31 old-fail to new-pass, 0 old-pass to new-fail, 4 new passing cases.
   Includes critical, scope, pending-choice and stage-order regression suites.
 - Deployment results will be recorded after completion.
+
+Review: the second snapshot's unrelated old test assertions were not imported;
+doing so would restore the removed default time range and regress current tests.
+Only the identified new runtime changes were merged. A second full regression is
+required for this final merged version before deployment.
 
 ## Release boundaries
 

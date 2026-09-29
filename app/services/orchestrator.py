@@ -1230,11 +1230,15 @@ class DataAnalysisOrchestrator:
                         parameters: list[str],
                         structured: dict | None = None,
                     ) -> str:
-                        intent_line = (
-                            f"任务意图：{self._intent_label(intent)}\n"
-                            if intent is not None
-                            else ""
-                        )
+                        if "不再查询数据库" in question:
+                            # 复合指标拆出的计算任务，意图展示为指标计算
+                            intent_line = "任务意图：指标计算\n"
+                        else:
+                            intent_line = (
+                                f"任务意图：{self._intent_label(intent)}\n"
+                                if intent is not None
+                                else ""
+                            )
                         is_data_task = (
                             intent not in NO_DATA_INTENTS | METADATA_INTENTS
                         )
@@ -1257,8 +1261,7 @@ class DataAnalysisOrchestrator:
                         ).rstrip()
 
                     if plan is not None:
-                        # 依赖关系参考New_Agent的拆解展示：结构说明一句话在
-                        # 前，依赖行随后，纯并行时没有依赖行但有并行说明。
+                        # 依赖说明由拆分模型写在分析内容里，不再单独输出依赖行
                         task_order = {
                             task.task_id: index
                             for index, task in enumerate(plan.tasks, 1)
@@ -1297,8 +1300,6 @@ class DataAnalysisOrchestrator:
                         if summary[-1] not in "。！？?!":
                             summary += "。"
                         sections = ["分析内容：" + summary]
-                        if dependency_pairs:
-                            sections.append("依赖关系：" + "、".join(dependency_pairs))
                         sections.append(task_section)
                         planning_detail = "\n\n".join(sections)
                     else:
