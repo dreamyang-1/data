@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.domain.models import ChatRequest, DataQueryResult, Dataset, PrimaryIntent, TrustedIdentity
-from app.services.result_cleanup import clean_name_list, cleanup_message
+from app.services.result_cleanup import clean_name_list, cleanup_message, name_list_result_summary
 from app.services.orchestrator import DataAnalysisOrchestrator
 from app.services.progress import progress_scope
 from test_orchestrator import service
@@ -98,18 +98,22 @@ async def test_cleanup_in_real_completion_path_persistence_evidence_and_progress
     with progress_scope(events.append):
         response = await orchestrator._handle(chat, TrustedIdentity(tenant_id="t", user_id="u"))
     assert response.status == "COMPLETED"
-    assert "名单清理" in response.answer
+    # Product change: final answer summarizes results; technical cleanup stays in progress.
+    assert "名单清理" not in response.answer
+    assert "完全重复记录" not in response.answer
+    assert any("名单清理" in e.get("message", "") for e in events if e["stage"] == "DATA_RETRIEVAL")
     proof = next(item for item in response.evidence if item.kind == "RESULT_CLEANUP")
     assert proof.payload["invalid_rows_removed"] == 2
     if values[0]:
         persisted = orchestrator._persist_query_dataset.call_args.args[1]
         assert persisted.dataset.rows == [{"医院名称": "甲医院"}]
         assert response.dataset_id == "cleaned-dataset"
+        assert "本次查询整理出 1 条有效名单记录" in response.answer
         stages = [event["stage"] for event in events]
         assert stages.index("DATA_RETRIEVAL") < stages.index("RELIABILITY_CHECK") < stages.index("INSIGHT_ANALYSIS")
     else:
         orchestrator._persist_query_dataset.assert_not_called()
-        assert "清理后没有可展示的有效名称" in response.answer
+        assert "暂无可展示的有效名单记录" in response.answer
 
 
 @pytest.mark.asyncio
@@ -130,10 +134,29 @@ async def test_partial_preview_cleanup_never_imports_raw_file_or_claims_empty_da
     response = await orchestrator._handle(chat, TrustedIdentity(tenant_id="t", user_id="u"))
     assert "没有找到匹配的业务记录" not in response.answer
     if len(values) > 1:
-        assert "全量去重后数量未知" in response.answer
-        assert "附件是上游原始完整结果" in response.answer
+        assert "名单清理" not in response.answer
+        assert "上游原始结果" in response.answer
+        assert "不是完整名单" in response.answer or "不代表完整结果为空" in response.answer
         orchestrator._import_query_result_file.assert_not_called()
     else:
         assert "名单清理" not in response.answer
         orchestrator._import_query_result_file.assert_awaited_once()
     orchestrator._persist_query_dataset.assert_not_called()
+
+
+@pytest.mark.parametrize("partial", [False, True])
+@pytest.mark.parametrize("values", [["甲医院", "甲医院", "乙医院"], [None, "—"]])
+def test_summary_counts_only_visible_records_and_preserves_source(partial, values):
+    source = result([{"医院名称": v} for v in values], truncated=partial,
+                    total_row_count=100 if partial else len(values))
+    cleaned = clean_name_list(PrimaryIntent.DETAIL_QUERY, source)
+    before = cleaned.model_dump()
+    summary = name_list_result_summary(cleaned)
+    if values[0]:
+        assert "2 条有效名单记录" in summary
+    else:
+        assert "暂无可展示" in summary
+    assert "去除" not in summary and "去重" not in summary and "100" not in summary
+    assert "家" not in summary  # rows do not prove a count of distinct entities
+    assert cleaned.model_dump() == before
+    assert "名单清理" in cleanup_message(cleaned)

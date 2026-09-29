@@ -86,3 +86,20 @@ def clean_name_list(intent: PrimaryIntent, result: DataQueryResult) -> DataQuery
 def cleanup_message(result: DataQueryResult) -> str:
     return "\n".join(str(item["message"]) for item in result.execution_transforms
                      if item.get("type") == "NAME_LIST_CLEANUP" and item.get("message"))
+
+
+def name_list_result_summary(result: DataQueryResult) -> str:
+    """A brief result summary; cleanup mechanics belong to execution progress."""
+    count = len(result.dataset.rows)
+    if result.dataset.truncated:
+        text = (
+            f"本次整理出 {count} 条有效名单记录，仅代表返回的预览，不是完整名单。"
+            if count else "本次预览中暂无可展示的有效名单记录，不代表完整结果为空。"
+        )
+        if result.result_file_url:
+            text += "完整查询结果请查看附件（上游原始结果）。"
+        return text
+    return (
+        f"本次查询整理出 {count} 条有效名单记录，供您参考。"
+        if count else "本次返回的数据中暂无可展示的有效名单记录。"
+    )

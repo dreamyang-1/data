@@ -32,7 +32,7 @@ from app.analysis import (
 from app.analysis.interpretation import AnswerPlanner, InsightInterpretationLayer
 from app.analysis.visualization import render_chart_svg
 from app.services.chat_responder import QwenChatResponder
-from app.services.result_cleanup import clean_name_list, cleanup_message
+from app.services.result_cleanup import clean_name_list, cleanup_message, name_list_result_summary
 from app.services.memory_manager import MemoryManager
 from app.analysis.contracts import ordered_entity_metric_ranking_request
 from app.config import Settings
@@ -6069,7 +6069,7 @@ class DataAnalysisOrchestrator:
                 + " 本次暂无可下载的完整附件，未基于预览生成全量分析结论。"
             )
             if list_cleanup_note:
-                answer += "\n\n" + list_cleanup_note
+                answer += "\n\n" + name_list_result_summary(query_result)
             request.assumptions.append("LATEST_RESULT_DATASET_NOT_REUSABLE")
             await self.sessions.put_last_request(request)
             return await self._finish_terminal(request, AgentResponse(
@@ -6208,7 +6208,7 @@ class DataAnalysisOrchestrator:
                     dataset_id=dataset_id,
                 )
                 if list_cleanup_note:
-                    response.answer = "查询已完成，清理后没有可展示的有效名称。\n\n" + list_cleanup_note
+                    response.answer = name_list_result_summary(query_result)
                 return await self._finish_terminal(request, response)
             scope = "、".join(
                 f"{item.get('field')}={item.get('value')}"
@@ -6837,7 +6837,7 @@ class DataAnalysisOrchestrator:
         if analysis_warning:
             answer += "\n\n分析说明：" + analysis_warning
         if list_cleanup_note:
-            answer += "\n\n" + list_cleanup_note
+            answer += "\n\n" + name_list_result_summary(query_result)
         unavailable_fields = [
             value.split("=", 1)[1]
             for value in request.assumptions
