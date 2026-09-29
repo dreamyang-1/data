@@ -30,4 +30,17 @@
 
 ## Deployment
 
-Pending guarded deployment and read-only live verification. Optional model-output defects retain real results rather than blocking the response. Model-selected relevance remains probabilistic; no new semantic-review gate is introduced.
+- Runtime commit: 70ba955. Published to the existing feature branch/Draft PR, not merged.
+- Guarded deployment compared each target with the preflight snapshot, backed up originals and verified final hashes. Only the DataAnalysis service was restarted at 2026-09-29 13:44:48 CST; new PID 576387, READY. Sibling services and vector health passed; configuration hashes remained unchanged.
+- Remote selected suite: 352 passed, one dependency deprecation warning.
+- Live single-task trend: COMPLETED; seven-stage order, three-section layout, table in overview and chart in findings passed.
+- Live multi-task query of two Shanghai hospital metrics: COMPLETED in 73.3 seconds. Both requested results delivered, one root insight node, no child insight, no task-number report sections, no detailed-insight repetition, correct stage/section order, no chart in insight and no MCP takeover.
+- SSE emits many completed-status fragments for one report. The live harness was corrected to count the public insight heading and root ownership, not individual completed text fragments; no production SSE change was needed.
+- Direct real-model probe with explicitly synthetic inputs returned separate detailed claims and a final presentation plan. This is supplementary model-contract evidence, not business-query evidence.
+
+## Known independent limitations
+
+- PROVEN: the original per-dealer plus hospital-total sample returned missing upstream structured extraction and stopped at ASL before SQL. The planner/ASL extraction path was not modified in this release. The deeper cause of that missing output remains UNKNOWN; do not label it a timeout or a semantic defect without evidence.
+- A separate Shanghai/Beijing sample returned the available Shanghai result and disclosed the Beijing catalog-value binding failure without dropping the successful result. No semantic data or index was changed.
+- A direct-container probe without the production context bridge was not accepted as endpoint verification; only the successful actual HTTP/SSE runs above are reported as live acceptance.
+- Optional model-output defects retain real results rather than blocking the response. Model-selected relevance remains probabilistic; no new semantic-review gate is introduced. Existing SQL/metric business semantics are not certified by presentation acceptance.
