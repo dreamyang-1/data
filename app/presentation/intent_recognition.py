@@ -1061,7 +1061,10 @@ def render_asl_extraction_json(asl: dict[str, object], repairs: object = None) -
         +
         "说明：`filters` 仅记录本次查询显式提出的筛选；"
         "指标定义自带的固定口径由 SQL 翻译服务合并，"
-        "并在下一步单独展示。"
+        "并在下一步单独展示。\n"
+        "执行说明：`limit: null` 表示本次未指定条数上限，不代表 SQL 不限行数；"
+        "实际执行上限及系统补充的非空筛选以调度执行节点的说明为准，"
+        "不混入用户筛选条件。"
     )
 
 

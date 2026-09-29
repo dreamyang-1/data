@@ -2486,7 +2486,7 @@ class HttpDataRetrievalAdapter:
             business_domain_id=business_domain_id,
         )
         self._validate_read_only_sql(sql)
-        from app.presentation.execution_trace import executed_asl_metrics
+        from app.presentation.execution_trace import executed_asl_metrics, render_sql_execution_defaults
 
         selected_metrics = [
             {"指标名称": item["alias"] or item["name"], "标准编码": item["name"]}
@@ -2506,6 +2506,8 @@ class HttpDataRetrievalAdapter:
             ) if asl.get("dimensions") else None,
             "排序": asl.get("sort"),
             "结果上限": asl.get("limit"),
+            "时间范围": asl.get("time_context"),
+            "汇总后筛选": asl.get("having") or [],
         }
         await emit_progress(
             "SEMANTIC_QUERY_PLANNING",
@@ -2517,7 +2519,8 @@ class HttpDataRetrievalAdapter:
             f"ASL筛选条件={_compact_progress_value(asl.get('filters') or [], 500)}，"
             f"指标固定口径（SQL自动合并）="
             f"{_compact_progress_value(applied_metric_filters, 700)}）；"
-            f"输出：只读 SQL 已生成（{len(sql)}字符），安全校验：通过。",
+            f"输出：只读 SQL 已生成（{len(sql)}字符），安全校验：通过。\n"
+            + render_sql_execution_defaults(effective_filter_summary),
         )
 
         execute_payload: dict[str, Any] = {

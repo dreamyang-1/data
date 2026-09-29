@@ -3428,18 +3428,13 @@ class SQLTranslatorProd:
             related_conditions = compile_related_filters(self, ast, model_id)
             if related_conditions:
                 filter_clause += (' AND ' if filter_clause else 'WHERE ') + ' AND '.join(related_conditions)
-        if not is_detail_projection:
-            identity_conditions = self._group_identity_non_null_conditions(
-                dimensions,
-                filters,
-                entity_code,
-                model_id,
-            )
-            if identity_conditions:
-                if filter_clause:
-                    filter_clause += f" AND {' AND '.join(identity_conditions)}"
-                else:
-                    filter_clause = f"WHERE {' AND '.join(identity_conditions)}"
+        execution_defaults = self._execution_defaults(ast, model_id, entity_code)
+        identity_conditions = [item['condition'] for item in execution_defaults['system_filters']]
+        if identity_conditions:
+            if filter_clause:
+                filter_clause += f" AND {' AND '.join(identity_conditions)}"
+            else:
+                filter_clause = f"WHERE {' AND '.join(identity_conditions)}"
         if time_conditions:
             if filter_clause:
                 filter_clause += f" AND {' AND '.join(time_conditions)}"
@@ -3467,10 +3462,9 @@ class SQLTranslatorProd:
             sql_parts.append(having_clause)
         if order_by_clause:
             sql_parts.append(order_by_clause)
-        if limit:
-            sql_parts.append(f"LIMIT {limit}")
-        elif is_detail_projection:
-            sql_parts.append(f"LIMIT {MAX_QUERY_ROWS}")
+        effective_limit = execution_defaults['effective_limit']
+        if effective_limit is not None:
+            sql_parts.append(f"LIMIT {effective_limit}")
 
         return ' '.join(sql_parts)
 
@@ -4226,6 +4220,37 @@ class SQLTranslatorProd:
             payload['semantic_validation_report'] = report
         return payload
 
+    def _execution_defaults(
+        self, ast: Dict, model_id: Optional[str], entity_code: Optional[str] = None,
+    ) -> Dict:
+        """One source for SQL's existing defaults and their public explanation.
+
+        Never put system rules in caller filters or modify the caller's ASL.
+        """
+        metrics = ast.get('metrics') or []
+        dimensions = ast.get('dimensions') or []
+        is_detail = not metrics and bool(dimensions)
+        limit = ast.get('limit')
+        conditions = []
+        if metrics and dimensions:
+            entity_code = entity_code or (ast.get('subject') or {}).get('entity')
+            if not entity_code:
+                entity_code = self._get_bind_entity(metrics[0]['name'], model_id)
+            if not entity_code:
+                entity_code = self._derive_subject_entity(dimensions, ast.get('filters') or [], model_id)
+            conditions = self._group_identity_non_null_conditions(
+                dimensions, ast.get('filters') or [], entity_code, model_id,
+            )
+        return {
+            'system_filters': [
+                {'condition': condition, 'source': 'ENTITY_IDENTITY_DEFAULT',
+                 'reason': '分组实体的主名称字段排除空值组；该组对应的记录不参与本次汇总'}
+                for condition in conditions
+            ],
+            'effective_limit': limit if limit is not None else (MAX_QUERY_ROWS if is_detail else None),
+            'limit_source': 'ASL' if limit is not None else ('DETAIL_DEFAULT' if is_detail else 'NONE'),
+        }
+
     def _effective_filter_summary(
         self, ast: Dict, model_id: Optional[str]
     ) -> Dict:
@@ -4260,6 +4285,7 @@ class SQLTranslatorProd:
         return {
             'asl_filters': asl_filters,
             'metric_global_filters': metric_global_filters,
+            **self._execution_defaults(ast, model_id),
         }
 
     def _semantic_sql_validation_report(
