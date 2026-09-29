@@ -2389,7 +2389,7 @@ class DataAnalysisOrchestrator:
             "summary": answer.replace("**", ""),
             "warnings": [],
             "presentation": {
-                "table": self._markdown_result_table(list(coverage_rows[0]) if coverage_rows else [], coverage_rows[:20]),
+                "table": self._markdown_result_table([*data_columns, coverage_name], coverage_rows[:20]),
                 "chart": "",
                 "notes": ([f"计算结果共 {reference.row_count} 行，当前展示前20行。"] if reference.row_count > 20 else []),
             },
@@ -2416,8 +2416,8 @@ class DataAnalysisOrchestrator:
             intent=PrimaryIntent.CHAT,
             intent_source="TASK_DAG_COMPUTATION",
             answer=answer,
-            # 结果集只留在任务会话里供追问复用；响应不带dataset_id，
-            # 合并附件按原口径走各任务自己的导出链接
+            # The computed artifact is the deliverable, not the input workbooks.
+            dataset_id=reference.dataset_id,
             reliability=ReliabilityReport(
                 level="HIGH",
                 score=1.0,
@@ -3077,6 +3077,7 @@ class DataAnalysisOrchestrator:
         # Keep real links available, but never repeat child answer bodies.
         merged_links = list(dict.fromkeys(
             link for result in task_results
+            if result.task_id in selected_task_ids
             for link in self._split_child_attachment_lines(result.answer)[1]
         ))
         chart_specs = [spec for result in task_results if result.task_id in selected_task_ids for spec in result.chart_specs]
@@ -3151,6 +3152,7 @@ class DataAnalysisOrchestrator:
                 conversation_by_task=conversation_by_task,
                 markdown_link=True,
                 fallback_links=merged_links,
+                selected_task_ids=selected_task_ids,
             )
         elif (
             shared_clarification is None
@@ -3169,6 +3171,7 @@ class DataAnalysisOrchestrator:
                 conversation_by_task=conversation_by_task,
                 markdown_link=True,
                 fallback_links=merged_links,
+                selected_task_ids=selected_task_ids,
             )
         elif merged_links:
             final_response.answer += "\n\n附件：" + "；".join(merged_links)
@@ -7731,6 +7734,7 @@ class DataAnalysisOrchestrator:
         conversation_by_task: dict[str, str],
         markdown_link: bool = False,
         fallback_links: list[str] | None = None,
+        selected_task_ids: list[str] | None = None,
     ) -> None:
         """Export every complete report dataset as a separate auditable section.
 
@@ -7754,6 +7758,8 @@ class DataAnalysisOrchestrator:
         sections: list[tuple[str, Any]] = []
         seen_dataset_ids: set[str] = set()
         for task in plan.tasks:
+            if selected_task_ids is not None and task.task_id not in selected_task_ids:
+                continue
             value = responses.get(task.task_id)
             if (
                 not isinstance(value, AgentResponse)
@@ -7779,7 +7785,7 @@ class DataAnalysisOrchestrator:
                 continue
             sections.append((task.question, restore_reference(raw)))
             seen_dataset_ids.add(value.dataset_id)
-        if len(sections) < 2:
+        if len(sections) < (1 if selected_task_ids is not None else 2):
             if markdown_link and fallback_links:
                 response.answer += "\n\n附件：" + "；".join(fallback_links)
             else:

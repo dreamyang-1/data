@@ -157,6 +157,31 @@ def test_composite_xlsx_keeps_independent_datasets_on_separate_sheets():
     assert result["dataset_ids"] == ["dataset-1", "dataset-2"]
 
 
+def test_selected_single_final_dataset_exports_without_intermediate_sheets():
+    from io import BytesIO
+    from openpyxl import load_workbook
+    minio = Minio()
+    ref = reference()
+    result = DatasetReportExporter(minio, Store(), bucket="bam").export_many(
+        [("最终结果", ref)], scope=DatasetScope("tenant", "user", "app", "root"),
+        file_format="xlsx", title="最终结果")
+    workbook = load_workbook(BytesIO(minio.objects[("bam", result["object_name"])]), read_only=True)
+    try:
+        assert workbook.sheetnames == ["说明", "数据"]
+        assert result["dataset_ids"] == [ref.dataset_id]
+    finally:
+        workbook.close()
+
+
+def test_single_selected_dataset_keeps_semantic_scope_check():
+    from app.services.report_export import ReportExportError
+    with pytest.raises(ReportExportError):
+        DatasetReportExporter(Minio(), Store(), bucket="bam").export_many(
+            [("最终结果", reference())],
+            scope=DatasetScope("tenant", "user", "app", "root", "another-scope"),
+            file_format="xlsx", title="最终结果")
+
+
 @pytest.mark.asyncio
 async def test_expired_report_object_and_redis_reference_are_cleaned():
     minio = Minio()

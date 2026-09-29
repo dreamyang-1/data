@@ -44,23 +44,33 @@ def render_root_report(
 ) -> tuple[str, list[str]]:
     """Model selects evidence IDs, never supplies table cells/chart URLs.
 
-    Missing or unknown references fall back to available results, not a new
-    validation gate. Failed and incomplete branches are always disclosed.
+    Missing model metadata uses completed dependency outputs, not every input
+    table. Independent outputs stay independent; failed branches remain visible.
     """
     final = final or {}
     available = [item for item in materials if item["status"] in {"COMPLETED", "PARTIAL_SUCCESS"}]
     available_ids = {item["task_id"] for item in available}
     requested = final.get("result_task_ids") or []
     valid_selection = bool(requested) and all(item in available_ids for item in requested)
-    selected = [item for item in available if not valid_selection or item["task_id"] in requested]
+    if valid_selection:
+        selected = [item for item in available if item["task_id"] in requested]
+    else:
+        # Use the actual dependency graph, not keywords or the last task index.
+        # Only a successful downstream result supersedes its inputs. If the
+        # final calculation fails, keep the available evidence and explain why.
+        consumed = {dep for item in available for dep in item.get("depends_on", [])}
+        selected = [item for item in available if item["task_id"] not in consumed] or available
+    selected_ids = {item["task_id"] for item in selected}
     tables, charts, notes = [], [], []
     for item in materials:
-        notes.extend(item.get("warnings") or [])
-        notes.extend(item.get("presentation", {}).get("notes") or [])
+        if item["task_id"] in selected_ids or item["status"] != "COMPLETED":
+            notes.extend(item.get("warnings") or [])
+        if item["task_id"] in selected_ids:
+            notes.extend(item.get("presentation", {}).get("notes") or [])
         if item["status"] not in {"COMPLETED", "PARTIAL_SUCCESS"}:
             reason = "；".join(item.get("missing_information") or []) or str(item.get("summary") or "该部分未完成")
             notes.append(f"尚未完成的内容：{item['question']}。{reason}")
-        for query in item.get("query_results") or []:
+        for query in (item.get("query_results") or []) if item["task_id"] in selected_ids else []:
             if query.get("truncated"):
                 notes.append(f"“{item['question']}”仅提供{query.get('returned_row_count', '部分')}条预览，不能作为全量统计。")
     for item in selected:
@@ -75,9 +85,11 @@ def render_root_report(
         if presentation.get("chart"):
             charts.append(presentation["chart"])
     if requested and not valid_selection:
-        notes.append("结果展示选择未能完整对应已返回数据，已保留可用结果。")
+        notes.append("部分汇总信息未生成，以下保留已完成的结果。")
     overview = final.get("overview") or (
-        "以下为本次问题已获得的结果。" if available else "本次尚未获得可用于回答问题的数据。"
+        str(selected[0].get("summary") or "以下为本次问题已获得的结果。")
+        if len(selected) == 1 and selected[0].get("facts", {}).get("computation")
+        else "以下为本次问题已获得的结果。" if available else "本次尚未获得可用于回答问题的数据。"
     )
     answer = AnswerPlan(
         headline=overview, key_facts=final.get("findings") or [],

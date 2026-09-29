@@ -82,6 +82,7 @@ COMBINED_ADDENDUM = """本次调用面向一个完整用户目标，而不是分
 - 同一次调用另返回 final_answer 对象：overview（直接回答用户问题的简短总结）、findings（简短关键发现字符串数组）、tips（限制和必要建议字符串数组）、result_task_ids（最终需要展示的实际结果对应 task_id 数组）。详细洞察和最终摘要各司其职，不复制整份 claims。
 - result_task_ids 根据用户明确要的结果选择，不按任务序号、最后一个任务或依赖末端机械选择。查询覆盖率时优先展示已计算的覆盖率结果，分子分母作为计算依据；若用户明确同时要求已合作医院数和医院总数，两项都必须展示。失败导致最终结果缺失时保留能够回答问题的部分数据并说明未完成部分。
 - final_answer 不写表格、图表、附件链接，不重新编写数据单元格；程序会按选中的 task_id 使用原始结果展示。不能虚构 task_id、计算结果或把规划当成已执行事实。
+- 输出必须同时包含 claims 和 final_answer，示例结构：{"claims":[{"statement":"整体分析正文"}],"final_answer":{"overview":"回答补全后的问题","findings":[],"tips":[],"result_task_ids":["最终交付结果的任务ID"]}}。分子、分母等中间取数只作为依据，用户只问计算后的指标时，不选中这些中间表；只有用户明确同时索要中间指标时才另选。不得将不同经销商的去重医院数相加，声称是合并后的去重医院覆盖数。
 """
 
 # Adapt the context-driven method from NL_Agent/node/step3_Planner_and_execute.py

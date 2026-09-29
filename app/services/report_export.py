@@ -343,8 +343,8 @@ class DatasetReportExporter:
         file_format = file_format.lower()
         if file_format not in {"xlsx", "docx", "pdf"}:
             raise ReportExportError("format must be xlsx, docx or pdf")
-        if not 2 <= len(sections) <= 5:
-            raise ReportExportError("composite report requires two to five datasets")
+        if not 1 <= len(sections) <= 5:
+            raise ReportExportError("report requires one to five datasets")
         loaded_sections = []
         dataset_ids: list[str] = []
         for section_title, reference in sections:
@@ -372,7 +372,12 @@ class DatasetReportExporter:
             "docx": self._docx_many,
             "pdf": self._pdf_many,
         }
-        payload = builders[file_format](loaded_sections, title)
+        if len(loaded_sections) == 1:
+            _, columns, rows, _ = loaded_sections[0]
+            single_builders = {"xlsx": self._xlsx, "docx": self._docx, "pdf": self._pdf}
+            payload = single_builders[file_format](columns, rows, title)
+        else:
+            payload = builders[file_format](loaded_sections, title)
         return self._publish(
             payload,
             file_format=file_format,

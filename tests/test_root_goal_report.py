@@ -89,3 +89,99 @@ def test_malformed_optional_final_plan_does_not_discard_insight():
     result = QwenAnalysisSynthesizer._parse_report(text, set())
     assert result.claims[0].statement == "可用分析"
     assert result.final_answer == {"result_task_ids": ["a"]}
+
+
+@pytest.mark.parametrize("final", [None, {}, {"result_task_ids": ["unknown"]}])
+def test_missing_final_metadata_shows_computed_deliverable_not_inputs(final):
+    items = materials()
+    items[2].update(depends_on=["numerator", "denominator"],
+                    summary="已计算各经销商覆盖率。", facts={"computation": {"row_count": 2}})
+    items[0]["warnings"] = ["中间查询只有20行预览"]
+    items[0]["query_results"] = [{"truncated": True, "returned_row_count": 20}]
+    items[2]["presentation"]["notes"] = ["完整计算结果已生成，以下为预览。"]
+    answer, selected = render_root_report("统计各经销商覆盖率", items, final)
+    assert selected == ["coverage"]
+    assert "已计算各经销商覆盖率。" in answer
+    assert items[0]["presentation"]["table"] not in answer
+    assert items[1]["presentation"]["table"] not in answer
+    assert "中间查询只有20行预览" not in answer
+    assert "完整计算结果已生成" in answer
+
+
+def test_explicit_requested_inputs_and_computed_output_are_preserved():
+    items = materials()
+    items[2]["depends_on"] = ["numerator", "denominator"]
+    _, selected = render_root_report("同时查询医院数和覆盖率", items,
+        {"result_task_ids": ["numerator", "denominator", "coverage"]})
+    assert selected == ["numerator", "denominator", "coverage"]
+
+
+def test_failed_computation_does_not_hide_available_inputs_or_invent_ratio():
+    items = materials()
+    items[2].update(status="FAILED", depends_on=["numerator", "denominator"], summary="分母口径不一致，未计算")
+    answer, selected = render_root_report("覆盖率", items, None)
+    assert selected == ["numerator", "denominator"]
+    assert "未计算" in answer and "50%" not in answer
+
+
+@pytest.mark.asyncio
+async def test_download_exports_selected_derived_dataset_not_source_tables():
+    from dataclasses import replace
+    from uuid import uuid4
+    from app.config import Settings
+    from app.domain.models import AgentResponse, ChatRequest, TrustedIdentity
+    from app.services.orchestrator import DataAnalysisOrchestrator
+    from app.services.report_export import DatasetReportExporter
+    from app.stores import InMemorySessionStore
+    from minio_followup_store import DatasetScope
+    from test_report_export import reference, Minio, Store
+    service = object.__new__(DataAnalysisOrchestrator)
+    service.settings = Settings(_env_file=None, env="test")
+    service.sessions = InMemorySessionStore()
+    service.report_exporter = DatasetReportExporter(Minio(), Store(), bucket="bam")
+    chat = ChatRequest(semantic_model_id=81, application_id="app", conversation_id="root", message_id="m", question="覆盖率")
+    refs = [replace(reference(), dataset_id=name, scope=DatasetScope("tenant", "user", "app", name, chat.authorized_semantic_scope.fingerprint())) for name in ["source", "derived"]]
+    for ref in refs:
+        await service.sessions.put_dataset_reference(ref.to_dict(), recent_limit=10)
+    responses = {ref.dataset_id: AgentResponse(request_id=uuid4(), conversation_id=ref.scope.conversation_id,
+        status="COMPLETED", intent="METRIC_QUERY", answer="结果", dataset_id=ref.dataset_id) for ref in refs}
+    plan = TaskPlan(planner="STRUCTURED_MODEL", tasks=[AtomicTask(task_id="source", question="取数"),
+        AtomicTask(task_id="derived", question="覆盖率", depends_on=["source"])])
+    response = responses["derived"].model_copy(deep=True)
+    await service._attach_composite_report(response, chat=chat, identity=TrustedIdentity(tenant_id="tenant", user_id="user"),
+        plan=plan, responses=responses, conversation_by_task={"source":"source", "derived":"derived"},
+        markdown_link=True, selected_task_ids=["derived"])
+    assert response.files[0].dataset_ids == ["derived"]
+    assert "附件：" in response.answer
+
+
+@pytest.mark.asyncio
+async def test_computed_result_exposes_its_exact_artifact_for_final_export():
+    from dataclasses import replace
+    from unittest.mock import AsyncMock
+    from uuid import uuid4
+    from app.config import Settings
+    from app.domain.models import AgentResponse, ChatRequest, TrustedIdentity
+    from app.services.orchestrator import DataAnalysisOrchestrator
+    from minio_followup_store import LoadedDataset
+    from test_report_export import reference
+    source = replace(reference(), columns=("经销商", "医院数"))
+    denominator = replace(reference(), dataset_id="denominator", row_count=1, columns=("总数",))
+    derived = replace(reference(), dataset_id="derived")
+    class Store:
+        def load_dataset(self, ref, **kwargs):
+            return LoadedDataset(ref, ({"总数":10},) if ref.dataset_id == "denominator" else ({"经销商":"甲", "医院数":5},{"经销商":"乙", "医院数":2}))
+        def save_dataset(self, **kwargs):
+            assert kwargs["rows"][0]["覆盖率"] == "50.00%"
+            return derived
+    service = object.__new__(DataAnalysisOrchestrator)
+    service.settings = Settings(_env_file=None, env="test")
+    service.dataset_store = Store()
+    service.sessions = SimpleNamespace(put_dataset_reference=AsyncMock())
+    service._latest_task_dataset_reference = AsyncMock(side_effect=[source.to_dict(), denominator.to_dict()])
+    service._pure_computation_chat_fallback = AsyncMock(return_value=AgentResponse(request_id=uuid4(),conversation_id="test",status="COMPLETED",intent="CHAT",answer="fallback"))
+    chat = ChatRequest(semantic_model_id=81, application_id="app", conversation_id="test", message_id="m", question="覆盖率")
+    result = await service._respond_pure_computation(chat, TrustedIdentity(tenant_id="tenant",user_id="user"),
+        AtomicTask(task_id="final", question="计算覆盖率", depends_on=["source","denominator"]), {})
+    assert result.dataset_id == "derived"
+    assert "50.00%" in chat._dag_deferred_insight["presentation"]["table"]
