@@ -86,6 +86,17 @@ def catalog_candidates(knowledge):
         meta = _metadata(item)
         if meta.get('dim_code'): dimensions[meta['dim_code']] = meta
     values = []
+    def add_value(field, value, label=None):
+        """Add one executable standard value without duplicating aliases."""
+        if field not in allowed or value is None:
+            return
+        record = {'field': field, 'value': value}
+        if label is not None and str(label) != str(value):
+            record['label'] = label
+        if not any(item.get('field') == field and item.get('value') == value
+                   for item in values):
+            values.append(record)
+
     value_pool = [*knowledge.get('entity_attribute_values', []),
                   *(knowledge.get('_ambiguity_candidates') or {}).get('entity_attribute_value', [])]
     for item in value_pool:
@@ -99,9 +110,38 @@ def catalog_candidates(knowledge):
                        and meta.get('attr_code') == attr.get('attr_code')]
             if len(matches) == 1: field = matches[0]
         value = meta.get('attr_value', meta.get('canonical_value'))
-        if field in allowed and value is not None:
-            record = {'field': field, 'value': value}
-            if record not in values: values.append(record)
+        add_value(field, value, meta.get('attr_name') or meta.get('label'))
+
+    # Include enumerations published on physical fields or scoped dimensions.
+    # They are valid vector-grounded filter values even when no separate
+    # entity_attribute_value record was recalled.
+    for field, meta in fields.items():
+        for enum in meta.get('enum_values') or []:
+            if not isinstance(enum, dict):
+                continue
+            code = enum.get('value', enum.get('code'))
+            label = enum.get('name', enum.get('label'))
+            add_value(field, code if code is not None else label, label)
+    for dimension in dimensions.values():
+        mappings = _object(dimension.get('bind_entities')) or []
+        mapped_fields = []
+        direct = _field(dimension.get('field_mapping'))
+        if direct:
+            mapped_fields.append(direct)
+        for mapping in mappings:
+            if not isinstance(mapping, dict):
+                continue
+            table = mapping.get('mappingTable')
+            column = mapping.get('mappingColumn')
+            if table and column:
+                mapped_fields.append(f'{table}.{column}')
+        for field in dict.fromkeys(mapped_fields):
+            for enum in dimension.get('enum_list') or []:
+                if not isinstance(enum, dict):
+                    continue
+                code = enum.get('code', enum.get('value'))
+                label = enum.get('name', enum.get('label'))
+                add_value(field, code if code is not None else label, label)
     values = [dict(record, id=index) for index, record in enumerate(values)]
     return dict(entities=entities, metrics=metrics, fields=fields, dimensions=dimensions, values=values)
 
@@ -247,7 +287,10 @@ def _name_field_candidates(key, catalog):
 def _vector_matches(field, surface, catalog):
     matches = []
     for record in catalog.get('values', []):
-        if record.get('field') == field and _vector_value_equivalent(surface, record.get('value')):
+        if record.get('field') == field and (
+            _vector_value_equivalent(surface, record.get('value'))
+            or _vector_value_equivalent(surface, record.get('label'))
+        ):
             canonical = record.get('value')
             if canonical not in matches:
                 matches.append(canonical)
@@ -417,6 +460,38 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                     key, vals = corrected_key, corrected_vals
                 ids = [] if vector_repaired else (choice.get('value_ids') or [])
                 if ids:
+                    valid_ids = (
+                        isinstance(ids, list)
+                        and len(ids) == len(vals)
+                        and all(type(i) is int and 0 <= i < len(catalog['values']) for i in ids)
+                        and all(catalog['values'][i]['field'] == key for i in ids)
+                        and all(isinstance(v, str) for v in vals)
+                    )
+                    if not valid_ids:
+                        # Recover malformed multi-value bindings from the
+                        # vector catalog instead of rejecting the whole IN.
+                        repaired = _vector_correct_filter(key, vals, catalog, operator)
+                        if repaired is not None:
+                            repaired_key, repaired_vals = repaired
+                            if repaired_key != key or repaired_vals != vals:
+                                repairs.append({
+                                    'type': 'VECTOR_FILTER_VALUE_CORRECTED',
+                                    'source': 'VECTOR_CATALOG_FALLBACK',
+                                    'original_field': key,
+                                    'field': repaired_key,
+                                    'original_values': list(vals),
+                                    'values': list(repaired_vals),
+                                })
+                            key, vals = repaired_key, repaired_vals
+                        elif operator in {'=', '!=', 'IN', 'NOT IN'} and any(
+                            isinstance(v, str) and re.search(r'[\u4e00-\u9fff]', v)
+                            for v in vals
+                        ):
+                            ast['ambiguity'].append(issue(
+                                f'{source}[{index+1}]', original,
+                                '\u591a\u503c\u6761\u4ef6\u4e2d\u6709\u503c\u672a\u80fd\u7ed1\u5b9a\u5230\u6807\u51c6\u503c\uff0c\u8bf7\u6838\u5bf9\u8be5\u503c\u7684\u8bed\u4e49\u914d\u7f6e'))
+                            continue
+                        ids = []
                     if (not isinstance(ids,list) or len(ids)!=len(vals) or any(type(i) is not int or not 0<=i<len(catalog['values']) for i in ids)
                             or any(catalog['values'][i]['field']!=key for i in ids)
                             or any(not isinstance(v,str) for v in vals)):
