@@ -173,6 +173,36 @@ def test_scalar_shape_and_standard_alias_not_reinterpreted():
     assert ast['filters'][0]['value']=='上海市'
 
 
+def test_filter_value_is_vector_corrected_from_identifier_to_name_field():
+    e, k, p = fixture()
+    e[list(e)[5]][0] = {
+        'field': '\u7701\u4efd', 'op': '=', 'value': ['\u5317\u4eac'],
+    }
+    k['entities'].append(Obj(metadata={
+        'entity_code': 'dim_province',
+        'attributes': [
+            {'attr_code': 'province_id', 'attr_name': 'province id',
+             'field_mapping': 'dim_province.province_id'},
+            {'attr_code': 'province_name', 'attr_name': 'province name',
+             'is_main_attribute': True,
+             'field_mapping': 'dim_province.province_name'},
+        ],
+    }))
+    k['_vector_authorized_fields'].extend([
+        'dim_province.province_id', 'dim_province.province_name',
+    ])
+    k['entity_attribute_values'] = [Obj(metadata={
+        'source_field': 'dim_province.province_name', 'attr_value': '\u5317\u4eac\u5e02',
+    })]
+    p['filters'] = [{'index': 0, 'key': 'dim_province.province_id'}]
+    ast, repairs = run(e, k, p)
+    assert not ast['ambiguity']
+    assert ast['filters'] == [{
+        'field': 'dim_province.province_name', 'operator': '=', 'value': '\u5317\u4eac\u5e02',
+    }]
+    assert any(item.get('type') == 'VECTOR_FILTER_VALUE_CORRECTED' for item in repairs)
+
+
 @pytest.mark.parametrize('literal',[1000,0,-1,12.5,'00123','M60 set','-001','1e3'])
 def test_literal_numbers_and_codes_preserved(literal):
     e,k,p=fixture();e['过滤条件'][0]={'field':'金额','op':'>','value':[literal]}

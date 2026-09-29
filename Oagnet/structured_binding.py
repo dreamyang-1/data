@@ -163,6 +163,132 @@ def _metric_subject_candidates(metric_keys, catalog):
     return candidates
 
 
+# Value binding is deliberately kept separate from model field selection.  The
+# planner supplies the business literal, while the vector catalog is the only
+# authority for its canonical spelling.  This also gives us a safe repair path
+# when a model chooses an identifier field (for example ``province_id``) for a
+# human-readable value (for example ``北京``).
+_ADMINISTRATIVE_NAME_ALIASES = {
+    '北京': '北京市',
+    '上海': '上海市',
+    '天津': '天津市',
+    '重庆': '重庆市',
+    '香港': '香港特别行政区',
+    '澳门': '澳门特别行政区',
+}
+_IDENTIFIER_SUFFIXES = ('_id', '_code', '_key')
+
+
+def _vector_surface(value):
+    """Normalize only for comparing a surface form with a catalog value."""
+    import unicodedata
+    if not isinstance(value, str):
+        return value
+    text = unicodedata.normalize('NFKC', value).strip()
+    return re.sub(r'\s+', '', text).casefold()
+
+
+def _vector_value_equivalent(surface, canonical):
+    if not isinstance(surface, str) or not isinstance(canonical, str):
+        return surface == canonical
+    left = _vector_surface(surface)
+    right = _vector_surface(canonical)
+    if left == right:
+        return True
+    if _ADMINISTRATIVE_NAME_ALIASES.get(left) == right:
+        return True
+    # For other administrative regions, accept a short omitted suffix only
+    # when the catalog supplies the longer canonical value.  This is a
+    # comparison rule, not a value generator, so arbitrary prefixes are never
+    # turned into executable predicates without vector evidence.
+    if right.startswith(left):
+        suffix = right[len(left):]
+        return bool(suffix) and len(suffix) <= 8 and suffix.endswith((
+            '省', '市', '自治区', '特别行政区',
+        ))
+    return False
+
+
+def _field_is_identifier(field, metadata):
+    column = str(field or '').rsplit('.', 1)[-1].casefold()
+    attr_code = str((metadata or {}).get('attr_code') or '').casefold()
+    return column.endswith(_IDENTIFIER_SUFFIXES) or attr_code.endswith(_IDENTIFIER_SUFFIXES)
+
+
+def _name_field_candidates(key, catalog):
+    """Find name/display siblings in the same catalog scope, never by prose."""
+    fields = catalog.get('fields', {})
+    key_table, _, key_column = str(key).partition('.')
+    key_stem = re.sub(r'(_id|_code|_key)$', '', key_column.casefold())
+    source_meta = fields.get(key) or {}
+    source_owner = source_meta.get('owner')
+    ranked = []
+    for field, metadata in fields.items():
+        if field == key:
+            continue
+        table, _, column = str(field).partition('.')
+        column_lower = column.casefold()
+        attr_code = str(metadata.get('attr_code') or '').casefold()
+        attr_name = str(metadata.get('attr_name') or '').casefold()
+        same_table = table == key_table
+        same_owner = source_owner and metadata.get('owner') == source_owner
+        same_stem = key_stem and re.sub(r'(_name|_label|_title)$', '', column_lower) == key_stem
+        is_name = (column_lower.endswith(('_name', '_label', '_title')) or
+                   attr_code.endswith(('_name', '_label', '_title')) or
+                   '名称' in attr_name or 'name' in attr_name or 'label' in attr_name)
+        if not is_name or not (same_table or same_owner or same_stem):
+            continue
+        score = (0 if same_stem else 1, 0 if same_table else 1,
+                 0 if column_lower.endswith('_name') else 1, field)
+        ranked.append((score, field))
+    return [field for _, field in sorted(ranked)]
+
+
+def _vector_matches(field, surface, catalog):
+    matches = []
+    for record in catalog.get('values', []):
+        if record.get('field') == field and _vector_value_equivalent(surface, record.get('value')):
+            canonical = record.get('value')
+            if canonical not in matches:
+                matches.append(canonical)
+    return matches
+
+
+def _vector_correct_filter(key, values, catalog, operator):
+    """Return a unique vector-grounded ``(field, values)`` repair, if any."""
+    if operator not in {'=', '!=', 'IN', 'NOT IN'} or not values:
+        return None
+    if not any(isinstance(value, str) and value.strip() for value in values):
+        return None
+    fields_to_try = [key]
+    metadata = catalog.get('fields', {}).get(key) or {}
+    if _field_is_identifier(key, metadata):
+        fields_to_try.extend(_name_field_candidates(key, catalog))
+    selected_field = None
+    corrected = []
+    for surface in values:
+        if not isinstance(surface, str):
+            return None
+        candidates = []
+        for field in fields_to_try:
+            matches = _vector_matches(field, surface, catalog)
+            if len(matches) == 1:
+                candidates.append((field, matches[0]))
+        if not candidates:
+            return None
+        # Prefer the original field when its vector value is already valid;
+        # otherwise prefer the highest-ranked name sibling.
+        field, canonical = candidates[0]
+        if selected_field is None:
+            selected_field = field
+        elif selected_field != field:
+            return None
+        corrected.append(canonical)
+    if selected_field is None:
+        return None
+    return selected_field, corrected
+
+
 def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=None):
     """Model chooses bindings; deterministic assembly owns shape/operators/literals."""
     ast = dict(version='2.0', intent='query', subject={}, metrics=[], dimensions=[], filters=[],
@@ -274,7 +400,22 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 value = original.get('value'); vals = value if isinstance(value, list) else [value]
                 if operator not in OPERATORS or not vals or any(v is None or isinstance(v, (dict,list,bool)) or v == '' for v in vals):
                     ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '运算符或条件值缺失/不支持'));continue
-                ids = choice.get('value_ids') or []
+                corrected = _vector_correct_filter(key, vals, catalog, operator)
+                vector_repaired = False
+                if corrected is not None:
+                    corrected_key, corrected_vals = corrected
+                    if corrected_key != key or corrected_vals != vals:
+                        vector_repaired = True
+                        repairs.append({
+                            'type': 'VECTOR_FILTER_VALUE_CORRECTED',
+                            'source': 'VECTOR_CATALOG',
+                            'original_field': key,
+                            'field': corrected_key,
+                            'original_values': list(vals),
+                            'values': list(corrected_vals),
+                        })
+                    key, vals = corrected_key, corrected_vals
+                ids = [] if vector_repaired else (choice.get('value_ids') or [])
                 if ids:
                     if (not isinstance(ids,list) or len(ids)!=len(vals) or any(type(i) is not int or not 0<=i<len(catalog['values']) for i in ids)
                             or any(catalog['values'][i]['field']!=key for i in ids)
