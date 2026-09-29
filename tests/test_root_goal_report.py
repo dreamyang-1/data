@@ -223,15 +223,14 @@ def test_optional_title_parsing_does_not_discard_insight():
     assert parsed.claims[0].statement == "可用分析"
 
 
-def test_explicit_requested_count_and_ratio_stay_in_separate_result_blocks():
+def test_requested_count_and_ratio_can_use_one_combined_result_with_complete_title():
     items = materials()
     items[2]["depends_on"] = ["numerator", "denominator"]
-    titles = {"numerator": "上海各经销商的已合作医院数", "coverage": "上海各经销商的区域医院覆盖率"}
+    items[2]["presentation"]["table"] = "| 经销商 | 已合作医院数 | 区域医院覆盖率 |\n| --- | --- | --- |\n| 甲 | 5 | 50% |"
+    titles = {"coverage": "上海各经销商的已合作医院数及区域医院覆盖率"}
     answer, selected = render_root_report("查询上海各经销商已合作医院数和覆盖率", items,
-        {"result_task_ids": ["numerator", "coverage"], "result_titles": titles})
-    assert selected == ["numerator", "coverage"]
-    for task_id, title in titles.items():
-        assert f"**{title}**" in answer
-    assert answer.index(items[0]["presentation"]["table"]) < answer.index("**" + titles["coverage"] + "**")
+        {"result_task_ids": ["coverage"], "result_titles": titles})
+    assert selected == ["coverage"]
     assert items[2]["presentation"]["table"] in answer
+    assert items[0]["presentation"]["table"] not in answer
     assert items[1]["presentation"]["table"] not in answer

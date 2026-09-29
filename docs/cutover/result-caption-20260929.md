@@ -11,19 +11,19 @@ location-filter or semantic-model change.
 
 - The existing combined model call returns optional task-ID/title metadata based
   on the completed root question, not headers or the final calculation step.
-- Final user decision: independently requested counts and ratios are separate
-  result blocks with separate business-question titles. A ratio's auxiliary
-  count column does not replace the requested count result. A ratio-only
-  request still hides calculation inputs. Object/region/period distinctions
-  are preserved; no header-derived titles or metric-name keyword logic.
+- Latest user decision supersedes the separate-results proposal: keep merged
+  results; title each merged result from ALL explicitly requested goals it
+  answers. Ratio-only requests do not acquire an extra count requirement just
+  because an auxiliary column exists. Preserve scope and avoid header-derived
+  titles or metric-name keyword rules.
 - Renderer uses selected result titles without rewriting tables. Missing title
   metadata uses the original independent question or a neutral calculation
   caption, never blocking data output.
-- The unpublished automatic metric-title completion experiment was withdrawn
-  after the user chose separate results. No computation metadata change remains.
+- Both the unpublished metric-title completion experiment and the subsequent
+  separate-results proposal were withdrawn. No computation metadata change remains.
 - SQL, formulas, rows, result selection, single-result layout, API/SSE contracts,
   authorization and semantic configuration are unchanged. Selection instructions
-  now preserve each explicitly requested result independently. No extra model call
+  retain merged deliverables instead of repeating input tables. No extra model call
   or blocking validation is introduced.
 
 ## Verification
@@ -46,6 +46,13 @@ location-filter or semantic-model change.
   no failures or collection errors (10 added cases vs baseline 4458).
 - Live model with synthetic evidence: count+coverage selects both independent
   results/titles; coverage-only selects only coverage. Both passed before release.
+- The separate-results commit was interrupted BEFORE deployment; remote source
+  still matched 4b24b6f. The waiting deployment process was stopped. Those tests
+  describe the withdrawn proposal, not the final release policy.
+- Restored merged policy: 218 targeted tests and 4468 full regression tests
+  passed (8 existing report warnings); final prompt clarification rerun: 58 passed.
+  Live-model synthetic checks passed for both count+coverage (one result and
+  both goals in its title) and coverage-only (no invented extra title goal).
 
 ## Review
 
