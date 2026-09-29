@@ -23,4 +23,11 @@ Baseline d147400: 4449 passing tests. Nine new cases cover missing metadata, exp
 
 ## Verification and release
 
-Local offline regression: 4458 passed, 8 pre-existing pytest reporting warnings, zero failures or collection errors. Preflight: all four remote runtime files match the expected baseline; no peer changes will be overwritten. Guarded deployment/live verification pending.
+Local offline regression: 4458 passed, 8 pre-existing pytest reporting warnings, zero failures or collection errors. Preflight: all four remote runtime files matched the expected baseline; no peer changes were overwritten.
+
+- Runtime commit 5c4018a published to the existing feature branch/Draft PR, not merged.
+- Guarded deployment backed up and hash-verified the four runtime files. Only DataAnalysis restarted, at 2026-09-29 14:14:55 CST, PID 704029, READY. Sibling service/vector health passed; configuration hashes unchanged.
+- Remote selected suite: 369 passed, one dependency deprecation warning.
+- Live HTTP/SSE replay of the user's exact coverage question in the supplied semantic-model scope: COMPLETED in 77.8 seconds. One coverage table, no intermediate tables or task-number reports, three-section layout preserved, one root insight with no repeated insight prose, correct seven-stage order.
+- The computed task exposed its exact persisted artifact; the final download's dataset IDs matched only that derived artifact, with the attachment link present. No input datasets were included in that attachment.
+- Local Git workspace and development files matched the explicit manifest. No semantic configuration, indices, SQL services or runtime settings were changed.
