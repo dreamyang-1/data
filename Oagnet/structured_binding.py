@@ -143,6 +143,26 @@ def _group_exposes_field(group, field, catalog):
     return len(labels) == 1 and field in labels
 
 
+def _metric_subject_candidates(metric_keys, catalog):
+    """Return published execution entities for the selected metrics only."""
+    candidates = []
+    for key in metric_keys or []:
+        metadata = catalog.get('metrics', {}).get(key) or {}
+        dependency = _object(metadata.get('source_dependency'))
+        if not isinstance(dependency, dict):
+            continue
+        bound = _object(dependency.get('bind_entity'))
+        if isinstance(bound, str):
+            bound = [bound]
+        if not isinstance(bound, list):
+            continue
+        for entity in bound:
+            entity = str(entity).strip() if entity is not None else ''
+            if entity and entity in catalog.get('entities', {}) and entity not in candidates:
+                candidates.append(entity)
+    return candidates
+
+
 def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=None):
     """Model chooses bindings; deterministic assembly owns shape/operators/literals."""
     ast = dict(version='2.0', intent='query', subject={}, metrics=[], dimensions=[], filters=[],
@@ -282,6 +302,32 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
         if any(not isinstance(r,dict) or type(r.get('index')) is not int or not 0<=r['index']<len(extraction[source]) for r in rows):
             ast['ambiguity'].append(issue(source, extraction[source], '绑定输出添加了结构化提取中不存在的参数'))
     limit=extraction.get('限制')
+    # The selected metric's published source dependency is authoritative for
+    # the execution subject. This prevents extra planner entities from
+    # changing the join anchor and the meaning of region filters.
+    if ast['metrics']:
+        metric_subjects = _metric_subject_candidates(
+            [metric.get('name') for metric in ast['metrics']], catalog
+        )
+        current_subject = (ast.get('subject') or {}).get('entity')
+        if metric_subjects:
+            # If a metric is published against several entities, retain a
+            # model choice that is in that set. Otherwise use the first
+            # published binding so a harmless extra entity never stops the
+            # query; the repair record keeps the choice auditable.
+            selected_subject = (
+                current_subject if current_subject in metric_subjects
+                else metric_subjects[0]
+            )
+            if current_subject != selected_subject:
+                repairs.append({
+                    'type': 'METRIC_SUBJECT_FROM_SOURCE_DEPENDENCY',
+                    'source': 'METRIC_SOURCE_DEPENDENCY',
+                    'previous_subject': current_subject,
+                    'entity': selected_subject,
+                    'candidates': metric_subjects,
+                })
+            ast['subject'] = {'entity': selected_subject}
     if limit is not None and (type(limit) is not int or not 1<=limit<=10000):
         ast['ambiguity'].append(issue('限制',limit,'需要1到10000的整数'))
     else:ast['limit']=limit

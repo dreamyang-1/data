@@ -294,6 +294,26 @@ def test_missing_output_requests_business_choice_not_system_repair():
     assert '指标/展示字段' in ast['ambiguity'][0]['question']
 
 
+def test_metric_subject_uses_published_source_dependency_not_model_choice():
+    e, k, p = fixture()
+    k['entities'].append(Obj(metadata={
+        'entity_code': 'sales_order',
+        'entity_name': 'sales order',
+        'attributes': [],
+    }))
+    k['metrics'][0].metadata['source_dependency'] = {
+        'bind_entity': ['sales_order'],
+    }
+    p['subject'] = 'hospital'
+    ast, repairs = run(e, k, p)
+    assert not ast['ambiguity']
+    assert ast['subject'] == {'entity': 'sales_order'}
+    assert any(
+        item.get('type') == 'METRIC_SUBJECT_FROM_SOURCE_DEPENDENCY'
+        for item in repairs
+    )
+
+
 def test_category_field_and_value_must_bind_as_a_pair():
     e,k,p=fixture()
     e['过滤条件']=[{'field':'分类','op':'=','value':['透析器']}]
