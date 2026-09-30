@@ -1159,6 +1159,11 @@ async def chat_stream(
                     "heading_only": True,
                 }):
                     yield rendered_event
+            # New_Agent consumers switch from thinking to the answer panel on
+            # this state event. A step="output" chunk alone is not a state
+            # transition; otherwise a completed table can remain invisible.
+            # Emit after the final thinking heading, before any output payload.
+            yield _event("updata_state", {"step": "", "data": "output"})
             for extension in response.extension_executions:
                 tool_content = (
                     json.dumps(extension.output, ensure_ascii=False, default=str)

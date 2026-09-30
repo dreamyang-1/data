@@ -1641,7 +1641,7 @@ def test_stream_emits_new_agent_compatible_data_only_envelopes():
     assert all(
         data.get("data") in {
             "accepted", "heartbeat", "step1", "execute_plan",
-            "execute_exe", "response_result",
+            "execute_exe", "response_result", "output",
         }
         for data in events if data["type"] == "updata_state"
     )
