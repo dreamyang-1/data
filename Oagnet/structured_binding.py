@@ -1,7 +1,7 @@
 """Bind planner slots to finite catalog candidates; never extract from a question."""
 import json
 import re
-from datetime import date
+from datetime import date, timedelta
 from query_binding_review import _metadata, _object, _field
 from structured_time import compile_time, grouping_grain, is_temporal, dimension_fields
 
@@ -90,23 +90,17 @@ def catalog_candidates(knowledge):
             for field in dimension_fields(meta) & allowed:
                 fields.setdefault(field, {'attr_name': meta.get('dim_name'), 'data_type': 'DATE'})
     values = []
-    def add_value(field, value, label=None):
-        """Add one executable standard value without duplicating aliases.
-
-        Physical enum metadata and scoped-dimension enum metadata are both
-        valid sources for a filter.  Keep the executable code in ``value``
-        and retain the human label so vector binding can map a user's wording
-        to that code before SQL generation.
-        """
+    def add_value(field, value, label=None, attr_name=None):
+        """Add one executable standard value without duplicating aliases."""
         if field not in allowed or value is None:
             return
         record = {'field': field, 'value': value}
         if label is not None and str(label) != str(value):
             record['label'] = label
-        if not any(
-            item.get('field') == field and item.get('value') == value
-            for item in values
-        ):
+        if attr_name:
+            record['attr_name'] = attr_name
+        if not any(item.get('field') == field and item.get('value') == value
+                   for item in values):
             values.append(record)
 
     value_pool = [*knowledge.get('entity_attribute_values', []),
@@ -122,15 +116,13 @@ def catalog_candidates(knowledge):
                        and meta.get('attr_code') == attr.get('attr_code')]
             if len(matches) == 1: field = matches[0]
         value = meta.get('attr_value', meta.get('canonical_value'))
-        # attr_name is the field label, not the display value.  Do not use
-        # it as an alias for every enum member, otherwise an IN list can
-        # be rebound to an unrelated code.
-        add_value(field, value, meta.get('label'))
+        # attr_name is the field label, not the display value.  Only an
+        # explicitly published value label may be used for enum matching.
+        add_value(field, value, meta.get('label'), meta.get('attr_name'))
 
-    # Some semantic models publish enumerations on physical fields or scoped
-    # dimensions rather than as entity_attribute_value vector records.  Make
-    # those entries available to the same binding path; otherwise a valid
-    # multi-value IN filter can receive incomplete value_ids from the model.
+    # Include enumerations published on physical fields or scoped dimensions.
+    # They are valid vector-grounded filter values even when no separate
+    # entity_attribute_value record was recalled.
     for field, meta in fields.items():
         for enum in meta.get('enum_values') or []:
             if not isinstance(enum, dict):
@@ -199,20 +191,29 @@ def _group_exposes_field(group, field, catalog):
     return len(labels) == 1 and field in labels
 
 
-def _metric_subject_candidates(metric_keys, catalog):
-    """Return the published execution entities for the selected metrics.
+def _dim_bound_field(code, catalog):
+    """把维度编码翻译成目录授权的物理字段；映射不唯一或未授权时返回 None。"""
+    meta = catalog['dimensions'].get(code)
+    if not isinstance(meta, dict):
+        return None
+    fields = set()
+    direct = _field(meta.get('field_mapping'))
+    if direct and direct in catalog['fields']:
+        fields.add(direct)
+    for mapping in _object(meta.get('bind_entities')) or []:
+        if not isinstance(mapping, dict):
+            continue
+        table, column = mapping.get('mappingTable'), mapping.get('mappingColumn')
+        if table and column and f'{table}.{column}' in catalog['fields']:
+            fields.add(f'{table}.{column}')
+    return fields.pop() if len(fields) == 1 else None
 
-    ``subject`` is an execution choice, not another free-form interpretation of
-    the planner's entity list.  A metric can be bound to one or more semantic
-    entities through ``source_dependency.bind_entity``.  Keep this helper
-    deliberately narrow: it only trusts entities that were recalled in the
-    current semantic scope, and it does not infer a table from a formula or
-    from the user's wording.
-    """
+
+def _metric_subject_candidates(metric_keys, catalog):
+    """Use published execution bindings, never the order of involved entities."""
     candidates = []
-    for key in metric_keys or []:
-        metadata = catalog.get('metrics', {}).get(key) or {}
-        dependency = _object(metadata.get('source_dependency'))
+    for key in metric_keys:
+        dependency = _object((catalog['metrics'].get(key) or {}).get('source_dependency'))
         if not isinstance(dependency, dict):
             continue
         bound = _object(dependency.get('bind_entity'))
@@ -221,132 +222,112 @@ def _metric_subject_candidates(metric_keys, catalog):
         if not isinstance(bound, list):
             continue
         for entity in bound:
-            entity = str(entity).strip() if entity is not None else ''
-            if entity and entity in catalog.get('entities', {}) and entity not in candidates:
+            if isinstance(entity, str) and entity in catalog['entities'] and entity not in candidates:
                 candidates.append(entity)
     return candidates
 
 
-# Value binding is deliberately kept separate from model field selection.  The
-# planner supplies the business literal, while the vector catalog is the only
-# authority for its canonical spelling.  This also gives us a safe repair path
-# when a model chooses an identifier field (for example ``province_id``) for a
-# human-readable value (for example ``北京``).
-_ADMINISTRATIVE_NAME_ALIASES = {
-    '北京': '北京市',
-    '上海': '上海市',
-    '天津': '天津市',
-    '重庆': '重庆市',
-    '香港': '香港特别行政区',
-    '澳门': '澳门特别行政区',
-}
-_IDENTIFIER_SUFFIXES = ('_id', '_code', '_key')
-
-
 def _vector_surface(value):
-    """Normalize only for comparing a surface form with a catalog value."""
     import unicodedata
     if not isinstance(value, str):
         return value
-    text = unicodedata.normalize('NFKC', value).strip()
-    return re.sub(r'\s+', '', text).casefold()
+    return re.sub(r'\s+', '', unicodedata.normalize('NFKC', value).strip()).casefold()
+
+
+# 类别词收尾的差异视为同一事物（协和医院=协和）；"科"不入表，杜绝心内科=内科这类误伤
+_VALUE_SUFFIX_WORDS = ('省', '市', '自治区', '特别行政区', '自治州', '盟', '医院', '卫生院',
+                       '诊所', '门诊部', '公司', '集团', '厂家', '品牌', '大学', '学院')
+_PROVINCE_SHORT_NAMES = ('北京', '天津', '上海', '重庆', '河北', '山西', '辽宁', '吉林',
+                         '黑龙江', '江苏', '浙江', '安徽', '福建', '江西', '山东', '河南',
+                         '湖北', '湖南', '广东', '海南', '四川', '贵州', '云南', '陕西',
+                         '甘肃', '青海', '台湾', '内蒙古', '广西', '西藏', '宁夏', '新疆',
+                         '香港', '澳门')
 
 
 def _vector_value_equivalent(surface, canonical):
     if not isinstance(surface, str) or not isinstance(canonical, str):
         return surface == canonical
-    left = _vector_surface(surface)
-    right = _vector_surface(canonical)
+    left, right = _vector_surface(surface), _vector_surface(canonical)
     if left == right:
         return True
-    if _ADMINISTRATIVE_NAME_ALIASES.get(left) == right:
-        return True
-    if right.startswith(left):
-        suffix = right[len(left):]
-        return bool(suffix) and len(suffix) <= 8 and suffix.endswith((
-            '省', '市', '自治区', '特别行政区',
-        ))
+    # 输入与标准值互为"前缀+类别词"或"地域+主体"时视为同一事物：
+    # 三级医院=三级、上海市=上海、江苏苏云=苏云、云南白药=白药。
+    # 差异部分必须在白名单内精确匹配，防止任意包含关系把不同机构绑到一起
+    shorter, longer = (left, right) if len(left) < len(right) else (right, left)
+    if not shorter or len(shorter) < 2:
+        return False
+    if longer.startswith(shorter):
+        suffix = longer[len(shorter):]
+        return len(suffix) <= 8 and suffix in _VALUE_SUFFIX_WORDS
+    if longer.endswith(shorter):
+        prefix = longer[:-len(shorter)]
+        return len(prefix) <= 3 and prefix in _PROVINCE_SHORT_NAMES
     return False
 
 
+# Structured extraction is authoritative. These helpers only map an already
+# declared slot to one exact catalog key; they never create a new slot.
 def _metadata_terms(metadata):
-    """Return only published names/codes used to validate a model choice."""
+    if not isinstance(metadata, dict):
+        return []
     terms = []
-    for key in (
-        'metric_code', 'metric_name', 'dim_code', 'dim_name', 'synonyms',
-        'attr_code', 'attr_name', 'field_mapping', 'entity_code',
-        'entity_name', 'entity_alias',
-    ):
-        value = metadata.get(key)
-        values = value if isinstance(value, (list, tuple, set)) else [value]
-        for item in values:
-            if isinstance(item, str) and item.strip():
-                terms.append(item.strip())
+    for name in ('metric_code', 'metric_name', 'dim_code', 'dim_name',
+                 'attr_code', 'attr_name', 'field_mapping', 'field',
+                 'name', 'label', 'canonical_name'):
+        value = metadata.get(name)
+        if isinstance(value, str) and value.strip() and value not in terms:
+            terms.append(value.strip())
     return terms
 
-
-def _exact_choice_keys(source, original, catalog):
-    """Find catalog keys that exactly represent one structured slot.
-
-    The planner owns slot count and meaning.  This small deterministic gate is
-    intentionally exact; it is not a second natural-language parser.  It
-    prevents a model from replacing a declared ``dealer`` dimension with a
-    nearby temporal dimension while still allowing vector/model fallback when
-    the catalog has no exact published label.
-    """
-    label = (original.get('name') or original.get('field')) if isinstance(original, dict) else original
+def _exact_choice_keys(target, original, catalog):
+    """Return a single key only when the structured label has one exact match."""
+    if isinstance(original, dict):
+        label = original.get('name') or original.get('field')
+    else:
+        label = original
     if not isinstance(label, str) or not label.strip():
         return []
-    if source == 'metrics':
+    if target == 'metrics':
         pool = catalog.get('metrics', {})
-    elif source in {'dimensions', 'display_fields'}:
+    elif target == 'dimensions':
         pool = {**catalog.get('dimensions', {}), **catalog.get('fields', {})}
-    elif source == 'filters':
+    elif target == 'display_fields':
         pool = catalog.get('fields', {})
-    elif source == 'sort':
-        pool = {**catalog.get('metrics', {}), **catalog.get('dimensions', {}),
-                **catalog.get('fields', {})}
+    elif target in {'filters', 'sort'}:
+        pool = {**catalog.get('fields', {}), **catalog.get('dimensions', {}),
+                **catalog.get('metrics', {})}
     else:
         return []
-    return [
-        key for key, metadata in pool.items()
-        if any(_vector_value_equivalent(label, term)
-               for term in _metadata_terms(metadata))
-    ]
-
+    exact = []
+    for key, metadata in pool.items():
+        terms = [key, *_metadata_terms(metadata)]
+        if any(_vector_surface(label) == _vector_surface(term) for term in terms
+               if isinstance(term, str)) and key not in exact:
+            exact.append(key)
+    return exact
 
 def _field_is_identifier(field, metadata):
     column = str(field or '').rsplit('.', 1)[-1].casefold()
     attr_code = str((metadata or {}).get('attr_code') or '').casefold()
-    return column.endswith(_IDENTIFIER_SUFFIXES) or attr_code.endswith(_IDENTIFIER_SUFFIXES)
+    return column.endswith(('_id', '_code', '_key')) or attr_code.endswith(('_id', '_code', '_key'))
 
 
 def _name_field_candidates(key, catalog):
-    """Find name/display siblings in the same catalog scope, never by prose."""
     fields = catalog.get('fields', {})
-    key_table, _, key_column = str(key).partition('.')
-    key_stem = re.sub(r'(_id|_code|_key)$', '', key_column.casefold())
-    source_meta = fields.get(key) or {}
-    source_owner = source_meta.get('owner')
+    table, _, column = str(key).partition('.')
+    stem = re.sub(r'(_id|_code|_key)$', '', column.casefold())
+    owner = (fields.get(key) or {}).get('owner')
     ranked = []
     for field, metadata in fields.items():
         if field == key:
             continue
-        table, _, column = str(field).partition('.')
-        column_lower = column.casefold()
+        candidate_table, _, candidate_column = str(field).partition('.')
         attr_code = str(metadata.get('attr_code') or '').casefold()
         attr_name = str(metadata.get('attr_name') or '').casefold()
-        same_table = table == key_table
-        same_owner = source_owner and metadata.get('owner') == source_owner
-        same_stem = key_stem and re.sub(r'(_name|_label|_title)$', '', column_lower) == key_stem
-        is_name = (column_lower.endswith(('_name', '_label', '_title')) or
-                   attr_code.endswith(('_name', '_label', '_title')) or
-                   '名称' in attr_name or 'name' in attr_name or 'label' in attr_name)
-        if not is_name or not (same_table or same_owner or same_stem):
-            continue
-        score = (0 if same_stem else 1, 0 if same_table else 1,
-                 0 if column_lower.endswith('_name') else 1, field)
-        ranked.append((score, field))
+        same_stem = re.sub(r'(_name|_label|_title)$', '', candidate_column.casefold()) == stem
+        is_name = candidate_column.casefold().endswith(('_name', '_label', '_title')) or attr_code.endswith(('_name', '_label', '_title')) or 'name' in attr_name or 'label' in attr_name
+        if is_name and (candidate_table == table or (owner and metadata.get('owner') == owner) or same_stem):
+            ranked.append(((0 if same_stem else 1, 0 if candidate_table == table else 1, field), field))
     return [field for _, field in sorted(ranked)]
 
 
@@ -357,22 +338,35 @@ def _vector_matches(field, surface, catalog):
             _vector_value_equivalent(surface, record.get('value'))
             or _vector_value_equivalent(surface, record.get('label'))
         ):
-            canonical = record.get('value')
-            if canonical not in matches:
-                matches.append(canonical)
+            if record.get('value') not in matches:
+                matches.append(record.get('value'))
     return matches
 
 
-def _vector_correct_filter(key, values, catalog, operator):
-    """Return a unique vector-grounded ``(field, values)`` repair, if any.
+def _vector_locate_value(values, catalog):
+    """字段没绑上时，过滤值在授权字段上唯一命中即视为字段+值可代绑定；多义维持澄清。"""
+    selected, corrected = None, []
+    for surface in values:
+        if not isinstance(surface, str):
+            return None
+        candidates = [(field, match) for field in catalog.get('fields', {}) for match in _vector_matches(field, surface, catalog)]
+        if len(candidates) != 1:
+            return None
+        field, canonical = candidates[0]
+        if selected is not None and selected != field:
+            return None
+        selected = field
+        corrected.append(canonical)
+    return (selected, corrected) if selected is not None else None
 
-    The planner's field label is only a hypothesis.  Short model/specification
-    values (for example ``TDC-3``) are frequently classified as a product name
-    before the semantic catalog has seen the value.  Try the declared field
-    first for backwards compatibility, then widen to every value-bearing
-    catalog field in the current scope.  A cross-field repair is accepted only
-    when all literals resolve to one field; equal matches remain unresolved so
-    the caller can ask for clarification instead of guessing.
+
+def _vector_correct_filter(key, values, catalog, operator):
+    """Return a unique vector-grounded field/value repair.
+
+    The structured planner's field is a hypothesis for short model/spec
+    literals. Try it first, then all value-bearing fields in this scoped
+    catalog. Cross-field repair is accepted only when every literal resolves
+    to one unique field; ties remain unresolved instead of guessing.
     """
     if operator not in {'=', '!=', 'IN', 'NOT IN'} or not values:
         return None
@@ -382,16 +376,11 @@ def _vector_correct_filter(key, values, catalog, operator):
     metadata = catalog.get('fields', {}).get(key) or {}
     if _field_is_identifier(key, metadata):
         fields_to_try.extend(_name_field_candidates(key, catalog))
-
-    # Keep the broad pool bounded by the recalled catalog.  It includes the
-    # hidden per-value vector pool as well as the compact prompt-facing values,
-    # so a low-ranked model/specification value can still participate.
     broad_fields = list(dict.fromkeys(
         [str(field) for field in (catalog.get('fields') or {}) if field]
         + [str(record.get('field') or '') for record in catalog.get('values', [])]
     ))
     fields_to_try = list(dict.fromkeys(fields_to_try + broad_fields))
-
     selected_field = None
     corrected = []
     for surface in values:
@@ -404,16 +393,11 @@ def _vector_correct_filter(key, values, catalog, operator):
                 candidates.append((field, matches[0]))
         if not candidates:
             return None
-
-        # Prefer the declared field when it has a unique exact vector match.
-        # Otherwise require one unique field across the widened pool.  This is
-        # deliberately stricter than picking the first vector hit because the
-        # same code can legitimately appear on multiple governed attributes.
         declared = [item for item in candidates if item[0] == key]
         if len(declared) == 1:
             field, canonical = declared[0]
         else:
-            by_field: dict[str, set[str]] = {}
+            by_field = {}
             for field_name, canonical_value in candidates:
                 by_field.setdefault(field_name, set()).add(str(canonical_value))
             unique_fields = [
@@ -429,9 +413,81 @@ def _vector_correct_filter(key, values, catalog, operator):
         elif selected_field != field:
             return None
         corrected.append(canonical)
-    if selected_field is None:
+    return (selected_field, corrected) if selected_field is not None else None
+
+
+def _declared_field_locate(declared, vals, catalog):
+    """extraction 声明的字段名与值记录属性名对上时，把值修到该字段。
+
+    省份/城市等同值异字段场景靠声明的字段语义消歧，比全字段唯一性检查更贴合上游意图。
+    """
+    text = str(declared or '').strip()
+    if not text or len(text) < 2:
         return None
-    return selected_field, corrected
+    fields = set()
+    for record in catalog.get('values', []):
+        attr_name = str(record.get('attr_name') or '')
+        if not attr_name or (text not in attr_name and attr_name not in text):
+            continue
+        fields.add(record['field'])
+    hits = {}
+    for field in fields:
+        matches = [_vector_matches(field, surface, catalog) for surface in vals]
+        # Every input must bind; never execute just the matched part of IN.
+        if matches and all(len(match) == 1 for match in matches):
+            hits[field] = [match[0] for match in matches]
+    if len(hits) != 1:
+        return None
+    field, values = next(iter(hits.items()))
+    return field, values
+
+
+def _metric_having_expression(metric_code, original, catalog):
+    """指标阈值转 having 表达式；聚合口径取指标目录公式，非安全聚合形态返回 None。"""
+    if not isinstance(original, dict):
+        return None
+    operator = str(original.get('op') or original.get('operator') or '').strip()
+    value = original.get('value')
+    vals = value if isinstance(value, list) else [value]
+    if (operator not in {'=', '!=', '>', '>=', '<', '<='} or len(vals) != 1
+            or isinstance(vals[0], bool) or not isinstance(vals[0], (int, float))):
+        return None
+    meta = catalog['metrics'].get(metric_code) or {}
+    formula = str((meta.get('calculation_rule') or {}).get('calc_formula')
+                  or meta.get('calc_formula') or '')
+    m = re.search(r'=\s*(COUNT|SUM|AVG|MIN|MAX)\s*\(\s*(DISTINCT\s+)?'
+                  r'([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\s*\)', formula, re.IGNORECASE)
+    if not m:
+        return None
+    distinct = 'DISTINCT ' if m.group(2) else ''
+    return f"{m.group(1).upper()}({distinct}{m.group(3)}) {operator} {vals[0]}"
+
+
+def _temporal_bounds(value):
+    """把日期字面量解析成闭区间 [起, 止]；不是日期字面量返回 None。
+
+    支持 2025年 / 2025年7月 / 2025年7月3日 及 2025-07 / 2025-07-03 形式。
+    """
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    m = re.fullmatch(r'(\d{4})年\s*(?:(\d{1,2})月\s*(?:(\d{1,2})日\s*)?)?', text)
+    if not m:
+        m = re.fullmatch(r'(\d{4})-(\d{1,2})(?:-(\d{1,2}))?', text)
+    if not m:
+        return None
+    year, month, day = int(m.group(1)), int(m.group(2) or 0), int(m.group(3) or 0)
+    try:
+        if day:
+            start = end = date(year, month, day)
+        elif month:
+            start = date(year, month, 1)
+            end = date(year + (month == 12), 1 if month == 12 else month + 1, 1) - timedelta(days=1)
+        else:
+            start, end = date(year, 1, 1), date(year, 12, 31)
+    except ValueError:
+        return None
+    return start.isoformat(), end.isoformat()
 
 
 def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=None):
@@ -474,18 +530,20 @@ def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=No
 subject 是执行查询的主表：指标查询依据已选指标的实体绑定；明细查询结合已绑定展示字段、过滤字段及目录关系选择主体，允许使用授权目录中连接这些对象的关联实体，不要求主体必须出现在结构化实体数组中。不能据此增加指标、分组或筛选条件。无法判断时 subject=null 并给 subject_error。
 输出要求含明确的共享属性关联范围（如以目标商品适用科室寻找相关渠道），relationship_required=true；不能只看到实体中有科室就判定。不生成 SQL 或其他业务要求。'''
     prompt += ('value_ids必须使用catalog.values条目的显式id，不要自己数数组位置。'
-               '维度绑定可带attr（目录中该维度已有的属性ID），不返回granularity；程序依据结构化时间粒度赋值，不能新增时间维度。')
+               '维度绑定可带attr（目录中该维度已有的属性ID），不返回granularity；程序依据结构化时间粒度赋值，不能新增时间维度。'
+               'time.anchor、filters、display_fields的key都必须用物理字段（表.字段格式）；'
+               '目录中的维度编码不能填到这些位置，应换绑到该维度绑定的物理字段。')
+    # The model is a catalog selector only; it cannot reinterpret input.
+    prompt += (
+        '\nSTRICT BINDING CONTRACT: structured_extraction is authoritative. '
+        'Return exactly one candidate row for every declared item, preserving '
+        'order and cardinality. Never add, remove, reorder, or reinterpret a '
+        'metric, dimension, display field, filter, sort, limit, or time grain. '
+        'Use only recalled catalog keys/values. Do not invent a time dimension '
+        'or default date range. If a slot cannot be selected, return an error '
+        'with candidates instead of guessing.'
+    )
     try:
-        prompt += (
-            '\n\nSTRUCTURED_BINDING_CONTRACT:\n'
-            'structured_extraction is authoritative. Return exactly one candidate row '
-            'for every declared item and never add, remove, reorder, or reinterpret a '
-            'metric, dimension, display field, filter, sort, limit, or time grain. '
-            'Select only from the recalled catalog. Do not invent a time dimension. '
-            'The application performs deterministic exact/vector normalization after '
-            'this response; if a slot cannot be selected from the catalog, return an '
-            'error for that slot instead of guessing.\n'
-        )
         result = model.invoke([{'role': 'system', 'content': prompt}, {'role': 'user', 'content': json.dumps(context, ensure_ascii=False, default=str)}])
         plan = json.loads(re.sub(r'^```(?:json)?\s*|\s*```$', '', result.content.strip()))
         if not isinstance(plan, dict): raise ValueError('binding response must be object')
@@ -508,24 +566,52 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
             found = [r for r in rows if isinstance(r, dict) and type(r.get('index')) is int and r['index'] == index]
             choice = found[0] if len(found) == 1 else {}
             key = choice.get('key')
-            # The model may select only among candidates.  When a structured
-            # slot has one exact published catalog name, that deterministic
-            # match wins (for example, dealer must not become business_date).
             exact_keys = _exact_choice_keys(target, original, catalog)
-            if isinstance(key, str) and len(exact_keys) == 1 and key != exact_keys[0]:
-                repairs.append({
-                    'type': 'STRUCTURED_SLOT_KEY_CORRECTED',
-                    'source': 'VECTOR_CATALOG_EXACT_MATCH',
-                    'slot': f'{source}[{index + 1}]',
-                    'previous_key': key,
-                    'key': exact_keys[0],
-                })
+            if len(exact_keys) == 1 and key != exact_keys[0]:
+                repairs.append({'type': 'STRUCTURED_SLOT_KEY_CORRECTED',
+                                'source': 'STRUCTURED_EXTRACTION',
+                                'slot': f'{source}[{index+1}]',
+                                'original_key': key, 'key': exact_keys[0]})
                 key = exact_keys[0]
                 choice = dict(choice, key=key)
+            # 过滤/展示只认物理字段；模型绑了维度编码时先换绑到该维度的物理字段
+            if target in {'filters', 'display_fields'} and isinstance(key, str) and key not in catalog['fields']:
+                resolved = _dim_bound_field(key, catalog)
+                if resolved:
+                    key = resolved
+            # 指标阈值过滤分流：聚合查询转 having（口径取指标目录），明细场景要求上游拆计算任务
+            if target == 'filters' and isinstance(key, str) and key in catalog['metrics']:
+                having_expr = _metric_having_expression(key, original, catalog) if extraction['指标'] else None
+                if having_expr:
+                    ast['having'].append(having_expr)
+                    continue
+                ast['ambiguity'].append(issue(f'{source}[{index+1}]', original,
+                    '指标阈值筛选只能作用在汇总结果上，请调整问法为统计类查询，或由上游将该条件拆分为统计任务加纯计算任务'))
+                continue
             allowed = (catalog['metrics'] if target == 'metrics' else
                        {**catalog['dimensions'], **catalog['fields']} if target == 'dimensions' else
                        {**catalog['metrics'], **catalog['dimensions'], **catalog['fields']} if target == 'sort' else catalog['fields'])
             if choice.get('error') or not isinstance(key,str) or key not in allowed:
+                if target == 'filters' and isinstance(original, dict):
+                    # 模型绑不出字段时，过滤值若在授权字段上唯一命中则字段+值一起修正
+                    op_ = str(original.get('op') or original.get('operator') or '').upper()
+                    raw_vals = original.get('value')
+                    raw_vals = raw_vals if isinstance(raw_vals, list) else [raw_vals]
+                    located = ((_vector_correct_filter(key, raw_vals, catalog, op_)
+                                or _declared_field_locate(original.get('field'), raw_vals, catalog)
+                                or _vector_locate_value(raw_vals, catalog))
+                               if op_ in {'=','!=','IN','NOT IN'} else None)
+                    if located:
+                        located_field, fixed_vals = located
+                        operator2 = op_
+                        if len(fixed_vals) > 1 and op_ in {'=', '!='}:
+                            operator2 = 'IN' if op_ == '=' else 'NOT IN'
+                        ast['filters'].append({'field': located_field, 'operator': operator2,
+                                               'value': fixed_vals if operator2 in {'IN','NOT IN','BETWEEN'} else fixed_vals[0]})
+                        repairs.append({'type': 'VECTOR_FILTER_VALUE_CORRECTED', 'source': 'VECTOR_CATALOG_FIELD_FALLBACK',
+                                        'original_field': original.get('field'),
+                                        'field': located_field, 'original_values': raw_vals, 'values': fixed_vals})
+                        continue
                 reason = choice.get('error') or '未匹配到可执行的标准字段'
                 if target == 'display_fields' and not extraction['指标'] and any(isinstance(r.get('key'),str) and r.get('key') in catalog['fields'] for r in rows if isinstance(r, dict)):
                     # Existing partial display behavior; filters/groupings remain mandatory.
@@ -543,6 +629,12 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                                     f.get('attr_name') == label for f in catalog['fields'].values()):
                                 detail['binding_kind'] = 'field'
                     ast['ambiguity'].append(problem)
+                continue
+            # 展示位出现指标编码时按指标落位，避免聚合场景在字段白名单处被拒
+            if target == 'display_fields' and extraction['指标'] and isinstance(key, str) and key in catalog['metrics']:
+                if key not in {m['name'] for m in ast['metrics']}:
+                    ast['metrics'].append({'name': key, 'alias': catalog['metrics'][key].get('metric_name') or key,
+                                           'time_anchor': None})
                 continue
             if target == 'metrics':
                 ast['metrics'].append({'name': key, 'alias': allowed[key].get('metric_name') or key, 'time_anchor': None})
@@ -588,9 +680,8 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                     key, vals = corrected_key, corrected_vals
                 ids = [] if vector_repaired else (choice.get('value_ids') or [])
                 # A model-provided value_id can point at a nearby value from
-                # the wrong field.  For explicit codes/model numbers, discard
-                # that hint before the legacy strict check below; the raw
-                # literal must be resolved by the widened catalog pass.
+                # the wrong field. Discard that hint for explicit codes/model
+                # literals so the widened catalog pass can resolve the value.
                 if ids and isinstance(ids, list) and len(ids) == len(vals) \
                         and all(type(i) is int and 0 <= i < len(catalog['values']) for i in ids) \
                         and all(isinstance(v, str) for v in vals):
@@ -621,9 +712,6 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                         and all(isinstance(v, str) for v in vals)
                     )
                     if not valid_ids:
-                        # Treat malformed model value_ids as a recoverable
-                        # response-shape issue.  Rebind from the vector
-                        # catalog instead of blocking the whole IN filter.
                         repaired = _vector_correct_filter(key, vals, catalog, operator)
                         if repaired is not None:
                             repaired_key, repaired_vals = repaired
@@ -637,6 +725,13 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                                     'values': list(repaired_vals),
                                 })
                             key, vals = repaired_key, repaired_vals
+                            # 字段和值都已修正为目录标准形态，直接落条件，不再过 ids 数量检查
+                            operator2 = operator
+                            if len(vals) > 1 and operator in {'=', '!='}:
+                                operator2 = 'IN' if operator == '=' else 'NOT IN'
+                            ast['filters'].append({'field': key, 'operator': operator2,
+                                                   'value': vals if operator2 in {'IN', 'NOT IN', 'BETWEEN'} else vals[0]})
+                            continue
                         elif operator in {'=', '!=', 'IN', 'NOT IN'} and any(
                             isinstance(v, str) and re.search(r'[\u4e00-\u9fff]', v)
                             for v in vals
@@ -646,18 +741,73 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                                 '\u591a\u503c\u6761\u4ef6\u4e2d\u6709\u503c\u672a\u80fd\u7ed1\u5b9a\u5230\u6807\u51c6\u503c\uff0c\u8bf7\u6838\u5bf9\u8be5\u503c\u7684\u8bed\u4e49\u914d\u7f6e'))
                             continue
                         ids = []
-                if ids:
                     if (not isinstance(ids,list) or len(ids)!=len(vals) or any(type(i) is not int or not 0<=i<len(catalog['values']) for i in ids)
                             or any(catalog['values'][i]['field']!=key for i in ids)
                             or any(not isinstance(v,str) for v in vals)):
                         ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '标准值绑定与字段或输入值数量不一致'));continue
                     bound_vals=[catalog['values'][i]['value'] for i in ids]
-                    if any(re.search(r'[0-9A-Za-z]',v) and v!=str(b) for v,b in zip(vals,bound_vals)):
-                        ast['ambiguity'].append(issue(f'{source}[{index+1}]',original,'编码、型号或数字字符串不得被替换成其他值'));continue
-                    vals=bound_vals
+                    # A model may select semantic names only from recalled
+                    # same-field values, one per input. Exact matches above
+                    # win; codes/models remain literal below.
+                    if bound_vals != vals:
+                        repairs.append({'type': 'VECTOR_FILTER_VALUE_CORRECTED',
+                                        'source': 'SCOPED_CATALOG_VALUE_SELECTION',
+                                        'field': key, 'original_values': list(vals),
+                                        'values': list(bound_vals)})
+                    if ids:
+                        # 编码/型号按字面量透传，模型绑到别的值时保留输入原值
+                        literal_codes = all(
+                            isinstance(v, str) and re.fullmatch(r'[0-9A-Za-z][0-9A-Za-z\-/\.]*', v or '')
+                            and re.search(r'\d', v) and re.search(r'[A-Za-z]', v)
+                            for v in vals
+                        )
+                        if literal_codes and any(v != str(b) for v, b in zip(vals, bound_vals)):
+                            if len(vals)>1 and operator in {'=','!='}:
+                                operator = 'IN' if operator == '=' else 'NOT IN'
+                            ast['filters'].append({'field': key, 'operator': operator,
+                                                   'value': vals if operator in {'IN','NOT IN','BETWEEN'} else vals[0]})
+                            continue
+                        if any(re.search(r'[0-9A-Za-z]',v) and v!=str(b) for v,b in zip(vals,bound_vals)):
+                            ast['ambiguity'].append(issue(f'{source}[{index+1}]',original,'编码、型号或数字字符串不得被替换成其他值'));continue
+                        vals=bound_vals
+                    else:
+                        # 修正后的值已确认在标准值目录内，直接落过滤条件
+                        if len(vals)>1 and operator in {'=','!='}: operator='IN' if operator=='=' else 'NOT IN'
+                        ast['filters'].append({'field':key,'operator':operator,'value':vals if operator in {'IN','NOT IN','BETWEEN'} else vals[0]})
+                        continue
+                elif operator == 'BETWEEN' and len(vals) == 2 and all(_temporal_bounds(v) for v in vals):
+                    # 日期区间字面量确定性换算，不走标准值目录
+                    first, last = _temporal_bounds(vals[0]), _temporal_bounds(vals[1])
+                    ast['filters'].append({'field': key, 'operator': 'BETWEEN', 'value': [first[0], last[1]]})
+                    continue
+                elif operator in {'=', '>=', '>', '<=', '<'} and len(vals) == 1 and _temporal_bounds(vals[0]):
+                    # 单个日期字面量：等值换算成区间，比较运算取边界
+                    start, end = _temporal_bounds(vals[0])
+                    if operator == '=':
+                        ast['filters'].append({'field': key, 'operator': 'BETWEEN', 'value': [start, end]})
+                    else:
+                        ast['filters'].append({'field': key, 'operator': operator,
+                                               'value': start if operator in {'>=', '>'} else end})
+                    continue
                 elif operator in {'=','!=','IN','NOT IN'} and any(
                     isinstance(v,str) and re.search(r'[\u4e00-\u9fff]',v) for v in vals
                 ) and not all(any(c['field']==key and c['value']==v for c in catalog['values']) for v in vals):
+                    # 模型没给 ids 时先在同表名称字段找值（省份id挂省份名），
+                    # 再退到全字段唯一定位
+                    located = (_vector_correct_filter(key, vals, catalog, operator)
+                               or _declared_field_locate(original.get('field') if isinstance(original, dict) else None, vals, catalog)
+                               or _vector_locate_value(vals, catalog))
+                    if located:
+                        located_field, fixed_vals = located
+                        operator2 = operator
+                        if len(fixed_vals) > 1 and operator in {'=', '!='}:
+                            operator2 = 'IN' if operator == '=' else 'NOT IN'
+                        ast['filters'].append({'field': located_field, 'operator': operator2,
+                                               'value': fixed_vals if operator2 in {'IN','NOT IN','BETWEEN'} else fixed_vals[0]})
+                        repairs.append({'type': 'VECTOR_FILTER_VALUE_CORRECTED', 'source': 'VECTOR_CATALOG_FIELD_FALLBACK',
+                                        'original_field': key, 'field': located_field,
+                                        'original_values': list(vals), 'values': fixed_vals})
+                        continue
                     ast['ambiguity'].append(issue(f'{source}[{index+1}]',original,
                         f'字段 {key} 已匹配，但条件值尚未匹配到该字段的向量标准值，请核对字段层级及值目录'))
                     continue
@@ -670,43 +820,24 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                 if len(extraction[source])>1 or direction not in {'ASC','DESC'}:
                     ast['ambiguity'].append(issue(source, original, '当前ASL仅支持一个明确升序/降序的排序字段'));continue
                 ast['sort']={'field':key,'direction':direction,'field_type':'metric' if key in catalog['metrics'] else 'field' if '.' in key else 'dimension'}
-        if any(not isinstance(r,dict) or type(r.get('index')) is not int or not 0<=r['index']<len(extraction[source]) for r in rows):
+        if extraction[source] and any(not isinstance(r,dict) or type(r.get('index')) is not int or not 0<=r['index']<len(extraction[source]) for r in rows):
             ast['ambiguity'].append(issue(source, extraction[source], '绑定输出添加了结构化提取中不存在的参数'))
+        # 空数组表示没有该要求，模型多绑的行直接忽略，不作为澄清事项抛给用户
+        if not extraction[source] and rows:
+            repairs.append({'type': 'IGNORED_UNDECLARED_BINDINGS',
+                            'source': 'STRUCTURED_EXTRACTION', 'slot': source})
     limit=extraction.get('限制')
-    # For metric queries, the selected metric's published source dependency is
-    # authoritative for the execution subject. This keeps the join anchor
-    # stable when structured extraction lists additional involved entities.
-    # With multiple valid metric entities, retain an explicitly valid model
-    # choice; otherwise use the first published binding and keep a repair note.
     if ast['metrics']:
-        metric_subjects = _metric_subject_candidates(
-            [metric.get('name') for metric in ast['metrics']], catalog
-        )
-        current_subject = (ast.get('subject') or {}).get('entity')
+        metric_subjects = _metric_subject_candidates([m['name'] for m in ast['metrics']], catalog)
+        current = (ast.get('subject') or {}).get('entity')
         if metric_subjects:
-            # Keep a valid model choice; otherwise use the first published
-            # binding so an extra entity cannot stop an otherwise executable
-            # query. The repair record remains visible for auditing.
-            selected_subject = (
-                current_subject if current_subject in metric_subjects
-                else metric_subjects[0]
-            )
-            if current_subject != selected_subject:
-                repairs.append({
-                    'type': 'METRIC_SUBJECT_FROM_SOURCE_DEPENDENCY',
-                    'source': 'METRIC_SOURCE_DEPENDENCY',
-                    'previous_subject': current_subject,
-                    'entity': selected_subject,
-                    'candidates': metric_subjects,
-                })
-            ast['subject'] = {'entity': selected_subject}
-        elif len(metric_subjects) > 1 and current_subject not in metric_subjects:
-            ast['subject'] = {}
-            ast['ambiguity'].append(issue(
-                'subject', extraction.get('瀹炰綋'),
-                'multiple selected metrics have different executable subjects',
-                metric_subjects,
-            ))
+            selected = current if current in metric_subjects else metric_subjects[0]
+            if current != selected:
+                repairs.append({'type': 'METRIC_SUBJECT_FROM_SOURCE_DEPENDENCY',
+                                'source': 'METRIC_SOURCE_DEPENDENCY',
+                                'previous_subject': current, 'entity': selected,
+                                'candidates': metric_subjects})
+            ast['subject'] = {'entity': selected}
     if limit is not None and (type(limit) is not int or not 1<=limit<=10000):
         ast['ambiguity'].append(issue('限制',limit,'需要1到10000的整数'))
     else:ast['limit']=limit

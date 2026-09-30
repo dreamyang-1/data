@@ -135,6 +135,8 @@ def test_subject_resolver_cannot_add_out_of_scope_entity():
 def test_unbound_filter_is_not_hidden_by_subject_recovery():
     e, k, p = dealer_list_fixture()
     p['filters'] = []
+    # Without catalog evidence this is not a recoverable model omission.
+    k['entity_attribute_values'] = []
     ast, _ = bind(e, k, Obj(invoke=lambda _: Obj(content=json.dumps(p))),
                   detail_subject_resolver=lambda *_: pytest.fail('cannot recover incomplete bindings'))
     assert ast['ambiguity'][0]['field'] == '过滤条件[1]'
@@ -184,14 +186,19 @@ def test_literal_numbers_and_codes_preserved(literal):
 
 @pytest.mark.parametrize('slot,key',[('metrics','指标'),('filters','过滤条件')])
 def test_missing_core_slot_is_explicit_not_silently_dropped(slot,key):
-    e,k,p=fixture();p[slot]=[];ast,_=run(e,k,p)
+    e,k,p=fixture();p[slot]=[]
+    if slot == 'filters':
+        k['entity_attribute_values'] = []
+    ast,_=run(e,k,p)
     assert ast['ambiguity'] and key in ast['ambiguity'][0]['question']
     assert str(e[key][0].get('name') or e[key][0].get('field')) in ast['ambiguity'][0]['question']
 
 
 def test_no_added_dimension_or_metric():
     e,k,p=fixture();p['dimensions']=[{'index':0,'key':'hospital.name'}]
-    ast,_=run(e,k,p);assert ast['ambiguity'] and ast['dimensions']==[]
+    ast,repairs=run(e,k,p)
+    assert not ast['ambiguity'] and ast['dimensions']==[]
+    assert any(r['type'] == 'IGNORED_UNDECLARED_BINDINGS' for r in repairs)
 
 
 def test_partial_display_keeps_existing_contract_but_missing_filter_blocks():
@@ -201,7 +208,9 @@ def test_partial_display_keeps_existing_contract_but_missing_filter_blocks():
     ast,repairs=run(e,k,p)
     assert not ast['ambiguity'] and ast['dimensions'][0]['name']=='hospital.name'
     assert repairs[0]['type']=='OMIT_UNAVAILABLE_DISPLAY_FIELD'
-    p['filters']=[];ast,_=run(e,k,p);assert ast['ambiguity']
+    p['filters']=[]
+    k['entity_attribute_values'] = []
+    ast,_=run(e,k,p);assert ast['ambiguity']
 
 
 def test_explicit_time_without_anchor_is_not_removed():

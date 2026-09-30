@@ -63,9 +63,13 @@ def test_model_cannot_add_slots_absent_from_planner(slot):
     from structured_binding import bind
     extraction,knowledge,plan=fixture()
     plan[slot]=[*plan.get(slot,[]),{'index':50,'key':'hospital.name'}]
-    ast,_=bind(extraction,knowledge,Obj(invoke=lambda _:Obj(content=json.dumps(plan))))
-    assert ast['ambiguity']
-    assert '不存在的参数' in ast['ambiguity'][-1]['question']
+    ast,repairs=bind(extraction,knowledge,Obj(invoke=lambda _:Obj(content=json.dumps(plan))))
+    if slot in {'dimensions', 'display_fields'}:
+        assert not ast['ambiguity'] and ast['dimensions'] == []
+        assert any(r['type'] == 'IGNORED_UNDECLARED_BINDINGS' for r in repairs)
+    else:
+        assert ast['ambiguity']
+        assert '不存在的参数' in ast['ambiguity'][-1]['question']
 
 
 def test_declared_grouping_preserved_without_reading_original():
