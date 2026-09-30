@@ -12,7 +12,7 @@ from app.adapters.http import (
 )
 from app.config import Settings
 from datetime import date, datetime, timezone
-from app.domain.models import AnalysisOperator, CanonicalAnalysisRequest, Dataset, DependencyConstraint, MetricRef, PrimaryIntent, SemanticFilterBinding, TimeRange, TrustedIdentity
+from app.domain.models import AnalysisOperator, CanonicalAnalysisRequest, Dataset, DependencyConstraint, MetricRef, PlannerExtraction, PrimaryIntent, SemanticFilterBinding, TimeRange, TrustedIdentity
 from app.domain.semantic_scope import AuthorizedSemanticScope
 from app.services.knowledge_retrieval import RedisKnowledgeSearchCache
 from app.services.relationship_projection import (
@@ -1508,8 +1508,11 @@ async def test_explicit_deduplication_mode_reaches_sql_translation() -> None:
         "primary_intent": PrimaryIntent.DETAIL_QUERY,
         "entity": "\u533b\u9662",
         "fields": ["\u533b\u9662\u540d\u79f0"],
-        "assumptions": ["EXPLICIT_DISTINCT_PROJECTION"],
+        "assumptions": [],
     })
+    detail._planner_extraction = PlannerExtraction(
+        structured={"\u662f\u5426\u53bb\u91cd": "\u662f"},
+    )
     asl = {
         "version": "2.0",
         "subject": {"entity": "hospital"},

@@ -51,6 +51,7 @@ from app.services.intent_asl_contract import (
     validate_intent_asl_contract_definition,
 )
 from app.services.relationship_projection import (
+    explicit_projection_mode,
     requires_distinct_relationship_projection,
 )
 from app.tools.database_load import DatabaseLoadError, build_database_load_tool
@@ -2221,7 +2222,13 @@ class HttpDataRetrievalAdapter:
             # may contain several paths to the same projected combination.  The
             # translator applies this before LIMIT; ordinary order/event detail
             # remains explicitly row-shaped.
-            asl["projection_mode"] = (
+            planner_extraction = getattr(request, "_planner_extraction", None)
+            planner_mode = explicit_projection_mode(
+                planner_extraction.structured
+                if planner_extraction is not None
+                else None
+            )
+            asl["projection_mode"] = planner_mode or (
                 "DISTINCT"
                 if requires_distinct_relationship_projection(request)
                 else "ROWS"
