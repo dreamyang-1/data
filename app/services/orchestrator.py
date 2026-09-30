@@ -82,6 +82,7 @@ from app.services.semantic_decision import (
     semantic_decision_with_v1_fallback,
 )
 from app.services.legacy_guards import pending_answer_admissibility, extract_quoted_choice_candidate, apply_snapshot_display_default, apply_region_clear_barrier
+from app.services.relationship_projection import explicit_projection_mode
 from app.services.history_compaction import compact_history
 from app.services.working_memory import recalls_prior_task, requires_prior_task_resolution, select_recalled_task_frame
 from app.services.extension_dispatcher import ExtensionDispatcher
@@ -8963,6 +8964,13 @@ class DataAnalysisOrchestrator:
                 if planner_extraction.intent is not None:
                     result.primary_intent = planner_extraction.intent
                     result.intent_source = "TASK_PLANNER"
+                projection_mode = explicit_projection_mode(
+                    planner_extraction.structured
+                )
+                if projection_mode == "DISTINCT":
+                    result.assumptions.append("EXPLICIT_DISTINCT_PROJECTION")
+                elif projection_mode == "ROWS":
+                    result.assumptions.append("EXPLICIT_ROWS_PROJECTION")
             self._apply_platform_metric_vocabulary(result, agent_prompt)
             timing.mark_first_result()
             timing.set_attribute("intent_source", result.intent_source)

@@ -9,6 +9,23 @@ from app.domain.models import (
 )
 
 
+def explicit_projection_mode(extraction: dict | None) -> str | None:
+    """Read the planner's explicit detail deduplication request."""
+    if not isinstance(extraction, dict):
+        return None
+    # Unicode escapes keep this small execution contract independent of the
+    # deployment host's source-file/locale encoding.
+    value = extraction.get("\u662f\u5426\u53bb\u91cd", extraction.get("\u53bb\u91cd"))
+    if isinstance(value, bool):
+        return "DISTINCT" if value else "ROWS"
+    normalized = str(value or "").strip().casefold()
+    if normalized in {"\u662f", "true", "1", "yes", "y", "distinct"}:
+        return "DISTINCT"
+    if normalized in {"\u5426", "false", "0", "no", "n", "rows"}:
+        return "ROWS"
+    return None
+
+
 def requires_distinct_relationship_projection(
     request: CanonicalAnalysisRequest,
 ) -> bool:
@@ -27,6 +44,10 @@ def requires_distinct_relationship_projection(
     ):
         return False
 
+    if "EXPLICIT_DISTINCT_PROJECTION" in request.assumptions:
+        return True
+    if "EXPLICIT_ROWS_PROJECTION" in request.assumptions:
+        return False
     if "SET_RELATIONSHIP_PROJECTION" in request.assumptions:
         return True
 

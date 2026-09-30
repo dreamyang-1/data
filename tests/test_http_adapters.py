@@ -16,6 +16,7 @@ from app.domain.models import AnalysisOperator, CanonicalAnalysisRequest, Datase
 from app.domain.semantic_scope import AuthorizedSemanticScope
 from app.services.knowledge_retrieval import RedisKnowledgeSearchCache
 from app.services.relationship_projection import (
+    explicit_projection_mode,
     requires_distinct_relationship_projection,
 )
 from app.services.progress import progress_scope
@@ -1468,6 +1469,77 @@ def test_transaction_detail_remains_row_shaped() -> None:
     )
 
     assert requires_distinct_relationship_projection(detail) is False
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("\u662f", "DISTINCT"),
+        (True, "DISTINCT"),
+        ("\u5426", "ROWS"),
+        (False, "ROWS"),
+        ("unknown", None),
+    ],
+)
+def test_explicit_deduplication_mode_is_normalized(value, expected) -> None:
+    assert explicit_projection_mode({"\u662f\u5426\u53bb\u91cd": value}) == expected
+
+
+def test_explicit_deduplication_mode_controls_sql_projection_shape() -> None:
+    detail = CanonicalAnalysisRequest(
+        conversation_id="explicit-dedup",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="\u67e5\u8be2\u4ea7\u54c1\u5408\u4f5c\u533b\u9662\u540d\u5355",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+        entity="\u533b\u9662",
+        fields=["\u533b\u9662\u540d\u79f0"],
+        assumptions=["EXPLICIT_DISTINCT_PROJECTION"],
+    )
+    assert requires_distinct_relationship_projection(detail) is True
+
+    rows = detail.model_copy(update={"assumptions": ["EXPLICIT_ROWS_PROJECTION"]})
+    assert requires_distinct_relationship_projection(rows) is False
+
+
+@pytest.mark.asyncio
+async def test_explicit_deduplication_mode_reaches_sql_translation() -> None:
+    detail = request().model_copy(update={
+        "primary_intent": PrimaryIntent.DETAIL_QUERY,
+        "entity": "\u533b\u9662",
+        "fields": ["\u533b\u9662\u540d\u79f0"],
+        "assumptions": ["EXPLICIT_DISTINCT_PROJECTION"],
+    })
+    asl = {
+        "version": "2.0",
+        "subject": {"entity": "hospital"},
+        "metrics": [],
+        "dimensions": [{"name": "hospital.hospital_name"}],
+        "filters": [{
+            "field": "product.product_name",
+            "operator": "=",
+            "value": "\u5916\u5468\u63d2\u7ba1\u4e2d\u5fc3\u9759\u8109\u5bfc\u7ba1",
+        }],
+        "ambiguity": [],
+    }
+    client = StubClient([
+        {"success": True, "result": json.dumps(asl, ensure_ascii=False)},
+        {"success": True, "sql": "SELECT DISTINCT hospital_name FROM hospital"},
+        {
+            "success": True,
+            "sql": "SELECT DISTINCT hospital_name FROM hospital",
+            "data": [{"hospital_name": "H1"}],
+            "columns": ["hospital_name"],
+            "row_count": 1,
+        },
+    ])
+
+    await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
+        detail, IDENTITY, semantic_model_id=81, business_domain_id=205
+    )
+
+    translated_asl = json.loads(client.calls[1][2]["asl"])
+    assert translated_asl["projection_mode"] == "DISTINCT"
 
 
 def test_dependency_filtered_object_list_is_set_shaped() -> None:
