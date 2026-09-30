@@ -10966,6 +10966,14 @@ class DataAnalysisOrchestrator:
         semantic_extractions: tuple[dict[str, Any], ...]
         | list[dict[str, Any]] = (),
     ) -> AgentResponse:
+        # Atomic metrics suggested while a derived metric is unresolved are
+        # implementation hints, not valid answers for the user's requested
+        # metric. Keep the clarification open-text and explain what definition
+        # is needed instead of exposing those hints as selectable options.
+        for ambiguity in request.semantic_ambiguities:
+            if self._is_unmapped_derived_metric(ambiguity):
+                ambiguity.candidates = []
+                ambiguity.candidate_details = []
         previous = await self.sessions.get_pending(request.tenant_id, request.user_id, request.application_id, request.conversation_id)
         asked_keys = set(previous.asked_clarification_keys) if previous is not None and request.pending_state_version else set()
         if previous is not None and asked_keys:
@@ -12361,19 +12369,7 @@ class DataAnalysisOrchestrator:
                     for ambiguity in request.semantic_ambiguities:
                         if not ambiguity.blocking:
                             continue
-                        text = cls._sanitize_clarification_text(ambiguity.question)
-                        phrase = cls._sanitize_clarification_text(ambiguity.phrase or "")
-                        vague_markers = (
-                            "它", "该名称", "这个名称", "当前名称",
-                            "哪个业务字段", "存在歧义的业务口径",
-                            "请重新说明", "具体是什么", "具体指什么",
-                        )
-                        if (
-                            phrase
-                            and phrase not in text
-                            and any(marker in text for marker in vague_markers)
-                        ):
-                            text = f"关于“{phrase}”：{text}"
+                        text = cls._semantic_ambiguity_question(ambiguity)
                         if text and text not in questions:
                             questions.append(text)
                 else:
@@ -12389,6 +12385,36 @@ class DataAnalysisOrchestrator:
                 if prompt not in questions:
                     questions.append(prompt)
         return questions
+
+    @staticmethod
+    def _is_unmapped_derived_metric(ambiguity: SemanticAmbiguity) -> bool:
+        if ambiguity.type != "metric":
+            return False
+        text = f"{ambiguity.question} {ambiguity.phrase or ''}"
+        return any(marker in text for marker in ("衍生指标", "派生指标", "原子指标直接映射"))
+
+    @classmethod
+    def _semantic_ambiguity_question(cls, ambiguity: SemanticAmbiguity) -> str:
+        text = cls._sanitize_clarification_text(ambiguity.question)
+        phrase = cls._sanitize_clarification_text(ambiguity.phrase or "")
+        vague_markers = (
+            "它", "该名称", "这个名称", "当前名称",
+            "哪个业务字段", "存在歧义的业务口径",
+            "请重新说明", "具体是什么", "具体指什么",
+        )
+        if (
+            phrase
+            and phrase not in text
+            and any(marker in text for marker in vague_markers)
+        ):
+            text = f"关于“{phrase}”：{text}"
+        if cls._is_unmapped_derived_metric(ambiguity):
+            text += (
+                " 请补充该指标的计算公式或业务定义，说明所依据的基础指标、"
+                "增长率比较口径（如环比或同比）及平均计算方式；当前语义目录没有"
+                "可直接执行的对应衍生指标，单独的基础销量指标不足以代表增长率。"
+            )
+        return text
 
     @classmethod
     def _clarification_items(cls, request: CanonicalAnalysisRequest) -> list[dict[str, Any]]:
@@ -12422,9 +12448,9 @@ class DataAnalysisOrchestrator:
                 items.extend({
                     "slot": slot,
                     "title": semantic_titles[ambiguity.type],
-                    "question": ambiguity.question,
-                    "options": ambiguity.candidates,
-                    "option_details": ambiguity.candidate_details,
+                    "question": cls._semantic_ambiguity_question(ambiguity),
+                    "options": [] if cls._is_unmapped_derived_metric(ambiguity) else ambiguity.candidates,
+                    "option_details": [] if cls._is_unmapped_derived_metric(ambiguity) else ambiguity.candidate_details,
                     "multi_select": False,
                     "allow_free_text": True,
                 } for ambiguity in request.semantic_ambiguities if ambiguity.blocking)
