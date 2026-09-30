@@ -102,3 +102,35 @@ model to calculate dates, contradicting the new anchor-only time contract.
 
 Paused full-result-return work in the HTTP adapter and SQL export files is not
 included. Temporary server probes/cached diagnostics are not release artifacts.
+
+## Time-only deployment completed
+
+- Release: `structured-time-20260930-215139`; feature commit `b516e77`, test and
+  approval record `4ae5d0a`, pushed to the existing feature branch (no PR merge).
+- Only four Oagnet runtime files were installed. The remote binder and prompt
+  retain independent remote changes; this is not a wholesale local overwrite.
+- Installed-code regression: 275 passed, the same seven explicitly accepted
+  baseline failures, zero additional failures, zero collection errors. Exact
+  JUnit failure identities were compared before allowing the restart.
+- Service restart: September 30, 2026, 21:53:31 China Standard Time. Main PID
+  changed from 1476384 to 2924398; active state confirmed. Oagnet health returned
+  HTTP 200 / UP, DataAnalysis readiness returned HTTP 200 / READY.
+- Existing environment files were hash-checked unchanged. Pre-deploy file
+  backups and the hash manifest are retained under the release identifier.
+- Post-restart requests through the actual ASL HTTP service and SQL translator
+  passed for both quarters: Q1 2026 is January 1 through March 31; Q4 2025 is
+  October 1 through December 31. SQL uses the corresponding exclusive next-day
+  end bound. Both select the authorized order-date field and add no time grouping
+  to the detail query. This is ASL/translation verification, not a business-data
+  execution or a full conversation UI test.
+- No other service was restarted; the seven existing binding failures and
+  paused full-result-return work remain outside this release.
+
+Installed SHA-256:
+
+| File | SHA-256 |
+| --- | --- |
+| structured_binding.py | cba5573f407c0b8d2781f78a5af68cba194f7684d4ec05cca598d41712940ae7 |
+| prompt_build.py | 204ebd25ae1b4bc448b0a4f7ac49985b11c766b5d969ba5c42756e7ed1c8f438 |
+| query_binding_review.py | fdaa9cde0cf2d1f0fbab7d51bc2be366455dee3b87f3fa9c513a90a751b97e87 |
+| structured_time.py | 813afba8c3ad183009a298ce1cf9164d1a1852bda7c163540e7d4c58c41251c0 |
