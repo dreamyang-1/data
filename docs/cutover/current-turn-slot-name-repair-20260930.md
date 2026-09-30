@@ -58,3 +58,27 @@
 
 The paused full-result-return changes and Oagnet's seven previously disclosed
 remote binding failures are outside this DataAnalysis-only release.
+
+## Deployment and installed-code verification
+
+- Feature commit `c2b548c` pushed to the existing feature branch; no PR merge.
+- Release `slot-name-repair-20260930-222016` replaced only the three runtime
+  files listed above after comparing fresh server hashes with the inspection
+  snapshots. Originals and a manifest were backed up under this release ID.
+- Installed-code tests: 336 passed, zero failures. Production environment files
+  remained hash-identical; paused changes and other services were untouched.
+- DataAnalysis service restarted at September 30, 2026, 22:21:02 China Standard
+  Time; PID 1982481 became 3006072, active state confirmed, HTTP 200 / READY.
+- Post-restart read-only probe loaded installed modules and the actual configured
+  model. The synthetic summary-to-order-detail follow-up completed correctly,
+  retaining Q4 2025 and Shanghai. The bounded bad-slot correction also passed.
+  This validates recognition/repair, not SQL execution or the unretained original
+  conversation. No formal conversation was created or mutated by the probe.
+
+Installed file SHA-256:
+
+| File | SHA-256 |
+| --- | --- |
+| recognition.py | 9d16183a3b5707725d739704c3794b28e84a697616ee5758de030b61536ef3b9 |
+| recognition_client.py | 00fba3f1aa8121ada1d8f029a9b9f274efe8413bcf8c4df029156de899aa5836 |
+| recognition_slot_repair.py | 7f203758f79269487ae6284237255349e657da037323d9318e6d591e51761d10 |
