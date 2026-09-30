@@ -63,6 +63,45 @@ def render_root_report(
     """
     final = final or {}
     available = [item for item in materials if item["status"] in {"COMPLETED", "PARTIAL_SUCCESS"}]
+    if not available:
+        clarification_items = [
+            item for item in materials if item["status"] == "NEEDS_CLARIFICATION"
+        ]
+        if clarification_items:
+            # No query result exists yet, so an insight/report template would
+            # produce empty sections such as "no findings" and "no data".
+            # Return the actionable clarification itself and omit dependent
+            # skipped tasks, which add no new information for the user.
+            clarification_texts: list[str] = []
+            for item in clarification_items:
+                text = str(item.get("summary") or "").strip()
+                if not text:
+                    text = "\n".join(
+                        str(value).strip()
+                        for value in item.get("missing_information", [])
+                        if str(value).strip()
+                    )
+                if not text:
+                    text = "该任务还需要补充信息后才能继续查询。"
+                if len(clarification_items) > 1:
+                    text = f"{item.get('question') or '需要补充的信息'}：\n{text}"
+                clarification_texts.append(text)
+
+            # Keep unrelated hard failures visible without reintroducing the
+            # generic insight template or downstream dependency noise.
+            clarification_ids = {item["task_id"] for item in clarification_items}
+            for item in materials:
+                if item["status"] not in {"FAILED", "SAFE_FALLBACK"}:
+                    continue
+                if clarification_ids.intersection(item.get("depends_on", [])):
+                    continue
+                failure = str(item.get("summary") or "该任务未能完成。").strip()
+                if failure:
+                    clarification_texts.append(
+                        f"{item.get('question') or '其他任务'}：{failure}"
+                    )
+            return "\n\n".join(clarification_texts), []
+
     available_ids = {item["task_id"] for item in available}
     requested = final.get("result_task_ids") or []
     valid_selection = bool(requested) and all(item in available_ids for item in requested)

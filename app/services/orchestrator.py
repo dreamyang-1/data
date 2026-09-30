@@ -3083,12 +3083,10 @@ class DataAnalysisOrchestrator:
         ))
         chart_specs = [spec for result in task_results if result.task_id in selected_task_ids for spec in result.chart_specs]
         if shared_clarification is not None:
-            combined_answer = (
-                "## 综合分析报告\n"
-                f"已识别 {len(plan.tasks)} 个独立分析维度。"
-                "它们共同等待同一个时间范围，尚未执行查询。\n\n"
-                + clarification_questions[0]
-            )
+            # A clarification is not a completed report. Keep the shared
+            # question as the response instead of wrapping it in an empty
+            # report/insight template.
+            combined_answer = clarification_questions[0]
         final_response = AgentResponse(
             clarification_decision_traces=[trace.model_copy(deep=True) for value in responses.values() if isinstance(value, AgentResponse) for trace in value.clarification_decision_traces],
             request_id=uuid4(),

@@ -1680,6 +1680,10 @@ async def test_report_branches_share_one_time_clarification_and_resume_together(
     assert len(first.clarification_questions) == 1
     assert first.clarification_items[0].slot == "shared:time_range"
     assert first.answer.count("要查询或分析哪个时间范围") == 1
+    assert "综合分析报告" not in first.answer
+    assert "概况总结" not in first.answer
+    assert "关键发现" not in first.answer
+    assert "业务提示" not in first.answer
     assert first.dag_resume_token
 
     second = await service.handle(ChatRequest(

@@ -48,6 +48,48 @@ def test_partial_results_and_preview_limits_survive_selection():
     assert "0%" not in answer
 
 
+def test_clarification_without_any_query_results_returns_only_actionable_explanation():
+    items = [
+        {
+            "task_id": "metric",
+            "question": "统计各经销商的合作时长",
+            "status": "NEEDS_CLARIFICATION",
+            "summary": (
+                "目录中未找到名为‘合作时长’的指标，因此目前无法生成可执行查询；"
+                "请补充合作时长的计算口径。"
+            ),
+            "missing_information": ["请补充合作时长的计算口径。"],
+            "depends_on": [],
+        },
+        {
+            "task_id": "filter",
+            "question": "筛选合作时长大于3个月的经销商",
+            "status": "SKIPPED",
+            "summary": "依赖任务尚未完成，本任务未执行。",
+            "depends_on": ["metric"],
+        },
+        {
+            "task_id": "independent",
+            "question": "查询独立数据项",
+            "status": "SAFE_FALLBACK",
+            "summary": "数据服务暂时不可用。",
+            "depends_on": [],
+        },
+    ]
+
+    answer, selected = render_root_report("列出合作时长大于3个月的经销商名单", items, None)
+
+    assert selected == []
+    assert "目录中未找到名为‘合作时长’的指标" in answer
+    assert "请补充合作时长的计算口径" in answer
+    assert "依赖任务尚未完成" not in answer
+    assert "数据服务暂时不可用" in answer
+    assert "概况总结" not in answer
+    assert "关键发现" not in answer
+    assert "业务提示" not in answer
+    assert "本次尚未获得可用于回答问题的数据" not in answer
+
+
 def test_cached_and_empty_branches_are_not_omitted_from_model_material():
     plan = TaskPlan(planner="STRUCTURED_MODEL", analyze_summary="先查两项指标。", tasks=[
         AtomicTask(task_id="a", question="查询甲项", extraction={"指标": [{"name": "甲项"}]}),
