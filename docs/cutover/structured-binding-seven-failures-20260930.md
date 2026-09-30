@@ -82,3 +82,23 @@ matches take priority and codes/model numbers cannot be replaced by similar text
 - Deploy only after zero-failure installed-code tests; no reuse of the previous
   seven-failure release exemption. Back up the target, compare remote hashes,
   protect other code/configuration, and roll back on test or health failure.
+
+## Deployment evidence
+
+- Feature commit `7a05da3` pushed to the existing feature branch/Draft PR;
+  no automatic merge. The paused three-file full-result-return work remains
+  uncommitted and hash-identical, excluded from this release.
+- Release `binding-seven-20260930-223727` backed up and replaced only
+  `structured_binding.py`. Installed-code full suite: **1,224 passed**,
+  zero failures; the prior seven-failure exemption was not used.
+- Oagnet restarted on September 30, 2026, at **22:43:31 CST**, PID 2924398
+  changed to 3073619; active, HTTP 200 / UP. DataAnalysis remained healthy,
+  HTTP 200 / READY, without a restart. Configuration and other runtime modules
+  were verified hash-identical.
+- Installed binder SHA-256:
+  `ae04441e42adae2f4dcd2cbca0bf8a5d8b5d0adc3b3d2be8a094f2b23906ae01`.
+- Post-restart read-only API probes using the configured model/catalog passed
+  for `2026年第一季度` and `2025年第四季度`: exact quarter boundaries and the
+  business-date anchor agree between ASL and translated SQL, with no invented
+  temporal grouping. These probes generated ASL/SQL but did not execute SQL
+  or create a formal conversation. They do not assert a business result count.
