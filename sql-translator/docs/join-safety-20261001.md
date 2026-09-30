@@ -76,6 +76,25 @@ Deployment requires matching remote baseline hashes, a rollback backup, passing
 installed-source tests, protected configuration hashes and health verification.
 Only the SQL service is restarted. No automatic PR merge is authorized.
 
-Deployment/live checks are pending at this source commit and will be recorded
-below after they complete. Current offline regression blockers: none found in
-the tested paths. This bounded V1 fix makes no V2 cutover-readiness claim.
+## Deployment and live checks
+
+- Source commit `7f55d01` was pushed to the existing feature branch. Draft PR #85
+  remains open and unmerged.
+- Release `join-safety-20261001-075233`: SQL service restarted at
+  2026-10-01 07:58:44 CST. Process identity changed; service state is active.
+- Installed-source regression suite: 597 passed, 3 subtests passed. SQL health
+  returned HTTP 200/ok; DataAnalysis readiness returned HTTP 200/READY.
+- Protected configuration and unrelated runtime hashes were unchanged; the
+  previous source is backed up for rollback. Only the two declared runtime files
+  were installed. Paused full-result-return changes remain paused and undeployed.
+- Live public execution rejected four bad statements with `SQL_JOIN_INVALID`,
+  including the reported disconnected JOIN, a nonexistent ON alias, ON 1=1 and
+  a repeated SELECT. The guard rejects them before data-source lookup/submission.
+- A public constant SELECT returned one row and confirmed that the default
+  server timeout was set. No export or business-data write was involved.
+- The previous dealer order-count/time-range ASL still translates successfully
+  with exactly one order-table JOIN.
+
+Current regression/release blockers: none found in the tested paths. This bounded
+V1 fix makes no V2 cutover-readiness claim. Existing unrelated local edits remain
+in the worktree and are not represented as committed or released by this task.
