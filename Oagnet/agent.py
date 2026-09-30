@@ -3393,6 +3393,14 @@ def _result_entity_distances(
         if not isinstance(dimension, dict):
             continue
         name = str(dimension.get("name") or "")
+        # ASL dimensions may use the logical entity code (for example
+        # ``dealer``) instead of a physical projected field such as
+        # ``dealer.dealer_name``. Resolve that logical grouping first so an
+        # administrative filter is owned by the visible result entity even
+        # when the fact subject is ``sales_order``.
+        logical_entities = _contract_entity_candidates(name, knowledge)
+        if logical_entities:
+            seeds.update(logical_entities)
         for entity_code, attributes in attributes_by_entity.items():
             if name in attributes:
                 seeds.add(entity_code)
