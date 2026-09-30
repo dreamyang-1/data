@@ -26,7 +26,7 @@ def test_metric_internal_noun_does_not_replace_explicit_grouped_query_object():
 
     assert request.entity == "经销商"
     assert request.dimensions == ["经销商"]
-    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert {"field": "经销商城市", "operator": "EQ", "value": "上海市"} in request.filters
     assert "医院" not in request.dimensions
     assert "EXPLICIT_RESULT_OBJECT_FROM_GROUPING=经销商" in request.assumptions
 
@@ -516,7 +516,7 @@ def test_grouping_phrase_is_not_invented_as_a_product_filter():
 
     assert request.dimensions == ["经销商"]
     assert request.filters == [
-        {"field": "业务城市", "operator": "EQ", "value": "上海市"},
+        {"field": "经销商城市", "operator": "EQ", "value": "上海市"},
     ]
     assert request.entity != "产品"
 
@@ -1113,7 +1113,7 @@ def test_period_free_grouped_relationship_count_uses_all_available_history():
     assert request.primary_intent == PrimaryIntent.METRIC_QUERY
     assert [item.input for item in request.metrics] == ["已合作医院数"]
     assert request.dimensions == ["经销商"]
-    assert {"field": "业务城市", "operator": "EQ", "value": "上海市"} in request.filters
+    assert {"field": "经销商城市", "operator": "EQ", "value": "上海市"} in request.filters
     assert not any(
         item.get("field") == "商品名称" for item in request.filters
     )

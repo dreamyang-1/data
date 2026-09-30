@@ -2813,12 +2813,28 @@ class RuleBasedIntentClassifier:
             r"(?:位于|所在(?:地|省|市)?|注册(?:地|在)|地址(?:在|为))",
             text,
         ))
+        # In the noun phrase ``上海市的各经销商`` (and its common variants
+        # ``上海市各个经销商``/``上海市每家经销商``), the region modifies the
+        # dealer noun itself. Treat it as the dealer's location scope. This is
+        # distinct from ``各经销商在上海市`` where the region is transaction
+        # scope.
+        dealer_prefixed_region = any(
+            re.match(
+                r"^(?:的)?(?:各个|各|每个|每家|所有)?经销商",
+                text[end:],
+            )
+            for _start, end, _region in matches
+        )
+        if dealer_prefixed_region:
+            explicit_entity_location = True
         located_entity = request.entity
         if located_entity not in {"医院", "经销商"}:
             located_entity = next(
                 (role for role in ("医院", "经销商") if role in text),
                 None,
             )
+        if dealer_prefixed_region:
+            located_entity = "经销商"
         if explicit_entity_location and located_entity in {"医院", "经销商"}:
             region_role = located_entity + ("省份" if is_province_scope else "城市")
         elif not (
@@ -2864,6 +2880,8 @@ class RuleBasedIntentClassifier:
         geographic_assumption = {
             "业务城市": "GEOGRAPHIC_ROLE=SALES_BUSINESS_CITY",
             "业务省份": "GEOGRAPHIC_ROLE=SALES_BUSINESS_PROVINCE",
+            "经销商城市": "GEOGRAPHIC_ROLE=DEALER_LOCATION_CITY",
+            "经销商省份": "GEOGRAPHIC_ROLE=DEALER_LOCATION_PROVINCE",
         }.get(region_role)
         if geographic_assumption and geographic_assumption not in request.assumptions:
             request.assumptions.append(geographic_assumption)
