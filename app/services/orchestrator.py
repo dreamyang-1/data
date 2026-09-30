@@ -6712,6 +6712,9 @@ class DataAnalysisOrchestrator:
                     ),
                     dataset_id=dataset_id,
                 )
+                response.answer = self._empty_result_message(
+                    request, query_result.dataset
+                )
                 if list_cleanup_note:
                     response.answer = name_list_result_summary(query_result)
                 return await self._finish_terminal(request, response)
@@ -6784,6 +6787,8 @@ class DataAnalysisOrchestrator:
                         + (f"未完成绑定的字段：{fields}。" if fields else "")
                         + "请查看本次 ASL 的字段和值绑定，或补充更完整的业务名称后重试。"
                     )
+            if scope:
+                message = self._empty_result_message(request, query_result.dataset)
             response = self._fallback(request, message)
             response.dataset_id = dataset_id
             response.result_file_url = query_result.result_file_url
@@ -10203,6 +10208,48 @@ class DataAnalysisOrchestrator:
             if expected and not expected.issubset(matched.get(index, set())):
                 missing.append(str(item.get("field") or f"filter[{index}]"))
         return not missing, missing
+
+    @staticmethod
+    def _empty_result_message(request: CanonicalAnalysisRequest, dataset) -> str:
+        """Explain an empty result without guessing why the filters missed."""
+        scope = "、".join(
+            f"{item.get('field')}={item.get('value')}"
+            for item in request.filters
+            if isinstance(item, dict)
+            and item.get("field")
+            and item.get("value") not in (None, "", [])
+        )
+        message = "查询执行成功，返回 0 条结果；指定条件下没有匹配到有效业务数据，并非查询执行失败。"
+        watermark = dataset.source_data_as_of
+        if request.time_range is not None and watermark is not None:
+            watermark_day = watermark.date()
+            if request.time_range.start > watermark_day:
+                message += (
+                    f"查询起始日期为 {request.time_range.start.isoformat()}，"
+                    f"但当前业务数据只更新到 {watermark_day.isoformat()}；"
+                    "所选区间完全位于数据水位之后。"
+                )
+            elif request.time_range.end_exclusive > watermark_day + timedelta(days=1):
+                message += (
+                    f"当前业务数据只更新到 {watermark_day.isoformat()}，"
+                    "所选区间有一部分超过数据水位，不能据此判断完整周期结果。"
+                )
+        if not scope:
+            return message + "无数据不等同于指标值为 0。"
+        message += f"当前筛选条件：{scope}。"
+        bindings_complete, unbound_fields = DataAnalysisOrchestrator._filter_binding_coverage(request)
+        if bindings_complete:
+            return message + (
+                "筛选字段和值已完成语义绑定；本次查询在该条件下确实没有返回业务记录，"
+                "这不等同于指标值为 0。"
+            )
+        fields = "、".join(unbound_fields)
+        return message + (
+            "本次查询未携带完整的筛选值绑定证据，不能仅凭空结果判断是业务上无数据"
+            "还是筛选名称未匹配。"
+            + (f"未完成绑定的字段：{fields}。" if fields else "")
+            + "请查看本次 ASL 的字段和值绑定，或补充更完整的业务名称后重试。"
+        )
 
     @classmethod
     def _preserve_pending_execution_contract(
