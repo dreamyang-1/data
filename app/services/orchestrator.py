@@ -6749,6 +6749,41 @@ class DataAnalysisOrchestrator:
                         "筛选条件中的实体名称未能匹配到可核验的业务属性；"
                         "请使用更完整的业务名称或表述重新查询。"
                     )
+            if scope:
+                # Rebuild the empty-result explanation from the verified
+                # execution state.  The legacy branch above treated an empty
+                # binding list as proof that a name was unmatched, which is
+                # false for follow-up requests and for adapters that do not
+                # return binding evidence in their response.
+                bindings_complete, unbound_fields = self._filter_binding_coverage(request)
+                message = "查询执行成功，但指定条件下没有匹配到有效业务数据。"
+                if request.time_range is not None and watermark is not None:
+                    watermark_day = watermark.date()
+                    if request.time_range.start > watermark_day:
+                        message += (
+                            f"查询起始日期为 {request.time_range.start.isoformat()}，"
+                            f"但当前业务数据只更新到 {watermark_day.isoformat()}；"
+                            "所选区间完全位于数据水位之后。"
+                        )
+                    elif request.time_range.end_exclusive > watermark_day + timedelta(days=1):
+                        message += (
+                            f"当前业务数据只更新到 {watermark_day.isoformat()}，"
+                            "所选区间有一部分超过数据水位，不能据此判断完整周期结果。"
+                        )
+                message += f"当前筛选条件：{scope}。"
+                if bindings_complete:
+                    message += (
+                        "筛选字段和值已完成语义绑定；本次查询在该条件下确实没有返回业务记录，"
+                        "这不等同于指标值为 0。"
+                    )
+                else:
+                    fields = "、".join(unbound_fields)
+                    message += (
+                        "本次查询未携带完整的筛选值绑定证据，不能仅凭空结果判断是业务上无数据"
+                        "还是筛选名称未匹配。"
+                        + (f"未完成绑定的字段：{fields}。" if fields else "")
+                        + "请查看本次 ASL 的字段和值绑定，或补充更完整的业务名称后重试。"
+                    )
             response = self._fallback(request, message)
             response.dataset_id = dataset_id
             response.result_file_url = query_result.result_file_url
@@ -10136,6 +10171,38 @@ class DataAnalysisOrchestrator:
         # A complete sentence beginning with a task verb is a new request even
         # when a value such as “最近一年” incidentally fills an old missing slot.
         return complete_self_contained and (not resolved_slots or explicit_new_task)
+
+    @staticmethod
+    def _filter_binding_coverage(request: CanonicalAnalysisRequest) -> tuple[bool, list[str]]:
+        """Check binding evidence against the filters that will actually run.
+
+        An empty result must not be explained as an unmatched entity merely
+        because the binding list is empty.  Follow-up turns can replace one
+        filter while retaining another, and a stale binding must not be used
+        as proof for the new value.  This helper is deliberately value-based;
+        field identity is checked by the ASL/SQL gates upstream.
+        """
+        filters = [item for item in request.filters if isinstance(item, dict)]
+        if not filters:
+            return True, []
+        matched: dict[int, set[str]] = {}
+        for binding in request.semantic_filter_bindings:
+            index = int(binding.filter_index)
+            if index < 0 or index >= len(filters):
+                continue
+            values = matched.setdefault(index, set())
+            for value in (binding.input_value, binding.canonical_value):
+                text = str(value or "").strip()
+                if text:
+                    values.add(text)
+        missing: list[str] = []
+        for index, item in enumerate(filters):
+            raw = item.get("value")
+            expected = raw if isinstance(raw, list) else [raw]
+            expected = {str(value or "").strip() for value in expected if value not in (None, "")}
+            if expected and not expected.issubset(matched.get(index, set())):
+                missing.append(str(item.get("field") or f"filter[{index}]"))
+        return not missing, missing
 
     @classmethod
     def _preserve_pending_execution_contract(
