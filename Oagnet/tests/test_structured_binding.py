@@ -356,3 +356,21 @@ def test_category_field_and_value_must_bind_as_a_pair():
     ast,_=run(e,k,p)
     assert not ast['ambiguity']
     assert ast['filters']==[{'field':'hospital.name','operator':'=','value':'01透析器具'}]
+
+
+def test_alphanumeric_literal_widens_value_field_before_rejecting_model_id():
+    """A model/spec value may be classified as a product name upstream."""
+    from structured_binding import _vector_correct_filter
+    catalog = {
+        'fields': {
+            'product.product_name': {'attr_code': 'product_name'},
+            'product.product_model': {'attr_code': 'product_model'},
+        },
+        'values': [
+            {'field': 'product.product_name', 'value': 'other product'},
+            {'field': 'product.product_model', 'value': 'TDC-3'},
+        ],
+    }
+    assert _vector_correct_filter(
+        'product.product_name', ['TDC-3'], catalog, '='
+    ) == ('product.product_model', ['TDC-3'])

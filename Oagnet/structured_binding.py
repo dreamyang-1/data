@@ -300,7 +300,13 @@ def _vector_matches(field, surface, catalog):
 
 
 def _vector_correct_filter(key, values, catalog, operator):
-    """Return a unique vector-grounded ``(field, values)`` repair, if any."""
+    """Return a unique vector-grounded ``(field, values)`` repair, if any.
+
+    A short model/specification value can be classified as a product name
+    upstream. Try the declared field first, then widen to every value-bearing
+    field in the current scoped catalog. Accept a cross-field repair only when
+    all literals resolve to one unique field; equal matches remain unresolved.
+    """
     if operator not in {'=', '!=', 'IN', 'NOT IN'} or not values:
         return None
     if not any(isinstance(value, str) and value.strip() for value in values):
@@ -309,6 +315,11 @@ def _vector_correct_filter(key, values, catalog, operator):
     metadata = catalog.get('fields', {}).get(key) or {}
     if _field_is_identifier(key, metadata):
         fields_to_try.extend(_name_field_candidates(key, catalog))
+    broad_fields = list(dict.fromkeys(
+        [str(field) for field in (catalog.get('fields') or {}) if field]
+        + [str(record.get('field') or '') for record in catalog.get('values', [])]
+    ))
+    fields_to_try = list(dict.fromkeys(fields_to_try + broad_fields))
     selected_field = None
     corrected = []
     for surface in values:
@@ -323,7 +334,21 @@ def _vector_correct_filter(key, values, catalog, operator):
             return None
         # Prefer the original field when its vector value is already valid;
         # otherwise prefer the highest-ranked name sibling.
-        field, canonical = candidates[0]
+        declared = [item for item in candidates if item[0] == key]
+        if len(declared) == 1:
+            field, canonical = declared[0]
+        else:
+            by_field: dict[str, set[str]] = {}
+            for field_name, canonical_value in candidates:
+                by_field.setdefault(field_name, set()).add(str(canonical_value))
+            unique_fields = [
+                field_name for field_name, canonical_values in by_field.items()
+                if len(canonical_values) == 1
+            ]
+            if len(unique_fields) != 1:
+                return None
+            field = unique_fields[0]
+            canonical = next(iter(by_field[field]))
         if selected_field is None:
             selected_field = field
         elif selected_field != field:
@@ -461,6 +486,27 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                         })
                     key, vals = corrected_key, corrected_vals
                 ids = [] if vector_repaired else (choice.get('value_ids') or [])
+                if ids and isinstance(ids, list) and len(ids) == len(vals) \
+                        and all(type(i) is int and 0 <= i < len(catalog['values']) for i in ids) \
+                        and all(isinstance(v, str) for v in vals):
+                    provisional = [catalog['values'][i]['value'] for i in ids]
+                    if any(
+                        catalog['values'][i].get('field') != key
+                        or (
+                            re.search(r'[0-9A-Za-z]', value)
+                            and value != str(bound)
+                        )
+                        for i, (value, bound) in zip(ids, zip(vals, provisional))
+                    ):
+                        repairs.append({
+                            'type': 'VECTOR_VALUE_ID_DISCARDED',
+                            'source': 'VECTOR_CATALOG',
+                            'field': key,
+                            'values': list(vals),
+                            'bound_values': list(provisional),
+                            'reason': 'VALUE_ID_FIELD_OR_LITERAL_MISMATCH',
+                        })
+                        ids = []
                 if ids:
                     valid_ids = (
                         isinstance(ids, list)

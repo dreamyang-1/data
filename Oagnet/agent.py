@@ -1857,8 +1857,8 @@ def _all_non_key_attribute_candidates(
 
 _CATALOG_IDENTITY_ATTRIBUTE = re.compile(
     r"(?<![a-z0-9])(?:name|title|label|brand|manufacturer|maker|category|"
-    r"classification|type|kind)(?![a-z0-9])|"
-    r"名称|姓名|标题|品牌|厂牌|厂家|生产商|制造商|分类|类别|品类|类型",
+    r"classification|type|kind|model|variant|spec|specification|sku)(?![a-z0-9])|"
+    r"名称|姓名|标题|品牌|厂牌|厂家|生产商|制造商|分类|类别|品类|类型|型号|规格|规格型号",
     re.IGNORECASE,
 )
 _CATALOG_NON_IDENTITY_ATTRIBUTE = re.compile(
