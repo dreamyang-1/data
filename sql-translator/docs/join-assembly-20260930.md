@@ -61,4 +61,22 @@ installed-source tests, configuration preservation, SQL service restart and
 health verification; it restores the previous files on deployment failure.
 No V2 cutover, database writes, index rebuild or PR merge is included.
 
-Deployment and post-restart read-only query evidence will be recorded below.
+## Deployment and live verification
+
+- Source commit: `898ef92`, pushed to the existing feature branch; Draft PR #85
+  remains open and unmerged.
+- Release: `join-assembly-20260930-230116`; SQL service restarted at
+  2026-09-30 23:11:24 CST. Process identity changed and service state is active.
+- Installed-source suite: 546 passed, 3 subtests passed. SQL health returned
+  HTTP 200/ok; DataAnalysis readiness returned HTTP 200/READY.
+- Protected configuration and unrelated runtime-file hashes were unchanged.
+  A pre-release source backup is available for rollback. Only the two declared
+  runtime files were deployed; the paused full-result-return task remains paused.
+- Post-restart translation of the reported ASL produced exactly one order-table
+  JOIN and preserved the explicit range, ascending metric sort and LIMIT 5.
+  Executing that SELECT with a consistent read-only snapshot and a 15-second
+  timeout succeeded and returned 5 rows. No export or database write was invoked;
+  business rows and credentials are not stored in this report.
+
+Current JOIN regression blockers: none found in the tested paths. This is a
+bounded V1 bugfix; it does not assert V2 replacement readiness or change cutover.
