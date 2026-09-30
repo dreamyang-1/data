@@ -1164,7 +1164,7 @@ def test_result_dimension_geography_wins_over_fact_subject_geography():
         "product.product_code", "dealer.dealer_code",
     ))
     ast = _asl("dealer.dealer_name")
-    ast["subject"] = {"entity": "product"}
+    ast["subject"] = {"entity": "sales_order"}
     ast["dimensions"] = [{
         # Structured ASL commonly emits the logical grouping entity here.
         "name": "dealer", "attr": None,
