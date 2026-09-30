@@ -519,6 +519,15 @@ class PromptBuilder:
         records outside the current model/domain.
         """
         text = str(user_query or "")
+        try:
+            structured = json.loads(text)
+        except (ValueError, TypeError):
+            structured = None
+        if isinstance(structured, dict) and '时间粒度' in structured:
+            temporal = structured.get('时间粒度')
+            return isinstance(temporal, dict) and any(
+                temporal.get(key) for key in ('time_range', 'unit', 'anchor', 'field')
+            )
         if "TRANSACTION_TIME_SCOPE=SALES_RECORD" in text:
             return True
         return bool(re.search(
@@ -1074,6 +1083,7 @@ class PromptBuilder:
                 [*scoped_time_dimensions, *dimensions],
                 max(self.MAX_PROMPT_RESULTS_PER_TYPE, self.top_k),
             )
+            dimensions = self._dedupe_results([*dimensions, *scoped_time_dimensions])
         entity_attribute_values = retrieve_type("entity_attribute_value")
         entities, attributes, relations, completion = self._complete_relational_scope(
             direct_entities,

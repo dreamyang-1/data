@@ -206,6 +206,8 @@ def test_partial_display_keeps_existing_contract_but_missing_filter_blocks():
 
 def test_explicit_time_without_anchor_is_not_removed():
     e,k,p=fixture();e['时间粒度']['time_range']='最近一年'
+    k['entities'][0].metadata['attributes'].pop()
+    k['_vector_authorized_fields'].remove('hospital.date')
     p['time']={'mode':'rolling','amount':1,'unit':'year','anchor':'invented.date'}
     ast,_=run(e,k,p);assert '时间' in ast['ambiguity'][0]['question']
 

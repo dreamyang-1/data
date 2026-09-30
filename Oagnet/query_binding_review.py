@@ -5,9 +5,8 @@ Ordinary predicates retain their bound fields and standard values. Only explicit
 business-owner disambiguation may use dictionary rows to supply FK values. Query shape remains
 owned exclusively by planner parameters; original wording is never model input.
 """
-import calendar
 import copy
-from datetime import date, timedelta
+from datetime import date
 import json
 import re
 
@@ -82,44 +81,6 @@ def binding_options(ast, knowledge):
         if choices:
             result.append({"filter_index": index, "predicate": predicate, "choices": choices})
     return result
-
-
-def _time_value(decision, today):
-    """Date arithmetic, not a hardcoded business default; months != calendar year."""
-    mode = decision.get("mode")
-    if mode == "none":
-        return None
-    anchor = decision.get("anchor")
-    if mode == "rolling":
-        amount, unit = decision.get("amount"), decision.get("unit")
-        if type(amount) is not int or not 1 <= amount <= 3660:
-            raise ValueError("invalid rolling period")
-        if unit in {"month", "year"}:
-            months = amount * (12 if unit == "year" else 1)
-            year, month = divmod(today.year * 12 + today.month - 1 - months, 12)
-            start = date(year, month + 1, min(today.day, calendar.monthrange(year, month + 1)[1]))
-        elif unit in {"day", "week"}:
-            start = today - timedelta(days=amount * (7 if unit == "week" else 1))
-        else:
-            raise ValueError("invalid rolling unit")
-        return {"type": "range", "start": start.isoformat(), "end": today.isoformat(),
-                "unit": "day", "anchor": anchor}
-    if mode == "range":
-        start, end = date.fromisoformat(decision["start"]), date.fromisoformat(decision["end"])
-        if end < start:
-            raise ValueError("reversed range")
-        return {"type": "range", "start": start.isoformat(), "end": end.isoformat(),
-                "unit": "day", "anchor": anchor}
-    if mode == "calendar" and decision.get("type") in {"this_year", "this_month", "last_month", "today", "yesterday", "year"}:
-        kind = decision["type"]
-        result = {"type": kind, "anchor": anchor,
-                  "unit": "year" if kind in {"year", "this_year"} else "month" if "month" in kind else "day"}
-        if kind == "year":
-            if type(decision.get("value")) is not int or not 1 <= decision["value"] <= 9999:
-                raise ValueError("invalid year")
-            result["value"] = decision["value"]
-        return result
-    raise ValueError("unknown time decision")
 
 
 def review_bindings(content, knowledge, question, extraction, model, resolve_keys,

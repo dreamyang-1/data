@@ -2,7 +2,8 @@
 import json
 import re
 from datetime import date
-from query_binding_review import _metadata, _object, _field, _time_value
+from query_binding_review import _metadata, _object, _field
+from structured_time import compile_time, grouping_grain, is_temporal, dimension_fields
 
 SECTIONS = {'指标': 'metrics', '维度': 'dimensions', '展示字段': 'display_fields', '过滤条件': 'filters', '排序': 'sort'}
 OPERATORS = {'=', '!=', '>', '>=', '<', '<=', 'IN', 'NOT IN', 'LIKE', 'BETWEEN'}
@@ -85,6 +86,9 @@ def catalog_candidates(knowledge):
     for item in knowledge.get('dimensions', []):
         meta = _metadata(item)
         if meta.get('dim_code'): dimensions[meta['dim_code']] = meta
+        if is_temporal(meta):
+            for field in dimension_fields(meta) & allowed:
+                fields.setdefault(field, {'attr_name': meta.get('dim_name'), 'data_type': 'DATE'})
     values = []
     def add_value(field, value, label=None):
         """Add one executable standard value without duplicating aliases.
@@ -265,21 +269,6 @@ def _vector_value_equivalent(surface, canonical):
     return False
 
 
-_TIME_UNIT_ALIASES = {
-    'hour': 'hour', 'day': 'day', 'week': 'week', 'month': 'month',
-    'quarter': 'quarter', 'year': 'year',
-    '\u5c0f\u65f6': 'hour', '\u65e5': 'day', '\u5929': 'day',
-    '\u5468': 'week', '\u6708': 'month', '\u5b63': 'quarter',
-    '\u5b63\u5ea6': 'quarter', '\u5e74': 'year',
-}
-
-
-def _normalize_time_unit(value):
-    if value is None:
-        return None
-    return _TIME_UNIT_ALIASES.get(str(value).strip().casefold())
-
-
 def _metadata_terms(metadata):
     """Return only published names/codes used to validate a model choice."""
     terms = []
@@ -324,24 +313,6 @@ def _exact_choice_keys(source, original, catalog):
         if any(_vector_value_equivalent(label, term)
                for term in _metadata_terms(metadata))
     ]
-
-
-def _is_temporal_dimension(key, catalog):
-    metadata = (catalog.get('dimensions', {}).get(key)
-                or catalog.get('fields', {}).get(key) or {})
-    dim_type = str(metadata.get('dim_type') or '').casefold()
-    data_type = str(metadata.get('data_type') or '').casefold()
-    support = metadata.get('granularity_support')
-    if isinstance(support, str):
-        try:
-            support = json.loads(support)
-        except (TypeError, ValueError):
-            support = [support]
-    return bool(
-        support
-        or any(token in dim_type for token in ('time', 'date', '\u65f6\u95f4', '\u65e5\u671f'))
-        or any(token in data_type for token in ('date', 'time', 'datetime'))
-    )
 
 
 def _field_is_identifier(field, metadata):
@@ -492,19 +463,18 @@ def bind(extraction, knowledge, model, *, today=None, detail_subject_resolver=No
 实体数组表示涉及的表，不是筛选值；指标/维度/展示字段/过滤/排序/时间/限制的角色及数量不得更改。
 目录只用于标准化，不允许从目录说明补指标、条件、默认时间或分组。空数组表示没有该要求。
 结合参数内 entity、field、输出要求判断字段归属；信息不足就返回 error 和目录候选，不猜业务要求。
-每个参数逐项绑定。返回 JSON: {subject:目录实体编码, metrics:[{index:0,key:目录指标编码}], dimensions:[{index:0,key:维度编码或物理字段}], display_fields:[{index:0,key:物理字段}], filters:[{index:0,key:物理字段,value_ids:[目录values序号]}], sort:[{index:0,key:目录指标编码或物理字段}], time:{mode:keep|range|rolling|calendar,anchor:目录时间字段,amount:整数,unit:day|week|month|year,start:日期,end:日期,type:时间类型,value:年份}, relationship_required:false}。
+每个参数逐项绑定。返回 JSON: {subject:目录实体编码, metrics:[{index:0,key:目录指标编码}], dimensions:[{index:0,key:维度编码或物理字段}], display_fields:[{index:0,key:物理字段}], filters:[{index:0,key:物理字段,value_ids:[目录values序号]}], sort:[{index:0,key:目录指标编码或物理字段}], time:{anchor:目录时间字段}, relationship_required:false}。
 每个输入 index 恰好返回一项，无法匹配的项改为 {index:0,error:具体原因,candidates:[标准候选名称]}。
 过滤值是数值阈值、日期、编码/型号时不需要 value_ids，原值原样保留。字符串可用 values 中同字段的标准值替换，逐输入值提供一个序号；不能凭空创造值、截断型号或扩大集合。
 按结构化条件的字段含义选择名称字段或编号字段，不按值中有无数字/字母猜测：商品名称对应目录名称字段，商品编号对应目录编号字段。名称匹配后保留标准名称，不能为了表连接而改绑编码字段；编号按原值精确筛选，保留前导零，不用相似名称替换。
 名称、品牌、分类等中文等值条件必须联合绑定字段和标准值：先找能表达该业务值的catalog.values条目，再使用该条目的field与id，不能仅凭字段标题相似就把原词填到无对应标准值的字段。多级分类尤其要按标准值所在层级绑定；同一“商品品类”可映射产品类别或一级/二级分类，取决于值的目录证据。找不到对应标准值则返回该参数error，不伪装成已验证。
-只绑定已声明的时间范围，缺少时间锚点则 time={error:具体原因}；未声明时间范围时 time=null。不增加默认范围。
+时间只允许选择目录中的时间字段anchor；起止日期、数量、时间类型和分组粒度全部由程序从结构化参数确定，禁止返回或改写这些值。未声明时间范围时time=null，不增加默认范围。季度筛选不代表按季度分组，明细日期列不做时间截断。
 没有指标时 dimensions/display_fields 表示明细列；有指标时 dimensions 才是分组，展示字段不能变成额外分组。
 实体数组列出本次涉及的业务对象，不是要求用户从中选一个；同时出现多个实体不构成歧义。展示字段的 entity/field 表示要返回的对象，过滤条件表示限定哪些记录。
 subject 是执行查询的主表：指标查询依据已选指标的实体绑定；明细查询结合已绑定展示字段、过滤字段及目录关系选择主体，允许使用授权目录中连接这些对象的关联实体，不要求主体必须出现在结构化实体数组中。不能据此增加指标、分组或筛选条件。无法判断时 subject=null 并给 subject_error。
 输出要求含明确的共享属性关联范围（如以目标商品适用科室寻找相关渠道），relationship_required=true；不能只看到实体中有科室就判定。不生成 SQL 或其他业务要求。'''
     prompt += ('value_ids必须使用catalog.values条目的显式id，不要自己数数组位置。'
-               '维度绑定可带attr（目录中该维度已有的属性ID）和granularity；只有时间维度才能设置granularity，'
-               '且必须对应结构化时间粒度unit，不能自行选择默认粒度或新增时间维度。')
+               '维度绑定可带attr（目录中该维度已有的属性ID），不返回granularity；程序依据结构化时间粒度赋值，不能新增时间维度。')
     try:
         prompt += (
             '\n\nSTRUCTURED_BINDING_CONTRACT:\n'
@@ -581,32 +551,17 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
                     if not any(_group_exposes_field(d, key, catalog) for d in ast['dimensions']):
                         ast['ambiguity'].append(issue(f'{source}[{index+1}]', original, '聚合查询的展示列没有声明为分组维度，请上游明确展示口径'))
                 elif key not in {d['name'] for d in ast['dimensions']}:
-                    units = {'时':'hour','小时':'hour','日':'day','天':'day','周':'week','月':'month','季度':'quarter','季':'quarter','年':'year'}
                     temporal = extraction.get('时间粒度') or {}
-                    unit = temporal.get('unit') if isinstance(temporal,dict) else None
-                    unit = units.get(unit, unit)
-                    granularity = choice.get('granularity')
-                    # Never let the model change an explicitly requested
-                    # temporal grain.  Normalize its spelling and repair a
-                    # temporal candidate to the structured unit.
-                    structured_unit = _normalize_time_unit(temporal.get('unit')) if isinstance(temporal, dict) else None
-                    model_unit = _normalize_time_unit(granularity)
-                    if model_unit is not None and structured_unit is not None and _is_temporal_dimension(key, catalog):
-                        if model_unit != structured_unit:
-                            repairs.append({
-                                'type': 'STRUCTURED_TIME_GRANULARITY_CORRECTED',
-                                'source': 'STRUCTURED_EXTRACTION',
-                                'previous_granularity': model_unit,
-                                'granularity': structured_unit,
-                                'field': key,
-                            })
-                        granularity = structured_unit
-                        unit = structured_unit
-                    elif model_unit is not None:
-                        granularity = model_unit
-                    if granularity is not None and (granularity != unit or unit not in set(units.values())):
-                        ast['ambiguity'].append(issue(source,original,'时间分组粒度与结构化参数不一致'))
+                    try:
+                        granularity = grouping_grain(temporal, original, key, target, ast, catalog)
+                    except ValueError as exc:
+                        ast['ambiguity'].append(issue(source, original, str(exc)))
                         continue
+                    if choice.get('granularity') != granularity:
+                        repairs.append({'type': 'STRUCTURED_TIME_GRANULARITY_CORRECTED',
+                                        'source': 'STRUCTURED_EXTRACTION', 'field': key,
+                                        'previous_granularity': choice.get('granularity'),
+                                        'granularity': granularity})
                     ast['dimensions'].append(dict(name=key, attr=choice.get('attr') if target=='dimensions' and '.' not in key else None,
                                                   level=None, granularity=granularity))
             elif target == 'filters':
@@ -756,17 +711,10 @@ subject 是执行查询的主表：指标查询依据已选指标的实体绑定
         ast['ambiguity'].append(issue('限制',limit,'需要1到10000的整数'))
     else:ast['limit']=limit
     temporal=extraction.get('时间粒度') or {}
-    if not isinstance(temporal,dict):
-        ast['ambiguity'].append(issue('时间粒度',temporal,'时间参数格式不完整'))
-    elif temporal.get('time_range'):
-        decision=plan.get('time') or {}
-        if not isinstance(decision,dict):decision={'error':'时间绑定格式无效'}
-        try:
-            if decision.get('anchor') not in catalog['fields']:raise ValueError('未匹配到授权的时间字段')
-            ast['time_context']=_time_value(decision,today or date.today())
-            if ast['time_context'] is None:raise ValueError('声明的时间范围未绑定')
-        except (ValueError,TypeError,KeyError,OverflowError) as exc:
-            ast['ambiguity'].append(issue('时间粒度',temporal,decision.get('error') or str(exc)))
+    try:
+        ast['time_context'] = compile_time(temporal, ast, catalog, knowledge, plan.get('time'), today or date.today())
+    except (ValueError, TypeError, KeyError, OverflowError) as exc:
+        ast['ambiguity'].append(issue('时间粒度', temporal, str(exc)))
     if not ast['metrics'] and not ast['dimensions'] and not ast['ambiguity']:
         ast['ambiguity'].append(issue('指标/展示字段', [], '未声明要计算的指标或返回的字段，不能自行补医院名称或计数'))
     if not ast['subject'] and not ast['ambiguity']:
