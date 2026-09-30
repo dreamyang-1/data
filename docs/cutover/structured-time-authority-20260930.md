@@ -50,12 +50,21 @@
   dates, month ends, absent/default time, authorization and other parameter values.
 - Oagnet focused contracts: 230 passed. SQL time/snapshot/hardening: 130 passed.
 - DataAnalysis critical/API/task DAG: 259 passed; full suite: 4,504 passed.
-- Oagnet full baseline: 1,108 passed, 2 failed. Final: 1,194 passed, the same 2
-  failed; no collection errors or unresolved new regressions.
+- Oagnet full baseline: 1,108 passed, 2 failed. Initial final: 1,194 passed,
+  the same 2 failed. After the stale fixture correction below: 1,196 passed;
+  no collection errors or unresolved new regressions.
 - STALE_TEST: the missing-anchor fixture now actually lacks an authorized time
   field, instead of expecting a bad model field to block a uniquely bindable
   declared range. The relative-time integration test fixes today's date rather
   than trusting the model's historical hardcoded start/end. Assertions remain.
+- STALE_TEST (release review): the two specification cases called only scalar
+  literal preparation, despite specifications being catalog identity attributes
+  that require standard-value grounding. The user explicitly requires catalog
+  matching and permits correcting an upstream name/model field guess. The tests
+  now exercise literal preparation followed by scoped standard-value matching,
+  assert that the catalog matcher was used, and retain the original exact final
+  field/operator/value assertions. No runtime code was changed to make them pass.
+  The literal-constraint file has 52 passing tests.
 - Read-only server candidate probe uses the real scoped vector catalog, model
   and SQL translation service for both requested quarters. Both ASLs bind
   `sales_order.created_date`, retain the single name projection, and translate
@@ -68,12 +77,28 @@
 
 ## Release blocker and remaining scope
 
-Publishing is stopped under the repository's test-failure rule. Two pre-existing
-`test_surface_literal_constraints.py::test_explicit_codes_letters_models_keep_field_and_literal`
-cases for product specification literals still fail on the unchanged baseline.
-They target a legacy literal-preparation helper and are not silently waived or
-changed to make the suite green. Resolve that blocker separately before pushing,
-deploying or restarting this repair. No production cutover is involved.
+The local blocker is resolved. A fresh server hash check confirms the independent
+remote binder edits have not changed since the investigation snapshot. Testing
+the remote-preserving candidate gives 275 passed and 7 failed. The exact same
+seven failures reproduce against untouched active server code (a targeted run
+has 2 passed, 7 failed, 36 deselected):
+
+- unbound filter subject recovery;
+- missing filter slot;
+- unrequested dimension handling;
+- missing filter with partial display;
+- numeric non-group identity projection;
+- metric subject/source selection;
+- category field/value binding.
+
+These are `REMOTE_BASELINE_DIVERGENCE`, not new time regressions. On September 30,
+the user explicitly authorized retaining these seven existing failures and
+deploying/restarting only the time repair. The release gate compares exact JUnit
+failure identities with the untouched remote baseline; any additional failure
+or collection error still blocks deployment. Independent server code and the
+paused full-result task are not overwritten. No production cutover is involved. The server
+candidate also removes a remote-only prompt example that still instructed the
+model to calculate dates, contradicting the new anchor-only time contract.
 
 Paused full-result-return work in the HTTP adapter and SQL export files is not
 included. Temporary server probes/cached diagnostics are not release artifacts.

@@ -78,13 +78,38 @@ def test_bound_amount_never_searches_values_or_changes_operator(monkeypatch, ope
     ("商品ID", "0012", "product.id"),
     ("状态", "A", "sales_order.status"),
     ("状态", False, "sales_order.status"),
-    ("规格型号", "M60 set", "product.specification"),
-    ("规格型号", "AT75242", "product.specification"),
 ])
-def test_explicit_codes_letters_models_keep_field_and_literal(field, value, physical):
+def test_explicit_codes_letters_keep_field_and_literal(field, value, physical):
     content, _ = agent._prepare_surface_literal_constraints(_detail_ast(), catalog(),
         planner_reference(extraction(field, value), None))
     assert json.loads(content)["filters"] == [{"field": physical, "operator": "=", "value": value}]
+
+
+@pytest.mark.parametrize("value", ["M60 set", "AT75242"])
+def test_model_literal_is_preserved_after_catalog_value_grounding(monkeypatch, value):
+    # STALE_TEST: specifications are catalog identity attributes, not scalar
+    # thresholds. They must pass value grounding before becoming a predicate.
+    # Keep the original final field/value assertion, but exercise both stages.
+    knowledge = catalog()
+    content, _ = agent._prepare_surface_literal_constraints(
+        _detail_ast(), knowledge, planner_reference(extraction("规格型号", value), None))
+    assert json.loads(content)["filters"] == []
+    calls = []
+
+    def resolve(model_id, scope, candidates, mention):
+        assert model_id == 81 and scope == [205]
+        assert mention == value
+        assert "product.specification" in {item["field"] for item in candidates}
+        calls.append(mention)
+        return [{"field": "product.specification", "canonical_value": value,
+                 "match_type": "EXACT"}]
+
+    monkeypatch.setattr(agent, "resolve_entity_attribute_catalog_matches", resolve)
+    content, _ = agent._apply_surface_mention_normalization(
+        content, knowledge, {"mentions": [{"text": value, "role_hint": "规格型号"}]}, 81, [205])
+    assert calls
+    assert json.loads(content)["filters"] == [
+        {"field": "product.specification", "operator": "=", "value": value}]
 
 
 @pytest.mark.parametrize("value,expected", [
