@@ -2102,8 +2102,12 @@ async def test_multi_task_extraction_is_kept_per_task_and_no_data_intent_drops_i
     assert plan.tasks[0].extraction is not None
     assert plan.tasks[0].extraction["意图"] == "明细查询"
     assert plan.tasks[0].parameters == ["医院（实体）", "百特产品（商品名称）"]
-    # 不查业务库的意图：结构化提取强制为空。
-    assert plan.tasks[1].extraction is None
+    # Remote planner retains descriptive metadata for non-query tasks. Neither
+    # representation may retain executable statistics from the model input.
+    non_query = plan.tasks[1].extraction
+    if non_query is not None:
+        assert non_query["意图"] == "解释口径"
+        assert all(non_query[key] == [] for key in ["实体", "指标", "维度", "展示字段", "过滤条件"])
     assert plan.tasks[1].parameters == []
 
 
@@ -2139,7 +2143,8 @@ async def test_multi_task_insight_is_combined_once_at_root() -> None:
         async def synthesize(self, *args, **kwargs):
             raise AssertionError("多任务拆分不应再调用单任务解读")
 
-        async def synthesize_combined(self, question, tasks, *, agent_prompt="", planning_context=None):
+        async def synthesize_combined(self, question, tasks, *, agent_prompt="", planning_context=None, semantic_model_id=None):
+            assert semantic_model_id in (None, 81)
             self.combined_questions.append(question)
             self.combined_tasks.append(list(tasks))
             assert planning_context["completed_question"] == question
@@ -2208,7 +2213,8 @@ async def test_combined_insight_failure_keeps_per_task_results() -> None:
         async def synthesize(self, *args, **kwargs):
             raise AssertionError("多任务拆分不应再调用单任务解读")
 
-        async def synthesize_combined(self, question, tasks, *, agent_prompt="", planning_context=None):
+        async def synthesize_combined(self, question, tasks, *, agent_prompt="", planning_context=None, semantic_model_id=None):
+            assert semantic_model_id in (None, 81)
             raise RuntimeError("model unavailable")
 
     settings = Settings(
