@@ -10970,11 +10970,12 @@ class DataAnalysisOrchestrator:
         # implementation hints, not valid answers for the user's requested
         # metric. Keep the clarification open-text and explain what definition
         # is needed instead of exposing those hints as selectable options.
-        for ambiguity in request.semantic_ambiguities:
-            if self._is_unmapped_derived_metric(ambiguity):
-                ambiguity.candidates = []
-                ambiguity.candidate_details = []
         previous = await self.sessions.get_pending(request.tenant_id, request.user_id, request.application_id, request.conversation_id)
+        if previous is None or request.pending_state_version is None:
+            for ambiguity in request.semantic_ambiguities:
+                if self._is_unmapped_derived_metric(ambiguity):
+                    ambiguity.candidates = []
+                    ambiguity.candidate_details = []
         asked_keys = set(previous.asked_clarification_keys) if previous is not None and request.pending_state_version else set()
         if previous is not None and asked_keys:
             asked_keys = restore_clarification_keys(previous.request, asked_keys)
