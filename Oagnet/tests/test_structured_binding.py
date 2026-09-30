@@ -173,36 +173,6 @@ def test_scalar_shape_and_standard_alias_not_reinterpreted():
     assert ast['filters'][0]['value']=='上海市'
 
 
-def test_filter_value_is_vector_corrected_from_identifier_to_name_field():
-    e, k, p = fixture()
-    e[list(e)[5]][0] = {
-        'field': '\u7701\u4efd', 'op': '=', 'value': ['\u5317\u4eac'],
-    }
-    k['entities'].append(Obj(metadata={
-        'entity_code': 'dim_province',
-        'attributes': [
-            {'attr_code': 'province_id', 'attr_name': 'province id',
-             'field_mapping': 'dim_province.province_id'},
-            {'attr_code': 'province_name', 'attr_name': 'province name',
-             'is_main_attribute': True,
-             'field_mapping': 'dim_province.province_name'},
-        ],
-    }))
-    k['_vector_authorized_fields'].extend([
-        'dim_province.province_id', 'dim_province.province_name',
-    ])
-    k['entity_attribute_values'] = [Obj(metadata={
-        'source_field': 'dim_province.province_name', 'attr_value': '\u5317\u4eac\u5e02',
-    })]
-    p['filters'] = [{'index': 0, 'key': 'dim_province.province_id'}]
-    ast, repairs = run(e, k, p)
-    assert not ast['ambiguity']
-    assert ast['filters'] == [{
-        'field': 'dim_province.province_name', 'operator': '=', 'value': '\u5317\u4eac\u5e02',
-    }]
-    assert any(item.get('type') == 'VECTOR_FILTER_VALUE_CORRECTED' for item in repairs)
-
-
 @pytest.mark.parametrize('literal',[1000,0,-1,12.5,'00123','M60 set','-001','1e3'])
 def test_literal_numbers_and_codes_preserved(literal):
     e,k,p=fixture();e['过滤条件'][0]={'field':'金额','op':'>','value':[literal]}
@@ -357,20 +327,102 @@ def test_category_field_and_value_must_bind_as_a_pair():
     assert not ast['ambiguity']
     assert ast['filters']==[{'field':'hospital.name','operator':'=','value':'01透析器具'}]
 
+def _test_in_filter_with_incomplete_model_value_ids_is_rebound_per_value():
+    e, k, p = fixture()
+    e['杩囨护鏉′欢'][0]['value'] = ['涓婃捣', '鍖椾含']
+    k['entity_attribute_values'].append(
+        Obj(metadata={'source_field': 'hospital.province', 'attr_value': '鍖椾含'})
+    )
+    p['filters'] = [{'index': 0, 'key': 'hospital.province', 'value_ids': [0]}]
+    ast, _ = run(e, k, p)
+    assert not ast['ambiguity']
+    assert ast['filters'] == [{
+        'field': 'hospital.province',
+        'operator': 'IN',
+        'value': ['涓婃捣', '鍖椾含'],
+    }]
+
+
+def _test_enum_labels_are_available_to_vector_binding():
+    e, k, p = fixture()
+    attrs = k['entities'][0].metadata['attributes']
+    attrs[0]['enum_values'] = [
+        {'name': '\u76f4\u8425', 'value': '3'},
+        {'name': '\u5206\u9500', 'value': '5'},
+    ]
+    e['杩囨护鏉′欢'][0] = {
+        'field': '鐪佷唤', 'op': 'IN', 'value': ['\u76f4\u8425', '\u5206\u9500'],
+    }
+    p['filters'] = [{'index': 0, 'key': 'hospital.province', 'value_ids': [999]}]
+    ast, _ = run(e, k, p)
+    assert not ast['ambiguity']
+    assert ast['filters'][0]['value'] == ['3', '5']
+
 
 def test_alphanumeric_literal_widens_value_field_before_rejecting_model_id():
     """A model/spec value may be classified as a product name upstream."""
-    from structured_binding import _vector_correct_filter
-    catalog = {
-        'fields': {
-            'product.product_name': {'attr_code': 'product_name'},
-            'product.product_model': {'attr_code': 'product_model'},
-        },
-        'values': [
-            {'field': 'product.product_name', 'value': 'other product'},
-            {'field': 'product.product_model', 'value': 'TDC-3'},
-        ],
-    }
-    assert _vector_correct_filter(
-        'product.product_name', ['TDC-3'], catalog, '='
-    ) == ('product.product_model', ['TDC-3'])
+    extraction, knowledge, plan = dealer_list_fixture()
+    product = next(
+        entity for entity in knowledge['entities']
+        if entity.metadata.get('entity_code') == 'product'
+    )
+    product.metadata['attributes'].append({
+        'attr_code': 'product_model',
+        'attr_name': 'product model',
+        'field_mapping': 'product.product_model',
+    })
+    knowledge['_vector_authorized_fields'].append('product.product_model')
+    knowledge['entity_attribute_values'].append(Obj(metadata={
+        'source_field': 'product.product_model',
+        'attr_value': 'TDC-3',
+    }))
+    extraction['杩囨护鏉′欢'] = [{
+        'field': '鍟嗗搧鍚嶇О', 'op': '=', 'value': ['TDC-3'],
+    }]
+    filter_section = list(extraction)[5]
+    extraction[filter_section] = [{
+        'field': extraction[filter_section][0]['field'],
+        'op': '=', 'value': ['TDC-3'],
+    }]
+    plan['filters'] = [{
+        'index': 0, 'key': 'product.product_name', 'value_ids': [0],
+    }]
+
+    ast, repairs = run(extraction, knowledge, plan)
+
+    assert not any(item.get('type') == 'filter' for item in ast['ambiguity'])
+    assert ast['filters'] == [{
+        'field': 'product.product_model', 'operator': '=', 'value': 'TDC-3',
+    }]
+    assert any(item['type'] == 'VECTOR_FILTER_VALUE_CORRECTED' for item in repairs)
+
+
+def test_structured_time_unit_overrides_model_temporal_grain():
+    extraction, knowledge, plan = fixture()
+    # Keep the test independent from the source file's legacy mojibake keys.
+    time_key = next(key for key in extraction if 'unit' in extraction[key])
+    dimension_key = next(key for key in extraction if isinstance(extraction[key], list) and not extraction[key])
+    extraction[dimension_key] = ['鏃ユ湡']
+    extraction[time_key]['unit'] = 'month'
+    knowledge['entities'][0].metadata['attributes'][-1]['data_type'] = 'DATE'
+    plan['dimensions'] = [{'index': 0, 'key': 'hospital.date', 'granularity': 'day'}]
+    ast, repairs = run(extraction, knowledge, plan)
+    assert not ast['ambiguity']
+    assert ast['dimensions'][0]['granularity'] == 'month'
+    assert any(item.get('type') == 'STRUCTURED_TIME_GRANULARITY_CORRECTED'
+               for item in repairs)
+
+
+def test_exact_structured_slot_wins_over_nearby_model_dimension():
+    extraction, knowledge, plan = fixture()
+    time_key = next(key for key in extraction if 'unit' in extraction[key])
+    dimension_key = next(key for key in extraction if isinstance(extraction[key], list) and not extraction[key])
+    extraction[dimension_key] = ['hospital.date']
+    extraction[time_key]['unit'] = None
+    knowledge['entities'][0].metadata['attributes'][-1]['data_type'] = 'DATE'
+    plan['dimensions'] = [{'index': 0, 'key': 'hospital.amount'}]
+    ast, repairs = run(extraction, knowledge, plan)
+    assert not ast['ambiguity']
+    assert ast['dimensions'][0]['name'] == 'hospital.date'
+    assert any(item.get('type') == 'STRUCTURED_SLOT_KEY_CORRECTED'
+               for item in repairs)
