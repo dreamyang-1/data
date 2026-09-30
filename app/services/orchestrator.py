@@ -3923,6 +3923,7 @@ class DataAnalysisOrchestrator:
             PrimaryIntent.TREND_ANALYSIS, PrimaryIntent.COMPARISON_ANALYSIS,
         }:
             return None
+        self._apply_explicit_projection_mode(request, chat._planner_extraction)
         request.application_id = chat.application_id
         if not supplied_request:
             request.original_question = chat.question
@@ -6211,6 +6212,11 @@ class DataAnalysisOrchestrator:
             await emit_progress(
                 "COMPLETENESS_CHECK", "COMPLETED", "执行所需的关键信息已满足。"
             )
+
+        # Task planning is the source of the user's explicit shape request.
+        # Apply it after all rule/pending/fast-path merges, because those
+        # branches may bypass _classify entirely.
+        self._apply_explicit_projection_mode(request, chat._planner_extraction)
 
         # Persist the understood task before external execution. This is the
         # short-term working memory used by follow-ups even when ASL/SQL or the
@@ -8964,17 +8970,39 @@ class DataAnalysisOrchestrator:
                 if planner_extraction.intent is not None:
                     result.primary_intent = planner_extraction.intent
                     result.intent_source = "TASK_PLANNER"
-                projection_mode = explicit_projection_mode(
-                    planner_extraction.structured
-                )
-                if projection_mode == "DISTINCT":
-                    result.assumptions.append("EXPLICIT_DISTINCT_PROJECTION")
-                elif projection_mode == "ROWS":
-                    result.assumptions.append("EXPLICIT_ROWS_PROJECTION")
+                self._apply_explicit_projection_mode(result, planner_extraction)
             self._apply_platform_metric_vocabulary(result, agent_prompt)
             timing.mark_first_result()
             timing.set_attribute("intent_source", result.intent_source)
             return result
+
+    @staticmethod
+    def _apply_explicit_projection_mode(
+        request: CanonicalAnalysisRequest,
+        planner_extraction: PlannerExtraction | None,
+    ) -> None:
+        """Carry the planner's explicit deduplication choice to SQL shaping.
+
+        The standalone/fast path can reuse a rule-classified request instead
+        of calling ``_classify``. Applying this at the execution boundary
+        keeps both paths aligned without re-parsing the user's question.
+        """
+        extraction = (
+            planner_extraction.structured
+            if planner_extraction is not None
+            else None
+        )
+        projection_mode = explicit_projection_mode(extraction)
+        if projection_mode == "DISTINCT":
+            request.assumptions = list(dict.fromkeys([
+                *request.assumptions,
+                "EXPLICIT_DISTINCT_PROJECTION",
+            ]))
+        elif projection_mode == "ROWS":
+            request.assumptions = list(dict.fromkeys([
+                *request.assumptions,
+                "EXPLICIT_ROWS_PROJECTION",
+            ]))
 
     @staticmethod
     def _platform_metric_aliases(agent_prompt: str) -> dict[str, str]:

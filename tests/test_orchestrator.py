@@ -21,6 +21,7 @@ from app.domain.models import (
     KnowledgeContext,
     MetricRef,
     PendingState,
+    PlannerExtraction,
     PrimaryIntent,
     ReliabilityReport,
     SemanticAmbiguity,
@@ -41,6 +42,23 @@ from app.stores.long_memory import (
     MemoryScope,
     MemoryType,
 )
+
+
+def test_planner_deduplication_survives_rule_classified_execution_path():
+    request = CanonicalAnalysisRequest(
+        conversation_id="dedup-boundary",
+        tenant_id="t1",
+        user_id="u1",
+        original_question="query",
+        primary_intent=PrimaryIntent.DETAIL_QUERY,
+    )
+    extraction = PlannerExtraction(
+        structured={"\u662f\u5426\u53bb\u91cd": "\u662f"},
+    )
+
+    DataAnalysisOrchestrator._apply_explicit_projection_mode(request, extraction)
+
+    assert "EXPLICIT_DISTINCT_PROJECTION" in request.assumptions
 
 
 def service() -> DataAnalysisOrchestrator:
