@@ -1961,6 +1961,8 @@ class SQLTranslatorProd:
                         if '.' in side:
                             join_tables.add(side.split('.')[0].strip())
                     if table_name in join_tables and table_name != from_base:
+                        if not join_tables.issubset(existing_tables | {table_name}):
+                            continue
                         join_segment = f"LEFT JOIN {table_name} ON {join_key}"
                         if table_name not in existing_tables:
                             return join_segment
@@ -2729,7 +2731,8 @@ class SQLTranslatorProd:
                 else:
                     join_segments = self._build_join_segments(
                         join_key, current_base_table,
-                        target_table, next_ent, model_id
+                        target_table, next_ent, model_id,
+                        source_entity=current,
                     )
                 if not join_segments:
                     continue
@@ -2766,14 +2769,16 @@ class SQLTranslatorProd:
             for side in re.split(r'=', join_key)
             if '.' in side.strip()
         }
-        # Direct source-target relationship: the same equality is symmetric.
-        if current_base_table in join_tables:
-            return [f"LEFT JOIN {source_table} ON {join_key}"]
         bridge_table = next(
-            (table for table in join_tables if table and table != source_table),
+            (
+                table for table in join_tables
+                if table and table not in {current_base_table, source_table}
+            ),
             None,
         )
         if not bridge_table:
+            if current_base_table in join_tables:
+                return [f"LEFT JOIN {source_table} ON {join_key}"]
             return None
         current = self._get_entity(current_entity, model_id)
         if not current:
@@ -2792,6 +2797,23 @@ class SQLTranslatorProd:
             return [
                 f"LEFT JOIN {bridge_table} ON {target_join}",
                 f"LEFT JOIN {source_table} ON {join_key}",
+            ]
+        source_entity = self._find_entity_by_table_name(source_table, model_id)
+        source = self._get_entity(source_entity, model_id) if source_entity else None
+        for mapping in (source or {}).get('sub_table_mappings', []) or []:
+            if mapping.get('sub_table_name') != bridge_table:
+                continue
+            main_column = str(mapping.get('main_join_column') or '')
+            sub_column = str(mapping.get('sub_join_column') or '')
+            if not main_column or not sub_column:
+                continue
+            source_join = (
+                f"{source_table}.{main_column} = "
+                f"{bridge_table}.{sub_column}"
+            )
+            return [
+                f"LEFT JOIN {bridge_table} ON {join_key}",
+                f"LEFT JOIN {source_table} ON {source_join}",
             ]
         inference = getattr(self.catalog, 'infer_unique_bridge_endpoint', None)
         if callable(inference) and model_id:
@@ -2835,7 +2857,9 @@ class SQLTranslatorProd:
         return None
 
     def _build_join_segments(self, join_key: str, current_base_table: str,
-                             target_table: str, target_entity: str, model_id: Optional[str] = None) -> Optional[list]:
+                             target_table: str, target_entity: str,
+                             model_id: Optional[str] = None,
+                             source_entity: Optional[str] = None) -> Optional[list]:
         """
         构建本跳 JOIN 片段列表。
 
@@ -2855,11 +2879,42 @@ class SQLTranslatorProd:
                 join_tables.add(side.split('.')[0].strip())
 
         # case 1: join_key 直接关联到目标表，单段 JOIN
-        if target_table in join_tables or not join_tables:
+        bridge_table = next(
+            (
+                table for table in join_tables
+                if table and table not in {current_base_table, target_table}
+            ),
+            None,
+        )
+        if bridge_table and source_entity:
+            source_ent = self._get_entity(source_entity, model_id)
+            for sub in (source_ent or {}).get('sub_table_mappings', []) or []:
+                if sub.get('sub_table_name') != bridge_table:
+                    continue
+                main_col = str(sub.get('main_join_column') or '')
+                sub_col = str(sub.get('sub_join_column') or '')
+                if not main_col or not sub_col:
+                    continue
+                first_join = (
+                    f"{current_base_table}.{main_col} = "
+                    f"{bridge_table}.{sub_col}"
+                )
+                return [
+                    f"LEFT JOIN {bridge_table} ON {first_join}",
+                    f"LEFT JOIN {target_table} ON {join_key}",
+                ]
+
+        if not bridge_table and (target_table in join_tables or not join_tables):
             return [f"LEFT JOIN {target_table} ON {join_key}"]
 
         # case 2: join_key 引用的是中间表，需要从子表映射补全第二段
-        bridge_table = next((t for t in join_tables if t and t != current_base_table), None)
+        bridge_table = next(
+            (
+                t for t in join_tables
+                if t and t not in {current_base_table, target_table}
+            ),
+            None,
+        )
         if not bridge_table:
             return None
         target_ent = self._get_entity(target_entity, model_id)

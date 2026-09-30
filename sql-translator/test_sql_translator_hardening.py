@@ -1183,6 +1183,76 @@ class TranslatorHardeningTests(unittest.TestCase):
         )
         self.assertNotIn("dealer", joins)
 
+    def test_source_subtable_m2m_relation_expands_to_two_joins(self):
+        value = translator()
+        value.loader.entities = {
+            "dealer": {
+                "entity_code": "dealer",
+                "physical_table_join": {"base_table": "dealer"},
+                "attributes": [],
+                "relations": [{
+                    "target_entity": "product",
+                    "join_key": (
+                        "dealer_product_relation.product_code = "
+                        "product.product_code"
+                    ),
+                }],
+                "sub_table_mappings": [{
+                    "sub_table_name": "dealer_product_relation",
+                    "main_join_column": "dealer_code",
+                    "sub_join_column": "dealer_code",
+                }],
+            },
+            "product": {
+                "entity_code": "product",
+                "physical_table_join": {"base_table": "product"},
+                "attributes": [],
+                "relations": [],
+                "sub_table_mappings": [],
+            },
+        }
+
+        joins = value._find_join_path("dealer", "product", "113")
+
+        self.assertEqual(
+            "LEFT JOIN dealer_product_relation ON "
+            "dealer.dealer_code = dealer_product_relation.dealer_code "
+            "LEFT JOIN product ON "
+            "dealer_product_relation.product_code = product.product_code",
+            joins,
+        )
+
+    def test_bridge_qualified_relation_without_mapping_fails_closed(self):
+        value = translator()
+        value.loader.entities = {
+            "dealer": {
+                "entity_code": "dealer",
+                "physical_table_join": {"base_table": "dealer"},
+                "attributes": [],
+                "relations": [{
+                    "target_entity": "product",
+                    "join_key": (
+                        "dealer_product_relation.product_code = "
+                        "product.product_code"
+                    ),
+                }],
+                "sub_table_mappings": [],
+            },
+            "product": {
+                "entity_code": "product",
+                "physical_table_join": {"base_table": "product"},
+                "attributes": [],
+                "relations": [],
+                "sub_table_mappings": [],
+            },
+        }
+
+        joins = value._find_join_to_table(
+            "dealer", "product", {"dealer"}, "113"
+        )
+
+        self.assertIsNone(joins)
+
     def test_region_filter_extends_the_grouped_city_hierarchy(self):
         value = translator()
         value.loader.entities = {
