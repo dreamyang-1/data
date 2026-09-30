@@ -1274,6 +1274,46 @@ async def test_dependency_failure_skips_downstream_but_preserves_sibling() -> No
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("failure_status", ["EXCEPTION", "SAFE_FALLBACK", "NEEDS_CLARIFICATION"])
+async def test_all_failed_dag_returns_reason_without_insight_template(failure_status) -> None:
+    from unittest.mock import AsyncMock
+    from app.services.progress import progress_scope
+
+    settings = Settings(_env_file=None, env="test", multi_question_model_enabled=False)
+    synthesis = SimpleNamespace(synthesize_combined=AsyncMock())
+    service = _StubOrchestrator(
+        settings=settings, classifier=_Classifier(), adapters=build_mock_adapters(),
+        sessions=InMemorySessionStore(7200, 7200), task_planner=MultiQuestionPlanner(settings),
+        analysis_synthesizer=synthesis,
+    )
+
+    async def unsuccessful(chat, identity):
+        if failure_status == "EXCEPTION":
+            raise RuntimeError("test failure")
+        return AgentResponse(request_id=uuid4(), conversation_id=chat.conversation_id,
+            status=failure_status, intent=PrimaryIntent.METRIC_QUERY,
+            answer="数据服务不可用" if failure_status == "SAFE_FALLBACK" else "请补充合作时长的计算口径",
+            clarification_questions=["请补充合作时长的计算口径"] if failure_status == "NEEDS_CLARIFICATION" else [])
+
+    service._handle = unsuccessful
+    plan = TaskPlan(planner="DETERMINISTIC_RULE", tasks=[
+        AtomicTask(task_id="source", question="查询各经销商合作时长"),
+        AtomicTask(task_id="derived", question="根据结果筛选名单", depends_on=["source"]),
+    ])
+    events = []
+    with progress_scope(events.append):
+        response = await service._handle_task_plan(
+            ChatRequest(semantic_model_id=81, conversation_id="failed-dag", message_id="m1",
+                        question="列出合作时长大于3个月的经销商名单", application_id="app"),
+            TrustedIdentity(tenant_id="t", user_id="u"), plan)
+    assert response.task_results[1].status == "SKIPPED"
+    assert response.answer
+    assert all(text not in response.answer for text in ["概况总结", "关键发现", "业务提示", "见上表", "依赖任务尚未完成"])
+    synthesis.synthesize_combined.assert_not_awaited()
+    assert not any(event["stage"] == "INSIGHT_ANALYSIS" for event in events)
+
+
+@pytest.mark.asyncio
 async def test_dependent_new_entity_query_inherits_bounded_upstream_dimension_values() -> None:
     settings = Settings(env="test", multi_question_model_enabled=False)
     sessions = InMemorySessionStore(7200, 7200)

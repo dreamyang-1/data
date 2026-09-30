@@ -64,43 +64,35 @@ def render_root_report(
     final = final or {}
     available = [item for item in materials if item["status"] in {"COMPLETED", "PARTIAL_SUCCESS"}]
     if not available:
-        clarification_items = [
-            item for item in materials if item["status"] == "NEEDS_CLARIFICATION"
+        # No completed output: all terminal failure kinds bypass insight
+        # templates, including stale optional model-generated final metadata.
+        # Hide only dependent SKIPPED noise; independent failures remain visible.
+        task_ids = {item["task_id"] for item in materials}
+        actionable = [
+            item for item in materials
+            if not (item["status"] == "SKIPPED" and task_ids.intersection(item.get("depends_on", [])))
         ]
-        if clarification_items:
-            # No query result exists yet, so an insight/report template would
-            # produce empty sections such as "no findings" and "no data".
-            # Return the actionable clarification itself and omit dependent
-            # skipped tasks, which add no new information for the user.
-            clarification_texts: list[str] = []
-            for item in clarification_items:
-                text = str(item.get("summary") or "").strip()
-                if not text:
-                    text = "\n".join(
-                        str(value).strip()
-                        for value in item.get("missing_information", [])
-                        if str(value).strip()
-                    )
-                if not text:
-                    text = "该任务还需要补充信息后才能继续查询。"
-                if len(clarification_items) > 1:
-                    text = f"{item.get('question') or '需要补充的信息'}：\n{text}"
-                clarification_texts.append(text)
-
-            # Keep unrelated hard failures visible without reintroducing the
-            # generic insight template or downstream dependency noise.
-            clarification_ids = {item["task_id"] for item in clarification_items}
-            for item in materials:
-                if item["status"] not in {"FAILED", "SAFE_FALLBACK"}:
-                    continue
-                if clarification_ids.intersection(item.get("depends_on", [])):
-                    continue
-                failure = str(item.get("summary") or "该任务未能完成。").strip()
-                if failure:
-                    clarification_texts.append(
-                        f"{item.get('question') or '其他任务'}：{failure}"
-                    )
-            return "\n\n".join(clarification_texts), []
+        if not actionable:
+            actionable = materials
+        messages: list[str] = []
+        for item in actionable:
+            text = str(item.get("summary") or "").strip()
+            if not text:
+                text = "\n".join(
+                    str(value).strip()
+                    for value in item.get("missing_information", [])
+                    if str(value).strip()
+                )
+            if not text:
+                text = (
+                    "该任务还需要补充信息后才能继续查询。"
+                    if item["status"] == "NEEDS_CLARIFICATION"
+                    else "该任务未能完成，暂未提供具体原因，请重试或联系管理员查看执行日志。"
+                )
+            if len(actionable) > 1:
+                text = f"{item.get('question') or '未完成的任务'}：\n{text}"
+            messages.append(text)
+        return "\n\n".join(dict.fromkeys(messages)) or "本次任务未执行成功，尚未获得查询结果，请重试或联系管理员查看执行日志。", []
 
     available_ids = {item["task_id"] for item in available}
     requested = final.get("result_task_ids") or []

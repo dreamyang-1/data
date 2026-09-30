@@ -90,6 +90,35 @@ def test_clarification_without_any_query_results_returns_only_actionable_explana
     assert "本次尚未获得可用于回答问题的数据" not in answer
 
 
+@pytest.mark.parametrize("status", ["NEEDS_CLARIFICATION", "FAILED", "SAFE_FALLBACK", "REJECTED", "CANCELLED", "SKIPPED"])
+@pytest.mark.parametrize("final", [None, {"overview": "不应显示的总结", "findings": ["不应显示的发现"]}])
+def test_all_unsuccessful_statuses_bypass_report_template(status, final):
+    items = [{"task_id": "source", "question": "查询合作时长", "status": status,
+              "summary": "无法完成：具体原因。", "depends_on": []},
+             {"task_id": "next", "question": "筛选名单", "status": "SKIPPED",
+              "summary": "依赖任务未完成", "depends_on": ["source"]}]
+    answer, selected = render_root_report("完整问题", items, final)
+    assert answer == "无法完成：具体原因。"
+    assert selected == []
+
+
+def test_missing_failure_text_and_empty_plan_never_produce_insights():
+    for items in [[], [{"task_id": "a", "status": "FAILED"}],
+                  [{"task_id": "a", "status": "NEEDS_CLARIFICATION", "missing_information": ["请补充计算口径"]}]]:
+        answer, selected = render_root_report("问题", items, None)
+        assert answer and not selected
+        assert all(title not in answer for title in ["概况总结", "关键发现", "业务提示", "见上表"])
+    assert "请补充计算口径" in answer
+
+
+def test_independent_failures_and_skipped_reason_remain_visible():
+    items = [{"task_id": "a", "question": "查甲", "status": "FAILED", "summary": "连接超时"},
+             {"task_id": "b", "question": "查乙", "status": "SKIPPED", "summary": "任务取消"}]
+    answer, selected = render_root_report("问题", items, None)
+    assert "连接超时" in answer and "任务取消" in answer
+    assert not selected and "概况总结" not in answer
+
+
 def test_cached_and_empty_branches_are_not_omitted_from_model_material():
     plan = TaskPlan(planner="STRUCTURED_MODEL", analyze_summary="先查两项指标。", tasks=[
         AtomicTask(task_id="a", question="查询甲项", extraction={"指标": [{"name": "甲项"}]}),
