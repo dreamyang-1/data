@@ -127,7 +127,7 @@ class SplitAPIContractTests(unittest.TestCase):
         self.assertNotIn("GROUP BY", sql)
         self.assertTrue(sql.endswith("LIMIT 10000"))
 
-    def test_large_result_keeps_first_twenty_rows_with_download_url(self):
+    def test_large_result_keeps_full_rows_with_download_url(self):
         class FakeExporter:
             @staticmethod
             def export_to_excel(columns, data):
@@ -142,9 +142,9 @@ class SplitAPIContractTests(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertEqual(205, result["row_count"])
         self.assertEqual(["value"], result["columns"])
-        self.assertEqual(rows[:20], result["data"])
-        self.assertEqual(20, result["preview_count"])
-        self.assertTrue(result["preview_truncated"])
+        self.assertEqual(rows, result["data"])
+        self.assertEqual(205, result["preview_count"])
+        self.assertFalse(result["preview_truncated"])
         self.assertEqual("http://files.example/result.xlsx", result["download_url"])
 
 

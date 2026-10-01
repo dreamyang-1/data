@@ -7,6 +7,26 @@ from app.analysis.interpretation import AnswerPlan
 from app.domain.models import AgentResponse, TaskExecutionResult, TaskPlan
 
 
+def preview_result_tables(text: str) -> str:
+    """Limit rendered table bodies only; never slice execution/model datasets."""
+    lines, table, output = text.splitlines(), [], []
+    def flush():
+        if not table:
+            return
+        output.extend(table[:22])  # header, separator, twenty data rows
+        if len(table) > 22:
+            output.extend(["", f"> 本表共 {len(table) - 2} 行，当前仅展示前 20 行；完整结果及下载状态见附件说明。", ""])
+        table.clear()
+    for line in lines:
+        if line.lstrip().startswith("|"):
+            table.append(line)
+        else:
+            flush()
+            output.append(line)
+    flush()
+    return "\n".join(output)
+
+
 def result_table_title(material: dict[str, Any], titles: Any) -> str:
     """Use root-question deliverable wording, never generate titles from cells.
 
@@ -120,7 +140,7 @@ def render_root_report(
                 notes.append(f"“{item['question']}”仅提供{query.get('returned_row_count', '部分')}条预览，不能作为全量统计。")
     for item in selected:
         presentation = item.get("presentation") or {}
-        table = str(presentation.get("table") or "").strip()
+        table = preview_result_tables(str(presentation.get("table") or "").strip())
         if table:
             tables.append((f"**{result_table_title(item, final.get('result_titles'))}**\n\n" if len(selected) > 1 else "") + table)
         elif item.get("summary"):

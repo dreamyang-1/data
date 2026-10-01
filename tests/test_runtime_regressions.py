@@ -103,7 +103,7 @@ def test_result_table_keeps_only_available_identifier_column() -> None:
     assert "LINE-01" in answer
 
 
-def test_metric_table_displays_all_138_untruncated_rows() -> None:
+def test_metric_table_previews_twenty_of_138_complete_rows() -> None:
     request = request_for(
         "统计每家医院承接的订单总金额（含税）及订单笔数，并关联医院等级"
     )
@@ -126,12 +126,13 @@ def test_metric_table_displays_all_138_untruncated_rows() -> None:
 
     assert "共 138 行" in answer
     assert "测试医院001" in answer
-    assert "测试医院138" in answer
-    assert answer.count("| 测试医院") == 138
-    assert "当前展示前" not in answer
+    assert "测试医院138" not in answer
+    assert answer.count("| 测试医院") == 20
+    assert "当前仅展示前 20 行" in answer
+    assert len(rows) == 138
 
 
-def test_complete_217_row_product_list_is_not_silently_presented_as_preview() -> None:
+def test_complete_217_row_product_list_discloses_twenty_row_presentation() -> None:
     request = request_for("查询国药集团上海医疗器械有限公司销售的产品有哪些")
     request.entity = "商品"
     request.fields = ["商品名称"]
@@ -146,9 +147,10 @@ def test_complete_217_row_product_list_is_not_silently_presented_as_preview() ->
 
     assert "共查询到 217 条明细" in answer
     assert "产品001" in answer
-    assert "产品217" in answer
-    assert answer.count("| 产品") == 217
-    assert "当前展示前" not in answer
+    assert "产品217" not in answer
+    assert answer.count("| 产品") == 20
+    assert "当前仅展示前 20 条" in answer
+    assert len(rows) == 217
 
 
 def test_relationship_projection_preserves_duplicate_sql_rows() -> None:
@@ -189,7 +191,8 @@ def test_implicit_product_dealer_list_preserves_repeated_fact_paths() -> None:
     )
 
     assert "共查询到 196 条明细" in answer
-    assert answer.count("| 上海德昶实业有限公司 |") == 196
+    assert answer.count("| 上海德昶实业有限公司 |") == 20
+    assert len(rows) == 196
     assert "唯一组合" not in answer
 
 

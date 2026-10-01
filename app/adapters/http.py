@@ -2654,15 +2654,6 @@ class HttpDataRetrievalAdapter:
             )
         result_file_url = self._result_file_url(raw)
         export_error = self._result_export_error(raw)
-        if export_error and not result_file_url and isinstance(raw.get("data"), list):
-            # Compatibility with older SQL servers returning the entire result
-            # on export failure. Preserve the total, not the oversized payload.
-            raw = {
-                **raw,
-                "data": raw["data"][:20],
-                "preview_count": min(len(raw["data"]), 20),
-                "preview_truncated": True,
-            }
         dataset = self._dataset(
             raw,
             request_id=str(request.request_id),
@@ -4663,8 +4654,7 @@ class HttpDataRetrievalAdapter:
         uses_preview = (
             ("data" not in data and "preview_data" in data)
             or (
-                has_result_file
-                and isinstance(rows_from_data, list)
+                isinstance(rows_from_data, list)
                 and isinstance(data.get("row_count"), int)
                 and data["row_count"] > len(rows_from_data)
             )

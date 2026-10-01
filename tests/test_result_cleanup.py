@@ -27,7 +27,8 @@ def test_duplicate_and_missing_names_cleaned_without_mutating_source():
     assert cleaned.dataset.total_row_count == cleaned.dataset.row_count == 3
     assert cleaned.dataset.snapshot_id != original.dataset.snapshot_id
     assert original.model_dump() == before
-    assert "去除 2 行完全重复记录、4 行空名称" in cleanup_message(cleaned)
+    assert cleaned.execution_transforms[-1]["duplicate_rows_removed"] == 2
+    assert cleaned.execution_transforms[-1]["invalid_rows_removed"] == 4
     assert clean_name_list(PrimaryIntent.DETAIL_QUERY, cleaned) is cleaned
 
 
@@ -72,8 +73,9 @@ def test_incomplete_result_keeps_raw_file_and_does_not_claim_global_distinct_tot
     assert cleaned.dataset.total_row_count == cleaned.dataset.row_count == 1
     assert cleaned.execution_transforms[-1]["source_total_row_count"] == 100
     assert cleaned.result_file_url == original.result_file_url
-    assert "全量去重后数量未知" in cleanup_message(cleaned)
-    assert "附件是上游原始完整结果" in cleanup_message(cleaned)
+    assert cleaned.execution_transforms[-1]["source_truncated"] is True
+    assert "不是完整名单" in name_list_result_summary(cleaned)
+    assert "上游原始结果" in name_list_result_summary(cleaned)
 
 
 def test_complete_cleaned_list_does_not_offer_raw_export():
@@ -98,10 +100,10 @@ async def test_cleanup_in_real_completion_path_persistence_evidence_and_progress
     with progress_scope(events.append):
         response = await orchestrator._handle(chat, TrustedIdentity(tenant_id="t", user_id="u"))
     assert response.status == "COMPLETED"
-    # Product change: final answer summarizes results; technical cleanup stays in progress.
+    # Cleanup accounting is structured evidence, not a required display sentence.
     assert "名单清理" not in response.answer
     assert "完全重复记录" not in response.answer
-    assert any("名单清理" in e.get("message", "") for e in events if e["stage"] == "DATA_RETRIEVAL")
+    assert any(e["stage"] == "DATA_RETRIEVAL" for e in events)
     proof = next(item for item in response.evidence if item.kind == "RESULT_CLEANUP")
     assert proof.payload["invalid_rows_removed"] == 2
     if values[0]:
@@ -159,4 +161,5 @@ def test_summary_counts_only_visible_records_and_preserves_source(partial, value
     assert "去除" not in summary and "去重" not in summary and "100" not in summary
     assert "家" not in summary  # rows do not prove a count of distinct entities
     assert cleaned.model_dump() == before
-    assert "名单清理" in cleanup_message(cleaned)
+    assert cleaned.execution_transforms[-1]["type"] == "NAME_LIST_CLEANUP"
+    assert cleaned.execution_transforms[-1]["returned_row_count"] == len(cleaned.dataset.rows)

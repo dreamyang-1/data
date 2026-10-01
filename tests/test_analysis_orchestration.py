@@ -358,7 +358,7 @@ async def test_detail_limit_with_stale_ranking_operator_keeps_rows_and_stage_ord
 
 
 @pytest.mark.asyncio
-async def test_oversized_result_without_attachment_returns_bounded_preview():
+async def test_complete_oversized_result_only_limits_final_table():
     orchestrator = service()
     orchestrator.settings.data_query_max_rows = 50
     request = CanonicalAnalysisRequest(
@@ -378,9 +378,11 @@ async def test_oversized_result_without_attachment_returns_bounded_preview():
                     message_id="m1", question=request.original_question, semantic_model_id=1),
         TrustedIdentity(tenant_id="t1", user_id="u1"), request, result,
     )
-    assert response.status == "PARTIAL_SUCCESS"
+    assert response.status == "COMPLETED"
     assert "ORDER-19" in response.answer and "ORDER-20" not in response.answer
-    assert "60" in response.answer and "预览" in response.answer
+    assert "60" in response.answer and "前 20 条" in response.answer
+    query = next(item.payload for item in response.evidence if item.kind == "QUERY_RESULT")
+    assert query["returned_row_count"] == 60 and not query["truncated"]
     assert response.dataset_id is None
     assert not response.requirements
 

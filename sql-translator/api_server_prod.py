@@ -5,7 +5,7 @@ SQL翻译器 HTTP API 服务（生产版）
 
 接口列表：
   1. POST /api/translate   - 仅翻译ASL为SQL，不执行
-  2. POST /api/execute     - 执行SQL并返回结果（>200条自动导出Excel到MinIO）
+  2. POST /api/execute     - 执行SQL并返回完整结果（>20条同时导出Excel到MinIO）
   3. POST /api/ast-to-sql  - 完整流程（翻译+执行），保持向后兼容
   4. POST /api/cache/refresh - 刷新DSL缓存
   5. GET  /api/health      - 健康检查
@@ -429,12 +429,12 @@ class APIHandler(BaseHTTPRequestHandler):
 
     def _handle_execute(self):
         """
-        SQL执行接口：执行SQL -> 返回结果（>200条自动导出Excel到MinIO，同时预览前20条）
+        SQL执行接口：执行SQL -> 返回完整结果，超过20条同时导出Excel到MinIO
 
         入参格式：{"sql": "SELECT ...", "modelId": "<模型ID>", "dataSourceId": "<数据源ID>"}
         返回：
-          - 数据<=200条：{"success": true, "data": [...], "columns": [...], "row_count": N}
-          - 数据>200条：{"success": true, "data": [前20条], "columns": [...], "download_url": "http://...xlsx", "row_count": N, "message": "..."}
+          - data 始终包含全部查询结果；download_url 指向同一份处理后的数据。
+          - 页面20条预览由调用方最终展示阶段处理。
         """
         try:
             wrapper, body, err = _read_request_body(self)
@@ -488,24 +488,33 @@ class APIHandler(BaseHTTPRequestHandler):
 
             if result['success']:
                 if analysis_contract is not None:
-                    # ``row_count`` is the complete SQL result size. For a
-                    # download response ``data`` intentionally contains only
-                    # the first 20 rows, so normalization must not overwrite
-                    # the total with the preview length.
+                    # Normalize all returned rows and regenerate any attachment
+                    # when normalization changes them, so data and file agree.
                     total_row_count = result.get('row_count')
-                    columns, rows, normalization = normalize_result(
-                        analysis_contract,
-                        result.get('columns'),
-                        result.get('data'),
-                    )
+                    source_rows = result.get('data') or []
+                    if (result.get('preview_truncated') or result.get('truncated')
+                            or isinstance(total_row_count, int) and total_row_count > len(source_rows)):
+                        columns, rows = result.get('columns'), source_rows
+                        normalization = {'applied': False, 'producer': 'SQL_TRANSLATOR',
+                                         'reason': 'incomplete_source_result'}
+                    else:
+                        columns, rows, normalization = normalize_result(
+                            analysis_contract, result.get('columns'), source_rows,
+                        )
                     result['columns'] = columns
                     result['data'] = rows
-                    result['row_count'] = (
-                        total_row_count
-                        if result.get('download_url') and total_row_count is not None
-                        else len(rows)
-                    )
-                    if result.get('download_url'):
+                    if normalization.get('applied'):
+                        from data_exporter import format_query_result
+                        refreshed = format_query_result(
+                            columns, rows, len(rows), sql,
+                            force_export=bool(result.get('download_url')),
+                        )
+                        for key in ('export_error', 'preview_count', 'preview_truncated'):
+                            result.pop(key, None)
+                        result.update(refreshed)
+                        total_row_count = len(rows)
+                    result['row_count'] = total_row_count if total_row_count is not None else len(rows)
+                    if 'preview_count' in result or result.get('download_url'):
                         result['preview_count'] = len(rows)
                         result['preview_truncated'] = result['row_count'] > len(rows)
                     result['analysis_normalization'] = normalization

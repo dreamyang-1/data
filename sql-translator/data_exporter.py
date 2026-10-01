@@ -37,8 +37,7 @@ MINIO_PUBLIC_BASE = (
 ).rstrip("/") + f"/{MINIO_CONFIG['bucket_name']}"
 
 # 大数据量阈值（超过此条数导出为Excel）
-EXPORT_THRESHOLD = 200
-DOWNLOAD_PREVIEW_ROWS = 20
+EXPORT_THRESHOLD = 20
 logger = logging.getLogger(__name__)
 
 
@@ -167,9 +166,9 @@ def get_exporter() -> DataExporter:
 
 
 def format_query_result(columns: List[str], data: List[Dict[str, Any]], 
-                       row_count: int, sql: str = None) -> Dict[str, Any]:
+                       row_count: int, sql: str = None, *, force_export: bool = False) -> Dict[str, Any]:
     """
-    格式化查询结果，根据数据量决定直接返回JSON还是导出Excel
+    返回完整查询数据，超过页面展示行数时同时导出同一份数据。
 
     Args:
         columns: 列名列表
@@ -183,7 +182,7 @@ def format_query_result(columns: List[str], data: List[Dict[str, Any]],
             "sql": "...",
             "row_count": N,
             "columns": [...],
-            "data": [...],           # 数据量小时返回
+            "data": [...],           # 完整结果，不在服务间截断
             "download_url": "..."     # 数据量大时返回（Excel下载链接）
         }
     """
@@ -193,14 +192,15 @@ def format_query_result(columns: List[str], data: List[Dict[str, Any]],
         "row_count": row_count,
     }
 
-    if row_count > EXPORT_THRESHOLD:
-        # A failed attachment must not turn a bounded preview into a full payload.
+    if row_count > EXPORT_THRESHOLD or force_export:
+        # Analysis and dependent tasks consume all rows. Only the final UI
+        # may select a preview; the attachment uses exactly this dataset.
         result.update(
             columns=columns,
-            data=data[:DOWNLOAD_PREVIEW_ROWS],
+            data=data,
             download_url=None,
-            preview_count=min(len(data), DOWNLOAD_PREVIEW_ROWS),
-            preview_truncated=row_count > min(len(data), DOWNLOAD_PREVIEW_ROWS),
+            preview_count=len(data),
+            preview_truncated=row_count > len(data),
         )
         # 数据量大，导出Excel
         try:
@@ -208,9 +208,8 @@ def format_query_result(columns: List[str], data: List[Dict[str, Any]],
             download_url = exporter.export_to_excel(columns, data)
             result["download_url"] = download_url
             result["message"] = (
-                f"数据量({row_count}条)超过{EXPORT_THRESHOLD}条，已导出为Excel；"
-                f"data字段返回前{len(result['data'])}条预览，"
-                "完整结果请通过download_url下载"
+                f"已返回{len(data)}条查询结果，并导出同一份数据为Excel；"
+                "最终页面仅展示前20条，完整结果可通过download_url下载"
             )
         except Exception as e:
             # Do not expose raw SDK errors (URLs, credentials or record values).
@@ -228,7 +227,7 @@ def format_query_result(columns: List[str], data: List[Dict[str, Any]],
             )
             result["export_error"] = f"完整附件导出失败：{reason}。"
             result["message"] = (
-                f"查询成功，共{row_count}条；仅返回前{len(result['data'])}条预览。"
+                f"查询成功，已返回{len(data)}条数据，附件导出失败不影响数据分析。"
                 + result["export_error"]
             )
     else:

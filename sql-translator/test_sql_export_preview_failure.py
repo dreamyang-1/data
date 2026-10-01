@@ -6,7 +6,7 @@ from minio.error import S3Error
 from data_exporter import format_query_result
 
 
-@pytest.mark.parametrize("count", [0, 20, 200])
+@pytest.mark.parametrize("count", [0, 1, 20])
 def test_small_results_do_not_export(count):
     rows = [{"value": n} for n in range(count)]
     with patch("data_exporter.get_exporter") as exporter:
@@ -17,9 +17,9 @@ def test_small_results_do_not_export(count):
     assert "export_error" not in result
 
 
-@pytest.mark.parametrize("count", [201, 1523])
+@pytest.mark.parametrize("count", [21, 200, 201, 2154])
 @pytest.mark.parametrize("fails", [False, True])
-def test_large_results_always_return_twenty_but_export_all(count, fails):
+def test_large_results_return_and_export_the_same_full_dataset(count, fails):
     rows = [{"value": n} for n in range(count)]
     exporter = Mock()
     exporter.export_to_excel.return_value = "https://files.example/result.xlsx"
@@ -30,9 +30,9 @@ def test_large_results_always_return_twenty_but_export_all(count, fails):
     exporter.export_to_excel.assert_called_once_with(["value"], rows)
     assert result["success"] is True
     assert result["row_count"] == count
-    assert result["data"] == rows[:20]
-    assert result["preview_count"] == 20
-    assert result["preview_truncated"] is True
+    assert result["data"] == rows
+    assert result["preview_count"] == count
+    assert result["preview_truncated"] is False
     assert "private-secret-record" not in str(result)
     if fails:
         assert result["download_url"] is None
@@ -42,13 +42,13 @@ def test_large_results_always_return_twenty_but_export_all(count, fails):
         assert "export_error" not in result
 
 
-def test_exporter_initialization_failure_preserves_preview_and_safe_cause(caplog):
+def test_exporter_initialization_failure_preserves_all_data_and_safe_cause(caplog):
     error = S3Error(response=None, code="AccessDenied", message="private-secret",
                     resource="private-resource", request_id="r", host_id="h")
     rows = [{"value": n} for n in range(1523)]
     with patch("data_exporter.get_exporter", side_effect=error):
         result = format_query_result(["value"], rows, len(rows))
-    assert len(result["data"]) == 20
+    assert result["data"] == rows
     assert "AccessDenied" in result["export_error"]
     assert "private-secret" not in str(result) + caplog.text
     assert "storage_access_denied=True" in caplog.text

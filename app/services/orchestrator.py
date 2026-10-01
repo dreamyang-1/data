@@ -82,10 +82,10 @@ from app.services.semantic_decision import (
     semantic_decision_with_v1_fallback,
 )
 from app.services.legacy_guards import pending_answer_admissibility, extract_quoted_choice_candidate, apply_snapshot_display_default, apply_region_clear_barrier
-from app.services.relationship_projection import explicit_projection_mode
 from app.services.history_compaction import compact_history
 from app.services.working_memory import recalls_prior_task, requires_prior_task_resolution, select_recalled_task_frame
 from app.services.extension_dispatcher import ExtensionDispatcher
+from app.services.relationship_projection import explicit_projection_mode
 from app.services.mcp_file_analysis import (
     McpFileAnalysisRunner,
     pick_primary_artifact,
@@ -103,7 +103,7 @@ from app.presentation import (
     render_intent_recognition_display_v2,
     render_reliability_validation,
 )
-from app.presentation.root_report import collect_root_materials, render_root_report
+from app.presentation.root_report import collect_root_materials, render_root_report, preview_result_tables
 from app.skills import DynamicSkillLoader, skill_for_intent
 from minio_followup_store import (
     DatasetScope,
@@ -2394,7 +2394,7 @@ class DataAnalysisOrchestrator:
                 "chart": "",
                 "notes": ([f"计算结果共 {reference.row_count} 行，当前展示前20行。"] if reference.row_count > 20 else []),
             },
-            "facts": QwenAnalysisSynthesizer._bounded({
+            "facts": {**QwenAnalysisSynthesizer._bounded({
                 "computation": {
                     "operation": f"{metric_column} / {denominator:g}",
                     "denominator": denominator,
@@ -2408,7 +2408,11 @@ class DataAnalysisOrchestrator:
                         for row, ratio in computed[:10]
                     ],
                 },
-            }),
+            }), "query_data": {
+                "columns": [*data_columns, coverage_name], "rows": coverage_rows,
+                "returned_row_count": len(coverage_rows), "total_row_count": len(coverage_rows),
+                "total_row_count_confirmed": True, "sample_only": False,
+            }},
         }
         return AgentResponse(
             request_id=uuid4(),
@@ -3045,6 +3049,7 @@ class DataAnalysisOrchestrator:
             if original in deferred_insights:
                 deferred_insights[alias] = deferred_insights[original]
         materials = collect_root_materials(plan, task_results, responses, deferred_insights)
+        await self._hydrate_root_query_data(materials, responses, conversation_by_task, chat, identity)
         resolved_answers = dict(root_context.get("resolved_task_questions") or {})
         for item in materials:
             if item["task_id"] in task_answers and item["status"] in {"COMPLETED", "PARTIAL_SUCCESS"}:
@@ -6407,6 +6412,7 @@ class DataAnalysisOrchestrator:
         self, chat, identity, request, query_result, *,
         dataset_id=None, external_search_mode=None,
     ):
+        source_rows = query_result.dataset.rows
         self._restore_projected_filter_columns(request, query_result.dataset)
         cleaned_result = clean_name_list(request.primary_intent, query_result)
         if cleaned_result is not query_result:
@@ -6414,6 +6420,15 @@ class DataAnalysisOrchestrator:
             dataset_id = None
         query_result = cleaned_result
         list_cleanup_note = cleanup_message(query_result)
+        list_was_cleaned = any(
+            item.get("type") == "NAME_LIST_CLEANUP"
+            for item in query_result.execution_transforms
+        )
+        if query_result.dataset.rows is not source_rows and not query_result.dataset.truncated:
+            # Any deterministic row transformation invalidates the raw file
+            # and cached artifact, including deployment-specific processors.
+            dataset_id = None
+            query_result.result_file_url = None
         await emit_progress(
             "DATA_RETRIEVAL",
             "COMPLETED",
@@ -6422,7 +6437,7 @@ class DataAnalysisOrchestrator:
                 f"返回行数：{query_result.dataset.row_count}；\n"
                 + (
                     "全量清理后行数：未知。"
-                    if list_cleanup_note and query_result.dataset.truncated
+                    if list_was_cleaned and query_result.dataset.truncated
                     else f"结果总行数：{query_result.dataset.total_row_count}。"
                 )
                 + (f"\n{list_cleanup_note}" if list_cleanup_note else "")
@@ -6529,7 +6544,8 @@ class DataAnalysisOrchestrator:
             request.assumptions.append("LATEST_RESULT_DATASET_NOT_REUSABLE")
             await self.sessions.put_last_request(request)
             return await self._finish_terminal(request, response)
-        if query_result.result_export_error and not query_result.result_file_url:
+        if (query_result.result_export_error and not query_result.result_file_url
+                and query_result.dataset.truncated):
             # Export failure is a delivery failure, not a query failure. Keep
             # the preview separate from full-data calculations and follow-ups.
             preview = query_result.dataset.rows[:20]
@@ -6577,7 +6593,7 @@ class DataAnalysisOrchestrator:
                 + "\n\n附件说明：" + note
                 + " 本次暂无可下载的完整附件，未基于预览生成全量分析结论。"
             )
-            if list_cleanup_note:
+            if list_was_cleaned:
                 answer += "\n\n" + name_list_result_summary(query_result)
             request.assumptions.append("LATEST_RESULT_DATASET_NOT_REUSABLE")
             await self.sessions.put_last_request(request)
@@ -6587,19 +6603,6 @@ class DataAnalysisOrchestrator:
                 intent_source=request.intent_source, intent_confidence=request.intent_confidence,
                 answer=answer, evidence=evidence, reliability=reliability,
             ))
-        if (
-            total_row_count > self.settings.data_query_max_rows
-            and not query_result.result_file_url
-        ):
-            # Cap work on oversized results, not delivery of already returned
-            # data. Never persist this preview as a complete reusable dataset.
-            query_result = query_result.model_copy(update={"dataset": query_result.dataset.model_copy(update={
-                "rows": query_result.dataset.rows[:20],
-                "row_count": min(20, len(query_result.dataset.rows)),
-                "total_row_count": total_row_count,
-                "truncated": True,
-            })})
-            dataset_id = None
         analysis_warning = "；".join(
             str(warning) for transform in query_result.execution_transforms
             if transform.get("type") == "ANALYSIS_RESULT_CONTRACT_WARNING"
@@ -6612,8 +6615,9 @@ class DataAnalysisOrchestrator:
         if (
             dataset_id is None
             and query_result.result_file_url
+            and query_result.dataset.truncated
             and request.primary_intent == PrimaryIntent.DETAIL_QUERY
-            and not list_cleanup_note
+            and not list_was_cleaned
         ):
             dataset_id = await self._import_query_result_file(
                 request, query_result.result_file_url
@@ -6659,7 +6663,7 @@ class DataAnalysisOrchestrator:
         )
         if (
             not query_result.dataset.rows and not query_result.result_file_url
-            and not (list_cleanup_note and query_result.dataset.truncated)
+            and not (list_was_cleaned and query_result.dataset.truncated)
         ) or no_effective_values:
             # The SQL/ASL contract is still verified when its result is empty.
             # Preserve it as the latest executable context so a subsequent
@@ -6720,7 +6724,7 @@ class DataAnalysisOrchestrator:
                 response.answer = self._empty_result_message(
                     request, query_result.dataset
                 )
-                if list_cleanup_note:
+                if list_was_cleaned:
                     response.answer = name_list_result_summary(query_result)
                 return await self._finish_terminal(request, response)
             scope = "、".join(
@@ -7097,13 +7101,12 @@ class DataAnalysisOrchestrator:
                 },
                 "query_data": {
                     "columns": query_result.dataset.columns,
-                    "rows": query_result.dataset.rows[:20],
+                    "rows": query_result.dataset.rows,
                     "returned_row_count": len(query_result.dataset.rows),
                     "total_row_count": total_row_count,
                     "total_row_count_confirmed": total_row_count_confirmed,
                     "sample_only": (
                         query_result.dataset.truncated
-                        or len(query_result.dataset.rows) > 20
                         or not total_row_count_confirmed
                         or total_row_count > len(query_result.dataset.rows)
                     ),
@@ -7126,8 +7129,8 @@ class DataAnalysisOrchestrator:
             await emit_progress(
                 "ANSWER_SYNTHESIS", "RUNNING", "正在结合本次问题与查询数据生成分析解读。"
             )
-            # Only the model input receives this bounded task-local preview;
-            # do not add raw rows to persisted analysis evidence or cross-task context.
+            # Full task-local results feed insight; the final table alone is a
+            # preview. Raw rows stay out of persisted conversational evidence.
             synthesis_input = replace(insight_output, facts={
                 **insight_output.facts,
                 "executed_query": {
@@ -7136,13 +7139,12 @@ class DataAnalysisOrchestrator:
                 },
                 "query_data": {
                     "columns": query_result.dataset.columns,
-                    "rows": query_result.dataset.rows[:20],
+                    "rows": query_result.dataset.rows,
                     "returned_row_count": len(query_result.dataset.rows),
                     "total_row_count": total_row_count,
                     "total_row_count_confirmed": total_row_count_confirmed,
                     "sample_only": (
                         query_result.dataset.truncated
-                        or len(query_result.dataset.rows) > 20
                         or not total_row_count_confirmed
                         or total_row_count > len(query_result.dataset.rows)
                     ),
@@ -7426,8 +7428,10 @@ class DataAnalysisOrchestrator:
             final_notes.extend(analysis_output.warnings)
         if analysis_warning:
             final_notes.append("分析说明：" + analysis_warning)
-        if list_cleanup_note:
+        if list_was_cleaned:
             final_notes.append(name_list_result_summary(query_result))
+        if query_result.result_export_error and not query_result.result_file_url:
+            final_notes.append(query_result.result_export_error + "本次校验和分析仍使用完整返回数据。")
         unavailable_fields = [
             value.split("=", 1)[1]
             for value in request.assumptions
@@ -7452,6 +7456,7 @@ class DataAnalysisOrchestrator:
                 answer += "\n\n" + "\n\n".join(final_notes)
             if chart_display and chart_display not in answer:
                 answer += chart_display
+        answer = preview_result_tables(answer)
         incomplete_result = bool(
             query_result.dataset.truncated and not query_result.result_file_url
         )
@@ -7492,7 +7497,7 @@ class DataAnalysisOrchestrator:
                 request._planner_extraction.structured if request._planner_extraction else None
             )
             material["presentation"] = {
-                "table": (answer_plan.headline if analysis_output is not None
+                "table": preview_result_tables(answer_plan.headline if analysis_output is not None
                     and analysis_output.method in structured_table_methods and answer_plan is not None
                     else self._analyze(request, query_result.dataset.columns, query_result.dataset.rows,
                         knowledge_context, result_truncated=query_result.dataset.truncated)),
@@ -7560,6 +7565,15 @@ class DataAnalysisOrchestrator:
         if request.primary_intent == PrimaryIntent.REPORT_GENERATION:
             await self._attach_requested_report(
                 response, request=request, identity=identity, dataset_id=dataset_id
+            )
+        elif (query_result.dataset.row_count > 20 and not query_result.dataset.truncated
+              and not query_result.result_file_url and not query_result.result_export_error
+              and not chat._dag_defer_insight):
+            # Cleanup/local calculations may replace the SQL dataset. Export
+            # this processed dataset, never retain the raw upstream attachment.
+            await self._attach_requested_report(
+                response, request=request, identity=identity, dataset_id=dataset_id,
+                file_format="xlsx",
             )
         request.temporal_anchor = build_temporal_anchor(
             request,
@@ -7889,6 +7903,45 @@ class DataAnalysisOrchestrator:
                 "可通过 files[0].download_url 下载。"
             )
 
+    async def _hydrate_root_query_data(self, materials, responses, conversations, chat, identity):
+        """Cached/resumed/derived tasks must not supply only an old UI preview."""
+        if self.dataset_store is None:
+            return
+        for material in materials:
+            facts = material.setdefault("facts", {})
+            query = facts.get("query_data") or {}
+            value = responses.get(material["task_id"])
+            if (material["status"] not in {"COMPLETED", "PARTIAL_SUCCESS"}
+                    or query and not query.get("sample_only", True)
+                    or not isinstance(value, AgentResponse) or not value.dataset_id):
+                continue
+            conversation = conversations.get(material["task_id"])
+            if not conversation:
+                continue
+            try:
+                references = await self.sessions.get_recent_dataset_references(
+                    identity.tenant_id, identity.user_id, chat.application_id, conversation,
+                    limit=self.settings.dataset_recent_limit,
+                )
+                raw = next((item for item in references if item.get("dataset_id") == value.dataset_id), None)
+                if raw is None:
+                    continue
+                reference = restore_reference(raw)
+                loaded = await asyncio.to_thread(
+                    self.dataset_store.load_dataset, reference,
+                    current_scope=DatasetScope(identity.tenant_id, identity.user_id, chat.application_id,
+                        conversation, chat.authorized_semantic_scope.fingerprint()),
+                )
+                facts["query_data"] = {
+                    "columns": list(reference.columns), "rows": list(loaded.rows),
+                    "returned_row_count": len(loaded.rows), "total_row_count": reference.row_count,
+                    "total_row_count_confirmed": True,
+                    "sample_only": not dataset_source_complete(reference, len(loaded.rows)),
+                }
+            except Exception as exc:
+                logger.warning("root result materialization failed: %s", type(exc).__name__)
+                material.setdefault("warnings", []).append("未能读取该任务的完整数据，不能从其页面预览推断全量统计。")
+
     async def _attach_requested_report(
         self,
         response: AgentResponse,
@@ -7896,6 +7949,7 @@ class DataAnalysisOrchestrator:
         request: CanonicalAnalysisRequest,
         identity: TrustedIdentity,
         dataset_id: str | None,
+        file_format: str | None = None,
     ) -> None:
         """Create a report only when the chat intent explicitly requests one."""
         if dataset_id is None:
@@ -7917,7 +7971,7 @@ class DataAnalysisOrchestrator:
         if raw_reference is None:
             response.answer += "\n未生成下载文件：数据集引用已过期，请重新查询后再试。"
             return
-        file_format = self._requested_report_format(request.original_question)
+        file_format = file_format or self._requested_report_format(request.original_question)
         try:
             result = await asyncio.to_thread(
                 self.report_exporter.export,
@@ -8357,7 +8411,7 @@ class DataAnalysisOrchestrator:
                 ]
                 rows = [
                     {column: row.get(column) for column in visible_columns}
-                    for row in loaded.rows[: self.settings.data_query_max_rows]
+                    for row in loaded.rows
                 ]
                 dataset = Dataset(
                     columns=visible_columns,
@@ -8366,6 +8420,7 @@ class DataAnalysisOrchestrator:
                     snapshot_id=loaded.reference.dataset_id,
                     data_as_of=datetime.fromisoformat(loaded.reference.data_as_of),
                     quality_status="PASS",
+                    total_row_count=loaded.reference.row_count,
                     truncated=loaded.reference.row_count > len(rows),
                 )
                 request.execution_mode = "REUSE_PREVIOUS_RESULT"
@@ -8415,9 +8470,18 @@ class DataAnalysisOrchestrator:
                 column for column in result.reference.columns
                 if not str(column).startswith("_")
             ]
+            # execute_followup computes and persists the full result, but its
+            # return value is a preview. Load its own scoped artifact for all
+            # downstream checks/insight, not just the first page.
+            result_rows = result.preview_rows
+            if result.reference.row_count > len(result_rows):
+                complete = await asyncio.to_thread(
+                    self.dataset_store.load_dataset, result.reference, current_scope=scope,
+                )
+                result_rows = complete.rows
             rows = [
                 {column: row.get(column) for column in visible_columns}
-                for row in result.preview_rows
+                for row in result_rows
             ]
             dataset = Dataset(
                 columns=visible_columns,
@@ -8426,6 +8490,7 @@ class DataAnalysisOrchestrator:
                 snapshot_id=result.reference.dataset_id,
                 data_as_of=datetime.fromisoformat(result.reference.data_as_of),
                 quality_status="PASS",
+                total_row_count=result.reference.row_count,
                 truncated=result.reference.row_count > len(rows),
             )
             return (
@@ -8982,7 +9047,7 @@ class DataAnalysisOrchestrator:
         """Carry the planner's explicit deduplication choice to SQL shaping.
 
         The standalone/fast path can reuse a rule-classified request instead
-        of calling ``_classify``. Applying this at the execution boundary
+        of calling ``_classify``.  Applying this at the execution boundary
         keeps both paths aligned without re-parsing the user's question.
         """
         extraction = (
@@ -11965,20 +12030,15 @@ class DataAnalysisOrchestrator:
         if all(value is None for row in rows for value in row.values()):
             return "查询执行成功，但指定条件下没有有效数据。"
         if request.primary_intent == PrimaryIntent.DETAIL_QUERY:
-            # Keep ordinary complete business lists complete in the answer.
-            # The retrieval contract already caps an in-memory dataset at
-            # ``data_query_max_rows`` (1000 by default); an older presentation
-            # cap silently turned a verified 217-row result into a 20/200-row
-            # looking answer.  Truly larger results arrive as truncated/file
-            # responses and are handled by the explicit preview branch.
-            display_limit = 1000
+            # Presentation only: dataset rows and all analyses remain complete.
+            display_limit = 20
             answer = (
                 f"共查询到 {len(rows)} 条明细。\n\n"
                 f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit], question=request.rewritten_question or request.original_question)}"
             )
             if len(rows) > display_limit:
                 answer += (
-                    f"\n\n> 当前展示前 {display_limit} 条，完整结果请使用附件下载。"
+                    f"\n\n> 当前仅展示前 {display_limit} 条，完整结果见附件；下载状态见下方说明。"
                 )
             return answer
         if len(rows) == 1:
@@ -11996,14 +12056,14 @@ class DataAnalysisOrchestrator:
             PrimaryIntent.FORECAST_ANALYSIS: "预测模型输入数据",
             PrimaryIntent.REPORT_GENERATION: "报表数据",
         }.get(request.primary_intent, "查询结果")
-        display_limit = 200
+        display_limit = 20
         answer = (
             f"{label}，共 {len(rows)} 行。\n\n"
             f"{DataAnalysisOrchestrator._markdown_result_table(columns, rows[:display_limit], question=request.rewritten_question or request.original_question)}"
         )
         if len(rows) > display_limit:
             answer += (
-                f"\n\n> 当前展示前 {display_limit} 行，完整结果请使用附件下载。"
+                f"\n\n> 当前仅展示前 {display_limit} 行，完整结果见附件；下载状态见下方说明。"
             )
         if knowledge.documents:
             references = "；".join(

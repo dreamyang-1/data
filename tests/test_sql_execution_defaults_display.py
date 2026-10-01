@@ -64,9 +64,11 @@ async def test_shared_sql_boundary_reports_rules_without_changing_asl_or_sql(mon
     assert client.calls[1][2]['sql'] == sql
 
 
-def test_asl_explains_null_limit_without_changing_it():
+def test_asl_preserves_null_limit_without_claiming_an_unlimited_execution():
     ast = {'metrics': [], 'dimensions': [{'name': 'dealer.dealer_name'}], 'limit': None}
     text = render_asl_extraction_json(ast)
-    assert '不代表 SQL 不限行数' in text
+    # Execution defaults are explained by the SQL execution trace (tested above),
+    # not necessarily repeated in the ASL display.
+    assert '未添加 LIMIT' not in text
     assert '"limit": null' in text
     assert ast['limit'] is None

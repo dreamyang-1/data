@@ -33,9 +33,9 @@ async def test_adapter_preserves_total_preview_and_sanitizes_export_error(legacy
     result = await HttpDataRetrievalAdapter(Settings(adapter_mode="http"), client).query(
         request(), IDENTITY, semantic_model_id=8, business_domain_id=None,
     )
-    assert result.dataset.row_count == 20
+    assert result.dataset.row_count == (1523 if legacy else 20)
     assert result.dataset.total_row_count == 1523
-    assert result.dataset.truncated
+    assert result.dataset.truncated is (not legacy)
     assert expected in result.result_export_error
     assert "private-secret" not in result.result_export_error
     assert result.result_file_url is None
@@ -43,17 +43,19 @@ async def test_adapter_preserves_total_preview_and_sanitizes_export_error(legacy
 
 
 @pytest.mark.asyncio
-async def test_unexplained_oversized_payload_returns_bounded_preview():
+async def test_complete_oversized_payload_is_not_discarded_without_attachment():
     response = await service(row_count=1523).handle(ChatRequest(
         application_id="app", conversation_id="no-export-contract", message_id="m1",
         question="查询最近一年销售过费森尤斯产品的经销商名单",
         semantic_model_id=1, business_domain_id=1,
     ), TrustedIdentity(tenant_id="tenant", user_id="user"))
-    assert response.status == "PARTIAL_SUCCESS"
-    assert "20 条预览" in response.answer
+    assert response.status == "COMPLETED"
+    assert "前 20 条" in response.answer
     assert "1523" in response.answer
     assert "最大行数" not in response.answer
     assert response.dataset_id is None
+    query = next(item.payload for item in response.evidence if item.kind == "QUERY_RESULT")
+    assert query["returned_row_count"] == 1523 and not query["truncated"]
 
 
 @pytest.mark.asyncio
